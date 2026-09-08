@@ -70,15 +70,16 @@ Les textes du jeu en langues autres que l'anglais sont des traductions communaut
 - [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) : les traductions communautaires de `global.ini` qui alimentent les options de langue française, portugaise du Brésil et italienne. Leurs traducteurs font le vrai travail ici ; nous ne faisons que le livrer.
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES) : la traduction communautaire de `global.ini` qui alimente l'option de langue espagnole.
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources) : la traduction communautaire de `global.ini` qui alimente l'option de langue japonaise.
-- [**42Kit**](https://ini.42kit.com/) : la traduction communautaire de `global.ini` qui alimente l'option de langue chinoise.
+- [**42Kit**](https://ini.42kit.com/) : la traduction communautaire de `global.ini` qui alimente l'option de langue chinoise (simplifié).
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) : la traduction communautaire de `global.ini` qui alimente l'option de langue allemande.
+- [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) : la traduction communautaire de `global.ini` qui alimente l'option de langue chinois traditionnel. Mise à jour pour la dernière fois en mai 2024, elle couvre environ deux tiers des textes actuels du jeu ; le reste repose sur l'anglais.
 
 ## Fonctionnalités clés
 
 ### 🎯 Fonctionnalités principales
 - **Charger et modifier** : chargez le `global.ini` de votre installation Star Citizen et personnalisez les textes dans une vue en tableau intuitive
 - **Multi-canaux** : LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW ont chacun leur `user.ini`, cache, sauvegardes et extraction DataForge isolés ; changez de canal depuis l'onglet Paramètres sans redémarrer
-- **Multilingue** : basculez l'application et les textes du jeu entre anglais, français, espagnol, portugais du Brésil, japonais, chinois, italien et allemand depuis l'onglet Paramètres. Les langues autres que l'anglais superposent un `global.ini` traduit par la communauté à la base anglaise, avec repli sur l'anglais pour tout texte non traduit. D'autres langues seront proposées à mesure que les traductions communautaires arrivent (voir `languages/TRANSLATIONS.md`)
+- **Multilingue** : basculez l'application et les textes du jeu entre anglais, français, espagnol, portugais du Brésil, japonais, chinois (simplifié), italien, allemand et chinois traditionnel depuis l'onglet Paramètres. Les langues autres que l'anglais superposent un `global.ini` traduit par la communauté à la base anglaise, avec repli sur l'anglais pour tout texte non traduit. D'autres langues seront proposées à mesure que les traductions communautaires arrivent (voir `languages/TRANSLATIONS.md`)
 - **Contrats de mission** : modifiez les textes de contrats et de briefings depuis la catégorie Missions dédiée
 - **Filtrage intelligent** : recherchez des textes, filtrez par catégorie (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) ou par statut de modification
 - **Filtres par colonne** : tapez directement dans les champs de filtre sous chaque en-tête de colonne pour une recherche fine

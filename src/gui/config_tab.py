@@ -18,6 +18,21 @@ from src.utils.user_ini_manager import migrate_user_data_dir
 
 logger = logging.getLogger(__name__)
 
+# Display labels that diverge from the generic folder-name transform
+# (lang.replace("_", " ").title()) used by _populate_language_combo below --
+# either because the word order that transform produces is wrong (e.g.
+# "chinese_traditional" -> "Chinese Traditional" reads backwards) or because
+# the label needs to carry extra context up front, before the user selects
+# it.
+_LANGUAGE_COMBO_LABEL_OVERRIDES = {
+    # #403: the source hasn't been updated since May 2024 and covers only
+    # 67.3% of the current English key set (measured at the time the issue
+    # was filed) -- a third of strings would render in English. Flagged
+    # directly in the selector so picking it isn't a silent surprise,
+    # rather than a caveat buried in docs nobody reads before switching.
+    "chinese_traditional": "Traditional Chinese (67.3%)",
+}
+
 
 class ConfigTab(QWidget):
     """Configuration tab — game path, P4K extraction, and import tools."""
@@ -889,7 +904,10 @@ class ConfigTab(QWidget):
         try:
             self.language_combo.clear()
             for lang in AppSettings.get_available_languages():
-                self.language_combo.addItem(lang.replace("_", " ").title(), userData=lang)
+                label = _LANGUAGE_COMBO_LABEL_OVERRIDES.get(
+                    lang, lang.replace("_", " ").title()
+                )
+                self.language_combo.addItem(label, userData=lang)
             current = AppSettings.get_selected_language()
             idx = self.language_combo.findData(current)
             if idx < 0:
@@ -1092,7 +1110,9 @@ class LanguageSourceDialog(QDialog):
         self._inputs: dict[str, QLineEdit] = {}
         grid = QGridLayout()
         for row, lang in enumerate(sorted(langs)):
-            label = QLabel(lang.replace("_", " ").title())
+            label = QLabel(_LANGUAGE_COMBO_LABEL_OVERRIDES.get(
+                lang, lang.replace("_", " ").title()
+            ))
             edit = QLineEdit(AppSettings.get_language_source_override(lang))
             edit.setPlaceholderText(
                 bundled.get(lang, "") or tr("config.language_source_placeholder")
