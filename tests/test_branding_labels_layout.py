@@ -12,12 +12,18 @@ The fix is a Fixed vertical policy on both. It is one declarative line in
 setup_ui, so without this test a regression that dropped it would reinstate
 the reported bug with the whole rest of the suite still green.
 
-This is the only test that builds a real MainWindow. It is worth the cost
-here because the bug is a property of the assembled window: the stub used
-elsewhere in tests/test_ui_mode.py has no branding labels and no content
-layout to distribute height through, so it cannot observe this at all.
-Settings, user-data and cache directories are all redirected to tmp_path so
-the construction touches nothing real.
+This is one of only two test files that build a real MainWindow (see also
+tests/test_tab_scrollbar_placement.py). It is worth the cost here because the
+bug is a property of the assembled window: the stub used elsewhere in
+tests/test_ui_mode.py has no branding labels and no content layout to
+distribute height through, so it cannot observe this at all. Settings,
+user-data and cache directories are all redirected to tmp_path so the
+construction touches nothing real.
+
+The ``window`` fixture below is module-scoped for the same reason
+tests/test_tab_scrollbar_placement.py's is: see tests/gui_window.py for why
+building one per test destabilised the whole run. Keep it that way rather
+than reverting to a function-scoped fixture per test.
 """
 from __future__ import annotations
 
@@ -45,18 +51,41 @@ def qapp():
     yield QApplication.instance() or QApplication([])
 
 
-@pytest.fixture
-def window(qapp, tmp_path, monkeypatch):
-    """A real MainWindow in Simple mode, fully redirected to tmp_path.
+@pytest.fixture(scope="module")
+def window(qapp, tmp_path_factory):
+    """A real MainWindow in Simple mode, fully redirected to a tmp dir.
 
-    The built-in monkeypatch fixture is safe here because this fixture is
-    function-scoped, so pytest finalises it even if construction raises. See
-    tests/gui_window.py for everything that has to be handled to build one of
-    these without destabilising the run.
+    Module-scoped on purpose, matching
+    tests/test_tab_scrollbar_placement.py: building one per test (there are
+    three in this file) tripled this file's contribution to the real
+    MainWindow count kept alive for the rest of the run in
+    tests/gui_window.py's ``_LIVE_WINDOWS``, which is exactly the exposure
+    that module warns destabilises the suite.
+
+    ``show()`` + ``resize(1200, 1000)`` happen once here, not per-test (#390
+    review): Qt's ``resize()`` is a no-op when the target size already
+    matches the current size, so a second test resizing to the same value
+    doesn't re-settle anything -- it silently reads state a prior test
+    already established, coupling two tests that should be independent.
+    Settling once here, before any test runs, matches
+    tests/test_tab_scrollbar_placement.py's own fixture. Safe for both
+    labels' ``sizeHint()`` either way: neither has word wrap on, so the hint
+    is intrinsic to font/text, not window geometry.
+
+    MonkeyPatch.context() rather than the bare ``monkeypatch`` fixture for
+    the same reason as tests/test_tab_scrollbar_placement.py: it is
+    module-scoped so the function-scoped fixture can't be used, and the
+    context manager's undo runs even if construction raises.
     """
-    win = build_main_window(tmp_path, monkeypatch, AppSettings.UI_MODE_SIMPLE)
-    yield win
-    retire_main_window(win)
+    tmp = tmp_path_factory.mktemp("branding_labels")
+    with pytest.MonkeyPatch.context() as patch:
+        win = build_main_window(tmp, patch, AppSettings.UI_MODE_SIMPLE)
+        win.show()
+        win.resize(1200, 1000)
+        for _ in range(8):
+            qapp.processEvents()
+        yield win
+        retire_main_window(win)
 
 
 def _labels(win):
@@ -68,30 +97,16 @@ def test_branding_labels_have_a_fixed_height_policy(window):
         assert label.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Fixed
 
 
-def test_branding_labels_do_not_grow_with_the_window(window, qapp):
-    """The behaviour, not just the policy: at a tall window neither label may
-    exceed the height of its own text."""
-    window.show()
-    for _ in range(6):
-        qapp.processEvents()
-    hints = [label.sizeHint().height() for label in _labels(window)]
-
-    window.resize(1200, 1000)
-    for _ in range(8):
-        qapp.processEvents()
-
-    for label, hint in zip(_labels(window), hints):
-        assert label.height() == hint
+def test_branding_labels_do_not_grow_with_the_window(window):
+    """The behaviour, not just the policy: at a tall window (the fixture's
+    1200x1000) neither label may exceed the height of its own text."""
+    for label in _labels(window):
+        assert label.height() == label.sizeHint().height()
 
 
-def test_tagline_stays_directly_under_the_title(window, qapp):
+def test_tagline_stays_directly_under_the_title(window):
     """The visible symptom was the pair being torn apart, so pin the gap to
     the layout's own spacing rather than an arbitrary tolerance."""
-    window.show()
-    window.resize(1200, 1000)
-    for _ in range(8):
-        qapp.processEvents()
-
     spacing = window._content_widget.layout().spacing()
     title, tagline = _labels(window)
     gap = tagline.y() - (title.y() + title.height())
