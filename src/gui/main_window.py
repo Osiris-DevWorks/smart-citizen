@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -129,6 +130,31 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
 # builds with their own progression -- never scanned regardless of the
 # "also scan other channels" checkbox.
 _LINKED_CHANNELS = frozenset({AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX})
+
+
+def _count_enhancement_categories(sources_dict: dict) -> Counter:
+    """Category breakdown of the enhancement source that's about to be
+    applied, for apply_to_game()'s success-dialog summary (#399).
+
+    Counts sources_dict["enhancements"]'s own keys via StringEntry.
+    extract_category -- deliberately NOT self.entries, which can be stale
+    relative to a just-completed generation. Simple mode's one-button flow
+    calls apply_to_game() before the reload that refreshes self.entries
+    with newly-generated content (that reload runs after, to update the
+    hidden Advanced view), so on a profile that skipped the startup
+    "Generate Enhancements?" prompt and generated for the first time via
+    Simple mode's own click, self.entries was still whatever loaded before
+    generation ran -- typically nothing tagged "enhancements" yet, so the
+    old self.entries-based count reported 0 even though the game file
+    itself was written correctly (apply_to_game's own merge is always
+    fresh). sources_dict["enhancements"] reflects exactly what was just
+    merged, including any "Include discovered items" strip already applied
+    to it in place earlier in apply_to_game.
+    """
+    return Counter(
+        StringEntry.extract_category(key)
+        for key in sources_dict.get("enhancements", {})
+    )
 
 
 def _channels_to_scan(active_channel: str, other_enabled: bool, installed_channels) -> list:
@@ -2351,16 +2377,12 @@ class MainWindow(QMainWindow):
             # the game-side writes). Reach for the count here purely for the
             # success-dialog summary — the save itself is locked in by now.
 
-            # Count enhancement entries, broken down by category. Sorted
-            # descending by count so the dialog leads with the biggest
-            # buckets (typically Missions / Ship Items). "SCLE" was the
-            # legacy app name (SC Localization Editor); the label now
-            # matches the rebrand to "Smart Citizen".
-            from collections import Counter
-            enhancement_categories = Counter(
-                entry.category for entry in self.entries
-                if entry.source_file == "enhancements"
-            )
+            # Count enhancement entries, broken down by category, for the
+            # success-dialog summary. Sorted descending by count so the
+            # dialog leads with the biggest buckets (typically Missions /
+            # Ship Items). "SCLE" was the legacy app name (SC Localization
+            # Editor); the label now matches the rebrand to "Smart Citizen".
+            enhancement_categories = _count_enhancement_categories(sources_dict)
             enhancement_count = sum(enhancement_categories.values())
 
             # Copy languages.ini to {channel}/data/languages.ini if available
