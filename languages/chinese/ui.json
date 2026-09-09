@@ -841,6 +841,182 @@
     "import_settings_tooltip": {
       "ht": "",
       "at": "恢复由任意 Smart Citizen 版本创建的设置备份压缩包。系统会先为你当前的 user.ini 文件创建快照，然后恢复你的《星际公民》目录（如果备份中的路径在本机不存在，则会自动检测），最后 Smart Citizen 会以导入的设置重新启动。"
+    },
+    "dupe_check_btn": {
+      "ht": "",
+      "at": "验证安装位置"
+    },
+    "dupe_check_tooltip": {
+      "ht": "",
+      "at": "在本机搜索其他星际公民安装目录，并确认 Smart Citizen 指向的正是 RSI Launcher 实际启动的那一个。"
+    },
+    "dupe_scanning": {
+      "ht": "",
+      "at": "正在查找星际公民安装目录..."
+    },
+    "dupe_scan_progress": {
+      "ht": "",
+      "at": "已搜索 {count} 个文件夹 - {path}"
+    },
+    "dupe_scan_failed_title": {
+      "ht": "",
+      "at": "检查失败"
+    },
+    "dupe_scan_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen 无法完成安装目录搜索。\n\n{error}"
+    },
+    "dupe_title": {
+      "ht": "",
+      "at": "星际公民安装目录"
+    },
+    "dupe_close_btn": {
+      "ht": "",
+      "at": "关闭"
+    },
+    "dupe_deep_btn": {
+      "ht": "",
+      "at": "扫描所有驱动器"
+    },
+    "dupe_deep_tooltip": {
+      "ht": "",
+      "at": "在所有固定驱动器上搜索保存在自定义文件夹中的安装目录。比快速检查慢，可随时取消。"
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "",
+      "at": "取消"
+    },
+    "dupe_open_btn": {
+      "ht": "",
+      "at": "打开文件夹"
+    },
+    "dupe_use_btn": {
+      "ht": "",
+      "at": "使用此安装"
+    },
+    "dupe_use_tooltip": {
+      "ht": "",
+      "at": "让 Smart Citizen 指向此安装目录。此后的应用都会写入这里。"
+    },
+    "dupe_use_already": {
+      "ht": "",
+      "at": "Smart Citizen 已在使用此安装目录。"
+    },
+    "dupe_use_leftover": {
+      "ht": "",
+      "at": "此文件夹中没有 Data.p4k，游戏无法从这里运行。若让 Smart Citizen 指向此处，每次应用都将毫无效果。"
+    },
+    "dupe_use_failed_title": {
+      "ht": "",
+      "at": "无法切换安装"
+    },
+    "dupe_use_failed_body": {
+      "ht": "",
+      "at": "找不到 {path}。它可能位于已断开连接的驱动器上。未做任何更改。"
+    },
+    "dupe_no_path_set": {
+      "ht": "",
+      "at": "未设置文件夹"
+    },
+    "dupe_unknown_version": {
+      "ht": "",
+      "at": "版本未知"
+    },
+    "dupe_verdict_none": {
+      "ht": "",
+      "at": "本机未找到星际公民安装目录。请使用“浏览”手动设置文件夹，或尝试“扫描所有驱动器”。"
+    },
+    "dupe_verdict_single": {
+      "ht": "",
+      "at": "找到一个安装目录，Smart Citizen 正在使用它。无需修改。"
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "",
+      "at": "Smart Citizen 没有指向你的安装目录。它写入的是 {configured}，而本机的安装目录位于 {found}。在切换之前，应用不会影响到游戏。"
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "",
+      "at": "找到的唯一安装文件夹没有游戏数据（缺少 Data.p4k），因此无法在此应用任何内容。请使用浏览手动设置真正的安装文件夹，或尝试扫描所有驱动器。"
+    },
+    "dupe_verdict_match": {
+      "ht": "",
+      "at": "找到 {count} 个安装目录，Smart Citizen 指向的正是 RSI Launcher 启动的那一个：{path}。无需修改。"
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "",
+      "at": "Smart Citizen 指向的是 RSI 启动器启动的安装：{path}。但它没有游戏数据（缺少 Data.p4k），因此实际上无法在那里应用任何内容。"
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "",
+      "at": "Smart Citizen 正在写入错误的安装目录。RSI Launcher 启动的是 {launcher}，而 Smart Citizen 写入的是 {configured}，因此你的修改不会出现在游戏中。请在下方启动器对应的条目上点击“使用此安装”。"
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "",
+      "at": "Smart Citizen 尚未指向任何安装。RSI 启动器启动的是 {launcher}。点击下方该条目上的使用此安装。"
+    },
+    "dupe_verdict_unknown": {
+      "ht": "",
+      "at": "找到 {count} 个安装目录，Smart Citizen 无法判断你实际游玩的是哪一个。列表按版本从新到旧排列，请选择你启动的那一个。"
+    },
+    "dupe_summary_count": {
+      "ht": "",
+      "at": "找到 {count} 个安装文件夹。"
+    },
+    "dupe_summary_leftovers": {
+      "ht": "",
+      "at": "其中 {count} 个不含游戏数据，无法用于游玩。"
+    },
+    "dupe_summary_unused": {
+      "ht": "",
+      "at": "有 {count} 个安装目录既未被 RSI Launcher 使用，也未被 Smart Citizen 使用：{paths}。删除它们可释放约 {size}。"
+    },
+    "dupe_summary_quick": {
+      "ht": "",
+      "at": "这是针对常用安装文件夹的快速检查；如需查找自定义文件夹，请使用“扫描所有驱动器”。"
+    },
+    "dupe_summary_cancelled": {
+      "ht": "",
+      "at": "驱动器扫描已取消，此列表可能不完整。"
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "",
+      "at": "无法读取 RSI Launcher 日志，因此启动器使用的安装目录是根据版本日期推测的。"
+    },
+    "dupe_badge_configured": {
+      "ht": "",
+      "at": "Smart Citizen 正在使用"
+    },
+    "dupe_badge_launcher": {
+      "ht": "",
+      "at": "RSI Launcher 启动"
+    },
+    "dupe_badge_leftover": {
+      "ht": "",
+      "at": "无游戏数据"
+    },
+    "dupe_badge_unused": {
+      "ht": "",
+      "at": "未使用"
+    },
+    "dupe_channel_line": {
+      "ht": "",
+      "at": "{channel}：{version} - {size} - 更新于 {date}"
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "",
+      "at": "{channel}：为空，此文件夹中没有 Data.p4k"
+    },
+    "dupe_applied_by_us": {
+      "ht": "",
+      "at": "已在此应用 Smart Citizen v{version}（{languages}）"
+    },
+    "dupe_applied_other": {
+      "ht": "",
+      "at": "此处已应用 global.ini（{languages}），但并非 Smart Citizen 写入的"
+    },
+    "dupe_not_applied": {
+      "ht": "",
+      "at": "此处未应用本地化"
     }
   },
   "enhancements": {

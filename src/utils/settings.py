@@ -4,11 +4,16 @@ import datetime
 import json
 import logging
 import os
-import string
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings
 import winreg
+
+from src.utils.install_scanner import (
+    SC_CHANNELS,
+    iter_common_sc_install_locations,
+    looks_like_sc_root,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,14 +63,15 @@ def _is_valid_sc_root(path: str) -> bool:
     (LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW).  This guards against stale
     registry values like ``SmartCitizen 1.4.1`` being returned as the
     install root.
+
+    Deliberately does NOT require ``Data.p4k``: loosening it here would change
+    which path an existing profile resolves to. The Config tab's *Check
+    Install Location* button applies the stricter bar instead, and reports a
+    channel folder with no game data as a leftover
+    (:attr:`install_scanner.ScInstall.is_leftover`) rather than a real install.
     """
     try:
-        p = Path(path)
-        if not p.is_dir():
-            return False
-        return any((p / ch).is_dir() for ch in (
-            "LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"
-        ))
+        return looks_like_sc_root(Path(path))
     except (OSError, ValueError):
         return False
 
@@ -84,21 +90,6 @@ def _path_ends_in_channel(path: str) -> bool:
     return name in {c.upper() for c in AppSettings.AVAILABLE_CHANNELS}
 
 
-# Relative install paths under a drive's root, in the order real installs are
-# most likely to use them. RSI Launcher's own default is the first two; the
-# rest cover users who point the launcher at a secondary drive and either
-# keep RSI's own folder shape or nest it under a personal "Games" folder --
-# both are common in the wild (a real tester install turned up at
-# ``E:\Games\Roberts Space Industries\StarCitizen``, which none of the
-# previous hardcoded C:\ candidates could ever have matched).
-_COMMON_SC_SUBPATHS = (
-    r"Program Files\Roberts Space Industries\StarCitizen",
-    r"Program Files (x86)\Roberts Space Industries\StarCitizen",
-    r"Roberts Space Industries\StarCitizen",
-    r"Games\Roberts Space Industries\StarCitizen",
-)
-
-
 # Sentinel distinct from a real scan outcome — the scan legitimately returns
 # None ("nothing found"), so that value can't double as "not run yet".
 _SC_SCAN_UNSET = object()
@@ -115,9 +106,9 @@ def _scan_common_sc_install_locations() -> "str | None":
     where the only way to find an install on a non-default drive is to look.
     Cheap in practice -- most drive letters don't exist and short-circuit on
     the very first ``exists()`` check, and a hit is validated the same way
-    every other candidate is (:func:`_is_valid_sc_root`), so an empty/stub
-    folder (e.g. a partial RSI Launcher download with no real ``Data.p4k``
-    channel folder yet) is never mistaken for a real install.
+    every other candidate is (:func:`install_scanner.looks_like_sc_root`), so
+    an empty/stub folder (e.g. a partial RSI Launcher download with no real
+    ``Data.p4k`` channel folder yet) is never mistaken for a real install.
 
     Cached in-memory for the process's lifetime, including a "found
     nothing" result -- without this, a no-install profile re-walks every
@@ -130,15 +121,12 @@ def _scan_common_sc_install_locations() -> "str | None":
     if _sc_scan_cache is not _SC_SCAN_UNSET:
         return _sc_scan_cache
 
-    candidates: list[str] = []
-    for letter in string.ascii_uppercase:
-        drive_root = Path(f"{letter}:\\")
-        if not drive_root.exists():
-            continue
-        for subpath in _COMMON_SC_SUBPATHS:
-            candidate = drive_root / subpath
-            if _is_valid_sc_root(str(candidate)):
-                candidates.append(str(candidate))
+    # The shared generator walks drive letters and common subpaths -- the
+    # "find them all" consumer is the Config tab's install check
+    # (``install_scanner.scan_installs``). #370 still applies here, so
+    # multiple hits are ranked by _pick_live_sc_install rather than just
+    # taking the first, the way this loop used to.
+    candidates = [str(p) for p in iter_common_sc_install_locations()]
 
     if not candidates:
         _sc_scan_cache = None
@@ -368,13 +356,13 @@ class AppSettings:
     CHANNEL_EPTU = "EPTU"
     CHANNEL_HOTFIX = "HOTFIX"
     CHANNEL_TECH_PREVIEW = "TECH-PREVIEW"
-    AVAILABLE_CHANNELS = (
-        CHANNEL_LIVE,
-        CHANNEL_PTU,
-        CHANNEL_EPTU,
-        CHANNEL_HOTFIX,
-        CHANNEL_TECH_PREVIEW,
-    )
+    # install_scanner.SC_CHANNELS is the source of truth: that module has to
+    # stay importable without PyQt6 (it is tested against a temp directory
+    # tree, no QSettings registry), so it cannot import this one and the
+    # dependency has to point this way. The CHANNEL_* constants above are kept
+    # as readable names for the same values; test_install_scanner.py locks
+    # them to this tuple so the two can never drift.
+    AVAILABLE_CHANNELS = SC_CHANNELS
     DEFAULT_CHANNEL = CHANNEL_LIVE
 
     # Settings key - Language selection

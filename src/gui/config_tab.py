@@ -223,6 +223,25 @@ class ConfigTab(QWidget):
         self._channel_hint_label.setStyleSheet("font-size: 10px;")
         channel_row.addWidget(self._channel_hint_label)
         channel_row.addStretch()
+
+        # ── Install-location check (2.4, #385) ─────────────────────────────
+        # Rides the right end of the channel row rather than taking a row of
+        # its own: a dedicated row left a dead gap down the left-hand side
+        # and pushed Channel/Language a row lower, while sharing the path row
+        # ate the QLineEdit's width. The channel row already ends in dead
+        # space, so this costs no vertical room and moves nothing.
+        #
+        # It answers the question the path field above raises -- "is this the
+        # install I actually play?" -- because a second install the RSI
+        # Launcher drives instead makes every apply a silent no-op, and
+        # nothing else in the app can surface that.
+        self._dupe_check_btn = QPushButton(tr("config.dupe_check_btn"))
+        self._dupe_check_btn.setMaximumWidth(220)
+        self._dupe_check_btn.setToolTip(tr("config.dupe_check_tooltip"))
+        # Lambda, not a bare connect: clicked(bool) would land its `checked`
+        # argument in the `deep` parameter.
+        self._dupe_check_btn.clicked.connect(lambda: self._check_other_installs(deep=False))
+        channel_row.addWidget(self._dupe_check_btn)
         game_layout.addLayout(channel_row)
 
         self._populate_channel_combo()
@@ -459,6 +478,8 @@ class ConfigTab(QWidget):
         self.game_path_input.setToolTip(tr("config.game_path_tooltip"))
         self._game_browse_btn.setText(tr("config.browse_btn"))
         self._game_browse_btn.setToolTip(tr("config.browse_game_tooltip"))
+        self._dupe_check_btn.setText(tr("config.dupe_check_btn"))
+        self._dupe_check_btn.setToolTip(tr("config.dupe_check_tooltip"))
         self._channel_label.setText(tr("config.channel_label"))
         self.channel_combo.setToolTip(tr("config.channel_tooltip"))
         self._language_label.setText(tr("config.language_label"))
@@ -514,9 +535,18 @@ class ConfigTab(QWidget):
 
     # ── Game path ────────────────────────────────────────────────────────────
 
-    def _save_game_path(self):
+    def _save_game_path(self) -> bool:
         """Save the SC install root when editing finishes, and refresh the
-        channel combo so per-channel enable/disable reflects the new root."""
+        channel combo so per-channel enable/disable reflects the new root.
+
+        Returns whether the value was actually applied. An empty field is a
+        deliberate clear and counts as applied; a non-empty path that fails
+        the exists() check does not. Most callers (manual typing, Browse) are
+        fine ignoring this -- the field itself still shows what was rejected.
+        ``_use_install_root`` is the one caller that needs to know, since it
+        would otherwise close its results dialog as if a picked install had
+        been applied when it silently was not (#385 review).
+        """
         game_path = self.game_path_input.text().strip()
         if game_path:
             # Normalize to native separators (backslashes on Windows). Qt's
@@ -527,10 +557,11 @@ class ConfigTab(QWidget):
             self.game_path_input.setText(game_path)
         if game_path and not Path(game_path).exists():
             logger.warning(f"SC install root does not exist: {game_path}")
-            return
+            return False
         AppSettings.set_sc_install_root(game_path)  # also syncs legacy GAME_INSTALL_PATH
         self._populate_channel_combo()
         self._refresh_p4k_status()
+        return True
 
     def _browse_game_path(self):
         start_dir = self.game_path_input.text().strip() or str(AppSettings.get_sc_install_root())
@@ -540,6 +571,163 @@ class ConfigTab(QWidget):
         if path:
             self.game_path_input.setText(path)
             self._save_game_path()
+
+    # ── Duplicate-install check (2.4) ────────────────────────────────────────
+
+    def _check_other_installs(self, deep: bool = False):
+        """Scan for every Star Citizen install and show the results dialog.
+
+        Runs in :class:`InstallScanWorker` even for the quick scan: reading
+        each install's applied global.ini for the apply watermark is cheap
+        warm but measured at 26 s cold, which would freeze the window.
+
+        Re-entry guard (#385 review): the dialog's own "Scan all drives"
+        button stays enabled for the whole deep scan (`set_report` only
+        touches it once a report arrives), and the deep walk is slow by
+        design -- exactly the window a second click needs. Without this, a
+        second call reassigns `self._dupe_worker`/`self._dupe_progress` to
+        the new scan, and the first worker's `finished` handler hits the
+        (correct, already-tested) stale-worker identity check and returns
+        before ever closing its own progress dialog -- an orphaned progress
+        window left on screen for the life of the app.
+        """
+        if getattr(self, "_dupe_worker", None) is not None:
+            return
+
+        from src.gui.workers import AnimatedProgressDialog, InstallScanWorker
+
+        self._dupe_check_btn.setEnabled(False)
+        # Parent to the results dialog when one is already open (a deep scan
+        # launched from inside it) so the progress window stacks above that
+        # modal instead of behind it.
+        open_dialog = getattr(self, "_dupe_dialog", None)
+        progress_parent = open_dialog if (open_dialog and open_dialog.isVisible()) else self
+        # A quick scan has nothing meaningful to cancel and finishes in a
+        # blink; only the drive walk gets a working Cancel button (passing
+        # real button text here, not just wiring .canceled below, is what
+        # actually makes Qt create one — #385 review).
+        cancel_text = tr("config.dupe_deep_scan_cancel_btn") if deep else None
+        self._dupe_progress = AnimatedProgressDialog(
+            tr("config.dupe_scanning"), progress_parent, title=tr("config.dupe_title"),
+            cancel_text=cancel_text,
+        )
+        # Hard backstop on top of the label eliding in InstallScanWorker:
+        # QProgressDialog grows to fit its label and never shrinks, so without
+        # a cap one long path stretches it across the screen for the rest of
+        # the scan. 560 comfortably fits an elided path at this font size.
+        self._dupe_progress.setMaximumWidth(560)
+        if deep:
+            self._dupe_progress.canceled.connect(self._cancel_install_scan)
+
+        self._dupe_worker = InstallScanWorker(deep=deep, parent=self)
+        self._dupe_worker.progress_pct.connect(self._dupe_progress.set_progress)
+        self._dupe_worker.error.connect(self._on_install_scan_error)
+        # w=self._dupe_worker binds at connect time, not call time -- this is
+        # how _on_install_scan_finished tells "the worker that just finished"
+        # apart from "whatever self._dupe_worker points at right now", which
+        # can already be a newer scan by the time a cancelled one's finished
+        # signal actually arrives (#385 review).
+        self._dupe_worker.finished.connect(
+            lambda report, w=self._dupe_worker: self._on_install_scan_finished(report, w)
+        )
+        self._dupe_worker.start()
+
+    def _cancel_install_scan(self):
+        worker = getattr(self, "_dupe_worker", None)
+        if worker is not None:
+            worker.cancel()
+
+    def _on_install_scan_error(self, message: str):
+        QMessageBox.warning(
+            self,
+            tr("config.dupe_scan_failed_title"),
+            tr("config.dupe_scan_failed_body", error=message),
+        )
+
+    def _on_install_scan_finished(self, report, worker):
+        """Tear the worker down, then show or refresh the results dialog.
+
+        Cancel-then-act (re-scan, or close the dialog) leaves a scan whose
+        `finished` can arrive after something newer already replaced what it
+        was going to touch. Two cases (#385 review):
+
+        * Re-scanning before the cancelled worker's own `finished` arrives
+          reassigns `self._dupe_worker` to the new one. Without the identity
+          check below, this handler would call `.wait()` on that NEW, still-
+          running worker instead of the one that actually just finished --
+          and a custom-`run()` QThread ignores `.quit()`, so `.wait()` blocks
+          the GUI thread for the whole new scan.
+        * Cancel, then close the results dialog, still leaves the cancelled
+          worker running. Without the `report.cancelled` check below, its
+          late `finished` would build and `.exec()` a brand new modal
+          dialog the user already explicitly dismissed.
+
+        `worker` is the specific instance this call's connection was bound
+        to (see the `lambda report, w=...` at the connect site), not
+        whatever `self._dupe_worker` happens to hold when this runs -- that
+        is the whole fix, so testing it needs both to be able to disagree.
+        """
+        worker.quit()
+        worker.wait()  # the worker that just emitted finished() has, by
+                        # definition, already returned from run() -- this is
+                        # never the wait-on-a-live-thread case above.
+        if worker is not self._dupe_worker:
+            return
+
+        self._dupe_worker = None
+        progress = getattr(self, "_dupe_progress", None)
+        if progress is not None:
+            progress.close()
+            self._dupe_progress = None
+
+        self._dupe_check_btn.setEnabled(True)
+        if report is None:
+            return  # the error slot already told the user
+
+        dialog = getattr(self, "_dupe_dialog", None)
+        if dialog is not None and dialog.isVisible():
+            # A deep scan launched from inside the dialog: refresh in place
+            # rather than stacking a second window on top of the first.
+            dialog.set_report(report)
+            return
+        if report.cancelled:
+            # No dialog open to refresh, and the scan that just finished was
+            # explicitly cancelled -- the user asked to stop, so don't pop a
+            # fresh results window open after they've already moved on.
+            return
+
+        from src.gui.duplicate_install_dialog import DuplicateInstallDialog
+        dialog = DuplicateInstallDialog(report, self)
+        dialog.install_selected.connect(self._use_install_root)
+        dialog.deep_scan_requested.connect(lambda: self._check_other_installs(deep=True))
+        self._dupe_dialog = dialog
+        dialog.exec()
+        self._dupe_dialog = None
+
+    def _use_install_root(self, root: str):
+        """Repoint Smart Citizen at *root*, picked from the results dialog.
+
+        Goes through the same field-then-``_save_game_path`` path a manual
+        Browse does, so channel-combo refresh, P4K status, and the legacy
+        GAME_INSTALL_PATH sync all happen exactly once and in one place.
+        """
+        logger.info(f"Switching SC install root to {root!r} from the install check")
+        self.game_path_input.setText(os.path.normpath(root))
+        if not self._save_game_path():
+            # The install picked from the scan results vanished between scan
+            # time and click time (unplugged removable drive, dropped share).
+            # Closing the dialog anyway would look identical to a successful
+            # switch -- exactly the silent no-op this feature exists to catch
+            # (#385 review).
+            QMessageBox.warning(
+                self,
+                tr("config.dupe_use_failed_title"),
+                tr("config.dupe_use_failed_body", path=root),
+            )
+            return
+        dialog = getattr(self, "_dupe_dialog", None)
+        if dialog is not None:
+            dialog.accept()
 
     # ── Smart Citizen data folder ────────────────────────────────────────────
 

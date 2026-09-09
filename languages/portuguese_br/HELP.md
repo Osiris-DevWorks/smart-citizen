@@ -163,6 +163,7 @@ Acompanhe quais blueprints de fabricação você já possui, e veja isso refleti
 
 - **Aparência**: escolha o tema do app (veja abaixo).
 - **Instalação do Star Citizen**: caminho para o seu diretório LIVE; detectado automaticamente na instalação, editável aqui. O menu **Canal** escolhe qual canal o app lê e grava, e o menu **Idioma** troca o app e as strings do jogo (veja *Trocar de Idioma* acima).
+- **Verificar local da instalação**: verifica se o Smart Citizen aponta para a cópia do Star Citizen que você realmente joga. Se houver mais de uma instalação no PC (uma pasta de biblioteca movida, um segundo disco, sobras de uma reinstalação), o app pode estar gravando justamente naquela que o launcher da RSI nunca inicia: aplicar informa sucesso, mas nada muda no jogo. Este botão encontra todas as instalações que consegue e diz qual delas o launcher realmente usa, lendo o log do próprio launcher em vez de adivinhar pelos nomes das pastas. Cada instalação encontrada é listada com suas evidências, e **Usar esta instalação** aponta o Smart Citizen para ela com um clique. Se a sua instalação estiver em um local incomum, **Verificar todas as unidades** faz uma busca mais lenta e profunda.
 - **Dados do Smart Citizen**: pasta para `user.ini`, caches, extração do DataForge, INIs de aprimoramento gerados e backups. Padrão `Documents\Smart Citizen`; mova para fora do OneDrive se a extração ou a limpeza do cache estiver lenta.
 - **Localização Base (Extração do P4K)**: clique em **Extrair do Data.p4k** para descompactar a localização original e os dados de entidades do DataForge diretamente do jogo instalado. Esta é a única fonte das strings base e dos dados de aprimoramento.
 - **Importar INI**: incorpore um arquivo INI existente às suas alterações pela caixa de resolução de conflitos.
@@ -210,6 +211,7 @@ A aba **FAQ** responde às perguntas que mais recebemos, direto no app: quais ar
 - **Nada na tabela**: confira se **Extrair do Data.p4k** terminou e se o recarregamento pós-extração concluiu, depois verifique a aba **Log** em busca de erros de leitura.
 - **Aprimoramentos vazios ou com itens faltando**: execute **Gerar Aprimoramentos** na aba Aprimoramentos; é preciso ter um cache do DataForge (clique antes em **Extrair do Data.p4k** se ainda não fez).
 - **Falha ao Aplicar Aprimoramentos**: confirme o caminho de instalação do Star Citizen na aba **Config** e que o jogo não está em execução.
+- **Aplicar diz que deu certo, mas o jogo não muda**: você pode ter mais de uma instalação do Star Citizen, com o Smart Citizen apontando para a que você não inicia. Clique em **Verificar local da instalação** na aba **Config**: ele indica a instalação que o launcher da RSI realmente usa e reaponta o app com um clique.
 - **A extração diz que o Data.p4k está bloqueado**: o RSI Launcher está baixando ou verificando uma atualização. Espere ele terminar (ou feche o launcher) e clique de novo em **Extrair do Data.p4k**.
 - **Dados desatualizados após um patch do jogo**: execute novamente **Extrair do Data.p4k** e depois regenere os aprimoramentos.
 

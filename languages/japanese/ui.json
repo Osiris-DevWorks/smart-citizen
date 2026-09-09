@@ -841,6 +841,182 @@
     "import_settings_tooltip": {
       "ht": "",
       "at": "任意の Smart Citizen バージョンで作成された設定バックアップ zip を復元します。現在の user.ini ファイルはまずスナップショットとして保存され、Star Citizen フォルダが復元されます（バックアップのパスがこの PC に存在しない場合は自動検出されます）。その後 Smart Citizen はインポートした設定で再起動します。"
+    },
+    "dupe_check_btn": {
+      "ht": "",
+      "at": "インストール場所を検証"
+    },
+    "dupe_check_tooltip": {
+      "ht": "",
+      "at": "この PC 内の他の Star Citizen インストールを検索し、Smart Citizen が RSI Launcher の実際に起動するインストールを指しているか確認します。"
+    },
+    "dupe_scanning": {
+      "ht": "",
+      "at": "Star Citizen のインストールを検索しています..."
+    },
+    "dupe_scan_progress": {
+      "ht": "",
+      "at": "{count} 個のフォルダーを検索しました - {path}"
+    },
+    "dupe_scan_failed_title": {
+      "ht": "",
+      "at": "確認に失敗しました"
+    },
+    "dupe_scan_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen はインストールの検索を完了できませんでした。\n\n{error}"
+    },
+    "dupe_title": {
+      "ht": "",
+      "at": "Star Citizen のインストール"
+    },
+    "dupe_close_btn": {
+      "ht": "",
+      "at": "閉じる"
+    },
+    "dupe_deep_btn": {
+      "ht": "",
+      "at": "すべてのドライブを検索"
+    },
+    "dupe_deep_tooltip": {
+      "ht": "",
+      "at": "固定ドライブ全体から、任意のフォルダーに保存されたインストールを検索します。クイック確認より低速ですが、途中でキャンセルできます。"
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "",
+      "at": "キャンセル"
+    },
+    "dupe_open_btn": {
+      "ht": "",
+      "at": "フォルダーを開く"
+    },
+    "dupe_use_btn": {
+      "ht": "",
+      "at": "このインストールを使用"
+    },
+    "dupe_use_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen をこのインストールに向けます。以降の適用はここに書き込まれます。"
+    },
+    "dupe_use_already": {
+      "ht": "",
+      "at": "Smart Citizen はすでにこのインストールを使用しています。"
+    },
+    "dupe_use_leftover": {
+      "ht": "",
+      "at": "このフォルダーには Data.p4k がないため、ゲームを実行できません。ここを指定すると、適用しても何も起こらなくなります。"
+    },
+    "dupe_use_failed_title": {
+      "ht": "",
+      "at": "インストールを切り替えられませんでした"
+    },
+    "dupe_use_failed_body": {
+      "ht": "",
+      "at": "{path} が見つかりませんでした。切断されたドライブ上にあった可能性があります。変更は行われていません。"
+    },
+    "dupe_no_path_set": {
+      "ht": "",
+      "at": "フォルダー未設定"
+    },
+    "dupe_unknown_version": {
+      "ht": "",
+      "at": "バージョン不明"
+    },
+    "dupe_verdict_none": {
+      "ht": "",
+      "at": "この PC で Star Citizen のインストールが見つかりませんでした。「参照」から手動でフォルダーを指定するか、「すべてのドライブを検索」をお試しください。"
+    },
+    "dupe_verdict_single": {
+      "ht": "",
+      "at": "インストールが 1 つ見つかり、Smart Citizen はそれを使用しています。修正は不要です。"
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "",
+      "at": "Smart Citizen はお使いのインストールを指していません。書き込み先は {configured} ですが、この PC のインストールは {found} にあります。切り替えるまで、適用してもゲームには反映されません。"
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "",
+      "at": "見つかった唯一のインストールフォルダーにはゲームデータがありません（Data.p4k がありません）。そのためここには何も適用できません。参照で本当のインストールフォルダーを手動で設定するか、すべてのドライブを検索を試してください。"
+    },
+    "dupe_verdict_match": {
+      "ht": "",
+      "at": "{count} 個のインストールが見つかり、Smart Citizen は RSI Launcher が起動するもの ({path}) を指しています。修正は不要です。"
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "",
+      "at": "Smart Citizen は RSI ランチャーが起動するインストールを指しています: {path}。しかしそこにはゲームデータがなく（Data.p4k がありません）、実際には何も適用できません。"
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "",
+      "at": "Smart Citizen が誤ったインストールに適用しています。RSI Launcher は {launcher} を起動しますが、Smart Citizen は {configured} に書き込んでいるため、変更内容はゲームに反映されません。下のランチャーの項目で「このインストールを使用」を押してください。"
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "",
+      "at": "Smart Citizen はまだどのインストールも指していません。RSI ランチャーは {launcher} を起動します。下記のその項目にある このインストールを使用 を押してください。"
+    },
+    "dupe_verdict_unknown": {
+      "ht": "",
+      "at": "{count} 個のインストールが見つかりましたが、どれをプレイしているか判別できませんでした。ビルドの新しい順に並んでいます。起動しているものを選んでください。"
+    },
+    "dupe_summary_count": {
+      "ht": "",
+      "at": "{count} 個のインストールフォルダーが見つかりました。"
+    },
+    "dupe_summary_leftovers": {
+      "ht": "",
+      "at": "そのうち {count} 個にはゲームデータがなく、プレイできません。"
+    },
+    "dupe_summary_unused": {
+      "ht": "",
+      "at": "{count} 個のインストールは RSI Launcher にも Smart Citizen にも使われていません: {paths}。削除すると約 {size} の空き容量ができます。"
+    },
+    "dupe_summary_quick": {
+      "ht": "",
+      "at": "これは通常のインストールフォルダーを対象としたクイック確認です。任意のフォルダーを調べるには「すべてのドライブを検索」を使用してください。"
+    },
+    "dupe_summary_cancelled": {
+      "ht": "",
+      "at": "ドライブの検索がキャンセルされたため、この一覧は不完全な可能性があります。"
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "",
+      "at": "RSI Launcher のログを読み取れなかったため、ランチャーが起動するインストールはビルド日時からの推定です。"
+    },
+    "dupe_badge_configured": {
+      "ht": "",
+      "at": "Smart Citizen が使用中"
+    },
+    "dupe_badge_launcher": {
+      "ht": "",
+      "at": "RSI Launcher が起動"
+    },
+    "dupe_badge_leftover": {
+      "ht": "",
+      "at": "ゲームデータなし"
+    },
+    "dupe_badge_unused": {
+      "ht": "",
+      "at": "未使用"
+    },
+    "dupe_channel_line": {
+      "ht": "",
+      "at": "{channel}: {version} - {size} - 更新日 {date}"
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "",
+      "at": "{channel}: 空です。このフォルダーに Data.p4k がありません"
+    },
+    "dupe_applied_by_us": {
+      "ht": "",
+      "at": "Smart Citizen v{version} をここに適用済み ({languages})"
+    },
+    "dupe_applied_other": {
+      "ht": "",
+      "at": "ここに global.ini が適用されています ({languages}) が、Smart Citizen が書き込んだものではありません"
+    },
+    "dupe_not_applied": {
+      "ht": "",
+      "at": "ここにローカライズは適用されていません"
     }
   },
   "enhancements": {

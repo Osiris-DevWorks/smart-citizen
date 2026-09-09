@@ -337,6 +337,20 @@ class TestScanCommonScInstallLocations:
     though a real install existed. This scans every local drive letter for
     a handful of common shapes instead of just two fixed C:\\ paths."""
 
+    # The walk itself moved to install_scanner.iter_common_sc_install_locations
+    # in 2.4, so the validator these patch is that module's
+    # ``looks_like_sc_root``. This is NOT a first-hit consumer, despite an
+    # earlier version of this comment claiming so (#385 review) --
+    # ``_scan_common_sc_install_locations`` still ranks every matching
+    # candidate through ``_pick_live_sc_install`` (newest Data.p4k wins,
+    # scan order only breaks a tie), because "first hit" is exactly the
+    # bug issue #370 fixed: an abandoned install on an earlier drive letter
+    # beat the real one. None-when-nothing-matches and per-process caching
+    # are unchanged. See ``test_sc_install_scan_picks_live.py`` for the
+    # ranking algorithm itself, and
+    # ``test_multiple_candidates_all_reach_the_ranker`` below for proof this
+    # function actually hands every match to it rather than short-circuiting.
+
     def test_finds_install_at_a_matching_candidate(self, monkeypatch):
         import src.utils.settings as settings_mod
         from src.utils.settings import _scan_common_sc_install_locations
@@ -347,8 +361,8 @@ class TestScanCommonScInstallLocations:
         monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
         target = r"C:\Games\Roberts Space Industries\StarCitizen"
         monkeypatch.setattr(
-            "src.utils.settings._is_valid_sc_root",
-            lambda p: os.path.normcase(p) == os.path.normcase(target),
+            "src.utils.install_scanner.looks_like_sc_root",
+            lambda p: os.path.normcase(str(p)) == os.path.normcase(target),
         )
         assert _scan_common_sc_install_locations() == target
 
@@ -357,7 +371,9 @@ class TestScanCommonScInstallLocations:
         from src.utils.settings import _scan_common_sc_install_locations
 
         monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
-        monkeypatch.setattr("src.utils.settings._is_valid_sc_root", lambda p: False)
+        monkeypatch.setattr(
+            "src.utils.install_scanner.looks_like_sc_root", lambda p: False
+        )
         assert _scan_common_sc_install_locations() is None
 
     def test_result_is_cached_for_process_lifetime(self, monkeypatch):
@@ -370,22 +386,67 @@ class TestScanCommonScInstallLocations:
         monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
         target = r"C:\Games\Roberts Space Industries\StarCitizen"
         monkeypatch.setattr(
-            "src.utils.settings._is_valid_sc_root",
-            lambda p: os.path.normcase(p) == os.path.normcase(target),
+            "src.utils.install_scanner.looks_like_sc_root",
+            lambda p: os.path.normcase(str(p)) == os.path.normcase(target),
         )
         assert _scan_common_sc_install_locations() == target
         # Flip the validator so a real re-scan would find nothing.
-        monkeypatch.setattr("src.utils.settings._is_valid_sc_root", lambda p: False)
+        monkeypatch.setattr(
+            "src.utils.install_scanner.looks_like_sc_root", lambda p: False
+        )
         assert _scan_common_sc_install_locations() == target
+
+    def test_multiple_candidates_all_reach_the_ranker(self, monkeypatch):
+        """Empirically the gap this diff closes: every existing test here
+        engineers exactly one matching candidate, so nothing previously
+        distinguished a real call to ``_pick_live_sc_install(candidates)``
+        from a naive ``candidates[0]`` -- verified by temporarily patching
+        line 135 to the latter during the #385 review and finding the whole
+        suite, including every test in this class, still passed.
+
+        Spies on the ranker directly instead of relying on real Data.p4k
+        mtimes (there's no file on disk under either of these paths), and
+        has the spy pick the LAST candidate rather than the first, so this
+        fails distinctly from both "only the first hit ever arrives" and
+        "the ranker is bypassed entirely" regressions.
+        """
+        import src.utils.settings as settings_mod
+        from src.utils.settings import _scan_common_sc_install_locations
+
+        monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
+        # Two of the four documented subpaths, both under the same (real)
+        # C:\ drive so no drive-existence mocking is needed.
+        matching = {
+            os.path.normcase(r"C:\Program Files\Roberts Space Industries\StarCitizen"),
+            os.path.normcase(r"C:\Games\Roberts Space Industries\StarCitizen"),
+        }
+        monkeypatch.setattr(
+            "src.utils.install_scanner.looks_like_sc_root",
+            lambda p: os.path.normcase(str(p)) in matching,
+        )
+        seen_candidates = []
+
+        def _spy_pick(candidates):
+            seen_candidates.extend(candidates)
+            return candidates[-1]
+
+        monkeypatch.setattr(settings_mod, "_pick_live_sc_install", _spy_pick)
+
+        result = _scan_common_sc_install_locations()
+
+        assert len(seen_candidates) == 2, (
+            "the ranker must see every matching candidate, not just the first"
+        )
+        assert result == seen_candidates[-1]
 
     def test_documented_subpaths_cover_default_and_secondary_drive_shapes(self):
         """Locks the exact candidate list down -- covers RSI Launcher's own
         default (Program Files, both bitness variants), a secondary drive
         kept in RSI's own shape, and one nested under a personal "Games"
         folder (the real shape a tester's install turned up in)."""
-        from src.utils.settings import _COMMON_SC_SUBPATHS
+        from src.utils.install_scanner import COMMON_SC_SUBPATHS
 
-        assert _COMMON_SC_SUBPATHS == (
+        assert COMMON_SC_SUBPATHS == (
             r"Program Files\Roberts Space Industries\StarCitizen",
             r"Program Files (x86)\Roberts Space Industries\StarCitizen",
             r"Roberts Space Industries\StarCitizen",
