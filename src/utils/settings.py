@@ -2812,30 +2812,47 @@ class AppSettings:
 
     @staticmethod
     def migrate_dataforge_cache_to_local() -> None:
-        r"""One-shot move of the DataForge XML cache from Documents → AppData\Local.
+        r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
         Pre-1.0 the DataForge cache lived inside get_cache_dir() (Documents\…),
         putting ~1.4 GB of extracted XMLs into the OneDrive sync tree. Moving it
-        to AppData\Local eliminates per-file OneDrive / Defender / Indexer hooks
-        during extraction and keeps large build-artefact files out of cloud sync.
+        out eliminates per-file OneDrive / Defender / Indexer hooks during
+        extraction and keeps large build-artefact files out of cloud sync.
 
-        Idempotent: no-ops when the old path is already absent. If the new
-        location already has a valid stamp the old directory is cleaned up and
-        the migration is considered complete.
+        The destination is resolved through :meth:`get_dataforge_cache_dir`, so
+        a ``CACHE_DIR`` override set from the Config tab is honoured. Targeting
+        ``AppData\Local`` unconditionally used to drag the cache back out of a
+        user-chosen folder on the next launch, silently undoing that setting.
+
+        Idempotent: no-ops when the old path is absent or already the resolved
+        destination. If the destination already has a valid stamp the old
+        directory is cleaned up and the migration is considered complete.
         """
         import shutil
 
         old_dir = AppSettings.get_cache_dir() / "dataforge"
-        local_appdata = Path(
-            os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-        )
-        new_dir = (
-            local_appdata / "Smart Citizen"
-            / AppSettings.get_active_channel()
-            / "cache" / "dataforge"
-        )
-
         if not old_dir.exists():
+            return
+
+        # Resolved after the early return: the getter creates the directory it
+        # returns, and a launch with nothing to migrate shouldn't leave an empty
+        # cache tree behind as a side effect. It can also raise when an override
+        # points at absent removable/network storage — that must not abort
+        # startup, since this runs before any window exists.
+        try:
+            new_dir = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            logger.warning(
+                f"DataForge cache destination unavailable ({e}); skipping migration"
+            )
+            return
+
+        try:
+            if old_dir.resolve() == new_dir.resolve():
+                return
+        except OSError:
+            # Can't prove the two differ; skipping costs one deferred migration,
+            # while continuing could rmtree what turns out to be the only copy.
             return
 
         from src.utils.pak_extractor import P4K_MTIME_STAMP
@@ -2849,16 +2866,46 @@ class AppSettings:
                 logger.warning(f"Could not remove old DataForge cache at {old_dir}: {e}")
             return
 
+        # get_dataforge_cache_dir() creates the destination; shutil.move would
+        # then nest the source inside it. Drop the empty placeholder so the move
+        # is a plain rename, and bail out if it holds unstamped data.
+        if new_dir.exists():
+            try:
+                new_dir.rmdir()
+            except OSError as e:
+                logger.warning(
+                    f"DataForge cache destination {new_dir} is unusable ({e}); "
+                    f"leaving old copy at {old_dir}"
+                )
+                return
+
+        # Once CACHE_DIR points at another drive the move is cross-volume, which
+        # shutil implements as a non-atomic copytree + rmtree. Stage it under a
+        # name the freshness check never accepts so an interrupted copy cannot
+        # leave a stamped-but-partial cache at new_dir — the next launch would
+        # trust that stamp and delete the intact source for it.
+        staging = new_dir.parent / f"{new_dir.name}.migrating"
         logger.info(f"Migrating DataForge cache: {old_dir} → {new_dir}")
         try:
             new_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(old_dir), str(new_dir))
+            if staging.exists():
+                shutil.rmtree(staging, ignore_errors=True)
+            shutil.move(str(old_dir), str(staging))
+            staging.rename(new_dir)
             logger.info("DataForge cache migration complete")
         except Exception as e:
             logger.warning(
                 f"DataForge cache migration failed ({e}); "
                 "cache will be re-extracted on next use"
             )
+            # Only discard the staged copy while the source is still intact;
+            # past that point staging may hold the only copy of the cache.
+            if old_dir.exists():
+                shutil.rmtree(staging, ignore_errors=True)
+            elif staging.exists():
+                logger.warning(
+                    f"Partially migrated DataForge cache left at {staging}"
+                )
 
     @staticmethod
     def migrate_data_to_documents() -> None:
