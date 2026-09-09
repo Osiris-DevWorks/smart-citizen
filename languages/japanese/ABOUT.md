@@ -68,15 +68,16 @@ Smart Citizen は、以下の上流ツールも同梱しています。
 - [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — フランス語、ブラジルポルトガル語、イタリア語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。ここでの本当の仕事は彼らの翻訳者が担っており、私たちはそれを届けているにすぎません。
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES) : スペイン語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources)：日本語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。
-- [**42Kit**](https://ini.42kit.com/)：中国語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。
+- [**42Kit**](https://ini.42kit.com/)：中国語（簡体字）の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)：ドイツ語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。
+- [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP)：繁体字中国語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。2024年5月を最後に更新が止まっており、現在のゲーム内文字列の約3分の2をカバーしています。残りは英語にフォールバックします。
 
 ## 主な機能
 
 ### 🎯 コア機能
 - **読み込みと編集**: Star Citizen のインストールから `global.ini` を読み込み、直感的なテーブルビューで文字列をカスタマイズ
 - **マルチチャンネル対応**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW がそれぞれ独立した `user.ini`、キャッシュ、バックアップ、DataForge 抽出を持ち、再起動せずに Config タブからチャンネルを切り替え可能
-- **多言語対応**: Config タブから、アプリとゲーム文字列を英語、フランス語、スペイン語、ブラジルポルトガル語、日本語、中国語、イタリア語、ドイツ語の間で切り替え。英語以外の言語は、コミュニティ翻訳の `global.ini` を英語ベースの上に重ね、未翻訳の部分は英語にフォールバックします。コミュニティの翻訳が届くにつれて、より多くの言語が公開されます（`languages/TRANSLATIONS.md` を参照）
+- **多言語対応**: Config タブから、アプリとゲーム文字列を英語、フランス語、スペイン語、ブラジルポルトガル語、日本語、中国語（簡体字）、イタリア語、ドイツ語、繁体字中国語の間で切り替え。英語以外の言語は、コミュニティ翻訳の `global.ini` を英語ベースの上に重ね、未翻訳の部分は英語にフォールバックします。コミュニティの翻訳が届くにつれて、より多くの言語が公開されます（`languages/TRANSLATIONS.md` を参照）
 - **ミッションコントラクト**: 専用の Missions カテゴリーから、ミッションのコントラクトとブリーフィングのテキストを編集
 - **スマートフィルタリング**: 文字列を検索し、カテゴリー（艦船、艦船アイテム、ミッション、装備、商品、ジャーナル、その他）や変更ステータスでフィルタリング
 - **列ごとのフィルター**: 各列ヘッダーの下のフィルターボックスに直接入力して、きめ細かく検索

@@ -1,0 +1,2918 @@
+{
+  "branding": {
+    "title": {
+      "ht": "",
+      "at": "智慧公民"
+    },
+    "tagline": {
+      "ht": "",
+      "at": "為星際公民打造更智慧的字串"
+    }
+  },
+  "window": {
+    "title": {
+      "ht": "",
+      "at": "智慧公民 v{version}"
+    }
+  },
+  "simple_mode": {
+    "switch_to_advanced": {
+      "ht": "",
+      "at": "切換到高階模式"
+    },
+    "switch_to_advanced_tip": {
+      "ht": "",
+      "at": "顯示包含所有標籤頁和選項的完整智慧公民介面。"
+    },
+    "generate_apply_btn": {
+      "ht": "",
+      "at": "應用增強內容"
+    },
+    "generate_apply_tip": {
+      "ht": "",
+      "at": "使用當前設定生成最新的增強內容並應用到遊戲中。會先備份當前的 global.ini。"
+    },
+    "defaults_hint": {
+      "ht": "",
+      "at": "使用你當前的設定（與高階檢視顯示的相同）。\n首次執行在提取 DataForge 時可能需要幾分鐘。"
+    },
+    "set_game_folder_title": {
+      "ht": "",
+      "at": "設定你的遊戲資料夾"
+    },
+    "set_game_folder_body": {
+      "ht": "",
+      "at": "Smart Citizen 需要知道 Star Citizen 的安裝位置才能應用更改。\n\n即將切換到高階模式，以便你在配置標籤頁設定遊戲資料夾。"
+    },
+    "apply_enhancements_confirm_title": {
+      "ht": "",
+      "at": "應用增強內容"
+    },
+    "apply_enhancements_confirm_body": {
+      "ht": "",
+      "at": "這將使用你當前的設定生成最新的增強內容，並應用到遊戲的 global.ini。系統會先建立一個帶時間戳的備份。\n\n首次執行可能需要幾分鐘，因為需要提取 DataForge。是否繼續？"
+    }
+  },
+  "tabs": {
+    "string_editor": {
+      "ht": "",
+      "at": "字串編輯器"
+    },
+    "config": {
+      "ht": "",
+      "at": "配置"
+    },
+    "enhancements": {
+      "ht": "",
+      "at": "增強內容"
+    },
+    "blueprint_tracker": {
+      "ht": "",
+      "at": "藍圖追蹤器"
+    },
+    "log": {
+      "ht": "",
+      "at": "日誌"
+    },
+    "about": {
+      "ht": "",
+      "at": "關於"
+    },
+    "faq": {
+      "ht": "",
+      "at": "常見問題"
+    },
+    "legal": {
+      "ht": "",
+      "at": "法律資訊"
+    },
+    "about_load_failed": {
+      "ht": "",
+      "at": "無法載入關於資訊。"
+    },
+    "faq_load_failed": {
+      "ht": "",
+      "at": "無法載入常見問題。"
+    },
+    "legal_load_failed": {
+      "ht": "",
+      "at": "無法載入法律資訊。"
+    }
+  },
+  "toolbar": {
+    "apply_btn": {
+      "ht": "",
+      "at": "應用增強內容"
+    },
+    "restore_backup_btn": {
+      "ht": "",
+      "at": "恢復備份"
+    },
+    "clear_btn": {
+      "ht": "",
+      "at": "清除"
+    },
+    "import_export_btn": {
+      "ht": "",
+      "at": "匯入 / 匯出"
+    },
+    "open_loc_dir_btn": {
+      "ht": "",
+      "at": "開啟本地化目錄"
+    },
+    "editor_btn": {
+      "ht": "",
+      "at": "編輯器"
+    },
+    "help_btn": {
+      "ht": "",
+      "at": "幫助"
+    },
+    "tutorial_btn": {
+      "ht": "",
+      "at": "教程"
+    },
+    "more_btn": {
+      "ht": "",
+      "at": "更多"
+    },
+    "menu_clear_localization": {
+      "ht": "",
+      "at": "清除本地化"
+    },
+    "menu_clear_cache": {
+      "ht": "",
+      "at": "清除快取"
+    },
+    "menu_import_ini": {
+      "ht": "",
+      "at": "匯入 INI…"
+    },
+    "menu_export_ini": {
+      "ht": "",
+      "at": "匯出 INI…"
+    },
+    "menu_test_plan": {
+      "ht": "",
+      "at": "測試計劃"
+    },
+    "menu_switch_to_simple": {
+      "ht": "",
+      "at": "切換到簡易模式"
+    },
+    "menu_reset_window_proportions": {
+      "ht": "",
+      "at": "重置視窗比例"
+    },
+    "editor_tooltip": {
+      "ht": "",
+      "at": "切換側邊停靠的字串編輯器，用更大的編輯區域編輯所選行的自定義值"
+    },
+    "help_tooltip": {
+      "ht": "",
+      "at": "切換幫助側邊面板"
+    },
+    "tutorial_tooltip": {
+      "ht": "",
+      "at": "開始智慧公民工作流程的引導教程。首次啟動時會自動執行；隨時點選此處可重新播放。"
+    },
+    "restore_backup_tooltip": {
+      "ht": "",
+      "at": "從備份資料夾恢復之前的 global.ini。最多保留 5 個帶時間戳的備份；建立新備份時會清除最舊的一個。"
+    },
+    "test_plan_tooltip": {
+      "ht": "",
+      "at": "開啟測試者的測試計劃：本次版本更新內容的檢查清單，帶進度跟蹤，並可提交報告。"
+    },
+    "switch_to_simple_tooltip": {
+      "ht": "",
+      "at": "切換到簡化的單按鈕檢視。"
+    },
+    "reset_window_proportions_tooltip": {
+      "ht": "",
+      "at": "將視窗大小、面板佈局和字串編輯器的列寬恢復為預設值。"
+    },
+    "more_tooltip": {
+      "ht": "",
+      "at": "更多操作：恢復備份、清除本地化或快取、匯入或匯出、開啟本地化資料夾"
+    },
+    "osiris_github_tooltip": {
+      "ht": "",
+      "at": "開啟 Osiris DevWorks 的 GitHub 組織頁面"
+    },
+    "feedback_tooltip": {
+      "ht": "",
+      "at": "開啟智慧公民 Discord 頻道，反饋問題、報告 Bug，並為即將推出的功能投票（需要加入 Osiris DevWorks Discord）。"
+    },
+    "apply_enabled_tooltip": {
+      "ht": "",
+      "at": "將合併後的表格內容寫入遊戲的 global.ini。會先建立當前 global.ini 的帶時間戳備份。"
+    },
+    "apply_disabled_tooltip": {
+      "ht": "",
+      "at": "已經應用：自上次應用到遊戲以來沒有任何更改。"
+    },
+    "feedback_fallback_text": {
+      "ht": "",
+      "at": "反饋、錯誤報告與功能投票"
+    },
+    "paypal_fallback_text": {
+      "ht": "",
+      "at": "透過 PayPal 捐贈"
+    },
+    "venmo_fallback_text": {
+      "ht": "",
+      "at": "Venmo"
+    }
+  },
+  "filters": {
+    "category_label": {
+      "ht": "",
+      "at": "分類："
+    },
+    "status_label": {
+      "ht": "",
+      "at": "狀態："
+    },
+    "status_all": {
+      "ht": "",
+      "at": "全部"
+    },
+    "status_modified": {
+      "ht": "",
+      "at": "已修改"
+    },
+    "status_enhanced": {
+      "ht": "",
+      "at": "已增強"
+    },
+    "status_unmodified": {
+      "ht": "",
+      "at": "未修改"
+    },
+    "status_new": {
+      "ht": "",
+      "at": "新增"
+    },
+    "hide_unmodified": {
+      "ht": "",
+      "at": "隱藏未修改項"
+    },
+    "ship_vehicle_names_only": {
+      "ht": "",
+      "at": "僅顯示飛船與載具名稱"
+    },
+    "ship_vehicle_names_only_tooltip": {
+      "ht": "",
+      "at": "僅顯示飛船和載具的名稱行，隱藏其他所有內容，包括飛船描述以及所有其他分類。只保留收藏和 ASOP 排序實際適用的行。"
+    },
+    "favorites_only": {
+      "ht": "",
+      "at": "★ 僅顯示收藏"
+    },
+    "bp_titles_only": {
+      "ht": "",
+      "at": "藍圖示題"
+    },
+    "bp_descs_only": {
+      "ht": "",
+      "at": "藍圖描述"
+    },
+    "group_sort_btn": {
+      "ht": "",
+      "at": "分組排序"
+    },
+    "clear_filters_btn": {
+      "ht": "",
+      "at": "清除篩選"
+    },
+    "copy_filtered_btn": {
+      "ht": "",
+      "at": "複製篩選結果"
+    },
+    "category_tooltip": {
+      "ht": "",
+      "at": "按領域篩選行（飛船、飛船物品、任務、裝備、商品、日誌、其他）。分類由本地化鍵的字首決定。"
+    },
+    "status_tooltip": {
+      "ht": "",
+      "at": "按狀態篩選。已修改 = 你設定了自定義值；已增強 = 由智慧公民的增強流程生成（飛船資料、任務獎勵等）；未修改 = 僅預設文字；新增 = 該鍵僅存在於增強內容/user.ini 中，不在基礎檔案裡。"
+    },
+    "hide_unmodified_tooltip": {
+      "ht": "",
+      "at": "僅顯示你設定了自定義值的行。與狀態篩選中的“已修改”選項相同，但可單獨開關。"
+    },
+    "favorites_only_tooltip": {
+      "ht": "",
+      "at": "僅顯示你標記為收藏的行。收藏項會加上可自定義的字首，使其排在遊戲內列表的最前面。"
+    },
+    "bp_titles_only_tooltip": {
+      "ht": "",
+      "at": "僅顯示帶有 [BP] / [BP?] 藍圖示籤的任務標題。"
+    },
+    "bp_descs_only_tooltip": {
+      "ht": "",
+      "at": "僅顯示包含“潛在藍圖”部分的任務描述。"
+    },
+    "group_sort_tooltip": {
+      "ht": "",
+      "at": "將同一實體的標題和描述放在一起排序"
+    },
+    "clear_filters_tooltip": {
+      "ht": "",
+      "at": "重置所有篩選條件（分類、狀態、搜尋、逐列篩選框、核取方塊），顯示完整表格。"
+    },
+    "copy_filtered_tooltip": {
+      "ht": "",
+      "at": "將當前可見的篩選行復制到剪貼簿（以製表符分隔）"
+    }
+  },
+  "strings_tab": {
+    "col_category": {
+      "ht": "",
+      "at": "分類"
+    },
+    "col_key": {
+      "ht": "",
+      "at": "鍵名"
+    },
+    "col_default_value": {
+      "ht": "",
+      "at": "預設值"
+    },
+    "col_current_value": {
+      "ht": "",
+      "at": "當前值"
+    },
+    "col_star": {
+      "ht": "",
+      "at": "★"
+    },
+    "col_order": {
+      "ht": "",
+      "at": "#"
+    },
+    "col_custom_value": {
+      "ht": "",
+      "at": "自定義值"
+    },
+    "col_status": {
+      "ht": "",
+      "at": "狀態"
+    },
+    "col_owned": {
+      "ht": "",
+      "at": "已擁有"
+    },
+    "no_data": {
+      "ht": "",
+      "at": "未載入資料"
+    },
+    "preview_placeholder": {
+      "ht": "",
+      "at": "選擇一行以預覽其渲染後的文字。"
+    },
+    "context_underline": {
+      "ht": "",
+      "at": "下劃線"
+    },
+    "context_highlight": {
+      "ht": "",
+      "at": "高亮"
+    },
+    "editor_underline_tooltip": {
+      "ht": "",
+      "at": "為所選文字新增下劃線（用 <EM3>...</EM3> 包裹）"
+    },
+    "editor_highlight_tooltip": {
+      "ht": "",
+      "at": "為所選文字新增顏色高亮（用 <EM4>...</EM4> 包裹）"
+    },
+    "column_filter_tooltip": {
+      "ht": "",
+      "at": "篩選 {column} 列。跨列篩選條件以“與”組合。"
+    },
+    "column_filter_placeholder": {
+      "ht": "",
+      "at": "篩選 {column}…"
+    },
+    "editor_dock_title": {
+      "ht": "",
+      "at": "字串編輯器"
+    },
+    "no_row_selected": {
+      "ht": "",
+      "at": "（未選擇任何行）"
+    },
+    "editor_underline_btn": {
+      "ht": "",
+      "at": "下劃線"
+    },
+    "editor_highlight_btn": {
+      "ht": "",
+      "at": "高亮"
+    },
+    "editor_placeholder": {
+      "ht": "",
+      "at": "在字串編輯器表格中選擇一行，即可在此編輯其自定義值。"
+    },
+    "context_copy_cell": {
+      "ht": "",
+      "at": "複製單元格"
+    },
+    "context_copy_key": {
+      "ht": "",
+      "at": "複製鍵名"
+    },
+    "context_edit": {
+      "ht": "",
+      "at": "編輯"
+    },
+    "context_reset_to_original": {
+      "ht": "",
+      "at": "重置為原始值"
+    },
+    "context_copy_all_filtered": {
+      "ht": "",
+      "at": "複製所有篩選結果"
+    },
+    "context_remove_favorite": {
+      "ht": "",
+      "at": "★ 取消收藏"
+    },
+    "context_add_favorite": {
+      "ht": "",
+      "at": "★ 新增到收藏"
+    },
+    "showing_count": {
+      "ht": "",
+      "at": "顯示 {total} 個字串中的 {shown} 個"
+    },
+    "copied_key": {
+      "ht": "",
+      "at": "已複製：{loc_key}"
+    },
+    "pyperclip_missing": {
+      "ht": "",
+      "at": "未安裝 pyperclip"
+    }
+  },
+  "config": {
+    "title": {
+      "ht": "",
+      "at": "配置"
+    },
+    "instructions": {
+      "ht": "",
+      "at": "配置你的《星際公民》安裝路徑，從 Data.p4k 提取基礎本地化資料，並匯入外部 INI 檔案以自定義你的字串。"
+    },
+    "tools_group": {
+      "ht": "",
+      "at": "工具"
+    },
+    "tools_desc": {
+      "ht": "",
+      "at": "匯入外部 INI 檔案，將自定義字串合併到你的 user.ini 中。鍵會與 base.ini 進行校驗，衝突可互動式解決。"
+    },
+    "import_ini_btn": {
+      "ht": "",
+      "at": "匯入 INI…"
+    },
+    "reset_user_ini_btn": {
+      "ht": "",
+      "at": "重置 user.ini…"
+    },
+    "restore_user_ini_btn": {
+      "ht": "",
+      "at": "恢復 user.ini…"
+    },
+    "preview_apply_btn": {
+      "ht": "",
+      "at": "預覽應用"
+    },
+    "check_updates_btn": {
+      "ht": "",
+      "at": "檢查更新"
+    },
+    "appearance_group": {
+      "ht": "",
+      "at": "外觀"
+    },
+    "theme_label": {
+      "ht": "",
+      "at": "主題："
+    },
+    "theme_default": {
+      "ht": "",
+      "at": "預設"
+    },
+    "theme_light": {
+      "ht": "",
+      "at": "淺色"
+    },
+    "theme_dark": {
+      "ht": "",
+      "at": "深色"
+    },
+    "theme_odw": {
+      "ht": "",
+      "at": "ODW"
+    },
+    "star_citizen_group": {
+      "ht": "",
+      "at": "星際公民"
+    },
+    "installation_label": {
+      "ht": "",
+      "at": "安裝位置"
+    },
+    "installation_desc": {
+      "ht": "",
+      "at": "你的《星際公民》安裝根目錄路徑（包含 LIVE、PTU、EPTU、HOTFIX、TECH-PREVIEW 的目錄）。"
+    },
+    "browse_btn": {
+      "ht": "",
+      "at": "瀏覽…"
+    },
+    "channel_label": {
+      "ht": "",
+      "at": "頻道："
+    },
+    "language_label": {
+      "ht": "",
+      "at": "語言："
+    },
+    "map_language_btn": {
+      "ht": "",
+      "at": "對映語言檔案"
+    },
+    "map_language_title": {
+      "ht": "",
+      "at": "對映語言檔案"
+    },
+    "map_language_desc": {
+      "ht": "",
+      "at": "為每種語言的 global.ini 設定一個下載地址。切換到該語言時，智慧公民會下載並將其用作基礎字串，而不是使用英文 Data.p4k 提取結果。下載內容按語言快取，僅在發生變化時才會重新獲取。留空則使用內建預設值（如果有）。"
+    },
+    "base_localization_label": {
+      "ht": "",
+      "at": "基礎本地化"
+    },
+    "base_localization_desc": {
+      "ht": "",
+      "at": "從你已安裝的 Data.p4k 中提取 global.ini，獲取與你所安裝版本完全匹配的官方遊戲字串。"
+    },
+    "extract_btn": {
+      "ht": "",
+      "at": "從 Data.p4k 提取"
+    },
+    "data_group": {
+      "ht": "",
+      "at": "智慧公民資料"
+    },
+    "data_desc": {
+      "ht": "",
+      "at": "存放 user.ini、源快取、增強內容 INI 及備份的資料夾。如果清理快取失敗，請將其移出 OneDrive 同步的“文件”資料夾。DataForge XML 快取有獨立的路徑設定見下方——它約 1.4 GB，預設路徑會自動讓它避開 OneDrive。"
+    },
+    "app_data_label": {
+      "ht": "",
+      "at": "應用資料資料夾："
+    },
+    "dataforge_cache_label": {
+      "ht": "",
+      "at": "DataForge 快取資料夾："
+    },
+    "reset_btn": {
+      "ht": "",
+      "at": "重置"
+    },
+    "p4k_group": {
+      "ht": "",
+      "at": "基礎本地化（P4K 提取）"
+    },
+    "p4k_desc": {
+      "ht": "",
+      "at": "從你已安裝的 Data.p4k 中提取 global.ini，獲取與你所安裝版本完全匹配的官方遊戲字串。"
+    },
+    "p4k_status_found_with_base": {
+      "ht": "",
+      "at": "已找到 Data.p4k  |  base.ini 上次更新：{date}"
+    },
+    "p4k_status_found_no_base": {
+      "ht": "",
+      "at": "已找到 Data.p4k  |  base.ini 尚未提取"
+    },
+    "p4k_status_not_found": {
+      "ht": "",
+      "at": "在此路徑未找到 Data.p4k：{path}"
+    },
+    "p4k_status_no_path": {
+      "ht": "",
+      "at": "尚未配置遊戲安裝路徑"
+    },
+    "select_sc_root": {
+      "ht": "",
+      "at": "選擇《星際公民》安裝根目錄"
+    },
+    "select_data_folder": {
+      "ht": "",
+      "at": "選擇智慧公民資料資料夾"
+    },
+    "select_cache_folder": {
+      "ht": "",
+      "at": "選擇 DataForge 快取資料夾"
+    },
+    "migrate_data_title": {
+      "ht": "",
+      "at": "是否遷移你的資料？"
+    },
+    "migrate_data_body": {
+      "ht": "",
+      "at": "是否將你現有的智慧公民資料（覆蓋項、備份、快取的字串）從\n\n{old_dir}\n\n移動到新資料夾\n\n{new_dir}？\n\n新資料夾中已存在的檔案將被保留。移動完成後會清理舊資料夾。"
+    },
+    "migrate_data_done_title": {
+      "ht": "",
+      "at": "資料已移動"
+    },
+    "migrate_data_done_body": {
+      "ht": "",
+      "at": "已將 {count} 個檔案移動到新的資料資料夾。"
+    },
+    "migrate_data_failed_title": {
+      "ht": "",
+      "at": "遷移失敗"
+    },
+    "migrate_data_failed_body": {
+      "ht": "",
+      "at": "無法遷移你的資料：\n{error}"
+    },
+    "channel_not_installed_title": {
+      "ht": "",
+      "at": "該頻道未安裝"
+    },
+    "channel_not_installed_body": {
+      "ht": "",
+      "at": "當前根目錄下未安裝 {channel}。請透過 RSI 啟動器安裝，或選擇其他頻道。"
+    },
+    "invalid_data_folder_title": {
+      "ht": "",
+      "at": "無效的資料資料夾"
+    },
+    "invalid_cache_folder_title": {
+      "ht": "",
+      "at": "無效的快取資料夾"
+    },
+    "dataforge_cache_changed_title": {
+      "ht": "",
+      "at": "DataForge 快取路徑已更改"
+    },
+    "dataforge_cache_changed_body": {
+      "ht": "",
+      "at": "更改 DataForge 快取路徑需要重新從 Data.p4k 提取。\n\n重新提取完成後，應如何處理之前的快取？"
+    },
+    "re_extract_delete_old": {
+      "ht": "",
+      "at": "重新提取並刪除舊快取"
+    },
+    "re_extract_keep_old": {
+      "ht": "",
+      "at": "重新提取並保留舊快取"
+    },
+    "preview_title": {
+      "ht": "",
+      "at": "應用預覽"
+    },
+    "preview_header": {
+      "ht": "",
+      "at": "應用預覽\n\n合併順序（從上到下）：\n"
+    },
+    "preview_total": {
+      "ht": "",
+      "at": "\n總鍵數：{count:,}\n狀態統計：\n"
+    },
+    "no_sources_warning": {
+      "ht": "",
+      "at": "沒有可供合併的來源。"
+    },
+    "include_new_tooltip": {
+      "ht": "",
+      "at": "勾選後，從 DataForge XML 中發現的、且文字非空的專案（狀態為“新增”）將被包含到應用的 global.ini 中。"
+    },
+    "import_ini_tooltip": {
+      "ht": "",
+      "at": "將外部 .ini 合併到你的覆蓋項中。衝突解決對話方塊可讓你逐鍵決定：保留當前值、使用匯入值、追加、前置，或提供自定義值。"
+    },
+    "reset_user_ini_tooltip": {
+      "ht": "",
+      "at": "刪除當前頻道的所有自定義字串覆蓋。會在原檔案旁儲存帶時間戳的備份，方便恢復。"
+    },
+    "restore_user_ini_tooltip": {
+      "ht": "",
+      "at": "從自動快照恢復你的自定義字串覆蓋。智慧公民會保留 user.ini 最近的幾個狀態，方便你回滾錯誤編輯或在檔案被清空後恢復。"
+    },
+    "preview_apply_tooltip": {
+      "ht": "",
+      "at": "預演“應用增強內容”將寫入的內容——按來源統計鍵數（增強內容按分類細分），以及已修改/已增強/未修改/新增的狀態統計。在你點選“應用增強內容”之前，不會向遊戲寫入任何內容。"
+    },
+    "check_updates_tooltip": {
+      "ht": "",
+      "at": "在 GitHub 上檢查是否有更新的智慧公民版本。"
+    },
+    "theme_tooltip": {
+      "ht": "",
+      "at": "切換應用主題。會立即在主視窗、工具欄、標籤頁和幫助面板中生效。"
+    },
+    "disable_tutorial_tooltip": {
+      "ht": "",
+      "at": "勾選後，引導教程將不會在新版本中自動啟動。工具欄中的教程按鈕仍然可用。"
+    },
+    "game_path_tooltip": {
+      "ht": "",
+      "at": "《星際公民》安裝根目錄——包含 LIVE/、PTU/、EPTU/、HOTFIX/ 和（或）TECH-PREVIEW/ 的目錄。安裝時會自動檢測；如果你的遊戲安裝在其他位置，可在此編輯。下方的“頻道”下拉選單選擇應用讀寫哪個頻道。"
+    },
+    "browse_game_tooltip": {
+      "ht": "",
+      "at": "在資料夾瀏覽器中選擇《星際公民》安裝根目錄。"
+    },
+    "channel_tooltip": {
+      "ht": "",
+      "at": "讀取 Data.p4k 及寫入 global.ini 所用的《星際公民》頻道。安裝根目錄下沒有 Data.p4k 的頻道會被禁用。切換頻道會立即針對新頻道的資料重新載入字串。"
+    },
+    "channel_not_installed_tooltip": {
+      "ht": "",
+      "at": "{channel} 未安裝——在 {path} 未找到 Data.p4k"
+    },
+    "language_tooltip": {
+      "ht": "",
+      "at": "應用到遊戲的語言。翻譯中缺失的鍵會自動回退到英文。"
+    },
+    "map_language_tooltip": {
+      "ht": "",
+      "at": "為每種語言的 global.ini 設定一個下載地址。切換到該語言時，智慧公民會下載並將其用作基礎字串，而不是使用英文 Data.p4k 提取結果。"
+    },
+    "data_dir_tooltip": {
+      "ht": "",
+      "at": "智慧公民的應用資料根目錄。每個頻道在此目錄下都有自己的子資料夾。留空或點選重置以使用 文件\\Smart Citizen。"
+    },
+    "browse_data_tooltip": {
+      "ht": "",
+      "at": "在資料夾瀏覽器中選擇智慧公民資料資料夾。"
+    },
+    "reset_data_tooltip": {
+      "ht": "",
+      "at": "清除自定義資料資料夾，改用 文件\\Smart Citizen。"
+    },
+    "cache_dir_tooltip": {
+      "ht": "",
+      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.4 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
+    },
+    "browse_cache_tooltip": {
+      "ht": "",
+      "at": "在資料夾瀏覽器中選擇 DataForge 快取基礎資料夾。"
+    },
+    "reset_cache_tooltip": {
+      "ht": "",
+      "at": "清除自定義快取資料夾，改用平臺預設值。"
+    },
+    "extract_tooltip": {
+      "ht": "",
+      "at": "從你已安裝的 Data.p4k 中解包官方本地化內容（base.ini）以及 DataForge 實體 XML。每次《星際公民》更新後執行——提取完成後字串會自動重新載入到表格中。"
+    },
+    "include_new_cb": {
+      "ht": "",
+      "at": "包含新發現的專案"
+    },
+    "disable_tutorial_cb": {
+      "ht": "",
+      "at": "禁用教程"
+    },
+    "invalid_data_folder_body": {
+      "ht": "",
+      "at": "所選的資料資料夾是一個檔案，而不是目錄：\n{path}"
+    },
+    "onedrive_folder_title": {
+      "ht": "",
+      "at": "資料資料夾位於 OneDrive 中"
+    },
+    "onedrive_folder_body": {
+      "ht": "",
+      "at": "此資料夾位於 OneDrive 中：\n\n{path}\n\nOneDrive 可能會同步甚至清空這些檔案，已導致過編輯內容丟失。強烈建議使用 OneDrive 之外的本地資料夾。\n\n仍要使用此 OneDrive 資料夾嗎？"
+    },
+    "dataforge_cache_old_new": {
+      "ht": "",
+      "at": "舊：{old}\n新：{new}"
+    },
+    "channel_not_installed_hint": {
+      "ht": "",
+      "at": "⚠ 此根目錄下未安裝 {channel} — 請選擇其他頻道"
+    },
+    "preview_merge_failed": {
+      "ht": "",
+      "at": "預覽合併失敗：{error}"
+    },
+    "game_path_placeholder": {
+      "ht": "",
+      "at": "C:\\Program Files\\Roberts Space Industries\\StarCitizen"
+    },
+    "language_source_placeholder": {
+      "ht": "",
+      "at": "https://…/global.ini"
+    },
+    "backup_desc": {
+      "ht": "",
+      "at": "將你的所有設定——偏好設定、標籤配置、《星際公民》目錄，以及每個頻道的自定義字串覆蓋——儲存到一個小型備份檔案中。可在新電腦上、重新解壓便攜版後，或用於撤銷錯誤配置時匯入。備份可在不同 Smart Citizen 版本之間通用。遊戲快取不包含在內，它們會根據你的遊戲檔案自動重建。"
+    },
+    "backup_group": {
+      "ht": "",
+      "at": "設定備份"
+    },
+    "export_settings_btn": {
+      "ht": "",
+      "at": "匯出設定…"
+    },
+    "export_settings_tooltip": {
+      "ht": "",
+      "at": "將你的偏好設定、《星際公民》目錄和自定義字串覆蓋儲存為一個小型備份壓縮包（幾 KB 大小）。可儲存在任何地方——雲盤、U 盤——之後在任意 Smart Citizen 版本上匯入以恢復你的設定。"
+    },
+    "import_settings_btn": {
+      "ht": "",
+      "at": "匯入設定…"
+    },
+    "import_settings_tooltip": {
+      "ht": "",
+      "at": "恢復由任意 Smart Citizen 版本建立的設定備份壓縮包。系統會先為你當前的 user.ini 檔案建立快照，然後恢復你的《星際公民》目錄（如果備份中的路徑在本機不存在，則會自動檢測），最後 Smart Citizen 會以匯入的設定重新啟動。"
+    }
+  },
+  "enhancements": {
+    "title": {
+      "ht": "",
+      "at": "增強內容"
+    },
+    "desc": {
+      "ht": "",
+      "at": "擴充套件基礎本地化資料的可選功能：增強內容生成器的分類開關、遊戲內飛船列表的收藏字首，以及用於自定義元件、導彈和飛船武器括號名稱標籤的標籤生成器。"
+    },
+    "enhancements_group": {
+      "ht": "",
+      "at": "本地化增強內容"
+    },
+    "enhancements_desc": {
+      "ht": "",
+      "at": "選擇要包含的增強內容分類。點選“應用”儲存更改。增強內容根據你已安裝的 Data.p4k 生成。"
+    },
+    "cat_desc_ships": {
+      "ht": "",
+      "at": "飛船效能、配裝及船員資料"
+    },
+    "cat_desc_ship_items": {
+      "ht": "",
+      "at": "元件等級/尺寸/品級註釋及統計資料"
+    },
+    "cat_desc_gear": {
+      "ht": "",
+      "at": "FPS 武器的戰鬥資料"
+    },
+    "cat_desc_missions": {
+      "ht": "",
+      "at": "任務的經驗獎勵與藍圖掉落"
+    },
+    "cat_desc_commodities": {
+      "ht": "",
+      "at": "製作配方與材料用量"
+    },
+    "cat_desc_journal": {
+      "ht": "",
+      "at": "包含每種礦物製作資料的採礦彙編"
+    },
+    "cat_desc_medical_consumables": {
+      "ht": "",
+      "at": "CureLife 醫療筆的通俗效果說明"
+    },
+    "apply_btn": {
+      "ht": "",
+      "at": "應用"
+    },
+    "generate_btn": {
+      "ht": "",
+      "at": "生成增強內容"
+    },
+    "favorites_group": {
+      "ht": "",
+      "at": "收藏"
+    },
+    "favorites_desc": {
+      "ht": "",
+      "at": "生成的飛船列表中，星標飛船名稱會加上可自定義的字首，使其排在遊戲內飛船選擇列表的最前面。"
+    },
+    "sort_prefix_label": {
+      "ht": "",
+      "at": "排序字首："
+    },
+    "tag_builder_group": {
+      "ht": "",
+      "at": "標籤生成器"
+    },
+    "tag_builder_desc": {
+      "ht": "",
+      "at": "自定義元件、導彈和飛船武器上括號內的名稱標籤。更改需在點選“儲存標籤更改”並重新執行“生成增強內容”後生效。"
+    },
+    "preview_label": {
+      "ht": "",
+      "at": "預覽："
+    },
+    "annotate_mission_descs_cb": {
+      "ht": "",
+      "at": "在任務描述中為元件新增註釋"
+    },
+    "apply_tag_changes_btn": {
+      "ht": "",
+      "at": "儲存標籤更改"
+    },
+    "reset_defaults_btn": {
+      "ht": "",
+      "at": "恢復預設值"
+    },
+    "edit_mapping_btn": {
+      "ht": "",
+      "at": "編輯對映…"
+    },
+    "blueprints_group": {
+      "ht": "",
+      "at": "藍圖"
+    },
+    "blueprints_desc": {
+      "ht": "",
+      "at": "標記你已擁有的藍圖。已擁有的物品在任務的潛在藍圖獎勵中出現時會帶有 [Owned] 標籤，讓你一眼就能看出哪些值得追求。在左側選擇物品，用箭頭將它們移動到你的已擁有列表。"
+    },
+    "blueprints_empty_note": {
+      "ht": "",
+      "at": "請先生成任務增強內容以填充此列表。藍圖來自任務獎勵資料。"
+    },
+    "blueprints_search_placeholder": {
+      "ht": "",
+      "at": "按名稱搜尋藍圖…"
+    },
+    "blueprints_show_tags_checkbox": {
+      "ht": "",
+      "at": "在藍圖名稱上顯示標籤"
+    },
+    "blueprints_mission_label": {
+      "ht": "",
+      "at": "任務："
+    },
+    "blueprints_facet_any": {
+      "ht": "",
+      "at": "任意"
+    },
+    "blueprints_facet_type": {
+      "ht": "",
+      "at": "型別："
+    },
+    "blueprints_facet_class": {
+      "ht": "",
+      "at": "等級："
+    },
+    "blueprints_facet_size": {
+      "ht": "",
+      "at": "尺寸："
+    },
+    "blueprints_facet_grade": {
+      "ht": "",
+      "at": "品級："
+    },
+    "blueprints_filter_note": {
+      "ht": "",
+      "at": "型別會將所有物品分類為元件、FPS 武器、護甲或其他。等級、尺寸和品級僅適用於飛船元件。"
+    },
+    "blueprints_tooltip_missions": {
+      "ht": "",
+      "at": "任務：{missions}"
+    },
+    "blueprints_available_label": {
+      "ht": "",
+      "at": "可用藍圖"
+    },
+    "blueprints_owned_label": {
+      "ht": "",
+      "at": "已擁有藍圖"
+    },
+    "blueprints_add_tooltip": {
+      "ht": "",
+      "at": "將所選藍圖示記為已擁有"
+    },
+    "blueprints_remove_tooltip": {
+      "ht": "",
+      "at": "將所選藍圖從已擁有列表中移除"
+    },
+    "bp_scan_title": {
+      "ht": "",
+      "at": "藍圖掃描"
+    },
+    "bp_scan_starting": {
+      "ht": "",
+      "at": "正在掃描《星際公民》日誌以查詢已獲得的藍圖…"
+    },
+    "bp_scan_progress": {
+      "ht": "",
+      "at": "正在掃描 {file}…"
+    },
+    "bp_scan_finishing": {
+      "ht": "",
+      "at": "正在完成…"
+    },
+    "bp_scan_no_path": {
+      "ht": "",
+      "at": "未配置《星際公民》安裝路徑，因此沒有可掃描的日誌。請先在配置標籤頁設定你的遊戲資料夾。"
+    },
+    "bp_scan_none": {
+      "ht": "",
+      "at": "自上次掃描以來沒有發現新的藍圖。"
+    },
+    "mission_field_ace_tooltip": {
+      "ht": "",
+      "at": "當任務生成王牌飛行員時，在任務詳情正文中顯示“王牌飛行員：是”一行。[ACE] 標題標籤是一個獨立的開關，位於“通用標籤”下。將在下次“生成增強內容”時生效。"
+    },
+    "mission_field_default_tooltip": {
+      "ht": "",
+      "at": "在生成的任務正文中顯示 {label} 一行。將在下次“生成增強內容”時生效。"
+    },
+    "stats_prepend_tooltip": {
+      "ht": "",
+      "at": "將生成的資料統計塊放在製造商/公關描述上方，而不是下方（飛船、元件、武器）。將在下次“生成增強內容”時生效。"
+    },
+    "standardize_ship_names_tooltip": {
+      "ht": "",
+      "at": "為高管機庫（PYX）和 Wikelo（WIK）飛船變體重新命名，加上字尾以區別於標準認購版本（例如“Anvil F8C Lightning PYX”）。將在下次“生成增強內容”時生效。"
+    },
+    "apply_categories_tooltip": {
+      "ht": "",
+      "at": "儲存分類選擇。未勾選的分類將被禁用。"
+    },
+    "generate_enabled_tooltip": {
+      "ht": "",
+      "at": "根據你遊戲的 Data.p4k 生成增強本地化檔案。\n如果 DataForge 資料尚未快取，將自動提取\n（首次執行需幾分鐘；之後執行會很快）。"
+    },
+    "generate_disabled_tooltip": {
+      "ht": "",
+      "at": "已是最新——自上次執行以來，影響生成輸出的內容（分類、任務欄位、統計/名稱選項、標籤生成器）沒有變化。"
+    },
+    "favorite_prefix_tooltip": {
+      "ht": "",
+      "at": "新增到收藏飛船名稱前的字元，使其排在遊戲內飛船列表的最前面。更改後點選“應用字首”以更新所有現有收藏。"
+    },
+    "rep_xp_label_tooltip": {
+      "ht": "",
+      "at": "沒有陣營等級名稱的任務所使用的標籤（例如“聲望：+100 經驗”）"
+    },
+    "header_em_tooltip": {
+      "ht": "",
+      "at": "分割槽標題的樣式：下劃線（EM3）或藍色文字（EM4）"
+    },
+    "prefix_enabled_tooltip": {
+      "ht": "",
+      "at": "儲存所選字首，並更新所有現有收藏以使用它"
+    },
+    "prefix_disabled_tooltip": {
+      "ht": "",
+      "at": "已經應用——所選字首與你當前的收藏一致。"
+    },
+    "annotate_mission_descs_tooltip": {
+      "ht": "",
+      "at": "勾選後，配置的 [等級-Sx-品級] 標籤會被新增到任務描述“潛在藍圖”列表中的元件名稱上。取消勾選可讓任務正文更簡潔，同時在其他地方的實際元件名稱上保留標籤。"
+    },
+    "reset_tag_tooltip": {
+      "ht": "",
+      "at": "恢復每個分類（元件 / 導彈 / 飛船武器）的預設格式、對映和順序。在你點選“儲存標籤更改”或“生成增強內容”之前不會儲存或重新生成。"
+    },
+    "tag_enabled_tooltip": {
+      "ht": "",
+      "at": "儲存元件 / 導彈 / 飛船武器的標籤配置，並重新執行增強內容生成器。新標籤會在下次“應用增強內容”後出現在遊戲中。"
+    },
+    "tag_disabled_tooltip": {
+      "ht": "",
+      "at": "已儲存——自上次儲存以來標籤生成器沒有更改。"
+    },
+    "generating_enhancements_tooltip": {
+      "ht": "",
+      "at": "正在生成增強內容…"
+    },
+    "extracting_dataforge_tooltip": {
+      "ht": "",
+      "at": "正在從 Data.p4k 提取 DataForge…"
+    },
+    "tag_move_up_tooltip": {
+      "ht": "",
+      "at": "上移此元素"
+    },
+    "tag_move_down_tooltip": {
+      "ht": "",
+      "at": "下移此元素"
+    },
+    "tag_untick_exclude_tooltip": {
+      "ht": "",
+      "at": "取消勾選可將此元素從標籤中排除"
+    },
+    "tag_edit_mapping_row_btn": {
+      "ht": "",
+      "at": "編輯對映…"
+    },
+    "tag_mapping_tooltip_ordinance": {
+      "ht": "",
+      "at": "編輯每種追蹤型別使用的短/中/長文字（例如：Infrared → I / IR / Infrared）。"
+    },
+    "tag_mapping_tooltip_damage": {
+      "ht": "",
+      "at": "編輯每種傷害型別使用的短/中/長文字（例如：Energy → E / EN / Energy）。"
+    },
+    "tag_mapping_tooltip_type": {
+      "ht": "",
+      "at": "編輯每種元件型別使用的短/中/長文字（例如：Shield Generator → SH / SHLD / Shield）。"
+    },
+    "tag_mapping_tooltip_label": {
+      "ht": "",
+      "at": "編輯製造標籤的短/中/長文字（例如：Crafting → CF / Craft / Crafting）。"
+    },
+    "tag_mapping_tooltip_collection": {
+      "ht": "",
+      "at": "編輯收藏標籤的短/中/長文字（例如：Collection → Col / Collect / Collection）。"
+    },
+    "tag_mapping_tooltip_default": {
+      "ht": "",
+      "at": "編輯每個等級使用的短/中/長文字（例如：Military → M / MIL / Military）。"
+    },
+    "mission_detail_fields_heading": {
+      "ht": "",
+      "at": "任務詳情欄位："
+    },
+    "mission_field_mission_type": {
+      "ht": "",
+      "at": "任務型別"
+    },
+    "mission_field_difficulty": {
+      "ht": "",
+      "at": "難度"
+    },
+    "mission_field_hostiles": {
+      "ht": "",
+      "at": "敵對數量"
+    },
+    "mission_field_reputation": {
+      "ht": "",
+      "at": "聲望"
+    },
+    "mission_field_blueprints": {
+      "ht": "",
+      "at": "藍圖"
+    },
+    "mission_field_ace_pilot": {
+      "ht": "",
+      "at": "王牌飛行員"
+    },
+    "mission_detail_fields_note": {
+      "ht": "",
+      "at": "未勾選的欄位不會出現在任務描述中。下次生成增強內容時生效。"
+    },
+    "stats_prepend_cb": {
+      "ht": "",
+      "at": "在描述上方顯示屬性資料"
+    },
+    "standardize_ship_names_cb": {
+      "ht": "",
+      "at": "統一可獲取飛船的名稱"
+    },
+    "mission_labels_group": {
+      "ht": "",
+      "at": "任務標籤"
+    },
+    "mission_label_details": {
+      "ht": "",
+      "at": "詳情："
+    },
+    "mission_label_blueprints": {
+      "ht": "",
+      "at": "藍圖："
+    },
+    "mission_label_item_rewards": {
+      "ht": "",
+      "at": "物品獎勵："
+    },
+    "mission_label_blueprint_data": {
+      "ht": "",
+      "at": "藍圖資料："
+    },
+    "mission_label_xp": {
+      "ht": "",
+      "at": "經驗值標籤："
+    },
+    "mission_label_header_style": {
+      "ht": "",
+      "at": "標題樣式："
+    },
+    "em_label_underline": {
+      "ht": "",
+      "at": "下劃線"
+    },
+    "em_label_blue_text": {
+      "ht": "",
+      "at": "藍色文字"
+    },
+    "forge_status_not_extracted": {
+      "ht": "",
+      "at": "DataForge：尚未提取 — 點選“生成增強內容”開始"
+    },
+    "forge_status_outdated": {
+      "ht": "",
+      "at": "DataForge：快取已過期 — 點選“生成增強內容”以重新提取並更新"
+    },
+    "forge_status_up_to_date": {
+      "ht": "",
+      "at": "DataForge：快取已是最新 ✓"
+    },
+    "tag_separator_label": {
+      "ht": "",
+      "at": "分隔符："
+    },
+    "tag_enclosing_label": {
+      "ht": "",
+      "at": "括號樣式："
+    },
+    "tag_placement_label": {
+      "ht": "",
+      "at": "放置位置："
+    },
+    "tag_craft_usage_separator_label": {
+      "ht": "",
+      "at": "用途分隔符："
+    },
+    "mt_hauling_group": {
+      "ht": "",
+      "at": "運輸任務"
+    },
+    "mt_enable_route_cb": {
+      "ht": "",
+      "at": "在運輸任務標題中新增路線"
+    },
+    "mt_standardize_cb": {
+      "ht": "",
+      "at": "統一運輸任務名稱（例如所有公司統一顯示為“Medium Cargo Haul”，而不是“Large Shipment” / “Haul - Small Scale”）"
+    },
+    "mt_route_hint": {
+      "ht": "",
+      "at": "接受任務後，遊戲會自動填入實際的取貨和送貨地點。"
+    },
+    "mt_route_arrow_label": {
+      "ht": "",
+      "at": "路線箭頭："
+    },
+    "mt_title_separator_label": {
+      "ht": "",
+      "at": "標題分隔符："
+    },
+    "mt_rank_separator_label": {
+      "ht": "",
+      "at": "等級分隔符："
+    },
+    "mt_location_detail_label": {
+      "ht": "",
+      "at": "地點詳細程度："
+    },
+    "mt_shorten_titles_cb": {
+      "ht": "",
+      "at": "縮短原始標題（縮短常見短語，例如“Local Shipment Route” → “Route”）"
+    },
+    "mt_shorten_sizes_cb": {
+      "ht": "",
+      "at": "縮短貨艙容量（縮寫貨艙等級，例如“Extra Small” → “XS”）"
+    },
+    "mt_underline_direct_cb": {
+      "ht": "",
+      "at": "為“Direct”加下劃線（在遊戲中突出顯示“Direct”運輸任務）"
+    },
+    "mt_general_tags_group": {
+      "ht": "",
+      "at": "通用標籤"
+    },
+    "mt_general_tags_hint": {
+      "ht": "",
+      "at": "僅在任務標題中顯示或隱藏這些標籤"
+    },
+    "mt_tag_rep_cb": {
+      "ht": "",
+      "at": "聲望標籤（新增“[500 REP]”）"
+    },
+    "mt_tag_blueprint_cb": {
+      "ht": "",
+      "at": "藍圖示籤（新增“[BP]” / “[BP?]”）"
+    },
+    "mt_tag_ace_cb": {
+      "ht": "",
+      "at": "王牌標籤（新增“[ACE]” / “[ACE?]”）"
+    },
+    "mt_tag_rep_track_cb": {
+      "ht": "",
+      "at": "聲望軌道標籤（在聲望標籤後新增“(Security)” / “(Contractor)”）"
+    },
+    "mt_scanning_group": {
+      "ht": "",
+      "at": "掃描/採礦任務"
+    },
+    "mt_scanning_hint": {
+      "ht": "",
+      "at": "Recco Battaglia 的掃描/採礦任務針對特定可開採礦物，會在任務標題中顯示每種礦物的資源訊號值。"
+    },
+    "mt_tag_rs_cb": {
+      "ht": "",
+      "at": "顯示資源訊號（RS）標籤"
+    },
+    "mt_preview_route_off": {
+      "ht": "",
+      "at": "預覽：  {display} [50 REP]  （路線已關閉）"
+    },
+    "mt_preview_route_on": {
+      "ht": "",
+      "at": "預覽：  {display} [50 REP]"
+    },
+    "tag_preview": {
+      "ht": "",
+      "at": "預覽：  {content}"
+    },
+    "tag_preview_no_tag": {
+      "ht": "",
+      "at": "預覽：  {name}   （無標籤 — 所有元素均為空或已禁用）"
+    },
+    "mission_field_resource_signatures": {
+      "ht": "",
+      "at": "資源訊號"
+    },
+    "rs_ore_name_annotations_cb": {
+      "ht": "",
+      "at": "在礦石名稱旁顯示資源訊號（RS）"
+    },
+    "rs_ore_name_annotations_tooltip": {
+      "ht": "",
+      "at": "將每種可開採礦石的基礎資源訊號附加到其顯示名稱後（例如“Aluminium (RS 4285)”），使其在遊戲渲染該名稱的所有位置都會顯示——包括任務追蹤器。與“任務詳情欄位”下的“資源訊號”相互獨立。將在下次生成增強內容時生效。"
+    }
+  },
+  "blueprint_tracker": {
+    "title": {
+      "ht": "",
+      "at": "藍圖追蹤器"
+    },
+    "scan_logs_btn": {
+      "ht": "",
+      "at": "掃描日誌以查詢已擁有藍圖"
+    },
+    "scan_logs_tooltip": {
+      "ht": "",
+      "at": "掃描你的《星際公民》日誌檔案（Game.log 及 logbackups）以查詢“已獲得藍圖”獎勵通知，並自動將其標記為已擁有。"
+    },
+    "scan_other_channels_checkbox": {
+      "ht": "",
+      "at": "同時掃描 LIVE/HOTFIX（無論當前未啟用的是哪一個）"
+    },
+    "scan_other_channels_tooltip": {
+      "ht": "",
+      "at": "LIVE 和 HOTFIX 共享相同的賬號進度，因此在其中一個頻道獲得的藍圖也會出現在另一個頻道的日誌中。如果已安裝，也會掃描這兩個頻道中當前非啟用的那一個。PTU、EPTU 和 TECH-PREVIEW 是擁有各自獨立進度的測試版本，永遠不會被掃描。"
+    },
+    "force_rescan_checkbox": {
+      "ht": "",
+      "at": "重新掃描所有日誌（忽略上次掃描）"
+    },
+    "force_rescan_tooltip": {
+      "ht": "",
+      "at": "通常掃描只會讀取自上次掃描以來的事件，以保持速度。如果你的已擁有列表看起來不正確，且你想從頭重新讀取每個日誌，請勾選此項。下次掃描後會自動取消勾選。"
+    },
+    "apply_owned_tag_btn": {
+      "ht": "",
+      "at": "應用已擁有標籤"
+    },
+    "apply_owned_tag_tooltip": {
+      "ht": "",
+      "at": "重新整理字串表中藍圖名稱的 [Owned] 標籤，使其與你當前的已擁有列表匹配。"
+    },
+    "apply_owned_tag_tooltip_disabled": {
+      "ht": "",
+      "at": "已是最新——自上次應用以來，你的已擁有列表沒有變化。"
+    },
+    "owned_tags_refreshed": {
+      "ht": "",
+      "at": "[Owned] 標籤已重新整理，與你當前的已擁有列表保持一致。"
+    },
+    "export_owned_btn": {
+      "ht": "",
+      "at": "匯出已擁有藍圖…"
+    },
+    "export_owned_tooltip": {
+      "ht": "",
+      "at": "將你的已擁有列表儲存為 JSON 或 CSV 檔案，以便與其他工具或另一個 Smart Citizen 安裝共享進度。"
+    },
+    "import_owned_btn": {
+      "ht": "",
+      "at": "匯入已擁有藍圖…"
+    },
+    "import_owned_tooltip": {
+      "ht": "",
+      "at": "從 JSON 或 CSV 檔案（包括 scmdb.net 匯出的檔案）中新增已擁有的藍圖到你當前的已擁有列表。絕不會移除任何已標記為擁有的專案。"
+    },
+    "export_nothing_title": {
+      "ht": "",
+      "at": "沒有可匯出的內容"
+    },
+    "export_nothing_body": {
+      "ht": "",
+      "at": "你的已擁有列表為空，因此沒有可匯出的內容。"
+    },
+    "export_dialog_title": {
+      "ht": "",
+      "at": "匯出已擁有藍圖"
+    },
+    "export_default_filename": {
+      "ht": "",
+      "at": "owned-blueprints"
+    },
+    "export_json_filter": {
+      "ht": "",
+      "at": "JSON 檔案 (*.json)"
+    },
+    "export_csv_filter": {
+      "ht": "",
+      "at": "CSV 檔案 (*.csv)"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "匯出失敗"
+    },
+    "export_failed_body": {
+      "ht": "",
+      "at": "無法寫入檔案。\n\n{error_type}：{error}"
+    },
+    "export_done_title": {
+      "ht": "",
+      "at": "匯出完成"
+    },
+    "export_done_singular": {
+      "ht": "",
+      "at": "已將 1 個已擁有藍圖匯出至：\n{path}"
+    },
+    "export_done_plural": {
+      "ht": "",
+      "at": "已將 {count} 個已擁有藍圖匯出至：\n{path}"
+    },
+    "import_dialog_title": {
+      "ht": "",
+      "at": "匯入已擁有藍圖"
+    },
+    "import_file_filter": {
+      "ht": "",
+      "at": "藍圖匯出檔案 (*.json *.csv)"
+    },
+    "import_invalid_title": {
+      "ht": "",
+      "at": "匯入失敗"
+    },
+    "import_invalid_body": {
+      "ht": "",
+      "at": "無法讀取該檔案。\n\n{error}"
+    },
+    "import_nothing_matched_body": {
+      "ht": "",
+      "at": "該檔案中的 {count} 個藍圖目前均未被 Smart Citizen 追蹤，因此未匯入任何內容。"
+    },
+    "owned_added_singular": {
+      "ht": "",
+      "at": "已將 1 個藍圖新增到你的已擁有列表。它會在任務藍圖獎勵中出現的任何位置顯示 [Owned] 標籤。"
+    },
+    "owned_added_plural": {
+      "ht": "",
+      "at": "已將 {count} 個藍圖新增到你的已擁有列表。它們會在任務藍圖獎勵中出現的任何位置顯示 [Owned] 標籤。"
+    },
+    "import_skipped_note": {
+      "ht": "",
+      "at": "檔案中另有 {skipped} 個目前未被 Smart Citizen 追蹤，已被跳過。"
+    },
+    "show_skipped_btn": {
+      "ht": "",
+      "at": "顯示已跳過的藍圖"
+    },
+    "hide_skipped_btn": {
+      "ht": "",
+      "at": "隱藏已跳過的藍圖"
+    },
+    "show_added_btn": {
+      "ht": "",
+      "at": "顯示已新增的藍圖"
+    },
+    "hide_added_btn": {
+      "ht": "",
+      "at": "隱藏已新增的藍圖"
+    }
+  },
+  "log": {
+    "min_level_label": {
+      "ht": "",
+      "at": "最低階別："
+    },
+    "auto_scroll_check": {
+      "ht": "",
+      "at": "自動滾動"
+    },
+    "clear_btn": {
+      "ht": "",
+      "at": "清除"
+    },
+    "export_btn": {
+      "ht": "",
+      "at": "匯出到檔案…"
+    },
+    "export_title": {
+      "ht": "",
+      "at": "匯出日誌"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "匯出失敗"
+    },
+    "lines_label": {
+      "ht": "",
+      "at": "{count} 行"
+    },
+    "min_level_tooltip": {
+      "ht": "",
+      "at": "顯示的最低嚴重級別。低於所選級別的條目將被隱藏（DEBUG < INFO < WARNING < ERROR）。"
+    },
+    "auto_scroll_tooltip": {
+      "ht": "",
+      "at": "新日誌到達時自動滾動到最新條目。關閉後可在檢視舊日誌時固定檢視。"
+    },
+    "clear_tooltip": {
+      "ht": "",
+      "at": "清除螢幕上的日誌緩衝區。磁碟上的會話日誌檔案不受影響。"
+    },
+    "export_tooltip": {
+      "ht": "",
+      "at": "將當前日誌緩衝區儲存為 .log 檔案——在提交 Bug 報告時很有用。"
+    }
+  },
+  "import_dialog": {
+    "title": {
+      "ht": "",
+      "at": "匯入衝突"
+    },
+    "conflicts_group": {
+      "ht": "",
+      "at": "衝突（{count} 個鍵）"
+    },
+    "keep_all_btn": {
+      "ht": "",
+      "at": "全部保留當前值"
+    },
+    "import_all_btn": {
+      "ht": "",
+      "at": "全部匯入"
+    },
+    "col_key": {
+      "ht": "",
+      "at": "鍵名"
+    },
+    "col_current_value": {
+      "ht": "",
+      "at": "當前值"
+    },
+    "col_imported_value": {
+      "ht": "",
+      "at": "匯入值"
+    },
+    "col_resolution": {
+      "ht": "",
+      "at": "處理方式"
+    },
+    "resolution_keep": {
+      "ht": "",
+      "at": "保留當前值"
+    },
+    "resolution_use": {
+      "ht": "",
+      "at": "使用匯入值"
+    },
+    "resolution_append": {
+      "ht": "",
+      "at": "追加匯入值"
+    },
+    "resolution_prepend": {
+      "ht": "",
+      "at": "前置匯入值"
+    },
+    "resolution_custom": {
+      "ht": "",
+      "at": "自定義…"
+    },
+    "custom_value_title": {
+      "ht": "",
+      "at": "自定義值"
+    },
+    "custom_value_prompt": {
+      "ht": "",
+      "at": "為該鍵輸入自定義值：\n{loc_key}"
+    },
+    "auto_add_summary": {
+      "ht": "",
+      "at": "{count} 個鍵將被自動新增。"
+    },
+    "excluded_summary": {
+      "ht": "",
+      "at": "{count} 個鍵被排除（不在 base.ini 中）。"
+    },
+    "keep_all_tooltip": {
+      "ht": "",
+      "at": "透過保留現有值並丟棄匯入值來解決所有衝突。"
+    },
+    "import_all_tooltip": {
+      "ht": "",
+      "at": "透過接受匯入值並覆蓋現有值來解決所有衝突。"
+    }
+  },
+  "coach": {
+    "back_btn": {
+      "ht": "",
+      "at": "上一步"
+    },
+    "next_btn": {
+      "ht": "",
+      "at": "下一步"
+    },
+    "skip_btn": {
+      "ht": "",
+      "at": "跳過"
+    },
+    "finish_btn": {
+      "ht": "",
+      "at": "完成"
+    },
+    "step_counter": {
+      "ht": "",
+      "at": "第 {current} 步，共 {total} 步"
+    }
+  },
+  "tag_mapping_dialog": {
+    "hint": {
+      "ht": "",
+      "at": "編輯每個原始值在短/中/長長度下的呈現方式。標籤生成器中元素的樣式下拉選單決定使用哪種長度。"
+    },
+    "reset_btn": {
+      "ht": "",
+      "at": "恢復預設值"
+    },
+    "col_value": {
+      "ht": "",
+      "at": "值"
+    },
+    "col_short": {
+      "ht": "",
+      "at": "短"
+    },
+    "col_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "col_long": {
+      "ht": "",
+      "at": "長"
+    },
+    "reset_tooltip": {
+      "ht": "",
+      "at": "將此對映表中的每個單元格恢復為智慧公民內建的預設值。"
+    }
+  },
+  "dialogs": {
+    "warning_title": {
+      "ht": "",
+      "at": "警告"
+    },
+    "error_title": {
+      "ht": "",
+      "at": "錯誤"
+    },
+    "success_title": {
+      "ht": "",
+      "at": "成功"
+    },
+    "no_file_loaded": {
+      "ht": "",
+      "at": "請先載入一個檔案"
+    },
+    "no_game_path": {
+      "ht": "",
+      "at": "請在配置標籤頁中配置遊戲安裝路徑"
+    },
+    "missing_sources_title": {
+      "ht": "",
+      "at": "缺少來源"
+    },
+    "missing_sources_body": {
+      "ht": "",
+      "at": "以下已啟用的來源無法載入：\n\n  {names}\n\n它們的自定義內容將不會包含在應用的檔案中。\n\n是否仍要應用？"
+    },
+    "apply_status": {
+      "ht": "",
+      "at": "已應用到遊戲 | {user_count} 處使用者編輯 | {enhancement_count} 處增強內容"
+    },
+    "apply_failed_status": {
+      "ht": "",
+      "at": "應用失敗——校驗錯誤"
+    },
+    "validation_failed_title": {
+      "ht": "",
+      "at": "校驗失敗"
+    },
+    "validation_failed_body": {
+      "ht": "",
+      "at": "寫入的檔案未透過校驗，已被刪除。\n\n{msg}{restore_note}"
+    },
+    "nothing_to_clear_title": {
+      "ht": "",
+      "at": "沒有可清除的內容"
+    },
+    "nothing_to_clear_body": {
+      "ht": "",
+      "at": "在遊戲的本地化目錄中未找到自定義 global.ini。\n遊戲當前使用的是原版文字。"
+    },
+    "clear_localization_title": {
+      "ht": "",
+      "at": "清除本地化"
+    },
+    "clear_localization_body": {
+      "ht": "",
+      "at": "這將刪除以下位置的自定義 global.ini：\n{loc_dir}\n\n遊戲將恢復為預設（原版）本地化文字。\n\n你的覆蓋項會保留在應用中，可隨時重新應用。\n\n是否繼續？"
+    },
+    "clear_localization_done_title": {
+      "ht": "",
+      "at": "完成"
+    },
+    "clear_localization_done_body": {
+      "ht": "",
+      "at": "自定義本地化已移除。\n遊戲現在將使用預設文字。\n\n要重新應用你的覆蓋項和資料統計描述，請點選“應用增強內容”。"
+    },
+    "clear_localization_status": {
+      "ht": "",
+      "at": "本地化已清除——遊戲已恢復為原版文字"
+    },
+    "cache_empty_title": {
+      "ht": "",
+      "at": "快取為空"
+    },
+    "cache_empty_body": {
+      "ht": "",
+      "at": "快取目錄已經是空的。"
+    },
+    "clear_cache_title": {
+      "ht": "",
+      "at": "清除快取"
+    },
+    "dataforge_cache_title": {
+      "ht": "",
+      "at": "是否清除 DataForge 快取？"
+    },
+    "cache_cleared_title": {
+      "ht": "",
+      "at": "快取已清除"
+    },
+    "dir_not_found_title": {
+      "ht": "",
+      "at": "未找到目錄"
+    },
+    "nothing_to_export_title": {
+      "ht": "",
+      "at": "沒有可匯出的內容"
+    },
+    "nothing_to_export_body": {
+      "ht": "",
+      "at": "在遊戲的本地化目錄中未找到已應用的 global.ini。\n\n請先點選“應用增強內容”寫入你的自定義內容，然後再匯出以打包分享。"
+    },
+    "export_loc_pack_title": {
+      "ht": "",
+      "at": "匯出本地化包"
+    },
+    "export_complete_title": {
+      "ht": "",
+      "at": "匯出完成"
+    },
+    "export_complete_body": {
+      "ht": "",
+      "at": "本地化包已寫入：\n{out_path}\n\n頻道：{channel}\n原始檔大小：{source_size:,} 位元組\n壓縮包大小：{zip_size:,} 位元組"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "匯出失敗"
+    },
+    "export_failed_body": {
+      "ht": "",
+      "at": "無法寫入本地化包壓縮檔案：\n{error}"
+    },
+    "update_available_title": {
+      "ht": "",
+      "at": "智慧公民 — 有可用更新"
+    },
+    "update_available_body": {
+      "ht": "",
+      "at": "有新版本可用：v{latest}\n你當前是 v{current}。"
+    },
+    "update_open_release": {
+      "ht": "",
+      "at": "開啟發布頁面"
+    },
+    "update_later": {
+      "ht": "",
+      "at": "稍後"
+    },
+    "update_now": {
+      "ht": "",
+      "at": "立即更新"
+    },
+    "update_auto_note": {
+      "ht": "",
+      "at": "智慧公民將自動關閉、安裝更新並重新開啟。Windows 會先請求授權。"
+    },
+    "update_download_title": {
+      "ht": "",
+      "at": "正在下載更新"
+    },
+    "update_download_label": {
+      "ht": "",
+      "at": "正在下載智慧公民 v{latest}…"
+    },
+    "update_download_failed_title": {
+      "ht": "",
+      "at": "更新下載失敗"
+    },
+    "update_download_failed_body": {
+      "ht": "",
+      "at": "無法下載更新：\n\n{message}\n\n你可以從釋出頁面手動下載。"
+    },
+    "update_launch_failed_title": {
+      "ht": "",
+      "at": "更新未啟動"
+    },
+    "update_launch_failed_body": {
+      "ht": "",
+      "at": "更新安裝程式未能啟動（Windows 授權被拒絕或啟動失敗）。\n\n你可以稍後自行執行它：\n{path}\n\n智慧公民目前將繼續在當前版本上執行。"
+    },
+    "up_to_date_title": {
+      "ht": "",
+      "at": "智慧公民 — 已是最新版本"
+    },
+    "up_to_date_body": {
+      "ht": "",
+      "at": "你正在使用最新版本（v{current}）。"
+    },
+    "update_check_failed_title": {
+      "ht": "",
+      "at": "智慧公民 — 更新檢查失敗"
+    },
+    "update_check_failed_body": {
+      "ht": "",
+      "at": "無法檢查更新：\n\n{message}"
+    },
+    "nothing_to_reset_title": {
+      "ht": "",
+      "at": "沒有可重置的內容"
+    },
+    "nothing_to_reset_body": {
+      "ht": "",
+      "at": "{channel} 頻道沒有 user.ini——已經是原始值。\n\n檢查的路徑：\n{path}"
+    },
+    "reset_user_ini_title": {
+      "ht": "",
+      "at": "是否重置 user.ini？"
+    },
+    "reset_failed_title": {
+      "ht": "",
+      "at": "重置失敗"
+    },
+    "reset_failed_body": {
+      "ht": "",
+      "at": "無法重置 user.ini：\n\n{error}\n\n檔案仍然存在。請關閉其他可能開啟該檔案的程式（文字編輯器、同步客戶端），然後重試。"
+    },
+    "no_sources_body": {
+      "ht": "",
+      "at": "未配置任何來源。請在配置標籤頁中配置資料來源。"
+    },
+    "merge_failed": {
+      "ht": "",
+      "at": "合併失敗"
+    },
+    "merging_sources": {
+      "ht": "",
+      "at": "正在合併來源…"
+    },
+    "language_changed_status": {
+      "ht": "",
+      "at": "語言已切換為 {language}——正在重新載入來源…"
+    },
+    "language_downloading": {
+      "ht": "",
+      "at": "正在下載 {language} 本地化內容…"
+    },
+    "language_no_url": {
+      "ht": "",
+      "at": "尚未為 {language} 設定下載地址；顯示英文基礎內容。請使用“對映語言檔案”設定一個。"
+    },
+    "language_download_failed": {
+      "ht": "",
+      "at": "無法下載 {language} 本地化內容，也未找到快取副本。改為顯示英文基礎內容。請檢查“對映語言檔案”中的地址及你的網路連線，然後重試。"
+    },
+    "language_generating_enhancements": {
+      "ht": "",
+      "at": "正在從 DataForge 生成 {language} 增強內容…"
+    },
+    "file_not_found_title": {
+      "ht": "",
+      "at": "未找到檔案"
+    },
+    "file_not_found_body": {
+      "ht": "",
+      "at": "檔案不存在：\n{path}"
+    },
+    "empty_file_title": {
+      "ht": "",
+      "at": "空檔案"
+    },
+    "empty_file_body": {
+      "ht": "",
+      "at": "匯入的檔案不包含任何有效的 key=value 條目。"
+    },
+    "copy_filtered_title": {
+      "ht": "",
+      "at": "複製篩選結果"
+    },
+    "copy_filtered_empty": {
+      "ht": "",
+      "at": "沒有可複製的行。"
+    },
+    "copy_filtered_done": {
+      "ht": "",
+      "at": "已將 {count} 行復制到剪貼簿。"
+    },
+    "copy_error_title": {
+      "ht": "",
+      "at": "複製錯誤"
+    },
+    "copy_error_body": {
+      "ht": "",
+      "at": "複製到剪貼簿失敗：{error}"
+    },
+    "unapplied_changes_title": {
+      "ht": "",
+      "at": "存在未應用的更改"
+    },
+    "unapplied_changes_body": {
+      "ht": "",
+      "at": "你有尚未應用到遊戲的更改（“應用增強內容”按鈕仍顯示為紅色）。\n\n是否立即應用，還是不應用直接退出？"
+    },
+    "unapplied_changes_apply_now": {
+      "ht": "",
+      "at": "立即應用"
+    },
+    "unapplied_changes_exit": {
+      "ht": "",
+      "at": "不應用直接退出"
+    },
+    "browse_ini_tooltip": {
+      "ht": "",
+      "at": "選擇要匯入的本地 .ini 檔案。"
+    },
+    "generate_now_tooltip": {
+      "ht": "",
+      "at": "立即執行 DataForge 提取 + 增強內容流程。首次執行需要幾分鐘。"
+    },
+    "skip_generate_tooltip": {
+      "ht": "",
+      "at": "跳過生成增強內容，繼續操作。你可以之後在增強內容標籤頁中執行它。"
+    },
+    "crash_error_title": {
+      "ht": "",
+      "at": "Smart Citizen — 錯誤"
+    },
+    "show_log_btn": {
+      "ht": "",
+      "at": "顯示日誌"
+    },
+    "dismiss_btn": {
+      "ht": "",
+      "at": "關閉"
+    },
+    "suppressed_errors_suffix": {
+      "ht": "",
+      "at": "\n\n（另有 {count} 個錯誤已被隱藏 — 詳情請檢視日誌標籤頁）"
+    },
+    "failed_to_delete_global_ini": {
+      "ht": "",
+      "at": "刪除 global.ini 失敗：{error}"
+    },
+    "failed_to_merge_sources": {
+      "ht": "",
+      "at": "合併資料來源失敗：{error}"
+    },
+    "failed_to_load_sources": {
+      "ht": "",
+      "at": "載入資料來源失敗：{error}"
+    },
+    "app_title": {
+      "ht": "",
+      "at": "Smart Citizen"
+    },
+    "reset_proportions_title": {
+      "ht": "",
+      "at": "重置視窗比例"
+    },
+    "reset_proportions_body": {
+      "ht": "",
+      "at": "是否將視窗大小、面板佈局和字串編輯器的列寬恢復為預設值？\n\n已儲存的尺寸將被清除。您的設定和本地化資料不會受到影響。"
+    }
+  },
+  "progress": {
+    "reading_sources": {
+      "ht": "",
+      "at": "正在讀取原始檔…"
+    },
+    "creating_entries": {
+      "ht": "",
+      "at": "正在建立字串條目物件…"
+    },
+    "computing_sort_keys": {
+      "ht": "",
+      "at": "正在計算排序鍵…"
+    },
+    "ready": {
+      "ht": "",
+      "at": "就緒"
+    },
+    "applying_patches": {
+      "ht": "",
+      "at": "正在應用 DataForge 補丁…"
+    },
+    "loading_generator": {
+      "ht": "",
+      "at": "正在載入增強內容生成器…"
+    },
+    "generating_enhancements": {
+      "ht": "",
+      "at": "正在生成增強內容（首次執行可能需要幾分鐘）…"
+    },
+    "unp4k_launch": {
+      "ht": "",
+      "at": "正在啟動 unp4k——這可能需要一分鐘…"
+    },
+    "unp4k_launch_short": {
+      "ht": "",
+      "at": "正在啟動 unp4k…"
+    },
+    "copy_global": {
+      "ht": "",
+      "at": "正在將提取的 global.ini 複製到快取…"
+    },
+    "copy_global_short": {
+      "ht": "",
+      "at": "正在複製提取的 global.ini…"
+    },
+    "extract_dcb": {
+      "ht": "",
+      "at": "正在從 Data.p4k 提取 Game2.dcb…"
+    },
+    "unforge": {
+      "ht": "",
+      "at": "正在轉換 DataForge 資料庫——這需要幾分鐘…"
+    },
+    "unforge_short": {
+      "ht": "",
+      "at": "正在轉換 DataForge 資料庫…"
+    },
+    "caching_entities": {
+      "ht": "",
+      "at": "正在快取實體檔案…"
+    },
+    "snapshot_diff": {
+      "ht": "",
+      "at": "正在為差異對比建立快取快照…"
+    },
+    "syncing_sources": {
+      "ht": "",
+      "at": "正在同步資料來源..."
+    },
+    "starting_up_title": {
+      "ht": "",
+      "at": "正在啟動"
+    },
+    "enhancements_label": {
+      "ht": "",
+      "at": "正在從 DataForge 生成增強本地化內容…\n\n首次執行可能需要幾分鐘。"
+    },
+    "generating_enhancements_title": {
+      "ht": "",
+      "at": "正在生成增強內容"
+    },
+    "reloading_with_enhancements": {
+      "ht": "",
+      "at": "正在使用更新後的增強內容重新載入字串…"
+    },
+    "reloading_after_user_ini_restore": {
+      "ht": "",
+      "at": "正在恢復 user.ini 後重新載入 {channel}..."
+    }
+  },
+  "status_bar": {
+    "no_strings_loaded": {
+      "ht": "",
+      "at": "未載入字串：請先在配置標籤頁從 Data.p4k 提取"
+    },
+    "update_checking": {
+      "ht": "",
+      "at": "正在檢查…"
+    },
+    "update_available": {
+      "ht": "",
+      "at": "v{version} 可用"
+    },
+    "update_up_to_date": {
+      "ht": "",
+      "at": "已是最新（v{version}）"
+    },
+    "update_check_failed": {
+      "ht": "",
+      "at": "檢查失敗"
+    },
+    "update_indicator_available": {
+      "ht": "",
+      "at": "v{current} · 有可用更新"
+    },
+    "update_indicator_up_to_date": {
+      "ht": "",
+      "at": "v{current} · 已是最新"
+    },
+    "update_indicator_failed": {
+      "ht": "",
+      "at": "v{current} · 檢查失敗"
+    },
+    "open_release_page_tooltip": {
+      "ht": "",
+      "at": "開啟 v{version} 的釋出頁面"
+    },
+    "downloading_ini": {
+      "ht": "",
+      "at": "正在下載 INI 檔案..."
+    },
+    "starting_up": {
+      "ht": "",
+      "at": "正在啟動 — 正在同步資料來源..."
+    },
+    "generating_enhancements_background": {
+      "ht": "",
+      "at": "正在後臺生成增強內容…"
+    },
+    "enhancements_generated_applying": {
+      "ht": "",
+      "at": "增強內容已生成 — 正在應用到遊戲…"
+    },
+    "enhancements_generated_reloading": {
+      "ht": "",
+      "at": "增強內容已生成 — 正在重新載入條目…"
+    },
+    "enhancement_generation_failed": {
+      "ht": "",
+      "at": "增強內容生成失敗 — 詳情請檢視日誌標籤頁"
+    },
+    "user_ini_reset": {
+      "ht": "",
+      "at": "{channel} 的 user.ini 已重置（已建立備份）"
+    },
+    "user_ini_restored": {
+      "ht": "",
+      "at": "已恢復 {channel} 的 user.ini"
+    },
+    "channel_indicator": {
+      "ht": "",
+      "at": "頻道：{channel}"
+    },
+    "channel_switched_extracting": {
+      "ht": "",
+      "at": "已切換到 {channel} — 正在提取 Data.p4k…"
+    },
+    "channel_switched_reloading": {
+      "ht": "",
+      "at": "已切換到 {channel} — 正在重新載入資料來源…"
+    },
+    "data_folder_changed_extracting": {
+      "ht": "",
+      "at": "資料資料夾已更改為 {data_dir} — 正在提取 Data.p4k…"
+    },
+    "data_folder_changed_reloading": {
+      "ht": "",
+      "at": "資料資料夾已更改為 {data_dir} — 正在重新載入資料來源…"
+    },
+    "cache_folder_changed": {
+      "ht": "",
+      "at": "DataForge 快取資料夾已更改 — 正在從 Data.p4k 重新提取…"
+    },
+    "syncing_source": {
+      "ht": "",
+      "at": "正在同步 {source_name}..."
+    },
+    "source_updated": {
+      "ht": "",
+      "at": "已更新 ↑"
+    },
+    "source_offline": {
+      "ht": "",
+      "at": "（離線？）"
+    },
+    "entry_count": {
+      "ht": "",
+      "at": "{count} 個條目"
+    },
+    "override_count_suffix": {
+      "ht": "",
+      "at": " | {count} 項覆蓋"
+    },
+    "manifest_missing": {
+      "ht": "",
+      "at": "SC {channel}（缺少清單）"
+    },
+    "settings_exported": {
+      "ht": "",
+      "at": "設定備份已匯出"
+    },
+    "window_proportions_reset": {
+      "ht": "",
+      "at": "視窗比例已恢復為預設值。"
+    }
+  },
+  "import_flow": {
+    "source_dialog_title": {
+      "ht": "",
+      "at": "匯入 INI 檔案"
+    },
+    "source_dialog_label": {
+      "ht": "",
+      "at": "輸入本地檔案路徑或網址："
+    },
+    "source_dialog_placeholder": {
+      "ht": "",
+      "at": "C:\\path\\to\\file.ini 或 https://example.com/file.ini"
+    },
+    "browse_btn": {
+      "ht": "",
+      "at": "瀏覽..."
+    },
+    "select_ini_file_title": {
+      "ht": "",
+      "at": "選擇 INI 檔案"
+    },
+    "ini_file_filter": {
+      "ht": "",
+      "at": "INI 檔案 (*.ini);;所有檔案 (*)"
+    },
+    "download_error_title": {
+      "ht": "",
+      "at": "下載錯誤"
+    },
+    "download_error_body": {
+      "ht": "",
+      "at": "下載失敗：\n{source}\n\n{error}"
+    },
+    "no_base_data_title": {
+      "ht": "",
+      "at": "沒有基礎資料"
+    },
+    "no_base_data_body": {
+      "ht": "",
+      "at": "尚未載入基礎 INI。請先從 Data.p4k 提取。"
+    },
+    "no_valid_keys_title": {
+      "ht": "",
+      "at": "沒有有效的鍵"
+    },
+    "no_valid_keys_body": {
+      "ht": "",
+      "at": "匯入的 {count} 個鍵中沒有一個存在於 base.ini 中。\n所有鍵均已排除。"
+    },
+    "nothing_to_import_title": {
+      "ht": "",
+      "at": "沒有可匯入的內容"
+    },
+    "nothing_to_import_body": {
+      "ht": "",
+      "at": "所有匯入的鍵在 user.ini 中已存在，且值相同。"
+    },
+    "confirm_title": {
+      "ht": "",
+      "at": "匯入 INI"
+    },
+    "confirm_body": {
+      "ht": "",
+      "at": "將向 user.ini 新增 {new_count} 個新鍵。\n{excluded_count} 個鍵被排除（不在 base.ini 中）。\n\n是否繼續？"
+    },
+    "reload_status": {
+      "ht": "",
+      "at": "正在使用匯入的資料重新載入..."
+    },
+    "complete_title": {
+      "ht": "",
+      "at": "匯入完成"
+    },
+    "complete_body": {
+      "ht": "",
+      "at": "匯入成功。\n\n  已新增：{added} 個鍵\n  衝突已解決：{resolved} 個鍵\n  已排除：{excluded} 個鍵"
+    },
+    "error_title": {
+      "ht": "",
+      "at": "匯入錯誤"
+    },
+    "error_body": {
+      "ht": "",
+      "at": "匯入 INI 檔案失敗：\n{error}"
+    }
+  },
+  "restore_backup": {
+    "select_file_title": {
+      "ht": "",
+      "at": "選擇要恢復的備份檔案"
+    },
+    "file_filter": {
+      "ht": "",
+      "at": "備份檔案 (*.bak_*);;INI 檔案 (*.ini);;所有檔案 (*)"
+    },
+    "success_body": {
+      "ht": "",
+      "at": "已從以下位置恢復備份：\n{name}"
+    },
+    "error_body": {
+      "ht": "",
+      "at": "恢復備份失敗：{error}"
+    }
+  },
+  "onedrive": {
+    "warning_title": {
+      "ht": "",
+      "at": "你的 Smart Citizen 資料位於 OneDrive 中"
+    },
+    "warning_body": {
+      "ht": "",
+      "at": "Smart Citizen 將你的編輯內容（user.ini）、資料來源快取和備份儲存在：\n\n{data_dir}\n\n該資料夾位於 OneDrive 中。OneDrive 可能會同步甚至清空這些檔案，已導致過編輯內容丟失。將資料移動到 OneDrive 之外的本地資料夾可以避免此問題。\n\n是否移動到：\n{local} ？"
+    },
+    "move_btn": {
+      "ht": "",
+      "at": "移動到本地資料夾"
+    },
+    "keep_here_btn": {
+      "ht": "",
+      "at": "保留在此處"
+    },
+    "dont_warn_again": {
+      "ht": "",
+      "at": "不再提醒我"
+    }
+  },
+  "user_ini_reset": {
+    "backup_note": {
+      "ht": "",
+      "at": "\n\n備份已儲存到：\n{path}"
+    },
+    "complete_title": {
+      "ht": "",
+      "at": "user.ini 已重置"
+    },
+    "complete_body": {
+      "ht": "",
+      "at": "{channel} 頻道的所有自定義覆蓋內容均已清除。{backup_note}"
+    }
+  },
+  "restore_user_ini": {
+    "no_snapshots_title": {
+      "ht": "",
+      "at": "尚無快照"
+    },
+    "no_snapshots_body": {
+      "ht": "",
+      "at": "Smart Citizen 目前還沒有 {channel} 頻道的自動 user.ini 快照。每次你更改覆蓋內容時都會儲存一個快照，因此在你進行並儲存編輯後才會出現可恢復的還原點。"
+    },
+    "snapshot_label": {
+      "ht": "",
+      "at": "{when}  —  {lines} 項覆蓋，{size_kb} KB"
+    },
+    "picker_title": {
+      "ht": "",
+      "at": "恢復 user.ini"
+    },
+    "picker_label": {
+      "ht": "",
+      "at": "為 {channel} 頻道選擇一個要恢復的快照。\n你當前的 user.ini 會先被儲存為快照，因此此操作是可逆的。"
+    },
+    "restore_failed_title": {
+      "ht": "",
+      "at": "恢復失敗"
+    },
+    "restore_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen 無法恢復該快照：\n\n{error_type}：{error}"
+    },
+    "restored_title": {
+      "ht": "",
+      "at": "user.ini 已恢復"
+    },
+    "restored_body": {
+      "ht": "",
+      "at": "已從以下位置恢復 {channel} 頻道的覆蓋內容：\n{name}\n\n請執行“應用增強內容”將恢復的覆蓋內容推送到遊戲中。"
+    }
+  },
+  "extract": {
+    "path_required_title": {
+      "ht": "",
+      "at": "需要 Star Citizen 路徑"
+    },
+    "path_required_body": {
+      "ht": "",
+      "at": "尚未配置 Star Citizen 安裝路徑，也未找到快取的本地化資料。\n\n請在配置標籤頁設定你的 Star Citizen 安裝路徑，然後點選“提取”以載入遊戲的本地化字串。"
+    },
+    "p4k_prompt_title": {
+      "ht": "",
+      "at": "從 Data.p4k 提取"
+    },
+    "p4k_prompt_base_missing": {
+      "ht": "",
+      "at": "快取中未找到基礎本地化檔案。\n\n現在從 Data.p4k 提取 global.ini 嗎？\n（載入和顯示本地化字串需要此操作。）"
+    },
+    "p4k_prompt_p4k_newer": {
+      "ht": "",
+      "at": "Data.p4k 比你快取的 base.ini 更新。\n\n現在從 Data.p4k 提取 global.ini 嗎？\n（這將獲取與你當前安裝的遊戲版本完全匹配的原版字串。）"
+    },
+    "dataforge_outdated_title": {
+      "ht": "",
+      "at": "DataForge 快取已過期"
+    },
+    "dataforge_outdated_body": {
+      "ht": "",
+      "at": "你的 DataForge 實體快取比當前的 Data.p4k 更舊。\n\n現在重新提取 DataForge 並重新生成增強內容嗎？\n\n此操作需要幾分鐘，並會在後臺執行 — 你可以在此期間繼續編輯字串。如果不想等待，可以暫時跳過；你也可以隨時從增強內容標籤頁觸發此操作。"
+    },
+    "generate_dialog_title": {
+      "ht": "",
+      "at": "生成增強內容"
+    },
+    "category_singular": {
+      "ht": "",
+      "at": "。"
+    },
+    "category_plural": {
+      "ht": "",
+      "at": "。"
+    },
+    "missing_categories_body": {
+      "ht": "",
+      "at": "缺少 {count} 個增強類別{noun}\n請選擇要生成的內容。\n你之後可以在增強內容標籤頁中更改此設定。"
+    },
+    "missing_category_label": {
+      "ht": "",
+      "at": "{label}  （缺失）"
+    },
+    "dataforge_auto_extract_note": {
+      "ht": "",
+      "at": "如果 DataForge 資料尚未快取，將會自動提取。\n首次執行需要幾分鐘。"
+    },
+    "generate_btn": {
+      "ht": "",
+      "at": "生成"
+    },
+    "skip_btn": {
+      "ht": "",
+      "at": "跳過"
+    },
+    "dataforge_extracting_background": {
+      "ht": "",
+      "at": "正在後臺提取 DataForge — 這需要幾分鐘…"
+    },
+    "dataforge_extracting_label": {
+      "ht": "",
+      "at": "正在從 Data.p4k 提取 DataForge — 這需要幾分鐘…"
+    },
+    "dataforge_extraction_title": {
+      "ht": "",
+      "at": "DataForge 提取"
+    },
+    "dataforge_extraction_error_title": {
+      "ht": "",
+      "at": "DataForge 提取錯誤"
+    },
+    "dataforge_extraction_error_body": {
+      "ht": "",
+      "at": "DataForge 提取失敗：\n\n{message}\n\n詳情請檢視日誌標籤頁。"
+    },
+    "dataforge_extracted_generating": {
+      "ht": "",
+      "at": "DataForge 已提取 — 正在生成增強內容…"
+    },
+    "dataforge_extraction_failed": {
+      "ht": "",
+      "at": "DataForge 提取失敗 — 詳情請檢視日誌標籤頁"
+    },
+    "p4k_extracting_label": {
+      "ht": "",
+      "at": "正在從 Data.p4k 提取 global.ini..."
+    },
+    "p4k_extraction_title": {
+      "ht": "",
+      "at": "P4K 提取"
+    },
+    "extraction_error_title": {
+      "ht": "",
+      "at": "提取錯誤"
+    },
+    "p4k_locked": {
+      "ht": "",
+      "at": "《星際公民》目前似乎正在更新。它的遊戲檔案（Data.p4k）已被其他程式鎖定，通常是 RSI 啟動器正在下載或校驗更新。\n\n請等待 RSI 啟動器中的所有更新和校驗完成後再試。"
+    },
+    "dataforge_timeout": {
+      "ht": "",
+      "at": "遊戲資料庫轉換超過 30 分鐘已被中止。\n\n找到的資料庫：{dcb}（{size} MB），位於：\n{path}\n\n正常安裝的轉換用時遠少於一分鐘。這通常表示 Smart Citizen 讀取了錯誤的星際公民資料夾。驅動器上殘留的舊安裝看起來有效，但包含過時的遊戲檔案。\n\n請開啟 RSI Launcher 檢視其顯示的安裝位置。如果與上面的路徑不同，請在 Smart Citizen 的 Config 標籤頁中更正。如果路徑相同，請改為在啟動器中執行 Verify Files。"
+    }
+  },
+  "apply": {
+    "cannot_save_edits_title": {
+      "ht": "",
+      "at": "無法儲存你的編輯內容"
+    },
+    "cannot_save_edits_body": {
+      "ht": "",
+      "at": "Smart Citizen 無法將你的編輯內容寫入：\n\n  {path}\n\n{error_type}：{error}\n\n遊戲檔案未被修改。常見原因：\n  • 防毒軟體 / Windows 受控資料夾訪問阻止了對遊戲資料夾的寫入\n  • user.ini 檔案已在其他程式中開啟\n  • 磁碟為只讀或空間不足\n\n請解決相關問題後重新應用。"
+    },
+    "applied_body": {
+      "ht": "",
+      "at": "已應用到 {target_path}\n\n  使用者編輯數：{user_count}\n\n{enhancement_block}"
+    },
+    "failed_body": {
+      "ht": "",
+      "at": "應用到遊戲失敗：{error}"
+    }
+  },
+  "test_plan": {
+    "intro": {
+      "ht": "",
+      "at": "逐項檢查此構建版本中的每個專案，驗證後請打勾。你的進度會自動儲存。完成後，點選“複製報告”或“提交”來分享你的發現。"
+    },
+    "tester_label": {
+      "ht": "",
+      "at": "測試者："
+    },
+    "tester_placeholder": {
+      "ht": "",
+      "at": "你的名字或暱稱"
+    },
+    "submit_btn": {
+      "ht": "",
+      "at": "提交到 Discord"
+    },
+    "no_webhook_tooltip": {
+      "ht": "",
+      "at": "尚未配置 Discord Webhook。請設定 {env_var} 環境變數（或 test_plan/webhook_url 設定項）以啟用提交功能。在此之前請使用“複製報告”。"
+    },
+    "copy_report_btn": {
+      "ht": "",
+      "at": "複製報告"
+    },
+    "reset_btn": {
+      "ht": "",
+      "at": "重置"
+    },
+    "notes_label": {
+      "ht": "",
+      "at": "補充反饋（可選）："
+    },
+    "notes_placeholder": {
+      "ht": "",
+      "at": "描述任何錯誤、意外情況或建議..."
+    },
+    "copied_status": {
+      "ht": "",
+      "at": "報告已複製到剪貼簿。"
+    },
+    "copy_failed_status": {
+      "ht": "",
+      "at": "無法將報告複製到剪貼簿。"
+    },
+    "reset_status": {
+      "ht": "",
+      "at": "檢查清單已重置。"
+    },
+    "no_webhook_status": {
+      "ht": "",
+      "at": "尚未配置 Discord Webhook。"
+    },
+    "sending_status": {
+      "ht": "",
+      "at": "正在將報告傳送到 Discord..."
+    }
+  },
+  "tutorial": {
+    "welcome": {
+      "title": {
+        "ht": "",
+        "at": "歡迎使用智慧公民"
+      },
+      "description": {
+        "ht": "",
+        "at": "這段簡短的教程將介紹自定義字串並將結果應用到《星際公民》的核心工作流程。其中許多步驟會自動完成，但也可以按需手動執行。你可以隨時跳過。"
+      }
+    },
+    "extract": {
+      "title": {
+        "ht": "",
+        "at": "1. 從 Data.p4k 提取"
+      },
+      "description": {
+        "ht": "",
+        "at": "點選“提取”會解包你已安裝遊戲的官方本地化檔案。如果你當前的檔案因補丁而過期，系統應會提示你執行此操作；如果沒有，你也可以隨時手動執行。提取完成後，字串會自動重新載入到表格中。"
+      }
+    },
+    "enhancements": {
+      "title": {
+        "ht": "",
+        "at": "2. 增強內容"
+      },
+      "description": {
+        "ht": "",
+        "at": "可選但推薦：增強內容標籤頁可切換飛船、元件、武器、任務藍圖/獎勵以及商品製作的資料統計疊加層。“生成增強內容”會執行從你提取的資料中生成這些疊加層的流程。接下來的幾步將逐一介紹此標籤頁中的各個部分。"
+      }
+    },
+    "enh_categories": {
+      "title": {
+        "ht": "",
+        "at": "3. 增強內容：分類"
+      },
+      "description": {
+        "ht": "",
+        "at": "切換生成時執行的增強內容分類。飛船、元件、飛船武器、FPS 武器、任務、任務獎勵、商品製作和醫療消耗品均可獨立啟用。"
+      }
+    },
+    "enh_favorites": {
+      "title": {
+        "ht": "",
+        "at": "4. 增強內容：收藏"
+      },
+      "description": {
+        "ht": "",
+        "at": "選擇新增到收藏飛船名稱前的字首字元，使其排在遊戲內 ASOP 終端列表的最前面。預設是 *。"
+      }
+    },
+    "enh_mission_labels": {
+      "title": {
+        "ht": "",
+        "at": "5. 增強內容：任務標籤"
+      },
+      "description": {
+        "ht": "",
+        "at": "自定義分割槽標題（任務詳情 / 潛在藍圖 / 物品獎勵 / 藍圖資料）、在沒有特定陣營等級的任務上顯示的經驗標籤（預設“聲望”），以及標題的強調標籤（EM3 = 下劃線，EM4 = 顏色）。"
+      }
+    },
+    "enh_tag_builder": {
+      "title": {
+        "ht": "",
+        "at": "6. 增強內容：標籤生成器"
+      },
+      "description": {
+        "ht": "",
+        "at": "構建新增到元件、導彈、飛船武器和商品上的括號名稱標籤。用 ▲/▼ 重新排序元素，取消勾選可排除，更改縮寫長度，選擇分隔符和括號，或將標籤放在名稱之後而不是之前。"
+      }
+    },
+    "blueprint_tracker": {
+      "title": {
+        "ht": "",
+        "at": "7. 藍圖追蹤器"
+      },
+      "description": {
+        "ht": "",
+        "at": "標記你擁有的藍圖。可按名稱或任務搜尋左側列表，或按元件型別、等級、尺寸和品級縮小範圍，然後用箭頭將物品移動到你的已擁有列表。已擁有的藍圖在任務的潛在獎勵中出現時會帶有 [Owned] 標籤，讓你一眼就能看出哪些值得追求。"
+      }
+    },
+    "edit": {
+      "title": {
+        "ht": "",
+        "at": "8. 編輯字串"
+      },
+      "description": {
+        "ht": "",
+        "at": "每一行都是一條本地化記錄。雙擊“自定義值”列中的單元格進行編輯——你的更改會自動儲存。★ 列將飛船標記為收藏，使其排在 ASOP 的最前面。"
+      }
+    },
+    "filter_row": {
+      "title": {
+        "ht": "",
+        "at": "9. 按列篩選"
+      },
+      "description": {
+        "ht": "",
+        "at": "列標題下方的搜尋框行會在你輸入時篩選表格。每個框僅作用於其所屬的列（鍵名、預設值、當前值、自定義值）；跨列的篩選條件以“與”組合。點選框內的 × 可清空它。"
+      }
+    },
+    "editor": {
+      "title": {
+        "ht": "",
+        "at": "10. 編輯器面板"
+      },
+      "description": {
+        "ht": "",
+        "at": "對於較長的字串，點選“編輯器”開啟一個空間更大的側邊停靠編輯區域。該面板會跟隨你選擇的行；右鍵點選所選文字可新增下劃線/高亮強調。拖動標題欄可將其取消停靠為自由浮動視窗。"
+      }
+    },
+    "preview": {
+      "title": {
+        "ht": "",
+        "at": "11. 預覽面板"
+      },
+      "description": {
+        "ht": "",
+        "at": "每當你選擇一行，右側的這個面板會顯示其當前值渲染後的文字。"
+      }
+    },
+    "apply": {
+      "title": {
+        "ht": "",
+        "at": "12. 應用增強內容"
+      },
+      "description": {
+        "ht": "",
+        "at": "“應用”會將合併結果寫入遊戲的 global.ini。會先建立當前 global.ini 的帶時間戳備份（最多保留 5 個，可透過“恢復備份”還原）。"
+      }
+    },
+    "cfg_appearance": {
+      "title": {
+        "ht": "",
+        "at": "13. 配置：外觀"
+      },
+      "description": {
+        "ht": "",
+        "at": "選擇應用主題（預設 / 淺色 / 深色 / ODW），並可選擇禁用新版本的自動教程。"
+      }
+    },
+    "cfg_sc_install": {
+      "title": {
+        "ht": "",
+        "at": "14. 配置：星際公民安裝"
+      },
+      "description": {
+        "ht": "",
+        "at": "你的《星際公民》安裝根目錄路徑（包含 LIVE、PTU、EPTU 等的目錄）。安裝時會自動檢測；如果你的遊戲安裝在其他位置，可在此編輯。“頻道”下拉選單選擇應用讀寫哪個頻道，“語言”下拉選單則同時切換應用介面和遊戲字串。"
+      }
+    },
+    "cfg_data_folder": {
+      "title": {
+        "ht": "",
+        "at": "15. 配置：智慧公民資料"
+      },
+      "description": {
+        "ht": "",
+        "at": "存放 user.ini、快取、DataForge 提取內容、生成的增強內容 INI 及備份的位置。預設是 文件\\Smart Citizen；如果提取或快取清理速度較慢，請將其移出 OneDrive。"
+      }
+    },
+    "cfg_p4k_extraction": {
+      "title": {
+        "ht": "",
+        "at": "16. 配置：基礎本地化"
+      },
+      "description": {
+        "ht": "",
+        "at": "“從 Data.p4k 提取”按鈕就在此處。這是基礎字串和增強內容資料的唯一來源——在遊戲更新後重新執行以重新整理資料。"
+      }
+    },
+    "cfg_tools": {
+      "title": {
+        "ht": "",
+        "at": "17. 配置：工具"
+      },
+      "description": {
+        "ht": "",
+        "at": "透過沖突解決對話方塊將外部 INI 匯入到你的覆蓋項中，或重置當前頻道的 user.ini（清除前會自動備份）。"
+      }
+    },
+    "help": {
+      "title": {
+        "ht": "",
+        "at": "18. 幫助與反饋"
+      },
+      "description": {
+        "ht": "",
+        "at": "“幫助”按鈕會開啟一個側邊面板，其中包含完整指南、已知問題列表，以及智慧公民 Discord 頻道的反饋連結。到這裡，你需要了解的一切就都齊了——祝你好運，公民。"
+      }
+    }
+  },
+  "settings_backup": {
+    "export_dialog_title": {
+      "ht": "",
+      "at": "匯出設定備份"
+    },
+    "export_done_body": {
+      "ht": "",
+      "at": "你的設定已儲存至：\n{path}\n\n包含內容：{n_settings} 項設定，以及以下頻道的自定義字串覆蓋：{channels}。\n\n此檔案可儲存在任何地方——體積很小。使用“匯入設定”可在新電腦上或遷移到新便攜版本後恢復。"
+    },
+    "export_done_title": {
+      "ht": "",
+      "at": "設定已匯出"
+    },
+    "export_failed_body": {
+      "ht": "",
+      "at": "無法寫入備份壓縮包。\n\n{error_type}：{error}"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "匯出失敗"
+    },
+    "import_confirm_body": {
+      "ht": "",
+      "at": "此備份由 Smart Citizen v{version} 於 {when} 建立。\n\n包含 {n_settings} 項設定及以下頻道的字串覆蓋：{channels}。\n\n匯入將把這些內容疊加到你當前的設定上，並替換所列頻道的 user.ini（系統會先為你當前的 user.ini 檔案建立快照，因此可透過“恢復 user.ini”撤銷）。是否繼續？"
+    },
+    "import_confirm_title": {
+      "ht": "",
+      "at": "匯入這些設定？"
+    },
+    "import_dialog_title": {
+      "ht": "",
+      "at": "匯入設定備份"
+    },
+    "import_done_body_detected": {
+      "ht": "",
+      "at": "已匯入 {applied} 項設定及以下頻道的字串覆蓋：{channels}。\n\n備份中的《星際公民》目錄在本機不存在，因此已自動檢測為：\n{root}\n\nSmart Citizen 需要重啟以載入你匯入的設定。重啟後，它將提示你重新生成並應用增強內容。"
+    },
+    "import_done_body_no_install": {
+      "ht": "",
+      "at": "已匯入 {applied} 項設定及以下頻道的字串覆蓋：{channels}。\n\n未在本機找到《星際公民》安裝目錄——請在重啟後於“配置”標籤頁中設定。\n\nSmart Citizen 需要重啟以載入你匯入的設定。"
+    },
+    "import_done_body_restored": {
+      "ht": "",
+      "at": "已匯入 {applied} 項設定及以下頻道的字串覆蓋：{channels}。\n\n你的《星際公民》目錄已從備份中恢復：\n{root}\n\nSmart Citizen 需要重啟以載入你匯入的設定。重啟後，它將提示你重新生成並應用增強內容。"
+    },
+    "import_done_title": {
+      "ht": "",
+      "at": "設定已匯入"
+    },
+    "import_failed_body": {
+      "ht": "",
+      "at": "無法寫入匯入的覆蓋內容。\n\n{error_type}：{error}\n\n未對任何設定進行更改。"
+    },
+    "import_failed_title": {
+      "ht": "",
+      "at": "匯入失敗"
+    },
+    "import_invalid_body": {
+      "ht": "",
+      "at": "此檔案無法匯入：\n\n{error}"
+    },
+    "import_invalid_title": {
+      "ht": "",
+      "at": "不是設定備份檔案"
+    },
+    "no_channels": {
+      "ht": "",
+      "at": "無"
+    },
+    "post_import_apply_body": {
+      "ht": "",
+      "at": "你的設定已匯入。最後一步是根據本機的遊戲檔案生成增強內容並將其寫入遊戲。\n\n備份儲存的是你的設定，而非生成的遊戲文字，因此每臺新電腦上都需要執行一次此操作。通常只需幾分鐘——首次執行時會稍長一些，因為需要解包你的遊戲檔案。\n\n你也可以稍後透過“應用增強內容”按鈕來完成此操作。"
+    },
+    "post_import_apply_later_btn": {
+      "ht": "",
+      "at": "稍後"
+    },
+    "post_import_apply_now_btn": {
+      "ht": "",
+      "at": "立即應用"
+    },
+    "post_import_apply_title": {
+      "ht": "",
+      "at": "即將完成——應用到你的遊戲？"
+    },
+    "post_import_no_install_body": {
+      "ht": "",
+      "at": "你匯入的設定已載入，但尚未配置《星際公民》安裝目錄。請在“配置”標籤頁中設定安裝目錄，然後使用“應用增強內容”將你的自定義內容寫入遊戲。"
+    },
+    "post_import_no_install_title": {
+      "ht": "",
+      "at": "設定你的《星際公民》目錄"
+    },
+    "relaunch_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen 無法自行重啟。請手動重新啟動它——屆時你匯入的設定將會載入。"
+    },
+    "relaunch_failed_title": {
+      "ht": "",
+      "at": "重啟失敗"
+    },
+    "restart_later_btn": {
+      "ht": "",
+      "at": "稍後重啟"
+    },
+    "restart_now_btn": {
+      "ht": "",
+      "at": "立即重啟"
+    },
+    "zip_filter": {
+      "ht": "",
+      "at": "設定備份 (*.zip)"
+    }
+  }
+}

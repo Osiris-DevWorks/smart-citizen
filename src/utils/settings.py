@@ -40,14 +40,15 @@ def _bundled_language_sources() -> dict:
 # Maps our internal language folder name → Star Citizen's language identifier
 # used in Localization directory paths and g_language in user.cfg.
 SC_LANGUAGE_IDS: dict[str, str] = {
-    "english":       "english",
-    "french":        "french_(france)",
-    "spanish":       "spanish_(spain)",
-    "portuguese_br": "portuguese_(brazil)",
-    "japanese":      "japanese_(japan)",
-    "chinese":       "chinese_(simplified)",
-    "italian":       "italian_(italy)",
-    "german":        "german_(germany)",
+    "english":              "english",
+    "french":               "french_(france)",
+    "spanish":              "spanish_(spain)",
+    "portuguese_br":        "portuguese_(brazil)",
+    "japanese":             "japanese_(japan)",
+    "chinese":              "chinese_(simplified)",
+    "italian":              "italian_(italy)",
+    "german":               "german_(germany)",
+    "chinese_traditional":  "chinese_(traditional)",
 }
 
 
