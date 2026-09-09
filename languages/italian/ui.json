@@ -1366,6 +1366,10 @@
       "ht": "",
       "at": "Analizza i file di log di Star Citizen (Game.log e logbackups) alla ricerca delle notifiche di ricompensa \"Received Blueprint\" e li contrassegna automaticamente come posseduti."
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "",
+      "at": "È già in corso una scansione (potrebbe essere la scansione automatica all'avvio)."
+    },
     "scan_other_channels_checkbox": {
       "ht": "",
       "at": "Analizza anche LIVE/HOTFIX (quello non attivo)"
@@ -1381,6 +1385,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalmente una scansione legge solo gli eventi dall'ultima scansione, per rimanere veloce. Seleziona questa opzione se la tua lista dei posseduti sembra errata e vuoi rileggere ogni log da zero. Si deseleziona automaticamente dopo la scansione successiva."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Analizza automaticamente i log all'avvio"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Esegue automaticamente \"Analizza i log per i blueprint posseduti\" a ogni avvio di Smart Citizen, così la tua lista Posseduti resta aggiornata senza un clic manuale. Usa la stessa copertura dei canali e la stessa scansione incrementale del pulsante sopra."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Scansione automatica: {count} blueprint aggiunti alla tua lista Posseduti"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Mostra popup per i nuovi blueprint trovati dalla scansione automatica"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Quando la scansione automatica all'avvio trova nuovi blueprint, mostra lo stesso popup di riepilogo del pulsante Analizza i log, invece di un semplice messaggio nella barra di stato. Si applica solo quando una scansione trova effettivamente qualcosa di nuovo."
     },
     "apply_owned_tag_btn": {
       "ht": "",

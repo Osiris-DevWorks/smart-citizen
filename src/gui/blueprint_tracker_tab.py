@@ -172,9 +172,11 @@ class BlueprintTrackerTab(QWidget):
         # visible regardless of the empty-state gate below, since scanning
         # logs doesn't need mission data loaded, it reads the player's own
         # earned-blueprint history straight from Star Citizen's log files.
-        # Row 1: scan-behavior checkboxes (cols 0-1, which channels to cover
-        # #268 and whether to ignore the watermark #308, both only affecting
-        # "Scan Logs for Owned Blueprints") | Export/Import the Owned set
+        # Row 1: scan-behavior checkboxes (cols 0-1: which channels to cover
+        # #268, whether to ignore the watermark #308, whether to run the scan
+        # automatically on startup #386, and whether that auto-scan pops the
+        # normal summary dialog or just a status bar message -- all four only
+        # affecting "Scan Logs for Owned Blueprints") | Export/Import the Owned set
         # (#234, cols 2-3) -- secondary actions, smaller than the primary
         # scan/apply buttons above them, sharing the row since neither
         # checkbox nor export/import needs mission data loaded.
@@ -231,6 +233,53 @@ class BlueprintTrackerTab(QWidget):
             tr("blueprint_tracker.force_rescan_tooltip")
         )
         checkboxes_row.addWidget(self._force_rescan_checkbox)
+
+        # #386: run "Scan Logs for Owned Blueprints" automatically on every
+        # launch instead of only on a manual click. Off by default -- opt-in,
+        # since it's an extra background log read on every startup. Reads
+        # MainWindow's own scan pipeline (channel queue, watermark, #268
+        # multi-channel coverage) unchanged; only the result feedback differs
+        # (status bar, not a popup, so it doesn't interrupt every launch).
+        self._auto_scan_startup_checkbox = QCheckBox(
+            tr("blueprint_tracker.auto_scan_startup_checkbox")
+        )
+        self._auto_scan_startup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_startup_tooltip")
+        )
+        self._auto_scan_startup_checkbox.setChecked(
+            AppSettings.get_auto_scan_blueprints_enabled()
+        )
+        self._auto_scan_startup_checkbox.toggled.connect(
+            self._on_auto_scan_startup_toggled
+        )
+        checkboxes_row.addWidget(self._auto_scan_startup_checkbox)
+
+        # #386 follow-up: opt back INTO the manual scan's own popup for the
+        # auto-scan too, for anyone who wants the interruption. Off by
+        # default, same as the auto-scan checkbox itself -- the status bar
+        # message stays the default so a launch that finds something new
+        # doesn't surprise everyone who didn't ask for a popup. Only affects
+        # the "found new blueprints" case; a quiet run still never pops
+        # anything, checkbox or not.
+        self._auto_scan_popup_checkbox = QCheckBox(
+            tr("blueprint_tracker.auto_scan_popup_checkbox")
+        )
+        self._auto_scan_popup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_popup_tooltip")
+        )
+        self._auto_scan_popup_checkbox.setChecked(
+            AppSettings.get_auto_scan_show_popup_enabled()
+        )
+        self._auto_scan_popup_checkbox.toggled.connect(
+            AppSettings.set_auto_scan_show_popup_enabled
+        )
+        # #386 review: this setting has no effect unless auto-scan itself is
+        # on -- greyed out (not just documented in the tooltip) so that's
+        # visible rather than a silently inert checkbox.
+        self._auto_scan_popup_checkbox.setEnabled(
+            self._auto_scan_startup_checkbox.isChecked()
+        )
+        checkboxes_row.addWidget(self._auto_scan_popup_checkbox)
         checkboxes_row.addStretch()
         top_grid.addLayout(checkboxes_row, 1, 0, 1, 2)
 
@@ -379,7 +428,11 @@ class BlueprintTrackerTab(QWidget):
         self._title_label.setText(tr("blueprint_tracker.title"))
         self._blueprints_desc_label.setText(tr("enhancements.blueprints_desc"))
         self._scan_logs_btn.setText(tr("blueprint_tracker.scan_logs_btn"))
-        self._scan_logs_btn.setToolTip(tr("blueprint_tracker.scan_logs_tooltip"))
+        # #386 review: re-derive from the button's own enabled state rather
+        # than a second tracked flag, same as _set_owned_btn_dirty does for
+        # _owned_dirty -- correct even if a scan happens to be running when
+        # the language switches.
+        self.set_scan_logs_enabled(self._scan_logs_btn.isEnabled())
         self._export_owned_btn.setText(tr("blueprint_tracker.export_owned_btn"))
         self._export_owned_btn.setToolTip(tr("blueprint_tracker.export_owned_tooltip"))
         self._import_owned_btn.setText(tr("blueprint_tracker.import_owned_btn"))
@@ -395,6 +448,18 @@ class BlueprintTrackerTab(QWidget):
         )
         self._force_rescan_checkbox.setToolTip(
             tr("blueprint_tracker.force_rescan_tooltip")
+        )
+        self._auto_scan_startup_checkbox.setText(
+            tr("blueprint_tracker.auto_scan_startup_checkbox")
+        )
+        self._auto_scan_startup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_startup_tooltip")
+        )
+        self._auto_scan_popup_checkbox.setText(
+            tr("blueprint_tracker.auto_scan_popup_checkbox")
+        )
+        self._auto_scan_popup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_popup_tooltip")
         )
         self._apply_owned_btn.setText(tr("blueprint_tracker.apply_owned_tag_btn"))
         self._set_owned_btn_dirty(self._owned_dirty)  # re-applies the right tooltip
@@ -625,6 +690,14 @@ class BlueprintTrackerTab(QWidget):
         """Persist the show-tags display toggle and re-render (#221)."""
         AppSettings.set_blueprint_show_tags(checked)
         self._render_blueprint_lists()
+
+    def _on_auto_scan_startup_toggled(self, checked: bool) -> None:
+        """Persist the auto-scan checkbox and keep the popup checkbox's
+        enabled state in sync (#386 review) -- the popup setting has no
+        effect unless auto-scan itself is on, so greying it out here
+        (rather than leaving it clickable but inert) makes that visible."""
+        AppSettings.set_auto_scan_blueprints_enabled(checked)
+        self._auto_scan_popup_checkbox.setEnabled(checked)
 
     def _own_selected_blueprints(self) -> None:
         """Move every selected available item into the owned set (one write)."""
@@ -873,3 +946,19 @@ class BlueprintTrackerTab(QWidget):
         (called by MainWindow after the scan queue finishes), so the next
         click defaults back to a normal incremental scan."""
         self._force_rescan_checkbox.setChecked(False)
+
+    def set_scan_logs_enabled(self, enabled: bool) -> None:
+        """#386 review: gate the "Scan Logs" button while a scan is running.
+
+        Called by MainWindow around every scan run, manual or the silent
+        startup auto-scan. Without this, a click during an in-flight silent
+        auto-scan (no progress dialog, easy-to-miss status bar text) hit the
+        pre-existing reentrancy guard and did nothing -- no dialog, no
+        disabled button, nothing telling the user a scan was already
+        running. The disabled tooltip makes that visible instead of silent.
+        """
+        self._scan_logs_btn.setEnabled(enabled)
+        self._scan_logs_btn.setToolTip(
+            tr("blueprint_tracker.scan_logs_tooltip") if enabled
+            else tr("blueprint_tracker.scan_logs_already_running_tooltip")
+        )

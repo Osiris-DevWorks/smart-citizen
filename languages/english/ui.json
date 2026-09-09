@@ -1366,6 +1366,10 @@
       "ht": "Scan your Star Citizen log files (Game.log and logbackups) for \"Received Blueprint\" reward notifications and automatically mark them as owned.",
       "at": ""
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "A scan is already running (this may be the automatic startup scan).",
+      "at": ""
+    },
     "scan_other_channels_checkbox": {
       "ht": "Also scan LIVE/HOTFIX (whichever isn't active)",
       "at": ""
@@ -1380,6 +1384,26 @@
     },
     "force_rescan_tooltip": {
       "ht": "Normally a scan only reads events since your last scan, so it stays fast. Check this if your Owned list looks wrong and you want to re-read every log from scratch instead. Unchecks itself after the next scan.",
+      "at": ""
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "Auto-scan logs on startup",
+      "at": ""
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "Runs Scan Logs for Owned Blueprints automatically every time Smart Citizen starts, so your Owned list stays current without a manual click. Uses the same channel coverage and incremental scan as the button above.",
+      "at": ""
+    },
+    "auto_scan_status_added": {
+      "ht": "Auto-scan: {count} new blueprint(s) added to your Owned list",
+      "at": ""
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "Show popup for new blueprints found by auto-scan",
+      "at": ""
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "When the automatic startup scan finds new blueprints, show the same summary popup the manual Scan Logs button shows, instead of just a status bar message. Only applies when a scan actually finds something new.",
       "at": ""
     },
     "apply_owned_tag_btn": {

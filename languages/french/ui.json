@@ -1366,6 +1366,10 @@
       "ht": "",
       "at": "Analyse les fichiers journaux de Star Citizen (Game.log et logbackups) à la recherche des notifications de récompense « Received Blueprint » et marque automatiquement ces plans comme possédés."
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "",
+      "at": "Une analyse est déjà en cours (il peut s'agir de l'analyse automatique au démarrage)."
+    },
     "scan_other_channels_checkbox": {
       "ht": "",
       "at": "Analyser aussi LIVE/HOTFIX (celui qui n'est pas actif)"
@@ -1381,6 +1385,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalement, une analyse ne lit que les événements depuis votre dernière analyse pour rester rapide. Cochez cette case si votre liste de possédés semble incorrecte et que vous voulez relire chaque journal depuis le début. Se décoche automatiquement après l'analyse suivante."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Rechercher automatiquement dans les journaux au démarrage"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Exécute « Rechercher les plans possédés dans les journaux » automatiquement à chaque démarrage de Smart Citizen, pour que votre liste de possédés reste à jour sans clic manuel. Utilise la même couverture de canaux et la même analyse incrémentielle que le bouton ci-dessus."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Analyse automatique : {count} plans ajoutés à votre liste de possédés"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Afficher une fenêtre pour les nouveaux plans trouvés par l'analyse automatique"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Lorsque l'analyse automatique au démarrage trouve de nouveaux plans, affiche la même fenêtre récapitulative que le bouton Rechercher dans les journaux, au lieu d'un simple message dans la barre d'état. Ne s'applique que si une analyse trouve réellement quelque chose de nouveau."
     },
     "apply_owned_tag_btn": {
       "ht": "",

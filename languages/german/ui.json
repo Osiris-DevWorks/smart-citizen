@@ -1366,6 +1366,10 @@
       "ht": "",
       "at": "Deine Star-Citizen-Protokolldateien (Game.log und logbackups) nach „Received Blueprint“-Belohnungsmeldungen durchsuchen und diese automatisch als besessen markieren."
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "",
+      "at": "Es läuft bereits ein Scan (möglicherweise der automatische Start-Scan)."
+    },
     "apply_owned_tag_btn": {
       "ht": "",
       "at": "Besessen-Tags anwenden"
@@ -1441,6 +1445,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalerweise liest ein Scan nur Ereignisse seit deinem letzten Scan, damit er schnell bleibt. Aktiviere dies, wenn deine Liste eigener Baupläne falsch aussieht und du stattdessen jedes Log von Grund auf neu einlesen möchtest. Wird nach dem nächsten Scan automatisch wieder deaktiviert."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Protokolle beim Start automatisch durchsuchen"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Führt „Protokolle nach besessenen Bauplänen durchsuchen“ bei jedem Start von Smart Citizen automatisch aus, damit deine Liste eigener Baupläne ohne manuellen Klick aktuell bleibt. Nutzt dieselbe Kanalabdeckung und denselben inkrementellen Scan wie die Schaltfläche oben."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Auto-Scan: {count} Baupläne zu deiner Liste eigener Baupläne hinzugefügt"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Popup für vom Auto-Scan gefundene neue Baupläne anzeigen"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Wenn der automatische Start-Scan neue Baupläne findet, wird dasselbe Zusammenfassungs-Popup wie bei der Schaltfläche „Logs scannen\" angezeigt, statt nur einer Statusleisten-Meldung. Gilt nur, wenn ein Scan tatsächlich etwas Neues findet."
     },
     "hide_added_btn": {
       "ht": "",

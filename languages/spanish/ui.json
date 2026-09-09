@@ -1366,6 +1366,10 @@
       "ht": "",
       "at": "Escanea los archivos de registro de Star Citizen (Game.log y logbackups) en busca de notificaciones de recompensa \"Received Blueprint\" y marca esos blueprints automáticamente como adquiridos."
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "",
+      "at": "Ya hay un análisis en curso (puede ser el análisis automático al iniciar)."
+    },
     "scan_other_channels_checkbox": {
       "ht": "",
       "at": "Analizar también LIVE/HOTFIX (el que no esté activo)"
@@ -1381,6 +1385,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalmente un análisis solo lee eventos desde tu último análisis, para seguir siendo rápido. Marca esto si tu lista de poseídos parece incorrecta y quieres releer cada registro desde cero. Se desmarca sola después del siguiente análisis."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Escanear registros automáticamente al iniciar"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Ejecuta \"Escanear registros en busca de blueprints adquiridos\" automáticamente cada vez que se inicia Smart Citizen, para que tu lista de adquiridos se mantenga actualizada sin un clic manual. Usa la misma cobertura de canales y el mismo análisis incremental que el botón de arriba."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Análisis automático: {count} blueprints añadidos a tu lista de adquiridos"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Mostrar ventana emergente para nuevos blueprints encontrados por el análisis automático"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Cuando el análisis automático al iniciar encuentra nuevos blueprints, muestra la misma ventana emergente de resumen que el botón Escanear registros, en lugar de solo un mensaje en la barra de estado. Solo se aplica cuando un análisis realmente encuentra algo nuevo."
     },
     "apply_owned_tag_btn": {
       "ht": "",

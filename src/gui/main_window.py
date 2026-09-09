@@ -630,6 +630,11 @@ class MainWindow(QMainWindow):
         self._bp_scan_channel = None
         self._bp_scan_new_names = set()
         self._bp_scan_force_rescan = False
+        # #386: True for a run kicked off by the startup auto-scan rather
+        # than a manual button click -- read only in _finish_blueprint_scan_
+        # queue to swap the completion popups for a status bar message, so a
+        # launch with new blueprints doesn't interrupt with a modal dialog.
+        self._bp_scan_silent = False
 
         self.log_tab = LogTab()
         self._log_tab_index = self.tabs.addTab(self.log_tab, tr("tabs.log"))
@@ -3957,6 +3962,47 @@ class MainWindow(QMainWindow):
         self._start_startup_sync()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
+        self._maybe_auto_scan_blueprints()
+
+    def _maybe_auto_scan_blueprints(self) -> None:
+        """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
+
+        Reuses the exact channel-queue/worker pipeline the manual "Scan Logs"
+        button drives (_start_next_blueprint_scan onward) -- the only
+        difference is _bp_scan_silent, which _finish_blueprint_scan_queue
+        checks to swap the completion popups for a status bar message. A
+        launch is not the place for a modal dialog every single time,
+        especially once the owned set is mostly caught up and most runs find
+        nothing new.
+
+        Silently does nothing (no warning dialog, unlike the manual scan)
+        when the setting is off or the active channel has no valid install
+        path yet -- a fresh profile with no game configured shouldn't see an
+        install-path warning it never asked for on every launch.
+        """
+        if not AppSettings.get_auto_scan_blueprints_enabled():
+            return
+        if self._bp_log_scan_worker is not None:
+            return  # a scan is already running somehow; don't queue a second
+
+        channel_path = AppSettings.get_channel_install_path()
+        if not channel_path or not Path(channel_path).is_dir():
+            logger.info("BP auto-scan: skipped, no valid install path configured yet")
+            return
+
+        installed = AppSettings.get_available_channels()
+        other_enabled = AppSettings.get_scan_other_channels_enabled()
+        self._bp_scan_queue = _channels_to_scan(
+            AppSettings.get_active_channel(), other_enabled, installed
+        )
+        self._bp_scan_new_names = set()
+        # Always a normal incremental scan -- "Rescan all logs" is a
+        # deliberate one-shot the user ticks before a manual click, not
+        # something an unattended startup run should ever force.
+        self._bp_scan_force_rescan = False
+        self._bp_scan_silent = True
+        self.blueprint_tracker_tab.set_scan_logs_enabled(False)
+        self._start_next_blueprint_scan()
 
     def _maybe_warn_onedrive_data_dir(self) -> None:
         """Warn once when the data root is inside a OneDrive-managed folder (#172).
@@ -6033,6 +6079,7 @@ class MainWindow(QMainWindow):
         """
         if self._bp_log_scan_worker is not None:
             return  # already scanning
+        self._bp_scan_silent = False  # #386: a manual click always reports normally
 
         channel_path = AppSettings.get_channel_install_path()
         if not channel_path or not Path(channel_path).is_dir():
@@ -6054,6 +6101,7 @@ class MainWindow(QMainWindow):
         # epoch floor. Read once here (not inside the worker) so a scan
         # already in flight isn't affected by the checkbox changing mid-scan.
         self._bp_scan_force_rescan = self.blueprint_tracker_tab.is_force_rescan_checked()
+        self.blueprint_tracker_tab.set_scan_logs_enabled(False)
         self._start_next_blueprint_scan()
 
     def _start_next_blueprint_scan(self):
@@ -6084,14 +6132,21 @@ class MainWindow(QMainWindow):
             self._bp_scan_force_rescan, AppSettings.get_blueprint_log_watermark(channel=channel)
         )
         self._bp_log_scan_worker = BlueprintLogScanWorker(channel_path, since)
-        self._bp_log_scan_progress = AnimatedProgressDialog(
-            tr("enhancements.bp_scan_starting"),
-            parent=self,
-            title=tr("enhancements.bp_scan_title"),
-        )
+        # #386: a silent (startup auto-scan) run gets no progress dialog --
+        # it's a background operation, not something the user launched, so
+        # popping a window the moment the app starts would defeat the point.
+        # The status bar connection below still shows its progress text.
+        if self._bp_scan_silent:
+            self._bp_log_scan_progress = None
+        else:
+            self._bp_log_scan_progress = AnimatedProgressDialog(
+                tr("enhancements.bp_scan_starting"),
+                parent=self,
+                title=tr("enhancements.bp_scan_title"),
+            )
+            self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
+            self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
         self._bp_log_scan_worker.progress.connect(self.statusBar().showMessage)
-        self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
-        self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
         self._bp_log_scan_worker.error.connect(self._on_blueprint_log_scan_error)
         self._bp_log_scan_worker.finished.connect(self._on_blueprint_log_scan_finished)
         self._bp_log_scan_worker.start()
@@ -6186,8 +6241,21 @@ class MainWindow(QMainWindow):
             self._finish_blueprint_scan_queue()
 
     def _finish_blueprint_scan_queue(self):
-        """Write the combined owned-set change and show one summary dialog
-        covering every channel scanned this run (#268)."""
+        """Write the combined owned-set change and report the result,
+        covering every channel scanned this run (#268).
+
+        #386: a silent (startup auto-scan) run reports via the status bar
+        instead of the modal summary dialogs below -- consumed here, one-shot
+        per run, same as the force-rescan checkbox reset just below. Also the
+        single terminal point for every run regardless of source (manual or
+        auto-scan) or per-channel errors, so it's where the "Scan Logs"
+        button re-enables (#386 review) -- it was disabled the moment this
+        run actually started, in _run_blueprint_log_scan or
+        _maybe_auto_scan_blueprints.
+        """
+        self.blueprint_tracker_tab.set_scan_logs_enabled(True)
+        silent = self._bp_scan_silent
+        self._bp_scan_silent = False
         new_names = sorted(self._bp_scan_new_names)
         self._bp_scan_new_names = set()
         # #308: one-shot -- the checkbox is consumed by the whole queued run
@@ -6196,11 +6264,12 @@ class MainWindow(QMainWindow):
         self.blueprint_tracker_tab.reset_force_rescan_checkbox()
 
         if not new_names:
-            QMessageBox.information(
-                self,
-                tr("enhancements.bp_scan_title"),
-                tr("enhancements.bp_scan_none"),
-            )
+            if not silent:
+                QMessageBox.information(
+                    self,
+                    tr("enhancements.bp_scan_title"),
+                    tr("enhancements.bp_scan_none"),
+                )
             return
 
         owned = AppSettings.get_owned_items()
@@ -6211,6 +6280,16 @@ class MainWindow(QMainWindow):
         # otherwise it stayed red immediately after the summary below told
         # the user its tags were applied.
         self.blueprint_tracker_tab.mark_owned_clean()
+
+        # #386 follow-up: an opt-in escape hatch back to the normal popup,
+        # for anyone who wants the interruption on a launch that finds
+        # something new. A quiet run (the not-new_names branch above)
+        # ignores this setting entirely -- it only ever applies here.
+        if silent and not AppSettings.get_auto_scan_show_popup_enabled():
+            self.statusBar().showMessage(
+                tr("blueprint_tracker.auto_scan_status_added", count=len(new_names))
+            )
+            return
 
         summary = (
             tr("blueprint_tracker.owned_added_singular") if len(new_names) == 1

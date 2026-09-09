@@ -1366,6 +1366,10 @@
       "ht": "",
       "at": "扫描你的《星际公民》日志文件（Game.log 及 logbackups）以查找“已获得蓝图”奖励通知，并自动将其标记为已拥有。"
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "",
+      "at": "已有扫描正在进行（可能是启动时的自动扫描）。"
+    },
     "scan_other_channels_checkbox": {
       "ht": "",
       "at": "同时扫描 LIVE/HOTFIX（无论当前未激活的是哪一个）"
@@ -1381,6 +1385,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "通常扫描只会读取自上次扫描以来的事件，以保持速度。如果你的已拥有列表看起来不正确，且你想从头重新读取每个日志，请勾选此项。下次扫描后会自动取消勾选。"
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "启动时自动扫描日志"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "每次启动 Smart Citizen 时自动执行“扫描日志以查找已拥有蓝图”，无需手动点击即可让你的已拥有列表保持最新。使用与上方按钮相同的频道范围和增量扫描。"
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "自动扫描：已将 {count} 个蓝图添加到你的已拥有列表"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "自动扫描发现新蓝图时显示弹窗"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "当启动时的自动扫描发现新蓝图时，显示与手动扫描日志按钮相同的摘要弹窗，而不仅仅是状态栏消息。仅在扫描确实发现新内容时适用。"
     },
     "apply_owned_tag_btn": {
       "ht": "",
