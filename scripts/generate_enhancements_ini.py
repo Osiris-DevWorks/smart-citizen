@@ -7551,12 +7551,25 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         lookup_jobs["standings"] = _build_standings
 
     if lookup_jobs:
-        logger.info(f"Building {len(lookup_jobs)} lookups in parallel (workers={min(max_workers, len(lookup_jobs))})…")
-        _flush()
-        with ThreadPoolExecutor(max_workers=min(max_workers, len(lookup_jobs)),
-                                thread_name_prefix="lookup") as pool:
-            futures = {name: pool.submit(fn) for name, fn in lookup_jobs.items()}
-            results = {name: fut.result() for name, fut in futures.items()}
+        if len(lookup_jobs) == 1:
+            # A pool of one buys no parallelism, and spins up a background
+            # thread for nothing -- and a background thread spinning up a
+            # further nested thread to run lxml-based XML parsing is the
+            # exact shape issue #389 traced a native heap-corruption crash
+            # (0xC0000374) to. The precise mechanism was never conclusively
+            # pinned down, but not creating a thread that buys nothing is
+            # the defensible fix regardless.
+            name, fn = next(iter(lookup_jobs.items()))
+            logger.info(f"Building 1 lookup ({name})…")
+            _flush()
+            results = {name: fn()}
+        else:
+            logger.info(f"Building {len(lookup_jobs)} lookups in parallel (workers={min(max_workers, len(lookup_jobs))})…")
+            _flush()
+            with ThreadPoolExecutor(max_workers=min(max_workers, len(lookup_jobs)),
+                                    thread_name_prefix="lookup") as pool:
+                futures = {name: pool.submit(fn) for name, fn in lookup_jobs.items()}
+                results = {name: fut.result() for name, fut in futures.items()}
 
         if "vehicle_ammo" in results:
             vehicle_ammo = results["vehicle_ammo"]
@@ -7651,23 +7664,38 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     out_medical_consumables: dict[str, str] = {}
 
     if gen_jobs:
-        n_workers = min(max_workers, len(gen_jobs))
-        logger.info(f"Running {len(gen_jobs)} output generators in parallel (workers={n_workers}, pool=thread)…")
-        _flush()
-        with ThreadPoolExecutor(max_workers=n_workers,
-                                thread_name_prefix="gen") as pool:
-            futs = {name: pool.submit(fn, ctx) for name, fn in gen_jobs.items()}
-            for name, fut in futs.items():
-                result = fut.result()
-                _tick(f"Finished {name}")
-                if name == "components":          out_components   = result
-                elif name == "missiles":          out_missiles     = result
-                elif name == "ship_weapons":      out_ship_weapons = result
-                elif name == "fps_weapons":       out_fps_weapons  = result
-                elif name == "ships":             out_ships        = result
-                elif name == "missions":          out_missions     = result
-                elif name == "commodity_journal": out_commodities, out_journal = result
-                elif name == "medical_consumables": out_medical_consumables = result
+        results: dict = {}
+        if len(gen_jobs) == 1:
+            # Same reasoning as the lookup pool above (#389): a pool of one
+            # buys no parallelism, and is the exact shape a reported native
+            # heap-corruption crash (0xC0000374) traced back to -- a
+            # background QThread spinning up a further nested thread to run
+            # a single lxml-based generator.
+            name, fn = next(iter(gen_jobs.items()))
+            logger.info(f"Running 1 output generator ({name})…")
+            _flush()
+            results[name] = fn(ctx)
+            _tick(f"Finished {name}")
+        else:
+            n_workers = min(max_workers, len(gen_jobs))
+            logger.info(f"Running {len(gen_jobs)} output generators in parallel (workers={n_workers}, pool=thread)…")
+            _flush()
+            with ThreadPoolExecutor(max_workers=n_workers,
+                                    thread_name_prefix="gen") as pool:
+                futs = {name: pool.submit(fn, ctx) for name, fn in gen_jobs.items()}
+                for name, fut in futs.items():
+                    results[name] = fut.result()
+                    _tick(f"Finished {name}")
+
+        for name, result in results.items():
+            if name == "components":          out_components   = result
+            elif name == "missiles":          out_missiles     = result
+            elif name == "ship_weapons":      out_ship_weapons = result
+            elif name == "fps_weapons":       out_fps_weapons  = result
+            elif name == "ships":             out_ships        = result
+            elif name == "missions":          out_missions     = result
+            elif name == "commodity_journal": out_commodities, out_journal = result
+            elif name == "medical_consumables": out_medical_consumables = result
 
     # ── Apply loc-string workarounds for CIG data bugs ────────────────────────
     # XML patches we ran before this script realigned the enhancement

@@ -131,6 +131,30 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
 _LINKED_CHANNELS = frozenset({AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX})
 
 
+def _drop_none_entries(entries: list) -> list:
+    """Strip stray ``None`` items out of a freshly loaded/merged entries list.
+
+    Filtering only where a crash was actually observed (``update_category_
+    combo``'s ``e.category`` read, #389) isn't enough -- ``_restore_pending_
+    user_edits`` reads ``e.key`` on every entry earlier in the same reload
+    path and would crash there first whenever the snapshot is non-empty, and
+    the table model reads entries straight from ``self.entries`` afterward
+    regardless. A ``None`` has to be removed at the source, once, so every
+    downstream consumer sees a clean list. #389's own reported crash was a
+    native heap-corruption fault (0xC0000374); this can't undo memory
+    corruption, only stop it from also taking down the UI thread with an
+    AttributeError once the (already corrupted) entries reach Python code.
+    """
+    clean = [e for e in entries if e is not None]
+    dropped = len(entries) - len(clean)
+    if dropped:
+        logger.warning(
+            "Dropped %d None entr%s from a freshly loaded list (#389)",
+            dropped, "y" if dropped == 1 else "ies",
+        )
+    return clean
+
+
 def _channels_to_scan(active_channel: str, other_enabled: bool, installed_channels) -> list:
     """Which channels a "Scan Logs for Owned Blueprints" run should cover.
 
@@ -2711,6 +2735,7 @@ class MainWindow(QMainWindow):
                 # Load synchronously in main thread
                 logger.info("Merging configured sources...")
                 entries = load_source_files(sources_dict, hierarchy, enhancements_key_categories=enhancements_key_categories)
+                entries = _drop_none_entries(entries)
                 logger.info(f"Merge complete: {len(entries)} entries")
                 restored = self._restore_pending_user_edits(entries, pending_edits)
                 if restored:
@@ -5124,6 +5149,8 @@ class MainWindow(QMainWindow):
             self._loader_worker.quit()
             self._loader_worker.wait()
             self._loader_worker = None
+
+        entries = _drop_none_entries(entries)
 
         # Preserve in-memory edits the user hasn't Applied yet — Generate
         # Enhancements (and other reload paths) hit this slot with freshly
