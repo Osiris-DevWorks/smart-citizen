@@ -4,8 +4,10 @@ Three layers:
 
 * The AppSettings contract: default is 'simple', round-trips, and any
   unrecognized stored value coerces back to 'simple'.
-* The SimpleModeWidget: its two buttons emit the right intent signals and
-  ``set_busy`` disables the action.
+* The SimpleModeWidget: its two buttons emit the right intent signals,
+  ``set_busy`` disables the action, and ``set_apply_dirty`` (#397) mirrors
+  the Advanced-mode Apply button's red/green convention -- busy always
+  wins for enabled state, dirty always decides color.
 * ``MainWindow._apply_ui_mode``: shows one view and hides the other, along
   with the advanced toolbar. Driven on a lightweight stand-in ``self`` (the
   real unbound method) so we don't construct the whole window, which pulls in
@@ -96,6 +98,63 @@ def test_simple_widget_set_busy(qapp):
     assert not w.generate_apply_btn.isEnabled()
     w.set_busy(False)
     assert w.generate_apply_btn.isEnabled()
+
+
+def test_simple_widget_starts_dirty(qapp):
+    """#397: matches MainWindow._apply_dirty's own pre-load default -- red
+    and clickable from construction, not the old hardcoded-green button."""
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+    from src.utils.i18n import tr
+
+    w = SimpleModeWidget()
+    assert w.generate_apply_btn.isEnabled()
+    assert get_button_color("needs_apply") in w.generate_apply_btn.styleSheet()
+    assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip")
+
+
+def test_simple_widget_set_apply_dirty_toggles_color_enabled_and_tooltip(qapp):
+    """#397 follow-up: the tooltip has to swap with dirty state too, not
+    just color/enabled -- it was still showing the same static string in
+    both states even after the color/enabled half of the fix landed."""
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+    from src.utils.i18n import tr
+
+    w = SimpleModeWidget()
+    w.set_apply_dirty(False)
+    assert not w.generate_apply_btn.isEnabled()
+    assert get_button_color("apply") in w.generate_apply_btn.styleSheet()
+    assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip_disabled")
+
+    w.set_apply_dirty(True)
+    assert w.generate_apply_btn.isEnabled()
+    assert get_button_color("needs_apply") in w.generate_apply_btn.styleSheet()
+    assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip")
+
+
+def test_simple_widget_busy_overrides_dirty_for_enabled_not_color(qapp):
+    """A run in progress must disable the button regardless of dirty state,
+    but the color keeps reflecting dirty -- busy is a transient interaction
+    lock, not a verdict about whether there's anything to apply."""
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+
+    w = SimpleModeWidget()
+    w.set_apply_dirty(True)
+    w.set_busy(True)
+    assert not w.generate_apply_btn.isEnabled()
+    assert get_button_color("needs_apply") in w.generate_apply_btn.styleSheet()
+
+    # Clean (green) while busy: still disabled for the busy reason, not
+    # re-enabled just because dirty flipped mid-run.
+    w.set_apply_dirty(False)
+    assert not w.generate_apply_btn.isEnabled()
+
+    # Busy clears: enabled now reflects the dirty state set while busy,
+    # not whatever it was before the run started.
+    w.set_busy(False)
+    assert not w.generate_apply_btn.isEnabled()
 
 
 # ── _apply_ui_mode swap ─────────────────────────────────────────────────────

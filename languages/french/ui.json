@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Génère les derniers enrichissements avec les réglages par défaut et les applique à votre jeu. Une sauvegarde du fichier global.ini actuel est créée au préalable."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Déjà appliqué : rien n'a changé depuis la dernière application."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Utilise vos réglages par défaut. Le premier lancement peut prendre quelques minutes, le temps d'extraire DataForge."

@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Gera os aprimoramentos mais recentes com as configurações padrão e os aplica ao seu jogo. Um backup do global.ini atual é criado antes."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Já aplicado — nada mudou desde a última aplicação."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Usa suas configurações padrão. A primeira execução pode levar alguns minutos enquanto o DataForge é extraído."
