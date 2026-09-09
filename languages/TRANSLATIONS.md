@@ -47,8 +47,46 @@ them against the new source.
 - `enhancements.apply_tag_changes_btn` — English renamed from "Apply Tag
   Changes" to "Save Tag Changes" (#214, 2.1.2). Affects french,
   portuguese_br, spanish (all three still translate "Apply...").
+- `config.map_language_desc`, `dialogs.language_no_url`,
+  `dialogs.language_download_failed` — English reworded from URL-only to
+  URL-or-local-file phrasing for #367's local-file *Map Language File*
+  support. Affects spanish, whose human `ht` for all three still describes
+  a URL-only flow ("Define una URL al global.ini...", "No hay URL de
+  descarga configurada...").
 
 ## Backfill log
+
+- **2.4.0 cycle (2026-09-10, Claude Sonnet 5):** New language **korean** added
+  (#367), shipped as bring-your-own-file rather than with a bundled source.
+  Full AI translation of all 668 `ui.json` keys plus the 19-step guided tour
+  (`tutorial.*`), all `at`-only (`ht` empty). Translated `HELP.md`, `ABOUT.md`,
+  `LEGAL.md`, and `FAQ.md`. Unlike every other language here, `sources.json`
+  carries no URL for Korean (deliberately blank, with a comment explaining
+  why) — the Star Citizen Korean Localization Project (스타 시티즌 유저
+  한국어 프로젝트, run by the Shatagon/MGM Star Fleet/Falco Rescue guilds at
+  sc.galaxyhub.kr) licenses their `global.ini` for non-redistribution: it can
+  only be downloaded through their own patcher with a daily Discord-issued
+  access code. `SC_LANGUAGE_IDS["korean"] = "korean_(south_korea)"`, one of
+  the twelve official CIG Localization slots (confirmed via the community's
+  own installation guides, since Korean — unlike Turkish in the parallel
+  #404 work this cycle — has a real dedicated slot and needs no borrowing).
+  installer `LanguageChoicePage` gained a Korean option.
+
+  This is the first language to exercise **Map Language File**'s new
+  local-file support, added alongside it: `LanguageBaseDownloadWorker`
+  (`src/gui/workers.py`) now detects whether its mapped source is an
+  `http(s)://` URL (downloaded, freshness-checked, same as every other
+  language) or a local file path (copied via `shutil.copy2`, no network
+  round trip), and the *Map Language File* dialog (`config_tab.py`) gained a
+  per-row **Browse...** button so a user doesn't have to hand-type a Windows
+  path. `AppSettings.get_language_base_url()`'s docstring and the relevant
+  `ui.json` strings (`config.map_language_desc`, `config.map_language_tooltip`,
+  `dialogs.language_no_url`, `dialogs.language_download_failed`) were
+  reworded from URL-specific to source-agnostic language; a new
+  `dialogs.language_copying` key covers the copy-in-progress dialog title a
+  local source shows in place of "Downloading...". All 7 other languages
+  gained an AI `at`-only backfill for that one new key so their
+  key-universe tests stay green. Locked by `tests/test_korean_activation.py`.
 
 - **2.3.1 pre-release (2026-08-28, Claude Opus 5):** `ABOUT.md` docs-parity
   follow-up to the `HELP.md` sweep below — the window-layout work (#364) was
@@ -298,3 +336,23 @@ them against the new source.
   `g_language = german_(germany)` (`SC_LANGUAGE_IDS`). A German-speaking
   reviewer replacing the `at` strings with `ht` is the next step to promote
   it from AI-only to human-reviewed.
+- **korean** — AI-translated by **Claude** (#367). No human translator yet, so
+  **every** key is `at`-only (`ht` empty) — the whole UI, the guided tour
+  (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review (grep `"ht": ""` returns the entire
+  file by design). Unlike every other language here, Korean ships with
+  **no bundled `global.ini` source** — `sources.json`'s `korean` entry is
+  deliberately blank. The community source, the Star Citizen Korean
+  Localization Project (스타 시티즌 유저 한국어 프로젝트, sc.galaxyhub.kr),
+  licenses their file for non-redistribution and gates the download behind
+  a daily Discord access code, so there is no public URL Smart Citizen
+  could fetch even if it wanted to. Instead, a Korean-speaking user installs
+  the community patch themselves, then uses the Config tab's *Map Language
+  File* (now with a **Browse...** button, #367) to point Smart Citizen at
+  the `global.ini` they already have locally — Smart Citizen copies it in
+  rather than downloading it, and never redistributes it. Korean writes to
+  the game's `korean_(south_korea)` Localization folder with
+  `g_language = korean_(south_korea)` (`SC_LANGUAGE_IDS`) — one of CIG's
+  twelve official Localization slots. A Korean-speaking reviewer replacing
+  the `at` strings with `ht` is the next step to promote it from AI-only to
+  human-reviewed.

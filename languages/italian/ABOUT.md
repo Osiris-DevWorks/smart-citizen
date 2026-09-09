@@ -70,13 +70,14 @@ I testi di gioco in lingue diverse dall'inglese sono traduzioni della community:
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources): la traduzione di `global.ini` mantenuta dalla community che alimenta l'opzione di lingua giapponese.
 - [**42Kit**](https://ini.42kit.com/): la traduzione di `global.ini` mantenuta dalla community che alimenta l'opzione di lingua cinese.
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): la traduzione di `global.ini` mantenuta dalla community che alimenta l'opzione di lingua tedesca.
+- **[Progetto di localizzazione coreana per Star Citizen](https://sc.galaxyhub.kr)** (le gilde Shatagon, MGM Star Fleet e Falco Rescue) — il team della community dietro la localizzazione coreana. Il loro file non è incluso in Smart Citizen (la loro licenza non consente la ridistribuzione); il coreano è una lingua "porta il tuo file", mappata tramite *Mappa file lingua* su una copia locale che ottieni direttamente da loro.
 
 ## Caratteristiche principali
 
 ### 🎯 Funzionalità principali
 - **Carica e modifica**: carica il `global.ini` della tua installazione di Star Citizen e personalizza i testi in una vista a tabella intuitiva
 - **Supporto multi-canale**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW hanno ciascuno il proprio `user.ini`, cache, backup ed estrazione DataForge isolati — cambia canale dalla scheda Configurazione senza riavviare
-- **Supporto multilingua**: passa da una lingua all'altra per l'app e i testi di gioco tra inglese, francese, spagnolo, portoghese brasiliano, giapponese, cinese, italiano e tedesco dalla scheda Configurazione. Le lingue diverse dall'inglese sovrappongono un `global.ini` tradotto dalla community alla base inglese, con fallback in inglese per tutto ciò che non è tradotto. Altre lingue saranno rese disponibili man mano che arriveranno traduzioni dalla community (vedi `languages/TRANSLATIONS.md`)
+- **Supporto multilingua**: passa da una lingua all'altra per l'app e i testi di gioco tra inglese, francese, spagnolo, portoghese brasiliano, giapponese, cinese, italiano, tedesco e coreano (file personale) dalla scheda Configurazione. Le lingue diverse dall'inglese sovrappongono un `global.ini` tradotto dalla community alla base inglese, con fallback in inglese per tutto ciò che non è tradotto. Altre lingue saranno rese disponibili man mano che arriveranno traduzioni dalla community (vedi `languages/TRANSLATIONS.md`)
 - **Contratti di missione**: modifica il testo dei contratti di missione e dei briefing dalla categoria Missions dedicata
 - **Filtraggio intelligente**: cerca testi, filtra per categoria (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) o per stato di modifica
 - **Filtri per colonna**: digita direttamente nelle caselle di filtro sotto ogni intestazione di colonna per una ricerca dettagliata

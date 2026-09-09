@@ -1912,6 +1912,10 @@
       "ht": "",
       "at": "Téléchargement de la localisation {language}…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "Copie de la localisation {language}…"
+    },
     "language_no_url": {
       "ht": "",
       "at": "Aucune URL de téléchargement définie pour {language} ; les textes anglais de base sont affichés. Utilisez « Associer un fichier de langue » pour en définir une."

@@ -208,34 +208,45 @@ class StartupSyncWorker(QThread):
 
 
 class LanguageBaseDownloadWorker(QThread):
-    """Download a language's global.ini to its per-language base.ini path.
+    """Fetch a language's global.ini to its per-language base.ini path.
 
-    Uses ``download_file_if_changed`` so an unchanged remote (matched via
-    ETag / Last-Modified) is a fast no-op: switching back to a language whose
-    base.ini we already cached doesn't re-download the ~10 MB file.
+    ``source`` is either an ``http(s)://`` URL (the normal case) or a local
+    file path (#367: a language whose community source can't be redistributed,
+    e.g. Korean, is mapped via *Map Language File* to a file the user already
+    has on disk). URLs use ``download_file_if_changed`` so an unchanged remote
+    (matched via ETag / Last-Modified) is a fast no-op: switching back to a
+    language whose base.ini we already cached doesn't re-download the ~10 MB
+    file. A local path is just copied — there's no network round trip to
+    save a conditional request on.
     """
 
     finished = pyqtSignal(bool)  # True = a base.ini is present and usable
     error = pyqtSignal(str)
 
-    def __init__(self, url: str, dest_path):
+    def __init__(self, source: str, dest_path):
         super().__init__()
-        self._url = url
+        self._source = source
         self._dest = dest_path
 
     def run(self):
+        import shutil
         from src.utils.updater import download_file_if_changed
         try:
-            changed = download_file_if_changed(self._url, self._dest)
-            logger.info(
-                f"Language base.ini ready: {self._dest} "
-                f"({'downloaded' if changed else 'unchanged, used cache'})"
-            )
+            if self._source.startswith(("http://", "https://")):
+                changed = download_file_if_changed(self._source, self._dest)
+                logger.info(
+                    f"Language base.ini ready: {self._dest} "
+                    f"({'downloaded' if changed else 'unchanged, used cache'})"
+                )
+            else:
+                Path(self._dest).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(self._source, self._dest)
+                logger.info(f"Language base.ini ready: {self._dest} (copied from local file)")
             self.finished.emit(True)
         except Exception as e:
-            logger.exception(f"Language base.ini download failed: {e}")
+            logger.exception(f"Language base.ini fetch failed: {e}")
             self.error.emit(str(e))
-            # finished(False): a download failure isn't fatal — the caller
+            # finished(False): a fetch failure isn't fatal — the caller
             # falls back to any cached copy, or to English.
             self.finished.emit(False)
 

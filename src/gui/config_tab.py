@@ -1097,8 +1097,11 @@ class LanguageSourceDialog(QDialog):
             edit.setPlaceholderText(
                 bundled.get(lang, "") or tr("config.language_source_placeholder")
             )
+            browse_btn = QPushButton(tr("config.browse_btn"))
+            browse_btn.clicked.connect(lambda checked=False, e=edit: self._browse_for_local_file(e))
             grid.addWidget(label, row, 0)
             grid.addWidget(edit, row, 1)
+            grid.addWidget(browse_btn, row, 2)
             self._inputs[lang] = edit
         layout.addLayout(grid)
 
@@ -1108,6 +1111,18 @@ class LanguageSourceDialog(QDialog):
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _browse_for_local_file(self, edit: QLineEdit) -> None:
+        """Pick a local global.ini to map (#367): for a language whose
+        community source can't be redistributed (e.g. Korean), the user
+        already has their own file on disk from that community's own
+        installer and just needs to point Smart Citizen at it."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("import_flow.select_ini_file_title"), "",
+            tr("import_flow.ini_file_filter"),
+        )
+        if path:
+            edit.setText(path)
 
     def _save(self):
         for lang, edit in self._inputs.items():

@@ -1912,6 +1912,10 @@
       "ht": "Descargando localización {language}...",
       "at": ""
     },
+    "language_copying": {
+      "ht": "",
+      "at": "Copiando localización {language}..."
+    },
     "language_no_url": {
       "ht": "No hay URL de descarga configurada para {language}; se muestra la base inglesa. Usa Asignar archivo de idioma para configurar una.",
       "at": ""

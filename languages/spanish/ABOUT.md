@@ -72,13 +72,14 @@ Los textos del juego en idiomas distintos del inglés son traducciones comunitar
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources): la traducción comunitaria de `global.ini` que alimenta la opción de idioma japonés.
 - [**42Kit**](https://ini.42kit.com/): la traducción comunitaria de `global.ini` que alimenta la opción de idioma chino.
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): la traducción comunitaria de `global.ini` que alimenta la opción de idioma alemán.
+- **[Proyecto de Localización Coreana de Star Citizen](https://sc.galaxyhub.kr)** (los clanes Shatagon, MGM Star Fleet y Falco Rescue): el equipo comunitario detrás de la localización coreana. Su archivo no se incluye con Smart Citizen (su licencia no permite la redistribución); el coreano es un idioma "trae tu propio archivo", asignado mediante *Asignar archivo de idioma* a una copia local que obtienes directamente de ellos.
 
 ## Funciones principales
 
 ### 🎯 Funciones básicas
 - **Cargar y editar**: carga el `global.ini` de tu instalación de Star Citizen y personaliza los textos en una vista de tabla intuitiva
 - **Multi-canal**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW tienen cada uno su propio `user.ini`, caché, copias de seguridad y extracción de DataForge aislados; cambia de canal desde la pestaña Configuración sin reiniciar
-- **Multi-idioma**: alterna la aplicación y los textos del juego entre inglés, francés, español, portugués de Brasil, japonés, chino, italiano y alemán desde la pestaña Configuración. Los idiomas distintos del inglés superponen un `global.ini` traducido por la comunidad a la base en inglés, con retorno al inglés para lo no traducido. Se irán exponiendo más idiomas a medida que lleguen traducciones comunitarias (ver `languages/TRANSLATIONS.md`)
+- **Multi-idioma**: alterna la aplicación y los textos del juego entre inglés, francés, español, portugués de Brasil, japonés, chino, italiano, alemán y coreano (archivo propio) desde la pestaña Configuración. Los idiomas distintos del inglés superponen un `global.ini` traducido por la comunidad a la base en inglés, con retorno al inglés para lo no traducido. Se irán exponiendo más idiomas a medida que lleguen traducciones comunitarias (ver `languages/TRANSLATIONS.md`)
 - **Contratos de misión**: edita los textos de contratos y briefings desde la categoría Missions dedicada
 - **Filtrado inteligente**: busca textos, filtra por categoría (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) o por estado de modificación
 - **Filtros por columna**: escribe directamente en los cuadros de filtro bajo cada encabezado de columna para búsquedas precisas

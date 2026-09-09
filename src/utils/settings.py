@@ -48,6 +48,7 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     "chinese":       "chinese_(simplified)",
     "italian":       "italian_(italy)",
     "german":        "german_(germany)",
+    "korean":        "korean_(south_korea)",
 }
 
 
@@ -2747,12 +2748,15 @@ class AppSettings:
 
     @staticmethod
     def get_language_base_url(language: str) -> str:
-        """Resolve the global.ini download URL for *language*.
+        """Resolve the global.ini source for *language*: a URL to download,
+        or a local file path to copy (#367 — a language whose community
+        source can't be redistributed, e.g. Korean, ships with no bundled
+        URL and relies entirely on a user-supplied local path here).
 
         User override (Map Language File dialog) wins over the bundled
         ``languages/sources.json`` map. Returns '' when nothing is mapped
         (e.g. English, which uses the local P4K extraction, or a language
-        with no URL yet).
+        with no source yet).
         """
         override = AppSettings.get_language_source_override(language)
         if override:
