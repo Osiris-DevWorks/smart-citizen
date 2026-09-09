@@ -146,7 +146,7 @@ The non-English game strings are community translations:
 
 ### Support This Project
 Smart Citizen is completely free. If you find it valuable:
-- 💳 [Donate via PayPal](https://paypal.me/RighteousKill)
+- 💳 [Donate via PayPal](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Donate via Venmo](https://venmo.com/u/Amr-Abouelleil)
 
 ## Other Tools by Osiris DevWorks
