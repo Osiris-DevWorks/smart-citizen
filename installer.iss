@@ -92,6 +92,12 @@ var
     itself falls back to displaying English (index 0) for an unrecognized
     value. See #236 review discussion. }
   LanguageChoiceUnknownSaved: Boolean;
+  { #357: set by the checkbox on the custom uninstall confirmation dialog
+    (InitializeUninstall). False (the safe, non-destructive default) unless
+    the user explicitly ticked "also delete all saved settings" -- read by
+    CurUninstallStepChanged to decide between the normal cache-only cleanup
+    and the full opt-in wipe (DeleteAllUserSettings). }
+  DeleteAllSettingsChecked: Boolean;
 
 function IsAutoUpdate(): Boolean;
 begin
@@ -102,12 +108,55 @@ begin
   Result := ExpandConstant('{param:AUTOUPDATE|0}') = '1';
 end;
 
+function IsVerySilentUninstall(): Boolean;
+var
+  I: Integer;
+begin
+  { #357 review fix: UninstallSilent() is True for BOTH /SILENT and
+    /VERYSILENT, but only /VERYSILENT means genuinely headless -- /SILENT
+    still shows MsgBox prompts, and the "click NO, uninstall old version
+    only" branch of the reinstall-detection prompt below runs its
+    sub-uninstall with exactly /SILENT (an interactive user is sitting
+    right there, mid-click). Checking the actual command line instead of
+    UninstallSilent() distinguishes that case from the truly automated
+    /VERYSILENT auto-update cleanup (UnInstallOldVersion above). }
+  Result := False;
+  for I := 1 to ParamCount do
+  begin
+    if CompareText(ParamStr(I), '/VERYSILENT') = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
 function GetLocalCacheDefault(): String;
 begin
   { Mirrors AppSettings.get_dataforge_cache_base() default for registry
     mode: %LOCALAPPDATA%\Smart Citizen. Channel/cache/dataforge nesting
     is added by the app at runtime. }
   Result := ExpandConstant('{%LOCALAPPDATA}\Smart Citizen');
+end;
+
+function GetCacheDir(): String;
+var
+  OverridePath: String;
+begin
+  { #357: override-aware resolver for the DataForge cache location, mirroring
+    GetDocumentsDir's resolution order for user_data_dir. Needed so the
+    opt-in full-wipe uninstall (DeleteAllUserSettings) deletes wherever the
+    cache ACTUALLY lives, not just the %LOCALAPPDATA% default -- a user who
+    moved it to another drive would otherwise be left with a multi-GB
+    orphaned folder after "delete everything". }
+  if RegQueryStringValue(HKCU,
+    'Software\Osiris DevWorks\Smart Citizen',
+    'cache_dir', OverridePath) and (OverridePath <> '') then
+  begin
+    Result := OverridePath;
+    Exit;
+  end;
+  Result := GetLocalCacheDefault();
 end;
 
 function IsDocsOnOneDrive(): Boolean;
@@ -826,21 +875,239 @@ begin
   end;
 end;
 
+procedure DeleteAllUserSettings();
+var
+  UserDataDir, CacheDir, LegacyUserDataDir: String;
+begin
+  { #357: the ONE deliberate exception to the #172 persistence lock
+    documented in CurUninstallStepChanged below — only reached when the
+    user explicitly ticked "also delete all saved settings" on the custom
+    uninstall confirmation dialog (see InitializeUninstall). Removes the
+    three locations the app's settings/data can live in:
+      1. HKCU registry node (sc_directory, user_data_dir, cache_dir,
+         ui_mode, selected_language, the owned-blueprints set, everything
+         AppSettings persists in registry mode).
+      2. The user data folder (user.ini, backups, per-channel cache) —
+         wherever it ACTUALLY resolves to, matching GetDocumentsDir's own
+         override-aware resolution, not just the Documents default.
+      3. The separate DataForge cache folder (~1.4 GB) — wherever it
+         ACTUALLY resolves to (GetCacheDir). This one is never touched by
+         the normal uninstall path at all (CleanCachedData only ever
+         reaches into the user data folder's per-channel \cache
+         subfolders), so leaving it out here would defeat the point of a
+         "full" wipe for anyone who moved it to a custom drive.
+    Path resolution happens BEFORE the registry delete on purpose: both
+    overrides (user_data_dir / cache_dir) live in that registry node, so
+    deleting it first would make GetDocumentsDir/GetCacheDir fall back to
+    the wrong (default) location and silently miss a custom folder. }
+  Log('User opted in to full settings wipe (issue #357).');
+
+  UserDataDir := GetDocumentsDir();
+  CacheDir := GetCacheDir();
+
+  if DirExists(UserDataDir) then
+  begin
+    Log('Deleting user data folder: ' + UserDataDir);
+    if not DelTree(UserDataDir, True, True, True) then
+      Log('WARNING: DelTree returned false for user data folder: ' + UserDataDir);
+  end
+  else
+    Log('User data folder absent (nothing to delete): ' + UserDataDir);
+
+  { #357 review: the pre-0.9.0, pre-rebrand Documents folder (mirrors
+    MigrateUserDocsFolder's OldDir). GetDocumentsDir() only ever resolves to
+    the current "Smart Citizen" name -- an install that never launched a
+    post-rebrand build (so the migration rename never ran) would otherwise
+    keep its old user.ini/backups/cache here even after a "full wipe". Not
+    gated on user_data_dir being unset: the rename is unconditional on the
+    Documents base, independent of whether a later version's override is
+    also in play, so this folder can exist (or not) regardless. }
+  LegacyUserDataDir := GetDocumentsBase() + '\SC Localization Editor';
+  if DirExists(LegacyUserDataDir) then
+  begin
+    Log('Deleting legacy pre-rebrand user data folder: ' + LegacyUserDataDir);
+    if not DelTree(LegacyUserDataDir, True, True, True) then
+      Log('WARNING: DelTree returned false for legacy user data folder: ' + LegacyUserDataDir);
+  end;
+
+  { Skip if it's the same folder as (or nested under) the user data folder
+    already just deleted above -- a custom cache_dir is normally a wholly
+    separate location, but avoid a redundant/confusing second DelTree pass
+    over the same path either way. PathUnderRoot covers both cases: it
+    matches an exact match too, since normalizing both sides the same way
+    before the prefix test makes a path trivially "under" itself. }
+  if (CacheDir <> '') and (not PathUnderRoot(CacheDir, UserDataDir)) then
+  begin
+    if DirExists(CacheDir) then
+    begin
+      Log('Deleting DataForge cache folder: ' + CacheDir);
+      if not DelTree(CacheDir, True, True, True) then
+        Log('WARNING: DelTree returned false for cache folder: ' + CacheDir);
+    end
+    else
+      Log('DataForge cache folder absent (nothing to delete): ' + CacheDir);
+  end;
+
+  if RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Osiris DevWorks\Smart Citizen') then
+    Log('Deleted HKCU registry node: Software\Osiris DevWorks\Smart Citizen')
+  else
+    Log('HKCU registry node delete returned false (may already be absent).');
+  { Legacy pre-rebrand node, in case an ancient install never migrated. }
+  RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Osiris DevWorks\SC Localization Editor');
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
   begin
-    { Same cleanup contract as install/upgrade: per-channel \cache gets
-      nuked, \backups + user.ini survive so a reinstall picks up where
-      the user left off. Only \cache is disposable.
+    if DeleteAllSettingsChecked then
+    begin
+      { #357: user explicitly opted in via the uninstall confirmation
+        dialog's checkbox -- see DeleteAllUserSettings for what this
+        deletes and why it supersedes the normal CleanCachedData() call
+        below (it deletes the whole user data folder, a superset of the
+        per-channel \cache CleanCachedData targets). }
+      DeleteAllUserSettings();
+    end
+    else
+    begin
+      { Same cleanup contract as install/upgrade: per-channel \cache gets
+        nuked, \backups + user.ini survive so a reinstall picks up where
+        the user left off. Only \cache is disposable.
 
-      Persistence lock (#172): do NOT delete the live registry node
-      'Software\Osiris DevWorks\Smart Citizen' or any of its values here —
-      user_data_dir (and the other settings) MUST survive uninstall so the
-      next install pre-fills the user's chosen data folder. Wiping the node
-      is exactly the regression that let the data-folder choice revert. }
-    Log('Cleaning cached data during uninstall');
-    CleanCachedData();
+        Persistence lock (#172): do NOT delete the live registry node
+        'Software\Osiris DevWorks\Smart Citizen' or any of its values here —
+        user_data_dir (and the other settings) MUST survive uninstall so the
+        next install pre-fills the user's chosen data folder. Wiping the node
+        is exactly the regression that let the data-folder choice revert.
+        (The one deliberate exception is DeleteAllUserSettings above, gated
+        on the user's explicit opt-in checkbox — issue #357 — every other
+        path through here, this branch, leaves the node untouched.) }
+      Log('Cleaning cached data during uninstall');
+      CleanCachedData();
+    end;
+  end;
+end;
+
+procedure DeleteAllCheckBoxOnClick(Sender: TObject);
+var
+  CB: TNewCheckBox;
+  Response: Integer;
+begin
+  { #357: the warning is delivered here, as an explicit acknowledge-to-
+    proceed popup fired the moment the box is TICKED, rather than as
+    passive text sitting on the main dialog (easy to skim past, and — per
+    the first version of this dialog — it also doesn't fit: TNewCheckBox
+    doesn't word-wrap its caption, so a long inline warning either got
+    clipped or ran off the dialog entirely). Sender is the checkbox itself,
+    since this is wired up as its OnClick handler below. }
+  CB := TNewCheckBox(Sender);
+  if not CB.Checked then
+    Exit;  { Only warn on the OFF -> ON transition; unchecking needs no prompt. }
+
+  Response := MsgBox(
+    'This will permanently delete:' + #13#10 +
+    '  - Your saved Star Citizen directory and other settings (registry)' + #13#10 +
+    '  - Your user data folder (custom edits, owned blueprints list, backups)' + #13#10 +
+    '  - The cached DataForge data' + #13#10 + #13#10 +
+    'This cannot be undone. Click OK to confirm, or Cancel to keep your settings.',
+    mbError, MB_OKCANCEL);
+  if Response <> IDOK then
+    CB.Checked := False;  { Not acknowledged -- revert to the safe default. }
+end;
+
+function InitializeUninstall(): Boolean;
+var
+  ConfirmForm: TSetupForm;
+  MsgLabel: TNewStaticText;
+  DeleteCheckBox: TNewCheckBox;
+  UninstallButton, CancelButton: TNewButton;
+begin
+  Result := True;
+  DeleteAllSettingsChecked := False;
+
+  { #357: never show the custom dialog during a truly headless uninstall --
+    e.g. the old-version cleanup step of an in-app auto-update, which runs
+    its uninstaller with /VERYSILENT (see UnInstallOldVersion above and
+    _launch_installer_and_quit in src/gui/main_window.py). Unlike MsgBox, a
+    raw custom VCL form isn't auto-suppressed by Inno's silent flags, so
+    skipping it here is required — otherwise a fully automated upgrade
+    would hang forever waiting for a click on a dialog nobody can see.
+    Defaults to False (the safe, non-destructive choice): an
+    automated/background uninstall must never accidentally wipe settings.
+
+    Deliberately checks IsVerySilentUninstall(), not UninstallSilent():
+    the latter is also True for plain /SILENT, which the interactive
+    "click NO, uninstall old version only" reinstall-detection flow further
+    below uses for its sub-uninstall -- that's a user sitting at the
+    installer mid-click, not a headless run, and skipping the dialog there
+    would silently deny them the choice this feature exists to offer. }
+  if IsVerySilentUninstall() then
+    Exit;
+
+  { Fixed size (AAllowResize=False): a static confirmation dialog has no
+    controls that benefit from resizing. DoubleBuffered=True for smooth
+    rendering, matching CreateCustomForm's documented example usage. }
+  ConfirmForm := CreateCustomForm(ScaleX(420), ScaleY(150), False, True);
+  try
+    ConfirmForm.Caption := 'Uninstall Smart Citizen';
+
+    MsgLabel := TNewStaticText.Create(ConfirmForm);
+    MsgLabel.Parent := ConfirmForm;
+    MsgLabel.Left := ScaleX(16);
+    MsgLabel.Top := ScaleY(16);
+    MsgLabel.Width := ConfirmForm.ClientWidth - ScaleX(32);
+    MsgLabel.AutoSize := False;
+    MsgLabel.WordWrap := True;
+    MsgLabel.Height := ScaleY(32);
+    MsgLabel.Caption := 'Are you sure you want to uninstall Smart Citizen?';
+
+    { Short, single-line caption on purpose: TNewCheckBox renders its
+      Caption as one line and clips anything that doesn't fit, unlike
+      TNewStaticText -- the full explanation lives in the acknowledge
+      popup (DeleteAllCheckBoxOnClick) instead. }
+    DeleteCheckBox := TNewCheckBox.Create(ConfirmForm);
+    DeleteCheckBox.Parent := ConfirmForm;
+    DeleteCheckBox.Left := ScaleX(16);
+    DeleteCheckBox.Top := MsgLabel.Top + MsgLabel.Height + ScaleY(12);
+    DeleteCheckBox.Width := ConfirmForm.ClientWidth - ScaleX(32);
+    DeleteCheckBox.Height := ScaleY(17);
+    DeleteCheckBox.Caption := 'Also delete all saved settings';
+    DeleteCheckBox.Checked := False;
+    DeleteCheckBox.OnClick := @DeleteAllCheckBoxOnClick;
+
+    UninstallButton := TNewButton.Create(ConfirmForm);
+    UninstallButton.Parent := ConfirmForm;
+    UninstallButton.Width := ScaleX(90);
+    UninstallButton.Height := ScaleY(23);
+    UninstallButton.Top := ConfirmForm.ClientHeight - ScaleY(16) - UninstallButton.Height;
+    UninstallButton.Left := ConfirmForm.ClientWidth - ScaleX(16) - UninstallButton.Width;
+    UninstallButton.Caption := 'Uninstall';
+    UninstallButton.ModalResult := mrOk;
+    UninstallButton.Default := True;
+
+    CancelButton := TNewButton.Create(ConfirmForm);
+    CancelButton.Parent := ConfirmForm;
+    CancelButton.Width := ScaleX(90);
+    CancelButton.Height := ScaleY(23);
+    CancelButton.Top := UninstallButton.Top;
+    CancelButton.Left := UninstallButton.Left - ScaleX(8) - CancelButton.Width;
+    CancelButton.Caption := 'Cancel';
+    CancelButton.ModalResult := mrCancel;
+    CancelButton.Cancel := True;
+
+    if ConfirmForm.ShowModal() = mrOk then
+    begin
+      { By the time we get here, a checked box has already been through
+        the acknowledge popup above (and would have reverted to
+        unchecked if not confirmed) -- no need to re-warn on this click. }
+      DeleteAllSettingsChecked := DeleteCheckBox.Checked;
+      Result := True;
+    end
+    else
+      Result := False;
+  finally
+    ConfirmForm.Free;
   end;
 end;
 
