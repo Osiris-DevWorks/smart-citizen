@@ -1912,6 +1912,10 @@
       "ht": "",
       "at": "Baixando a localização {language}…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "Copiando a localização {language}…"
+    },
     "language_no_url": {
       "ht": "",
       "at": "Nenhuma URL de download definida para {language}; exibindo a base em inglês. Use “Mapear Arquivo de Idioma” para definir uma."

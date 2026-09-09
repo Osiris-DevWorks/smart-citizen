@@ -1912,6 +1912,10 @@
       "ht": "",
       "at": "正在下载 {language} 本地化内容…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "正在复制 {language} 本地化内容…"
+    },
     "language_no_url": {
       "ht": "",
       "at": "尚未为 {language} 设置下载地址；显示英文基础内容。请使用“映射语言文件”设置一个。"

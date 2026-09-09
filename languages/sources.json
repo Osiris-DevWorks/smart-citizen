@@ -1,10 +1,11 @@
 {
-  "_comment": "Maps a UI language (as named in the app) to a URL for that language's global.ini. On switching to a non-English language, Smart Citizen downloads this file and uses it as the base.ini for that language instead of the English Data.p4k extraction. English is intentionally absent (it uses the local P4K extraction). Use a raw file URL (raw.githubusercontent.com/...), not a github.com /blob/ or /tree/ page URL, which serve HTML. A blank value means no URL is mapped yet; set one here or via the Config tab's 'Map Language File' button (which stores a per-user override that wins over this file).",
+  "_comment": "Maps a UI language (as named in the app) to a URL or local file path for that language's global.ini. On switching to a non-English language, Smart Citizen fetches this source and uses it as the base.ini for that language instead of the English Data.p4k extraction — a URL is downloaded, a local path is copied. English is intentionally absent (it uses the local P4K extraction). Use a raw file URL (raw.githubusercontent.com/...), not a github.com /blob/ or /tree/ page URL, which serve HTML. A blank value means no source is mapped here; set one via the Config tab's 'Map Language File' button (which stores a per-user URL or local path override that wins over this file) instead. korean is deliberately blank: the community source's license forbids redistribution, so there's no URL to bundle — see languages/TRANSLATIONS.md.",
   "french": "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/french_(france)/global.ini",
   "spanish": "https://raw.githubusercontent.com/Thord82/Star_citizen_ES/propuestas_thord/global.ini",
   "portuguese_br": "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/portuguese_(brazil)/global.ini",
   "japanese": "https://raw.githubusercontent.com/stdblue/StarCitizenJapaneseResources/master/v4.x/release/japanese_(japan)/global.ini",
   "chinese": "https://ini.42kit.com/full/global.ini",
   "italian": "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/italian_(italy)/global.ini",
-  "german": "https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini"
+  "german": "https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini",
+  "korean": ""
 }

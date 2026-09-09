@@ -70,13 +70,14 @@ Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources): die von der Community gepflegte `global.ini`-Übersetzung, die die japanische Sprachoption antreibt.
 - [**42Kit**](https://ini.42kit.com/): die von der Community gepflegte `global.ini`-Übersetzung, die die chinesische Sprachoption antreibt.
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) — die von der Community gepflegte `global.ini`-Übersetzung, die die deutsche Sprachoption antreibt.
+- **[Star-Citizen-Community-Koreanisch-Projekt](https://sc.galaxyhub.kr)** (die Gilden Shatagon, MGM Star Fleet und Falco Rescue) — das Community-Team hinter der koreanischen Lokalisierung. Ihre Datei ist nicht in Smart Citizen enthalten (ihre Lizenz erlaubt keine Weiterverbreitung); Koreanisch ist eine „eigene Datei mitbringen"-Sprache, die über **Sprachdatei zuordnen** auf eine lokale Kopie verweist, die du direkt von ihnen erhältst.
 
 ## Hauptfunktionen
 
 ### 🎯 Kernfunktionen
 - **Laden & Bearbeiten**: Lade `global.ini` aus deiner Star-Citizen-Installation und passe Strings in einer intuitiven Tabellenansicht an
 - **Unterstützung mehrerer Kanäle**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW erhalten jeweils eigene isolierte `user.ini`, Cache, Sicherungen und DataForge-Extraktion — Kanäle im Konfiguration-Tab ohne Neustart wechseln
-- **Unterstützung mehrerer Sprachen**: Wechsle App und Spieltexte zwischen Englisch, Französisch, Spanisch, brasilianischem Portugiesisch, Japanisch, Chinesisch, Italienisch und Deutsch im Konfiguration-Tab. Nicht-englische Sprachen legen eine von der Community übersetzte `global.ini` über die englische Basis, mit englischem Rückfall für alles Unübersetzte. Weitere Sprachen werden freigeschaltet, sobald Community-Übersetzungen eintreffen (siehe `languages/TRANSLATIONS.md`)
+- **Unterstützung mehrerer Sprachen**: Wechsle App und Spieltexte zwischen Englisch, Französisch, Spanisch, brasilianischem Portugiesisch, Japanisch, Chinesisch, Italienisch, Deutsch und Koreanisch (eigene Datei) im Konfiguration-Tab. Nicht-englische Sprachen legen eine von der Community übersetzte `global.ini` über die englische Basis, mit englischem Rückfall für alles Unübersetzte. Weitere Sprachen werden freigeschaltet, sobald Community-Übersetzungen eintreffen (siehe `languages/TRANSLATIONS.md`)
 - **Missionsverträge**: Bearbeite Missionsvertrags- und Briefing-Text aus der eigenen Kategorie Missionen
 - **Intelligente Filterung**: Strings durchsuchen, nach Kategorie (Schiffe, Schiffsgegenstände, Missionen, Ausrüstung, Rohstoffe, Journal, Sonstiges) oder Änderungsstatus filtern
 - **Spaltenfilter**: Direkt in Filterfelder unter jeder Spaltenüberschrift tippen für feingranulare Suche

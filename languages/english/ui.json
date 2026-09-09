@@ -575,7 +575,7 @@
       "at": ""
     },
     "map_language_desc": {
-      "ht": "Set a URL to each language's global.ini. When you switch to that language, Smart Citizen downloads it and uses it as the base strings, instead of the English Data.p4k extraction. The download is cached per language and only re-fetched when it changes. Leave a field blank to use the bundled default (if any).",
+      "ht": "Set a URL or local file path to each language's global.ini (use Browse for a file you already have). When you switch to that language, Smart Citizen uses it as the base strings instead of the English Data.p4k extraction — a URL is downloaded and cached, only re-fetched when it changes; a local file is copied in. Leave a field blank to use the bundled default (if any).",
       "at": ""
     },
     "base_localization_label": {
@@ -771,7 +771,7 @@
       "at": ""
     },
     "map_language_tooltip": {
-      "ht": "Set a URL to each language's global.ini. When you switch to that language, Smart Citizen downloads it and uses it as the base strings instead of the English Data.p4k extraction.",
+      "ht": "Set a URL or local file path to each language's global.ini. When you switch to that language, Smart Citizen uses it as the base strings instead of the English Data.p4k extraction.",
       "at": ""
     },
     "data_dir_tooltip": {
@@ -1912,12 +1912,16 @@
       "ht": "Downloading {language} localization…",
       "at": ""
     },
+    "language_copying": {
+      "ht": "Copying {language} localization…",
+      "at": ""
+    },
     "language_no_url": {
-      "ht": "No download URL set for {language}; showing the English base. Use Map Language File to set one.",
+      "ht": "No source set for {language}; showing the English base. Use Map Language File to set one.",
       "at": ""
     },
     "language_download_failed": {
-      "ht": "Couldn't download the {language} localization, and no cached copy was found. Showing the English base instead. Check the URL in Map Language File and your connection, then try again.",
+      "ht": "Couldn't load the {language} localization from the configured source, and no cached copy was found. Showing the English base instead. Check the URL or file in Map Language File, then try again.",
       "at": ""
     },
     "language_generating_enhancements": {
