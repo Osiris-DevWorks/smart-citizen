@@ -1232,7 +1232,7 @@ class MainWindow(QMainWindow):
 
     def open_paypal_donation(self, event):
         """Open PayPal donation link in browser."""
-        paypal_url = "https://paypal.me/RighteousKill"
+        paypal_url = "https://www.paypal.com/ncp/payment/YAWXHMGZH8T76"
         QDesktopServices.openUrl(QUrl(paypal_url))
 
     def open_venmo_donation(self, event):

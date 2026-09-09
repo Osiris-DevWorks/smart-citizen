@@ -255,7 +255,7 @@ All bug reports, feature requests, and prioritization happen in the dedicated `#
 
 Smart Citizen is a free, open-source project. If you find it useful and want to support development:
 
-- [PayPal Donation](https://paypal.me/RighteousKill)
+- [PayPal Donation](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - [Venmo Donation](https://venmo.com/u/Amr-Abouelleil)
 
 ---

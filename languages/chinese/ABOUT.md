@@ -146,7 +146,7 @@
 
 ### 支持本项目
 智慧公民完全免费。如果你觉得它有价值：
-- 💳 [通过 PayPal 捐赠](https://paypal.me/RighteousKill)
+- 💳 [通过 PayPal 捐赠](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [通过 Venmo 捐赠](https://venmo.com/u/Amr-Abouelleil)
 
 ## Osiris DevWorks 的其他工具
