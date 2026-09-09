@@ -230,6 +230,7 @@ class AppSettings:
 
     # Settings keys - Favorites
     FAVORITE_PREFIX = "favorite_prefix"
+    DEFAULT_FAVORITE_PREFIX = "*"
 
     # Settings keys - Test Plan panel (#144)
     TEST_PLAN_CHECKS = "test_plan/checks"        # JSON: {"hash": ..., "checked": [...]}
@@ -323,6 +324,15 @@ class AppSettings:
         "blueprints": "POTENTIAL BLUEPRINTS",
         "items": "ITEM REWARDS",
         "blueprint_data": "BLUEPRINT DATA",
+    }
+    # Field name → settings key, the counterpart to MISSION_HEADER_DEFAULTS
+    # above. Extracted (#383) because three places needed the same mapping:
+    # get_mission_headers, set_mission_header, and profile_default_values.
+    _MISSION_HEADER_SETTING = {
+        "details":        MISSION_HEADER_DETAILS,
+        "blueprints":     MISSION_HEADER_BLUEPRINTS,
+        "items":          MISSION_HEADER_ITEMS,
+        "blueprint_data": MISSION_HEADER_BLUEPRINT_DATA,
     }
 
     # Settings keys - Appearance
@@ -537,6 +547,31 @@ class AppSettings:
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
     })
+
+    # Keys that have a default but are deliberately NOT materialised into a
+    # backup by profile_default_values() (#383). These are per-machine state
+    # or user *data*, not preferences, so writing their "unset" default into
+    # every export would make an import destructive rather than restorative:
+    #   - the install paths: an empty value clears a working path and forces
+    #     re-detection, which can silently land on a different install (#370).
+    #   - owned_items: the player's blueprint collection. Rebuilt by a log
+    #     scan, but wiping it from a settings restore is real data loss.
+    #   - the blueprint log watermark: scan position, per-channel, and
+    #     resetting it only forces a slow full re-scan.
+    #   - the test-plan keys: tester identity and per-run progress.
+    #   - tutorial_completed_version: per-install first-run state.
+    # Keys already in PROFILE_EXCLUDE_KEYS never reach this stage at all.
+    PROFILE_DEFAULT_EXCLUDE_KEYS = frozenset({
+        "sc_install_root",
+        "game_install_path",
+        "owned_items",
+        "tutorial_completed_version",
+        "test_plan/checks",
+        "test_plan/tester_name",
+        "test_plan/webhook_url",
+    })
+    # Prefixes of the same, for per-channel keys whose full name is dynamic.
+    PROFILE_DEFAULT_EXCLUDE_PREFIXES = ("blueprint_log_watermark",)
 
     # reconcile_imported_install_path() outcomes.
     INSTALL_PATH_RESTORED = "restored"     # backup's path is valid here
@@ -796,7 +831,9 @@ class AppSettings:
     @staticmethod
     def get_favorite_prefix() -> str:
         """Get the character prepended to favorited ship names (default '*')."""
-        return AppSettings.settings().value(AppSettings.FAVORITE_PREFIX, "*")
+        return AppSettings.settings().value(
+            AppSettings.FAVORITE_PREFIX, AppSettings.DEFAULT_FAVORITE_PREFIX
+        )
 
     @staticmethod
     def set_favorite_prefix(prefix: str) -> None:
@@ -866,22 +903,15 @@ class AppSettings:
         s = AppSettings.settings()
         d = AppSettings.MISSION_HEADER_DEFAULTS
         return {
-            "details":        s.value(AppSettings.MISSION_HEADER_DETAILS, d["details"]),
-            "blueprints":     s.value(AppSettings.MISSION_HEADER_BLUEPRINTS, d["blueprints"]),
-            "items":          s.value(AppSettings.MISSION_HEADER_ITEMS, d["items"]),
-            "blueprint_data": s.value(AppSettings.MISSION_HEADER_BLUEPRINT_DATA, d["blueprint_data"]),
+            name: s.value(key, d[name])
+            for name, key in AppSettings._MISSION_HEADER_SETTING.items()
         }
 
     @staticmethod
     def set_mission_header(key: str, value: str) -> None:
-        key_map = {
-            "details": AppSettings.MISSION_HEADER_DETAILS,
-            "blueprints": AppSettings.MISSION_HEADER_BLUEPRINTS,
-            "items": AppSettings.MISSION_HEADER_ITEMS,
-            "blueprint_data": AppSettings.MISSION_HEADER_BLUEPRINT_DATA,
-        }
-        if key in key_map:
-            AppSettings.settings().setValue(key_map[key], value)
+        setting = AppSettings._MISSION_HEADER_SETTING.get(key)
+        if setting:
+            AppSettings.settings().setValue(setting, value)
 
     @staticmethod
     def get_mission_header_em_tag() -> str:
@@ -3106,14 +3136,111 @@ class AppSettings:
         return False
 
     @staticmethod
+    def profile_default_values() -> dict:
+        """Every preference's default value, for materialising into a backup.
+
+        A setting is only written to the backend when the user changes it, so
+        anything still at its default has no key to enumerate. That made a
+        backup silently partial (#383): restoring it could not put a
+        preference *back* to its default, because the backup never said what
+        the default was. Importing one therefore left every
+        since-changed-from-default setting untouched — the Mission Labels
+        case the issue was reported against, but equally theme, UI mode, the
+        favourites prefix, and every checkbox.
+
+        Built as a function rather than a class constant for two reasons:
+        some keys (``merge_hierarchy``) are defined further down the class
+        body, and the theme default lives in ``src.gui.theme``, which must
+        stay a deferred import here. Not cached — it is built once per
+        export, and a cache would go stale under tests that patch defaults.
+
+        ``PROFILE_DEFAULT_EXCLUDE_KEYS`` documents what is deliberately left
+        out and why. ``tests/test_settings_profile_defaults.py`` locks this
+        map against the getters so a newly added setting can't quietly go
+        missing from backups the way these did.
+        """
+        from src.gui.theme import DEFAULT_THEME
+        from src.utils.tag_builder import DEFAULT_TAG_CONFIGS
+
+        defaults: dict = {
+            AppSettings.THEME: DEFAULT_THEME,
+            AppSettings.UI_MODE: AppSettings.UI_MODE_SIMPLE,
+            AppSettings.ACTIVE_CHANNEL: AppSettings.DEFAULT_CHANNEL,
+            AppSettings.SELECTED_LANGUAGE: AppSettings.DEFAULT_LANGUAGE,
+            AppSettings.MERGE_HIERARCHY: list(AppSettings.AVAILABLE_SOURCES),
+            AppSettings.FAVORITE_PREFIX: AppSettings.DEFAULT_FAVORITE_PREFIX,
+            AppSettings.REP_XP_LABEL: AppSettings.DEFAULT_REP_XP_LABEL,
+            AppSettings.MISSION_HEADER_EM_TAG: AppSettings.DEFAULT_MISSION_HEADER_EM_TAG,
+            AppSettings.ENHANCEMENTS_ENABLED: True,
+            AppSettings.INCLUDE_NEW_LINES: False,
+            AppSettings.STATS_PREPEND: False,
+            AppSettings.AUTO_WRITE_ENABLED: False,
+            AppSettings.STANDARDIZE_EARNABLE_SHIP_NAMES: False,
+            AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
+            AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
+            AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.BLUEPRINT_SHOW_TAGS: False,
+            AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS: True,
+            AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
+        }
+        # Composed from the same maps the getters read, so these can't drift.
+        defaults.update({
+            key: AppSettings.MISSION_HEADER_DEFAULTS[name]
+            for name, key in AppSettings._MISSION_HEADER_SETTING.items()
+        })
+        defaults.update({
+            key: True for key in AppSettings._MISSION_FIELD_SETTING.values()
+        })
+        defaults.update({
+            key: AppSettings._MISSION_TITLE_TAG_DEFAULTS.get(name, True)
+            for name, key in AppSettings._MISSION_TITLE_TAG_SETTING.items()
+        })
+        defaults.update({
+            f"enhancements/categories/{cat}/enabled": True
+            for cat in AppSettings.ENHANCEMENT_LABELS
+        })
+        # "" is the stored form of "use DEFAULT_TAG_CONFIGS", so materialising
+        # it is what lets an import reset a customised Tag Builder back to
+        # stock rather than leaving the customisation in place.
+        defaults.update({
+            f"tag_builder/{cat}/config": "" for cat in DEFAULT_TAG_CONFIGS
+        })
+        return defaults
+
+    @staticmethod
+    def is_profile_default_materialised(key: str, value=None) -> bool:
+        """True when *key*'s default belongs in a backup (see #383).
+
+        *value* is threaded through to is_profile_excluded_key's own
+        data_sources/*/path URL check, the same way export_all_values does
+        for a real stored value — without it, that check sees no value and
+        can't tell a URL-mapped default from a local one, so it falls back
+        to treating any such key as non-URL (excluded). No default in
+        profile_default_values() has that shape today, so this is currently
+        a no-op in practice; passing it costs nothing and keeps the two
+        exclusion checks answering the same question the same way if one
+        ever does.
+        """
+        if key in AppSettings.PROFILE_DEFAULT_EXCLUDE_KEYS:
+            return False
+        if key.startswith(AppSettings.PROFILE_DEFAULT_EXCLUDE_PREFIXES):
+            return False
+        return not AppSettings.is_profile_excluded_key(key, value)
+
+    @staticmethod
     def export_all_values() -> dict:
-        """Snapshot every backend key/value for a settings backup.
+        """Snapshot every setting for a backup, defaults included.
 
         Works against either backend: ``QSettings.allKeys()`` (registry
         build) or ``JsonSettings.keys()`` (portable build / tests). Values
         that JSON can't serialise (e.g. a stray QByteArray) are skipped with
         a warning rather than poisoning the whole export — the known binary
         keys (window geometry/state) are already excluded by the filter.
+
+        Defaults are laid down first and stored values written over them
+        (#383), so the result describes the user's whole configuration
+        rather than only the parts that happen to differ from stock. That is
+        what makes an import able to restore a setting *to* its default.
         """
         backend = AppSettings.settings()
         if hasattr(backend, "allKeys"):
@@ -3121,7 +3248,11 @@ class AppSettings:
         else:
             keys = backend.keys()
 
-        out: dict = {}
+        out: dict = {
+            key: value
+            for key, value in AppSettings.profile_default_values().items()
+            if AppSettings.is_profile_default_materialised(key, value)
+        }
         for key in keys:
             value = backend.value(key)
             if AppSettings.is_profile_excluded_key(key, value):
