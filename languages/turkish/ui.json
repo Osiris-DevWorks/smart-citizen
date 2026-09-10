@@ -1,0 +1,2918 @@
+{
+  "branding": {
+    "title": {
+      "ht": "",
+      "at": "SMART CITIZEN"
+    },
+    "tagline": {
+      "ht": "",
+      "at": "STAR CITIZEN İÇİN DAHA AKILLI METİNLER"
+    }
+  },
+  "window": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen v{version}"
+    }
+  },
+  "simple_mode": {
+    "switch_to_advanced": {
+      "ht": "",
+      "at": "Gelişmiş Moda Geç"
+    },
+    "switch_to_advanced_tip": {
+      "ht": "",
+      "at": "Tüm sekmeler ve seçeneklerle Smart Citizen'ın tam arayüzünü gösterir."
+    },
+    "generate_apply_btn": {
+      "ht": "",
+      "at": "Geliştirmeleri Uygula"
+    },
+    "generate_apply_tip": {
+      "ht": "",
+      "at": "Geçerli ayarlarınızla en güncel geliştirmeleri oluşturur ve oyununuza uygular. Önce mevcut global.ini dosyasının yedeği alınır."
+    },
+    "defaults_hint": {
+      "ht": "",
+      "at": "Geçerli ayarlarınızı kullanır (Gelişmiş görünümde gösterilenlerle aynı).\nİlk çalıştırma, DataForge çıkarılırken birkaç dakika sürebilir."
+    },
+    "set_game_folder_title": {
+      "ht": "",
+      "at": "Oyun Klasörünüzü Ayarlayın"
+    },
+    "set_game_folder_body": {
+      "ht": "",
+      "at": "Smart Citizen'ın değişiklikleri uygulayabilmesi için Star Citizen'ın nereye kurulu olduğunu bilmesi gerekir.\n\nOyun klasörünü Yapılandırma sekmesinden ayarlayabilmeniz için Gelişmiş moda geçiliyor."
+    },
+    "apply_enhancements_confirm_title": {
+      "ht": "",
+      "at": "Geliştirmeleri Uygula"
+    },
+    "apply_enhancements_confirm_body": {
+      "ht": "",
+      "at": "Bu işlem, geçerli ayarlarınızla en güncel geliştirmeleri oluşturur ve oyununuzun global.ini dosyasına uygular. Önce zaman damgalı bir yedek alınır.\n\nİlk çalıştırma, DataForge çıkarılırken birkaç dakika sürebilir. Devam edilsin mi?"
+    }
+  },
+  "tabs": {
+    "string_editor": {
+      "ht": "",
+      "at": "Metin Düzenleyici"
+    },
+    "config": {
+      "ht": "",
+      "at": "Yapılandırma"
+    },
+    "enhancements": {
+      "ht": "",
+      "at": "Geliştirmeler"
+    },
+    "blueprint_tracker": {
+      "ht": "",
+      "at": "Plan Takipçisi"
+    },
+    "log": {
+      "ht": "",
+      "at": "Günlük"
+    },
+    "about": {
+      "ht": "",
+      "at": "Hakkında"
+    },
+    "faq": {
+      "ht": "",
+      "at": "SSS"
+    },
+    "legal": {
+      "ht": "",
+      "at": "Yasal"
+    },
+    "about_load_failed": {
+      "ht": "",
+      "at": "Hakkında bilgileri yüklenemedi."
+    },
+    "faq_load_failed": {
+      "ht": "",
+      "at": "SSS yüklenemedi."
+    },
+    "legal_load_failed": {
+      "ht": "",
+      "at": "Yasal bilgiler yüklenemedi."
+    }
+  },
+  "toolbar": {
+    "apply_btn": {
+      "ht": "",
+      "at": "Geliştirmeleri Uygula"
+    },
+    "restore_backup_btn": {
+      "ht": "",
+      "at": "Yedeği Geri Yükle"
+    },
+    "clear_btn": {
+      "ht": "",
+      "at": "Temizle"
+    },
+    "import_export_btn": {
+      "ht": "",
+      "at": "İçe / Dışa Aktar"
+    },
+    "open_loc_dir_btn": {
+      "ht": "",
+      "at": "Yerelleştirme Klasörünü Aç"
+    },
+    "editor_btn": {
+      "ht": "",
+      "at": "Düzenleyici"
+    },
+    "help_btn": {
+      "ht": "",
+      "at": "Yardım"
+    },
+    "tutorial_btn": {
+      "ht": "",
+      "at": "Rehberli Tur"
+    },
+    "more_btn": {
+      "ht": "",
+      "at": "Daha Fazla"
+    },
+    "menu_clear_localization": {
+      "ht": "",
+      "at": "Yerelleştirmeyi Temizle"
+    },
+    "menu_clear_cache": {
+      "ht": "",
+      "at": "Önbelleği Temizle"
+    },
+    "menu_import_ini": {
+      "ht": "",
+      "at": "INI İçe Aktar…"
+    },
+    "menu_export_ini": {
+      "ht": "",
+      "at": "INI Dışa Aktar…"
+    },
+    "menu_test_plan": {
+      "ht": "",
+      "at": "Test Planı"
+    },
+    "menu_switch_to_simple": {
+      "ht": "",
+      "at": "Basit Moda Geç"
+    },
+    "menu_reset_window_proportions": {
+      "ht": "",
+      "at": "Pencere Oranlarını Sıfırla"
+    },
+    "editor_tooltip": {
+      "ht": "",
+      "at": "Seçili satırın özel değerini düzenlemek için daha geniş bir alan sunan, yana yerleştirilmiş Metin Düzenleyici'yi aç/kapat"
+    },
+    "help_tooltip": {
+      "ht": "",
+      "at": "Yardım yan panelini aç/kapat"
+    },
+    "tutorial_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen iş akışının rehberli turunu başlatır. İlk açılışta otomatik çalışır; yeniden izlemek için istediğiniz zaman buraya tıklayın."
+    },
+    "restore_backup_tooltip": {
+      "ht": "",
+      "at": "Yedekler klasöründen önceki bir global.ini dosyasını geri yükler. En fazla 5 zaman damgalı yedek saklanır; yeni bir yedek oluşturulduğunda en eskisi silinir."
+    },
+    "test_plan_tooltip": {
+      "ht": "",
+      "at": "Test edici Test Planı'nı açar: bu sürümde nelerin değiştiğini gösteren, ilerleme takibi ve gönderebileceğiniz bir rapor içeren bir kontrol listesi."
+    },
+    "switch_to_simple_tooltip": {
+      "ht": "",
+      "at": "Tek düğmeli basitleştirilmiş görünüme geçer."
+    },
+    "reset_window_proportions_tooltip": {
+      "ht": "",
+      "at": "Pencere boyutunu, panel düzenini ve Metin Düzenleyici sütun genişliklerini varsayılanlarına döndürür."
+    },
+    "more_tooltip": {
+      "ht": "",
+      "at": "Diğer işlemler: yedek geri yükle, yerelleştirmeyi veya önbelleği temizle, içe veya dışa aktar, yerelleştirme klasörünü aç"
+    },
+    "osiris_github_tooltip": {
+      "ht": "",
+      "at": "Osiris DevWorks GitHub organizasyonunu aç"
+    },
+    "feedback_tooltip": {
+      "ht": "",
+      "at": "Geri bildirim, hata bildirimi ve gelecek özelliklere oy vermek için Smart Citizen Discord kanalını açar (Osiris DevWorks Discord sunucusuna katılmayı gerektirir)."
+    },
+    "apply_enabled_tooltip": {
+      "ht": "",
+      "at": "Birleştirilmiş tablo içeriğini oyunun global.ini dosyasına yazar. Önce mevcut global.ini dosyasının zaman damgalı bir yedeği oluşturulur."
+    },
+    "apply_disabled_tooltip": {
+      "ht": "",
+      "at": "Zaten uygulandı: son Oyuna Uygula işleminden bu yana hiçbir şey değişmedi."
+    },
+    "feedback_fallback_text": {
+      "ht": "",
+      "at": "Geri Bildirim, Hatalar ve Özellik Oylaması"
+    },
+    "paypal_fallback_text": {
+      "ht": "",
+      "at": "PayPal ile Bağış Yap"
+    },
+    "venmo_fallback_text": {
+      "ht": "",
+      "at": "Venmo"
+    }
+  },
+  "filters": {
+    "category_label": {
+      "ht": "",
+      "at": "Kategori:"
+    },
+    "status_label": {
+      "ht": "",
+      "at": "Durum:"
+    },
+    "status_all": {
+      "ht": "",
+      "at": "Tümü"
+    },
+    "status_modified": {
+      "ht": "",
+      "at": "Değiştirilmiş"
+    },
+    "status_enhanced": {
+      "ht": "",
+      "at": "Geliştirilmiş"
+    },
+    "status_unmodified": {
+      "ht": "",
+      "at": "Değiştirilmemiş"
+    },
+    "status_new": {
+      "ht": "",
+      "at": "Yeni"
+    },
+    "hide_unmodified": {
+      "ht": "",
+      "at": "Değiştirilmemişleri Gizle"
+    },
+    "ship_vehicle_names_only": {
+      "ht": "",
+      "at": "Yalnızca Gemi/Araç Adları"
+    },
+    "ship_vehicle_names_only_tooltip": {
+      "ht": "",
+      "at": "Yalnızca gemi ve araç adı satırlarını gösterir; gemi açıklamaları ve diğer tüm kategoriler dahil geri kalan her şeyi gizler. Geriye tam olarak favorilerin ve ASOP sıralama düzeninin uygulandığı satırlar kalır."
+    },
+    "favorites_only": {
+      "ht": "",
+      "at": "★ Yalnızca Favoriler"
+    },
+    "bp_titles_only": {
+      "ht": "",
+      "at": "BP Başlıkları"
+    },
+    "bp_descs_only": {
+      "ht": "",
+      "at": "BP Açıklamaları"
+    },
+    "group_sort_btn": {
+      "ht": "",
+      "at": "Gruplu Sıralama"
+    },
+    "clear_filters_btn": {
+      "ht": "",
+      "at": "Filtreleri Temizle"
+    },
+    "copy_filtered_btn": {
+      "ht": "",
+      "at": "Filtrelenenleri Kopyala"
+    },
+    "category_tooltip": {
+      "ht": "",
+      "at": "Satırları alana göre filtreler (Gemiler, Gemi Öğeleri, Görevler, Teçhizat, Emtialar, Günce, Diğer). Kategoriler yerelleştirme anahtarının ön ekinden türetilir."
+    },
+    "status_tooltip": {
+      "ht": "",
+      "at": "Duruma göre filtreler. Değiştirilmiş = bir Özel Değer belirlediniz; Geliştirilmiş = Smart Citizen'ın geliştirme hattı tarafından üretildi (gemi istatistikleri, görev ödülleri vb.); Değiştirilmemiş = yalnızca varsayılan metin; Yeni = anahtar yalnızca geliştirmelerde/user.ini içinde var, temel dosyada yok."
+    },
+    "hide_unmodified_tooltip": {
+      "ht": "",
+      "at": "Yalnızca Özel Değer belirlediğiniz satırları gösterir. Durum filtresinin Değiştirilmiş seçeneğiyle aynıdır, ancak tek başına açılıp kapatılabilir."
+    },
+    "favorites_only_tooltip": {
+      "ht": "",
+      "at": "Yalnızca favori olarak yıldızladığınız satırları gösterir. Favorilerin adının başına, oyun içi listede en üstte sıralanmaları için yapılandırılabilir bir ön ek eklenir."
+    },
+    "bp_titles_only_tooltip": {
+      "ht": "",
+      "at": "Yalnızca [BP] / [BP?] plan etiketini taşıyan görev başlıklarını gösterir."
+    },
+    "bp_descs_only_tooltip": {
+      "ht": "",
+      "at": "Yalnızca POTENTIAL BLUEPRINTS bölümü içeren görev açıklamalarını gösterir."
+    },
+    "group_sort_tooltip": {
+      "ht": "",
+      "at": "Aynı varlığa ait başlıkları ve açıklamaları birlikte sıralar"
+    },
+    "clear_filters_tooltip": {
+      "ht": "",
+      "at": "Tablonun tamamı görünsün diye tüm filtreleri (kategori, durum, arama, sütun kutuları, onay kutuları) sıfırlar."
+    },
+    "copy_filtered_tooltip": {
+      "ht": "",
+      "at": "Görünen tüm filtrelenmiş satırları panoya kopyalar (sekmeyle ayrılmış)"
+    }
+  },
+  "strings_tab": {
+    "col_category": {
+      "ht": "",
+      "at": "Kategori"
+    },
+    "col_key": {
+      "ht": "",
+      "at": "Anahtar"
+    },
+    "col_default_value": {
+      "ht": "",
+      "at": "Varsayılan Değer"
+    },
+    "col_current_value": {
+      "ht": "",
+      "at": "Geçerli Değer"
+    },
+    "col_star": {
+      "ht": "",
+      "at": "★"
+    },
+    "col_order": {
+      "ht": "",
+      "at": "#"
+    },
+    "col_custom_value": {
+      "ht": "",
+      "at": "Özel Değer"
+    },
+    "col_status": {
+      "ht": "",
+      "at": "Durum"
+    },
+    "col_owned": {
+      "ht": "",
+      "at": "Sahip Olunan"
+    },
+    "no_data": {
+      "ht": "",
+      "at": "Veri yüklenmedi"
+    },
+    "preview_placeholder": {
+      "ht": "",
+      "at": "İşlenmiş metnini önizlemek için bir satır seçin."
+    },
+    "context_underline": {
+      "ht": "",
+      "at": "Altını Çiz"
+    },
+    "context_highlight": {
+      "ht": "",
+      "at": "Vurgula"
+    },
+    "editor_underline_tooltip": {
+      "ht": "",
+      "at": "Seçili metnin altını çizer (<EM3>...</EM3> içine alır)"
+    },
+    "editor_highlight_tooltip": {
+      "ht": "",
+      "at": "Seçili metni renk vurgusuyla öne çıkarır (<EM4>...</EM4> içine alır)"
+    },
+    "column_filter_tooltip": {
+      "ht": "",
+      "at": "{column} sütununu filtreler. Sütunlar arasındaki filtreler VE ile birleşir."
+    },
+    "column_filter_placeholder": {
+      "ht": "",
+      "at": "{column} filtrele…"
+    },
+    "editor_dock_title": {
+      "ht": "",
+      "at": "Metin Düzenleyici"
+    },
+    "no_row_selected": {
+      "ht": "",
+      "at": "(satır seçilmedi)"
+    },
+    "editor_underline_btn": {
+      "ht": "",
+      "at": "Altını Çiz"
+    },
+    "editor_highlight_btn": {
+      "ht": "",
+      "at": "Vurgula"
+    },
+    "editor_placeholder": {
+      "ht": "",
+      "at": "Özel değerini burada düzenlemek için Metin Düzenleyici tablosundan bir satır seçin."
+    },
+    "context_copy_cell": {
+      "ht": "",
+      "at": "Hücreyi Kopyala"
+    },
+    "context_copy_key": {
+      "ht": "",
+      "at": "Anahtarı Kopyala"
+    },
+    "context_edit": {
+      "ht": "",
+      "at": "Düzenle"
+    },
+    "context_reset_to_original": {
+      "ht": "",
+      "at": "Özgün Değere Sıfırla"
+    },
+    "context_copy_all_filtered": {
+      "ht": "",
+      "at": "Tüm Filtrelenenleri Kopyala"
+    },
+    "context_remove_favorite": {
+      "ht": "",
+      "at": "★ Favorilerden Kaldır"
+    },
+    "context_add_favorite": {
+      "ht": "",
+      "at": "★ Favorilere Ekle"
+    },
+    "showing_count": {
+      "ht": "",
+      "at": "{total} metinden {shown} tanesi gösteriliyor"
+    },
+    "copied_key": {
+      "ht": "",
+      "at": "Kopyalandı: {loc_key}"
+    },
+    "pyperclip_missing": {
+      "ht": "",
+      "at": "pyperclip yüklü değil"
+    }
+  },
+  "config": {
+    "title": {
+      "ht": "",
+      "at": "Yapılandırma"
+    },
+    "instructions": {
+      "ht": "",
+      "at": "Star Citizen kurulum yolunuzu yapılandırın, Data.p4k dosyasından temel yerelleştirmeyi çıkarın ve metinlerinizi özelleştirmek için harici INI dosyalarını içe aktarın."
+    },
+    "tools_group": {
+      "ht": "",
+      "at": "Araçlar"
+    },
+    "tools_desc": {
+      "ht": "",
+      "at": "Özel metinleri user.ini dosyanıza birleştirmek için harici bir INI dosyasını içe aktarın. Anahtarlar base.ini ile doğrulanır ve çakışmalar etkileşimli olarak çözülür."
+    },
+    "import_ini_btn": {
+      "ht": "",
+      "at": "INI İçe Aktar..."
+    },
+    "reset_user_ini_btn": {
+      "ht": "",
+      "at": "user.ini Dosyasını Sıfırla..."
+    },
+    "restore_user_ini_btn": {
+      "ht": "",
+      "at": "user.ini Dosyasını Geri Yükle..."
+    },
+    "preview_apply_btn": {
+      "ht": "",
+      "at": "Uygulama Önizlemesi"
+    },
+    "backup_group": {
+      "ht": "",
+      "at": "Ayar Yedeği"
+    },
+    "backup_desc": {
+      "ht": "",
+      "at": "Tüm ayarlarınızı — tercihler, etiket yapılandırmaları, Star Citizen klasörünüz ve her kanal için özel metin geçersiz kılmalarınız — tek bir küçük yedek dosyasına kaydedin. Yeni bir bilgisayarda, taşınabilir sürümü yeniden açtıktan sonra veya hatalı bir yapılandırmayı geri almak için içe aktarın. Yedekler Smart Citizen sürümleri arasında çalışır. Oyun önbellekleri dahil değildir; oyun dosyalarınızdan otomatik olarak yeniden oluşturulur."
+    },
+    "export_settings_btn": {
+      "ht": "",
+      "at": "Ayarları Dışa Aktar..."
+    },
+    "export_settings_tooltip": {
+      "ht": "",
+      "at": "Tercihlerinizi, Star Citizen klasörünüzü ve özel metin geçersiz kılmalarınızı küçük bir yedek zip dosyasına (birkaç KB) kaydedin. İstediğiniz yerde saklayın — bulut sürücü, USB bellek — ve ayarlarınızı geri yüklemek için daha sonra herhangi bir Smart Citizen sürümünde içe aktarın."
+    },
+    "import_settings_btn": {
+      "ht": "",
+      "at": "Ayarları İçe Aktar..."
+    },
+    "import_settings_tooltip": {
+      "ht": "",
+      "at": "Herhangi bir Smart Citizen sürümüyle oluşturulmuş bir ayar yedeği zip dosyasını geri yükleyin. Önce mevcut user.ini dosyalarınızın anlık görüntüsü alınır, Star Citizen klasörünüz geri yüklenir (yedekteki yol bu bilgisayarda yoksa otomatik algılanır) ve Smart Citizen içe aktarılan ayarlarla yeniden başlar."
+    },
+    "check_updates_btn": {
+      "ht": "",
+      "at": "Güncellemeleri Denetle"
+    },
+    "appearance_group": {
+      "ht": "",
+      "at": "Görünüm"
+    },
+    "theme_label": {
+      "ht": "",
+      "at": "Tema:"
+    },
+    "theme_default": {
+      "ht": "",
+      "at": "Varsayılan"
+    },
+    "theme_light": {
+      "ht": "",
+      "at": "Açık"
+    },
+    "theme_dark": {
+      "ht": "",
+      "at": "Koyu"
+    },
+    "theme_odw": {
+      "ht": "",
+      "at": "ODW"
+    },
+    "star_citizen_group": {
+      "ht": "",
+      "at": "Star Citizen"
+    },
+    "installation_label": {
+      "ht": "",
+      "at": "Kurulum"
+    },
+    "installation_desc": {
+      "ht": "",
+      "at": "Star Citizen kurulum kök dizininizin yolu (LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW klasörlerini içeren dizin)."
+    },
+    "browse_btn": {
+      "ht": "",
+      "at": "Gözat..."
+    },
+    "channel_label": {
+      "ht": "",
+      "at": "Kanal:"
+    },
+    "language_label": {
+      "ht": "",
+      "at": "Dil:"
+    },
+    "map_language_btn": {
+      "ht": "",
+      "at": "Dil Dosyası Eşle"
+    },
+    "map_language_title": {
+      "ht": "",
+      "at": "Dil Dosyası Eşle"
+    },
+    "map_language_desc": {
+      "ht": "",
+      "at": "Her dilin global.ini dosyası için bir URL belirleyin. O dile geçtiğinizde Smart Citizen dosyayı indirir ve İngilizce Data.p4k çıkarımı yerine temel metinler olarak kullanır. İndirme dil başına önbelleğe alınır ve yalnızca değiştiğinde yeniden alınır. Paketle gelen varsayılanı (varsa) kullanmak için alanı boş bırakın."
+    },
+    "base_localization_label": {
+      "ht": "",
+      "at": "Temel Yerelleştirme"
+    },
+    "base_localization_desc": {
+      "ht": "",
+      "at": "Kurulu sürümünüzle her zaman eşleşen orijinal oyun metinlerini almak için kurulu Data.p4k dosyanızdan global.ini dosyasını çıkarın."
+    },
+    "extract_btn": {
+      "ht": "",
+      "at": "Data.p4k Dosyasından Çıkar"
+    },
+    "data_group": {
+      "ht": "",
+      "at": "Smart Citizen Verileri"
+    },
+    "data_desc": {
+      "ht": "",
+      "at": "user.ini, kaynak önbelleği, geliştirme INI dosyaları ve yedekler için klasör. Önbellek temizliği başarısız oluyorsa bunu OneDrive ile eşitlenen Belgeler klasöründen dışarı taşıyın. DataForge XML önbelleğinin aşağıda kendi yolu vardır — yaklaşık 1,4 GB olduğundan varsayılan ayar onu otomatik olarak OneDrive dışında tutar."
+    },
+    "app_data_label": {
+      "ht": "",
+      "at": "Uygulama veri klasörü:"
+    },
+    "dataforge_cache_label": {
+      "ht": "",
+      "at": "DataForge önbellek klasörü:"
+    },
+    "reset_btn": {
+      "ht": "",
+      "at": "Sıfırla"
+    },
+    "p4k_group": {
+      "ht": "",
+      "at": "Temel Yerelleştirme (P4K Çıkarma)"
+    },
+    "p4k_desc": {
+      "ht": "",
+      "at": "Kurulu sürümünüzle her zaman eşleşen orijinal oyun metinlerini almak için kurulu Data.p4k dosyanızdan global.ini dosyasını çıkarın."
+    },
+    "p4k_status_found_with_base": {
+      "ht": "",
+      "at": "Data.p4k bulundu  |  base.ini son güncelleme: {date}"
+    },
+    "p4k_status_found_no_base": {
+      "ht": "",
+      "at": "Data.p4k bulundu  |  base.ini henüz çıkarılmadı"
+    },
+    "p4k_status_not_found": {
+      "ht": "",
+      "at": "Data.p4k şu konumda bulunamadı: {path}"
+    },
+    "p4k_status_no_path": {
+      "ht": "",
+      "at": "Oyun kurulum yolu yapılandırılmamış"
+    },
+    "select_sc_root": {
+      "ht": "",
+      "at": "Star Citizen Kurulum Kök Dizinini Seçin"
+    },
+    "select_data_folder": {
+      "ht": "",
+      "at": "Smart Citizen Veri Klasörünü Seçin"
+    },
+    "select_cache_folder": {
+      "ht": "",
+      "at": "DataForge Önbellek Klasörünü Seçin"
+    },
+    "migrate_data_title": {
+      "ht": "",
+      "at": "Verileriniz Taşınsın mı?"
+    },
+    "migrate_data_body": {
+      "ht": "",
+      "at": "Mevcut Smart Citizen verileriniz (geçersiz kılmalar, yedekler, önbelleğe alınmış metinler) şu konumdan\n\n{old_dir}\n\nyeni klasöre taşınsın mı?\n\n{new_dir}\n\nYeni klasörde zaten bulunan dosyalar korunur. Taşıma sonrasında eski klasör temizlenir."
+    },
+    "migrate_data_done_title": {
+      "ht": "",
+      "at": "Veriler Taşındı"
+    },
+    "migrate_data_done_body": {
+      "ht": "",
+      "at": "{count} dosya yeni veri klasörüne taşındı."
+    },
+    "migrate_data_failed_title": {
+      "ht": "",
+      "at": "Taşıma Başarısız"
+    },
+    "migrate_data_failed_body": {
+      "ht": "",
+      "at": "Verileriniz taşınamadı:\n{error}"
+    },
+    "channel_not_installed_title": {
+      "ht": "",
+      "at": "Kanal Kurulu Değil"
+    },
+    "channel_not_installed_body": {
+      "ht": "",
+      "at": "{channel} geçerli kök dizin altında kurulu değil. RSI Launcher ile kurun veya farklı bir kanal seçin."
+    },
+    "invalid_data_folder_title": {
+      "ht": "",
+      "at": "Geçersiz Veri Klasörü"
+    },
+    "invalid_cache_folder_title": {
+      "ht": "",
+      "at": "Geçersiz Önbellek Klasörü"
+    },
+    "dataforge_cache_changed_title": {
+      "ht": "",
+      "at": "DataForge Önbellek Yolu Değişti"
+    },
+    "dataforge_cache_changed_body": {
+      "ht": "",
+      "at": "DataForge önbellek yolunu değiştirmek Data.p4k dosyasından yeniden çıkarma gerektirir.\n\nYeniden çıkarma tamamlandıktan sonra önceki önbelleğe ne yapılsın?"
+    },
+    "re_extract_delete_old": {
+      "ht": "",
+      "at": "Yeniden çıkar && eskisini sil"
+    },
+    "re_extract_keep_old": {
+      "ht": "",
+      "at": "Yeniden çıkar && eskisini koru"
+    },
+    "preview_title": {
+      "ht": "",
+      "at": "Uygulama Önizlemesi"
+    },
+    "preview_header": {
+      "ht": "",
+      "at": "Uygulama Önizlemesi\n\nBirleştirme Sırası (yukarıdan aşağıya):\n"
+    },
+    "preview_total": {
+      "ht": "",
+      "at": "\nToplam Anahtar: {count:,}\nDurum Dağılımı:\n"
+    },
+    "no_sources_warning": {
+      "ht": "",
+      "at": "Birleştirilecek kaynak yok."
+    },
+    "include_new_tooltip": {
+      "ht": "",
+      "at": "İşaretlendiğinde, DataForge XML'den keşfedilen ve boş olmayan metne sahip öğeler ('Yeni' durumundakiler) uygulanan global.ini dosyasına dahil edilir."
+    },
+    "import_ini_tooltip": {
+      "ht": "",
+      "at": "Harici bir .ini dosyasını geçersiz kılmalarınıza katın. Çakışma çözüm iletişim kutusu her anahtar için karar vermenizi sağlar: mevcut olanı koru, içe aktarılanı kullan, sonuna ekle, başına ekle veya özel bir değer gir."
+    },
+    "reset_user_ini_tooltip": {
+      "ht": "",
+      "at": "Etkin kanal için tüm özel metin geçersiz kılmalarını silin. Geri yükleyebilmeniz için orijinalin yanına zaman damgalı bir yedek kaydedilir."
+    },
+    "restore_user_ini_tooltip": {
+      "ht": "",
+      "at": "Özel metin geçersiz kılmalarınızı otomatik bir anlık görüntüden geri yükleyin. Smart Citizen user.ini dosyasının son birkaç durumunu saklar; böylece hatalı bir düzenlemeyi geri alabilir veya dosya boşaltıldıktan sonra kurtarabilirsiniz."
+    },
+    "preview_apply_tooltip": {
+      "ht": "",
+      "at": "Geliştirmeleri Uygula'nın yazacaklarının deneme özeti — kaynak başına anahtar sayıları (Geliştirmeler kategoriye göre ayrılmış) ve Değiştirilmiş / Geliştirilmiş / Değiştirilmemiş / Yeni durum sayımı. Geliştirmeleri Uygula'ya tıklayana kadar oyuna hiçbir şey yazılmaz."
+    },
+    "check_updates_tooltip": {
+      "ht": "",
+      "at": "GitHub'da daha yeni bir Smart Citizen sürümü olup olmadığını denetleyin."
+    },
+    "theme_tooltip": {
+      "ht": "",
+      "at": "Uygulama temasını değiştirin. Ana pencere, araç çubuğu, sekmeler ve Yardım paneli genelinde hemen etkili olur."
+    },
+    "disable_tutorial_tooltip": {
+      "ht": "",
+      "at": "İşaretlendiğinde, rehberli tur yeni bir sürümde otomatik olarak başlatılmaz. Araç çubuğundaki Rehberli Tur düğmesi çalışmaya devam eder."
+    },
+    "game_path_tooltip": {
+      "ht": "",
+      "at": "Star Citizen kurulum kök dizini — LIVE/, PTU/, EPTU/, HOTFIX/ ve/veya TECH-PREVIEW/ klasörlerini içeren dizin. Kurulum sırasında otomatik algılanır; oyununuz başka bir yerdeyse düzenleyin. Aşağıdaki 'Kanal' açılır listesi uygulamanın hangisini okuyup yazacağını seçer."
+    },
+    "browse_game_tooltip": {
+      "ht": "",
+      "at": "Klasör tarayıcısında Star Citizen kurulum kök dizinini seçin."
+    },
+    "channel_tooltip": {
+      "ht": "",
+      "at": "Data.p4k dosyasının okunacağı ve global.ini dosyasının yazılacağı Star Citizen kanalı. Kurulum kök dizini altında Data.p4k dosyası olmayan kanallar devre dışıdır. Kanal değiştirmek metinleri yeni kanalın verilerine göre hemen yeniden yükler."
+    },
+    "channel_not_installed_tooltip": {
+      "ht": "",
+      "at": "{channel} kurulu değil — {path} konumunda Data.p4k yok"
+    },
+    "language_tooltip": {
+      "ht": "",
+      "at": "Oyuna uygulanacak dil. Çeviride eksik olan anahtarlar otomatik olarak İngilizceye döner."
+    },
+    "map_language_tooltip": {
+      "ht": "",
+      "at": "Her dilin global.ini dosyası için bir URL belirleyin. O dile geçtiğinizde Smart Citizen dosyayı indirir ve İngilizce Data.p4k çıkarımı yerine temel metinler olarak kullanır."
+    },
+    "data_dir_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen uygulama veri kök dizini. Her kanal bu dizin içinde kendi alt klasörünü alır. Belgeler\\Smart Citizen kullanmak için boş bırakın veya Sıfırla'ya tıklayın."
+    },
+    "browse_data_tooltip": {
+      "ht": "",
+      "at": "Klasör tarayıcısında Smart Citizen veri klasörünü seçin."
+    },
+    "reset_data_tooltip": {
+      "ht": "",
+      "at": "Özel veri klasörünü temizleyin ve Belgeler\\Smart Citizen kullanın."
+    },
+    "cache_dir_tooltip": {
+      "ht": "",
+      "at": "Çıkarılan DataForge XML ağacı (~1,4 GB) için temel klasör. Her kanal bunun altında {base}\\{channel}\\cache\\dataforge\\ olarak yer alır. OneDrive dışında kalması için varsayılan olarak %LOCALAPPDATA%\\Smart Citizen kullanılır. Yolu değiştirmek yeniden çıkarma başlatır."
+    },
+    "browse_cache_tooltip": {
+      "ht": "",
+      "at": "Klasör tarayıcısında DataForge önbellek temel klasörünü seçin."
+    },
+    "reset_cache_tooltip": {
+      "ht": "",
+      "at": "Özel önbellek klasörünü temizleyin ve platform varsayılanını kullanın."
+    },
+    "extract_tooltip": {
+      "ht": "",
+      "at": "Kurulu Data.p4k dosyanızdan orijinal yerelleştirmeyi (base.ini) ve DataForge varlık XML'lerini çıkarın. Her Star Citizen yamasından sonra çalıştırın — çıkarma bittiğinde metinler tabloya otomatik olarak yeniden yüklenir."
+    },
+    "include_new_cb": {
+      "ht": "",
+      "at": "Keşfedilen öğeleri dahil et"
+    },
+    "disable_tutorial_cb": {
+      "ht": "",
+      "at": "Rehberli Turu Devre Dışı Bırak"
+    },
+    "invalid_data_folder_body": {
+      "ht": "",
+      "at": "Seçilen veri klasörü bir dizin değil, bir dosya:\n{path}"
+    },
+    "onedrive_folder_title": {
+      "ht": "",
+      "at": "Veri Klasörü OneDrive İçinde"
+    },
+    "onedrive_folder_body": {
+      "ht": "",
+      "at": "Bu klasör OneDrive içinde:\n\n{path}\n\nOneDrive bu dosyaları eşitleyebilir, hatta boşaltabilir; bu durum düzenlemelerin kaybolmasına yol açmıştır. OneDrive dışında yerel bir klasör şiddetle önerilir.\n\nYine de bu OneDrive klasörü kullanılsın mı?"
+    },
+    "dataforge_cache_old_new": {
+      "ht": "",
+      "at": "Eski: {old}\nYeni: {new}"
+    },
+    "channel_not_installed_hint": {
+      "ht": "",
+      "at": "⚠ {channel} bu kök dizin altında kurulu değil — başka bir kanal seçin"
+    },
+    "preview_merge_failed": {
+      "ht": "",
+      "at": "Birleştirme önizlemesi başarısız: {error}"
+    },
+    "game_path_placeholder": {
+      "ht": "",
+      "at": "C:\\Program Files\\Roberts Space Industries\\StarCitizen"
+    },
+    "language_source_placeholder": {
+      "ht": "",
+      "at": "https://…/global.ini"
+    }
+  },
+  "enhancements": {
+    "title": {
+      "ht": "",
+      "at": "Geliştirmeler"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Temel yerelleştirme verilerini genişleten isteğe bağlı özellikler: geliştirme oluşturucu için kategori anahtarları, oyun içi gemi listesi için bir favori ön eki ve bileşenler, füzeler ve gemi silahlarındaki köşeli parantezli ad etiketlerini özelleştiren bir Etiket Oluşturucu."
+    },
+    "enhancements_group": {
+      "ht": "",
+      "at": "Yerelleştirme Geliştirmeleri"
+    },
+    "enhancements_desc": {
+      "ht": "",
+      "at": "Dahil edilecek geliştirme kategorilerini seçin. Değişiklikleri kaydetmek için Uygula'ya tıklayın. Geliştirmeler, yüklü Data.p4k dosyanızdan oluşturulur."
+    },
+    "cat_desc_ships": {
+      "ht": "",
+      "at": "Gemi performansı, donanım ve mürettebat verileri"
+    },
+    "cat_desc_ship_items": {
+      "ht": "",
+      "at": "Bileşen sınıfı/boyutu/derecesi açıklamaları ve istatistikleri"
+    },
+    "cat_desc_gear": {
+      "ht": "",
+      "at": "FPS silahları için çatışma istatistikleri"
+    },
+    "cat_desc_missions": {
+      "ht": "",
+      "at": "Görevler için XP ödülleri ve düşen planlar"
+    },
+    "cat_desc_commodities": {
+      "ht": "",
+      "at": "Üretim tarifleri ve malzeme kullanımı"
+    },
+    "cat_desc_journal": {
+      "ht": "",
+      "at": "Mineral başına üretim verileri içeren Madencilik Derlemesi"
+    },
+    "cat_desc_medical_consumables": {
+      "ht": "",
+      "at": "CureLife tıbbi kalemleri için sade dilde etki özetleri"
+    },
+    "apply_btn": {
+      "ht": "",
+      "at": "Uygula"
+    },
+    "generate_btn": {
+      "ht": "",
+      "at": "Geliştirmeleri Oluştur"
+    },
+    "favorites_group": {
+      "ht": "",
+      "at": "Favoriler"
+    },
+    "favorites_desc": {
+      "ht": "",
+      "at": "Oluşturulan gemi listesinde yıldızlanan gemi adlarının başına yapılandırılabilir bir ön ek eklenir; böylece oyun içi gemi seçiminde en üstte sıralanırlar."
+    },
+    "sort_prefix_label": {
+      "ht": "",
+      "at": "Sıralama ön eki:"
+    },
+    "tag_builder_group": {
+      "ht": "",
+      "at": "Etiket Oluşturucu"
+    },
+    "tag_builder_desc": {
+      "ht": "",
+      "at": "Bileşenler, füzeler ve gemi silahlarındaki köşeli parantezli ad etiketlerini özelleştirir. Değişiklikler, Etiket Değişikliklerini Kaydet'e tıklayıp Geliştirmeleri Oluştur'u yeniden çalıştırdıktan sonra geçerli olur."
+    },
+    "preview_label": {
+      "ht": "",
+      "at": "Önizleme:"
+    },
+    "annotate_mission_descs_cb": {
+      "ht": "",
+      "at": "Görev açıklamalarındaki bileşenlere açıklama ekle"
+    },
+    "apply_tag_changes_btn": {
+      "ht": "",
+      "at": "Etiket Değişikliklerini Kaydet"
+    },
+    "reset_defaults_btn": {
+      "ht": "",
+      "at": "Varsayılanlara sıfırla"
+    },
+    "edit_mapping_btn": {
+      "ht": "",
+      "at": "Eşlemeyi Düzenle..."
+    },
+    "blueprints_group": {
+      "ht": "",
+      "at": "Planlar"
+    },
+    "blueprints_desc": {
+      "ht": "",
+      "at": "Zaten sahip olduğunuz planları işaretleyin. Sahip olunan öğeler, bir görevin olası plan ödüllerinde göründükleri her yerde [Owned] etiketi alır; böylece neyin peşine düşmeye değer olduğunu bir bakışta anlarsınız. Soldan öğeleri seçin ve okları kullanarak sahip olunanlar listenize taşıyın."
+    },
+    "blueprints_empty_note": {
+      "ht": "",
+      "at": "Bu listeyi doldurmak için önce görev geliştirmelerini oluşturun. Planlar görev ödül verilerinden gelir."
+    },
+    "blueprints_search_placeholder": {
+      "ht": "",
+      "at": "Planları ada göre ara…"
+    },
+    "blueprints_show_tags_checkbox": {
+      "ht": "",
+      "at": "Plan adlarında etiketleri göster"
+    },
+    "blueprints_mission_label": {
+      "ht": "",
+      "at": "Görev:"
+    },
+    "blueprints_facet_any": {
+      "ht": "",
+      "at": "Herhangi"
+    },
+    "blueprints_facet_type": {
+      "ht": "",
+      "at": "Tür:"
+    },
+    "blueprints_facet_class": {
+      "ht": "",
+      "at": "Sınıf:"
+    },
+    "blueprints_facet_size": {
+      "ht": "",
+      "at": "Boyut:"
+    },
+    "blueprints_facet_grade": {
+      "ht": "",
+      "at": "Derece:"
+    },
+    "blueprints_filter_note": {
+      "ht": "",
+      "at": "Tür her şeyi bileşenler, FPS silahları, zırh veya Diğer olarak sıralar. Sınıf, Boyut ve Derece yalnızca gemi bileşenlerine uygulanır."
+    },
+    "blueprints_tooltip_missions": {
+      "ht": "",
+      "at": "Görevler: {missions}"
+    },
+    "blueprints_available_label": {
+      "ht": "",
+      "at": "Mevcut planlar"
+    },
+    "blueprints_owned_label": {
+      "ht": "",
+      "at": "Sahip olunan planlar"
+    },
+    "blueprints_add_tooltip": {
+      "ht": "",
+      "at": "Seçili planları sahip olunan olarak işaretle"
+    },
+    "blueprints_remove_tooltip": {
+      "ht": "",
+      "at": "Seçili planları sahip olunanlardan kaldır"
+    },
+    "bp_scan_title": {
+      "ht": "",
+      "at": "BP Taraması"
+    },
+    "bp_scan_starting": {
+      "ht": "",
+      "at": "Alınan planlar için Star Citizen günlükleri taranıyor…"
+    },
+    "bp_scan_progress": {
+      "ht": "",
+      "at": "{file} taranıyor…"
+    },
+    "bp_scan_finishing": {
+      "ht": "",
+      "at": "Tamamlanıyor…"
+    },
+    "bp_scan_no_path": {
+      "ht": "",
+      "at": "Yapılandırılmış bir Star Citizen kurulum yolu olmadığından taranacak günlük yok. Önce Yapılandırma sekmesinden oyun klasörünüzü ayarlayın."
+    },
+    "bp_scan_none": {
+      "ht": "",
+      "at": "Son taramadan bu yana yeni plan bulunamadı."
+    },
+    "mission_field_ace_tooltip": {
+      "ht": "",
+      "at": "Görev bir as pilot ortaya çıkardığında görev ayrıntıları gövdesinde bir \"Ace Pilot: Yes\" satırı göster. [ACE] başlık etiketi, Genel Etiketler altında ayrı bir anahtardır. Bir sonraki Geliştirmeleri Oluştur'da geçerli olur."
+    },
+    "mission_field_default_tooltip": {
+      "ht": "",
+      "at": "Oluşturulan görev gövdelerinde {label} satırını göster. Bir sonraki Geliştirmeleri Oluştur'da geçerli olur."
+    },
+    "stats_prepend_tooltip": {
+      "ht": "",
+      "at": "Oluşturulan istatistik bloğunu üretici/PR açıklamasının altına değil üstüne yerleştir (gemiler, bileşenler, silahlar). Bir sonraki Geliştirmeleri Oluştur'da geçerli olur."
+    },
+    "standardize_ship_names_tooltip": {
+      "ht": "",
+      "at": "Exec hangar (PYX) ve Wikelo (WIK) gemi varyantlarını, standart pledge mağazası sürümünden ayırt eden bir son ek içerecek şekilde yeniden adlandır (ör. \"Anvil F8C Lightning PYX\"). Bir sonraki Geliştirmeleri Oluştur'da geçerli olur."
+    },
+    "rs_ore_name_annotations_tooltip": {
+      "ht": "",
+      "at": "Çıkarılabilir her cevherin temel Kaynak İmzasını kendi görünen adının sonuna ekle (ör. \"Aluminium (RS 4285)\"); böylece görev takipçisi dahil oyunun bu adı gösterdiği her yerde görünür. Görev Ayrıntı Alanları altındaki Kaynak İmzaları'ndan bağımsızdır. Bir sonraki Geliştirmeleri Oluştur'da geçerli olur."
+    },
+    "apply_categories_tooltip": {
+      "ht": "",
+      "at": "Kategori seçimini kaydet. İşareti kaldırılan kategoriler devre dışı bırakılır."
+    },
+    "generate_enabled_tooltip": {
+      "ht": "",
+      "at": "Oyununuzun Data.p4k dosyasından geliştirilmiş yerelleştirme dosyaları oluştur.\nDataForge verileri önbellekte yoksa otomatik olarak çıkarılır\n(ilk çalıştırma birkaç dakika sürer; sonraki çalıştırmalar hızlıdır)."
+    },
+    "generate_disabled_tooltip": {
+      "ht": "",
+      "at": "Zaten güncel — son çalıştırmadan bu yana oluşturulan çıktıyı etkileyen hiçbir şey (kategoriler, görev alanları, istatistik/ad seçenekleri, Etiket Oluşturucu) değişmedi."
+    },
+    "favorite_prefix_tooltip": {
+      "ht": "",
+      "at": "Favori gemi adlarının başına eklenen ve oyun içi gemi listesinde en üstte sıralanmalarını sağlayan karakter. Değiştirdikten sonra tüm mevcut favorileri güncellemek için Ön Eki Uygula'ya tıklayın."
+    },
+    "rep_xp_label_tooltip": {
+      "ht": "",
+      "at": "Rütbe adı olmayan görevler için etiket (ör. 'Rep: +100 XP')"
+    },
+    "header_em_tooltip": {
+      "ht": "",
+      "at": "Bölüm başlıkları için stil: Altı çizili (EM3) veya Mavi metin (EM4)"
+    },
+    "prefix_enabled_tooltip": {
+      "ht": "",
+      "at": "Seçili ön eki kaydet ve tüm mevcut favorileri bunu kullanacak şekilde güncelle"
+    },
+    "prefix_disabled_tooltip": {
+      "ht": "",
+      "at": "Zaten uygulandı — seçili ön ek mevcut favorilerinizle eşleşiyor."
+    },
+    "annotate_mission_descs_tooltip": {
+      "ht": "",
+      "at": "İşaretlendiğinde, yapılandırılmış [CLASS-Sx-grade] etiketi görev açıklamalarındaki POTENTIAL BLUEPRINTS listesinde yer alan bileşen adlarına eklenir. Etiketi başka yerlerdeki asıl bileşen adlarında tutarken daha sade bir görev gövdesi için işareti kaldırın."
+    },
+    "reset_tag_tooltip": {
+      "ht": "",
+      "at": "Her kategori (Bileşenler / Füzeler / Gemi Silahları) için varsayılan deseni, eşlemeyi ve sıralamayı geri yükle. Etiket Değişikliklerini Kaydet'e veya Geliştirmeleri Oluştur'a tıklayana kadar kaydetmez ya da yeniden oluşturmaz."
+    },
+    "tag_enabled_tooltip": {
+      "ht": "",
+      "at": "Bileşenler / Füzeler / Gemi Silahları etiket yapılandırmalarını kaydet ve geliştirme oluşturucuyu yeniden çalıştır. Yeni etiketler, bir sonraki Geliştirmeleri Uygula'dan sonra oyunda görünür."
+    },
+    "tag_disabled_tooltip": {
+      "ht": "",
+      "at": "Zaten kaydedildi — son kayıttan bu yana Etiket Oluşturucu değişikliği yok."
+    },
+    "generating_enhancements_tooltip": {
+      "ht": "",
+      "at": "Geliştirmeler oluşturuluyor…"
+    },
+    "extracting_dataforge_tooltip": {
+      "ht": "",
+      "at": "Data.p4k dosyasından DataForge çıkarılıyor…"
+    },
+    "tag_move_up_tooltip": {
+      "ht": "",
+      "at": "Bu öğeyi yukarı taşı"
+    },
+    "tag_move_down_tooltip": {
+      "ht": "",
+      "at": "Bu öğeyi aşağı taşı"
+    },
+    "tag_untick_exclude_tooltip": {
+      "ht": "",
+      "at": "Bu öğeyi etiketten çıkarmak için işareti kaldırın"
+    },
+    "tag_edit_mapping_row_btn": {
+      "ht": "",
+      "at": "Eşlemeyi düzenle…"
+    },
+    "tag_mapping_tooltip_ordinance": {
+      "ht": "",
+      "at": "Her izleme türü için kullanılan Kısa / Orta / Uzun metni düzenleyin (ör. Infrared → I / IR / Infrared)."
+    },
+    "tag_mapping_tooltip_damage": {
+      "ht": "",
+      "at": "Her hasar türü için kullanılan Kısa / Orta / Uzun metni düzenleyin (ör. Energy → E / EN / Energy)."
+    },
+    "tag_mapping_tooltip_type": {
+      "ht": "",
+      "at": "Her bileşen türü için kullanılan Kısa / Orta / Uzun metni düzenleyin (ör. Shield Generator → SH / SHLD / Shield)."
+    },
+    "tag_mapping_tooltip_label": {
+      "ht": "",
+      "at": "Üretim etiketi için Kısa / Orta / Uzun metni düzenleyin (ör. Crafting → CF / Craft / Crafting)."
+    },
+    "tag_mapping_tooltip_collection": {
+      "ht": "",
+      "at": "Koleksiyon etiketi için Kısa / Orta / Uzun metni düzenleyin (ör. Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_default": {
+      "ht": "",
+      "at": "Her sınıf için kullanılan Kısa / Orta / Uzun metni düzenleyin (ör. Military → M / MIL / Military)."
+    },
+    "mission_detail_fields_heading": {
+      "ht": "",
+      "at": "Görev ayrıntı alanları:"
+    },
+    "mission_field_mission_type": {
+      "ht": "",
+      "at": "Görev Türü"
+    },
+    "mission_field_difficulty": {
+      "ht": "",
+      "at": "Zorluk"
+    },
+    "mission_field_hostiles": {
+      "ht": "",
+      "at": "Düşmanlar"
+    },
+    "mission_field_reputation": {
+      "ht": "",
+      "at": "İtibar"
+    },
+    "mission_field_blueprints": {
+      "ht": "",
+      "at": "Planlar"
+    },
+    "mission_field_ace_pilot": {
+      "ht": "",
+      "at": "As Pilot"
+    },
+    "mission_field_resource_signatures": {
+      "ht": "",
+      "at": "Kaynak İmzaları"
+    },
+    "mission_detail_fields_note": {
+      "ht": "",
+      "at": "İşaretlenmeyen alanlar görev açıklamalarının dışında bırakılır. Bir sonraki Geliştirmeleri Oluştur'da uygulanır."
+    },
+    "stats_prepend_cb": {
+      "ht": "",
+      "at": "İstatistikleri açıklamanın üstünde göster"
+    },
+    "standardize_ship_names_cb": {
+      "ht": "",
+      "at": "Kazanılabilir gemi adlarını standartlaştır"
+    },
+    "rs_ore_name_annotations_cb": {
+      "ht": "",
+      "at": "Cevher adlarının yanında Kaynak İmzalarını (RS) göster"
+    },
+    "mission_labels_group": {
+      "ht": "",
+      "at": "Görev Etiketleri"
+    },
+    "mission_label_details": {
+      "ht": "",
+      "at": "Ayrıntılar:"
+    },
+    "mission_label_blueprints": {
+      "ht": "",
+      "at": "Planlar:"
+    },
+    "mission_label_item_rewards": {
+      "ht": "",
+      "at": "Eşya ödülleri:"
+    },
+    "mission_label_blueprint_data": {
+      "ht": "",
+      "at": "Plan verileri:"
+    },
+    "mission_label_xp": {
+      "ht": "",
+      "at": "XP etiketi:"
+    },
+    "mission_label_header_style": {
+      "ht": "",
+      "at": "Başlık stili:"
+    },
+    "em_label_underline": {
+      "ht": "",
+      "at": "Altı çizili"
+    },
+    "em_label_blue_text": {
+      "ht": "",
+      "at": "Mavi metin"
+    },
+    "forge_status_not_extracted": {
+      "ht": "",
+      "at": "DataForge: henüz çıkarılmadı — başlamak için 'Geliştirmeleri Oluştur'a tıklayın"
+    },
+    "forge_status_outdated": {
+      "ht": "",
+      "at": "DataForge: önbellek güncel değil — yeniden çıkarmak ve güncellemek için 'Geliştirmeleri Oluştur'a tıklayın"
+    },
+    "forge_status_up_to_date": {
+      "ht": "",
+      "at": "DataForge: önbellek güncel ✓"
+    },
+    "tag_separator_label": {
+      "ht": "",
+      "at": "Ayırıcı:"
+    },
+    "tag_enclosing_label": {
+      "ht": "",
+      "at": "Çevreleyen:"
+    },
+    "tag_placement_label": {
+      "ht": "",
+      "at": "Yerleşim:"
+    },
+    "tag_craft_usage_separator_label": {
+      "ht": "",
+      "at": "Üretim kullanımı ayırıcısı:"
+    },
+    "mt_hauling_group": {
+      "ht": "",
+      "at": "Nakliye Görevleri"
+    },
+    "mt_enable_route_cb": {
+      "ht": "",
+      "at": "Nakliye görevi başlıklarına rota ekle"
+    },
+    "mt_standardize_cb": {
+      "ht": "",
+      "at": "Nakliye görevi adlarını standartlaştır (ör. \"Large Shipment\" / \"Haul - Small Scale\" yerine her şirket için \"Medium Cargo Haul\")"
+    },
+    "mt_route_hint": {
+      "ht": "",
+      "at": "Görev kabul edildiğinde oyun gerçek alım ve teslimat konumlarını doldurur."
+    },
+    "mt_route_arrow_label": {
+      "ht": "",
+      "at": "Rota oku:"
+    },
+    "mt_title_separator_label": {
+      "ht": "",
+      "at": "Başlık ayırıcısı:"
+    },
+    "mt_rank_separator_label": {
+      "ht": "",
+      "at": "Rütbe ayırıcısı:"
+    },
+    "mt_location_detail_label": {
+      "ht": "",
+      "at": "Konum ayrıntısı:"
+    },
+    "mt_shorten_titles_cb": {
+      "ht": "",
+      "at": "Orijinal başlıkları kısalt (Standart ifadeleri kısaltır, ör. \"Local Shipment Route\" → \"Route\")"
+    },
+    "mt_shorten_sizes_cb": {
+      "ht": "",
+      "at": "Kargo boyutlarını kısalt (Kargo boyutlarını kısaltır, ör. \"Extra Small\" → \"XS\")"
+    },
+    "mt_underline_direct_cb": {
+      "ht": "",
+      "at": "\"Direct\" ifadesinin altını çiz (Oyunda \"Direct\" nakliyelerine vurgu ekler)"
+    },
+    "mt_general_tags_group": {
+      "ht": "",
+      "at": "Genel Etiketler"
+    },
+    "mt_general_tags_hint": {
+      "ht": "",
+      "at": "Bu etiketleri yalnızca görev başlığında göster veya gizle"
+    },
+    "mt_tag_rep_cb": {
+      "ht": "",
+      "at": "Rep Etiketi (\"[500 REP]\" ekler)"
+    },
+    "mt_tag_blueprint_cb": {
+      "ht": "",
+      "at": "BP Etiketi (\"[BP]\" / \"[BP?]\" ekler)"
+    },
+    "mt_tag_ace_cb": {
+      "ht": "",
+      "at": "ACE Etiketi (\"[ACE]\" / \"[ACE?]\" ekler)"
+    },
+    "mt_tag_rep_track_cb": {
+      "ht": "",
+      "at": "Rep Yolu Etiketi (Rep etiketine \"(Security)\" / \"(Contractor)\" ekler)"
+    },
+    "mt_scanning_group": {
+      "ht": "",
+      "at": "Tarama/Madencilik Görevleri"
+    },
+    "mt_scanning_hint": {
+      "ht": "",
+      "at": "Recco Battaglia'nın Tarama/Madencilik görevleri belirli çıkarılabilir cevherleri hedefler; her cevherin Kaynak İmzası değerini görev başlığında gösterin."
+    },
+    "mt_tag_rs_cb": {
+      "ht": "",
+      "at": "Kaynak İmzası (RS) Etiketlerini Göster"
+    },
+    "mt_preview_route_off": {
+      "ht": "",
+      "at": "Önizleme:  {display} [50 REP]  (rota kapalı)"
+    },
+    "mt_preview_route_on": {
+      "ht": "",
+      "at": "Önizleme:  {display} [50 REP]"
+    },
+    "tag_preview": {
+      "ht": "",
+      "at": "Önizleme:  {content}"
+    },
+    "tag_preview_no_tag": {
+      "ht": "",
+      "at": "Önizleme:  {name}   (etiket yok — her öğe boş veya devre dışı)"
+    }
+  },
+  "blueprint_tracker": {
+    "title": {
+      "ht": "",
+      "at": "Plan Takipçisi"
+    },
+    "scan_logs_btn": {
+      "ht": "",
+      "at": "Sahip Olunan Planlar için Günlükleri Tara"
+    },
+    "scan_logs_tooltip": {
+      "ht": "",
+      "at": "Star Citizen günlük dosyalarınızı (Game.log ve logbackups) \"Received Blueprint\" ödül bildirimleri için tarayın ve bunları otomatik olarak sahip olunan olarak işaretleyin."
+    },
+    "scan_other_channels_checkbox": {
+      "ht": "",
+      "at": "LIVE/HOTFIX'i de tara (hangisi etkin değilse)"
+    },
+    "scan_other_channels_tooltip": {
+      "ht": "",
+      "at": "LIVE ve HOTFIX aynı hesap ilerlemesini paylaşır; bu nedenle birinde kazanılan bir plan diğerinin günlüklerinde de görünür. İkisinden hangisi etkin kanalınız değilse, yüklüyse o da taranır. PTU, EPTU ve TECH-PREVIEW kendi ilerlemelerine sahip ayrı test sürümleridir ve hiçbir zaman taranmaz."
+    },
+    "force_rescan_checkbox": {
+      "ht": "",
+      "at": "Tüm günlükleri yeniden tara (son taramayı yok say)"
+    },
+    "force_rescan_tooltip": {
+      "ht": "",
+      "at": "Normalde bir tarama yalnızca son taramanızdan sonraki olayları okur, böylece hızlı kalır. Sahip Olunan listeniz yanlış görünüyorsa ve bunun yerine her günlüğü baştan yeniden okumak istiyorsanız bunu işaretleyin. Bir sonraki taramadan sonra işareti kendiliğinden kalkar."
+    },
+    "apply_owned_tag_btn": {
+      "ht": "",
+      "at": "Sahip Olunan Etiketlerini Uygula"
+    },
+    "apply_owned_tag_tooltip": {
+      "ht": "",
+      "at": "Metin tablosundaki plan adlarında bulunan [Owned] etiketini mevcut Sahip Olunan listenizle eşleşecek şekilde yenileyin."
+    },
+    "apply_owned_tag_tooltip_disabled": {
+      "ht": "",
+      "at": "Zaten güncel — Sahip Olunan listeniz son uygulamadan bu yana değişmedi."
+    },
+    "owned_tags_refreshed": {
+      "ht": "",
+      "at": "[Owned] etiketleri mevcut Sahip Olunan listenizle eşleşecek şekilde yenilendi."
+    },
+    "export_owned_btn": {
+      "ht": "",
+      "at": "Sahip Olunan Planları Dışa Aktar…"
+    },
+    "export_owned_tooltip": {
+      "ht": "",
+      "at": "Sahip Olunan listenizi, ilerlemenizi diğer araçlarla veya başka bir Smart Citizen kurulumuyla paylaşmak için bir JSON ya da CSV dosyasına kaydedin."
+    },
+    "import_owned_btn": {
+      "ht": "",
+      "at": "Sahip Olunan Planları İçe Aktar…"
+    },
+    "import_owned_tooltip": {
+      "ht": "",
+      "at": "Bir JSON veya CSV dosyasından (scmdb.net dışa aktarımı dahil) sahip olunan planları mevcut Sahip Olunan listenize ekleyin. Zaten sahip olunan olarak işaretlenmiş hiçbir şeyi kaldırmaz."
+    },
+    "export_nothing_title": {
+      "ht": "",
+      "at": "Dışa aktarılacak bir şey yok"
+    },
+    "export_nothing_body": {
+      "ht": "",
+      "at": "Sahip Olunan listeniz boş, bu nedenle dışa aktarılacak bir şey yok."
+    },
+    "export_dialog_title": {
+      "ht": "",
+      "at": "Sahip Olunan Planları Dışa Aktar"
+    },
+    "export_default_filename": {
+      "ht": "",
+      "at": "owned-blueprints"
+    },
+    "export_json_filter": {
+      "ht": "",
+      "at": "JSON dosyaları (*.json)"
+    },
+    "export_csv_filter": {
+      "ht": "",
+      "at": "CSV dosyaları (*.csv)"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "Dışa aktarma başarısız"
+    },
+    "export_failed_body": {
+      "ht": "",
+      "at": "Dosya yazılamadı.\n\n{error_type}: {error}"
+    },
+    "export_done_title": {
+      "ht": "",
+      "at": "Dışa aktarma tamamlandı"
+    },
+    "export_done_singular": {
+      "ht": "",
+      "at": "1 sahip olunan plan şuraya dışa aktarıldı:\n{path}"
+    },
+    "export_done_plural": {
+      "ht": "",
+      "at": "{count} sahip olunan plan şuraya dışa aktarıldı:\n{path}"
+    },
+    "import_dialog_title": {
+      "ht": "",
+      "at": "Sahip Olunan Planları İçe Aktar"
+    },
+    "import_file_filter": {
+      "ht": "",
+      "at": "Plan dışa aktarma dosyaları (*.json *.csv)"
+    },
+    "import_invalid_title": {
+      "ht": "",
+      "at": "İçe aktarma başarısız"
+    },
+    "import_invalid_body": {
+      "ht": "",
+      "at": "Bu dosya okunamadı.\n\n{error}"
+    },
+    "import_nothing_matched_body": {
+      "ht": "",
+      "at": "Bu dosyadaki {count} planın hiçbiri şu anda Smart Citizen tarafından takip edilmiyor; bu nedenle hiçbir şey içe aktarılmadı."
+    },
+    "owned_added_singular": {
+      "ht": "",
+      "at": "Sahip Olunan listenize 1 plan eklendi. Bir görevin plan ödüllerinde göründüğü her yerde [Owned] etiketi gösterecek."
+    },
+    "owned_added_plural": {
+      "ht": "",
+      "at": "Sahip Olunan listenize {count} plan eklendi. Bir görevin plan ödüllerinde göründükleri her yerde [Owned] etiketi gösterecekler."
+    },
+    "import_skipped_note": {
+      "ht": "",
+      "at": "Dosyadaki diğer {skipped} plan şu anda Smart Citizen tarafından takip edilmiyor ve atlandı."
+    },
+    "show_skipped_btn": {
+      "ht": "",
+      "at": "Atlanan Planları Göster"
+    },
+    "hide_skipped_btn": {
+      "ht": "",
+      "at": "Atlanan Planları Gizle"
+    },
+    "show_added_btn": {
+      "ht": "",
+      "at": "Eklenen Planları Göster"
+    },
+    "hide_added_btn": {
+      "ht": "",
+      "at": "Eklenen Planları Gizle"
+    }
+  },
+  "log": {
+    "min_level_label": {
+      "ht": "",
+      "at": "En düşük düzey:"
+    },
+    "auto_scroll_check": {
+      "ht": "",
+      "at": "Otomatik kaydır"
+    },
+    "clear_btn": {
+      "ht": "",
+      "at": "Temizle"
+    },
+    "export_btn": {
+      "ht": "",
+      "at": "Dosyaya aktar…"
+    },
+    "export_title": {
+      "ht": "",
+      "at": "Günlüğü dışa aktar"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "Dışa aktarma başarısız"
+    },
+    "lines_label": {
+      "ht": "",
+      "at": "{count} satır"
+    },
+    "min_level_tooltip": {
+      "ht": "",
+      "at": "Gösterilecek en düşük önem düzeyi. Seçilen düzeyin altındaki kayıtlar gizlenir (DEBUG < INFO < WARNING < ERROR)."
+    },
+    "auto_scroll_tooltip": {
+      "ht": "",
+      "at": "Yeni günlük kaydı geldikçe görünümü otomatik olarak en sona kaydırır. Eski satırları incelerken görünümü sabitlemek için kapatın."
+    },
+    "clear_tooltip": {
+      "ht": "",
+      "at": "Ekrandaki günlük arabelleğini temizler. Diskteki oturum günlüğü dosyası etkilenmez."
+    },
+    "export_tooltip": {
+      "ht": "",
+      "at": "Geçerli günlük arabelleğini bir .log dosyasına kaydeder — hata bildirimi yaparken kullanışlıdır."
+    }
+  },
+  "import_dialog": {
+    "title": {
+      "ht": "",
+      "at": "İçe Aktarma Çakışmaları"
+    },
+    "conflicts_group": {
+      "ht": "",
+      "at": "Çakışmalar ({count} anahtar)"
+    },
+    "keep_all_btn": {
+      "ht": "",
+      "at": "Tümünü Mevcut Haliyle Koru"
+    },
+    "import_all_btn": {
+      "ht": "",
+      "at": "Tümünü İçe Aktar"
+    },
+    "col_key": {
+      "ht": "",
+      "at": "Anahtar"
+    },
+    "col_current_value": {
+      "ht": "",
+      "at": "Geçerli Değer"
+    },
+    "col_imported_value": {
+      "ht": "",
+      "at": "İçe Aktarılan Değer"
+    },
+    "col_resolution": {
+      "ht": "",
+      "at": "Çözüm"
+    },
+    "resolution_keep": {
+      "ht": "",
+      "at": "Mevcudu Koru"
+    },
+    "resolution_use": {
+      "ht": "",
+      "at": "İçe Aktarılanı Kullan"
+    },
+    "resolution_append": {
+      "ht": "",
+      "at": "İçe Aktarılanı Sona Ekle"
+    },
+    "resolution_prepend": {
+      "ht": "",
+      "at": "İçe Aktarılanı Başa Ekle"
+    },
+    "resolution_custom": {
+      "ht": "",
+      "at": "Özel..."
+    },
+    "custom_value_title": {
+      "ht": "",
+      "at": "Özel Değer"
+    },
+    "custom_value_prompt": {
+      "ht": "",
+      "at": "Şu anahtar için özel değer girin:\n{loc_key}"
+    },
+    "auto_add_summary": {
+      "ht": "",
+      "at": "{count} anahtar otomatik olarak eklenecek."
+    },
+    "excluded_summary": {
+      "ht": "",
+      "at": "{count} anahtar hariç tutuldu (base.ini içinde yok)."
+    },
+    "keep_all_tooltip": {
+      "ht": "",
+      "at": "Tüm çakışmaları mevcut değerinizi koruyup içe aktarılanı yok sayarak çözer."
+    },
+    "import_all_tooltip": {
+      "ht": "",
+      "at": "Tüm çakışmaları içe aktarılan değeri kabul edip mevcut değerinizin üzerine yazarak çözer."
+    }
+  },
+  "coach": {
+    "back_btn": {
+      "ht": "",
+      "at": "Geri"
+    },
+    "next_btn": {
+      "ht": "",
+      "at": "İleri"
+    },
+    "skip_btn": {
+      "ht": "",
+      "at": "Atla"
+    },
+    "finish_btn": {
+      "ht": "",
+      "at": "Bitir"
+    },
+    "step_counter": {
+      "ht": "",
+      "at": "Adım {current} / {total}"
+    }
+  },
+  "tag_mapping_dialog": {
+    "hint": {
+      "ht": "",
+      "at": "Her ham değerin Kısa / Orta / Uzun uzunluklarda nasıl görüntüleneceğini düzenleyin. Etiket Oluşturucu'daki öğenin stil açılır listesi hangi uzunluğun kullanılacağını belirler."
+    },
+    "reset_btn": {
+      "ht": "",
+      "at": "Varsayılanlara sıfırla"
+    },
+    "col_value": {
+      "ht": "",
+      "at": "Değer"
+    },
+    "col_short": {
+      "ht": "",
+      "at": "Kısa"
+    },
+    "col_medium": {
+      "ht": "",
+      "at": "Orta"
+    },
+    "col_long": {
+      "ht": "",
+      "at": "Uzun"
+    },
+    "reset_tooltip": {
+      "ht": "",
+      "at": "Bu eşleme tablosundaki her hücreyi yerleşik Smart Citizen varsayılanlarına döndürür."
+    }
+  },
+  "dialogs": {
+    "warning_title": {
+      "ht": "",
+      "at": "Uyarı"
+    },
+    "error_title": {
+      "ht": "",
+      "at": "Hata"
+    },
+    "success_title": {
+      "ht": "",
+      "at": "Başarılı"
+    },
+    "no_file_loaded": {
+      "ht": "",
+      "at": "Lütfen önce bir dosya yükleyin"
+    },
+    "no_game_path": {
+      "ht": "",
+      "at": "Lütfen Yapılandırma sekmesinden oyun kurulum yolunu yapılandırın"
+    },
+    "missing_sources_title": {
+      "ht": "",
+      "at": "Eksik Kaynaklar"
+    },
+    "missing_sources_body": {
+      "ht": "",
+      "at": "Aşağıdaki etkin kaynaklar yüklenemedi:\n\n  {names}\n\nBu kaynakların özelleştirmeleri uygulanan dosyaya DAHİL EDİLMEYECEKTİR.\n\nYine de uygulansın mı?"
+    },
+    "apply_status": {
+      "ht": "",
+      "at": "Oyuna uygulandı | {user_count} kullanıcı düzenlemesi | {enhancement_count} geliştirme"
+    },
+    "apply_failed_status": {
+      "ht": "",
+      "at": "Uygulama başarısız — doğrulama hatası"
+    },
+    "validation_failed_title": {
+      "ht": "",
+      "at": "Doğrulama Başarısız"
+    },
+    "validation_failed_body": {
+      "ht": "",
+      "at": "Yazılan dosya doğrulamayı geçemedi ve silindi.\n\n{msg}{restore_note}"
+    },
+    "nothing_to_clear_title": {
+      "ht": "",
+      "at": "Temizlenecek Bir Şey Yok"
+    },
+    "nothing_to_clear_body": {
+      "ht": "",
+      "at": "Oyunun yerelleştirme dizininde özel bir global.ini bulunamadı.\nOyun zaten orijinal metinleri kullanıyor."
+    },
+    "clear_localization_title": {
+      "ht": "",
+      "at": "Yerelleştirmeyi Temizle"
+    },
+    "clear_localization_body": {
+      "ht": "",
+      "at": "Bu işlem özel global.ini dosyasını şuradan silecek:\n{loc_dir}\n\nOyun varsayılan (orijinal) yerelleştirme metnine geri dönecek.\n\nGeçersiz kılmalarınız uygulamada korunur ve istediğiniz zaman yeniden uygulanabilir.\n\nDevam edilsin mi?"
+    },
+    "clear_localization_done_title": {
+      "ht": "",
+      "at": "Tamamlandı"
+    },
+    "clear_localization_done_body": {
+      "ht": "",
+      "at": "Özel yerelleştirme kaldırıldı.\nOyun artık varsayılan metnini kullanacak.\n\nGeçersiz kılmalarınızı ve istatistik açıklamalarını yeniden uygulamak için Geliştirmeleri Uygula'ya tıklayın."
+    },
+    "clear_localization_status": {
+      "ht": "",
+      "at": "Yerelleştirme temizlendi — oyun orijinal metne geri döndü"
+    },
+    "cache_empty_title": {
+      "ht": "",
+      "at": "Önbellek Boş"
+    },
+    "cache_empty_body": {
+      "ht": "",
+      "at": "Önbellek dizini zaten boş."
+    },
+    "clear_cache_title": {
+      "ht": "",
+      "at": "Önbelleği Temizle"
+    },
+    "dataforge_cache_title": {
+      "ht": "",
+      "at": "DataForge Önbelleği Temizlensin mi?"
+    },
+    "cache_cleared_title": {
+      "ht": "",
+      "at": "Önbellek Temizlendi"
+    },
+    "dir_not_found_title": {
+      "ht": "",
+      "at": "Dizin Bulunamadı"
+    },
+    "nothing_to_export_title": {
+      "ht": "",
+      "at": "Dışa Aktarılacak Bir Şey Yok"
+    },
+    "nothing_to_export_body": {
+      "ht": "",
+      "at": "Oyunun yerelleştirme dizininde uygulanmış bir global.ini bulunamadı.\n\nÖzelleştirmelerinizi yazmak için önce ‘Geliştirmeleri Uygula’ya tıklayın, ardından paylaşmak üzere paketlemek için Dışa Aktar'ı kullanın."
+    },
+    "export_loc_pack_title": {
+      "ht": "",
+      "at": "Yerelleştirme Paketini Dışa Aktar"
+    },
+    "export_complete_title": {
+      "ht": "",
+      "at": "Dışa Aktarma Tamamlandı"
+    },
+    "export_complete_body": {
+      "ht": "",
+      "at": "Yerelleştirme paketi şuraya yazıldı:\n{out_path}\n\nKanal: {channel}\nKaynak boyutu: {source_size:,} bayt\nZip boyutu: {zip_size:,} bayt"
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "Dışa Aktarma Başarısız"
+    },
+    "export_failed_body": {
+      "ht": "",
+      "at": "Yerelleştirme paketi zip dosyası yazılamadı:\n{error}"
+    },
+    "update_available_title": {
+      "ht": "",
+      "at": "Smart Citizen — Güncelleme Mevcut"
+    },
+    "update_available_body": {
+      "ht": "",
+      "at": "Yeni bir sürüm mevcut: v{latest}\nŞu anda v{current} sürümündesiniz."
+    },
+    "update_open_release": {
+      "ht": "",
+      "at": "Sürüm Sayfasını Aç"
+    },
+    "update_later": {
+      "ht": "",
+      "at": "Daha Sonra"
+    },
+    "update_now": {
+      "ht": "",
+      "at": "Şimdi Güncelle"
+    },
+    "update_auto_note": {
+      "ht": "",
+      "at": "Smart Citizen kapanacak, güncellemeyi yükleyecek ve otomatik olarak yeniden açılacak. Windows önce izin isteyecektir."
+    },
+    "update_download_title": {
+      "ht": "",
+      "at": "Güncelleme İndiriliyor"
+    },
+    "update_download_label": {
+      "ht": "",
+      "at": "Smart Citizen v{latest} indiriliyor..."
+    },
+    "update_download_failed_title": {
+      "ht": "",
+      "at": "Güncelleme İndirilemedi"
+    },
+    "update_download_failed_body": {
+      "ht": "",
+      "at": "Güncelleme indirilemedi:\n\n{message}\n\nSürüm sayfasından elle indirebilirsiniz."
+    },
+    "update_launch_failed_title": {
+      "ht": "",
+      "at": "Güncelleme Başlatılmadı"
+    },
+    "update_launch_failed_body": {
+      "ht": "",
+      "at": "Güncelleme yükleyicisi başlatılamadı (Windows izni reddedildi veya başlatma başarısız oldu).\n\nDaha sonra kendiniz çalıştırabilirsiniz:\n{path}\n\nSmart Citizen şimdilik mevcut sürümde çalışmaya devam edecek."
+    },
+    "up_to_date_title": {
+      "ht": "",
+      "at": "Smart Citizen — Güncel"
+    },
+    "up_to_date_body": {
+      "ht": "",
+      "at": "En son sürümü kullanıyorsunuz (v{current})."
+    },
+    "update_check_failed_title": {
+      "ht": "",
+      "at": "Smart Citizen — Güncelleme Denetimi Başarısız"
+    },
+    "update_check_failed_body": {
+      "ht": "",
+      "at": "Güncellemeler denetlenemedi:\n\n{message}"
+    },
+    "nothing_to_reset_title": {
+      "ht": "",
+      "at": "Sıfırlanacak Bir Şey Yok"
+    },
+    "nothing_to_reset_body": {
+      "ht": "",
+      "at": "{channel} kanalı için user.ini yok — zaten varsayılan değerlerde.\n\nDenetlenen yol:\n{path}"
+    },
+    "reset_user_ini_title": {
+      "ht": "",
+      "at": "user.ini Sıfırlansın mı?"
+    },
+    "reset_failed_title": {
+      "ht": "",
+      "at": "Sıfırlama Başarısız"
+    },
+    "reset_failed_body": {
+      "ht": "",
+      "at": "user.ini sıfırlanamadı:\n\n{error}\n\nDosya hâlâ yerinde. Dosyayı açık tutuyor olabilecek diğer uygulamaları (metin düzenleyici, eşitleme istemcisi) kapatıp yeniden deneyin."
+    },
+    "no_sources_body": {
+      "ht": "",
+      "at": "Yapılandırılmış kaynak yok. Lütfen Yapılandırma sekmesinden veri kaynaklarını yapılandırın."
+    },
+    "merge_failed": {
+      "ht": "",
+      "at": "Birleştirme başarısız"
+    },
+    "merging_sources": {
+      "ht": "",
+      "at": "Kaynaklar birleştiriliyor..."
+    },
+    "language_changed_status": {
+      "ht": "",
+      "at": "Dil {language} olarak değiştirildi — kaynaklar yeniden yükleniyor…"
+    },
+    "language_downloading": {
+      "ht": "",
+      "at": "{language} yerelleştirmesi indiriliyor…"
+    },
+    "language_no_url": {
+      "ht": "",
+      "at": "{language} için indirme URL'si ayarlanmamış; İngilizce temel gösteriliyor. Ayarlamak için Dil Dosyasını Eşle'yi kullanın."
+    },
+    "language_download_failed": {
+      "ht": "",
+      "at": "{language} yerelleştirmesi indirilemedi ve önbelleğe alınmış bir kopya bulunamadı. Bunun yerine İngilizce temel gösteriliyor. Dil Dosyasını Eşle'deki URL'yi ve bağlantınızı kontrol edip yeniden deneyin."
+    },
+    "language_generating_enhancements": {
+      "ht": "",
+      "at": "DataForge'dan {language} geliştirmeleri oluşturuluyor…"
+    },
+    "file_not_found_title": {
+      "ht": "",
+      "at": "Dosya Bulunamadı"
+    },
+    "file_not_found_body": {
+      "ht": "",
+      "at": "Dosya mevcut değil:\n{path}"
+    },
+    "empty_file_title": {
+      "ht": "",
+      "at": "Boş Dosya"
+    },
+    "empty_file_body": {
+      "ht": "",
+      "at": "İçe aktarılan dosya geçerli anahtar=değer girdisi içermiyor."
+    },
+    "copy_filtered_title": {
+      "ht": "",
+      "at": "Filtrelenenleri Kopyala"
+    },
+    "copy_filtered_empty": {
+      "ht": "",
+      "at": "Kopyalanacak satır yok."
+    },
+    "copy_filtered_done": {
+      "ht": "",
+      "at": "{count} satır panoya kopyalandı."
+    },
+    "copy_error_title": {
+      "ht": "",
+      "at": "Kopyalama Hatası"
+    },
+    "copy_error_body": {
+      "ht": "",
+      "at": "Panoya kopyalanamadı: {error}"
+    },
+    "unapplied_changes_title": {
+      "ht": "",
+      "at": "Uygulanmamış Değişiklikler"
+    },
+    "unapplied_changes_body": {
+      "ht": "",
+      "at": "Henüz oyuna uygulanmamış değişiklikleriniz var (Geliştirmeleri Uygula düğmesi hâlâ kırmızı görünüyor).\n\nŞimdi uygulansın mı, yoksa uygulamadan çıkılsın mı?"
+    },
+    "unapplied_changes_apply_now": {
+      "ht": "",
+      "at": "Şimdi Uygula"
+    },
+    "unapplied_changes_exit": {
+      "ht": "",
+      "at": "Uygulamadan Çık"
+    },
+    "browse_ini_tooltip": {
+      "ht": "",
+      "at": "İçe aktarmak için yerel bir .ini dosyası seçin."
+    },
+    "generate_now_tooltip": {
+      "ht": "",
+      "at": "DataForge çıkarma + geliştirme hattını şimdi çalıştırın. İlk seferde birkaç dakika sürer."
+    },
+    "skip_generate_tooltip": {
+      "ht": "",
+      "at": "Geliştirmeler oluşturulmadan devam edin. Daha sonra Geliştirmeler sekmesinden çalıştırabilirsiniz."
+    },
+    "crash_error_title": {
+      "ht": "",
+      "at": "Smart Citizen — Hata"
+    },
+    "show_log_btn": {
+      "ht": "",
+      "at": "Günlüğü Göster"
+    },
+    "dismiss_btn": {
+      "ht": "",
+      "at": "Kapat"
+    },
+    "suppressed_errors_suffix": {
+      "ht": "",
+      "at": "\n\n(+{count} ek hata bastırıldı — ayrıntılar için Günlük sekmesine bakın)"
+    },
+    "failed_to_delete_global_ini": {
+      "ht": "",
+      "at": "global.ini silinemedi: {error}"
+    },
+    "failed_to_merge_sources": {
+      "ht": "",
+      "at": "Kaynaklar birleştirilemedi: {error}"
+    },
+    "failed_to_load_sources": {
+      "ht": "",
+      "at": "Kaynaklar yüklenemedi: {error}"
+    },
+    "app_title": {
+      "ht": "",
+      "at": "Smart Citizen"
+    },
+    "reset_proportions_title": {
+      "ht": "",
+      "at": "Pencere Oranlarını Sıfırla"
+    },
+    "reset_proportions_body": {
+      "ht": "",
+      "at": "Pencere boyutu, panel düzeni ve Metin Düzenleyici sütun genişlikleri varsayılanlarına sıfırlansın mı?\n\nKaydedilmiş boyutlarınız unutulacak. Ayarlarınız ve yerelleştirme verileriniz etkilenmez."
+    }
+  },
+  "progress": {
+    "reading_sources": {
+      "ht": "",
+      "at": "Kaynak dosyalar okunuyor..."
+    },
+    "creating_entries": {
+      "ht": "",
+      "at": "StringEntry nesneleri oluşturuluyor..."
+    },
+    "computing_sort_keys": {
+      "ht": "",
+      "at": "Sıralama anahtarları hesaplanıyor..."
+    },
+    "ready": {
+      "ht": "",
+      "at": "Hazır"
+    },
+    "applying_patches": {
+      "ht": "",
+      "at": "DataForge yamaları uygulanıyor…"
+    },
+    "loading_generator": {
+      "ht": "",
+      "at": "Geliştirme oluşturucu yükleniyor..."
+    },
+    "generating_enhancements": {
+      "ht": "",
+      "at": "Geliştirmeler oluşturuluyor (ilk çalıştırmada birkaç dakika sürebilir)..."
+    },
+    "unp4k_launch": {
+      "ht": "",
+      "at": "unp4k başlatılıyor — bu bir dakika sürebilir..."
+    },
+    "unp4k_launch_short": {
+      "ht": "",
+      "at": "unp4k başlatılıyor…"
+    },
+    "copy_global": {
+      "ht": "",
+      "at": "Çıkarılan global.ini önbelleğe kopyalanıyor..."
+    },
+    "copy_global_short": {
+      "ht": "",
+      "at": "Çıkarılan global.ini kopyalanıyor…"
+    },
+    "extract_dcb": {
+      "ht": "",
+      "at": "Game2.dcb Data.p4k içinden çıkarılıyor…"
+    },
+    "unforge": {
+      "ht": "",
+      "at": "DataForge veritabanı dönüştürülüyor — bu birkaç dakika sürer…"
+    },
+    "unforge_short": {
+      "ht": "",
+      "at": "DataForge veritabanı dönüştürülüyor…"
+    },
+    "caching_entities": {
+      "ht": "",
+      "at": "Varlık dosyaları önbelleğe alınıyor…"
+    },
+    "snapshot_diff": {
+      "ht": "",
+      "at": "Fark için önbellek anlık görüntüsü alınıyor…"
+    },
+    "syncing_sources": {
+      "ht": "",
+      "at": "Kaynaklar eşitleniyor..."
+    },
+    "starting_up_title": {
+      "ht": "",
+      "at": "Başlatılıyor"
+    },
+    "enhancements_label": {
+      "ht": "",
+      "at": "DataForge'dan geliştirilmiş yerelleştirmeler oluşturuluyor…\n\nİlk çalıştırmada bu birkaç dakika sürebilir."
+    },
+    "generating_enhancements_title": {
+      "ht": "",
+      "at": "Geliştirmeler Oluşturuluyor"
+    },
+    "reloading_with_enhancements": {
+      "ht": "",
+      "at": "Metinler güncellenmiş geliştirmelerle yeniden yükleniyor…"
+    },
+    "reloading_after_user_ini_restore": {
+      "ht": "",
+      "at": "user.ini geri yüklemesinin ardından {channel} yeniden yükleniyor..."
+    }
+  },
+  "status_bar": {
+    "no_strings_loaded": {
+      "ht": "",
+      "at": "Metin yüklenmedi: önce Yapılandırma sekmesinden Data.p4k çıkarın"
+    },
+    "update_checking": {
+      "ht": "",
+      "at": "Denetleniyor…"
+    },
+    "update_available": {
+      "ht": "",
+      "at": "v{version} mevcut"
+    },
+    "update_up_to_date": {
+      "ht": "",
+      "at": "Güncel (v{version})"
+    },
+    "update_check_failed": {
+      "ht": "",
+      "at": "Denetim başarısız"
+    },
+    "update_indicator_available": {
+      "ht": "",
+      "at": "v{current} · güncelleme mevcut"
+    },
+    "update_indicator_up_to_date": {
+      "ht": "",
+      "at": "v{current} · güncel"
+    },
+    "update_indicator_failed": {
+      "ht": "",
+      "at": "v{current} · denetim başarısız"
+    },
+    "open_release_page_tooltip": {
+      "ht": "",
+      "at": "v{version} sürüm sayfasını aç"
+    },
+    "settings_exported": {
+      "ht": "",
+      "at": "Ayar yedeği dışa aktarıldı"
+    },
+    "downloading_ini": {
+      "ht": "",
+      "at": "INI dosyası indiriliyor..."
+    },
+    "starting_up": {
+      "ht": "",
+      "at": "Başlatılıyor — kaynaklar eşitleniyor..."
+    },
+    "generating_enhancements_background": {
+      "ht": "",
+      "at": "Geliştirmeler arka planda oluşturuluyor…"
+    },
+    "enhancements_generated_applying": {
+      "ht": "",
+      "at": "Geliştirmeler oluşturuldu — oyuna uygulanıyor…"
+    },
+    "enhancements_generated_reloading": {
+      "ht": "",
+      "at": "Geliştirmeler oluşturuldu — kayıtlar yeniden yükleniyor…"
+    },
+    "enhancement_generation_failed": {
+      "ht": "",
+      "at": "Geliştirme oluşturma başarısız — ayrıntılar için Günlük sekmesine bakın"
+    },
+    "user_ini_reset": {
+      "ht": "",
+      "at": "{channel} için user.ini sıfırlandı (yedek oluşturuldu)"
+    },
+    "user_ini_restored": {
+      "ht": "",
+      "at": "{channel} için user.ini geri yüklendi"
+    },
+    "channel_indicator": {
+      "ht": "",
+      "at": "Kanal: {channel}"
+    },
+    "channel_switched_extracting": {
+      "ht": "",
+      "at": "{channel} kanalına geçildi — Data.p4k çıkarılıyor…"
+    },
+    "channel_switched_reloading": {
+      "ht": "",
+      "at": "{channel} kanalına geçildi — kaynaklar yeniden yükleniyor…"
+    },
+    "data_folder_changed_extracting": {
+      "ht": "",
+      "at": "Veri klasörü {data_dir} olarak değiştirildi — Data.p4k çıkarılıyor…"
+    },
+    "data_folder_changed_reloading": {
+      "ht": "",
+      "at": "Veri klasörü {data_dir} olarak değiştirildi — kaynaklar yeniden yükleniyor…"
+    },
+    "cache_folder_changed": {
+      "ht": "",
+      "at": "DataForge önbellek klasörü değiştirildi — Data.p4k yeniden çıkarılıyor…"
+    },
+    "syncing_source": {
+      "ht": "",
+      "at": "{source_name} eşitleniyor..."
+    },
+    "source_updated": {
+      "ht": "",
+      "at": "güncellendi ↑"
+    },
+    "source_offline": {
+      "ht": "",
+      "at": "(çevrimdışı?)"
+    },
+    "entry_count": {
+      "ht": "",
+      "at": "{count} kayıt"
+    },
+    "override_count_suffix": {
+      "ht": "",
+      "at": " | {count} geçersiz kılma"
+    },
+    "manifest_missing": {
+      "ht": "",
+      "at": "SC {channel} (manifest eksik)"
+    },
+    "window_proportions_reset": {
+      "ht": "",
+      "at": "Pencere oranları varsayılanlara sıfırlandı."
+    }
+  },
+  "import_flow": {
+    "source_dialog_title": {
+      "ht": "",
+      "at": "INI Dosyası İçe Aktar"
+    },
+    "source_dialog_label": {
+      "ht": "",
+      "at": "Yerel bir dosya yolu veya URL girin:"
+    },
+    "source_dialog_placeholder": {
+      "ht": "",
+      "at": "C:\\yol\\dosya.ini veya https://example.com/file.ini"
+    },
+    "browse_btn": {
+      "ht": "",
+      "at": "Gözat..."
+    },
+    "select_ini_file_title": {
+      "ht": "",
+      "at": "INI Dosyası Seç"
+    },
+    "ini_file_filter": {
+      "ht": "",
+      "at": "INI Dosyaları (*.ini);;Tüm Dosyalar (*)"
+    },
+    "download_error_title": {
+      "ht": "",
+      "at": "İndirme Hatası"
+    },
+    "download_error_body": {
+      "ht": "",
+      "at": "İndirilemedi:\n{source}\n\n{error}"
+    },
+    "no_base_data_title": {
+      "ht": "",
+      "at": "Temel Veri Yok"
+    },
+    "no_base_data_body": {
+      "ht": "",
+      "at": "Temel INI henüz yüklenmedi. Önce Data.p4k'dan çıkarın."
+    },
+    "no_valid_keys_title": {
+      "ht": "",
+      "at": "Geçerli Anahtar Yok"
+    },
+    "no_valid_keys_body": {
+      "ht": "",
+      "at": "İçe aktarılan {count} anahtardan hiçbiri base.ini içinde yok.\nTüm anahtarlar hariç tutuldu."
+    },
+    "nothing_to_import_title": {
+      "ht": "",
+      "at": "İçe Aktarılacak Bir Şey Yok"
+    },
+    "nothing_to_import_body": {
+      "ht": "",
+      "at": "İçe aktarılan tüm anahtarlar aynı değerlerle user.ini içinde zaten mevcut."
+    },
+    "confirm_title": {
+      "ht": "",
+      "at": "INI İçe Aktar"
+    },
+    "confirm_body": {
+      "ht": "",
+      "at": "{new_count} yeni anahtar user.ini dosyasına eklenecek.\n{excluded_count} anahtar hariç tutuldu (base.ini içinde yok).\n\nDevam edilsin mi?"
+    },
+    "reload_status": {
+      "ht": "",
+      "at": "İçe aktarılan verilerle yeniden yükleniyor..."
+    },
+    "complete_title": {
+      "ht": "",
+      "at": "İçe Aktarma Tamamlandı"
+    },
+    "complete_body": {
+      "ht": "",
+      "at": "İçe aktarma başarılı.\n\n  Eklenen: {added} anahtar\n  Çözülen çakışma: {resolved} anahtar\n  Hariç tutulan: {excluded} anahtar"
+    },
+    "error_title": {
+      "ht": "",
+      "at": "İçe Aktarma Hatası"
+    },
+    "error_body": {
+      "ht": "",
+      "at": "INI dosyası içe aktarılamadı:\n{error}"
+    }
+  },
+  "restore_backup": {
+    "select_file_title": {
+      "ht": "",
+      "at": "Geri Yüklenecek Yedek Dosyasını Seçin"
+    },
+    "file_filter": {
+      "ht": "",
+      "at": "Yedek Dosyaları (*.bak_*);;INI Dosyaları (*.ini);;Tüm Dosyalar (*)"
+    },
+    "success_body": {
+      "ht": "",
+      "at": "Yedek şuradan geri yüklendi:\n{name}"
+    },
+    "error_body": {
+      "ht": "",
+      "at": "Yedek geri yüklenemedi: {error}"
+    }
+  },
+  "onedrive": {
+    "warning_title": {
+      "ht": "",
+      "at": "Smart Citizen Verileriniz OneDrive İçinde"
+    },
+    "warning_body": {
+      "ht": "",
+      "at": "Smart Citizen düzenlemelerinizi (user.ini), kaynak önbelleğini ve yedekleri şurada saklıyor:\n\n{data_dir}\n\nBu klasör OneDrive içinde. OneDrive bu dosyaları eşitleyebilir, hatta boşaltabilir; bu durum düzenlemelerin kaybolmasına yol açmıştır. Verilerinizi OneDrive dışında yerel bir klasöre taşımak bunu önler.\n\nŞuraya taşınsın mı:\n{local} ?"
+    },
+    "move_btn": {
+      "ht": "",
+      "at": "Yerel Bir Klasöre Taşı"
+    },
+    "keep_here_btn": {
+      "ht": "",
+      "at": "Burada Tut"
+    },
+    "dont_warn_again": {
+      "ht": "",
+      "at": "Bir daha uyarma"
+    }
+  },
+  "user_ini_reset": {
+    "backup_note": {
+      "ht": "",
+      "at": "\n\nYedek şuraya kaydedildi:\n{path}"
+    },
+    "complete_title": {
+      "ht": "",
+      "at": "user.ini Sıfırlandı"
+    },
+    "complete_body": {
+      "ht": "",
+      "at": "{channel} kanalı için tüm özel geçersiz kılmalar temizlendi.{backup_note}"
+    }
+  },
+  "restore_user_ini": {
+    "no_snapshots_title": {
+      "ht": "",
+      "at": "Henüz Anlık Görüntü Yok"
+    },
+    "no_snapshots_body": {
+      "ht": "",
+      "at": "Smart Citizen'ın {channel} kanalı için henüz otomatik user.ini anlık görüntüsü yok. Geçersiz kılmalarınız her değiştiğinde bir anlık görüntü kaydedilir; bu nedenle geri yükleme noktaları düzenleme yapıp kaydettikten sonra görünür."
+    },
+    "snapshot_label": {
+      "ht": "",
+      "at": "{when}  —  {lines} geçersiz kılma, {size_kb} KB"
+    },
+    "picker_title": {
+      "ht": "",
+      "at": "user.ini Dosyasını Geri Yükle"
+    },
+    "picker_label": {
+      "ht": "",
+      "at": "{channel} kanalı için geri yüklenecek bir anlık görüntü seçin.\nÖnce mevcut user.ini dosyanızın anlık görüntüsü alınır; bu işlem geri alınabilir."
+    },
+    "restore_failed_title": {
+      "ht": "",
+      "at": "Geri Yükleme Başarısız"
+    },
+    "restore_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen anlık görüntüyü geri yükleyemedi:\n\n{error_type}: {error}"
+    },
+    "restored_title": {
+      "ht": "",
+      "at": "user.ini Geri Yüklendi"
+    },
+    "restored_body": {
+      "ht": "",
+      "at": "{channel} kanalı için geçersiz kılmalarınız şuradan geri yüklendi:\n{name}\n\nGeri yüklenen geçersiz kılmaları oyuna aktarmak için Geliştirmeleri Uygula'yı çalıştırın."
+    }
+  },
+  "extract": {
+    "path_required_title": {
+      "ht": "",
+      "at": "Star Citizen Yolu Gerekli"
+    },
+    "path_required_body": {
+      "ht": "",
+      "at": "Yapılandırılmış bir Star Citizen kurulum yolu yok ve önbelleğe alınmış yerelleştirme verisi bulunamadı.\n\nLütfen Yapılandırma sekmesinden Star Citizen kurulum yolunuzu ayarlayın, ardından oyununuzun yerelleştirme metinlerini yüklemek için Çıkar'a tıklayın."
+    },
+    "p4k_prompt_title": {
+      "ht": "",
+      "at": "Data.p4k'dan Çıkar"
+    },
+    "p4k_prompt_base_missing": {
+      "ht": "",
+      "at": "Önbellekte temel yerelleştirme dosyası bulunamadı.\n\nglobal.ini şimdi Data.p4k'dan çıkarılsın mı?\n(Yerelleştirme metinlerini yüklemek ve görüntülemek için gereklidir.)"
+    },
+    "p4k_prompt_p4k_newer": {
+      "ht": "",
+      "at": "Data.p4k, önbelleğe alınmış base.ini dosyanızdan daha yeni.\n\nglobal.ini şimdi Data.p4k'dan çıkarılsın mı?\n(Bu, tam olarak kurulu oyun sürümünüzle eşleşen orijinal metinleri sağlar.)"
+    },
+    "dataforge_outdated_title": {
+      "ht": "",
+      "at": "DataForge Önbelleği Güncel Değil"
+    },
+    "dataforge_outdated_body": {
+      "ht": "",
+      "at": "DataForge varlık önbelleğiniz mevcut Data.p4k dosyasından daha eski.\n\nDataForge şimdi yeniden çıkarılıp geliştirmeler yeniden oluşturulsun mu?\n\nBu işlem birkaç dakika sürer ve arka planda çalışır — bu sırada metinleri düzenlemeye devam edebilirsiniz. Beklemek istemiyorsanız şimdilik atlayın; bunu her zaman Geliştirmeler sekmesinden başlatabilirsiniz."
+    },
+    "generate_dialog_title": {
+      "ht": "",
+      "at": "Geliştirmeleri Oluştur"
+    },
+    "category_singular": {
+      "ht": "",
+      "at": "kategorisi"
+    },
+    "category_plural": {
+      "ht": "",
+      "at": "kategorisi"
+    },
+    "missing_categories_body": {
+      "ht": "",
+      "at": "{count} geliştirme {noun} eksik.\nHangilerinin oluşturulacağını seçin.\nBunu daha sonra Geliştirmeler sekmesinden değiştirebilirsiniz."
+    },
+    "missing_category_label": {
+      "ht": "",
+      "at": "{label}  (eksik)"
+    },
+    "dataforge_auto_extract_note": {
+      "ht": "",
+      "at": "DataForge verileri henüz önbelleğe alınmamışsa otomatik olarak çıkarılacaktır.\nİlk çalıştırma birkaç dakika sürer."
+    },
+    "generate_btn": {
+      "ht": "",
+      "at": "Oluştur"
+    },
+    "skip_btn": {
+      "ht": "",
+      "at": "Atla"
+    },
+    "dataforge_extracting_background": {
+      "ht": "",
+      "at": "DataForge arka planda çıkarılıyor — bu işlem birkaç dakika sürer…"
+    },
+    "dataforge_extracting_label": {
+      "ht": "",
+      "at": "DataForge Data.p4k'dan çıkarılıyor — bu işlem birkaç dakika sürer…"
+    },
+    "dataforge_extraction_title": {
+      "ht": "",
+      "at": "DataForge Çıkarma"
+    },
+    "dataforge_extraction_error_title": {
+      "ht": "",
+      "at": "DataForge Çıkarma Hatası"
+    },
+    "dataforge_extraction_error_body": {
+      "ht": "",
+      "at": "DataForge çıkarma başarısız oldu:\n\n{message}\n\nAyrıntılar için Günlük sekmesine bakın."
+    },
+    "dataforge_extracted_generating": {
+      "ht": "",
+      "at": "DataForge çıkarıldı — geliştirmeler oluşturuluyor…"
+    },
+    "dataforge_extraction_failed": {
+      "ht": "",
+      "at": "DataForge çıkarma başarısız oldu — ayrıntılar için Günlük sekmesine bakın"
+    },
+    "p4k_extracting_label": {
+      "ht": "",
+      "at": "global.ini Data.p4k'dan çıkarılıyor..."
+    },
+    "p4k_extraction_title": {
+      "ht": "",
+      "at": "P4K Çıkarma"
+    },
+    "extraction_error_title": {
+      "ht": "",
+      "at": "Çıkarma Hatası"
+    },
+    "p4k_locked": {
+      "ht": "",
+      "at": "Star Citizen şu anda güncelleniyor gibi görünüyor. Oyun dosyaları (Data.p4k) başka bir program tarafından kilitlenmiş; bu genellikle bir güncellemeyi indiren veya doğrulayan RSI Launcher'dır.\n\nRSI Launcher'da tüm güncellemeler ve doğrulama tamamlanana kadar bekleyin, ardından yeniden deneyin."
+    },
+    "dataforge_timeout": {
+      "ht": "",
+      "at": "Oyun veritabanının dönüştürülmesi 30 dakikadan uzun sürdü ve durduruldu.\n\nBulunan veritabanı {dcb} ({size} MB), konumu:\n{path}\n\nSağlıklı bir kurulum bir dakikadan çok daha kısa sürede dönüştürülür; bu nedenle bu durum genellikle Smart Citizen'ın yanlış Star Citizen klasörünü okuduğu anlamına gelir. Sürücünüzde kalan eski veya artık bir kurulum geçerli görünse de güncel olmayan oyun dosyaları içerir.\n\nRSI Launcher'ı açın ve Star Citizen için gösterdiği kurulum konumunu kontrol edin. Yukarıdaki yol değilse, Smart Citizen'ın Yapılandırma sekmesinden düzeltin. AYNI yol ise, kurulumu onarmak için bunun yerine başlatıcıda Dosyaları Doğrula'yı çalıştırın."
+    }
+  },
+  "apply": {
+    "cannot_save_edits_title": {
+      "ht": "",
+      "at": "Düzenlemeleriniz Kaydedilemiyor"
+    },
+    "cannot_save_edits_body": {
+      "ht": "",
+      "at": "Smart Citizen düzenlemelerinizi şuraya yazamadı:\n\n  {path}\n\n{error_type}: {error}\n\nOyun dosyası DEĞİŞTİRİLMEDİ. Yaygın nedenler:\n  • Antivirüs / Windows Denetimli Klasör Erişimi'nin oyun klasörü altına yazmayı engellemesi\n  • user.ini dosyasının başka bir programda açık olması\n  • Sürücünün salt okunur olması veya alanının dolması\n\nTemel sorunu giderin ve yeniden Uygulayın."
+    },
+    "applied_body": {
+      "ht": "",
+      "at": "{target_path} konumuna uygulandı\n\n  Kullanıcı düzenlemeleri: {user_count}\n\n{enhancement_block}"
+    },
+    "failed_body": {
+      "ht": "",
+      "at": "Oyuna uygulanamadı: {error}"
+    }
+  },
+  "test_plan": {
+    "intro": {
+      "ht": "",
+      "at": "Bu derlemedeki her maddeyi sırayla inceleyin ve doğruladıkça işaretleyin. İlerlemeniz otomatik olarak kaydedilir. Bitirdiğinizde bulgularınızı paylaşmak için Raporu Kopyala veya Gönder'i kullanın."
+    },
+    "tester_label": {
+      "ht": "",
+      "at": "Test eden:"
+    },
+    "tester_placeholder": {
+      "ht": "",
+      "at": "Adınız veya kullanıcı adınız"
+    },
+    "submit_btn": {
+      "ht": "",
+      "at": "Discord'a Gönder"
+    },
+    "no_webhook_tooltip": {
+      "ht": "",
+      "at": "Discord webhook'u yapılandırılmamış. Göndermeyi etkinleştirmek için {env_var} ortam değişkenini (veya test_plan/webhook_url ayarını) ayarlayın. Bu sırada Raporu Kopyala'yı kullanın."
+    },
+    "copy_report_btn": {
+      "ht": "",
+      "at": "Raporu Kopyala"
+    },
+    "reset_btn": {
+      "ht": "",
+      "at": "Sıfırla"
+    },
+    "notes_label": {
+      "ht": "",
+      "at": "Ek geri bildirim (isteğe bağlı):"
+    },
+    "notes_placeholder": {
+      "ht": "",
+      "at": "Hataları, beklenmedik durumları veya önerileri açıklayın..."
+    },
+    "copied_status": {
+      "ht": "",
+      "at": "Rapor panoya kopyalandı."
+    },
+    "copy_failed_status": {
+      "ht": "",
+      "at": "Rapor panoya kopyalanamadı."
+    },
+    "reset_status": {
+      "ht": "",
+      "at": "Kontrol listesi sıfırlandı."
+    },
+    "no_webhook_status": {
+      "ht": "",
+      "at": "Discord webhook'u yapılandırılmamış."
+    },
+    "sending_status": {
+      "ht": "",
+      "at": "Rapor Discord'a gönderiliyor..."
+    }
+  },
+  "settings_backup": {
+    "zip_filter": {
+      "ht": "",
+      "at": "Ayar yedeği (*.zip)"
+    },
+    "no_channels": {
+      "ht": "",
+      "at": "yok"
+    },
+    "export_dialog_title": {
+      "ht": "",
+      "at": "Ayar Yedeğini Dışa Aktar"
+    },
+    "export_done_title": {
+      "ht": "",
+      "at": "Ayarlar Dışa Aktarıldı"
+    },
+    "export_done_body": {
+      "ht": "",
+      "at": "Ayarlarınız şuraya kaydedildi:\n{path}\n\nİçerik: {n_settings} ayar ve şu kanallar için özel metin geçersiz kılmaları: {channels}.\n\nBu dosyayı istediğiniz yerde saklayın — küçüktür. Yeni bir bilgisayarda veya yeni bir taşınabilir sürüme geçtikten sonra geri yüklemek için Ayarları İçe Aktar'ı kullanın."
+    },
+    "export_failed_title": {
+      "ht": "",
+      "at": "Dışa Aktarma Başarısız"
+    },
+    "export_failed_body": {
+      "ht": "",
+      "at": "Yedek zip dosyası yazılamadı.\n\n{error_type}: {error}"
+    },
+    "import_dialog_title": {
+      "ht": "",
+      "at": "Ayar Yedeğini İçe Aktar"
+    },
+    "import_invalid_title": {
+      "ht": "",
+      "at": "Ayar Yedeği Değil"
+    },
+    "import_invalid_body": {
+      "ht": "",
+      "at": "Bu dosya içe aktarılamadı:\n\n{error}"
+    },
+    "import_confirm_title": {
+      "ht": "",
+      "at": "Bu Ayarlar İçe Aktarılsın mı?"
+    },
+    "import_confirm_body": {
+      "ht": "",
+      "at": "Yedek, Smart Citizen v{version} ile {when} tarihinde oluşturuldu.\n\n{n_settings} ayar ve şu kanallar için metin geçersiz kılmaları içeriyor: {channels}.\n\nİçe aktarma bunları mevcut ayarlarınızın üzerine katmanlar ve listelenen kanallar için user.ini dosyasını değiştirir (önce mevcut user.ini dosyalarınızın anlık görüntüsü alınır; bu nedenle user.ini dosyasını geri yükle ile geri alınabilir). Devam edilsin mi?"
+    },
+    "import_failed_title": {
+      "ht": "",
+      "at": "İçe Aktarma Başarısız"
+    },
+    "import_failed_body": {
+      "ht": "",
+      "at": "İçe aktarılan geçersiz kılmalar yazılamadı.\n\n{error_type}: {error}\n\nHiçbir ayar değiştirilmedi."
+    },
+    "import_done_title": {
+      "ht": "",
+      "at": "Ayarlar İçe Aktarıldı"
+    },
+    "import_done_body_restored": {
+      "ht": "",
+      "at": "{applied} ayar ve şu kanallar için metin geçersiz kılmaları içe aktarıldı: {channels}.\n\nStar Citizen klasörünüz yedekten geri yüklendi:\n{root}\n\nİçe aktarılan ayarları yüklemek için Smart Citizen'ın yeniden başlatılması gerekiyor. Yeniden başlatmanın ardından geliştirmelerinizi yeniden oluşturup uygulamayı önerecek."
+    },
+    "import_done_body_detected": {
+      "ht": "",
+      "at": "{applied} ayar ve şu kanallar için metin geçersiz kılmaları içe aktarıldı: {channels}.\n\nYedekteki Star Citizen klasörü bu bilgisayarda olmadığından bunun yerine otomatik algılandı:\n{root}\n\nİçe aktarılan ayarları yüklemek için Smart Citizen'ın yeniden başlatılması gerekiyor. Yeniden başlatmanın ardından geliştirmelerinizi yeniden oluşturup uygulamayı önerecek."
+    },
+    "import_done_body_no_install": {
+      "ht": "",
+      "at": "{applied} ayar ve şu kanallar için metin geçersiz kılmaları içe aktarıldı: {channels}.\n\nBu bilgisayarda Star Citizen kurulumu bulunamadı — yeniden başlatmadan sonra Yapılandırma sekmesinden ayarlayın.\n\nİçe aktarılan ayarları yüklemek için Smart Citizen'ın yeniden başlatılması gerekiyor."
+    },
+    "restart_now_btn": {
+      "ht": "",
+      "at": "Şimdi Yeniden Başlat"
+    },
+    "restart_later_btn": {
+      "ht": "",
+      "at": "Daha Sonra Yeniden Başlat"
+    },
+    "relaunch_failed_title": {
+      "ht": "",
+      "at": "Yeniden Başlatma Başarısız"
+    },
+    "relaunch_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen kendini yeniden başlatamadı. Lütfen elle yeniden başlatın — içe aktarılan ayarlarınız o zaman yüklenecek."
+    },
+    "post_import_no_install_title": {
+      "ht": "",
+      "at": "Star Citizen Klasörünüzü Ayarlayın"
+    },
+    "post_import_no_install_body": {
+      "ht": "",
+      "at": "İçe aktarılan ayarlarınız yüklendi ancak henüz yapılandırılmış bir Star Citizen kurulumu yok. Yapılandırma sekmesinden kurulum klasörünü ayarlayın, ardından özelleştirmelerinizi oyuna aktarmak için Geliştirmeleri Uygula'yı kullanın."
+    },
+    "post_import_apply_title": {
+      "ht": "",
+      "at": "Neredeyse Bitti — Oyununuza Uygulansın mı?"
+    },
+    "post_import_apply_body": {
+      "ht": "",
+      "at": "Ayarlarınız içe aktarıldı. Son adım, geliştirmelerinizi bu bilgisayarın oyun dosyalarından oluşturup oyuna yazmak.\n\nYedekler oluşturulan oyun metnini değil ayarlarınızı sakladığından bu işlemin her yeni bilgisayarda bir kez yapılması gerekir. Genellikle birkaç dakika sürer — ilk seferde, oyun dosyalarınız açılırken biraz daha uzun.\n\nBunu daha sonra Geliştirmeleri Uygula düğmesiyle de yapabilirsiniz."
+    },
+    "post_import_apply_now_btn": {
+      "ht": "",
+      "at": "Şimdi Uygula"
+    },
+    "post_import_apply_later_btn": {
+      "ht": "",
+      "at": "Daha Sonra"
+    }
+  },
+  "tutorial": {
+    "welcome": {
+      "title": {
+        "ht": "",
+        "at": "Smart Citizen'a Hoş Geldiniz"
+      },
+      "description": {
+        "ht": "",
+        "at": "Bu kısa tur, metinleri özelleştirme ve sonucu Star Citizen'a geri uygulama temel iş akışını kapsar. Bu adımların çoğu otomatik olarak çalışır, ancak gerekirse elle de yapılabilir. İstediğiniz zaman atlayabilirsiniz."
+      }
+    },
+    "extract": {
+      "title": {
+        "ht": "",
+        "at": "1. Data.p4k'dan Çıkar"
+      },
+      "description": {
+        "ht": "",
+        "at": "Çıkar'a tıklamak, kurulu oyununuzun orijinal yerelleştirme dosyasını açar. Bir yama nedeniyle mevcut dosyanız eskidiğinde bunu çalıştırmanız istenir; istenmezse her zaman elle çalıştırabilirsiniz. Çıkarma bittiğinde metinler tabloya otomatik olarak yeniden yüklenir."
+      }
+    },
+    "enhancements": {
+      "title": {
+        "ht": "",
+        "at": "2. Geliştirmeler"
+      },
+      "description": {
+        "ht": "",
+        "at": "İsteğe bağlı ama önerilir: Geliştirmeler sekmesi gemiler, bileşenler, silahlar, görev planları/ödülleri ve emtia üretimi için istatistik katmanlarını açıp kapatır. Geliştirmeleri Oluştur, bu katmanları çıkarılan verilerinizden üreten hattı çalıştırır. Sonraki birkaç adım bu sekmenin bölümlerini tek tek ele alır."
+      }
+    },
+    "enh_categories": {
+      "title": {
+        "ht": "",
+        "at": "3. Geliştirmeler: Kategoriler"
+      },
+      "description": {
+        "ht": "",
+        "at": "Oluştur dediğinizde hangi geliştirme kategorilerinin çalışacağını seçin. Gemiler, bileşenler, gemi silahları, FPS silahları, görevler, görev ödülleri, emtia üretimi ve tıbbi sarf malzemelerinin her biri bağımsız olarak etkinleştirilebilir."
+      }
+    },
+    "enh_favorites": {
+      "title": {
+        "ht": "",
+        "at": "4. Geliştirmeler: Favoriler"
+      },
+      "description": {
+        "ht": "",
+        "at": "Favori gemi adlarının başına eklenecek ön ek karakterini seçin; böylece oyun içi ASOP terminalinde en üstte sıralanırlar. Varsayılan değer * karakteridir."
+      }
+    },
+    "enh_mission_labels": {
+      "title": {
+        "ht": "",
+        "at": "5. Geliştirmeler: Görev Etiketleri"
+      },
+      "description": {
+        "ht": "",
+        "at": "Bölüm başlıklarını (MISSION DETAILS / POTENTIAL BLUEPRINTS / ITEM REWARDS / BLUEPRINT DATA), belirli bir itibar rütbesi olmayan görevlerde gösterilen XP etiketini (varsayılan Rep) ve başlıklar için vurgu etiketini (EM3 = altı çizili, EM4 = renk) özelleştirin."
+      }
+    },
+    "enh_tag_builder": {
+      "title": {
+        "ht": "",
+        "at": "6. Geliştirmeler: Etiket Oluşturucu"
+      },
+      "description": {
+        "ht": "",
+        "at": "Bileşenlere, füzelere, gemi silahlarına ve emtialara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
+      }
+    },
+    "blueprint_tracker": {
+      "title": {
+        "ht": "",
+        "at": "7. Plan Takipçisi"
+      },
+      "description": {
+        "ht": "",
+        "at": "Sahip olduğunuz planları işaretleyin. Soldaki listede ada veya göreve göre arama yapın ya da bileşen Türü, Sınıfı, Boyutu ve Derecesine göre daraltın, ardından öğeleri sahip olunanlar listenize taşımak için okları kullanın. Sahip olunan planlar, bir görevin olası ödüllerinde göründükleri her yerde [Owned] etiketi alır; böylece neyin peşine düşmeye değer olduğunu bir bakışta görebilirsiniz."
+      }
+    },
+    "edit": {
+      "title": {
+        "ht": "",
+        "at": "8. Metinleri düzenleyin"
+      },
+      "description": {
+        "ht": "",
+        "at": "Her satır bir yerelleştirme kaydıdır. Düzenlemek için Özel Değer sütunundaki bir hücreye çift tıklayın — değişiklikleriniz otomatik olarak kaydedilir. ★ sütunu gemileri favori olarak işaretler; böylece ASOP'ta en üstte sıralanırlar."
+      }
+    },
+    "filter_row": {
+      "title": {
+        "ht": "",
+        "at": "9. Sütuna göre filtreleyin"
+      },
+      "description": {
+        "ht": "",
+        "at": "Sütun başlıklarının altındaki arama kutuları satırı, siz yazdıkça tabloyu filtreler. Her kutu kendi sütunuyla sınırlıdır (Anahtar, Varsayılan Değer, Mevcut Değer, Özel Değer); sütunlar arası filtreler VE ile birleşir. Temizlemek için kutunun içindeki × işaretine tıklayın."
+      }
+    },
+    "editor": {
+      "title": {
+        "ht": "",
+        "at": "10. Düzenleyici bölmesi"
+      },
+      "description": {
+        "ht": "",
+        "at": "Daha uzun metinler için Düzenleyici'ye tıklayarak yana yerleştirilmiş, daha geniş bir düzenleme alanı açın. Bölme seçtiğiniz satırı izler; Altı Çizili / Vurgulu vurgusu için seçili metne sağ tıklayın. Başlık çubuğunu sürükleyerek serbest duran bir pencereye ayırın."
+      }
+    },
+    "preview": {
+      "title": {
+        "ht": "",
+        "at": "11. Önizleme bölmesi"
+      },
+      "description": {
+        "ht": "",
+        "at": "Bir satır seçtiğinizde sağdaki bu bölme, mevcut değerinin işlenmiş metnini gösterir."
+      }
+    },
+    "apply": {
+      "title": {
+        "ht": "",
+        "at": "12. Geliştirmeleri Uygula"
+      },
+      "description": {
+        "ht": "",
+        "at": "Uygula, birleştirilmiş sonucu oyunun global.ini dosyasına yazar. Önce mevcut global.ini dosyasının zaman damgalı bir yedeği oluşturulur (en fazla 5 tane saklanır; Yedeği Geri Yükle'den geri yüklenebilir)."
+      }
+    },
+    "cfg_appearance": {
+      "title": {
+        "ht": "",
+        "at": "13. Yapılandırma: Görünüm"
+      },
+      "description": {
+        "ht": "",
+        "at": "Uygulama temasını seçin (Varsayılan / Açık / Koyu / ODW) ve isterseniz yeni sürümlerde otomatik turu devre dışı bırakın."
+      }
+    },
+    "cfg_sc_install": {
+      "title": {
+        "ht": "",
+        "at": "14. Yapılandırma: Star Citizen Kurulumu"
+      },
+      "description": {
+        "ht": "",
+        "at": "Star Citizen kurulum kök dizininizin yolu (LIVE, PTU, EPTU vb. klasörlerini içeren dizin). Kurulum sırasında otomatik algılanır; oyununuz başka bir yerdeyse burada düzenleyin. Kanal açılır menüsü uygulamanın hangi kanalı okuyup yazacağını seçer; Dil açılır menüsü ise hem uygulamanın arayüzünü hem de oyun metinlerini değiştirir."
+      }
+    },
+    "cfg_data_folder": {
+      "title": {
+        "ht": "",
+        "at": "15. Yapılandırma: Smart Citizen Verileri"
+      },
+      "description": {
+        "ht": "",
+        "at": "user.ini, önbellekler, DataForge çıkarımı, oluşturulan geliştirme INI dosyaları ve yedeklerin bulunduğu yer. Varsayılan olarak Documents\\Smart Citizen; çıkarma veya önbellek temizleme yavaşsa OneDrive dışına taşıyın."
+      }
+    },
+    "cfg_p4k_extraction": {
+      "title": {
+        "ht": "",
+        "at": "16. Yapılandırma: Temel Yerelleştirme"
+      },
+      "description": {
+        "ht": "",
+        "at": "Data.p4k'dan Çıkar düğmesi buradadır. Temel metinler ve geliştirme verileri için tek kaynak budur — yenilemek için oyun yamalarından sonra yeniden çalıştırın."
+      }
+    },
+    "cfg_tools": {
+      "title": {
+        "ht": "",
+        "at": "17. Yapılandırma: Araçlar"
+      },
+      "description": {
+        "ht": "",
+        "at": "Çakışma çözme iletişim kutusu aracılığıyla harici bir INI dosyasını geçersiz kılmalarınıza aktarın veya etkin kanal için user.ini dosyanızı sıfırlayın (temizlenmeden önce otomatik olarak yedeklenir)."
+      }
+    },
+    "help": {
+      "title": {
+        "ht": "",
+        "at": "18. Yardım ve geri bildirim"
+      },
+      "description": {
+        "ht": "",
+        "at": "Yardım düğmesi, tam kılavuzu, Bilinen Sorunlar listesini ve Smart Citizen Discord kanalına bir geri bildirim bağlantısını içeren bir yan panel açar. Başlamak için gereken her şey bu kadar — bol şans, vatandaş."
+      }
+    }
+  }
+}

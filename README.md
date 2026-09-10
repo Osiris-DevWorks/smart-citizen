@@ -10,7 +10,7 @@ A Windows desktop app for customizing Star Citizen's localization strings. Layer
 ## Features
 
 - **Multi-Channel Star Citizen Support**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW each get their own isolated workspace — independent `user.ini`, cache, backups, DataForge extraction, and enhancement INIs. Switch channels from the Config tab without restarting.
-- **Multi-Language Support**: Switch the app and game strings between English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, and German from the Config tab. Non-English languages layer a community-translated `global.ini` (from [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization), [42Kit](https://ini.42kit.com/), [stdblue/StarCitizenJapaneseResources](https://github.com/stdblue/StarCitizenJapaneseResources), [Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES), and [rjcncpt/StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)) over the English base, with English fallback for anything untranslated.
+- **Multi-Language Support**: Switch the app and game strings between English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, German, and Turkish from the Config tab. Non-English languages layer a community-translated `global.ini` (from [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization), [42Kit](https://ini.42kit.com/), [stdblue/StarCitizenJapaneseResources](https://github.com/stdblue/StarCitizenJapaneseResources), [Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES), and [rjcncpt/StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)) over the English base, with English fallback for anything untranslated.
 - **Simple & Advanced Mode**: A two-button Simple screen (one applies enhancements with your saved settings, the other switches to Advanced), or the full Advanced UI (table, filters, Enhancements, Config) for hand-editing. Pick your default at install; switch anytime in-app.
 - **Multi-Source Merge System**: Sources (stock base, language overlay, enhancements, user) merge in a drag-and-drop priority order, with user overrides always applied last so your edits never get overwritten.
 - **Sourced from Data.p4k**: All stock localization and DataForge entity data is extracted directly from your installed game — no community mirrors, no version drift, no network required after install.
@@ -106,7 +106,7 @@ All settings are stored in Windows Registry under:
 The Config tab lets you set:
 - **Star Citizen install path** (the SC root folder containing `LIVE/`, `PTU/`, etc. — auto-detected at install time)
 - **Active channel** (LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW)
-- **Language** (English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, German; switches the app UI and the game strings)
+- **Language** (English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, German, Turkish; switches the app UI and the game strings)
 - **Smart Citizen data folder** (where `user.ini`, cache, DataForge extraction, enhancement INIs, and backups live)
 - **Theme**
 - **Data sources**: enable/disable, drag-drop merge priority
@@ -222,6 +222,7 @@ Thanks to those who've contributed code to Smart Citizen:
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources) — the Japanese `global.ini` source that powers the Japanese game strings; the Japanese interface translation is AI-generated pending a human reviewer
 - [**42Kit**](https://ini.42kit.com/) — the [Chinese `global.ini` source](https://ini.42kit.com/full/global.ini) that powers the Chinese game strings; the Chinese interface translation is AI-generated pending a human reviewer
 - The Italian interface translation is AI-generated pending a human reviewer; the Italian `global.ini` source is the same [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) repo credited below
+- The Turkish interface translation is AI-generated pending a human reviewer; the Turkish `global.ini` source is the same [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) repo credited below
 - [**rjcncpt**](https://github.com/rjcncpt) — the [German `global.ini` source](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) that powers the German game strings; the German interface translation is AI-generated pending a human reviewer
 - [**Osiris-DevWorks/odw-fast-unp4k**](https://github.com/Osiris-DevWorks/odw-fast-unp4k) — Bundled `unp4k.exe` / `unforge.exe` used to unpack `Data.p4k` and convert DataForge to XML; our parallelized fork of the original [dolkensp/unp4k](https://github.com/dolkensp/unp4k)
 - [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — Community-maintained `global.ini` translations that power the non-English language options
