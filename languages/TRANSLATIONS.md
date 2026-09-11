@@ -67,9 +67,9 @@ them against the new source.
   first and rejected — the game does not recognise it. Dymerz's own guide
   maps Turkish onto `german_(germany)`, which would collide with our
   German language. Installer `LanguageChoicePage` gained a Turkish option.
-  The seven other translated `ABOUT.md` files still list eight languages;
-  left for the pre-release docs-parity sweep. Locked by
-  `tests/test_turkish_activation.py`.
+  The seven other translated `ABOUT.md` files gained Turkish in both the
+  Dymerz credit line and the *Multi-Language Support* bullet, so all nine
+  language lists agree. Locked by `tests/test_turkish_activation.py`.
 
 - **2.3.1 pre-release (2026-08-28, Claude Opus 5):** `ABOUT.md` docs-parity
   follow-up to the `HELP.md` sweep below — the window-layout work (#364) was

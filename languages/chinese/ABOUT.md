@@ -65,7 +65,7 @@
 
 非英语游戏字符串来自社区翻译：
 
-- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) —— 由社区维护的 `global.ini` 翻译，为法语、巴西葡萄牙语和意大利语选项提供支持。真正的翻译工作是他们完成的，我们只是负责交付。
+- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) —— 由社区维护的 `global.ini` 翻译，为法语、巴西葡萄牙语、意大利语和土耳其语选项提供支持。真正的翻译工作是他们完成的，我们只是负责交付。
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES)：由社区维护的 `global.ini` 翻译，为西班牙语选项提供支持。
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources)：由社区维护的 `global.ini` 翻译，为日语选项提供支持。
 - [**42Kit**](https://ini.42kit.com/) —— 由社区维护的 `global.ini` 翻译，为中文选项提供支持。
@@ -76,7 +76,7 @@
 ### 🎯 核心功能
 - **加载与编辑**：从你的《星际公民》安装目录加载 `global.ini`，在直观的表格视图中自定义字符串
 - **多频道支持**：LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW 各自拥有独立的 `user.ini`、缓存、备份和 DataForge 提取内容——无需重启即可在配置标签页中切换频道
-- **多语言支持**：在配置标签页中于英语、法语、西班牙语、巴西葡萄牙语、日语、中文、意大利语和德语之间切换应用界面和游戏字符串。非英语语言会将社区翻译的 `global.ini` 叠加在英文基础内容之上，任何未翻译的内容都会回退到英文。随着社区翻译的完善，将会开放更多语言（见 `languages/TRANSLATIONS.md`）
+- **多语言支持**：在配置标签页中于英语、法语、西班牙语、巴西葡萄牙语、日语、中文、意大利语、德语和土耳其语之间切换应用界面和游戏字符串。非英语语言会将社区翻译的 `global.ini` 叠加在英文基础内容之上，任何未翻译的内容都会回退到英文。随着社区翻译的完善，将会开放更多语言（见 `languages/TRANSLATIONS.md`）
 - **任务合同**：在专门的“任务”分类中编辑任务合同和简报文本
 - **智能筛选**：按分类（飞船、飞船物品、任务、装备、商品、日志、其他）或修改状态搜索、筛选字符串
 - **逐列筛选**：直接在每个列标题下方的筛选框中输入，实现精细搜索
