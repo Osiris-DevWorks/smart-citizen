@@ -4375,6 +4375,47 @@ def scan_contract_generators(
     return missions, mission_blueprints, mission_bp_chance, mission_items
 
 
+def _titles_with_calculated_reward(
+    contractgen_dir: Path,
+    xml_path_index: dict | None = None,
+    records_dir: Path | None = None,
+) -> set[str]:
+    """Title keys whose contract uses ContractResult_CalculatedReward (#413
+    investigation). That reward type is computed dynamically in-game rather
+    than stored as a fixed number anywhere in the mission data, so a title
+    using it can never get a static rep tag no matter how the extractor
+    improves -- distinct from a title that simply awards no reputation at
+    all (blueprint-only or item-only rewards), which is a separate, equally
+    correct "nothing to show" case.
+
+    A second lightweight XML walk rather than widening ContractVariant (its
+    12-field width is locked by tests/test_mission_variant_tuple.py, and
+    several ``for ... in variants:`` sites destructure it positionally) for
+    a value only the end-of-run diagnostic below needs -- called lazily,
+    only when there's actually a zero-XP title to classify.
+    """
+    if not contractgen_dir.exists():
+        return set()
+    _files = (
+        _index_rglob(xml_path_index, contractgen_dir, records_dir)
+        if xml_path_index is not None and records_dir is not None
+        else contractgen_dir.rglob("*.xml")
+    )
+    titles: set[str] = set()
+    for xml_file in _files:
+        try:
+            root = ET.parse(xml_file).getroot()
+        except ET.ParseError:
+            continue
+        for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
+            if contract.find(".//ContractResult_CalculatedReward") is None:
+                continue
+            title_param = contract.find(".//ContractStringParam[@param='Title']")
+            if title_param is not None:
+                titles.add(title_param.get("value", "").lstrip("@"))
+    return titles
+
+
 def _resolve_resource_uuids(
     bp_dir: Path,
     xml_path_index: dict | None = None,
@@ -7281,16 +7322,39 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
         if keys:
             logger.info(f"  Skipped ({reason}): {len(keys)} — e.g. {', '.join(keys[:5])}")
 
-    # #412: contractgen-sourced titles (see the loop above) that scanned fine
-    # but resolved zero reputation reward from every variant -- distinct from
-    # the pu_missions-only "no_rep_data" bucket above, which never looks at
-    # contractgen titles at all. Logged the same way so the two are directly
-    # comparable in the log.
+    # #412/#413: contractgen-sourced titles (see the loop above) that scanned
+    # fine but resolved zero reputation reward from every variant -- distinct
+    # from the pu_missions-only "no_rep_data" bucket above, which never looks
+    # at contractgen titles at all.
+    #
+    # Investigating #413's own findings split this bucket further: every
+    # title checked by hand across the largest clusters (shubin_rockcracker,
+    # Hockrow_FacilityDelve, TheCollector, several Headhunters/Covalex
+    # entries) turned out to genuinely carry no static reputation number --
+    # either the contract only awards blueprints/items, or it uses
+    # ContractResult_CalculatedReward, computed dynamically in-game with no
+    # fixed value anywhere in the data. Neither case is a bug (a title here
+    # is correctly showing no rep tag), so lumping both under one "zero XP"
+    # label read as an open problem when it wasn't one. Split so a future
+    # pass only needs to hand-check the (hopefully empty, or much smaller)
+    # genuine "no reward" bucket instead of redoing this investigation.
     if contractgen_zero_xp_titles:
-        logger.info(
-            f"  Contractgen titles with zero XP: {len(contractgen_zero_xp_titles)} — "
-            f"e.g. {', '.join(contractgen_zero_xp_titles[:5])}"
+        _calc_reward_titles = _titles_with_calculated_reward(
+            contractgen_dir, xml_path_index=xml_path_index, records_dir=records,
         )
+        _dynamic = [t for t in contractgen_zero_xp_titles if t in _calc_reward_titles]
+        _no_reward = [t for t in contractgen_zero_xp_titles if t not in _calc_reward_titles]
+        if _no_reward:
+            logger.info(
+                f"  Contractgen titles with no reputation reward: {len(_no_reward)} — "
+                f"e.g. {', '.join(_no_reward[:5])}"
+            )
+        if _dynamic:
+            logger.info(
+                f"  Contractgen titles with a dynamically-calculated reward "
+                f"(no static number exists to show): {len(_dynamic)} — "
+                f"e.g. {', '.join(_dynamic[:5])}"
+            )
 
     if _rs_ore_name_annotations:
         out.update(_build_mineable_rs_name_overrides(loc))
