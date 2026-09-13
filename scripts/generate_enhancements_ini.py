@@ -6799,6 +6799,16 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                 continue
 
     mission_titles_augmented = 0
+    # #412 investigation: contractgen-sourced titles (CareerContract/Contract,
+    # this loop) whose variants all resolved success_xp to 0. The pu_missions
+    # skip-reason diagnostic below (no_rep_data/no_base_title) only ever looks
+    # at titles NOT in contractgen_missions (see its own "if title_key in
+    # contractgen_missions: continue" guard), so a contractgen title that
+    # scanned fine for blueprints but found no positive reward record was
+    # previously invisible to both diagnostics -- it just silently carried no
+    # rep tag with nothing logged anywhere. Tracked here, logged after the
+    # loop, same shape as the pu_missions summary for easy comparison.
+    contractgen_zero_xp_titles: list[str] = []
     # Shared memo for _expand_nested_route_vars: the same *Token var (e.g.
     # SingleToMultiToken) recurs across many titles and each expansion scans
     # every loc key for the suffix match.
@@ -6938,6 +6948,15 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
             elif any(_ace_flags):
                 augmented_title += " <EM4>[ACE?]</EM4>"
         nonzero_xp = [x for x in unique_xp if x > 0] if _show_title_tag("rep") else []
+        # #412: every variant's success_xp resolved to 0 -- either this
+        # title genuinely carries no reputation reward, or its reward record
+        # uses a shape the two extractors above (ContractResult_
+        # LegacyReputation / ContractResult_ScenarioProgress) don't
+        # recognize. Checked against unique_xp (not nonzero_xp) so this
+        # fires on the real zero-XP case even when the rep tag itself is
+        # toggled off, since a disabled tag would make nonzero_xp always [].
+        if _show_title_tag("rep") and not any(x > 0 for x in unique_xp):
+            contractgen_zero_xp_titles.append(title_key)
         _rep_tag_suffix = (
             f" ({_title_track})" if _title_track and _show_title_tag("rep_track") else ""
         )
@@ -7261,6 +7280,17 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     for reason, keys in titles_skipped_reasons.items():
         if keys:
             logger.info(f"  Skipped ({reason}): {len(keys)} — e.g. {', '.join(keys[:5])}")
+
+    # #412: contractgen-sourced titles (see the loop above) that scanned fine
+    # but resolved zero reputation reward from every variant -- distinct from
+    # the pu_missions-only "no_rep_data" bucket above, which never looks at
+    # contractgen titles at all. Logged the same way so the two are directly
+    # comparable in the log.
+    if contractgen_zero_xp_titles:
+        logger.info(
+            f"  Contractgen titles with zero XP: {len(contractgen_zero_xp_titles)} — "
+            f"e.g. {', '.join(contractgen_zero_xp_titles[:5])}"
+        )
 
     if _rs_ore_name_annotations:
         out.update(_build_mineable_rs_name_overrides(loc))
