@@ -81,39 +81,32 @@ _MIXED_REWARDS_XML = """\
 """
 
 
-class TestTitlesWithCalculatedReward:
-    def test_calculated_reward_title_is_flagged(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerators"
-        contractgen_dir.mkdir()
-        (contractgen_dir / "test_gen.xml").write_text(_MIXED_REWARDS_XML, encoding="utf-8")
+@pytest.fixture
+def contractgen_dir(tmp_path):
+    """A contractgenerator directory pre-populated with _MIXED_REWARDS_XML."""
+    d = tmp_path / "contractgenerators"
+    d.mkdir()
+    (d / "test_gen.xml").write_text(_MIXED_REWARDS_XML, encoding="utf-8")
+    return d
 
+
+class TestTitlesWithCalculatedReward:
+    def test_calculated_reward_title_is_flagged(self, gen_module, contractgen_dir):
         titles = gen_module._titles_with_calculated_reward(contractgen_dir)
 
         assert "dynamic_reward_title" in titles
 
-    def test_legacy_reputation_title_is_not_flagged(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerators"
-        contractgen_dir.mkdir()
-        (contractgen_dir / "test_gen.xml").write_text(_MIXED_REWARDS_XML, encoding="utf-8")
-
+    def test_legacy_reputation_title_is_not_flagged(self, gen_module, contractgen_dir):
         titles = gen_module._titles_with_calculated_reward(contractgen_dir)
 
         assert "legacy_rep_title" not in titles
 
-    def test_blueprint_only_title_is_not_flagged(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerators"
-        contractgen_dir.mkdir()
-        (contractgen_dir / "test_gen.xml").write_text(_MIXED_REWARDS_XML, encoding="utf-8")
-
+    def test_blueprint_only_title_is_not_flagged(self, gen_module, contractgen_dir):
         titles = gen_module._titles_with_calculated_reward(contractgen_dir)
 
         assert "blueprint_only_title" not in titles
 
-    def test_exactly_one_title_flagged(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerators"
-        contractgen_dir.mkdir()
-        (contractgen_dir / "test_gen.xml").write_text(_MIXED_REWARDS_XML, encoding="utf-8")
-
+    def test_exactly_one_title_flagged(self, gen_module, contractgen_dir):
         titles = gen_module._titles_with_calculated_reward(contractgen_dir)
 
         assert titles == {"dynamic_reward_title"}
@@ -125,10 +118,7 @@ class TestTitlesWithCalculatedReward:
 
         assert titles == set()
 
-    def test_flags_span_multiple_files(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerators"
-        contractgen_dir.mkdir()
-        (contractgen_dir / "a.xml").write_text(_MIXED_REWARDS_XML, encoding="utf-8")
+    def test_flags_span_multiple_files(self, gen_module, contractgen_dir):
         second_xml = _MIXED_REWARDS_XML.replace(
             "dynamic_reward_title", "second_file_dynamic_title"
         )
@@ -137,3 +127,21 @@ class TestTitlesWithCalculatedReward:
         titles = gen_module._titles_with_calculated_reward(contractgen_dir)
 
         assert titles == {"dynamic_reward_title", "second_file_dynamic_title"}
+
+    def test_uses_xml_path_index_when_given(self, gen_module, tmp_path):
+        """Every other test above omits xml_path_index/records_dir, so only
+        exercises the contractgen_dir.rglob("*.xml") fallback branch. Real
+        generation runs always pass both (see _run_gen_missions), routing
+        through _index_rglob instead -- this covers that branch too."""
+        records_dir = tmp_path
+        contractgen_dir = records_dir / "contracts" / "contractgenerator"
+        contractgen_dir.mkdir(parents=True)
+        xml_file = contractgen_dir / "test_gen.xml"
+        xml_file.write_text(_MIXED_REWARDS_XML, encoding="utf-8")
+        xml_path_index = {"contracts/contractgenerator": [str(xml_file)]}
+
+        titles = gen_module._titles_with_calculated_reward(
+            contractgen_dir, xml_path_index=xml_path_index, records_dir=records_dir
+        )
+
+        assert titles == {"dynamic_reward_title"}

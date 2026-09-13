@@ -474,6 +474,30 @@ def _index_rglob(xml_path_index: dict, entity_dir: Path, records_dir: Path) -> l
     return result
 
 
+def _contractgen_xml_files(
+    contractgen_dir: Path,
+    xml_path_index: dict | None = None,
+    records_dir: Path | None = None,
+):
+    """Every XML file under contractgen_dir, index-aware when available.
+
+    Extracted (#413 review follow-up) after the third identical copy of this
+    ternary showed up across the file's three contractgen-XML walkers
+    (scan_contract_generators, the Battaglia RS-tag scan, and
+    _titles_with_calculated_reward) -- root CLAUDE.md's DRY calibration
+    treats a third repeat as the extraction signal. Scoped to contractgen_dir
+    specifically rather than generalizing _index_rglob's other ~10 callers
+    (templates/bp/scitem/ammo/pu_missions dirs, etc.): those weren't part of
+    what this PR touched or what the review flagged, and folding them in too
+    would be a much larger, unrelated refactor.
+    """
+    return (
+        _index_rglob(xml_path_index, contractgen_dir, records_dir)
+        if xml_path_index is not None and records_dir is not None
+        else contractgen_dir.rglob("*.xml")
+    )
+
+
 ENHANCEMENT_SEPARATOR = "\\n\\n--- STATS ---\\n"
 # Medical consumables (CureLife pens) have no numeric stats — just a plain
 # effect summary — so they get their own header instead of "--- STATS ---".
@@ -3846,11 +3870,7 @@ def _build_battaglia_mineable_rs_tags(
         templates_dir, xml_path_index=xml_path_index, records_dir=records_dir
     )
 
-    _files = (
-        _index_rglob(xml_path_index, contractgen_dir, records_dir)
-        if xml_path_index is not None and records_dir is not None
-        else contractgen_dir.rglob("*.xml")
-    )
+    _files = _contractgen_xml_files(contractgen_dir, xml_path_index, records_dir)
     for xml_file in _files:
         try:
             root = ET.parse(xml_file).getroot()
@@ -4011,11 +4031,7 @@ def scan_contract_generators(
     templates_dir = contractgen_dir.parent / "contracttemplates"
     template_lookup = _build_template_lookup(templates_dir, xml_path_index=xml_path_index, records_dir=records_dir)
 
-    _contractgen_files = (
-        _index_rglob(xml_path_index, contractgen_dir, records_dir)
-        if xml_path_index is not None and records_dir is not None
-        else contractgen_dir.rglob("*.xml")
-    )
+    _contractgen_files = _contractgen_xml_files(contractgen_dir, xml_path_index, records_dir)
     try:
         for xml_file in _contractgen_files:
             try:
@@ -4396,11 +4412,7 @@ def _titles_with_calculated_reward(
     """
     if not contractgen_dir.exists():
         return set()
-    _files = (
-        _index_rglob(xml_path_index, contractgen_dir, records_dir)
-        if xml_path_index is not None and records_dir is not None
-        else contractgen_dir.rglob("*.xml")
-    )
+    _files = _contractgen_xml_files(contractgen_dir, xml_path_index, records_dir)
     titles: set[str] = set()
     for xml_file in _files:
         try:
