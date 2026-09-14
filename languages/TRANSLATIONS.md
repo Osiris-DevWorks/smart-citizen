@@ -50,6 +50,27 @@ them against the new source.
 
 ## Backfill log
 
+- **2.4.0 (2026-09-08, Claude Fable 5.1):** New language **turkish** added
+  (#404). Full AI translation of all 668 UI keys plus the 19-step guided
+  tour (`tutorial.*`), all `at`-only (`ht` empty). Translated `HELP.md`,
+  `ABOUT.md`, `LEGAL.md`, and `FAQ.md`. Base `global.ini` mapped to
+  Dymerz/StarCitizen-Localization
+  (`data/Localization/turkish_(turkey)/global.ini`, 95% key coverage
+  against the current English file) in `sources.json`, the same source
+  repo already used for french, portuguese_br, and italian. **Turkish
+  borrows the game's `polish_(poland)` slot**:
+  `SC_LANGUAGE_IDS["turkish"] = "polish_(poland)"`. `turkish_(turkey)` is
+  not a `g_language` value the game accepts, so Turkish has to ride on an
+  official slot; Polish is unclaimed by our own languages and needs the
+  same Latin Extended-A block Turkish does (ł ą ę ż ź ć ń ś vs ğ ı İ ş),
+  so the game font already draws our glyphs. `russian_(russia)` was tried
+  first and rejected — the game does not recognise it. Dymerz's own guide
+  maps Turkish onto `german_(germany)`, which would collide with our
+  German language. Installer `LanguageChoicePage` gained a Turkish option.
+  The seven other translated `ABOUT.md` files gained Turkish in both the
+  Dymerz credit line and the *Multi-Language Support* bullet, so all nine
+  language lists agree. Locked by `tests/test_turkish_activation.py`.
+
 - **2.3.1 pre-release (2026-08-28, Claude Opus 5):** `ABOUT.md` docs-parity
   follow-up to the `HELP.md` sweep below — the window-layout work (#364) was
   described in Help but had no entry in the in-app About feature list, so the
@@ -298,3 +319,21 @@ them against the new source.
   `g_language = german_(germany)` (`SC_LANGUAGE_IDS`). A German-speaking
   reviewer replacing the `at` strings with `ht` is the next step to promote
   it from AI-only to human-reviewed.
+- **turkish** — AI-translated by **Claude** (#404). No human translator yet, so
+  **every** key is `at`-only (`ht` empty) — the whole UI, the guided tour
+  (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review (grep `"ht": ""` returns the entire
+  file by design). The base `global.ini` is sourced from
+  **Dymerz/StarCitizen-Localization**
+  (`data/Localization/turkish_(turkey)/global.ini`), the same source repo
+  already used for french, portuguese_br, and italian. Turkish writes to
+  the game's `polish_(poland)` Localization folder with
+  `g_language = polish_(poland)` (`SC_LANGUAGE_IDS`) — a borrowed slot,
+  not a Turkish one: `turkish_(turkey)` is not a `g_language` value the
+  game accepts, `russian_(russia)` was tried first and is not recognised
+  by the game either, and Dymerz's suggested `german_(germany)` is already
+  taken by our German language. Polish is unclaimed by our own languages
+  and shares Turkish's Latin Extended-A glyph needs. A Turkish-speaking
+  reviewer replacing the `at`
+  strings with `ht` is the next step to promote it from AI-only to
+  human-reviewed.

@@ -48,6 +48,16 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     "chinese":       "chinese_(simplified)",
     "italian":       "italian_(italy)",
     "german":        "german_(germany)",
+    # Turkish borrows the idle polish_(poland) slot (#404). turkish_(turkey) is
+    # not a g_language value the game accepts, so Turkish has to ride on some
+    # other official slot. Polish is the safest host: it is unclaimed by our own
+    # languages, and Polish needs the same Latin Extended-A block Turkish does
+    # (ł ą ę ż ź ć ń ś vs ğ ı İ ş), so the game font already draws our glyphs.
+    # Dymerz's guide maps Turkish onto german_(germany) instead, but that slot
+    # is taken by our own German and the two would overwrite each other's
+    # global.ini. russian_(russia) was tried first and rejected — the game does
+    # not recognise it.
+    "turkish":       "polish_(poland)",
 }
 
 
