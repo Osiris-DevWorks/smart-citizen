@@ -162,6 +162,7 @@ Track which crafting blueprints you already own, and see it reflected in-game: o
 
 - **Appearance** — pick the app theme (see below).
 - **Star Citizen Installation** — path to your LIVE directory; auto-detected at install time, editable here. The **Channel** dropdown picks which channel the app reads and writes, and the **Language** dropdown switches the app and game strings (see *Switch Languages* above).
+- **Verify Install Location** — checks that Smart Citizen is pointed at the copy of Star Citizen you actually play. If you have more than one install on your PC (a moved library folder, a second drive, leftovers from a reinstall) it's possible to have the app writing to the one the RSI Launcher never starts: apply reports success, but nothing changes in game. This button finds every install it can and tells you which one the launcher is really using, reading the launcher's own log rather than guessing from folder names. Each install found is listed with its evidence, and **Use this install** repoints Smart Citizen at it in one click. If your install sits somewhere unusual, **Scan all drives** does a slower, deeper search.
 - **Smart Citizen Data** — folder for `user.ini`, caches, DataForge extraction, generated enhancement INIs, and backups. Defaults to `Documents\Smart Citizen`; move it off OneDrive if extraction or cache cleanup is slow.
 - **Base Localization (P4K Extraction)** — click **Extract from Data.p4k** to unpack stock localization plus DataForge entity data directly from your installed game. This is the sole source for base strings and enhancement data.
 - **Import INI** — fold an existing INI file into your overrides via the conflict-resolution dialog.
@@ -209,6 +210,7 @@ The **FAQ** tab answers the questions we get most often, right inside the app �
 - **Nothing in the table** — Make sure **Extract from Data.p4k** has completed and the post-extract reload has finished, then check the **Log Tab** for parse errors.
 - **Enhancements empty or missing items** — Run **Generate Enhancements** from the Enhancements tab; it needs a DataForge cache (click **Extract from Data.p4k** first if you haven't).
 - **Apply Enhancements fails** — Confirm the Star Citizen install path in the **Config Tab** and that the game isn't running.
+- **Apply says it worked but the game looks unchanged** — You may have more than one Star Citizen install, with Smart Citizen pointed at the one you don't launch. Click **Verify Install Location** on the **Config Tab**: it names the install the RSI Launcher actually uses and repoints the app in one click.
 - **Extraction says Data.p4k is locked** — The RSI Launcher is downloading or verifying an update. Wait for it to finish (or close the launcher), then click **Extract from Data.p4k** again.
 - **Stale data after game update** — Re-run **Extract from Data.p4k**, then regenerate enhancements.
 
