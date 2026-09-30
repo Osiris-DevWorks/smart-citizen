@@ -841,6 +841,182 @@
     "import_settings_tooltip": {
       "ht": "",
       "at": "Ripristina un file zip di backup delle impostazioni creato con qualsiasi versione di Smart Citizen. I tuoi file user.ini attuali vengono prima salvati come snapshot, la tua cartella di Star Citizen viene ripristinata (o rilevata automaticamente se il percorso del backup non esiste su questo PC), e Smart Citizen si riavvia con le impostazioni importate."
+    },
+    "dupe_check_btn": {
+      "ht": "",
+      "at": "Verifica posizione installazione"
+    },
+    "dupe_check_tooltip": {
+      "ht": "",
+      "at": "Cerca altre installazioni di Star Citizen su questo PC e verifica che Smart Citizen punti a quella che il RSI Launcher avvia davvero."
+    },
+    "dupe_scanning": {
+      "ht": "",
+      "at": "Ricerca delle installazioni di Star Citizen..."
+    },
+    "dupe_scan_progress": {
+      "ht": "",
+      "at": "{count} cartelle esaminate - {path}"
+    },
+    "dupe_scan_failed_title": {
+      "ht": "",
+      "at": "Controllo non riuscito"
+    },
+    "dupe_scan_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen non ha potuto completare la ricerca delle installazioni.\n\n{error}"
+    },
+    "dupe_title": {
+      "ht": "",
+      "at": "Installazioni di Star Citizen"
+    },
+    "dupe_close_btn": {
+      "ht": "",
+      "at": "Chiudi"
+    },
+    "dupe_deep_btn": {
+      "ht": "",
+      "at": "Analizza tutti i dischi"
+    },
+    "dupe_deep_tooltip": {
+      "ht": "",
+      "at": "Cerca su tutti i dischi fissi le installazioni salvate in una cartella personalizzata. Più lento del controllo rapido e annullabile."
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "",
+      "at": "Annulla"
+    },
+    "dupe_open_btn": {
+      "ht": "",
+      "at": "Apri cartella"
+    },
+    "dupe_use_btn": {
+      "ht": "",
+      "at": "Usa questa installazione"
+    },
+    "dupe_use_tooltip": {
+      "ht": "",
+      "at": "Punta Smart Citizen a questa installazione. Da ora in poi le modifiche verranno scritte qui."
+    },
+    "dupe_use_already": {
+      "ht": "",
+      "at": "Smart Citizen usa già questa installazione."
+    },
+    "dupe_use_leftover": {
+      "ht": "",
+      "at": "Questa cartella non contiene alcun Data.p4k, quindi il gioco non può partire da qui. Puntare Smart Citizen qui renderebbe ogni applicazione priva di effetto."
+    },
+    "dupe_use_failed_title": {
+      "ht": "",
+      "at": "Impossibile cambiare installazione"
+    },
+    "dupe_use_failed_body": {
+      "ht": "",
+      "at": "Impossibile trovare {path}. Potrebbe trovarsi su un'unità che si è scollegata. Nessuna modifica è stata apportata."
+    },
+    "dupe_no_path_set": {
+      "ht": "",
+      "at": "nessuna cartella impostata"
+    },
+    "dupe_unknown_version": {
+      "ht": "",
+      "at": "versione sconosciuta"
+    },
+    "dupe_verdict_none": {
+      "ht": "",
+      "at": "Nessuna installazione di Star Citizen trovata su questo PC. Imposta la cartella manualmente con Sfoglia, oppure prova Analizza tutti i dischi."
+    },
+    "dupe_verdict_single": {
+      "ht": "",
+      "at": "Trovata una sola installazione, ed è quella che Smart Citizen sta usando. Non c'è nulla da correggere."
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "",
+      "at": "Smart Citizen non punta alla tua installazione. Scrive in {configured}, ma l'installazione presente su questo PC si trova in {found}. L'applicazione non raggiungerà il gioco finché non cambi percorso."
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "",
+      "at": "L'unica cartella di installazione trovata non contiene dati di gioco (Data.p4k mancante), quindi qui non è possibile applicare nulla. Imposta manualmente la vera cartella di installazione con Sfoglia, oppure prova Analizza tutti i dischi."
+    },
+    "dupe_verdict_match": {
+      "ht": "",
+      "at": "{count} installazioni trovate, e Smart Citizen punta a quella avviata dal RSI Launcher: {path}. Non c'è nulla da correggere."
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "",
+      "at": "Smart Citizen è puntato sull'installazione avviata dal launcher RSI: {path}. Ma non contiene dati di gioco (Data.p4k mancante), quindi lì non si può applicare nulla."
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "",
+      "at": "Smart Citizen sta scrivendo nell'installazione sbagliata. Il RSI Launcher avvia {launcher}, ma Smart Citizen scrive in {configured}, quindi le tue modifiche non compariranno nel gioco. Premi Usa questa installazione sulla voce del launcher qui sotto."
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "",
+      "at": "Smart Citizen non è ancora puntato su un'installazione. Il launcher RSI avvia {launcher}. Premi Usa questa installazione sulla relativa voce qui sotto."
+    },
+    "dupe_verdict_unknown": {
+      "ht": "",
+      "at": "{count} installazioni trovate, e Smart Citizen non è riuscito a capire quale usi per giocare. Sono elencate dalla build più recente alla più vecchia: scegli quella che avvii."
+    },
+    "dupe_summary_count": {
+      "ht": "",
+      "at": "{count} cartella/e di installazione trovate."
+    },
+    "dupe_summary_leftovers": {
+      "ht": "",
+      "at": "{count} di queste non contengono dati di gioco e non sono giocabili."
+    },
+    "dupe_summary_unused": {
+      "ht": "",
+      "at": "{count} installazione/i non sono usate né dal RSI Launcher né da Smart Citizen: {paths}. Eliminarle libererebbe circa {size}."
+    },
+    "dupe_summary_quick": {
+      "ht": "",
+      "at": "Questo era il controllo rapido delle cartelle di installazione abituali; usa Analizza tutti i dischi per quelle personalizzate."
+    },
+    "dupe_summary_cancelled": {
+      "ht": "",
+      "at": "L'analisi dei dischi è stata annullata, quindi questo elenco potrebbe essere incompleto."
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "",
+      "at": "Non è stato possibile leggere il registro del RSI Launcher, quindi l'installazione che avvia è una stima basata sulle date di build."
+    },
+    "dupe_badge_configured": {
+      "ht": "",
+      "at": "In uso da Smart Citizen"
+    },
+    "dupe_badge_launcher": {
+      "ht": "",
+      "at": "Avviata dal RSI Launcher"
+    },
+    "dupe_badge_leftover": {
+      "ht": "",
+      "at": "Nessun dato di gioco"
+    },
+    "dupe_badge_unused": {
+      "ht": "",
+      "at": "Non in uso"
+    },
+    "dupe_channel_line": {
+      "ht": "",
+      "at": "{channel}: {version} - {size} - aggiornato il {date}"
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "",
+      "at": "{channel}: vuota, nessun Data.p4k in questa cartella"
+    },
+    "dupe_applied_by_us": {
+      "ht": "",
+      "at": "Smart Citizen v{version} applicato qui ({languages})"
+    },
+    "dupe_applied_other": {
+      "ht": "",
+      "at": "Qui è applicato un global.ini ({languages}), ma non è stato scritto da Smart Citizen"
+    },
+    "dupe_not_applied": {
+      "ht": "",
+      "at": "Nessuna localizzazione applicata qui"
     }
   },
   "enhancements": {

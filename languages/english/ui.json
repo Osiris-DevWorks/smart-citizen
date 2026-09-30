@@ -841,6 +841,182 @@
     "language_source_placeholder": {
       "ht": "https://…/global.ini",
       "at": ""
+    },
+    "dupe_check_btn": {
+      "ht": "Verify Install Location",
+      "at": ""
+    },
+    "dupe_check_tooltip": {
+      "ht": "Search this PC for other Star Citizen installs and check that Smart Citizen is pointed at the one the RSI Launcher actually starts.",
+      "at": ""
+    },
+    "dupe_scanning": {
+      "ht": "Looking for Star Citizen installs...",
+      "at": ""
+    },
+    "dupe_scan_progress": {
+      "ht": "Searched {count} folders - {path}",
+      "at": ""
+    },
+    "dupe_scan_failed_title": {
+      "ht": "Install check failed",
+      "at": ""
+    },
+    "dupe_scan_failed_body": {
+      "ht": "Smart Citizen could not finish searching for installs.\n\n{error}",
+      "at": ""
+    },
+    "dupe_title": {
+      "ht": "Star Citizen Installs",
+      "at": ""
+    },
+    "dupe_close_btn": {
+      "ht": "Close",
+      "at": ""
+    },
+    "dupe_deep_btn": {
+      "ht": "Scan all drives",
+      "at": ""
+    },
+    "dupe_deep_tooltip": {
+      "ht": "Search every fixed drive for installs saved to a custom folder. Slower than the quick check, and can be cancelled.",
+      "at": ""
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "Cancel",
+      "at": ""
+    },
+    "dupe_open_btn": {
+      "ht": "Open folder",
+      "at": ""
+    },
+    "dupe_use_btn": {
+      "ht": "Use this install",
+      "at": ""
+    },
+    "dupe_use_tooltip": {
+      "ht": "Point Smart Citizen at this install. Applies from now on write here.",
+      "at": ""
+    },
+    "dupe_use_already": {
+      "ht": "Smart Citizen already uses this install.",
+      "at": ""
+    },
+    "dupe_use_leftover": {
+      "ht": "This folder holds no Data.p4k, so the game cannot run from it. Pointing Smart Citizen here would make every apply do nothing.",
+      "at": ""
+    },
+    "dupe_use_failed_title": {
+      "ht": "Couldn't switch install",
+      "at": ""
+    },
+    "dupe_use_failed_body": {
+      "ht": "{path} could not be found. It may have been on a drive that disconnected. Nothing was changed.",
+      "at": ""
+    },
+    "dupe_no_path_set": {
+      "ht": "no folder set",
+      "at": ""
+    },
+    "dupe_unknown_version": {
+      "ht": "unknown version",
+      "at": ""
+    },
+    "dupe_verdict_none": {
+      "ht": "No Star Citizen install found on this PC. Set the folder by hand with Browse, or try Scan all drives.",
+      "at": ""
+    },
+    "dupe_verdict_single": {
+      "ht": "One install found, and Smart Citizen is using it. Nothing to fix.",
+      "at": ""
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "Smart Citizen is not pointed at your install. It writes to {configured}, but the install on this PC is at {found}. Applying will not reach your game until you switch.",
+      "at": ""
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "The only install folder found has no game data (Data.p4k is missing), so nothing can be applied here. Set the real install folder by hand with Browse, or try Scan all drives.",
+      "at": ""
+    },
+    "dupe_verdict_match": {
+      "ht": "{count} installs found, and Smart Citizen is pointed at the one the RSI Launcher starts: {path}. Nothing to fix.",
+      "at": ""
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "Smart Citizen is pointed at the install the RSI Launcher starts: {path}. But it has no game data (Data.p4k is missing), so nothing can actually be applied there.",
+      "at": ""
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "Smart Citizen is applying to the wrong install. The RSI Launcher starts {launcher}, but Smart Citizen writes to {configured}, so your changes will not show up in game. Press Use this install on the launcher's entry below.",
+      "at": ""
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "Smart Citizen isn't pointed at an install yet. The RSI Launcher starts {launcher}. Press Use this install on its entry below.",
+      "at": ""
+    },
+    "dupe_verdict_unknown": {
+      "ht": "{count} installs found, and Smart Citizen could not tell which one you play. They are listed newest build first - pick the one you launch.",
+      "at": ""
+    },
+    "dupe_summary_count": {
+      "ht": "{count} install folder(s) found.",
+      "at": ""
+    },
+    "dupe_summary_leftovers": {
+      "ht": "{count} install folder(s) hold no game data and cannot be played from.",
+      "at": ""
+    },
+    "dupe_summary_unused": {
+      "ht": "{count} install(s) are used by neither the RSI Launcher nor Smart Citizen: {paths}. Deleting them would free about {size}.",
+      "at": ""
+    },
+    "dupe_summary_quick": {
+      "ht": "This was the quick check of the usual install folders; use Scan all drives to search custom ones.",
+      "at": ""
+    },
+    "dupe_summary_cancelled": {
+      "ht": "The drive scan was cancelled, so this list may be short.",
+      "at": ""
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "The RSI Launcher log could not be read, so which install the launcher starts is a guess based on build dates.",
+      "at": ""
+    },
+    "dupe_badge_configured": {
+      "ht": "In use by Smart Citizen",
+      "at": ""
+    },
+    "dupe_badge_launcher": {
+      "ht": "Started by RSI Launcher",
+      "at": ""
+    },
+    "dupe_badge_leftover": {
+      "ht": "No game data",
+      "at": ""
+    },
+    "dupe_badge_unused": {
+      "ht": "Not in use",
+      "at": ""
+    },
+    "dupe_channel_line": {
+      "ht": "{channel}: {version} - {size} - updated {date}",
+      "at": ""
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "{channel}: empty, no Data.p4k in this folder",
+      "at": ""
+    },
+    "dupe_applied_by_us": {
+      "ht": "Smart Citizen v{version} applied here ({languages})",
+      "at": ""
+    },
+    "dupe_applied_other": {
+      "ht": "A global.ini is applied here ({languages}), but not one Smart Citizen wrote",
+      "at": ""
+    },
+    "dupe_not_applied": {
+      "ht": "No localization applied here",
+      "at": ""
     }
   },
   "enhancements": {
