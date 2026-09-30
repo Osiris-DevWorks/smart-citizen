@@ -146,7 +146,7 @@ Smart Citizen は、以下の上流ツールも同梱しています。
 
 ### このプロジェクトを支援する
 Smart Citizen は完全無料です。価値を感じていただけたら：
-- 💳 [PayPal で寄付](https://paypal.me/RighteousKill)
+- 💳 [PayPal で寄付](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Venmo で寄付](https://venmo.com/u/Amr-Abouelleil)
 
 ## Osiris DevWorks のその他のツール
