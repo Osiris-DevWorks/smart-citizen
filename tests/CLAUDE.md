@@ -25,7 +25,7 @@ Split by domain:
 - `test_dataforge_patcher.py` — declarative XML patching.
 - `test_app_updater.py` — GitHub Releases version-check worker, plus the #211 auto-updater's installer-asset picker (`pick_installer_asset`: anchored name match, malformed-entry tolerance).
 - `test_channel_layout.py` — per-channel directory migration.
-- `test_cache_dir.py` — 1.4.1 split of the DataForge cache override from the user-data override: `CACHE_DIR` is its own registry key, defaults to `%LOCALAPPDATA%\Smart Citizen\<channel>\cache\dataforge\` when unset, and never falls back to the user-data override.
+- `test_cache_dir.py` — 1.4.1 split of the DataForge cache override from the user-data override: `CACHE_DIR` is its own registry key, defaults to `%LOCALAPPDATA%\Smart Citizen\<channel>\cache\dataforge\` when unset, and never falls back to the user-data override. Migrator coverage locks deferred cleanup (no startup copy/delete) for overrides, same-path no-ops, unavailable destinations, and staged no-override moves that preserve the source after interrupted cross-volume copies.
 - `test_retired_url_sources_migration.py` — 1.0 cleanup of contracts/components/ships/commodities/gear sources retired in 0.7.0. Covers fresh-install defaults, upgrade-time prune, URL-vs-local guard, idempotence.
 - `test_applied_file_validator.py` — post-apply `global.ini` vs stock `base.ini`.
 - `test_entry_filter.py` — column-filter logic plus the `NUM_COLUMNS` getter-tuple drift guard.
