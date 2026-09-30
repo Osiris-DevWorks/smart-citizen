@@ -6,5 +6,6 @@
   "japanese": "https://raw.githubusercontent.com/stdblue/StarCitizenJapaneseResources/master/v4.x/release/japanese_(japan)/global.ini",
   "chinese": "https://ini.42kit.com/full/global.ini",
   "italian": "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/italian_(italy)/global.ini",
-  "german": "https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini"
+  "german": "https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini",
+  "turkish": "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/turkish_(turkey)/global.ini"
 }

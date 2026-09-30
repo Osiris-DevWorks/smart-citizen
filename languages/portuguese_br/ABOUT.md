@@ -67,7 +67,7 @@ O Smart Citizen também embarca ferramentas de terceiros:
 
 As strings do jogo em idiomas diferentes do inglês são traduções da comunidade:
 
-- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization): as traduções comunitárias do `global.ini` que alimentam as opções de idioma francês, português do Brasil e italiano. Os tradutores deles fazem o trabalho de verdade aqui; nós só entregamos.
+- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization): as traduções comunitárias do `global.ini` que alimentam as opções de idioma francês, português do Brasil, italiano e turco. Os tradutores deles fazem o trabalho de verdade aqui; nós só entregamos.
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES): a tradução comunitária do `global.ini` que alimenta a opção de idioma espanhol.
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources): a tradução comunitária do `global.ini` que alimenta a opção de idioma japonês.
 - [**42Kit**](https://ini.42kit.com/): a tradução comunitária do `global.ini` que alimenta a opção de idioma chinês.
@@ -78,7 +78,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 ### 🎯 Recursos Centrais
 - **Carregar e Editar**: carregue o `global.ini` da sua instalação do Star Citizen e personalize strings em uma tabela intuitiva
 - **Suporte Multicanal**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW têm cada um seu próprio `user.ini`, cache, backups e extração do DataForge isolados; troque de canal na aba Config sem reiniciar
-- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês, italiano e alemão na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
+- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês, italiano, alemão e turco na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
 - **Contratos de Missão**: edite textos de contratos e briefings na categoria Missions dedicada
 - **Filtragem Inteligente**: busque strings, filtre por categoria (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) ou por status de modificação
 - **Filtros por Coluna**: digite direto nas caixas de filtro sob cada cabeçalho de coluna para buscas refinadas
