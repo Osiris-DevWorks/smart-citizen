@@ -3274,6 +3274,8 @@ class AppSettings:
             AppSettings.TUTORIAL_DISABLED: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS: True,
+            AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
+            AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
         }
         # Composed from the same maps the getters read, so these can't drift.
