@@ -9,6 +9,7 @@ Contents:
 - StartupSyncWorker       — refreshes URL-backed sources on startup
 - EnhancementsGeneratorWorker — runs scripts/generate_enhancements_ini.py
 - BlueprintLogScanWorker  — scans SC logs for received-blueprint events (#222)
+- InstallScanWorker       — finds every Star Citizen install on the machine (2.4)
 - P4kExtractWorker        — unp4k extraction of global.ini
 - DataForgeExtractWorker  — unp4k + unforge + patch pipeline
 - SelectAllDelegate       — Custom Value cell delegate (auto-select, EM3/EM4 wrap)
@@ -33,6 +34,25 @@ from src.utils.tag_builder import tag_config_fingerprint
 logger = logging.getLogger(__name__)
 
 
+def elide_middle(text: str, limit: int = 56) -> str:
+    r"""Shorten *text* to *limit* chars, dropping the middle.
+
+    For paths fed to a progress label. ``QProgressDialog`` resizes itself to
+    fit its label and never shrinks back, so a single long path permanently
+    stretches the dialog -- a drive scan across a media drive blew it out to
+    most of the screen width. Eliding the middle keeps both the drive letter
+    and the current folder name, which is the part that reads as progress:
+    ``E:\Anime\01. Love`` stays intact, while a deep path becomes
+    ``E:\Games\Some...\deep\folder``.
+    """
+    if len(text) <= limit:
+        return text
+    keep = max(0, limit - 3)
+    head = keep // 2
+    tail = keep - head
+    return f"{text[:head]}...{text[-tail:] if tail else ''}"
+
+
 class AnimatedProgressDialog(QProgressDialog):
     """Reusable progress dialog that toggles between indeterminate and determinate.
 
@@ -44,8 +64,19 @@ class AnimatedProgressDialog(QProgressDialog):
     the bar text since there's no meaningful percentage to show.
     """
 
-    def __init__(self, message: str, parent=None, title: str = "Processing"):
-        super().__init__(message, None, 0, 0, parent)
+    def __init__(
+        self, message: str, parent=None, title: str = "Processing",
+        cancel_text: str | None = None,
+    ):
+        # cancel_text=None (every existing caller) makes QProgressDialog omit
+        # the button entirely -- most of what this dialog drives (DataForge
+        # extraction, generation) isn't safely interruptible mid-phase. Only
+        # a caller that actually wires up .canceled and honours it should
+        # pass real button text (#385 review: the deep install scan wired
+        # the signal but never got a button to emit it from). Text is a
+        # caller-supplied string, not a bool + an internal tr() lookup, so
+        # this generic/reusable dialog carries no feature-specific string key.
+        super().__init__(message, cancel_text, 0, 0, parent)
         self.setWindowTitle(title)
         self.setModal(True)
         self.setMinimumWidth(400)
@@ -278,6 +309,92 @@ class BlueprintLogScanWorker(QThread):
             self.finished.emit(result)
         except Exception as e:
             logger.exception(f"Blueprint log scan failed: {e}")
+            self.error.emit(str(e))
+            self.finished.emit(None)
+
+
+class InstallScanWorker(QThread):
+    """Find every Star Citizen install on this machine (2.4).
+
+    Thin wrapper over ``install_scanner.scan_installs``. Both scan modes run
+    here, not just the deep one: even the quick scan reads each install's
+    applied ``global.ini`` looking for the apply watermark, and on a cold file
+    cache that measured 26 s against a real 11 MB file — long enough to freeze
+    the window if it ran on the main thread.
+
+    Unlike the tag-config hand-off ``src/utils/CLAUDE.md`` documents (settings
+    read on the main thread, frozen before the worker starts, specifically so
+    a mid-run edit elsewhere can't half-rewrite the input), the settings this
+    worker needs have no such "must be frozen at launch" concern -- nothing
+    else can change them mid-scan -- and root ``CLAUDE.md``'s own threading
+    section states ``AppSettings`` is thread-safe from either thread. So they
+    are read in :meth:`run`, on the worker thread, not ``__init__``: an
+    unconfigured profile makes ``get_sc_install_root()`` fall through to
+    ``_scan_common_sc_install_locations()``, whose own docstring warns a
+    disconnected network drive can hang that call for seconds -- exactly the
+    kind of I/O this class exists to keep off the main thread (#385 review).
+    """
+
+    progress_pct = pyqtSignal(int, int, str)
+    finished = pyqtSignal(object)  # ScanReport, or None on error
+    error = pyqtSignal(str)
+
+    def __init__(self, deep: bool = False, parent=None):
+        super().__init__(parent)
+        self._deep = deep
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        """Ask a deep scan to stop at the next directory boundary."""
+        self._cancelled = True
+
+    def run(self):
+        from src.utils.install_scanner import scan_installs
+        from src.utils.settings import _path_ends_in_channel
+
+        configured_root = AppSettings.get_sc_install_root()
+        registry_root = AppSettings._read_legacy_installer_sc_directory()
+        if registry_root and _path_ends_in_channel(registry_root):
+            # Reuses settings.py's own stripping helper rather than a second
+            # implementation (#385 review: an earlier version of this fix
+            # introduced install_scanner.is_channel_name for the same check
+            # AppSettings already had). The legacy installer can write a
+            # channel-suffixed path (e.g. ...\StarCitizen\LIVE) into this
+            # key. Passed through unstripped, read_install() would look for
+            # a nested LIVE\LIVE and silently drop this registry evidence
+            # for anyone on that older flow.
+            registry_root = str(Path(registry_root).parent)
+
+        try:
+            def _progress(visited: int, current: str) -> None:
+                # total=0: there is no knowable upper bound for either scan
+                # mode (a directory walk doesn't know its own size in
+                # advance), so this legitimately stays indeterminate rather
+                # than faking a percentage. Routing through progress_pct (the
+                # signal src/gui/CLAUDE.md documents every worker emitting)
+                # rather than a bespoke str signal is still the point: it
+                # keeps this worker on the one path AnimatedProgressDialog's
+                # callers already use (#385 review).
+                self.progress_pct.emit(0, 0, tr(
+                    "config.dupe_scan_progress",
+                    count=visited,
+                    path=elide_middle(current),
+                ))
+
+            report = scan_installs(
+                configured_root=configured_root or None,
+                registry_root=registry_root,
+                deep=self._deep,
+                progress=_progress if self._deep else None,
+                should_cancel=(lambda: self._cancelled) if self._deep else None,
+            )
+            logger.info(
+                "Install scan: %d install(s), verdict=%s, launcher=%s, deep=%s",
+                report.count, report.verdict, report.launcher_root, self._deep,
+            )
+            self.finished.emit(report)
+        except Exception as e:
+            logger.exception(f"Install scan failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(None)
 
