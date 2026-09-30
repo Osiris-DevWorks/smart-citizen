@@ -841,6 +841,182 @@
     "language_source_placeholder": {
       "ht": "",
       "at": "https://…/global.ini"
+    },
+    "dupe_check_btn": {
+      "ht": "",
+      "at": "Kurulum Konumunu Doğrula"
+    },
+    "dupe_check_tooltip": {
+      "ht": "",
+      "at": "Bu bilgisayarda başka Star Citizen kurulumları arar ve Smart Citizen'in RSI Launcher'ın gerçekten başlattığı kuruluma yönlendirildiğini kontrol eder."
+    },
+    "dupe_scanning": {
+      "ht": "",
+      "at": "Star Citizen kurulumları aranıyor..."
+    },
+    "dupe_scan_progress": {
+      "ht": "",
+      "at": "{count} klasör arandı - {path}"
+    },
+    "dupe_scan_failed_title": {
+      "ht": "",
+      "at": "Kurulum kontrolü başarısız oldu"
+    },
+    "dupe_scan_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen kurulum aramasını tamamlayamadı.\n\n{error}"
+    },
+    "dupe_title": {
+      "ht": "",
+      "at": "Star Citizen Kurulumları"
+    },
+    "dupe_close_btn": {
+      "ht": "",
+      "at": "Kapat"
+    },
+    "dupe_deep_btn": {
+      "ht": "",
+      "at": "Tüm sürücüleri tara"
+    },
+    "dupe_deep_tooltip": {
+      "ht": "",
+      "at": "Özel bir klasöre kaydedilmiş kurulumlar için tüm sabit sürücüleri arar. Hızlı kontrolden daha yavaştır ve iptal edilebilir."
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "",
+      "at": "İptal"
+    },
+    "dupe_open_btn": {
+      "ht": "",
+      "at": "Klasörü aç"
+    },
+    "dupe_use_btn": {
+      "ht": "",
+      "at": "Bu kurulumu kullan"
+    },
+    "dupe_use_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen'i bu kuruluma yönlendirir. Bundan sonraki uygulamalar buraya yazılır."
+    },
+    "dupe_use_already": {
+      "ht": "",
+      "at": "Smart Citizen zaten bu kurulumu kullanıyor."
+    },
+    "dupe_use_leftover": {
+      "ht": "",
+      "at": "Bu klasörde Data.p4k yok, bu yüzden oyun buradan çalışamaz. Smart Citizen'i buraya yönlendirmek her uygulamayı etkisiz hale getirir."
+    },
+    "dupe_use_failed_title": {
+      "ht": "",
+      "at": "Kurulum değiştirilemedi"
+    },
+    "dupe_use_failed_body": {
+      "ht": "",
+      "at": "{path} bulunamadı. Bağlantısı kesilen bir sürücüde olabilir. Hiçbir şey değiştirilmedi."
+    },
+    "dupe_no_path_set": {
+      "ht": "",
+      "at": "klasör ayarlanmadı"
+    },
+    "dupe_unknown_version": {
+      "ht": "",
+      "at": "bilinmeyen sürüm"
+    },
+    "dupe_verdict_none": {
+      "ht": "",
+      "at": "Bu bilgisayarda Star Citizen kurulumu bulunamadı. Klasörü Gözat ile elle ayarlayın veya Tüm sürücüleri tara'yı deneyin."
+    },
+    "dupe_verdict_single": {
+      "ht": "",
+      "at": "Bir kurulum bulundu ve Smart Citizen onu kullanıyor. Düzeltilecek bir şey yok."
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "",
+      "at": "Smart Citizen kurulumunuza yönlendirilmemiş. {configured} konumuna yazıyor, ancak bu bilgisayardaki kurulum {found} konumunda. Değiştirene kadar uygulamalar oyununuza ulaşmaz."
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "",
+      "at": "Bulunan tek kurulum klasöründe oyun verisi yok (Data.p4k eksik), bu yüzden buraya hiçbir şey uygulanamaz. Gerçek kurulum klasörünü Gözat ile elle ayarlayın veya Tüm sürücüleri tara'yı deneyin."
+    },
+    "dupe_verdict_match": {
+      "ht": "",
+      "at": "{count} kurulum bulundu ve Smart Citizen, RSI Launcher'ın başlattığı kuruluma yönlendirilmiş: {path}. Düzeltilecek bir şey yok."
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "",
+      "at": "Smart Citizen, RSI Launcher'ın başlattığı kuruluma yönlendirilmiş: {path}. Ancak orada oyun verisi yok (Data.p4k eksik), bu yüzden oraya aslında hiçbir şey uygulanamaz."
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "",
+      "at": "Smart Citizen yanlış kuruluma uyguluyor. RSI Launcher {launcher} kurulumunu başlatıyor, ancak Smart Citizen {configured} konumuna yazıyor, bu yüzden değişiklikleriniz oyunda görünmez. Aşağıda launcher'ın girişindeki Bu kurulumu kullan düğmesine basın."
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "",
+      "at": "Smart Citizen henüz bir kuruluma yönlendirilmemiş. RSI Launcher {launcher} kurulumunu başlatıyor. Aşağıda onun girişindeki Bu kurulumu kullan düğmesine basın."
+    },
+    "dupe_verdict_unknown": {
+      "ht": "",
+      "at": "{count} kurulum bulundu ve Smart Citizen hangisini oynadığınızı anlayamadı. En yeni derleme önce olacak şekilde listelenmiştir - başlattığınız kurulumu seçin."
+    },
+    "dupe_summary_count": {
+      "ht": "",
+      "at": "{count} kurulum klasörü bulundu."
+    },
+    "dupe_summary_leftovers": {
+      "ht": "",
+      "at": "{count} kurulum klasöründe oyun verisi yok ve buradan oynanamaz."
+    },
+    "dupe_summary_unused": {
+      "ht": "",
+      "at": "{count} kurulum ne RSI Launcher ne de Smart Citizen tarafından kullanılıyor: {paths}. Bunları silmek yaklaşık {size} yer açar."
+    },
+    "dupe_summary_quick": {
+      "ht": "",
+      "at": "Bu, olağan kurulum klasörlerinin hızlı kontrolüydü; özel klasörleri aramak için Tüm sürücüleri tara'yı kullanın."
+    },
+    "dupe_summary_cancelled": {
+      "ht": "",
+      "at": "Sürücü taraması iptal edildi, bu yüzden bu liste eksik olabilir."
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "",
+      "at": "RSI Launcher günlüğü okunamadı, bu yüzden launcher'ın hangi kurulumu başlattığı derleme tarihlerine dayalı bir tahmindir."
+    },
+    "dupe_badge_configured": {
+      "ht": "",
+      "at": "Smart Citizen tarafından kullanılıyor"
+    },
+    "dupe_badge_launcher": {
+      "ht": "",
+      "at": "RSI Launcher tarafından başlatılıyor"
+    },
+    "dupe_badge_leftover": {
+      "ht": "",
+      "at": "Oyun verisi yok"
+    },
+    "dupe_badge_unused": {
+      "ht": "",
+      "at": "Kullanılmıyor"
+    },
+    "dupe_channel_line": {
+      "ht": "",
+      "at": "{channel}: {version} - {size} - güncellendi {date}"
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "",
+      "at": "{channel}: boş, bu klasörde Data.p4k yok"
+    },
+    "dupe_applied_by_us": {
+      "ht": "",
+      "at": "Smart Citizen v{version} buraya uygulandı ({languages})"
+    },
+    "dupe_applied_other": {
+      "ht": "",
+      "at": "Buraya bir global.ini uygulanmış ({languages}), ancak Smart Citizen tarafından yazılmamış"
+    },
+    "dupe_not_applied": {
+      "ht": "",
+      "at": "Buraya yerelleştirme uygulanmamış"
     }
   },
   "enhancements": {
@@ -1366,6 +1542,10 @@
       "ht": "",
       "at": "Star Citizen günlük dosyalarınızı (Game.log ve logbackups) \"Received Blueprint\" ödül bildirimleri için tarayın ve bunları otomatik olarak sahip olunan olarak işaretleyin."
     },
+    "scan_logs_already_running_tooltip": {
+      "ht": "",
+      "at": "Zaten bir tarama çalışıyor (bu, otomatik başlangıç taraması olabilir)."
+    },
     "scan_other_channels_checkbox": {
       "ht": "",
       "at": "LIVE/HOTFIX'i de tara (hangisi etkin değilse)"
@@ -1381,6 +1561,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalde bir tarama yalnızca son taramanızdan sonraki olayları okur, böylece hızlı kalır. Sahip Olunan listeniz yanlış görünüyorsa ve bunun yerine her günlüğü baştan yeniden okumak istiyorsanız bunu işaretleyin. Bir sonraki taramadan sonra işareti kendiliğinden kalkar."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Başlangıçta günlükleri otomatik tara"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen her başladığında Sahip Olunan Planlar için Günlükleri Tara işlemini otomatik olarak çalıştırır, böylece Sahip Olunan listeniz elle tıklamaya gerek kalmadan güncel kalır. Yukarıdaki düğmeyle aynı kanal kapsamını ve artımlı taramayı kullanır."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Otomatik tarama: Sahip Olunan listenize {count} yeni plan eklendi"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Otomatik taramanın bulduğu yeni planlar için açılır pencere göster"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Otomatik başlangıç taraması yeni planlar bulduğunda, yalnızca bir durum çubuğu mesajı yerine elle kullanılan Günlükleri Tara düğmesinin gösterdiği özet açılır penceresini gösterir. Yalnızca bir tarama gerçekten yeni bir şey bulduğunda geçerlidir."
     },
     "apply_owned_tag_btn": {
       "ht": "",
