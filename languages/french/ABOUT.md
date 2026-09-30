@@ -148,7 +148,7 @@ Les textes du jeu en langues autres que l'anglais sont des traductions communaut
 
 ### Soutenir ce projet
 Smart Citizen est entièrement gratuit. Si vous le trouvez utile :
-- 💳 [Don via PayPal](https://paypal.me/RighteousKill)
+- 💳 [Don via PayPal](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Don via Venmo](https://venmo.com/u/Amr-Abouelleil)
 
 ## Autres outils d'Osiris DevWorks

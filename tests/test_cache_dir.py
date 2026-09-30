@@ -17,12 +17,14 @@ and routes ``get_dataforge_cache_dir`` through a base resolver that
 checks override → portable → LOCALAPPDATA in that order. The historic
 LOCALAPPDATA default is preserved so unchanged installs see no path
 movement on upgrade. These tests lock the resolution order and the
-override I/O contract.
+override I/O contract, deferred cleanup for custom cache locations, and
+staged migration to the default LOCALAPPDATA location.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -192,4 +194,286 @@ class TestPendingCleanup:
     def test_set_empty_string_clears(self, json_backend, tmp_path):
         AppSettings.set_pending_cache_cleanup(tmp_path / "old-cache")
         AppSettings.set_pending_cache_cleanup("")
+        assert AppSettings.get_pending_cache_cleanup() == ""
+
+
+def _seed_cache(path: Path, stamp_value: str = "123") -> Path:
+    """Create a DataForge-cache-shaped dir with a valid freshness stamp."""
+    from src.utils.pak_extractor import P4K_MTIME_STAMP
+
+    path.mkdir(parents=True, exist_ok=True)
+    (path / P4K_MTIME_STAMP).write_text(stamp_value)
+    (path / "raw").mkdir(exist_ok=True)
+    (path / "raw" / "record.xml").write_text("<x/>")
+    return path
+
+
+def _has_stamp(path: Path) -> bool:
+    from src.utils.pak_extractor import P4K_MTIME_STAMP
+
+    return (path / P4K_MTIME_STAMP).exists()
+
+
+class TestMigrateRespectsConfiguredCacheDir:
+    """``migrate_dataforge_cache_to_local`` must target the *resolved*
+    cache dir, not a hardcoded %LOCALAPPDATA%.
+
+    Regression: the migrator computed its destination as
+    ``%LOCALAPPDATA%\\Smart Citizen\\{channel}\\cache\\dataforge`` directly
+    while ``get_dataforge_cache_dir()`` honoured CACHE_DIR. A user who
+    pointed the Config tab's DataForge Cache Folder at another drive got
+    the cache silently dragged back to LOCALAPPDATA on the next launch,
+    undoing the setting every single time.
+    """
+
+    def test_override_equal_to_user_data_dir_is_left_alone(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """The exact reported case: CACHE_DIR == USER_DATA_DIR makes the
+        migrator's source and destination the same path. It must no-op
+        instead of moving the cache out to LOCALAPPDATA."""
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+        root = tmp_path / "data" / "Smart Citizen"
+        AppSettings.set_user_data_dir(root)
+        AppSettings.set_cache_dir(root)
+
+        cache = _seed_cache(root / "LIVE" / "cache" / "dataforge")
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert _has_stamp(cache), "configured cache must stay put"
+        assert AppSettings.get_pending_cache_cleanup() == ""
+        stray = tmp_path / "LocalAppData" / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
+        assert not _has_stamp(stray), "must not be dragged back to LOCALAPPDATA"
+
+    @pytest.mark.parametrize("destination_state", ["empty", "stamped", "partial"])
+    def test_override_queues_cleanup_without_copying_or_deleting(
+        self, json_backend, registry_mode, monkeypatch, tmp_path, destination_state
+    ):
+        import shutil
+
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+        AppSettings.set_cache_dir(tmp_path / "fast-ssd")
+
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "456")
+        dest = AppSettings.get_dataforge_cache_dir()
+        if destination_state == "stamped":
+            _seed_cache(dest, "789")
+        elif destination_state == "partial":
+            (dest / "partial.xml").write_text("<partial/>")
+        before = {p.relative_to(dest): p.read_bytes() for p in dest.rglob("*") if p.is_file()}
+        mutations = {
+            name: Mock(side_effect=AssertionError(f"Unexpected startup {name}"))
+            for name in ("move", "copytree", "rmtree")
+        }
+        for name, mutation in mutations.items():
+            monkeypatch.setattr(shutil, name, mutation)
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert AppSettings.get_pending_cache_cleanup() == str(old)
+        assert _has_stamp(old), "old cache must survive until re-extraction succeeds"
+        assert (old / "raw" / "record.xml").read_text() == "<x/>"
+        assert {p.relative_to(dest): p.read_bytes() for p in dest.rglob("*") if p.is_file()} == before
+        assert not dest.with_name("dataforge.migrating").exists()
+        assert not (tmp_path / "LocalAppData").exists()
+        for mutation in mutations.values():
+            mutation.assert_not_called()
+
+    def test_override_cleanup_stays_deferred_on_relaunch(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+        AppSettings.set_cache_dir(tmp_path / "fast-ssd")
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge")
+
+        AppSettings.migrate_dataforge_cache_to_local()
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert AppSettings.get_pending_cache_cleanup() == str(old)
+        assert _has_stamp(old)
+        assert not _has_stamp(AppSettings.get_dataforge_cache_dir())
+
+    def test_missing_source_does_not_queue_cleanup_or_create_destination(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+        target = tmp_path / "fast-ssd"
+        AppSettings.set_cache_dir(target)
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert AppSettings.get_pending_cache_cleanup() == ""
+        assert not target.exists()
+
+    def test_no_override_still_moves_to_localappdata(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """Back-compat: an unchanged install (no CACHE_DIR) keeps the
+        historic Documents -> LOCALAPPDATA behaviour."""
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_user_data_dir(tmp_path / "Documents" / "Smart Citizen")
+
+        old = _seed_cache(
+            tmp_path / "Documents" / "Smart Citizen" / "LIVE" / "cache" / "dataforge", "789"
+        )
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        dest = fake_local / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
+        assert _has_stamp(dest)
+        assert not old.exists()
+        assert not (dest / "dataforge").exists(), "must rename, not nest inside dest"
+        assert not dest.with_name("dataforge.migrating").exists()
+        assert AppSettings.get_pending_cache_cleanup() == ""
+
+    def test_no_override_stamped_destination_removes_stale_source(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "old")
+        dest = _seed_cache(
+            fake_local / "Smart Citizen" / "LIVE" / "cache" / "dataforge", "new"
+        )
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert not old.exists(), "stale source should be cleaned up"
+        from src.utils.pak_extractor import P4K_MTIME_STAMP
+        assert (dest / P4K_MTIME_STAMP).read_text() == "new"
+
+    def test_no_override_is_idempotent(self, json_backend, registry_mode, monkeypatch, tmp_path):
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+        _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "abc")
+
+        AppSettings.migrate_dataforge_cache_to_local()
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        dest = fake_local / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
+        assert _has_stamp(dest)
+        assert not (dest / "dataforge").exists()
+
+
+class TestMigrateDoesNotDestroyCache:
+    """Destructive-path guards for ``migrate_dataforge_cache_to_local``.
+
+    The function moves and then deletes a ~1.2 GB user cache, so every
+    branch that can reach an ``rmtree`` needs a test. With no CACHE_DIR
+    override, Documents on another drive still needs a cross-volume move,
+    which shutil implements as a non-atomic copytree + rmtree. An interrupted
+    copy must never masquerade as a complete cache on the following launch.
+    """
+
+    def test_unstamped_nonempty_destination_is_left_alone(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """A partial extraction already sitting at the destination must not
+        cost the user their good source cache."""
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "good")
+        dest = fake_local / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "partial.xml").write_text("<x/>")
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert _has_stamp(old), "source must survive an unusable destination"
+        assert (dest / "partial.xml").exists(), "destination must be untouched"
+
+    def test_interrupted_move_never_strands_a_stamped_partial(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """Simulates a cross-volume copy dying after the stamp made it across
+        (stamps sort ahead of ``raw/`` in scandir order). The destination must
+        not end up looking like a valid cache."""
+        import shutil
+
+        from src.utils.pak_extractor import P4K_MTIME_STAMP
+
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "good")
+        dest = fake_local / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
+        staging = dest.with_name("dataforge.migrating")
+
+        def exploding_move(src, dst):
+            assert Path(dst) == staging
+            Path(dst).mkdir(parents=True, exist_ok=True)
+            (Path(dst) / P4K_MTIME_STAMP).write_text("partial")
+            raise OSError("No space left on device")
+
+        monkeypatch.setattr(shutil, "move", exploding_move)
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert _has_stamp(old), "source must survive a failed move"
+        assert not _has_stamp(dest), "no stamped partial may be left at the destination"
+        assert not staging.exists(), "failed copy should be discarded while source is intact"
+
+    def test_source_survives_relaunch_after_interrupted_move(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """The regression that makes the previous case dangerous: on the next
+        launch a stamped partial would send the stamp branch straight into
+        rmtree(old_dir), destroying the only complete copy."""
+        import shutil
+
+        from src.utils.pak_extractor import P4K_MTIME_STAMP
+
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "good")
+
+        def exploding_move(src, dst):
+            Path(dst).mkdir(parents=True, exist_ok=True)
+            (Path(dst) / P4K_MTIME_STAMP).write_text("partial")
+            raise OSError("No space left on device")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(shutil, "move", exploding_move)
+            AppSettings.migrate_dataforge_cache_to_local()
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        dest = fake_local / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
+        assert _has_stamp(dest), "retry should complete the migration"
+        assert (dest / P4K_MTIME_STAMP).read_text() == "good"
+        assert not old.exists()
+
+    def test_unavailable_destination_does_not_raise(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """An override pointing at absent removable/network storage must not
+        abort startup — the migrator runs before any window exists."""
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+        AppSettings.set_user_data_dir(tmp_path / "userdata")
+        AppSettings.set_cache_dir(tmp_path / "gone")
+
+        old = _seed_cache(tmp_path / "userdata" / "LIVE" / "cache" / "dataforge", "good")
+
+        def boom():
+            raise OSError(3, "The system cannot find the path specified")
+
+        monkeypatch.setattr(
+            AppSettings, "get_dataforge_cache_dir", staticmethod(boom)
+        )
+
+        AppSettings.migrate_dataforge_cache_to_local()
+
+        assert _has_stamp(old), "source must be untouched when the target is gone"
         assert AppSettings.get_pending_cache_cleanup() == ""
