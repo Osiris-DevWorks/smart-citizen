@@ -32,6 +32,10 @@
       "ht": "Generate the latest enhancements with your current settings and apply them to your game. A backup of the current global.ini is made first.",
       "at": ""
     },
+    "generate_apply_tip_disabled": {
+      "ht": "Already applied: nothing has changed since the last time you applied.",
+      "at": ""
+    },
     "defaults_hint": {
       "ht": "Uses your current settings (the same ones the Advanced view shows).\nThe first run can take a few minutes while DataForge is extracted.",
       "at": ""

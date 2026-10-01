@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Erstellt die neuesten Erweiterungen mit deinen aktuellen Einstellungen und wendet sie auf dein Spiel an. Zuerst wird eine Sicherung der aktuellen global.ini erstellt."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Bereits angewendet: Es hat sich seit der letzten Anwendung nichts geändert."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Verwendet deine aktuellen Einstellungen (dieselben, die auch die erweiterte Ansicht zeigt).\nDer erste Durchlauf kann einige Minuten dauern, während DataForge extrahiert wird."

@@ -19,6 +19,34 @@ _LANGUAGE_KV_RE = re.compile(
 )
 
 
+def get_user_cfg_language(channel_path: str | Path | None = None) -> str | None:
+    """Read user.cfg's current g_language value, without modifying anything.
+
+    Returns None if the channel path/user.cfg is missing or unreadable, or
+    no g_language line is present. Pure read -- unlike ensure_user_cfg_
+    language, which also writes. Used by the already-applied check
+    (_compute_already_applied in main_window.py, #398 review): switching
+    language in the UI never touches user.cfg, so the merged file content
+    can match while the game's user.cfg still points at another language.
+    """
+    if channel_path is None:
+        channel_path = AppSettings.get_game_install_path()
+    if not channel_path:
+        return None
+    user_cfg_path = Path(channel_path) / "user.cfg"
+    if not user_cfg_path.exists():
+        return None
+    try:
+        content = user_cfg_path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    for line in content.splitlines():
+        if _LANGUAGE_KEY_RE.match(line):
+            match = _LANGUAGE_KV_RE.match(line)
+            return match.group(1).strip() if match else None
+    return None
+
+
 def ensure_user_cfg_language(language: str | None = None) -> bool:
     """Ensure Star Citizen's user.cfg has the correct g_language setting.
 

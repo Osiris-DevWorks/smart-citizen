@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from collections import Counter
 from pathlib import Path
 from typing import Optional
@@ -41,6 +42,7 @@ from src.gui.theme import (
 )
 from src.gui.workers import (
     AnimatedProgressDialog,
+    AppliedStateWorker,
     BlueprintLogScanWorker,
     DataForgeExtractWorker,
     EnhancementsGeneratorWorker,
@@ -63,7 +65,7 @@ from src.utils.build_mode import IS_PORTABLE
 from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices_impl
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.settings import AppSettings
+from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
 from src.utils.i18n import tr
 from src.utils.version import get_version
 
@@ -136,8 +138,8 @@ def _matches_applied_output(stock_dict: dict, merged_dict: dict, applied_dict: d
     """True if *applied_dict* already holds what a real apply would write.
 
     Pure/Qt-free (#387) so it's directly testable -- see
-    test_apply_already_applied.py -- separate from MainWindow._entries_
-    already_applied, which only resolves the three dicts this takes.
+    test_apply_already_applied.py. _compute_already_applied resolves the
+    three dicts this takes.
 
     Only ``stock_dict``'s own keys are ever compared: ``merge_ini_files``
     (the actual writer) only overwrites a key present in its structure-
@@ -152,6 +154,19 @@ def _matches_applied_output(stock_dict: dict, merged_dict: dict, applied_dict: d
         if applied_dict.get(key) != merged_dict.get(key, stock_value):
             return False
     return True
+
+
+def _user_cfg_language_matches(selected_language: str, actual_g_language: str | None) -> bool:
+    """True if user.cfg's actual g_language already matches what
+    *selected_language* should resolve to (#398 review).
+
+    Pure/Qt-free so it's directly testable: no file I/O, just the
+    SC_LANGUAGE_IDS resolution and a case-insensitive compare (user.cfg's own
+    parser is case-insensitive on the value, per ensure_user_cfg_language).
+    See _compute_already_applied for why content matching alone isn't enough.
+    """
+    expected = SC_LANGUAGE_IDS.get(selected_language, selected_language)
+    return (actual_g_language or "").lower() == (expected or "").lower()
 
 
 def _count_enhancement_categories(
@@ -299,6 +314,122 @@ def _stamp_journal_entries(merged: dict, stock: dict | None = None) -> dict:
 # "stock has empty string for this key" — the empty-string case is a
 # legitimate stock value that should still match an empty merged value.
 _SENTINEL_MISSING = object()
+
+
+@dataclass(frozen=True)
+class _ApplyMergeInputs:
+    """The window and settings state the Apply merge reads, captured as plain
+    data on the main thread so one merge implementation serves both
+    apply_to_game and the background already-applied check (#398 review)."""
+
+    user_overrides: dict       # key -> custom_value, for entries the user edited
+    discarded_new_keys: frozenset  # "New" entries without an override, when "Include discovered items" is off
+    owned: set
+    enclosings: tuple
+    bp_header: "str | None"
+
+
+def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
+    """Build the merged dict apply_to_game() writes, without writing it.
+
+    Shared by apply_to_game and the already-applied check (#387) so the two
+    can never compute different content for the same loaded state. Mutates
+    *sources_dict* in place (stripping discarded "New" keys from the
+    enhancements source), matching apply_to_game's own behavior; only
+    sources_dict["enhancements"] is touched, so the caller's later reads of
+    sources_dict["global"] are unaffected.
+    """
+    # When "Include discovered items" is off, strip discovered items
+    # (status "New" with no user override) from the enhancements
+    # source so they don't flow into the applied global.ini.
+    if inputs.discarded_new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
+        sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
+            k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
+            if k not in inputs.discarded_new_keys
+        }
+
+    # Merge all sources in hierarchy order, with user edits on top
+    merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, inputs.user_overrides)
+
+    # #157: weave [Owned] into blueprint lists so the tag reaches the
+    # applied game file (apply re-loads sources from disk, where the
+    # live owned overlay isn't baked in). Idempotent.
+    if inputs.owned:
+        from src.utils.owned_items import apply_owned_to_value
+        for _k, _v in list(merged_dict.items()):
+            _nv = apply_owned_to_value(
+                _v, inputs.owned, enclosings=inputs.enclosings, bp_header=inputs.bp_header,
+            )
+            if _nv != _v:
+                merged_dict[_k] = _nv
+
+    # Stamp Journal entries Smart Citizen produced or modified —
+    # both user-edited journals AND auto-generated journal
+    # enhancements (Mining Compendium etc.) qualify; stock CIG
+    # content is left alone. Comparison is against the stock
+    # base.ini values from sources_dict["global"], so any merged
+    # value that diverges from stock gets the stamp. Purely
+    # write-time and idempotent across re-applies.
+    stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
+    merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
+
+    # Stamp the main-menu version chip so the game shows that
+    # Smart Citizen is active. Idempotent across re-applies and
+    # version bumps; skipped if stock doesn't ship the key.
+    return _stamp_frontend_version(merged_dict)
+
+
+@dataclass(frozen=True)
+class _AppliedStateSnapshot:
+    """Everything _compute_already_applied needs, captured on the main thread
+    so the worker never reads live widget, entry or settings state."""
+
+    merge_inputs: _ApplyMergeInputs
+    target_path: Path          # the game's applied global.ini
+    channel_path: str          # where user.cfg lives
+    selected_language: str
+
+
+def _compute_already_applied(snapshot: _AppliedStateSnapshot, should_stop=lambda: False) -> bool:
+    """True if what's loaded already matches the game's global.ini on disk
+    (#387): lets the Apply button read green when nothing has changed since
+    the last apply. Resolves the dicts _matches_applied_output needs and
+    delegates the comparison to it (see that function for why only
+    stock_dict's keys are compared).
+
+    Runs on AppliedStateWorker. *should_stop* is polled between the
+    expensive steps so a superseded check gives up early; stopping returns
+    False like every other doubt (no applied file yet, no stock base.ini
+    loaded, a mismatch): wrongly reporting green would hide a real pending
+    change, so every uncertain outcome reads as "not applied".
+
+    Also requires user.cfg's actual g_language to match the selected language
+    (#398 review). File content alone isn't enough: switching language in the
+    UI never touches user.cfg (ensure_user_cfg_language only runs at window
+    init and apply time), so switching back to a language applied earlier
+    reads as "already applied" on content while the game still points at
+    another language. Only Apply fixes that, so it must stay reachable.
+    """
+    if not snapshot.target_path.exists():
+        return False
+    sources_dict, hierarchy, _mrk = load_sources_from_settings()
+    stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
+    if not stock_dict or should_stop():
+        return False
+
+    merged_dict = _merge_for_apply(sources_dict, hierarchy, snapshot.merge_inputs)
+    if should_stop():
+        return False
+
+    applied_dict = parse_ini_file(snapshot.target_path)
+    if should_stop() or not _matches_applied_output(stock_dict, merged_dict, applied_dict):
+        return False
+
+    from src.utils.user_cfg import get_user_cfg_language
+
+    return _user_cfg_language_matches(
+        snapshot.selected_language, get_user_cfg_language(snapshot.channel_path),
+    )
 
 
 def _blueprint_scan_since(force_rescan: bool, watermark):
@@ -512,16 +643,29 @@ class MainWindow(QMainWindow):
         # Apply-to-game dirty tracking (same grey-until-changed pattern as
         # Generate Enhancements / Save Tag Changes / Apply Owned Tags).
         # Starts True (clickable) as the pre-load default -- nothing is
-        # loaded yet to compare against. Superseded the moment the first
-        # load actually completes: _on_loading_finished calls
-        # _entries_already_applied() (#387) and picks green when the
-        # loaded state already matches the game's global.ini, so a launch
-        # with nothing to do doesn't start the button red. Any doubt in
-        # that check still falls back to this same conservative True —
-        # wrongly greying out the app's one write-to-disk action would be
-        # a much worse failure than an occasional redundant enabled state.
-        # See _mark_apply_dirty.
+        # loaded yet to compare against. After every load,
+        # _refresh_apply_dirty_after_reload (#387) starts a background check
+        # that turns the button green when the loaded state already matches
+        # the game's global.ini, so a launch with nothing to do doesn't stay
+        # red. Any doubt in that check still falls back to this same
+        # conservative True -- wrongly greying out the app's one write-to-disk
+        # action would be a much worse failure than an occasional redundant
+        # enabled state. See _mark_apply_dirty.
         self._apply_dirty = True
+
+        # Background already-applied check (AppliedStateWorker). One runs at a
+        # time. _applied_check_token changes whenever something makes an
+        # in-flight result untrustworthy (a new reload, an edit, a successful
+        # apply), so a stale verdict is dropped instead of overwriting newer
+        # state. A reload that lands mid-check sets _applied_check_rerun_
+        # pending instead of starting a second thread.
+        self._applied_state_worker: Optional[AppliedStateWorker] = None
+        self._applied_check_token = 0
+        self._applied_check_rerun_pending = False
+        # One-shot: the next reload only refreshes a state that was just
+        # applied cleanly (Simple mode applies, then reloads), so it must not
+        # flash the button red while the background check re-confirms it.
+        self._reload_follows_clean_apply = False
 
         # Tracks whether *this session* has produced a genuine unapplied
         # change, as opposed to _apply_dirty's conservative "we can't verify
@@ -2200,16 +2344,13 @@ class MainWindow(QMainWindow):
             logger.debug(f"Cache file not found: {cache_file}. Default values will be empty until sources are downloaded.")
 
     def _set_apply_btn_dirty(self, dirty: bool) -> None:
-        """Single chokepoint for the button's enabled state, tooltip, and
-        color so none of the three can drift apart. Red (needs_apply) means
-        a change is waiting to be applied; green (apply) means the game
-        already matches what's loaded. The :disabled selector is set
-        explicitly so Qt's native greyed-out look doesn't wash out the
-        color — the color itself is the signal here, not the enabled state.
-        Same enabled/disabled tooltip pattern as the Enhancements tab's
-        Generate Enhancements / Save Tag Changes buttons; resolved via tr()
-        here (not cached class constants) so it always reflects the active
-        language."""
+        """Single chokepoint for the Apply button's enabled state, tooltip and
+        color (and the Simple-mode page's own Apply button) so they can't
+        drift apart. Red (needs_apply) means a change is waiting to be
+        applied; green (apply) means the game already matches what's loaded.
+        The :disabled selector is set explicitly so Qt's greyed-out look
+        doesn't wash out the color, which is the real signal. Tooltips are
+        resolved via tr() on each call so they follow the active language."""
         self._apply_dirty = dirty
         self.apply_btn.setEnabled(dirty)
         self.apply_btn.setToolTip(
@@ -2222,6 +2363,10 @@ class MainWindow(QMainWindow):
             f"font-weight: bold; padding: 6px; }}"
             f"QPushButton:disabled {{ background-color: {color}; color: {text}; }}"
         )
+        # simple_page doesn't exist yet when create_toolbar() makes the first
+        # call, and it starts dirty too, so skipping that call loses nothing.
+        if hasattr(self, "simple_page"):
+            self.simple_page.set_apply_dirty(dirty)
 
     def _mark_apply_dirty(self, *_args):
         """Something that Apply to Game would pick up changed — light the
@@ -2231,106 +2376,127 @@ class MainWindow(QMainWindow):
         switches / import / restore, which all funnel through a reload), and
         the Owned-tag re-weave (which doesn't reload but does change what
         Apply would write)."""
+        self._invalidate_applied_check()
         self._set_apply_btn_dirty(True)
         if self._initial_load_done:
             self._session_has_unapplied_edit = True
 
+    def _mark_applied(self) -> None:
+        """Apply to Game just wrote the loaded state: the button goes clean,
+        and anything an in-flight already-applied check is working from is
+        now stale."""
+        self._invalidate_applied_check()
+        self._set_apply_btn_dirty(False)
+        self._session_has_unapplied_edit = False
+
+    def _apply_merge_inputs(self) -> _ApplyMergeInputs:
+        """Capture, on the main thread, what _merge_for_apply reads from the
+        window and settings. One pass over the entries; the result is plain
+        data, so it can also be handed to a worker thread."""
+        include_new = AppSettings.get_include_new_lines()
+        user_overrides: dict = {}
+        discarded_new_keys: set = set()
+        for entry in self.entries:
+            if entry.custom_value:
+                user_overrides[entry.key] = entry.custom_value
+            elif not include_new and entry.status == "New":
+                discarded_new_keys.add(entry.key)
+
+        owned = AppSettings.get_owned_items()
+        enclosings: tuple = ()
+        if owned:
+            from src.utils.owned_items import enclosings_from_tag_configs
+            enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+        return _ApplyMergeInputs(
+            user_overrides=user_overrides,
+            discarded_new_keys=frozenset(discarded_new_keys),
+            owned=owned,
+            enclosings=enclosings,
+            bp_header=self._bp_header(),
+        )
+
     def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
-        """Build the merged dict apply_to_game() would write, without writing it.
+        """The merged dict apply_to_game() writes, built from the live window state."""
+        return _merge_for_apply(sources_dict, hierarchy, self._apply_merge_inputs())
 
-        Shared by apply_to_game (the real write) and _entries_already_applied
-        (the startup dirty-check, #387) so the two can never compute
-        different content for the same loaded state. Mutates sources_dict
-        in place (stripping discarded "New" keys from the enhancements
-        source) — matches apply_to_game's own prior behavior, and the
-        caller's own use of sources_dict afterward (e.g. stock_keys_hint
-        from sources_dict["global"]) is unaffected since only
-        sources_dict["enhancements"] is touched here.
+    def _refresh_apply_dirty_after_reload(self) -> None:
+        """Start re-verifying, in the background, whether Apply is needed
+        (#387, #397). Runs after every reload, not just the first: Simple mode
+        applies and then reloads, and a reload on its own must not leave the
+        button red over state that was just applied. The verdict lands in
+        _on_applied_state_ready.
+
+        One check runs at a time. A reload that arrives mid-check interrupts
+        it and queues a rerun, which snapshots the newer state when it starts.
         """
-        # Build user overrides dict from entries with custom_value
-        user_overrides_dict = {
-            entry.key: entry.custom_value
-            for entry in self.entries
-            if entry.custom_value
-        }
+        self._invalidate_applied_check()
+        if self._applied_state_worker is not None:
+            self._applied_state_worker.requestInterruption()
+            self._applied_check_rerun_pending = True
+            return
+        self._launch_applied_state_check()
 
-        # When "Include discovered items" is off, strip discovered items
-        # (status "New" with no user override) from the enhancements
-        # source so they don't flow into the applied global.ini.
-        if not AppSettings.get_include_new_lines():
-            new_keys = {
-                entry.key for entry in self.entries
-                if entry.status == "New" and not entry.custom_value
-            }
-            if new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
-                sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
-                    k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
-                    if k not in new_keys
-                }
+    def _invalidate_applied_check(self) -> None:
+        """Make any in-flight already-applied result untrustworthy. An edit, a
+        successful apply or a newer reload changed the answer after the
+        check's snapshot was taken, and whatever did so has already put the
+        button in the right state, so a late verdict must not overwrite it."""
+        self._applied_check_token += 1
 
-        # Merge all sources in hierarchy order, with user edits on top
-        merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, user_overrides_dict)
-
-        # #157: weave [Owned] into blueprint lists so the tag reaches the
-        # applied game file (apply re-loads sources from disk, where the
-        # live owned overlay isn't baked in). Idempotent.
-        _owned = AppSettings.get_owned_items()
-        if _owned:
-            from src.utils.owned_items import apply_owned_to_value, enclosings_from_tag_configs
-            _enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
-            _bp_header = self._bp_header()
-            for _k, _v in list(merged_dict.items()):
-                _nv = apply_owned_to_value(_v, _owned, enclosings=_enclosings, bp_header=_bp_header)
-                if _nv != _v:
-                    merged_dict[_k] = _nv
-
-        # Stamp Journal entries Smart Citizen produced or modified —
-        # both user-edited journals AND auto-generated journal
-        # enhancements (Mining Compendium etc.) qualify; stock CIG
-        # content is left alone. Comparison is against the stock
-        # base.ini values from sources_dict["global"], so any merged
-        # value that diverges from stock gets the stamp. Purely
-        # write-time and idempotent across re-applies.
-        stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
-        merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
-
-        # Stamp the main-menu version chip so the game shows that
-        # Smart Citizen is active. Idempotent across re-applies and
-        # version bumps; skipped if stock doesn't ship the key.
-        merged_dict = _stamp_frontend_version(merged_dict)
-
-        return merged_dict
-
-    def _entries_already_applied(self) -> bool:
-        """True if what's currently loaded already matches the game's
-        global.ini on disk (#387) -- lets the startup Apply button start
-        green instead of unconditionally red when nothing has changed
-        since the last apply. Resolves the three dicts _matches_applied_
-        output needs and delegates the actual comparison to it (see that
-        function for why only stock_dict's keys are compared).
-
-        Conservative on any doubt: returns False (dirty/red) whenever the
-        comparison can't be made cheaply and safely -- no applied file yet,
-        no stock base.ini loaded, or any error along the way. Getting this
-        wrong in the green direction would hide a real pending change.
-        """
-        target_path = AppSettings.get_global_ini_path()
-        if not target_path.exists():
-            return False
-
+    def _launch_applied_state_check(self) -> None:
+        self._applied_check_rerun_pending = False
         try:
-            sources_dict, hierarchy, _mrk = load_sources_from_settings()
-            stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
-            if not stock_dict:
-                return False
-
-            merged_dict = self._build_apply_merged_dict(sources_dict, hierarchy)
-            applied_dict = parse_ini_file(target_path)
-
-            return _matches_applied_output(stock_dict, merged_dict, applied_dict)
+            snapshot = _AppliedStateSnapshot(
+                merge_inputs=self._apply_merge_inputs(),
+                target_path=AppSettings.get_global_ini_path(),
+                channel_path=AppSettings.get_game_install_path(),
+                selected_language=AppSettings.get_selected_language(),
+            )
         except Exception as e:
-            logger.debug(f"Could not verify already-applied state at startup (#387): {e}")
-            return False
+            # Same conservative fallback as any other doubt: stay red.
+            logger.debug(f"Could not start the already-applied check: {e}")
+            self._set_apply_btn_dirty(True)
+            return
+        worker = AppliedStateWorker(_compute_already_applied, snapshot, self._applied_check_token)
+        worker.finished.connect(lambda ok, w=worker: self._on_applied_state_ready(w, ok))
+        self._applied_state_worker = worker
+        worker.start()
+
+    def _on_applied_state_ready(self, worker, already_applied: bool) -> None:
+        worker.wait()
+        if self._applied_state_worker is not worker:
+            return  # already handled (e.g. settled on close); a late delivery is a no-op
+        self._applied_state_worker = None
+        if self._applied_check_rerun_pending:
+            self._launch_applied_state_check()
+            return
+        if worker.token != self._applied_check_token:
+            return
+        self._apply_applied_state_verdict(already_applied)
+
+    def _apply_applied_state_verdict(self, already_applied: bool) -> None:
+        self._set_apply_btn_dirty(not already_applied)
+        if already_applied:
+            self._session_has_unapplied_edit = False
+
+    def _settle_applied_state_check(self, timeout_ms: int = 10000) -> None:
+        """Let an in-flight already-applied check finish, and apply its verdict,
+        before the window closes. The thread has to be gone before the process
+        exits, and the verdict decides whether the unapplied-changes warning
+        shows: a reload sets that flag provisionally, so closing right after a
+        clean apply would otherwise warn about changes that don't exist."""
+        worker = self._applied_state_worker
+        if worker is None:
+            return
+        if not worker.wait(timeout_ms):
+            worker.requestInterruption()
+            if not worker.wait(timeout_ms):
+                return  # still running; keep the reference so Qt doesn't destroy a live thread
+            self._applied_state_worker = None
+            return  # interrupted, so its verdict is unknown and must not be applied
+        self._applied_state_worker = None
+        if worker.token == self._applied_check_token:
+            self._apply_applied_state_verdict(worker.result)
 
     @pyqtSlot()
     @timed
@@ -2422,9 +2588,9 @@ class MainWindow(QMainWindow):
                 if reply != QMessageBox.StandardButton.Yes:
                     return
 
-            # Build final merged dict (#387: shared with _entries_already_applied
-            # so the startup dirty-check can never compute different content
-            # than a real apply would).
+            # Build final merged dict (#387: the same _merge_for_apply the
+            # already-applied check uses, so it can never compute different
+            # content than a real apply would).
             merged_dict = self._build_apply_merged_dict(sources_dict, hierarchy)
 
             # Get a base file to use for structure preservation
@@ -2545,8 +2711,7 @@ class MainWindow(QMainWindow):
                 tr("apply.applied_body", target_path=target_path, user_count=f"{user_count:,}",
                    enhancement_block=enhancement_block),
             )
-            self._set_apply_btn_dirty(False)
-            self._session_has_unapplied_edit = False
+            self._mark_applied()
         except Exception as e:
             QMessageBox.critical(self, tr("dialogs.error_title"), tr("apply.failed_body", error=e))
             logger.error(f"Error applying to game: {e}")
@@ -5343,6 +5508,13 @@ class MainWindow(QMainWindow):
         self.apply_filters()
         self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
         self._recompute_owned()  # #157: weave [Owned] tags + populate Owned stars
+        if self._reload_follows_clean_apply:
+            # This reload only refreshes state that was just applied cleanly,
+            # but _recompute_owned marks every reload dirty. Undo that before
+            # control returns to the event loop, so the button never paints
+            # red while the background check below re-confirms it.
+            self._reload_follows_clean_apply = False
+            self._set_apply_btn_dirty(False)
 
         # Re-fit the default layout now that there are real rows to measure —
         # the ResizeToContents columns can only size themselves once the model
@@ -5359,13 +5531,7 @@ class MainWindow(QMainWindow):
             self._check_enhancements_after_loading = False
             self._check_enhancements_freshness()
 
-        # #387: only the very first load can start Apply green -- every
-        # later reload (regeneration, channel/language switch, import)
-        # already forces it red via _recompute_owned's _mark_apply_dirty
-        # call above, which is the correct default once the app is running
-        # and stays that way regardless of what this check would say.
-        if not self._initial_load_done:
-            self._set_apply_btn_dirty(not self._entries_already_applied())
+        self._refresh_apply_dirty_after_reload()
 
         # From here on, dirty-marking reflects a real in-session change —
         # see _mark_apply_dirty / _session_has_unapplied_edit.
@@ -5564,6 +5730,9 @@ class MainWindow(QMainWindow):
                 self._end_simple_run()
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_applying"))
                 self.apply_to_game()
+                # A successful apply leaves the button clean, and the reload
+                # below only refreshes that applied state (see _on_loading_finished).
+                self._reload_follows_clean_apply = not self._apply_dirty
             else:
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_reloading"))
             self._show_loading_progress(tr("progress.reloading_with_enhancements"))
@@ -5689,6 +5858,11 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Save state and overrides before closing."""
+        # Let a running already-applied check finish first: its verdict feeds
+        # the unapplied-changes warning below, and the thread must be gone
+        # before exit.
+        self._settle_applied_state_check()
+
         # Warn if something changed this session that Apply Enhancements
         # hasn't picked up yet (the button is still showing red) — e.g. the
         # user clicked Apply Tag Changes but never followed up with Apply
