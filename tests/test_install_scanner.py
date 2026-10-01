@@ -579,6 +579,8 @@ class TestDeepScan:
 # -- Contracts ---------------------------------------------------------------
 
 class TestSharedContracts:
+    INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
+
     def test_app_settings_channels_track_the_scanner(self):
         """AppSettings.AVAILABLE_CHANNELS is built from SC_CHANNELS; the named
         CHANNEL_* constants must keep naming the same values in the same
@@ -603,8 +605,6 @@ class TestSharedContracts:
             Path(__file__).resolve().parent.parent / "src" / "gui" / "main_window.py"
         ).read_text(encoding="utf-8")
         assert APPLY_STAMP_MARKER in source
-
-    INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
     def _installer_function(self, name: str) -> str:
         source = self.INSTALLER.read_text(encoding="utf-8")
