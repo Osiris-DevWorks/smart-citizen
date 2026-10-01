@@ -132,6 +132,28 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
 _LINKED_CHANNELS = frozenset({AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX})
 
 
+def _matches_applied_output(stock_dict: dict, merged_dict: dict, applied_dict: dict) -> bool:
+    """True if *applied_dict* already holds what a real apply would write.
+
+    Pure/Qt-free (#387) so it's directly testable -- see
+    test_apply_already_applied.py -- separate from MainWindow._entries_
+    already_applied, which only resolves the three dicts this takes.
+
+    Only ``stock_dict``'s own keys are ever compared: ``merge_ini_files``
+    (the actual writer) only overwrites a key present in its structure-
+    preservation source file (the stock base.ini), leaving that key's
+    stock value untouched on disk when *merged_dict* doesn't override it,
+    and never writing a key ``stock_dict`` lacks at all regardless of what
+    *merged_dict* carries for it. Comparing every ``merged_dict`` key
+    instead would report a false "dirty" for any profile with such a key,
+    even immediately after a genuine apply.
+    """
+    for key, stock_value in stock_dict.items():
+        if applied_dict.get(key) != merged_dict.get(key, stock_value):
+            return False
+    return True
+
+
 def _count_enhancement_categories(
     sources_dict: dict, enhancements_key_categories: dict | None = None,
 ) -> Counter:
@@ -465,11 +487,16 @@ class MainWindow(QMainWindow):
 
         # Apply-to-game dirty tracking (same grey-until-changed pattern as
         # Generate Enhancements / Save Tag Changes / Apply Owned Tags).
-        # Starts True (clickable) — we can't cheaply verify at launch whether
-        # the loaded state already matches what's live in the game's
-        # global.ini, and wrongly greying out the app's one write-to-disk
-        # action would be a much worse failure than an occasional redundant
-        # enabled state. See _mark_apply_dirty / _clear_apply_dirty.
+        # Starts True (clickable) as the pre-load default -- nothing is
+        # loaded yet to compare against. Superseded the moment the first
+        # load actually completes: _on_loading_finished calls
+        # _entries_already_applied() (#387) and picks green when the
+        # loaded state already matches the game's global.ini, so a launch
+        # with nothing to do doesn't start the button red. Any doubt in
+        # that check still falls back to this same conservative True —
+        # wrongly greying out the app's one write-to-disk action would be
+        # a much worse failure than an occasional redundant enabled state.
+        # See _mark_apply_dirty.
         self._apply_dirty = True
 
         # Tracks whether *this session* has produced a genuine unapplied
@@ -670,6 +697,11 @@ class MainWindow(QMainWindow):
         self._bp_scan_channel = None
         self._bp_scan_new_names = set()
         self._bp_scan_force_rescan = False
+        # #386: True for a run kicked off by the startup auto-scan rather
+        # than a manual button click -- read only in _finish_blueprint_scan_
+        # queue to swap the completion popups for a status bar message, so a
+        # launch with new blueprints doesn't interrupt with a modal dialog.
+        self._bp_scan_silent = False
 
         self.log_tab = LogTab()
         self._log_tab_index = self.tabs.addTab(self.log_tab, tr("tabs.log"))
@@ -1272,7 +1304,7 @@ class MainWindow(QMainWindow):
 
     def open_paypal_donation(self, event):
         """Open PayPal donation link in browser."""
-        paypal_url = "https://paypal.me/RighteousKill"
+        paypal_url = "https://www.paypal.com/ncp/payment/YAWXHMGZH8T76"
         QDesktopServices.openUrl(QUrl(paypal_url))
 
     def open_venmo_donation(self, event):
@@ -2179,6 +2211,103 @@ class MainWindow(QMainWindow):
         if self._initial_load_done:
             self._session_has_unapplied_edit = True
 
+    def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
+        """Build the merged dict apply_to_game() would write, without writing it.
+
+        Shared by apply_to_game (the real write) and _entries_already_applied
+        (the startup dirty-check, #387) so the two can never compute
+        different content for the same loaded state. Mutates sources_dict
+        in place (stripping discarded "New" keys from the enhancements
+        source) — matches apply_to_game's own prior behavior, and the
+        caller's own use of sources_dict afterward (e.g. stock_keys_hint
+        from sources_dict["global"]) is unaffected since only
+        sources_dict["enhancements"] is touched here.
+        """
+        # Build user overrides dict from entries with custom_value
+        user_overrides_dict = {
+            entry.key: entry.custom_value
+            for entry in self.entries
+            if entry.custom_value
+        }
+
+        # When "Include discovered items" is off, strip discovered items
+        # (status "New" with no user override) from the enhancements
+        # source so they don't flow into the applied global.ini.
+        if not AppSettings.get_include_new_lines():
+            new_keys = {
+                entry.key for entry in self.entries
+                if entry.status == "New" and not entry.custom_value
+            }
+            if new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
+                sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
+                    k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
+                    if k not in new_keys
+                }
+
+        # Merge all sources in hierarchy order, with user edits on top
+        merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, user_overrides_dict)
+
+        # #157: weave [Owned] into blueprint lists so the tag reaches the
+        # applied game file (apply re-loads sources from disk, where the
+        # live owned overlay isn't baked in). Idempotent.
+        _owned = AppSettings.get_owned_items()
+        if _owned:
+            from src.utils.owned_items import apply_owned_to_value, enclosings_from_tag_configs
+            _enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+            _bp_header = self._bp_header()
+            for _k, _v in list(merged_dict.items()):
+                _nv = apply_owned_to_value(_v, _owned, enclosings=_enclosings, bp_header=_bp_header)
+                if _nv != _v:
+                    merged_dict[_k] = _nv
+
+        # Stamp Journal entries Smart Citizen produced or modified —
+        # both user-edited journals AND auto-generated journal
+        # enhancements (Mining Compendium etc.) qualify; stock CIG
+        # content is left alone. Comparison is against the stock
+        # base.ini values from sources_dict["global"], so any merged
+        # value that diverges from stock gets the stamp. Purely
+        # write-time and idempotent across re-applies.
+        stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
+        merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
+
+        # Stamp the main-menu version chip so the game shows that
+        # Smart Citizen is active. Idempotent across re-applies and
+        # version bumps; skipped if stock doesn't ship the key.
+        merged_dict = _stamp_frontend_version(merged_dict)
+
+        return merged_dict
+
+    def _entries_already_applied(self) -> bool:
+        """True if what's currently loaded already matches the game's
+        global.ini on disk (#387) -- lets the startup Apply button start
+        green instead of unconditionally red when nothing has changed
+        since the last apply. Resolves the three dicts _matches_applied_
+        output needs and delegates the actual comparison to it (see that
+        function for why only stock_dict's keys are compared).
+
+        Conservative on any doubt: returns False (dirty/red) whenever the
+        comparison can't be made cheaply and safely -- no applied file yet,
+        no stock base.ini loaded, or any error along the way. Getting this
+        wrong in the green direction would hide a real pending change.
+        """
+        target_path = AppSettings.get_global_ini_path()
+        if not target_path.exists():
+            return False
+
+        try:
+            sources_dict, hierarchy, _mrk = load_sources_from_settings()
+            stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
+            if not stock_dict:
+                return False
+
+            merged_dict = self._build_apply_merged_dict(sources_dict, hierarchy)
+            applied_dict = parse_ini_file(target_path)
+
+            return _matches_applied_output(stock_dict, merged_dict, applied_dict)
+        except Exception as e:
+            logger.debug(f"Could not verify already-applied state at startup (#387): {e}")
+            return False
+
     @pyqtSlot()
     @timed
     def apply_to_game(self):
@@ -2244,8 +2373,8 @@ class MainWindow(QMainWindow):
                 shutil.copy2(target_path, backup_path)
                 logger.info(f"Backed up existing file to {backup_path}")
 
-            # Build final merged dict by re-merging all sources with user edits
-            # This ensures Apply uses latest source versions and user edits
+            # Re-load all sources fresh, so Apply uses the latest source
+            # versions and user edits rather than anything stale in memory.
             sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
 
             # Warn if any active sources are missing (only check sources actually in AVAILABLE_SOURCES)
@@ -2269,57 +2398,10 @@ class MainWindow(QMainWindow):
                 if reply != QMessageBox.StandardButton.Yes:
                     return
 
-            # Build user overrides dict from entries with custom_value
-            user_overrides_dict = {
-                entry.key: entry.custom_value
-                for entry in self.entries
-                if entry.custom_value
-            }
-
-            # When "Include discovered items" is off, strip discovered items
-            # (status "New" with no user override) from the enhancements
-            # source so they don't flow into the applied global.ini.
-            if not AppSettings.get_include_new_lines():
-                new_keys = {
-                    entry.key for entry in self.entries
-                    if entry.status == "New" and not entry.custom_value
-                }
-                if new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
-                    sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
-                        k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
-                        if k not in new_keys
-                    }
-
-            # Merge all sources in hierarchy order, with user edits on top
-            merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, user_overrides_dict)
-
-            # #157: weave [Owned] into blueprint lists so the tag reaches the
-            # applied game file (apply re-loads sources from disk, where the
-            # live owned overlay isn't baked in). Idempotent.
-            _owned = AppSettings.get_owned_items()
-            if _owned:
-                from src.utils.owned_items import apply_owned_to_value, enclosings_from_tag_configs
-                _enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
-                _bp_header = self._bp_header()
-                for _k, _v in list(merged_dict.items()):
-                    _nv = apply_owned_to_value(_v, _owned, enclosings=_enclosings, bp_header=_bp_header)
-                    if _nv != _v:
-                        merged_dict[_k] = _nv
-
-            # Stamp Journal entries Smart Citizen produced or modified —
-            # both user-edited journals AND auto-generated journal
-            # enhancements (Mining Compendium etc.) qualify; stock CIG
-            # content is left alone. Comparison is against the stock
-            # base.ini values from sources_dict["global"], so any merged
-            # value that diverges from stock gets the stamp. Purely
-            # write-time and idempotent across re-applies.
-            stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
-            merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
-
-            # Stamp the main-menu version chip so the game shows that
-            # Smart Citizen is active. Idempotent across re-applies and
-            # version bumps; skipped if stock doesn't ship the key.
-            merged_dict = _stamp_frontend_version(merged_dict)
+            # Build final merged dict (#387: shared with _entries_already_applied
+            # so the startup dirty-check can never compute different content
+            # than a real apply would).
+            merged_dict = self._build_apply_merged_dict(sources_dict, hierarchy)
 
             # Get a base file to use for structure preservation
             # Use the first source file from hierarchy
@@ -3995,6 +4077,47 @@ class MainWindow(QMainWindow):
         self._start_startup_sync()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
+        self._maybe_auto_scan_blueprints()
+
+    def _maybe_auto_scan_blueprints(self) -> None:
+        """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
+
+        Reuses the exact channel-queue/worker pipeline the manual "Scan Logs"
+        button drives (_start_next_blueprint_scan onward) -- the only
+        difference is _bp_scan_silent, which _finish_blueprint_scan_queue
+        checks to swap the completion popups for a status bar message. A
+        launch is not the place for a modal dialog every single time,
+        especially once the owned set is mostly caught up and most runs find
+        nothing new.
+
+        Silently does nothing (no warning dialog, unlike the manual scan)
+        when the setting is off or the active channel has no valid install
+        path yet -- a fresh profile with no game configured shouldn't see an
+        install-path warning it never asked for on every launch.
+        """
+        if not AppSettings.get_auto_scan_blueprints_enabled():
+            return
+        if self._bp_log_scan_worker is not None:
+            return  # a scan is already running somehow; don't queue a second
+
+        channel_path = AppSettings.get_channel_install_path()
+        if not channel_path or not Path(channel_path).is_dir():
+            logger.info("BP auto-scan: skipped, no valid install path configured yet")
+            return
+
+        installed = AppSettings.get_available_channels()
+        other_enabled = AppSettings.get_scan_other_channels_enabled()
+        self._bp_scan_queue = _channels_to_scan(
+            AppSettings.get_active_channel(), other_enabled, installed
+        )
+        self._bp_scan_new_names = set()
+        # Always a normal incremental scan -- "Rescan all logs" is a
+        # deliberate one-shot the user ticks before a manual click, not
+        # something an unattended startup run should ever force.
+        self._bp_scan_force_rescan = False
+        self._bp_scan_silent = True
+        self.blueprint_tracker_tab.set_scan_logs_enabled(False)
+        self._start_next_blueprint_scan()
 
     def _maybe_warn_onedrive_data_dir(self) -> None:
         """Warn once when the data root is inside a OneDrive-managed folder (#172).
@@ -5209,6 +5332,14 @@ class MainWindow(QMainWindow):
             self._check_enhancements_after_loading = False
             self._check_enhancements_freshness()
 
+        # #387: only the very first load can start Apply green -- every
+        # later reload (regeneration, channel/language switch, import)
+        # already forces it red via _recompute_owned's _mark_apply_dirty
+        # call above, which is the correct default once the app is running
+        # and stays that way regardless of what this check would say.
+        if not self._initial_load_done:
+            self._set_apply_btn_dirty(not self._entries_already_applied())
+
         # From here on, dirty-marking reflects a real in-session change —
         # see _mark_apply_dirty / _session_has_unapplied_edit.
         self._initial_load_done = True
@@ -6071,6 +6202,7 @@ class MainWindow(QMainWindow):
         """
         if self._bp_log_scan_worker is not None:
             return  # already scanning
+        self._bp_scan_silent = False  # #386: a manual click always reports normally
 
         channel_path = AppSettings.get_channel_install_path()
         if not channel_path or not Path(channel_path).is_dir():
@@ -6092,6 +6224,7 @@ class MainWindow(QMainWindow):
         # epoch floor. Read once here (not inside the worker) so a scan
         # already in flight isn't affected by the checkbox changing mid-scan.
         self._bp_scan_force_rescan = self.blueprint_tracker_tab.is_force_rescan_checked()
+        self.blueprint_tracker_tab.set_scan_logs_enabled(False)
         self._start_next_blueprint_scan()
 
     def _start_next_blueprint_scan(self):
@@ -6122,14 +6255,21 @@ class MainWindow(QMainWindow):
             self._bp_scan_force_rescan, AppSettings.get_blueprint_log_watermark(channel=channel)
         )
         self._bp_log_scan_worker = BlueprintLogScanWorker(channel_path, since)
-        self._bp_log_scan_progress = AnimatedProgressDialog(
-            tr("enhancements.bp_scan_starting"),
-            parent=self,
-            title=tr("enhancements.bp_scan_title"),
-        )
+        # #386: a silent (startup auto-scan) run gets no progress dialog --
+        # it's a background operation, not something the user launched, so
+        # popping a window the moment the app starts would defeat the point.
+        # The status bar connection below still shows its progress text.
+        if self._bp_scan_silent:
+            self._bp_log_scan_progress = None
+        else:
+            self._bp_log_scan_progress = AnimatedProgressDialog(
+                tr("enhancements.bp_scan_starting"),
+                parent=self,
+                title=tr("enhancements.bp_scan_title"),
+            )
+            self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
+            self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
         self._bp_log_scan_worker.progress.connect(self.statusBar().showMessage)
-        self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
-        self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
         self._bp_log_scan_worker.error.connect(self._on_blueprint_log_scan_error)
         self._bp_log_scan_worker.finished.connect(self._on_blueprint_log_scan_finished)
         self._bp_log_scan_worker.start()
@@ -6224,8 +6364,21 @@ class MainWindow(QMainWindow):
             self._finish_blueprint_scan_queue()
 
     def _finish_blueprint_scan_queue(self):
-        """Write the combined owned-set change and show one summary dialog
-        covering every channel scanned this run (#268)."""
+        """Write the combined owned-set change and report the result,
+        covering every channel scanned this run (#268).
+
+        #386: a silent (startup auto-scan) run reports via the status bar
+        instead of the modal summary dialogs below -- consumed here, one-shot
+        per run, same as the force-rescan checkbox reset just below. Also the
+        single terminal point for every run regardless of source (manual or
+        auto-scan) or per-channel errors, so it's where the "Scan Logs"
+        button re-enables (#386 review) -- it was disabled the moment this
+        run actually started, in _run_blueprint_log_scan or
+        _maybe_auto_scan_blueprints.
+        """
+        self.blueprint_tracker_tab.set_scan_logs_enabled(True)
+        silent = self._bp_scan_silent
+        self._bp_scan_silent = False
         new_names = sorted(self._bp_scan_new_names)
         self._bp_scan_new_names = set()
         # #308: one-shot -- the checkbox is consumed by the whole queued run
@@ -6234,11 +6387,12 @@ class MainWindow(QMainWindow):
         self.blueprint_tracker_tab.reset_force_rescan_checkbox()
 
         if not new_names:
-            QMessageBox.information(
-                self,
-                tr("enhancements.bp_scan_title"),
-                tr("enhancements.bp_scan_none"),
-            )
+            if not silent:
+                QMessageBox.information(
+                    self,
+                    tr("enhancements.bp_scan_title"),
+                    tr("enhancements.bp_scan_none"),
+                )
             return
 
         owned = AppSettings.get_owned_items()
@@ -6249,6 +6403,16 @@ class MainWindow(QMainWindow):
         # otherwise it stayed red immediately after the summary below told
         # the user its tags were applied.
         self.blueprint_tracker_tab.mark_owned_clean()
+
+        # #386 follow-up: an opt-in escape hatch back to the normal popup,
+        # for anyone who wants the interruption on a launch that finds
+        # something new. A quiet run (the not-new_names branch above)
+        # ignores this setting entirely -- it only ever applies here.
+        if silent and not AppSettings.get_auto_scan_show_popup_enabled():
+            self.statusBar().showMessage(
+                tr("blueprint_tracker.auto_scan_status_added", count=len(new_names))
+            )
+            return
 
         summary = (
             tr("blueprint_tracker.owned_added_singular") if len(new_names) == 1
