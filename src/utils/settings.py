@@ -558,6 +558,10 @@ class AppSettings:
     SOURCE_GEAR = "gear"
     SOURCE_USER = "user"
     AVAILABLE_SOURCES = [SOURCE_GLOBAL, SOURCE_USER]
+    # Synthetic, runtime-only source load_sources_from_settings() injects
+    # when any enhancement category is enabled (#399 review DRY note) --
+    # never a registry entry, so deliberately not in AVAILABLE_SOURCES.
+    SOURCE_ENHANCEMENTS = "enhancements"
 
     # Backend override hook — kept None by default so production stays on
     # QSettings (registry mode). PR-B in the standalone-build series sets

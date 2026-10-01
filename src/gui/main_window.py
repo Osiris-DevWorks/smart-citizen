@@ -132,28 +132,42 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
 _LINKED_CHANNELS = frozenset({AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX})
 
 
-def _count_enhancement_categories(sources_dict: dict) -> Counter:
+def _count_enhancement_categories(
+    sources_dict: dict, enhancements_key_categories: dict | None = None,
+) -> Counter:
     """Category breakdown of the enhancement source that's about to be
     applied, for apply_to_game()'s success-dialog summary (#399).
 
-    Counts sources_dict["enhancements"]'s own keys via StringEntry.
-    extract_category -- deliberately NOT self.entries, which can be stale
-    relative to a just-completed generation. Simple mode's one-button flow
-    calls apply_to_game() before the reload that refreshes self.entries
-    with newly-generated content (that reload runs after, to update the
-    hidden Advanced view), so on a profile that skipped the startup
-    "Generate Enhancements?" prompt and generated for the first time via
-    Simple mode's own click, self.entries was still whatever loaded before
-    generation ran -- typically nothing tagged "enhancements" yet, so the
-    old self.entries-based count reported 0 even though the game file
-    itself was written correctly (apply_to_game's own merge is always
-    fresh). sources_dict["enhancements"] reflects exactly what was just
-    merged, including any "Include discovered items" strip already applied
-    to it in place earlier in apply_to_game.
+    Counts sources_dict["enhancements"]'s own keys -- deliberately NOT
+    self.entries, which can be stale relative to a just-completed
+    generation. Simple mode's one-button flow calls apply_to_game() before
+    the reload that refreshes self.entries with newly-generated content
+    (that reload runs after, to update the hidden Advanced view), so on a
+    profile that skipped the startup "Generate Enhancements?" prompt and
+    generated for the first time via Simple mode's own click, self.entries
+    was still whatever loaded before generation ran -- typically nothing
+    tagged "enhancements" yet, so the old self.entries-based count reported
+    0 even though the game file itself was written correctly (apply_to_
+    game's own merge is always fresh). sources_dict["enhancements"]
+    reflects exactly what was just merged, including any "Include
+    discovered items" strip already applied to it in place earlier in
+    apply_to_game.
+
+    Each key's category prefers enhancements_key_categories (the same map
+    load_sources_from_settings() builds for the main table's own category
+    column, keyed off each generator's real output category rather than
+    the key's prefix) before falling back to StringEntry.extract_category.
+    The two are not equivalent (#399 review): every medical-consumable key
+    is item_Desccrlf_consumable_*, which extract_category's prefix rules
+    land in "Gear" since it recognizes no ship-component code there, while
+    enhancements_key_categories correctly has it as "Medical Consumables"
+    from the generator that actually produced it. A caller with no map
+    (or one missing a given key) still gets the prefix-based fallback.
     """
+    categories = enhancements_key_categories or {}
     return Counter(
-        StringEntry.extract_category(key)
-        for key in sources_dict.get("enhancements", {})
+        categories.get(key) or StringEntry.extract_category(key)
+        for key in sources_dict.get(AppSettings.SOURCE_ENHANCEMENTS, {})
     )
 
 
@@ -268,7 +282,7 @@ def _journal_stamp_for_entry(entry) -> str | None:
         return None
     if _JOURNAL_TITLE_KEY_RE.search(entry.key):
         return None
-    if not (entry.custom_value or entry.source_file == "enhancements"):
+    if not (entry.custom_value or entry.source_file == AppSettings.SOURCE_ENHANCEMENTS):
         return None
     from src.utils.version import get_version
     return f"[Edited with Smart Citizen v{get_version()}]"
@@ -2232,15 +2246,15 @@ class MainWindow(QMainWindow):
 
             # Build final merged dict by re-merging all sources with user edits
             # This ensures Apply uses latest source versions and user edits
-            sources_dict, hierarchy, _mrk = load_sources_from_settings()
+            sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
 
             # Warn if any active sources are missing (only check sources actually in AVAILABLE_SOURCES)
             active_source_names = set(AppSettings.AVAILABLE_SOURCES)
-            active_source_names.add("enhancements")
+            active_source_names.add(AppSettings.SOURCE_ENHANCEMENTS)
             missing_sources = [
                 name for name in hierarchy
                 if name in active_source_names
-                and name != AppSettings.SOURCE_USER and name != "enhancements"
+                and name != AppSettings.SOURCE_USER and name != AppSettings.SOURCE_ENHANCEMENTS
                 and name not in sources_dict
                 and AppSettings.is_source_enabled(name)
             ]
@@ -2270,9 +2284,9 @@ class MainWindow(QMainWindow):
                     entry.key for entry in self.entries
                     if entry.status == "New" and not entry.custom_value
                 }
-                if new_keys and "enhancements" in sources_dict:
-                    sources_dict["enhancements"] = {
-                        k: v for k, v in sources_dict["enhancements"].items()
+                if new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
+                    sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
+                        k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
                         if k not in new_keys
                     }
 
@@ -2382,7 +2396,9 @@ class MainWindow(QMainWindow):
             # dialog leads with the biggest buckets (typically Missions /
             # Ship Items). "SCLE" was the legacy app name (SC Localization
             # Editor); the label now matches the rebrand to "Smart Citizen".
-            enhancement_categories = _count_enhancement_categories(sources_dict)
+            enhancement_categories = _count_enhancement_categories(
+                sources_dict, enhancements_key_categories
+            )
             enhancement_count = sum(enhancement_categories.values())
 
             # Copy languages.ini to {channel}/data/languages.ini if available
