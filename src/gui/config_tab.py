@@ -25,12 +25,7 @@ logger = logging.getLogger(__name__)
 # the label needs to carry extra context up front, before the user selects
 # it.
 _LANGUAGE_COMBO_LABEL_OVERRIDES = {
-    # #403: the source hasn't been updated since May 2024 and covers only
-    # 67.3% of the current English key set (measured at the time the issue
-    # was filed) -- a third of strings would render in English. Flagged
-    # directly in the selector so picking it isn't a silent surprise,
-    # rather than a caveat buried in docs nobody reads before switching.
-    "chinese_traditional": "Traditional Chinese (67.3%)",
+    "chinese_traditional": "Traditional Chinese",
 }
 
 
