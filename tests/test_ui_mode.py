@@ -144,6 +144,40 @@ def test_simple_widget_set_apply_dirty_toggles_color_and_tooltip_not_enabled(qap
     assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip")
 
 
+def test_main_window_forwards_apply_state_to_the_simple_button(qapp):
+    """#397's actual wiring: the one chokepoint MainWindow routes every
+    dirty/clean change through must also drive the Simple-mode button,
+    including the language-switch tooltip refresh that goes through it. A
+    window without simple_page yet (create_toolbar runs first) must not raise."""
+    from PyQt6.QtWidgets import QPushButton
+
+    from src.gui.main_window import MainWindow
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+    from src.utils.i18n import tr
+
+    class _Stub:
+        _set_apply_btn_dirty = MainWindow._set_apply_btn_dirty
+
+        def __init__(self, with_page=True):
+            self.apply_btn = QPushButton()
+            if with_page:
+                self.simple_page = SimpleModeWidget()
+
+    stub = _Stub()
+    stub._set_apply_btn_dirty(False)
+    button = stub.simple_page.generate_apply_btn
+    assert button.isEnabled()  # green never disables the Simple button
+    assert get_button_color("apply") in button.styleSheet()
+    assert button.toolTip() == tr("simple_mode.generate_apply_tip_disabled")
+
+    stub._set_apply_btn_dirty(True)
+    assert get_button_color("needs_apply") in button.styleSheet()
+    assert button.toolTip() == tr("simple_mode.generate_apply_tip")
+
+    _Stub(with_page=False)._set_apply_btn_dirty(False)  # construction order guard
+
+
 def test_simple_widget_busy_overrides_everything_for_enabled_not_color(qapp):
     """A run in progress must disable the button regardless of dirty state,
     but the color keeps reflecting dirty -- busy is a transient interaction

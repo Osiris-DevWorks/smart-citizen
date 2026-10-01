@@ -110,8 +110,8 @@ def test_should_stop_reflects_interruption_requests(qapp, interrupt, expected):
 # The fake-worker tests in test_apply_already_applied.py prove the decisions;
 # these prove the Qt mechanics they rely on: the verdict really is delivered
 # to the GUI thread through a queued lambda connection, the slot's worker.wait()
-# doesn't deadlock, a disconnect on close really stops delivery, and a stale
-# result from a real thread is dropped.
+# doesn't deadlock, settling on close waits for a running check without
+# starting a queued rerun, and a stale result from a real thread is dropped.
 
 import time  # noqa: E402
 

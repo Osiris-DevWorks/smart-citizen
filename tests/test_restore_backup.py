@@ -42,6 +42,10 @@ class _Stub:
 
     def __init__(self):
         self.reloaded = False
+        self.marked_dirty = False
+
+    def _mark_apply_dirty(self):
+        self.marked_dirty = True
 
     def perform_merge_and_reload(self):
         self.reloaded = True
@@ -87,6 +91,7 @@ def test_restore_copies_backup_and_refreshes(qapp, monkeypatch, tmp_path):
     # Backup landed on the game's global.ini, table refreshed, success shown.
     assert target.read_text(encoding="utf-8") == "key=restored\n"
     assert stub.reloaded is True
+    assert stub.marked_dirty is True  # the game file changed under the Apply check
     assert dialogs["info"] and not dialogs["critical"]
 
 
@@ -121,4 +126,5 @@ def test_restore_no_game_path_warns_and_skips(qapp, monkeypatch, tmp_path):
 
     assert dialogs["warning"]            # guarded with a warning
     assert stub.reloaded is False        # nothing restored
+    assert stub.marked_dirty is False
     assert not target.exists()

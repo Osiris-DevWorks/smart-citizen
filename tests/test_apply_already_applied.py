@@ -23,7 +23,7 @@ launch even immediately after a genuine apply.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -100,7 +100,7 @@ class TestMatchesAppliedOutput:
 
 
 class TestUserCfgLanguageMatches:
-    """#398 review: _entries_already_applied's file-content comparison alone
+    """#398 review: _compute_already_applied's file-content comparison alone
     missed a real bug. Switching the language selector in Smart Citizen's
     UI never touches user.cfg by itself (only window init and apply-to-game
     time do) -- so switching back to a language that was fully applied in
@@ -131,7 +131,7 @@ class TestUserCfgLanguageMatches:
 
     def test_unmapped_language_falls_back_to_itself(self):
         """A selected_language not in SC_LANGUAGE_IDS (shouldn't happen in
-        practice, but _entries_already_applied must not crash on it) falls
+        practice, but _compute_already_applied must not crash on it) falls
         back to comparing the raw value, same as SC_LANGUAGE_IDS.get's own
         default-to-key behavior everywhere else it's used."""
         assert _user_cfg_language_matches("klingon", "klingon") is True
@@ -395,6 +395,19 @@ class TestComputeAlreadyApplied:
         self._write_applied(env, self.STOCK)
         assert _compute_already_applied(self._snapshot(env, overrides={"a": "mine"})) is False
 
+    def test_an_override_cleared_in_memory_is_not_read_back_from_user_ini(self, env, monkeypatch):
+        """user.ini on disk still holds an override the user has since cleared
+        (Apply hasn't saved yet). Apply rewrites user.ini from the loaded
+        entries first, so it would write stock "a"; the check must not read the
+        stale override back and call the old applied file current."""
+        self._write_applied(env, {"a": "mine", "b": "stock b"})
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: (
+            {"global": dict(self.STOCK), "user": {"a": "mine"}}, ["global", "user"], {},
+        ))
+        assert _compute_already_applied(self._snapshot(env, overrides={})) is False
+        # ...while an override still in memory is expected, as before.
+        assert _compute_already_applied(self._snapshot(env, overrides={"a": "mine"})) is True
+
     def test_false_when_user_cfg_points_at_another_language(self, env):
         """Content matches, but switching language in the UI never touches
         user.cfg, so the game would still load the other language."""
@@ -428,11 +441,6 @@ class _FakeSignal:
     def connect(self, callback):
         self.callbacks.append(callback)
 
-    def disconnect(self):
-        if not self.callbacks:
-            raise TypeError("nothing connected")
-        self.callbacks.clear()
-
     def emit(self, value):
         for callback in list(self.callbacks):
             callback(value)
@@ -450,6 +458,8 @@ class _FakeWorker:
         self.token = token
         self.result = False
         self.started = False
+        self.quit_called = False
+        self.delete_later_called = False
         self.interrupted = False
         self.waits_to_finish = True
         self.finished = _FakeSignal()
@@ -457,6 +467,12 @@ class _FakeWorker:
 
     def start(self):
         self.started = True
+
+    def quit(self):
+        self.quit_called = True
+
+    def deleteLater(self):
+        self.delete_later_called = True
 
     def requestInterruption(self):
         self.interrupted = True
@@ -539,6 +555,13 @@ class TestAppliedStateLifecycle:
         assert window._session_has_unapplied_edit is False
         assert window._applied_state_worker is None
 
+    def test_a_finished_worker_gets_the_standard_cleanup(self, window):
+        """quit() + wait(), then deleteLater() (root CLAUDE.md threading model)."""
+        window._refresh_apply_dirty_after_reload()
+        worker = _FakeWorker.instances[0]
+        worker.finish(True)
+        assert worker.quit_called and worker.delete_later_called
+
     def test_not_applied_stays_red_and_leaves_the_session_flag_alone(self, window):
         """A genuinely dirty reload (e.g. just regenerated enhancements, not
         yet applied) must still show red, and must not clear a session flag a
@@ -620,8 +643,8 @@ class TestSettleOnClose:
         assert window._applied_state_worker is None
 
     def test_a_late_signal_after_settling_cannot_start_another_run(self, window):
-        """Qt can still deliver a result that was already queued when the
-        signal got disconnected. It must not start a new thread mid-shutdown."""
+        """Qt can still deliver a result that was already queued when closing
+        settled the check. It must not start a new thread mid-shutdown."""
         window._refresh_apply_dirty_after_reload()
         window._refresh_apply_dirty_after_reload()  # rerun now pending
         worker = _FakeWorker.instances[0]
@@ -740,16 +763,17 @@ class TestReloadAfterACleanApply:
             me._refresh_apply_dirty_after_reload.assert_called_once_with()
 
 
-def _generation_self(simple: bool, apply_cleans: bool):
+def _generation_self(simple: bool, apply_cleans: bool, starts_dirty: bool = True):
     me = MagicMock()
     me._enhancements_progress_dialog = None
     me._simple_run_active = simple
-    me._apply_dirty = True
+    me._apply_dirty = starts_dirty
     me._reload_follows_clean_apply = False
 
     def fake_apply():
         if apply_cleans:
             me._apply_dirty = False
+        return apply_cleans  # apply_to_game reports whether it really applied
 
     me.apply_to_game.side_effect = fake_apply
     return me
@@ -768,6 +792,22 @@ class TestSimpleFlowFlagsTheCleanReload:
     def test_a_failed_or_cancelled_apply_does_not(self):
         me = _generation_self(simple=True, apply_cleans=False)
         MainWindow._on_enhancements_generation_finished(me, True)
+        assert me._reload_follows_clean_apply is False
+
+    def test_a_failed_apply_does_not_flag_even_when_the_button_was_already_green(self):
+        """Simple mode keeps its button clickable on green (to re-apply after a
+        game patch). A run that starts green and then fails to apply must not
+        dress the reload up as a refresh of applied state."""
+        me = _generation_self(simple=True, apply_cleans=False, starts_dirty=False)
+        MainWindow._on_enhancements_generation_finished(me, True)
+        assert me._reload_follows_clean_apply is False
+
+    def test_a_failed_reload_clears_the_one_shot(self):
+        me = MagicMock()
+        me._reload_follows_clean_apply = True
+        me._loader_worker = None
+        with patch.object(main_window, "QMessageBox"):
+            MainWindow._on_loading_error(me, "boom")
         assert me._reload_follows_clean_apply is False
 
     def test_a_manual_generate_does_not_apply_or_flag(self):
@@ -820,3 +860,173 @@ class TestCloseEventSettlesTheCheck:
         MainWindow.closeEvent(self._closing_self(order, unapplied=False), MagicMock())
 
         assert order == ["settle"]
+
+    def test_cancelling_the_close_re_checks_the_button(self, monkeypatch):
+        """Settling may drop a verdict or a queued rerun so the window can close
+        quickly. When the user cancels instead, the window stays, so the button
+        gets a fresh check rather than keeping a provisional red."""
+        order = []
+        buttons = [MagicMock(name="apply"), MagicMock(name="exit"), MagicMock(name="cancel")]
+        box = MagicMock()
+        box.addButton.side_effect = list(buttons)
+        box.clickedButton.return_value = buttons[2]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        me = self._closing_self(order, unapplied=True)
+        event = MagicMock()
+
+        MainWindow.closeEvent(me, event)
+
+        event.ignore.assert_called_once_with()
+        me._refresh_apply_dirty_after_reload.assert_called_once_with()
+
+
+class _RecordingMessageBox:
+    """Stands in for QMessageBox: records each dialog into a shared call list
+    and answers No to any question."""
+
+    calls: list = []
+
+    class StandardButton:
+        Yes = 1
+        No = 2
+
+    @classmethod
+    def _record(cls, kind):
+        cls.calls.append(f"dialog-{kind}")
+
+    @classmethod
+    def information(cls, *args, **kwargs):
+        cls._record("information")
+
+    @classmethod
+    def warning(cls, *args, **kwargs):
+        cls._record("warning")
+        return cls.StandardButton.No
+
+    @classmethod
+    def critical(cls, *args, **kwargs):
+        cls._record("critical")
+
+
+class TestApplyToGameKeepsTheCheckHonest:
+    """The real apply_to_game on a MagicMock self, with file I/O stubbed. A
+    verdict computed from the file Apply is replacing must not land later (a
+    dialog's event loop can deliver it), and a failed apply must not be left
+    looking clean. apply_to_game also reports whether it really applied."""
+
+    @pytest.fixture
+    def env(self, tmp_path, monkeypatch):
+        import src.merger.ini_merger as ini_merger
+        import src.utils.user_cfg as user_cfg
+        import src.utils.user_ini_manager as user_ini_manager
+
+        calls: list = []
+        _RecordingMessageBox.calls = calls
+        base = tmp_path / "base.ini"
+        base.write_text("a=stock a\n", encoding="utf-8")
+        state = type("State", (), {"merge_raises": False, "sources": None})
+
+        def fake_merge(base_file, merged, target):
+            calls.append("write")
+            if state.merge_raises:
+                raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(main_window, "QMessageBox", _RecordingMessageBox)
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: state.sources or (
+            {AppSettings.SOURCE_GLOBAL: {"a": "stock a"}}, [AppSettings.SOURCE_GLOBAL], {},
+        ))
+        monkeypatch.setattr(ini_merger, "merge_ini_files", fake_merge)
+        monkeypatch.setattr(user_ini_manager, "save_user_ini", lambda entries, path: 0)
+        monkeypatch.setattr(user_cfg, "ensure_user_cfg_language", lambda: None)
+        for name, value in (
+            ("get_game_install_path", lambda: str(tmp_path)),
+            ("get_user_ini_path", lambda: tmp_path / "user.ini"),
+            ("get_global_ini_path", lambda: tmp_path / "game" / "global.ini"),
+            ("get_source_path", lambda name: str(base)),
+            ("is_source_enabled", lambda name: True),
+            ("get_language_languages_ini_path", lambda: None),
+        ):
+            monkeypatch.setattr(AppSettings, name, staticmethod(value))
+
+        me = MagicMock()
+        me.entries = [object()]
+        me._build_apply_merged_dict.return_value = {"a": "mine"}
+        me._validate_applied_file.return_value = ""
+        me._invalidate_applied_check.side_effect = lambda: calls.append("invalidate")
+        me._mark_apply_dirty.side_effect = lambda: calls.append("dirty")
+        me._mark_applied.side_effect = lambda: calls.append("applied")
+        return type("Env", (), {"me": me, "calls": calls, "state": state})
+
+    def test_a_successful_apply_invalidates_before_writing_and_reports_true(self, env):
+        assert MainWindow.apply_to_game(env.me) is True
+        assert env.calls == ["invalidate", "write", "dialog-information", "applied"]
+
+    def test_a_failed_write_is_marked_dirty_before_its_error_dialog(self, env):
+        env.state.merge_raises = True
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["invalidate", "write", "dirty", "dialog-critical"]
+
+    def test_a_failed_validation_is_marked_dirty_before_its_error_dialog(self, env):
+        env.me._validate_applied_file.return_value = "missing keys"
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["invalidate", "write", "dirty", "dialog-critical"]
+
+    def test_declining_missing_sources_writes_nothing_and_reports_false(self, env):
+        env.state.sources = ({}, [AppSettings.SOURCE_GLOBAL], {})
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-warning"]
+
+
+class TestOtherEntryPointsMarkTheButton:
+    def test_clear_localization_marks_dirty(self, tmp_path, monkeypatch):
+        game_ini = tmp_path / "global.ini"
+        game_ini.write_text("a=x\n", encoding="utf-8")
+        box = MagicMock()
+        box.StandardButton.Yes = "yes"
+        box.question.return_value = "yes"
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_global_ini_path", staticmethod(lambda: game_ini))
+        me = MagicMock()
+
+        MainWindow.clear_localization(me)
+
+        assert not game_ini.exists()
+        me._mark_apply_dirty.assert_called_once_with()
+
+    def test_restore_backup_marks_dirty_before_reloading(self, tmp_path, monkeypatch):
+        backup = tmp_path / "global.ini.bak_1"
+        backup.write_text("a=old\n", encoding="utf-8")
+        target = tmp_path / "global.ini"
+        dialog = MagicMock()
+        dialog.getOpenFileName.return_value = (str(backup), "")
+        monkeypatch.setattr(main_window, "QFileDialog", dialog)
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock())
+        monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_backups_dir", staticmethod(lambda: tmp_path))
+        monkeypatch.setattr(AppSettings, "get_global_ini_path", staticmethod(lambda: target))
+        me = MagicMock()
+
+        MainWindow.restore_backup(me)
+
+        assert target.read_text(encoding="utf-8") == "a=old\n"
+        names = _call_names(me)
+        assert names.index("_mark_apply_dirty") < names.index("perform_merge_and_reload")
+
+    def test_a_synchronous_reload_requests_a_check_after_the_dirty_marking(self, monkeypatch):
+        """Channel switch, Config save, restore and the rest reload through
+        perform_merge_and_reload, not the async loader; they need the same
+        authoritative check, after _recompute_owned marks everything red."""
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: (
+            {AppSettings.SOURCE_GLOBAL: {}}, [AppSettings.SOURCE_GLOBAL], {},
+        ))
+        monkeypatch.setattr(main_window, "load_source_files", lambda *a, **k: [])
+        me = MagicMock()
+        me._snapshot_pending_user_edits.return_value = {}
+        me._restore_pending_user_edits.return_value = 0
+
+        MainWindow.perform_merge_and_reload(me)
+
+        names = _call_names(me)
+        me._refresh_apply_dirty_after_reload.assert_called_once_with()
+        assert names.index("_recompute_owned") < names.index("_refresh_apply_dirty_after_reload")
