@@ -19,7 +19,9 @@ from PyQt6.QtWidgets import (
     QMessageBox, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-from src.gui.enhancements_tab import _NoScrollComboBox
+from src.gui.enhancements_tab import (
+    _NoScrollComboBox, reposition_combo_popup_below_if_it_fits,
+)
 from src.gui.theme import get_button_color
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
@@ -37,8 +39,50 @@ class _NoWheelComboBox(_NoScrollComboBox):
     inherits _NoScrollComboBox's popup-placement fix.
     """
 
+    _MAX_VISIBLE_ITEMS = 12
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Mission enumerates one entry per unique mission title in the
+        # loaded strings -- easily 100+. setMaxVisibleItems is the
+        # documented Qt knob for this, but confirmed live (#388 follow-up)
+        # it has no effect here on its own -- the popup still rendered
+        # every row uncapped. Kept anyway (harmless, correct intent, some
+        # Qt code paths still consult it for sizeHint); showPopup below
+        # does the actual capping by force.
+        self.setMaxVisibleItems(self._MAX_VISIBLE_ITEMS)
+
     def wheelEvent(self, event):  # noqa: N802 (Qt override)
         event.ignore()
+
+    def showPopup(self):  # noqa: N802 (Qt override)
+        # #388 follow-up: force the popup window's pixel height down to
+        # _MAX_VISIBLE_ITEMS rows, computed from the view's own row height
+        # so it holds regardless of font/theme, and force a real scrollbar
+        # (see the policy line below -- Fusion's combo popup defaults to
+        # tiny scroll-arrow buttons instead, confirmed live).
+        super().showPopup()  # _NoScrollComboBox: shows, positions below if it fits
+        view = self.view()
+        popup = view.window()
+        # Fusion's combo popup prefers small top/bottom scroll-arrow
+        # buttons over a real scrollbar once content overflows the
+        # popup -- confirmed live (#388 follow-up), capping the height
+        # above left no visible scrollbar at all. Forcing the policy on
+        # makes Qt render the view's actual scrollbar instead.
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        row_height = view.sizeHintForRow(0) if self.count() else 0
+        if row_height <= 0:
+            row_height = view.fontMetrics().height() + 6
+        capped_height = row_height * self._MAX_VISIBLE_ITEMS + 2 * view.frameWidth() + 4
+        if popup.height() <= capped_height:
+            return
+        popup.setFixedHeight(int(capped_height))
+        # _NoScrollComboBox's own "does it fit below" check (inside the
+        # super().showPopup() call above) ran against the OLD, uncapped
+        # height -- a 100+ row list rarely fits below, so it likely left
+        # the popup flipped above the combo instead. Re-run the same check
+        # now that the popup is a fraction of that size.
+        reposition_combo_popup_below_if_it_fits(self, popup)
 
 
 def _relabel_details_button(box: QMessageBox, shown_label: str, hidden_label: str) -> None:
@@ -172,9 +216,11 @@ class BlueprintTrackerTab(QWidget):
         # visible regardless of the empty-state gate below, since scanning
         # logs doesn't need mission data loaded, it reads the player's own
         # earned-blueprint history straight from Star Citizen's log files.
-        # Row 1: scan-behavior checkboxes (cols 0-1, which channels to cover
-        # #268 and whether to ignore the watermark #308, both only affecting
-        # "Scan Logs for Owned Blueprints") | Export/Import the Owned set
+        # Row 1: scan-behavior checkboxes (cols 0-1: which channels to cover
+        # #268, whether to ignore the watermark #308, whether to run the scan
+        # automatically on startup #386, and whether that auto-scan pops the
+        # normal summary dialog or just a status bar message -- all four only
+        # affecting "Scan Logs for Owned Blueprints") | Export/Import the Owned set
         # (#234, cols 2-3) -- secondary actions, smaller than the primary
         # scan/apply buttons above them, sharing the row since neither
         # checkbox nor export/import needs mission data loaded.
@@ -231,6 +277,53 @@ class BlueprintTrackerTab(QWidget):
             tr("blueprint_tracker.force_rescan_tooltip")
         )
         checkboxes_row.addWidget(self._force_rescan_checkbox)
+
+        # #386: run "Scan Logs for Owned Blueprints" automatically on every
+        # launch instead of only on a manual click. Off by default -- opt-in,
+        # since it's an extra background log read on every startup. Reads
+        # MainWindow's own scan pipeline (channel queue, watermark, #268
+        # multi-channel coverage) unchanged; only the result feedback differs
+        # (status bar, not a popup, so it doesn't interrupt every launch).
+        self._auto_scan_startup_checkbox = QCheckBox(
+            tr("blueprint_tracker.auto_scan_startup_checkbox")
+        )
+        self._auto_scan_startup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_startup_tooltip")
+        )
+        self._auto_scan_startup_checkbox.setChecked(
+            AppSettings.get_auto_scan_blueprints_enabled()
+        )
+        self._auto_scan_startup_checkbox.toggled.connect(
+            self._on_auto_scan_startup_toggled
+        )
+        checkboxes_row.addWidget(self._auto_scan_startup_checkbox)
+
+        # #386 follow-up: opt back INTO the manual scan's own popup for the
+        # auto-scan too, for anyone who wants the interruption. Off by
+        # default, same as the auto-scan checkbox itself -- the status bar
+        # message stays the default so a launch that finds something new
+        # doesn't surprise everyone who didn't ask for a popup. Only affects
+        # the "found new blueprints" case; a quiet run still never pops
+        # anything, checkbox or not.
+        self._auto_scan_popup_checkbox = QCheckBox(
+            tr("blueprint_tracker.auto_scan_popup_checkbox")
+        )
+        self._auto_scan_popup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_popup_tooltip")
+        )
+        self._auto_scan_popup_checkbox.setChecked(
+            AppSettings.get_auto_scan_show_popup_enabled()
+        )
+        self._auto_scan_popup_checkbox.toggled.connect(
+            AppSettings.set_auto_scan_show_popup_enabled
+        )
+        # #386 review: this setting has no effect unless auto-scan itself is
+        # on -- greyed out (not just documented in the tooltip) so that's
+        # visible rather than a silently inert checkbox.
+        self._auto_scan_popup_checkbox.setEnabled(
+            self._auto_scan_startup_checkbox.isChecked()
+        )
+        checkboxes_row.addWidget(self._auto_scan_popup_checkbox)
         checkboxes_row.addStretch()
         top_grid.addLayout(checkboxes_row, 1, 0, 1, 2)
 
@@ -253,14 +346,6 @@ class BlueprintTrackerTab(QWidget):
         self._blueprints_empty_note.setStyleSheet("font-size: 11px; font-style: italic;")
         self._blueprints_empty_note.setWordWrap(True)
         layout.addWidget(self._blueprints_empty_note)
-
-        self._blueprints_search = QLineEdit()
-        self._blueprints_search.setPlaceholderText(
-            tr("enhancements.blueprints_search_placeholder")
-        )
-        self._blueprints_search.setClearButtonEnabled(True)
-        self._blueprints_search.textChanged.connect(self._refilter_blueprint_lists)
-        layout.addWidget(self._blueprints_search)
 
         # Display-only toggle (#221): show each item's Tag Builder tag inline
         # instead of the bare name. Matching/filtering/Owned tracking always
@@ -306,12 +391,31 @@ class BlueprintTrackerTab(QWidget):
             facet_row.addWidget(lbl)
             facet_row.addWidget(combo, 1)
         layout.addLayout(facet_row)
+        self._align_mission_and_type_label_widths()
 
+        # #388 follow-up: the note explaining Type/Class/Size/Grade sits
+        # directly under the facet row it describes, still above the
+        # keyword search box below -- explanatory text about the dropdown
+        # filters reads better right next to them than after the unrelated
+        # search box.
         self._blueprints_filter_note = QLabel(tr("enhancements.blueprints_filter_note"))
         self._blueprints_filter_note.setProperty("role", "secondary")
         self._blueprints_filter_note.setStyleSheet("font-size: 10px;")
         self._blueprints_filter_note.setWordWrap(True)
         layout.addWidget(self._blueprints_filter_note)
+
+        # #388: keyword search sits beneath the dropdown/checkbox filters
+        # above (mission + facet combos, show-tags toggle), matching the
+        # String Editor's own filter row (create_string_filter_row's
+        # category/status/checkbox controls, all above the table's
+        # per-column keyword search boxes) -- was above them here instead.
+        self._blueprints_search = QLineEdit()
+        self._blueprints_search.setPlaceholderText(
+            tr("enhancements.blueprints_search_placeholder")
+        )
+        self._blueprints_search.setClearButtonEnabled(True)
+        self._blueprints_search.textChanged.connect(self._refilter_blueprint_lists)
+        layout.addWidget(self._blueprints_search)
 
         lists_row = QHBoxLayout()
 
@@ -374,12 +478,32 @@ class BlueprintTrackerTab(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
 
+    def _align_mission_and_type_label_widths(self) -> None:
+        """#388 follow-up: "Mission:" and "Type:" render at different
+        natural widths, so their combos started at different x positions
+        even though the two rows are meant to read as one column of
+        filters. Pad the shorter label out to match the wider one's
+        sizeHint so both combos line up -- computed from actual rendered
+        text (not a hard-coded pixel value) so it stays correct across
+        every language's translation, and re-run from retranslate_ui after
+        a language switch changes both labels' text.
+        """
+        mission_label = self._blueprints_mission_label
+        type_label = self._blueprints_facet_labels["enhancements.blueprints_facet_type"]
+        width = max(mission_label.sizeHint().width(), type_label.sizeHint().width())
+        mission_label.setMinimumWidth(width)
+        type_label.setMinimumWidth(width)
+
     def retranslate_ui(self) -> None:
         """Re-apply tr() to every text-bearing widget after a language switch."""
         self._title_label.setText(tr("blueprint_tracker.title"))
         self._blueprints_desc_label.setText(tr("enhancements.blueprints_desc"))
         self._scan_logs_btn.setText(tr("blueprint_tracker.scan_logs_btn"))
-        self._scan_logs_btn.setToolTip(tr("blueprint_tracker.scan_logs_tooltip"))
+        # #386 review: re-derive from the button's own enabled state rather
+        # than a second tracked flag, same as _set_owned_btn_dirty does for
+        # _owned_dirty -- correct even if a scan happens to be running when
+        # the language switches.
+        self.set_scan_logs_enabled(self._scan_logs_btn.isEnabled())
         self._export_owned_btn.setText(tr("blueprint_tracker.export_owned_btn"))
         self._export_owned_btn.setToolTip(tr("blueprint_tracker.export_owned_tooltip"))
         self._import_owned_btn.setText(tr("blueprint_tracker.import_owned_btn"))
@@ -396,6 +520,18 @@ class BlueprintTrackerTab(QWidget):
         self._force_rescan_checkbox.setToolTip(
             tr("blueprint_tracker.force_rescan_tooltip")
         )
+        self._auto_scan_startup_checkbox.setText(
+            tr("blueprint_tracker.auto_scan_startup_checkbox")
+        )
+        self._auto_scan_startup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_startup_tooltip")
+        )
+        self._auto_scan_popup_checkbox.setText(
+            tr("blueprint_tracker.auto_scan_popup_checkbox")
+        )
+        self._auto_scan_popup_checkbox.setToolTip(
+            tr("blueprint_tracker.auto_scan_popup_tooltip")
+        )
         self._apply_owned_btn.setText(tr("blueprint_tracker.apply_owned_tag_btn"))
         self._set_owned_btn_dirty(self._owned_dirty)  # re-applies the right tooltip
         self._blueprints_empty_note.setText(tr("enhancements.blueprints_empty_note"))
@@ -409,6 +545,7 @@ class BlueprintTrackerTab(QWidget):
         self._blueprints_remove_btn.setToolTip(tr("enhancements.blueprints_remove_tooltip"))
         for label_key, lbl in self._blueprints_facet_labels.items():
             lbl.setText(tr(label_key))
+        self._align_mission_and_type_label_widths()
 
     @staticmethod
     def _available_blueprints(all_names, owned) -> list:
@@ -625,6 +762,14 @@ class BlueprintTrackerTab(QWidget):
         """Persist the show-tags display toggle and re-render (#221)."""
         AppSettings.set_blueprint_show_tags(checked)
         self._render_blueprint_lists()
+
+    def _on_auto_scan_startup_toggled(self, checked: bool) -> None:
+        """Persist the auto-scan checkbox and keep the popup checkbox's
+        enabled state in sync (#386 review) -- the popup setting has no
+        effect unless auto-scan itself is on, so greying it out here
+        (rather than leaving it clickable but inert) makes that visible."""
+        AppSettings.set_auto_scan_blueprints_enabled(checked)
+        self._auto_scan_popup_checkbox.setEnabled(checked)
 
     def _own_selected_blueprints(self) -> None:
         """Move every selected available item into the owned set (one write)."""
@@ -873,3 +1018,19 @@ class BlueprintTrackerTab(QWidget):
         (called by MainWindow after the scan queue finishes), so the next
         click defaults back to a normal incremental scan."""
         self._force_rescan_checkbox.setChecked(False)
+
+    def set_scan_logs_enabled(self, enabled: bool) -> None:
+        """#386 review: gate the "Scan Logs" button while a scan is running.
+
+        Called by MainWindow around every scan run, manual or the silent
+        startup auto-scan. Without this, a click during an in-flight silent
+        auto-scan (no progress dialog, easy-to-miss status bar text) hit the
+        pre-existing reentrancy guard and did nothing -- no dialog, no
+        disabled button, nothing telling the user a scan was already
+        running. The disabled tooltip makes that visible instead of silent.
+        """
+        self._scan_logs_btn.setEnabled(enabled)
+        self._scan_logs_btn.setToolTip(
+            tr("blueprint_tracker.scan_logs_tooltip") if enabled
+            else tr("blueprint_tracker.scan_logs_already_running_tooltip")
+        )
