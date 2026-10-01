@@ -7524,12 +7524,14 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         _sink.set_total(phase_total)
     _tick(f"Loaded base.ini ({len(loc):,} keys)")
 
-    # ── Parallel build of independent lookups (Group A) ───────────────────────
+    # ── Build of independent lookups (Group A) ────────────────────────────────
     # vehicle_ammo, fps_ammo, scitem_lookups, controller_lookup, armor_lookup,
     # and reputation_lookup have no cross-dependencies and are dominated by
-    # XML parse + file I/O. Builders are pure: each returns a dict that is
-    # never mutated again, so thread-safe by construction. _cached_lookup
-    # writes to per-name pickle files, so parallel cache writes don't collide.
+    # XML parse + file I/O. They run in a thread pool when more than one
+    # worker is allowed (CLI default), and inline otherwise (the GUI, #389).
+    # Builders are pure: each returns a dict that is never mutated again, so
+    # thread-safe by construction. _cached_lookup writes to per-name pickle
+    # files, so parallel cache writes don't collide.
     vehicle_ammo: dict = {}
     fps_ammo: dict = {}
     mag_lookup: dict = {}
@@ -7704,12 +7706,14 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             )
             _tick("Built standings + track lookups")
 
-    # ── Output-file generators (parallel wave) ────────────────────────────────
-    # Generators run in a ThreadPoolExecutor. Each is a module-level function
-    # (not a closure) receiving shared read-only state via a context dict.
-    # Internal sub-phases within each generator stay serial since each step
-    # consumes the prior step's in-memory result. Across generators there is
-    # no shared mutable state, so they run safely on independent threads.
+    # ── Output-file generators ────────────────────────────────────────────────
+    # Generators run in a thread pool when more than one worker is allowed
+    # (CLI default), and inline otherwise (the GUI, #389). Each is a
+    # module-level function (not a closure) receiving shared read-only state
+    # via a context dict. Internal sub-phases within each generator stay
+    # serial since each step consumes the prior step's in-memory result.
+    # Across generators there is no shared mutable state, so they run safely
+    # on independent threads.
     ships_scitem = records / "entities" / "scitem" / "ships"
     scitem_dir   = records / "entities" / "scitem"
 

@@ -115,3 +115,25 @@ class TestSingleJobSkipsThreadPool:
         ships.assert_called_once()
         out_path = base_ini.parent / "medical_consumables_enhancements.ini"
         assert out_path.read_text(encoding="utf-8").strip() != ""
+
+    def test_one_lookup_with_several_workers_never_constructs_a_pool(
+        self, gen_module, forge_layout
+    ):
+        """The other half of min(max_workers, len(jobs)) == 1 at the lookup
+        pool: one job, several workers. commodity_crafting needs only the
+        scitem lookup, and its generator is stubbed, so this needs no XML."""
+        base_ini, forge_dir = forge_layout
+        with patch.object(gen_module, "build_scitem_lookups",
+                          return_value=({}, {}, {}, {})) as scitem, \
+             patch.object(gen_module, "_run_gen_commodity_journal",
+                          return_value=({}, {})) as commodity, \
+             patch.object(gen_module, "ThreadPoolExecutor") as pool_cls:
+            gen_module.main(
+                base_ini_path=base_ini,
+                forge_dir=forge_dir,
+                categories={"commodity_crafting"},
+                max_workers=6,
+            )
+        _assert_no_pool(pool_cls)
+        scitem.assert_called_once()
+        commodity.assert_called_once()
