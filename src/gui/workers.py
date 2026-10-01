@@ -6,6 +6,7 @@ isolation, and so the file size of main_window.py stays manageable.
 Contents:
 - AnimatedProgressDialog — reusable indeterminate↔determinate progress dialog
 - FileLoaderWorker        — loads sources, builds StringEntry list, sort keys
+- AppliedStateWorker      — checks off the GUI thread whether the loaded state is already applied
 - StartupSyncWorker       — refreshes URL-backed sources on startup
 - EnhancementsGeneratorWorker — runs scripts/generate_enhancements_ini.py
 - BlueprintLogScanWorker  — scans SC logs for received-blueprint events (#222)
@@ -160,6 +161,45 @@ class FileLoaderWorker(QThread):
         except Exception as e:
             logger.exception(f"Error loading files: {e}")
             self.error.emit(str(e))
+
+
+class AppliedStateWorker(QThread):
+    """Work out off the GUI thread whether the loaded state already matches
+    the game's global.ini (#398 review).
+
+    The check re-reads every source, re-merges, and parses the applied file,
+    which is seconds of work on a real profile, so it can't run in the slot
+    that follows a reload.
+
+    ``compute(snapshot, should_stop)`` does the work and is injected by
+    MainWindow rather than imported: it shares its merge with Apply to Game,
+    which lives in main_window.py, and importing that here would be a
+    gui <-> gui cycle. *snapshot* is plain data captured on the main thread so
+    nothing in here reads widget or entry state the user may be editing
+    mid-run. *token* is echoed back untouched so MainWindow can tell a stale
+    result from a current one.
+
+    Emits ``finished`` exactly once and stores the same value in ``result``.
+    False means "not verified as applied": a mismatch, an error, or an
+    interruption. It is always the safe (red) direction.
+    """
+
+    finished = pyqtSignal(bool)
+
+    def __init__(self, compute, snapshot, token: int):
+        super().__init__()
+        self._compute = compute
+        self._snapshot = snapshot
+        self.token = token
+        self.result = False
+
+    def run(self):
+        try:
+            self.result = bool(self._compute(self._snapshot, self.isInterruptionRequested))
+        except Exception as e:
+            logger.debug(f"Could not verify already-applied state: {e}")
+            self.result = False
+        self.finished.emit(self.result)
 
 
 class StartupSyncWorker(QThread):

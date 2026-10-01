@@ -24,15 +24,10 @@ def get_user_cfg_language(channel_path: str | Path | None = None) -> str | None:
 
     Returns None if the channel path/user.cfg is missing or unreadable, or
     no g_language line is present. Pure read -- unlike ensure_user_cfg_
-    language, which also writes. Added for MainWindow._entries_already_
-    applied (#398 review): switching the language selector in Smart
-    Citizen's own UI never touches user.cfg by itself (ensure_user_cfg_
-    language only ever runs at window init and apply-to-game time), so a
-    merged-file-content comparison alone can look "already applied" (green)
-    for a language switched back to from another one, while the game's
-    user.cfg still points at the OTHER language entirely -- green with
-    nothing actually fixable, since Apply (the only path that corrects
-    g_language) is now disabled by that same false-green verdict.
+    language, which also writes. Used by the already-applied check
+    (_compute_already_applied in main_window.py, #398 review): switching
+    language in the UI never touches user.cfg, so the merged file content
+    can match while the game's user.cfg still points at another language.
     """
     if channel_path is None:
         channel_path = AppSettings.get_game_install_path()

@@ -99,42 +99,27 @@ class SimpleModeWidget(QWidget):
         self._refresh_apply_button()
 
     def set_apply_dirty(self, dirty: bool) -> None:
-        """Mirror the Advanced-mode Apply button's color/enabled convention
-        (#397): red/clickable when there's something to apply, green/
-        disabled when the loaded state already matches what's on disk.
-        Called from MainWindow._set_apply_btn_dirty, the one chokepoint
-        that already keeps the toolbar button in sync -- this button was
-        previously never wired to it at all, hardcoded green from
-        construction regardless of actual state.
-        """
+        """Mirror the Advanced-mode Apply button's state (#397): red when
+        there's something to apply, green when the loaded state already
+        matches the game. Driven by MainWindow._set_apply_btn_dirty. Only the
+        color and tooltip follow it; see _refresh_apply_button for why the
+        button itself never disables on green."""
         self._apply_dirty = dirty
         self._refresh_apply_button()
 
     def _refresh_apply_button(self) -> None:
-        """Single chokepoint for this button's tooltip, enabled state, and
-        color, so busy-state and dirty-state can't race and leave any of
-        them wrong -- busy always wins for enabled (never clickable
-        mid-run), dirty decides color and tooltip always but NOT enabled.
+        """Single chokepoint for this button's tooltip, enabled state and
+        color, so busy-state and dirty-state can't leave any of them out of
+        sync. Busy disables it (never clickable mid-run); dirty drives the
+        color and tooltip only.
 
-        The tooltip fix is #397 follow-up: this button's tooltip was still
-        the single static "here's what clicking does" string from
-        construction even after set_apply_dirty started correctly driving
-        color/enabled -- unlike the Advanced-mode Apply button, which
-        already swaps its tooltip text between the two states. Resolved
-        via tr() here (not cached) so a language switch picks it up too,
-        same as retranslate_ui below already does for everything else.
-
-        #397 review: enabled must NOT also depend on dirty, unlike the
-        Advanced-mode Apply button (main_window.py's apply_btn.setEnabled
-        (dirty)). That button can safely disable on green because Config/
-        Enhancements still offer other always-clickable entry points to
-        force a recheck (e.g. "Extract DataForge from P4K" picking up a
-        game patch). Simple mode hides both tabs -- this button is the
-        ONLY extract/generate/apply entry point -- so a green-and-disabled
-        state after a patch (dirty still reflects the OLD, now-stale
-        comparison) leaves the user with no way to refresh at all. Dirty
-        still drives color/tooltip so a correctly-green state still reads
-        as "nothing to do"; the user can simply choose to click anyway.
+        Dirty deliberately does not disable it, unlike the Advanced-mode
+        Apply button. That one can go grey because Config and Enhancements
+        still offer other ways to force a recheck (e.g. re-extracting after a
+        game patch). Simple mode hides both tabs, so this button is the only
+        extract/generate/apply entry point and must stay clickable even when
+        the state reads as already applied. Tooltips are resolved via tr() on
+        every refresh so a language switch picks them up.
         """
         color = get_button_color("needs_apply" if self._apply_dirty else "apply")
         self.generate_apply_btn.setStyleSheet(
