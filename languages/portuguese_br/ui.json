@@ -552,7 +552,11 @@
     },
     "map_language_desc": {
       "ht": "",
-      "at": "Defina uma URL para o global.ini de cada idioma. Ao trocar para esse idioma, o Smart Citizen o baixa e o usa como strings base, em vez da extração em inglês do Data.p4k. O download fica em cache por idioma e só é baixado novamente quando houver alterações. Deixe um campo em branco para usar o padrão incluído (se houver)."
+      "at": "Defina uma URL ou um caminho de arquivo local para o global.ini de cada idioma (use Procurar para um arquivo que você já tem). Ao trocar para esse idioma, o Smart Citizen o usa como texto base em vez da extração em inglês do Data.p4k — uma URL é baixada e armazenada em cache, sendo baixada novamente apenas quando muda; um arquivo local é copiado. Deixe um campo em branco para usar o padrão incluído (se houver)."
+    },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "Não é possível mapear {languages} aqui: esse caminho é onde o Smart Citizen grava sua própria saída mesclada para este idioma. Aplicar novamente traria essa saída de volta como origem, duplicando cada aprimoramento. Copie o arquivo da comunidade para outra pasta primeiro e depois mapeie essa cópia."
     },
     "base_localization_label": {
       "ht": "Localização Base",
@@ -748,7 +752,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Definir uma URL para o global.ini de cada idioma. Ao mudar para esse idioma, o Smart Citizen o baixa e o usa como strings base em vez da extração em inglês do Data.p4k."
+      "at": "Defina uma URL ou um caminho de arquivo local para o global.ini de cada idioma. Ao trocar para esse idioma, o Smart Citizen o usa como texto base em vez da extração em inglês do Data.p4k."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -2118,11 +2122,11 @@
     },
     "language_no_url": {
       "ht": "",
-      "at": "Nenhuma URL de download definida para {language}; exibindo a base em inglês. Use “Mapear Arquivo de Idioma” para definir uma."
+      "at": "Nenhuma fonte definida para {language}; exibindo a base em inglês. Use Mapear Arquivo de Idioma para definir uma."
     },
     "language_download_failed": {
       "ht": "",
-      "at": "Não foi possível baixar a localização {language}, e nenhuma cópia em cache foi encontrada. Exibindo a base em inglês. Verifique a URL em “Mapear Arquivo de Idioma” e sua conexão, e tente novamente."
+      "at": "Não foi possível carregar a localização {language} a partir da fonte configurada, e nenhuma cópia em cache foi encontrada. Exibindo a base em inglês. Verifique a URL ou o arquivo em Mapear Arquivo de Idioma e tente novamente."
     },
     "language_generating_enhancements": {
       "ht": "",

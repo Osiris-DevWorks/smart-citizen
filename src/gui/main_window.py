@@ -622,6 +622,7 @@ class MainWindow(QMainWindow):
         self.config_tab.restore_user_ini_requested.connect(self._handle_restore_user_ini)
         self.config_tab.channel_changed.connect(self._on_channel_changed)
         self.config_tab.language_changed.connect(self._on_language_changed)
+        self.config_tab.language_source_changed.connect(self._apply_language_base_source)
         self.config_tab.check_updates_requested.connect(self._on_check_updates_clicked)
         self.config_tab.data_dir_changed.connect(self._on_data_dir_changed)
         self.config_tab.cache_dir_changed.connect(self._on_cache_dir_changed)

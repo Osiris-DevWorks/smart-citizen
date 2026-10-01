@@ -3170,18 +3170,20 @@ class AppSettings:
         return game_path / AppSettings.get_active_channel() / "Data.p4k"
 
     @staticmethod
-    def get_global_ini_path() -> Path:
+    def get_global_ini_path(language: str | None = None) -> Path:
         r"""Return the active channel's applied ``global.ini`` location.
 
         Equivalent to ``{sc_install_root}\{active_channel}\data\Localization\{language}\global.ini``
         — the file "Apply to Game" writes and "Clear Localization" deletes.
-        The language directory reflects :meth:`get_selected_language`.
+        The language directory defaults to :meth:`get_selected_language`, or
+        pass *language* to resolve another language's apply path (e.g. to
+        check a mapped source against it before switching to that language).
         Callers should use this instead of reconstructing the path from
         :meth:`get_game_install_path`, which the pre-0.9.3 code did with
         scattered ``if name == "LIVE"`` branches that don't cover the new
         channels.
         """
-        sc_lang = AppSettings.get_sc_language_id()
+        sc_lang = AppSettings.get_sc_language_id(language)
         channel_path = AppSettings.get_channel_install_path()
         if channel_path:
             return Path(channel_path) / "data" / "Localization" / sc_lang / "global.ini"
@@ -3193,6 +3195,21 @@ class AppSettings:
             game_path / AppSettings.get_active_channel()
             / "data" / "Localization" / sc_lang / "global.ini"
         )
+
+    @staticmethod
+    def is_local_source_same_as_apply_target(local_path: str, language: str) -> bool:
+        """True if *local_path* (a Map Language File local path, not a URL)
+        resolves to the exact file "Apply to Game" writes for *language*.
+
+        Guards the Map Language File dialog's save (#409 follow-up): a
+        language whose community translation can't be redistributed (e.g.
+        Korean) is typically installed by its own community patcher at
+        exactly this path, so it's an easy path for a user to pick. Accepting
+        it would feed Smart Citizen's own merged output back in as the
+        "source" on the next apply, double-stacking every enhancement.
+        """
+        target = AppSettings.get_global_ini_path(language)
+        return os.path.normcase(os.path.abspath(local_path)) == os.path.normcase(str(target))
 
     @staticmethod
     def ensure_user_ini_file() -> None:

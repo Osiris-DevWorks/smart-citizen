@@ -578,6 +578,10 @@
       "ht": "Set a URL or local file path to each language's global.ini (use Browse for a file you already have). When you switch to that language, Smart Citizen uses it as the base strings instead of the English Data.p4k extraction — a URL is downloaded and cached, only re-fetched when it changes; a local file is copied in. Leave a field blank to use the bundled default (if any).",
       "at": ""
     },
+    "map_language_overwrite_warning": {
+      "ht": "{languages} can't be mapped here: that path is where Smart Citizen writes its own merged output for this language. Applying again would feed that output back in as the source and double every enhancement. Copy the community file to a different folder first, then map that copy.",
+      "at": ""
+    },
     "base_localization_label": {
       "ht": "Base Localization",
       "at": ""

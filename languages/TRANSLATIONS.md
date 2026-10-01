@@ -52,10 +52,28 @@ them against the new source.
   URL-or-local-file phrasing for #367's local-file *Map Language File*
   support. Affects spanish, whose human `ht` for all three still describes
   a URL-only flow ("Define una URL al global.ini...", "No hay URL de
-  descarga configurada...").
+  descarga configurada..."). The AI `at` fallback for every other non-English
+  language had the same staleness (no `ht` to protect there, so the 2026-10-01
+  backfill below refreshed all of them directly instead of just flagging it).
 
 ## Backfill log
 
+- **2.4.0 cycle (2026-10-01, Claude Sonnet 5):** Merged `release/2.4.0` into
+  Korean's PR branch (#409) and backfilled the 50 English keys that had
+  landed since Korean's own translation pass: the duplicate-install-detection
+  feature's 44 `config.dupe_*` keys and the blueprint auto-scan feature's 6
+  `blueprint_tracker.auto_scan_*` / `scan_logs_already_running_tooltip` keys.
+  All `at`-only, styled on Korean's existing formal register. One further key
+  (`simple_mode.generate_apply_tip_disabled`) remains outstanding: it ships on
+  a PR still pending merge at backfill time, so it isn't visible to diff yet.
+  Also added `config.map_language_overwrite_warning` (new #409-follow-up
+  guard against mapping a language's own apply target as its source) across
+  all 10 languages, backfilled turkish's own missing `dialogs.language_copying`
+  (added by Korean's original pass before turkish existed, #404 never saw
+  it), and refreshed the stale URL-only `at` text on the 4 keys above for
+  french, portuguese_br, japanese, chinese, italian, german, and turkish
+  (Spanish's human `ht` is untouched, per the note above; its one AT-only key
+  among the four, `map_language_tooltip`, was refreshed too).
 - **2.4.0 cycle (2026-09-10, Claude Sonnet 5):** New language **korean** added
   (#367), shipped as bring-your-own-file rather than with a bundled source.
   Full AI translation of all 668 `ui.json` keys plus the 19-step guided tour

@@ -260,18 +260,16 @@ class LanguageBaseDownloadWorker(QThread):
         self._dest = dest_path
 
     def run(self):
-        import shutil
-        from src.utils.updater import download_file_if_changed
+        from src.utils.updater import fetch_language_base
+        is_url = self._source.startswith(("http://", "https://"))
         try:
-            if self._source.startswith(("http://", "https://")):
-                changed = download_file_if_changed(self._source, self._dest)
+            changed = fetch_language_base(self._source, self._dest)
+            if is_url:
                 logger.info(
                     f"Language base.ini ready: {self._dest} "
                     f"({'downloaded' if changed else 'unchanged, used cache'})"
                 )
             else:
-                Path(self._dest).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(self._source, self._dest)
                 logger.info(f"Language base.ini ready: {self._dest} (copied from local file)")
             self.finished.emit(True)
         except Exception as e:
