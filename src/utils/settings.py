@@ -64,6 +64,7 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     # not recognise it.
     "turkish":       "polish_(poland)",
     "korean":        "korean_(south_korea)",
+    "chinese_traditional": "chinese_(traditional)",
 }
 
 

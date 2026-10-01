@@ -18,6 +18,16 @@ from src.utils.user_ini_manager import migrate_user_data_dir
 
 logger = logging.getLogger(__name__)
 
+# Display labels that diverge from the generic folder-name transform
+# (lang.replace("_", " ").title()) used by _populate_language_combo below --
+# either because the word order that transform produces is wrong (e.g.
+# "chinese_traditional" -> "Chinese Traditional" reads backwards) or because
+# the label needs to carry extra context up front, before the user selects
+# it.
+_LANGUAGE_COMBO_LABEL_OVERRIDES = {
+    "chinese_traditional": "Traditional Chinese",
+}
+
 
 class ConfigTab(QWidget):
     """Configuration tab — game path, P4K extraction, and import tools."""
@@ -1082,7 +1092,10 @@ class ConfigTab(QWidget):
         try:
             self.language_combo.clear()
             for lang in AppSettings.get_available_languages():
-                self.language_combo.addItem(lang.replace("_", " ").title(), userData=lang)
+                label = _LANGUAGE_COMBO_LABEL_OVERRIDES.get(
+                    lang, lang.replace("_", " ").title()
+                )
+                self.language_combo.addItem(label, userData=lang)
             current = AppSettings.get_selected_language()
             idx = self.language_combo.findData(current)
             if idx < 0:
@@ -1293,7 +1306,9 @@ class LanguageSourceDialog(QDialog):
         self._original_overrides: dict[str, str] = {}
         grid = QGridLayout()
         for row, lang in enumerate(sorted(langs)):
-            label = QLabel(lang.replace("_", " ").title())
+            label = QLabel(_LANGUAGE_COMBO_LABEL_OVERRIDES.get(
+                lang, lang.replace("_", " ").title()
+            ))
             original = AppSettings.get_language_source_override(lang)
             edit = QLineEdit(original)
             edit.setPlaceholderText(

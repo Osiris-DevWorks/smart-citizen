@@ -812,6 +812,8 @@ begin
            'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'turkish');
       9: RegWriteStringValue(HKCU,
            'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'korean');
+      10: RegWriteStringValue(HKCU,
+           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'chinese_traditional');
     else
       RegWriteStringValue(HKCU,
         'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'english');
@@ -1353,6 +1355,7 @@ begin
   LanguageChoicePage.Add('German');
   LanguageChoicePage.Add('Turkish');
   LanguageChoicePage.Add('Korean');
+  LanguageChoicePage.Add('Traditional Chinese');
 
   { Pre-select the prior choice on a reinstall so an upgrade doesn't
     silently reset a non-English user back to English. Defaults to
@@ -1381,6 +1384,8 @@ begin
       LanguageIndex := 8
     else if CompareText(SavedLanguage, 'korean') = 0 then
       LanguageIndex := 9
+    else if CompareText(SavedLanguage, 'chinese_traditional') = 0 then
+      LanguageIndex := 10
     else if CompareText(SavedLanguage, 'english') <> 0 then
       { A saved value that matches none of this page's options — e.g. a
         newer app version shipped a 5th language before this installer's
