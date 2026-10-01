@@ -384,6 +384,71 @@ class TestLauncherLog:
         parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
         assert [root for root, _ in parsed.values()] == [named]
 
+    def test_per_file_paths_under_one_install_share_the_folder_walk(
+        self, tmp_path, monkeypatch
+    ):
+        """Each per-file path is a distinct raw string, so without a per-folder
+        memo every one walks up through the same folders again. First-run
+        detection parses on the GUI thread, so that walk has to stay bounded."""
+        root = make_install(tmp_path / "StarCitizen")
+        files = 40
+        lines = [
+            '{ "t":"2026-08-14 09:12:01.001", "[main][info] ": "Patched %s"  },'
+            % str(root / "LIVE" / "Data" / "Objects" / f"file{i}.dds").replace("\\", "\\\\")
+            for i in range(files)
+        ]
+        calls = []
+        real = scanner.is_sc_install_root
+        monkeypatch.setattr(
+            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
+        )
+
+        parsed = parse_launcher_log("\n".join(lines))
+
+        assert [found for found, _ in parsed.values()] == [root]
+        # One test per file path, plus one per folder on the way up. Without
+        # the memo it is five per file path.
+        assert len(calls) <= files + 4
+
+
+# -- One folder below each drive's top ---------------------------------------
+
+class TestShallowScan:
+    def _found(self, drive):
+        return list(scanner.iter_shallow_sc_install_locations([str(drive)]))
+
+    def test_finds_a_library_folder_one_level_down(self, tmp_path):
+        rsi = make_install(tmp_path / "Other Games" / "Roberts Space Industries" / "StarCitizen")
+        plain = make_install(tmp_path / "Library" / "StarCitizen")
+        at_root = make_install(tmp_path / "StarCitizen")
+        assert self._found(tmp_path) == [at_root, plain, rsi]
+
+    def test_a_leftover_without_game_data_is_not_picked(self, tmp_path):
+        """Nobody chose these folders, so the shell of an old install must not
+        be picked for them."""
+        make_install(tmp_path / "Old Games" / "StarCitizen", game_data=False)
+        assert self._found(tmp_path) == []
+
+    def test_smart_citizen_data_is_not_an_install(self, tmp_path):
+        data = tmp_path / "Smart Citizen" / "StarCitizen" / "LIVE"
+        data.mkdir(parents=True)
+        (data / "user.ini").write_text("k=v\n", encoding="utf-8")
+        assert self._found(tmp_path) == []
+
+    def test_does_not_go_two_folders_down(self, tmp_path):
+        make_install(tmp_path / "Games" / "PC" / "Roberts Space Industries" / "StarCitizen")
+        assert self._found(tmp_path) == []
+
+    def test_skips_system_folders(self, tmp_path):
+        make_install(tmp_path / "Windows" / "StarCitizen")
+        make_install(tmp_path / "$Stash" / "StarCitizen")
+        assert self._found(tmp_path) == []
+
+    def test_a_missing_drive_is_skipped(self, tmp_path):
+        found = make_install(tmp_path / "Games2" / "StarCitizen")
+        drives = [str(tmp_path / "no-such-drive"), str(tmp_path)]
+        assert list(scanner.iter_shallow_sc_install_locations(drives)) == [found]
+
 
 # -- Verdicts ----------------------------------------------------------------
 

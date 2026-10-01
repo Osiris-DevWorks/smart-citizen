@@ -50,11 +50,16 @@ def json_backend(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def no_real_launcher_log(monkeypatch):
-    """The auto-detect scan also reads %APPDATA%\\rsilauncher\\logs\\log.log, and on a
-    developer's machine that log names their real install. Keep every test off it:
-    tests that want a launcher log pass one in (see TestScanUsesLauncherLog)."""
+    """The auto-detect scan also reads %APPDATA%\\rsilauncher\\logs\\log.log and, when
+    nothing else turns up, lists the top of every fixed drive. On a developer's
+    machine either can find their real install. Keep every test off both: tests
+    that want them pass their own in (see TestScanUsesLauncherLog)."""
     monkeypatch.setattr(
         "src.utils.settings.read_launcher_installs", lambda log_path=None: ({}, False)
+    )
+    monkeypatch.setattr(
+        "src.utils.settings.iter_shallow_sc_install_locations",
+        lambda drives=None: iter(()),
     )
 
 
@@ -497,12 +502,13 @@ class TestScanUsesLauncherLog:
 
     @pytest.fixture
     def scan(self, monkeypatch):
-        """Run the real scan with the common-path walk replaced by ``common`` and the
-        launcher log replaced by the file ``log`` (None = no log)."""
+        """Run the real scan with the common-path walk replaced by ``common``, the
+        launcher log replaced by the file ``log`` (None = no log), and the
+        one-folder fallback replaced by ``shallow``."""
         import src.utils.install_scanner as scanner
         import src.utils.settings as settings_mod
 
-        def _run(*, common=(), log=None):
+        def _run(*, common=(), log=None, shallow=()):
             monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
             monkeypatch.setattr(
                 settings_mod, "iter_common_sc_install_locations",
@@ -514,9 +520,24 @@ class TestScanUsesLauncherLog:
                     scanner.read_launcher_installs(log) if log else ({}, False)
                 ),
             )
+            monkeypatch.setattr(
+                settings_mod, "iter_shallow_sc_install_locations",
+                lambda drives=None: iter([Path(c) for c in shallow]),
+            )
             return settings_mod._scan_common_sc_install_locations()
 
         return _run
+
+    @pytest.fixture
+    def ranked(self, monkeypatch):
+        """Record what reaches _pick_live_sc_install, which then picks the first."""
+        import src.utils.settings as settings_mod
+
+        seen = []
+        monkeypatch.setattr(
+            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
+        )
+        return seen
 
     def test_finds_an_install_in_a_custom_folder_the_log_names(self, tmp_path, scan):
         root = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
@@ -532,67 +553,109 @@ class TestScanUsesLauncherLog:
         common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
         assert scan(common=[common], log=tmp_path / "missing.log") == str(common)
 
-    def test_root_found_both_ways_reaches_the_ranker_once(self, tmp_path, scan, monkeypatch):
-        import src.utils.settings as settings_mod
-
+    def test_root_found_both_ways_reaches_the_ranker_once(self, tmp_path, scan, ranked):
         both = _fake_install(tmp_path, "Roberts Space Industries", "StarCitizen")
         only_common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
         log = _launcher_log(tmp_path, (both, "2026-09-30 21:01:02.003"))
-        seen = []
-        monkeypatch.setattr(
-            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
-        )
         scan(common=[both, only_common], log=log)
-        assert seen == [str(both), str(only_common)]
+        assert ranked == [str(both), str(only_common)]
 
-    def test_most_recently_mentioned_install_is_ranked_first(self, tmp_path, scan, monkeypatch):
-        import src.utils.settings as settings_mod
+    def test_the_same_root_in_different_casing_reaches_the_ranker_once(
+        self, tmp_path, scan, ranked
+    ):
+        """The log keeps whatever casing the launcher wrote, and Windows paths are
+        case-insensitive, so the dedup has to be too."""
+        both = _fake_install(tmp_path, "Roberts Space Industries", "StarCitizen")
+        logged = Path(str(both).lower())
+        log = _launcher_log(tmp_path, (logged, "2026-09-30 21:01:02.003"))
+        scan(common=[both], log=log)
+        assert ranked == [str(logged)]
 
+    def test_most_recently_mentioned_install_is_ranked_first(self, tmp_path, scan, ranked):
+        """The launcher appends to its log, so the newer mention comes last. It
+        still has to reach the ranker first, where it wins a Data.p4k tie."""
         old = _fake_install(tmp_path, "Old", "StarCitizen")
         new = _fake_install(tmp_path, "New", "StarCitizen")
         log = _launcher_log(
-            tmp_path, (new, "2026-09-30 21:01:02.003"), (old, "2026-08-01 10:00:00.000")
-        )
-        seen = []
-        monkeypatch.setattr(
-            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
+            tmp_path, (old, "2026-08-01 10:00:00.000"), (new, "2026-09-30 21:01:02.003")
         )
         scan(log=log)
-        assert seen == [str(new), str(old)]
+        assert ranked == [str(new), str(old)]
 
     def test_launcher_named_install_is_ranked_ahead_of_common_path_hits(
-        self, tmp_path, scan, monkeypatch
+        self, tmp_path, scan, ranked
     ):
         """A tie on Data.p4k age goes to the install the launcher last used."""
-        import src.utils.settings as settings_mod
-
         launcher = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
         common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
         log = _launcher_log(tmp_path, (launcher, "2026-09-30 21:01:02.003"))
-        seen = []
-        monkeypatch.setattr(
-            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
-        )
         scan(common=[common], log=log)
-        assert seen == [str(launcher), str(common)]
+        assert ranked == [str(launcher), str(common)]
+
+    def test_the_one_folder_fallback_finds_what_the_log_does_not_name(self, tmp_path, scan):
+        """The launcher's logs can be cleared or rotated, so the log is not always
+        there to name a custom library folder."""
+        root = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
+        assert scan(log=tmp_path / "missing.log", shallow=[root]) == str(root)
+
+    def test_the_one_folder_fallback_waits_until_nothing_else_found_one(
+        self, tmp_path, scan, ranked
+    ):
+        """It never joins the ranking the log and the common paths feed, so it
+        cannot change which install an existing setup resolves to."""
+        common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
+        logged = _fake_install(tmp_path, "Other Games", "StarCitizen")
+        shallow = _fake_install(tmp_path, "Elsewhere", "StarCitizen")
+        log = _launcher_log(tmp_path, (logged, "2026-09-30 21:01:02.003"))
+
+        scan(common=[common], shallow=[shallow])
+        assert ranked == [str(common)]
+        ranked.clear()
+        scan(log=log, shallow=[shallow])
+        assert ranked == [str(logged)]
 
     def test_fresh_profile_gets_the_log_named_install_and_keeps_it(
         self, tmp_path, json_backend, monkeypatch
     ):
         """End to end through get_sc_install_root(): nothing saved, no installer
-        registry value, only the launcher log knows where the game is."""
+        registry value, only the launcher log at its default place under
+        %APPDATA% knows where the game is."""
         import src.utils.install_scanner as scanner
         import src.utils.settings as settings_mod
 
         root = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
-        log = _launcher_log(tmp_path, (root, "2026-09-30 21:01:02.003"))
+        appdata = tmp_path / "appdata"
+        log_dir = appdata / "rsilauncher" / "logs"
+        log_dir.mkdir(parents=True)
+        _launcher_log(log_dir, (root, "2026-09-30 21:01:02.003"))
+        monkeypatch.setenv("APPDATA", str(appdata))
+        monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
+        monkeypatch.setattr(
+            settings_mod, "iter_common_sc_install_locations", lambda drives=None: iter(())
+        )
+        # The real reader, undoing the autouse stub, so the default log path is used.
+        monkeypatch.setattr(settings_mod, "read_launcher_installs", scanner.read_launcher_installs)
+
+        assert AppSettings.get_sc_install_root() == str(root)
+        assert AppSettings.settings().value(AppSettings.SC_INSTALL_ROOT, "") == str(root)
+
+    def test_fresh_profile_without_a_log_gets_the_one_folder_install(
+        self, tmp_path, json_backend, monkeypatch
+    ):
+        """End to end with no launcher log: the one-folder fallback over a fake
+        drive finds the install and it is saved."""
+        import src.utils.install_scanner as scanner
+        import src.utils.settings as settings_mod
+
+        drive = tmp_path / "drive"
+        root = _fake_install(drive, "Other Games", "Roberts Space Industries", "StarCitizen")
         monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
         monkeypatch.setattr(
             settings_mod, "iter_common_sc_install_locations", lambda drives=None: iter(())
         )
         monkeypatch.setattr(
-            settings_mod, "read_launcher_installs",
-            lambda log_path=None: scanner.read_launcher_installs(log),
+            settings_mod, "iter_shallow_sc_install_locations",
+            lambda drives=None: scanner.iter_shallow_sc_install_locations([str(drive)]),
         )
 
         assert AppSettings.get_sc_install_root() == str(root)

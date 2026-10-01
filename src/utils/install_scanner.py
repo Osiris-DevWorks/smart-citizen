@@ -7,8 +7,8 @@ Smart Citizen writes into one install: apply drops ``global.ini`` under
 folder, a second drive, a leftover from a reinstall) and Smart Citizen is
 pointed at the one the player *doesn't* launch, apply reports success,
 ``validate_applied_file`` passes, and nothing changes in game. Nothing in the
-app could previously surface that, because every existing lookup
-(``settings._scan_common_sc_install_locations``) stops at the first hit.
+app could previously surface that, because the only existing lookup
+(``settings._scan_common_sc_install_locations``) returns a single install.
 
 This module is the "find them all" half. It is deliberately Qt-free and
 settings-free -- it takes explicit inputs and returns plain dataclasses, so it
@@ -27,7 +27,9 @@ Evidence is gathered in three tiers, cheapest first:
    ``launcher store.json`` is encrypted in current launcher builds; don't
    bother with it.)
 2. **Cheap** -- the common RSI install paths on every drive letter, shared with
-   settings.py via ``iter_common_sc_install_locations``.
+   settings.py via ``iter_common_sc_install_locations``. First-run detection
+   in settings.py also has ``iter_shallow_sc_install_locations``, one folder
+   below the top of each fixed drive, as a last resort.
 3. **Opt-in** -- :func:`deep_scan_roots`, a depth-bounded walk of the fixed
    drives for installs at custom paths. Slow enough to need a worker thread,
    a progress callback, and a cancel hook, so it is never run implicitly.
@@ -678,16 +680,25 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
         emitted += 1
 
 
-def resolve_logged_root(raw: str) -> Optional[Path]:
+def resolve_logged_root(
+    raw: str, checked: Optional[dict[str, bool]] = None
+) -> Optional[Path]:
     """Turn one raw path out of the launcher log into an install root on disk.
 
     Returns None when nothing along the path resolves, which covers both junk
-    matches and installs the user has since deleted.
+    matches and installs the user has since deleted. *checked* memoizes the
+    install test per candidate folder, so a caller resolving many paths under
+    one install tests each of its folders once.
     """
     for candidate in _logged_path_candidates(raw):
-        path = Path(candidate)
-        if is_sc_install_root(path):
-            return path
+        if checked is not None and candidate in checked:
+            is_root = checked[candidate]
+        else:
+            is_root = is_sc_install_root(Path(candidate))
+            if checked is not None:
+                checked[candidate] = is_root
+        if is_root:
+            return Path(candidate)
     return None
 
 
@@ -703,6 +714,9 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
     """
     seen: dict[str, tuple[Path, datetime]] = {}
     resolved: dict[str, Optional[Path]] = {}  # raw -> root, memo across lines
+    # Folder -> install test, so per-file paths under one install (each a
+    # distinct raw string) share the walk up through its folders.
+    checked: dict[str, bool] = {}
     last_stamp: Optional[datetime] = None
 
     for line in text.splitlines():
@@ -720,7 +734,7 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
             if _LOG_PATH_HINT not in raw.lower():
                 continue
             if raw not in resolved:
-                resolved[raw] = resolve_logged_root(raw)
+                resolved[raw] = resolve_logged_root(raw, checked)
             root = resolved[raw]
             if root is None:
                 continue
@@ -777,11 +791,14 @@ def iter_common_sc_install_locations(
 ) -> Iterator[Path]:
     """Yield every existing install root sitting at a common RSI path.
 
-    The canonical form of the walk ``settings._scan_common_sc_install_locations``
-    does; that function is now just the cached first-hit consumer of this. Drive
-    presence is tested with ``exists()`` rather than :func:`fixed_drives` to
-    keep the pre-existing behaviour exactly (an install on a removable or
-    mapped drive still resolves).
+    Shared by :func:`scan_installs` and first-run detection
+    (``settings._scan_common_sc_install_locations``), which merges these hits
+    with the roots the launcher log names and ranks them all. Hits only need a
+    channel folder (:func:`looks_like_sc_root`), kept that loose so an existing
+    profile keeps resolving to the same path. Drive presence is tested with
+    ``exists()`` rather than :func:`fixed_drives` to keep the pre-existing
+    behaviour exactly (an install on a removable or mapped drive still
+    resolves).
     """
     letters = drives if drives is not None else (f"{c}:\\" for c in string.ascii_uppercase)
     for letter in letters:
@@ -794,6 +811,67 @@ def iter_common_sc_install_locations(
         for subpath in COMMON_SC_SUBPATHS:
             candidate = drive_root / subpath
             if looks_like_sc_root(candidate):
+                yield candidate
+
+
+# The launcher puts ``StarCitizen`` straight inside whatever library folder the
+# player picks, so a library at a drive's root or one folder below it (an
+# ``E:\Other Games`` folder, with or without RSI's own folder inside) puts the
+# install at one of these, relative to each top-level folder.
+SHALLOW_SC_SUBPATHS: tuple[str, ...] = (
+    r"Roberts Space Industries\StarCitizen",
+    "StarCitizen",
+)
+
+
+def _has_game_data(root: Path) -> bool:
+    """Return True if any channel folder under *root* holds ``Data.p4k``."""
+    for channel_dir in channel_dirs(root):
+        try:
+            if (channel_dir / GAME_DATA_FILE).is_file():
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def iter_shallow_sc_install_locations(
+    drives: Optional[Iterable[str]] = None,
+) -> Iterator[Path]:
+    r"""Yield installs with game data one folder below the top of each fixed drive.
+
+    First-run detection's last resort, for when neither the launcher log nor a
+    common path names the install. It costs one directory listing per fixed
+    drive plus a few probes per top-level folder, so it can run on the GUI
+    thread like the common-path walk. Checks ``<drive>\StarCitizen`` and each
+    top-level folder joined with :data:`SHALLOW_SC_SUBPATHS`, skipping
+    :data:`_DEEP_SCAN_SKIP_DIRS` and ``$``-prefixed system folders. Only a root
+    with ``Data.p4k`` in some channel counts: nobody chose these folders, so a
+    leftover shell must not be picked for them.
+    """
+    targets = list(drives) if drives is not None else fixed_drives()
+    for drive in targets:
+        drive_root = Path(drive)
+        candidates = [drive_root / "StarCitizen"]
+        try:
+            with os.scandir(drive_root) as entries:
+                tops = []
+                for entry in entries:
+                    name = entry.name.lower()
+                    if name in _DEEP_SCAN_SKIP_DIRS or name.startswith("$"):
+                        continue
+                    try:
+                        if not entry.is_dir(follow_symlinks=False):
+                            continue
+                    except OSError:
+                        continue
+                    tops.append(Path(entry.path))
+        except OSError:
+            continue
+        for top in sorted(tops, key=lambda p: p.name.lower()):
+            candidates.extend(top / subpath for subpath in SHALLOW_SC_SUBPATHS)
+        for candidate in candidates:
+            if _has_game_data(candidate):
                 yield candidate
 
 

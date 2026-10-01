@@ -12,8 +12,10 @@ import winreg
 from src.utils.install_scanner import (
     SC_CHANNELS,
     iter_common_sc_install_locations,
+    iter_shallow_sc_install_locations,
     looks_like_sc_root,
     read_launcher_installs,
+    same_path,
 )
 
 logger = logging.getLogger(__name__)
@@ -117,17 +119,26 @@ def _scan_common_sc_install_locations() -> "str | None":
     installer already told us where the game is. This exists for the case
     none of those do: a portable build's first run, or a fresh profile,
     where the only way to find an install on a non-default drive is to look.
-    Cheap in practice -- most drive letters don't exist and short-circuit on
-    the very first ``exists()`` check, and a hit is validated the same way
-    every other candidate is (:func:`install_scanner.looks_like_sc_root`), so
-    an empty/stub folder (e.g. a partial RSI Launcher download with no real
-    ``Data.p4k`` channel folder yet) is never mistaken for a real install.
 
-    The RSI Launcher's own log is read too. It names the install the
-    launcher maintains wherever the player put it, which no fixed list of
-    folder shapes can match (an install under a folder called "Other
-    Games" was the one that surfaced this). A root it names is used only
-    if it still exists, and it is ranked with every other candidate.
+    Candidates come from two sources, ranked together by
+    :func:`_pick_live_sc_install`:
+
+    - The RSI Launcher's own log, which names the install the launcher
+      maintains wherever the player put it. No fixed list of folder shapes
+      can match that (an install under a folder called "Other Games" was the
+      one that surfaced this). A root it names must still pass
+      :func:`install_scanner.is_sc_install_root`, real Star Citizen files in
+      a channel folder.
+    - The common RSI install paths on every drive letter
+      (:func:`install_scanner.iter_common_sc_install_locations`). Cheap, since
+      most drive letters don't exist and short-circuit on the first
+      ``exists()`` check. These only need a channel folder
+      (:func:`install_scanner.looks_like_sc_root`).
+
+    When neither finds anything, one folder below the top of each fixed drive
+    is checked too (:func:`install_scanner.iter_shallow_sc_install_locations`),
+    which only accepts a root with ``Data.p4k``. That covers a library folder
+    the log does not name, for example after the launcher's logs were cleared.
 
     Cached in-memory for the process's lifetime, including a "found
     nothing" result -- without this, a no-install profile re-walks every
@@ -154,10 +165,12 @@ def _scan_common_sc_install_locations() -> "str | None":
         read_launcher_installs()[0].values(), key=lambda hit: hit[1], reverse=True
     )
     candidates = [str(root) for root, _seen in logged]
-    known = {os.path.normcase(os.path.normpath(c)) for c in candidates}
     candidates += [
-        c for c in common if os.path.normcase(os.path.normpath(c)) not in known
+        c for c in common if not any(same_path(c, known) for known in candidates)
     ]
+
+    if not candidates:
+        candidates = [str(p) for p in iter_shallow_sc_install_locations()]
 
     if not candidates:
         _sc_scan_cache = None
@@ -2585,9 +2598,10 @@ class AppSettings:
              maintains wherever the player put it, plus every local
              drive letter at a common RSI Launcher install path -- a
              default C:\\ install, a secondary drive kept in the same
-             shape, or one nested under a personal "Games" folder.
-             Persists the result once found, so this scan only runs
-             once per profile.
+             shape, or one nested under a personal "Games" folder. If
+             neither finds one, a library folder one level below the top
+             of a fixed drive. Persists the result once found, so this
+             scan only runs once per profile.
 
         Returns an empty string when nothing resolves — the Config tab shows
         a placeholder in that case.
