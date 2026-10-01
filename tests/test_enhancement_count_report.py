@@ -6,8 +6,7 @@ for medical consumables ("Medical Consumables" vs "Gear").
 """
 from __future__ import annotations
 
-import inspect
-import re
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -121,24 +120,73 @@ class TestCountEnhancementCategories:
 
 
 class TestApplyToGameWiring:
-    """apply_to_game can't be driven without a window, so pin by source that it
-    fetches the generator's category map and hands it to the helper. Without it
-    every medical consumable lands in "Gear" again (the #399 review bug)."""
+    """Drives the real apply_to_game on a MagicMock self, with file I/O and
+    message boxes stubbed, and reads the success dialog the user sees. A medical
+    consumable must show as "Medical Consumables", not "Gear": that is what
+    apply_to_game passing the generator's category map to the count is for."""
 
-    @staticmethod
-    def _source():
-        return inspect.getsource(MainWindow.apply_to_game)
+    KEY = "item_Desccrlf_consumable_adrenaline_01"
 
-    def test_fetches_the_key_category_map(self):
-        assert re.search(
-            r"sources_dict, hierarchy, enhancements_key_categories\s*=\s*"
-            r"load_sources_from_settings\(\)",
-            self._source(),
-        ), "apply_to_game dropped the map load_sources_from_settings() returns"
+    def test_success_dialog_uses_the_category_map(self, tmp_path, monkeypatch):
+        import src.merger.ini_merger as ini_merger
+        import src.utils.user_cfg as user_cfg
+        import src.utils.user_ini_manager as user_ini_manager
+        from src.gui import main_window
+        from src.utils.settings import AppSettings
 
-    def test_passes_the_map_to_the_helper(self):
-        assert re.search(
-            r"_count_enhancement_categories\(\s*sources_dict,"
-            r"\s*enhancements_key_categories\s*\)",
-            self._source(),
-        ), "apply_to_game no longer passes the key-category map to the helper"
+        base = tmp_path / "base.ini"
+        base.write_text(f"{self.KEY}=Stock\n", encoding="utf-8")
+        shown = []
+
+        class FakeMessageBox:
+            class StandardButton:
+                Yes = 1
+                No = 2
+
+            @staticmethod
+            def information(parent, title, text, *args, **kwargs):
+                shown.append(("information", text))
+
+            @staticmethod
+            def warning(parent, title, text, *args, **kwargs):
+                shown.append(("warning", text))
+
+            @staticmethod
+            def critical(parent, title, text, *args, **kwargs):
+                shown.append(("critical", text))
+
+        monkeypatch.setattr(main_window, "QMessageBox", FakeMessageBox)
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: (
+            {AppSettings.SOURCE_GLOBAL: {self.KEY: "Stock"},
+             AppSettings.SOURCE_ENHANCEMENTS: {self.KEY: "Enhanced"}},
+            [AppSettings.SOURCE_GLOBAL, AppSettings.SOURCE_ENHANCEMENTS,
+             AppSettings.SOURCE_USER],
+            {self.KEY: "Medical Consumables"},
+        ))
+        monkeypatch.setattr(AppSettings, "get_game_install_path",
+                            staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_user_ini_path",
+                            staticmethod(lambda: tmp_path / "user.ini"))
+        monkeypatch.setattr(AppSettings, "get_global_ini_path",
+                            staticmethod(lambda: tmp_path / "game" / "global.ini"))
+        monkeypatch.setattr(AppSettings, "get_source_path",
+                            staticmethod(lambda name: str(base)))
+        monkeypatch.setattr(AppSettings, "is_source_enabled",
+                            staticmethod(lambda name: True))
+        monkeypatch.setattr(AppSettings, "get_language_languages_ini_path",
+                            staticmethod(lambda: None))
+        monkeypatch.setattr(user_ini_manager, "save_user_ini", lambda entries, path: 0)
+        monkeypatch.setattr(ini_merger, "merge_ini_files", lambda b, m, t: None)
+        monkeypatch.setattr(user_cfg, "ensure_user_cfg_language", lambda: None)
+
+        window = MagicMock()
+        window.entries = [object()]
+        window._build_apply_merged_dict.return_value = {self.KEY: "Enhanced"}
+        window._validate_applied_file.return_value = None
+
+        MainWindow.apply_to_game(window)
+
+        assert [kind for kind, _ in shown] == ["information"], shown
+        assert "Medical Consumables: 1" in shown[0][1]
+        assert "Gear" not in shown[0][1]
+        window._mark_applied.assert_called_once()
