@@ -875,6 +875,122 @@ begin
   end;
 end;
 
+function UnsafeDeleteRootReason(const Root: String): String;
+var
+  SCInstallRoot: String;
+  Stripped: String;
+  Normalized: String;
+begin
+  { #357 review: a custom user_data_dir / cache_dir override is any folder
+    the user (or the install wizard's OneDrive-escape default) picked --
+    GetDocumentsDir/GetCacheDir return it verbatim, with no guaranteed
+    "Smart Citizen" subfolder the way the Documents default has. Treating
+    an override root as fully "owned by the app" and recursively deleting
+    it would also take out whatever else lives there if the user picked
+    D:\, D:\Games (which may hold the SC install itself), their whole
+    Documents folder, or a OneDrive root (which then syncs the loss to the
+    cloud). Refuses -- logging why -- rather than guessing a safe partial
+    cleanup; the caller falls back to DeleteOwnedSubpaths for every other
+    root, which only ever touches the app's own named subpaths. }
+  Result := '';
+  if Root = '' then
+  begin
+    Result := 'empty path';
+    Exit;
+  end;
+  Stripped := RemoveBackslash(Root);
+  if (Length(Stripped) = 2) and (Copy(Stripped, 2, 1) = ':') then
+  begin
+    Result := 'a drive root';
+    Exit;
+  end;
+  Normalized := AddBackslash(LowerCase(Stripped));
+  if Normalized = AddBackslash(LowerCase(RemoveBackslash(GetDocumentsBase()))) then
+  begin
+    Result := 'the Documents folder';
+    Exit;
+  end;
+  if Normalized = AddBackslash(LowerCase(ExpandConstant('{%USERPROFILE}'))) then
+  begin
+    Result := '%USERPROFILE%';
+    Exit;
+  end;
+  if Normalized = AddBackslash(LowerCase(ExpandConstant('{app}'))) then
+  begin
+    Result := 'the Smart Citizen install folder ({app})';
+    Exit;
+  end;
+  SCInstallRoot := '';
+  if not (RegQueryStringValue(HKCU, 'Software\Osiris DevWorks\Smart Citizen',
+            'sc_directory', SCInstallRoot) and (SCInstallRoot <> '')) then
+    RegQueryStringValue(HKCU, 'Software\Osiris DevWorks\Smart Citizen',
+      'game_install_path', SCInstallRoot);
+  if (SCInstallRoot <> '') and PathUnderRoot(SCInstallRoot, Root) then
+  begin
+    Result := 'it contains the Star Citizen install (' + SCInstallRoot + ')';
+    Exit;
+  end;
+end;
+
+procedure DeleteOwnedSubpaths(const Root: String);
+var
+  OwnedDirs: array[0..7] of String;
+  i: Integer;
+  SubPath, UserIniPath, Reason: String;
+begin
+  { #357 review: delete only what the app actually writes under Root, never
+    Root itself recursively -- the five channel folders (each nesting its
+    own backups/user.ini/cache/dataforge, per the per-channel layout),
+    plus the non-per-channel \logs, and (defensively, in case an
+    unmigrated pre-channel-layout folder is still in play) a top-level
+    \backups, \cache and user.ini. Root is removed afterward only via
+    RemoveDir, which fails (harmlessly) if anything we don't own is still
+    in there -- the opposite of DelTree, which would take it out anyway. }
+  Reason := UnsafeDeleteRootReason(Root);
+  if Reason <> '' then
+  begin
+    Log('Refusing to delete under ' + Root + ' (' + Reason + ') -- ' +
+        'leaving it in place rather than risk deleting data the app does not own.');
+    Exit;
+  end;
+
+  OwnedDirs[0] := 'LIVE';
+  OwnedDirs[1] := 'PTU';
+  OwnedDirs[2] := 'EPTU';
+  OwnedDirs[3] := 'HOTFIX';
+  OwnedDirs[4] := 'TECH-PREVIEW';
+  OwnedDirs[5] := 'logs';
+  OwnedDirs[6] := 'backups';
+  OwnedDirs[7] := 'cache';
+  for i := 0 to 7 do
+  begin
+    SubPath := Root + '\' + OwnedDirs[i];
+    if DirExists(SubPath) then
+    begin
+      Log('Deleting owned subpath: ' + SubPath);
+      if not DelTree(SubPath, True, True, True) then
+        Log('WARNING: DelTree returned false for ' + SubPath);
+    end;
+  end;
+
+  UserIniPath := Root + '\user.ini';
+  if FileExists(UserIniPath) then
+  begin
+    Log('Deleting owned file: ' + UserIniPath);
+    if not DeleteFile(UserIniPath) then
+      Log('WARNING: DeleteFile returned false for ' + UserIniPath);
+  end;
+
+  if DirExists(Root) then
+  begin
+    if RemoveDir(Root) then
+      Log('Removed now-empty root: ' + Root)
+    else
+      Log('Root left in place (not empty after owned-subpath cleanup, ' +
+          'or still in use): ' + Root);
+  end;
+end;
+
 procedure DeleteAllUserSettings();
 var
   UserDataDir, CacheDir, LegacyUserDataDir: String;
@@ -887,15 +1003,27 @@ begin
       1. HKCU registry node (sc_directory, user_data_dir, cache_dir,
          ui_mode, selected_language, the owned-blueprints set, everything
          AppSettings persists in registry mode).
-      2. The user data folder (user.ini, backups, per-channel cache) —
-         wherever it ACTUALLY resolves to, matching GetDocumentsDir's own
-         override-aware resolution, not just the Documents default.
-      3. The separate DataForge cache folder (~1.4 GB) — wherever it
-         ACTUALLY resolves to (GetCacheDir). This one is never touched by
-         the normal uninstall path at all (CleanCachedData only ever
-         reaches into the user data folder's per-channel \cache
-         subfolders), so leaving it out here would defeat the point of a
-         "full" wipe for anyone who moved it to a custom drive.
+      2. The user data folder's app-owned contents (per-channel LIVE/PTU/
+         EPTU/HOTFIX/TECH-PREVIEW folders, \logs, and any top-level
+         \backups, \cache or user.ini left from before the per-channel
+         migration) — wherever the folder ACTUALLY resolves to, matching
+         GetDocumentsDir's own override-aware resolution, not just the
+         Documents default.
+      3. The separate DataForge cache folder's app-owned contents
+         (~1.4 GB) — wherever it ACTUALLY resolves to (GetCacheDir). This
+         one is never touched by the normal uninstall path at all
+         (CleanCachedData only ever reaches into the user data folder's
+         per-channel \cache subfolders), so leaving it out here would
+         defeat the point of a "full" wipe for anyone who moved it to a
+         custom drive.
+    Per the #357 review, (2) and (3) delete only the app's own named
+    subpaths, via DeleteOwnedSubpaths -- never the chosen root itself
+    recursively. A custom user_data_dir/cache_dir override can point
+    anywhere (a drive root, Documents, a folder that also holds the SC
+    install, a OneDrive root), and DelTree'ing that root outright would
+    take out whatever else lives there along with it. DeleteOwnedSubpaths
+    also refuses outright (logging why, deleting nothing) for exactly
+    those dangerous roots; see UnsafeDeleteRootReason.
     Path resolution happens BEFORE the registry delete on purpose: both
     overrides (user_data_dir / cache_dir) live in that registry node, so
     deleting it first would make GetDocumentsDir/GetCacheDir fall back to
@@ -905,14 +1033,8 @@ begin
   UserDataDir := GetDocumentsDir();
   CacheDir := GetCacheDir();
 
-  if DirExists(UserDataDir) then
-  begin
-    Log('Deleting user data folder: ' + UserDataDir);
-    if not DelTree(UserDataDir, True, True, True) then
-      Log('WARNING: DelTree returned false for user data folder: ' + UserDataDir);
-  end
-  else
-    Log('User data folder absent (nothing to delete): ' + UserDataDir);
+  Log('Deleting app-owned contents of user data folder: ' + UserDataDir);
+  DeleteOwnedSubpaths(UserDataDir);
 
   { #357 review: the pre-0.9.0, pre-rebrand Documents folder (mirrors
     MigrateUserDocsFolder's OldDir). GetDocumentsDir() only ever resolves to
@@ -931,21 +1053,15 @@ begin
   end;
 
   { Skip if it's the same folder as (or nested under) the user data folder
-    already just deleted above -- a custom cache_dir is normally a wholly
-    separate location, but avoid a redundant/confusing second DelTree pass
-    over the same path either way. PathUnderRoot covers both cases: it
-    matches an exact match too, since normalizing both sides the same way
-    before the prefix test makes a path trivially "under" itself. }
+    already just cleaned above -- a custom cache_dir is normally a wholly
+    separate location, but avoid a redundant/confusing second pass over the
+    same path either way. PathUnderRoot covers both cases: it matches an
+    exact match too, since normalizing both sides the same way before the
+    prefix test makes a path trivially "under" itself. }
   if (CacheDir <> '') and (not PathUnderRoot(CacheDir, UserDataDir)) then
   begin
-    if DirExists(CacheDir) then
-    begin
-      Log('Deleting DataForge cache folder: ' + CacheDir);
-      if not DelTree(CacheDir, True, True, True) then
-        Log('WARNING: DelTree returned false for cache folder: ' + CacheDir);
-    end
-    else
-      Log('DataForge cache folder absent (nothing to delete): ' + CacheDir);
+    Log('Deleting app-owned contents of DataForge cache folder: ' + CacheDir);
+    DeleteOwnedSubpaths(CacheDir);
   end;
 
   if RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Osiris DevWorks\Smart Citizen') then
@@ -1029,10 +1145,12 @@ begin
   { #357: never show the custom dialog during a truly headless uninstall --
     e.g. the old-version cleanup step of an in-app auto-update, which runs
     its uninstaller with /VERYSILENT (see UnInstallOldVersion above and
-    _launch_installer_and_quit in src/gui/main_window.py). Unlike MsgBox, a
-    raw custom VCL form isn't auto-suppressed by Inno's silent flags, so
-    skipping it here is required — otherwise a fully automated upgrade
-    would hang forever waiting for a click on a dialog nobody can see.
+    _launch_installer_and_quit in src/gui/main_window.py). /SUPPRESSMSGBOXES
+    only silences calls to SuppressibleMsgBox specifically -- a plain MsgBox
+    (and, same as one, this raw custom VCL form) is never auto-suppressed by
+    any silent flag, so skipping it here is required explicitly -- otherwise
+    a fully automated upgrade would hang forever waiting for a click on a
+    dialog nobody can see.
     Defaults to False (the safe, non-destructive choice): an
     automated/background uninstall must never accidentally wipe settings.
 
@@ -1060,7 +1178,13 @@ begin
     MsgLabel.AutoSize := False;
     MsgLabel.WordWrap := True;
     MsgLabel.Height := ScaleY(32);
-    MsgLabel.Caption := 'Are you sure you want to uninstall Smart Citizen?';
+    { #357 review: not phrased as a question -- Inno's own built-in "Are you
+      sure you want to completely remove Smart Citizen..." confirmation
+      follows immediately after this dialog's Uninstall button, so asking
+      the same thing here too read as a redundant double confirmation. This
+      dialog's own job is the options choice below, not the are-you-sure
+      gate. }
+    MsgLabel.Caption := 'You are about to uninstall Smart Citizen.';
 
     { Short, single-line caption on purpose: TNewCheckBox renders its
       Caption as one line and clips anything that doesn't fit, unlike
