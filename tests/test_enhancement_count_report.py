@@ -1,28 +1,17 @@
-"""Tests for _count_enhancement_categories (#399): the Apply-success-dialog
-summary must count what THIS apply actually just merged, not self.entries.
-
-Simple mode's one-button flow calls apply_to_game() before the reload that
-refreshes self.entries with newly-generated content (that reload runs
-afterward, to update the hidden Advanced view). On a profile that skipped
-the startup "Generate Enhancements?" prompt and generated for the first time
-via Simple mode's own click, self.entries was still whatever loaded before
-generation ran -- typically nothing tagged "enhancements" yet, so counting
-from self.entries reported 0 even though the game file itself was written
-correctly (apply_to_game's own merge is independent of self.entries).
-sources_dict["enhancements"] reflects exactly what was just merged, so
-counting from its own keys is correct regardless of self.entries' staleness.
-
-Also covers the #399 review follow-up: each key's category must prefer the
-enhancements_key_categories map (what load_sources_from_settings() builds
-from each generator's real output category) over StringEntry.extract_
-category's key-prefix guess. The two disagree for every medical-consumable
-key, which the prefix rules misclassify as "Gear".
+"""Tests for _count_enhancement_categories (#399): the Apply success dialog counts
+what this apply just merged (sources_dict["enhancements"]), not self.entries,
+which is stale after a first-time Simple-mode generation. Each key's category is
+the generator's map first, then the key-prefix fallback, since the two disagree
+for medical consumables ("Medical Consumables" vs "Gear").
 """
 from __future__ import annotations
 
+import inspect
+import re
+
 import pytest
 
-from src.gui.main_window import _count_enhancement_categories
+from src.gui.main_window import MainWindow, _count_enhancement_categories
 
 pytestmark = pytest.mark.unit
 
@@ -129,3 +118,27 @@ class TestCountEnhancementCategories:
         }
         counts = _count_enhancement_categories(sources_dict)
         assert sum(counts.values()) == 1
+
+
+class TestApplyToGameWiring:
+    """apply_to_game can't be driven without a window, so pin by source that it
+    fetches the generator's category map and hands it to the helper. Without it
+    every medical consumable lands in "Gear" again (the #399 review bug)."""
+
+    @staticmethod
+    def _source():
+        return inspect.getsource(MainWindow.apply_to_game)
+
+    def test_fetches_the_key_category_map(self):
+        assert re.search(
+            r"sources_dict, hierarchy, enhancements_key_categories\s*=\s*"
+            r"load_sources_from_settings\(\)",
+            self._source(),
+        ), "apply_to_game dropped the map load_sources_from_settings() returns"
+
+    def test_passes_the_map_to_the_helper(self):
+        assert re.search(
+            r"_count_enhancement_categories\(\s*sources_dict,"
+            r"\s*enhancements_key_categories\s*\)",
+            self._source(),
+        ), "apply_to_game no longer passes the key-category map to the helper"

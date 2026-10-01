@@ -1198,13 +1198,18 @@ class ConfigTab(QWidget):
             from collections import Counter
             from src.parser.ini_parser import load_sources_from_settings, load_source_files
 
-            sources_dict, hierarchy, _enhancements_cats = load_sources_from_settings()
+            sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
 
             if not sources_dict:
                 QMessageBox.warning(self, tr("dialogs.warning_title"), tr("config.no_sources_warning"))
                 return
 
-            entries = load_source_files(sources_dict, hierarchy)
+            # The map keeps this breakdown in step with the Apply dialog (#399):
+            # by key prefix alone, medical consumables would read as Gear.
+            entries = load_source_files(
+                sources_dict, hierarchy,
+                enhancements_key_categories=enhancements_key_categories,
+            )
 
             # Count contributions per source. The merge engine overlays later
             # sources on top of earlier ones, with user.ini always winning —
@@ -1220,11 +1225,10 @@ class ConfigTab(QWidget):
             # whole base) or "User" (always small enough to read at a
             # glance).
             enhancement_categories: Counter[str] = Counter()
-            ENHANCEMENTS_SRC = "enhancements"
             for entry in entries:
                 contributing = _AS.SOURCE_USER if entry.custom_value else entry.source_file
                 source_counts[contributing] = source_counts.get(contributing, 0) + 1
-                if contributing == ENHANCEMENTS_SRC:
+                if contributing == _AS.SOURCE_ENHANCEMENTS:
                     enhancement_categories[entry.category] += 1
 
             # Filter out zero-key entries before displaying — leftover
@@ -1243,7 +1247,7 @@ class ConfigTab(QWidget):
                 if count == 0:
                     continue
                 visible_index += 1
-                if name == ENHANCEMENTS_SRC:
+                if name == _AS.SOURCE_ENHANCEMENTS:
                     text += f"  {visible_index}. Smart Citizen Enhancements ({count:,} keys total):\n"
                     if enhancement_categories:
                         for cat, ccount in enhancement_categories.most_common():
