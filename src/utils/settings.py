@@ -13,6 +13,7 @@ from src.utils.install_scanner import (
     SC_CHANNELS,
     iter_common_sc_install_locations,
     looks_like_sc_root,
+    read_launcher_installs,
 )
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,12 @@ def _scan_common_sc_install_locations() -> "str | None":
     an empty/stub folder (e.g. a partial RSI Launcher download with no real
     ``Data.p4k`` channel folder yet) is never mistaken for a real install.
 
+    The RSI Launcher's own log is read too. It names the install the
+    launcher maintains wherever the player put it, which no fixed list of
+    folder shapes can match (an install under a folder called "Other
+    Games" was the one that surfaced this). A root it names is used only
+    if it still exists, and it is ranked with every other candidate.
+
     Cached in-memory for the process's lifetime, including a "found
     nothing" result -- without this, a no-install profile re-walks every
     drive letter on every call (e.g. after each channel switch clears
@@ -138,7 +145,19 @@ def _scan_common_sc_install_locations() -> "str | None":
     # (``install_scanner.scan_installs``). #370 still applies here, so
     # multiple hits are ranked by _pick_live_sc_install rather than just
     # taking the first, the way this loop used to.
-    candidates = [str(p) for p in iter_common_sc_install_locations()]
+    common = [str(p) for p in iter_common_sc_install_locations()]
+
+    # Newest launcher mention first, so a tie in the ranking below goes to the
+    # install the launcher last touched. The parser already dropped anything
+    # that no longer exists on disk.
+    logged = sorted(
+        read_launcher_installs()[0].values(), key=lambda hit: hit[1], reverse=True
+    )
+    candidates = [str(root) for root, _seen in logged]
+    known = {os.path.normcase(os.path.normpath(c)) for c in candidates}
+    candidates += [
+        c for c in common if os.path.normcase(os.path.normpath(c)) not in known
+    ]
 
     if not candidates:
         _sc_scan_cache = None
@@ -2561,11 +2580,12 @@ class AppSettings:
           2. Derived from legacy ``GAME_INSTALL_PATH`` (strip trailing
              ``\LIVE`` if present)
           3. The old installer's registry key (``sc_directory``)
-          4. Auto-detected by scanning every local drive letter for a
-             real install at a common RSI Launcher install path (see
-             :func:`_scan_common_sc_install_locations`) -- covers a
+          4. Auto-detected (see :func:`_scan_common_sc_install_locations`):
+             the RSI Launcher's own log, which names the install it
+             maintains wherever the player put it, plus every local
+             drive letter at a common RSI Launcher install path -- a
              default C:\\ install, a secondary drive kept in the same
-             shape, and one nested under a personal "Games" folder.
+             shape, or one nested under a personal "Games" folder.
              Persists the result once found, so this scan only runs
              once per profile.
 

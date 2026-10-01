@@ -48,6 +48,16 @@ def json_backend(tmp_path, monkeypatch):
     AppSettings._backend = saved
 
 
+@pytest.fixture(autouse=True)
+def no_real_launcher_log(monkeypatch):
+    """The auto-detect scan also reads %APPDATA%\\rsilauncher\\logs\\log.log, and on a
+    developer's machine that log names their real install. Keep every test off it:
+    tests that want a launcher log pass one in (see TestScanUsesLauncherLog)."""
+    monkeypatch.setattr(
+        "src.utils.settings.read_launcher_installs", lambda log_path=None: ({}, False)
+    )
+
+
 class TestInstallRootCrossCheck:
     def test_matching_root_returns_unchanged(self, json_backend):
         """SC_INSTALL_ROOT matches GAME_INSTALL_PATH parent -- returns as-is."""
@@ -452,6 +462,141 @@ class TestScanCommonScInstallLocations:
             r"Roberts Space Industries\StarCitizen",
             r"Games\Roberts Space Industries\StarCitizen",
         )
+
+
+def _fake_install(tmp_path, *parts):
+    """A minimal real-looking install: <parts>/LIVE/Data.p4k."""
+    root = tmp_path.joinpath(*parts)
+    (root / "LIVE").mkdir(parents=True)
+    (root / "LIVE" / "Data.p4k").write_bytes(b"x" * 16)
+    return root
+
+
+def _launcher_log(tmp_path, *mentions):
+    """A launcher log in the real format (one JSON-ish line per event, backslashes
+    escaped) naming each ``(root, "YYYY-MM-DD HH:MM:SS.mmm")`` mention."""
+    lines = []
+    for root, stamp in mentions:
+        escaped = str(root).replace("\\", "\\\\")
+        lines.append(
+            '{ "t":"%s", "[main][info] ": "[Pipeline] Verifying Star Citizen LIVE '
+            '4.10.0-live.12572603 at %s (type: verify, forceDP: false)"  },'
+            % (stamp, escaped)
+        )
+    log = tmp_path / "log.log"
+    log.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return log
+
+
+class TestScanUsesLauncherLog:
+    """First-run detection also reads the RSI Launcher log, which names the install
+    the launcher maintains wherever the player put it. A fixed list of folder
+    shapes can never cover that: an install under ``E:\\Other Games\\Roberts Space
+    Industries\\StarCitizen`` hit the "Star Citizen Path Required" dialog on a
+    portable's first run even though the launcher had been verifying it for weeks."""
+
+    @pytest.fixture
+    def scan(self, monkeypatch):
+        """Run the real scan with the common-path walk replaced by ``common`` and the
+        launcher log replaced by the file ``log`` (None = no log)."""
+        import src.utils.install_scanner as scanner
+        import src.utils.settings as settings_mod
+
+        def _run(*, common=(), log=None):
+            monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
+            monkeypatch.setattr(
+                settings_mod, "iter_common_sc_install_locations",
+                lambda drives=None: iter([Path(c) for c in common]),
+            )
+            monkeypatch.setattr(
+                settings_mod, "read_launcher_installs",
+                lambda log_path=None: (
+                    scanner.read_launcher_installs(log) if log else ({}, False)
+                ),
+            )
+            return settings_mod._scan_common_sc_install_locations()
+
+        return _run
+
+    def test_finds_an_install_in_a_custom_folder_the_log_names(self, tmp_path, scan):
+        root = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
+        log = _launcher_log(tmp_path, (root, "2026-09-30 21:01:02.003"))
+        assert scan(log=log) == str(root)
+
+    def test_install_the_log_names_but_is_gone_is_ignored(self, tmp_path, scan):
+        gone = tmp_path / "Other Games" / "Roberts Space Industries" / "StarCitizen"
+        log = _launcher_log(tmp_path, (gone, "2026-09-30 21:01:02.003"))
+        assert scan(log=log) is None
+
+    def test_no_launcher_log_leaves_the_common_paths_in_charge(self, tmp_path, scan):
+        common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
+        assert scan(common=[common], log=tmp_path / "missing.log") == str(common)
+
+    def test_root_found_both_ways_reaches_the_ranker_once(self, tmp_path, scan, monkeypatch):
+        import src.utils.settings as settings_mod
+
+        both = _fake_install(tmp_path, "Roberts Space Industries", "StarCitizen")
+        only_common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
+        log = _launcher_log(tmp_path, (both, "2026-09-30 21:01:02.003"))
+        seen = []
+        monkeypatch.setattr(
+            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
+        )
+        scan(common=[both, only_common], log=log)
+        assert seen == [str(both), str(only_common)]
+
+    def test_most_recently_mentioned_install_is_ranked_first(self, tmp_path, scan, monkeypatch):
+        import src.utils.settings as settings_mod
+
+        old = _fake_install(tmp_path, "Old", "StarCitizen")
+        new = _fake_install(tmp_path, "New", "StarCitizen")
+        log = _launcher_log(
+            tmp_path, (new, "2026-09-30 21:01:02.003"), (old, "2026-08-01 10:00:00.000")
+        )
+        seen = []
+        monkeypatch.setattr(
+            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
+        )
+        scan(log=log)
+        assert seen == [str(new), str(old)]
+
+    def test_launcher_named_install_is_ranked_ahead_of_common_path_hits(
+        self, tmp_path, scan, monkeypatch
+    ):
+        """A tie on Data.p4k age goes to the install the launcher last used."""
+        import src.utils.settings as settings_mod
+
+        launcher = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
+        common = _fake_install(tmp_path, "Games", "Roberts Space Industries", "StarCitizen")
+        log = _launcher_log(tmp_path, (launcher, "2026-09-30 21:01:02.003"))
+        seen = []
+        monkeypatch.setattr(
+            settings_mod, "_pick_live_sc_install", lambda c: seen.extend(c) or c[0]
+        )
+        scan(common=[common], log=log)
+        assert seen == [str(launcher), str(common)]
+
+    def test_fresh_profile_gets_the_log_named_install_and_keeps_it(
+        self, tmp_path, json_backend, monkeypatch
+    ):
+        """End to end through get_sc_install_root(): nothing saved, no installer
+        registry value, only the launcher log knows where the game is."""
+        import src.utils.install_scanner as scanner
+        import src.utils.settings as settings_mod
+
+        root = _fake_install(tmp_path, "Other Games", "Roberts Space Industries", "StarCitizen")
+        log = _launcher_log(tmp_path, (root, "2026-09-30 21:01:02.003"))
+        monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
+        monkeypatch.setattr(
+            settings_mod, "iter_common_sc_install_locations", lambda drives=None: iter(())
+        )
+        monkeypatch.setattr(
+            settings_mod, "read_launcher_installs",
+            lambda log_path=None: scanner.read_launcher_installs(log),
+        )
+
+        assert AppSettings.get_sc_install_root() == str(root)
+        assert AppSettings.settings().value(AppSettings.SC_INSTALL_ROOT, "") == str(root)
 
 
 class TestGetScInstallRootUsesDriveScan:
