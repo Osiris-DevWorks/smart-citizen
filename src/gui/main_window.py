@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
+from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -168,6 +169,69 @@ def _user_cfg_language_matches(selected_language: str, actual_g_language: str | 
     return (actual_g_language or "").lower() == (expected or "").lower()
 
 
+def _count_enhancement_categories(
+    sources_dict: dict, enhancements_key_categories: dict | None = None,
+) -> Counter:
+    """Category breakdown of the enhancement source that's about to be
+    applied, for apply_to_game()'s success-dialog summary (#399).
+
+    Counts sources_dict["enhancements"]'s own keys -- deliberately NOT
+    self.entries, which can be stale relative to a just-completed
+    generation. Simple mode's one-button flow calls apply_to_game() before
+    the reload that refreshes self.entries with newly-generated content
+    (that reload runs after, to update the hidden Advanced view), so on a
+    profile that skipped the startup "Generate Enhancements?" prompt and
+    generated for the first time via Simple mode's own click, self.entries
+    was still whatever loaded before generation ran -- typically nothing
+    tagged "enhancements" yet, so the old self.entries-based count reported
+    0 even though the game file itself was written correctly (apply_to_
+    game's own merge is always fresh). sources_dict["enhancements"]
+    reflects exactly what was just merged, including any "Include
+    discovered items" strip already applied to it in place earlier in
+    apply_to_game.
+
+    Each key's category prefers enhancements_key_categories (the same map
+    load_sources_from_settings() builds for the main table's own category
+    column, keyed off each generator's real output category rather than
+    the key's prefix) before falling back to StringEntry.extract_category.
+    The two are not equivalent (#399 review): every medical-consumable key
+    is item_Desccrlf_consumable_*, which extract_category's prefix rules
+    land in "Gear" since it recognizes no ship-component code there, while
+    enhancements_key_categories correctly has it as "Medical Consumables"
+    from the generator that actually produced it. A caller with no map
+    (or one missing a given key) still gets the prefix-based fallback.
+    """
+    categories = enhancements_key_categories or {}
+    return Counter(
+        categories.get(key) or StringEntry.extract_category(key)
+        for key in sources_dict.get(AppSettings.SOURCE_ENHANCEMENTS, {})
+    )
+
+
+def _drop_none_entries(entries: list) -> list:
+    """Strip stray ``None`` items out of a freshly loaded/merged entries list.
+
+    Filtering only where a crash was actually observed (``update_category_
+    combo``'s ``e.category`` read, #389) isn't enough -- ``_restore_pending_
+    user_edits`` reads ``e.key`` on every entry earlier in the same reload
+    path and would crash there first whenever the snapshot is non-empty, and
+    the table model reads entries straight from ``self.entries`` afterward
+    regardless. A ``None`` has to be removed at the source, once, so every
+    downstream consumer sees a clean list. #389's own reported crash was a
+    native heap-corruption fault (0xC0000374); this can't undo memory
+    corruption, only stop it from also taking down the UI thread with an
+    AttributeError once the (already corrupted) entries reach Python code.
+    """
+    clean = [e for e in entries if e is not None]
+    dropped = len(entries) - len(clean)
+    if dropped:
+        logger.warning(
+            "Dropped %d None entr%s from a freshly loaded list (#389)",
+            dropped, "y" if dropped == 1 else "ies",
+        )
+    return clean
+
+
 def _channels_to_scan(active_channel: str, other_enabled: bool, installed_channels) -> list:
     """Which channels a "Scan Logs for Owned Blueprints" run should cover.
 
@@ -278,9 +342,9 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     # When "Include discovered items" is off, strip discovered items
     # (status "New" with no user override) from the enhancements
     # source so they don't flow into the applied global.ini.
-    if inputs.discarded_new_keys and "enhancements" in sources_dict:
-        sources_dict["enhancements"] = {
-            k: v for k, v in sources_dict["enhancements"].items()
+    if inputs.discarded_new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
+        sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
+            k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
             if k not in inputs.discarded_new_keys
         }
 
@@ -395,7 +459,7 @@ def _journal_stamp_for_entry(entry) -> str | None:
         return None
     if _JOURNAL_TITLE_KEY_RE.search(entry.key):
         return None
-    if not (entry.custom_value or entry.source_file == "enhancements"):
+    if not (entry.custom_value or entry.source_file == AppSettings.SOURCE_ENHANCEMENTS):
         return None
     from src.utils.version import get_version
     return f"[Edited with Smart Citizen v{get_version()}]"
@@ -2501,15 +2565,15 @@ class MainWindow(QMainWindow):
 
             # Re-load all sources fresh, so Apply uses the latest source
             # versions and user edits rather than anything stale in memory.
-            sources_dict, hierarchy, _mrk = load_sources_from_settings()
+            sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
 
             # Warn if any active sources are missing (only check sources actually in AVAILABLE_SOURCES)
             active_source_names = set(AppSettings.AVAILABLE_SOURCES)
-            active_source_names.add("enhancements")
+            active_source_names.add(AppSettings.SOURCE_ENHANCEMENTS)
             missing_sources = [
                 name for name in hierarchy
                 if name in active_source_names
-                and name != AppSettings.SOURCE_USER and name != "enhancements"
+                and name != AppSettings.SOURCE_USER and name != AppSettings.SOURCE_ENHANCEMENTS
                 and name not in sources_dict
                 and AppSettings.is_source_enabled(name)
             ]
@@ -2599,15 +2663,13 @@ class MainWindow(QMainWindow):
             # the game-side writes). Reach for the count here purely for the
             # success-dialog summary — the save itself is locked in by now.
 
-            # Count enhancement entries, broken down by category. Sorted
-            # descending by count so the dialog leads with the biggest
-            # buckets (typically Missions / Ship Items). "SCLE" was the
-            # legacy app name (SC Localization Editor); the label now
-            # matches the rebrand to "Smart Citizen".
-            from collections import Counter
-            enhancement_categories = Counter(
-                entry.category for entry in self.entries
-                if entry.source_file == "enhancements"
+            # Count enhancement entries, broken down by category, for the
+            # success-dialog summary. Sorted descending by count so the
+            # dialog leads with the biggest buckets (typically Missions /
+            # Ship Items). "SCLE" was the legacy app name (SC Localization
+            # Editor); the label now matches the rebrand to "Smart Citizen".
+            enhancement_categories = _count_enhancement_categories(
+                sources_dict, enhancements_key_categories
             )
             enhancement_count = sum(enhancement_categories.values())
 
@@ -2958,6 +3020,7 @@ class MainWindow(QMainWindow):
                 # Load synchronously in main thread
                 logger.info("Merging configured sources...")
                 entries = load_source_files(sources_dict, hierarchy, enhancements_key_categories=enhancements_key_categories)
+                entries = _drop_none_entries(entries)
                 logger.info(f"Merge complete: {len(entries)} entries")
                 restored = self._restore_pending_user_edits(entries, pending_edits)
                 if restored:
@@ -5412,6 +5475,8 @@ class MainWindow(QMainWindow):
             self._loader_worker.quit()
             self._loader_worker.wait()
             self._loader_worker = None
+
+        entries = _drop_none_entries(entries)
 
         # Preserve in-memory edits the user hasn't Applied yet — Generate
         # Enhancements (and other reload paths) hit this slot with freshly
