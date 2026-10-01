@@ -139,7 +139,7 @@ python scripts/build/build_exe.py
 This creates a PyInstaller onedir at `dist/SmartCitizen-v{VERSION}\` containing `SmartCitizen-v{VERSION}.exe`. VERSION comes from `VERSION.TXT`.
 
 ### Create Installer (Windows)
-Requires [Inno Setup 6](https://jrsoftware.org/isdl.php):
+Requires [Inno Setup 6.6 or newer](https://jrsoftware.org/isdl.php) (`installer.iss` stops with an error on older versions):
 ```bash
 powershell -NoProfile -Command "& 'C:\Users\<you>\AppData\Local\Programs\Inno Setup 6\ISCC.exe' installer.iss"
 ```
@@ -148,7 +148,7 @@ Outputs:
 - `dist/SmartCitizen-v{VERSION}\` — Standalone executable (onedir, distributed via the installer)
 - `dist/SmartCitizen-{VERSION}-Setup.exe` — Installer (this is what users download)
 
-The installer preserves user data — `user.ini` and `backups/` survive both upgrades and uninstalls; only the regeneratable cache is removed on uninstall.
+The installer preserves user data — `user.ini` and `backups/` survive both upgrades and uninstalls; only the regeneratable cache is removed on uninstall. The one exception is the uninstall dialog's **Also delete all saved settings** box (off by default). It also removes the Smart Citizen registry settings (including the old `SC Localization Editor` ones), the old `Documents\SC Localization Editor` folder, and what Smart Citizen created in its data and cache folders, the default ones too if you moved them: the channel folders, its own crash and exported logs, the old root-level `cache` folder and `user.ini` / `overrides.ini` / `base.ini`. It never touches anything else in those folders. Nothing directly inside a folder that is or contains the Star Citizen install, a whole drive, Documents or your user profile folder is deleted (Smart Citizen's own named folders inside it, such as `Documents\Smart Citizen`, still are), and the uninstaller lists any folder it skipped or could not clear. An old cache in a folder other than the default (kept when you moved the cache in the Config tab, or left behind when you changed the cache folder in the installer) is not tracked, so delete that one yourself.
 
 ## Project Structure
 

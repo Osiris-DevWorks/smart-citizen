@@ -214,6 +214,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change the OneDrive data-root warning | `src/utils/onedrive.py`, `src/gui/main_window.py`, `src/gui/config_tab.py` | `is_onedrive_path()` / `suggest_local_data_dir()`; `_maybe_warn_onedrive_data_dir()` (startup, suppressible) + Config-tab folder-pick warning; `ConfigTab.change_data_dir_to()` for the one-click move (#172) |
 | Change the toolbar More overflow menu | `src/gui/main_window.py` | `more_menu` block in toolbar setup (restore backup, clear loc/cache, import/export, open loc dir) |
 | Change the tester Test Plan panel / content | `src/utils/test_plan.py`, `src/gui/test_plan_panel.py` | `TEST_SECTIONS` (per-release checklist), `TestPlanPanel`, `_ensure_test_plan_dock()` / `show_test_plan()` (#144) |
+| Change the uninstaller's opt-in "Also delete all saved settings" wipe | `installer.iss` | `InitializeUninstall()` (the dialog; skipped on `/SILENT` and `/VERYSILENT` unless `/SHOWDELETEOPTION=1`), `DeleteAllUserSettings()` (also the default data and cache folders when overridden, the legacy `Documents\SC Localization Editor` folder, and the queued `pending_cache_cleanup` tree), `DeleteOwnedSubpaths()` (app-owned names only; a folder is removed only if that left it empty), `UnsafeDeleteRootReason()` (refuses drive and share roots, Documents, `%USERPROFILE%`, `{app}`, links, and any folder that is or contains the SC install, by registry and by `HasScGameData()` markers, which mirror `install_scanner.SC_CHANNEL_MARKERS`) (#357) |
 
 ## Version & Release
 
@@ -243,7 +244,7 @@ The branching model above is enforced by GitHub settings, not just convention. D
 ### Release checklist (release/X.Y.Z → main)
 1. `VERSION.TXT` should already match the branch name from when it opened — confirm (sole source of truth; `installer.iss` reads it via ISPP at compile time).
 2. Build the PyInstaller onedir: `.venv/Scripts/python.exe scripts/build/build_exe.py`
-3. Compile the installer (Inno Setup is per-user; invoke via PowerShell): `powershell -NoProfile -Command "& 'C:\Users\<you>\AppData\Local\Programs\Inno Setup 6\ISCC.exe' installer.iss"`
+3. Compile the installer (Inno Setup 6.6.0 or newer, which `installer.iss` enforces; Inno Setup is per-user; invoke via PowerShell): `powershell -NoProfile -Command "& 'C:\Users\<you>\AppData\Local\Programs\Inno Setup 6\ISCC.exe' installer.iss"`
 4. Test the installer from `dist/SmartCitizen-{VERSION}-Setup.exe`
 5. Merge `release/X.Y.Z` into `main`, then tag on `main` (`git tag -a vX.Y.Z -m "Release vX.Y.Z"`), push branch + tag.
 6. Create the GitHub release and attach `dist/SmartCitizen-{VERSION}-Setup.exe` (installer only; portable onefile exe is retired).

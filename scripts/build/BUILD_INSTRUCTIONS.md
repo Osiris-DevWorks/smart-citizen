@@ -25,7 +25,7 @@ build_all.bat
 
 ### Download Inno Setup (Optional)
 
-For creating the installer, download from: https://jrsoftware.org/isdl.php
+For creating the installer, download Inno Setup 6.6.0 or newer from: https://jrsoftware.org/isdl.php (`installer.iss` stops with an error on older versions)
 - Install the Unicode version
 - Default installation is fine
 
