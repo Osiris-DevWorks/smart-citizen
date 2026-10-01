@@ -33,7 +33,7 @@
       "at": ""
     },
     "generate_apply_tip_disabled": {
-      "ht": "Already applied: nothing has changed since the last time you applied.",
+      "ht": "Already applied: the game matches your current settings. Click to regenerate and re-apply anyway, for example after a game patch.",
       "at": ""
     },
     "defaults_hint": {

@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Já aplicado — nada mudou desde a última aplicação."
+      "at": "Já aplicado: o jogo corresponde às suas configurações atuais. Clique para gerar e aplicar novamente mesmo assim, por exemplo após um patch do jogo."
     },
     "defaults_hint": {
       "ht": "",

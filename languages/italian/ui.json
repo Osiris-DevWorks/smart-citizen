@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Già applicato: nulla è cambiato dall'ultima applicazione."
+      "at": "Già applicato: il gioco corrisponde alle tue impostazioni attuali. Clicca comunque per rigenerare e riapplicare, ad esempio dopo una patch del gioco."
     },
     "defaults_hint": {
       "ht": "",
