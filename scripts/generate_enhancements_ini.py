@@ -7551,7 +7551,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         lookup_jobs["standings"] = _build_standings
 
     if lookup_jobs:
-        if len(lookup_jobs) == 1:
+        if min(max_workers, len(lookup_jobs)) == 1:
             # A pool of one buys no parallelism, and spins up a background
             # thread for nothing -- and a background thread spinning up a
             # further nested thread to run lxml-based XML parsing is the
@@ -7559,10 +7559,24 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             # (0xC0000374) to. The precise mechanism was never conclusively
             # pinned down, but not creating a thread that buys nothing is
             # the defensible fix regardless.
-            name, fn = next(iter(lookup_jobs.items()))
-            logger.info(f"Building 1 lookup ({name})…")
-            _flush()
-            results = {name: fn()}
+            #
+            # Checking len(lookup_jobs) == 1 alone (the original #389 fix)
+            # missed the actual GUI path: EnhancementsGeneratorWorker always
+            # calls main(..., max_workers=1) (src/gui/workers.py), so a
+            # normal multi-category run with several lookup_jobs still built
+            # ThreadPoolExecutor(max_workers=1) below -- the exact crash
+            # shape, just with more than one job queued onto that one
+            # worker. min(max_workers, len(lookup_jobs)) catches both ways
+            # the pool can end up with exactly one worker.
+            if len(lookup_jobs) == 1:
+                name, fn = next(iter(lookup_jobs.items()))
+                logger.info(f"Building 1 lookup ({name})…")
+                _flush()
+                results = {name: fn()}
+            else:
+                logger.info(f"Building {len(lookup_jobs)} lookups serially (max_workers=1)…")
+                _flush()
+                results = {name: fn() for name, fn in lookup_jobs.items()}
         else:
             logger.info(f"Building {len(lookup_jobs)} lookups in parallel (workers={min(max_workers, len(lookup_jobs))})…")
             _flush()
@@ -7665,17 +7679,33 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
 
     if gen_jobs:
         results: dict = {}
-        if len(gen_jobs) == 1:
+        if min(max_workers, len(gen_jobs)) == 1:
             # Same reasoning as the lookup pool above (#389): a pool of one
             # buys no parallelism, and is the exact shape a reported native
             # heap-corruption crash (0xC0000374) traced back to -- a
             # background QThread spinning up a further nested thread to run
             # a single lxml-based generator.
-            name, fn = next(iter(gen_jobs.items()))
-            logger.info(f"Running 1 output generator ({name})…")
-            _flush()
-            results[name] = fn(ctx)
-            _tick(f"Finished {name}")
+            #
+            # Checking len(gen_jobs) == 1 alone (the original #389 fix)
+            # missed the actual GUI path: EnhancementsGeneratorWorker always
+            # calls main(..., max_workers=1), so a normal multi-category run
+            # still built ThreadPoolExecutor(max_workers=1) below -- the
+            # exact crash shape, just with more than one job queued onto
+            # that one worker. min(max_workers, len(gen_jobs)) catches both
+            # ways the pool can end up with exactly one worker; when more
+            # than one job is selected, run each in turn instead of pooling.
+            if len(gen_jobs) == 1:
+                name, fn = next(iter(gen_jobs.items()))
+                logger.info(f"Running 1 output generator ({name})…")
+                _flush()
+                results[name] = fn(ctx)
+                _tick(f"Finished {name}")
+            else:
+                logger.info(f"Running {len(gen_jobs)} output generators serially (max_workers=1)…")
+                _flush()
+                for name, fn in gen_jobs.items():
+                    results[name] = fn(ctx)
+                    _tick(f"Finished {name}")
         else:
             n_workers = min(max_workers, len(gen_jobs))
             logger.info(f"Running {len(gen_jobs)} output generators in parallel (workers={n_workers}, pool=thread)…")

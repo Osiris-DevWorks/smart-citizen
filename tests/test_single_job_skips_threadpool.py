@@ -72,3 +72,32 @@ class TestSingleJobSkipsThreadPool:
         out_path = base_ini.parent / "medical_consumables_enhancements.ini"
         assert out_path.exists()
         assert out_path.read_text(encoding="utf-8").strip() != ""
+
+    def test_max_workers_one_never_constructs_a_pool_even_with_several_jobs(
+        self, gen_module, forge_layout
+    ):
+        """#389 follow-up (Osiris review on #395): the real GUI path always
+        calls main(..., max_workers=1) via EnhancementsGeneratorWorker
+        (src/gui/workers.py), regardless of how many categories are
+        selected. Checking len(jobs) == 1 alone missed this -- a normal
+        multi-category run still built ThreadPoolExecutor(max_workers=1),
+        the exact crash shape, just with more than one job queued onto it.
+
+        categories={"medical_consumables", "ship_descs"} gives two gen_jobs
+        (medical_consumables, ships) and two lookup_jobs (controller, armor,
+        both populated by the ship_descs branch). _run_gen_ships is stubbed
+        so this doesn't need real ship XML data; controller/armor lookups
+        run for real against the empty fixture tree, which they already
+        tolerate (see build_controller_lookup/build_armor_lookup's own
+        missing-dir guards).
+        """
+        base_ini, forge_dir = forge_layout
+        with patch.object(gen_module, "_run_gen_ships", return_value={}), \
+             patch.object(gen_module, "ThreadPoolExecutor") as pool_cls:
+            gen_module.main(
+                base_ini_path=base_ini,
+                forge_dir=forge_dir,
+                categories={"medical_consumables", "ship_descs"},
+                max_workers=1,
+            )
+        pool_cls.assert_not_called()
