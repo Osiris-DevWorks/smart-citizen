@@ -580,7 +580,11 @@
     },
     "map_language_desc": {
       "ht": "",
-      "at": "Her dilin global.ini dosyası için bir URL belirleyin. O dile geçtiğinizde Smart Citizen dosyayı indirir ve İngilizce Data.p4k çıkarımı yerine temel metinler olarak kullanır. İndirme dil başına önbelleğe alınır ve yalnızca değiştiğinde yeniden alınır. Paketle gelen varsayılanı (varsa) kullanmak için alanı boş bırakın."
+      "at": "Her dilin global.ini dosyası için bir URL veya yerel dosya yolu belirleyin (zaten sahip olduğunuz bir dosya için Gözat'ı kullanın). O dile geçtiğinizde Smart Citizen, İngilizce Data.p4k çıkarımı yerine bunu temel metin olarak kullanır — bir URL indirilir ve önbelleğe alınır, yalnızca değiştiğinde yeniden alınır; yerel bir dosya ise kopyalanır. Pakette gelen bir varsayılan varsa kullanmak için alanı boş bırakın."
+    },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "{languages} burada eşlenemez: bu yol, Smart Citizen'ın bu dil için kendi birleştirilmiş çıktısını yazdığı konumdur. Yeniden uygulamak bu çıktıyı kaynak olarak geri besler ve her geliştirmeyi ikiye katlar. Önce topluluk dosyasını farklı bir klasöre kopyalayın, ardından o kopyayı eşleyin."
     },
     "base_localization_label": {
       "ht": "",
@@ -776,7 +780,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Her dilin global.ini dosyası için bir URL belirleyin. O dile geçtiğinizde Smart Citizen dosyayı indirir ve İngilizce Data.p4k çıkarımı yerine temel metinler olarak kullanır."
+      "at": "Her dilin global.ini dosyası için bir URL veya yerel dosya yolu belirleyin. O dile geçtiğinizde Smart Citizen, İngilizce Data.p4k çıkarımı yerine bunu temel metin olarak kullanır."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -2116,13 +2120,17 @@
       "ht": "",
       "at": "{language} yerelleştirmesi indiriliyor…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "{language} yerelleştirmesi kopyalanıyor…"
+    },
     "language_no_url": {
       "ht": "",
-      "at": "{language} için indirme URL'si ayarlanmamış; İngilizce temel gösteriliyor. Ayarlamak için Dil Dosyasını Eşle'yi kullanın."
+      "at": "{language} için kaynak belirlenmemiş; İngilizce temel gösteriliyor. Bir kaynak belirlemek için Dil Dosyası Eşle'yi kullanın."
     },
     "language_download_failed": {
       "ht": "",
-      "at": "{language} yerelleştirmesi indirilemedi ve önbelleğe alınmış bir kopya bulunamadı. Bunun yerine İngilizce temel gösteriliyor. Dil Dosyasını Eşle'deki URL'yi ve bağlantınızı kontrol edip yeniden deneyin."
+      "at": "{language} yerelleştirmesi yapılandırılan kaynaktan yüklenemedi ve önbelleğe alınmış bir kopya bulunamadı. Bunun yerine İngilizce temel gösteriliyor. Dil Dosyası Eşle'deki URL'yi veya dosyayı kontrol edip yeniden deneyin."
     },
     "language_generating_enhancements": {
       "ht": "",

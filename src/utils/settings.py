@@ -63,6 +63,7 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     # global.ini. russian_(russia) was tried first and rejected — the game does
     # not recognise it.
     "turkish":       "polish_(poland)",
+    "korean":        "korean_(south_korea)",
 }
 
 
@@ -2824,12 +2825,15 @@ class AppSettings:
 
     @staticmethod
     def get_language_base_url(language: str) -> str:
-        """Resolve the global.ini download URL for *language*.
+        """Resolve the global.ini source for *language*: a URL to download,
+        or a local file path to copy (#367 — a language whose community
+        source can't be redistributed, e.g. Korean, ships with no bundled
+        URL and relies entirely on a user-supplied local path here).
 
         User override (Map Language File dialog) wins over the bundled
         ``languages/sources.json`` map. Returns '' when nothing is mapped
         (e.g. English, which uses the local P4K extraction, or a language
-        with no URL yet).
+        with no source yet).
         """
         override = AppSettings.get_language_source_override(language)
         if override:
@@ -3170,18 +3174,20 @@ class AppSettings:
         return game_path / AppSettings.get_active_channel() / "Data.p4k"
 
     @staticmethod
-    def get_global_ini_path() -> Path:
+    def get_global_ini_path(language: str | None = None) -> Path:
         r"""Return the active channel's applied ``global.ini`` location.
 
         Equivalent to ``{sc_install_root}\{active_channel}\data\Localization\{language}\global.ini``
         — the file "Apply to Game" writes and "Clear Localization" deletes.
-        The language directory reflects :meth:`get_selected_language`.
+        The language directory defaults to :meth:`get_selected_language`, or
+        pass *language* to resolve another language's apply path (e.g. to
+        check a mapped source against it before switching to that language).
         Callers should use this instead of reconstructing the path from
         :meth:`get_game_install_path`, which the pre-0.9.3 code did with
         scattered ``if name == "LIVE"`` branches that don't cover the new
         channels.
         """
-        sc_lang = AppSettings.get_sc_language_id()
+        sc_lang = AppSettings.get_sc_language_id(language)
         channel_path = AppSettings.get_channel_install_path()
         if channel_path:
             return Path(channel_path) / "data" / "Localization" / sc_lang / "global.ini"
@@ -3193,6 +3199,21 @@ class AppSettings:
             game_path / AppSettings.get_active_channel()
             / "data" / "Localization" / sc_lang / "global.ini"
         )
+
+    @staticmethod
+    def is_local_source_same_as_apply_target(local_path: str, language: str) -> bool:
+        """True if *local_path* (a Map Language File local path, not a URL)
+        resolves to the exact file "Apply to Game" writes for *language*.
+
+        Guards the Map Language File dialog's save (#409 follow-up): a
+        language whose community translation can't be redistributed (e.g.
+        Korean) is typically installed by its own community patcher at
+        exactly this path, so it's an easy path for a user to pick. Accepting
+        it would feed Smart Citizen's own merged output back in as the
+        "source" on the next apply, double-stacking every enhancement.
+        """
+        target = AppSettings.get_global_ini_path(language)
+        return os.path.normcase(os.path.abspath(local_path)) == os.path.normcase(str(target))
 
     @staticmethod
     def ensure_user_ini_file() -> None:

@@ -556,7 +556,11 @@
     },
     "map_language_desc": {
       "ht": "",
-      "at": "Lege für jede Sprache eine URL zu ihrer global.ini fest. Wenn du zu dieser Sprache wechselst, lädt Smart Citizen sie herunter und verwendet sie als Basis-Strings anstelle der englischen Data.p4k-Extraktion. Der Download wird pro Sprache zwischengespeichert und nur bei Änderungen erneut abgerufen. Lasse ein Feld leer, um den mitgelieferten Standard zu verwenden (falls vorhanden)."
+      "at": "Lege für jede Sprache eine URL oder einen lokalen Dateipfad zu ihrer global.ini fest (nutze Durchsuchen für eine Datei, die du bereits hast). Wenn du zu dieser Sprache wechselst, verwendet Smart Citizen sie als Basistext anstelle der englischen Data.p4k-Extraktion — eine URL wird heruntergeladen und zwischengespeichert und nur bei Änderung erneut abgerufen; eine lokale Datei wird kopiert. Lasse ein Feld leer, um den mitgelieferten Standard (falls vorhanden) zu verwenden."
+    },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "{languages} kann hier nicht zugeordnet werden: Unter diesem Pfad schreibt Smart Citizen seine eigene zusammengeführte Ausgabe für diese Sprache. Ein erneutes Anwenden würde diese Ausgabe als Quelle zurückführen und jede Erweiterung verdoppeln. Kopiere die Community-Datei zuerst in einen anderen Ordner und ordne dann diese Kopie zu."
     },
     "base_localization_label": {
       "ht": "",
@@ -752,7 +756,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Lege für jede Sprache eine URL zu ihrer global.ini fest. Wenn du zu dieser Sprache wechselst, lädt Smart Citizen sie herunter und verwendet sie als Basis-Strings anstelle der englischen Data.p4k-Extraktion."
+      "at": "Lege für jede Sprache eine URL oder einen lokalen Dateipfad zu ihrer global.ini fest. Wenn du zu dieser Sprache wechselst, verwendet Smart Citizen sie als Basistext anstelle der englischen Data.p4k-Extraktion."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -2116,13 +2120,17 @@
       "ht": "",
       "at": "{language}-Lokalisierung wird heruntergeladen…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "{language}-Lokalisierung wird kopiert…"
+    },
     "language_no_url": {
       "ht": "",
-      "at": "Keine Download-URL für {language} festgelegt; die englische Basis wird angezeigt. Verwende „Sprachdatei zuordnen“, um eine festzulegen."
+      "at": "Keine Quelle für {language} festgelegt; die englische Basis wird angezeigt. Verwende Sprachdatei zuordnen, um eine festzulegen."
     },
     "language_download_failed": {
       "ht": "",
-      "at": "Die {language}-Lokalisierung konnte nicht heruntergeladen werden, und es wurde keine zwischengespeicherte Kopie gefunden. Stattdessen wird die englische Basis angezeigt. Überprüfe die URL in „Sprachdatei zuordnen“ und deine Verbindung, dann versuche es erneut."
+      "at": "Die {language}-Lokalisierung konnte nicht aus der konfigurierten Quelle geladen werden, und es wurde keine zwischengespeicherte Kopie gefunden. Stattdessen wird die englische Basis angezeigt. Überprüfe die URL oder Datei in Sprachdatei zuordnen und versuche es erneut."
     },
     "language_generating_enhancements": {
       "ht": "",

@@ -558,6 +558,10 @@
       "ht": "Define una URL al global.ini de cada idioma. Al cambiar a ese idioma, Smart Citizen lo descarga y lo usa como textos base en lugar de la extracción inglesa de Data.p4k. La descarga queda en caché por idioma y solo se vuelve a obtener si cambia. Deja un campo vacío para usar el valor predeterminado incluido, si existe.",
       "at": ""
     },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "No se puede asignar {languages} aquí: esa ruta es donde Smart Citizen escribe su propia salida combinada para este idioma. Volver a aplicar traería esa salida de vuelta como origen, duplicando cada mejora. Copia primero el archivo de la comunidad a otra carpeta y luego asigna esa copia."
+    },
     "base_localization_label": {
       "ht": "Localización base",
       "at": ""
@@ -752,7 +756,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Establecer una URL para el global.ini de cada idioma. Al cambiar a ese idioma, Smart Citizen lo descarga y lo usa como cadenas base en lugar de la extracción en inglés de Data.p4k."
+      "at": "Establecer una URL o una ruta de archivo local para el global.ini de cada idioma. Al cambiar a ese idioma, Smart Citizen lo usa como cadenas base en lugar de la extracción en inglés de Data.p4k."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -2115,6 +2119,10 @@
     "language_downloading": {
       "ht": "Descargando localización {language}...",
       "at": ""
+    },
+    "language_copying": {
+      "ht": "",
+      "at": "Copiando localización {language}..."
     },
     "language_no_url": {
       "ht": "No hay URL de descarga configurada para {language}; se muestra la base inglesa. Usa Asignar archivo de idioma para configurar una.",

@@ -556,7 +556,11 @@
     },
     "map_language_desc": {
       "ht": "",
-      "at": "Définissez une URL vers le fichier global.ini de chaque langue. Lorsque vous passez à cette langue, Smart Citizen le télécharge et l'utilise comme textes de base, à la place de l'extraction anglaise du Data.p4k. Le téléchargement est mis en cache par langue et n'est retéléchargé que s'il a changé. Laissez un champ vide pour utiliser la valeur par défaut intégrée (le cas échéant)."
+      "at": "Définissez une URL ou un chemin de fichier local vers le global.ini de chaque langue (utilisez Parcourir pour un fichier que vous possédez déjà). Lorsque vous passez à cette langue, Smart Citizen l'utilise comme texte de base à la place de l'extraction anglaise de Data.p4k — une URL est téléchargée et mise en cache, puis retéléchargée uniquement si elle change ; un fichier local est copié. Laissez un champ vide pour utiliser la valeur par défaut fournie (le cas échéant)."
+    },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "Impossible de mapper {languages} ici : ce chemin est celui où Smart Citizen écrit sa propre sortie fusionnée pour cette langue. Appliquer à nouveau réintégrerait cette sortie comme source et doublerait chaque amélioration. Copiez d'abord le fichier communautaire dans un autre dossier, puis mappez cette copie."
     },
     "base_localization_label": {
       "ht": "Localisation de base",
@@ -752,7 +756,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Définir une URL pour le global.ini de chaque langue. Lorsque vous basculez vers cette langue, Smart Citizen le télécharge et l'utilise comme chaînes de base au lieu de l'extraction anglaise de Data.p4k."
+      "at": "Définissez une URL ou un chemin de fichier local vers le global.ini de chaque langue. Lorsque vous passez à cette langue, Smart Citizen l'utilise comme texte de base à la place de l'extraction anglaise de Data.p4k."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -2116,13 +2120,17 @@
       "ht": "",
       "at": "Téléchargement de la localisation {language}…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "Copie de la localisation {language}…"
+    },
     "language_no_url": {
       "ht": "",
-      "at": "Aucune URL de téléchargement définie pour {language} ; les textes anglais de base sont affichés. Utilisez « Associer un fichier de langue » pour en définir une."
+      "at": "Aucune source définie pour {language} ; affichage du texte anglais de base. Utilisez Associer un fichier de langue pour en définir une."
     },
     "language_download_failed": {
       "ht": "",
-      "at": "Impossible de télécharger la localisation {language}, et aucune copie en cache n'a été trouvée. Les textes anglais de base sont affichés à la place. Vérifiez l'URL dans « Associer un fichier de langue » ainsi que votre connexion, puis réessayez."
+      "at": "Impossible de charger la localisation {language} depuis la source configurée, et aucune copie en cache n'a été trouvée. Affichage du texte anglais de base à la place. Vérifiez l'URL ou le fichier dans Associer un fichier de langue, puis réessayez."
     },
     "language_generating_enhancements": {
       "ht": "",
