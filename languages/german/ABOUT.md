@@ -65,7 +65,7 @@ Smart Citizen bündelt außerdem vorgelagerte Werkzeuge von:
 
 Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 
-- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — die von der Community gepflegten `global.ini`-Übersetzungen, die die Sprachoptionen Französisch, brasilianisches Portugiesisch und Italienisch antreiben. Die eigentliche Arbeit leisten deren Übersetzer; wir liefern sie nur aus.
+- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — die von der Community gepflegten `global.ini`-Übersetzungen, die die Sprachoptionen Französisch, brasilianisches Portugiesisch, Italienisch und Türkisch antreiben. Die eigentliche Arbeit leisten deren Übersetzer; wir liefern sie nur aus.
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES): die von der Community gepflegte `global.ini`-Übersetzung, die die spanische Sprachoption antreibt.
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources): die von der Community gepflegte `global.ini`-Übersetzung, die die japanische Sprachoption antreibt.
 - [**42Kit**](https://ini.42kit.com/): die von der Community gepflegte `global.ini`-Übersetzung, die die chinesische (vereinfachte) Sprachoption antreibt.
@@ -77,7 +77,7 @@ Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 ### 🎯 Kernfunktionen
 - **Laden & Bearbeiten**: Lade `global.ini` aus deiner Star-Citizen-Installation und passe Strings in einer intuitiven Tabellenansicht an
 - **Unterstützung mehrerer Kanäle**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW erhalten jeweils eigene isolierte `user.ini`, Cache, Sicherungen und DataForge-Extraktion — Kanäle im Konfiguration-Tab ohne Neustart wechseln
-- **Unterstützung mehrerer Sprachen**: Wechsle App und Spieltexte zwischen Englisch, Französisch, Spanisch, brasilianischem Portugiesisch, Japanisch, Chinesisch (vereinfacht), Italienisch, Deutsch und traditionellem Chinesisch im Konfiguration-Tab. Nicht-englische Sprachen legen eine von der Community übersetzte `global.ini` über die englische Basis, mit englischem Rückfall für alles Unübersetzte. Weitere Sprachen werden freigeschaltet, sobald Community-Übersetzungen eintreffen (siehe `languages/TRANSLATIONS.md`)
+- **Unterstützung mehrerer Sprachen**: Wechsle App und Spieltexte zwischen Englisch, Französisch, Spanisch, brasilianischem Portugiesisch, Japanisch, Chinesisch (vereinfacht), Italienisch, Deutsch, Türkisch und traditionellem Chinesisch im Konfiguration-Tab. Nicht-englische Sprachen legen eine von der Community übersetzte `global.ini` über die englische Basis, mit englischem Rückfall für alles Unübersetzte. Weitere Sprachen werden freigeschaltet, sobald Community-Übersetzungen eintreffen (siehe `languages/TRANSLATIONS.md`)
 - **Missionsverträge**: Bearbeite Missionsvertrags- und Briefing-Text aus der eigenen Kategorie Missionen
 - **Intelligente Filterung**: Strings durchsuchen, nach Kategorie (Schiffe, Schiffsgegenstände, Missionen, Ausrüstung, Rohstoffe, Journal, Sonstiges) oder Änderungsstatus filtern
 - **Spaltenfilter**: Direkt in Filterfelder unter jeder Spaltenüberschrift tippen für feingranulare Suche
@@ -147,7 +147,7 @@ Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 
 ### Dieses Projekt unterstützen
 Smart Citizen ist völlig kostenlos. Wenn du es wertvoll findest:
-- 💳 [Über PayPal spenden](https://paypal.me/RighteousKill)
+- 💳 [Über PayPal spenden](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Über Venmo spenden](https://venmo.com/u/Amr-Abouelleil)
 
 ## Weitere Werkzeuge von Osiris DevWorks

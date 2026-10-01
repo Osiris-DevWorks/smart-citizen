@@ -29,6 +29,32 @@ _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
 logger = logging.getLogger(__name__)
 
 
+def reposition_combo_popup_below_if_it_fits(combo, popup) -> None:
+    """Move *popup* to align with *combo*'s bottom-left corner, but only if
+    it actually fits on-screen there.
+
+    Qt's default popup placement flips the list above the box when it judges
+    there isn't room below (common in a scroll area, even when there visually
+    is room) — force it below whenever that actually fits, so the option list
+    is where the user expects it. A combo near the bottom of the screen is
+    the case Qt's flip logic exists for; forcing "below" there would run the
+    popup off the bottom of the display, so only override when there's room.
+
+    Shared by _NoScrollComboBox.showPopup below (initial placement) and
+    blueprint_tracker_tab.py's _NoWheelComboBox.showPopup (#388, re-checked
+    a second time there after forcibly shrinking an overlong popup — the
+    first check ran against the original, taller height).
+    """
+    below_point = combo.mapToGlobal(combo.rect().bottomLeft())
+    screen = combo.screen()
+    fits_below = (
+        screen is None
+        or below_point.y() + popup.height() <= screen.availableGeometry().bottom()
+    )
+    if fits_below:
+        popup.move(below_point)
+
+
 class _NoScrollComboBox(QComboBox):
     """A combo box that ignores the mouse wheel unless it has focus (#197).
 
@@ -49,23 +75,8 @@ class _NoScrollComboBox(QComboBox):
             event.ignore()
 
     def showPopup(self):  # noqa: N802 (Qt override)
-        # Qt's default popup placement flips the list above the box when it
-        # judges there isn't room below (common in this tab's scroll area,
-        # even when there visually is room) — force it below whenever that
-        # actually fits on-screen, so the option list is where the user
-        # expects it. A combo near the bottom of the screen is the case Qt's
-        # flip logic exists for; forcing "below" there would run the popup
-        # off the bottom of the display, so only override when there's room.
         super().showPopup()
-        popup = self.view().window()
-        below_point = self.mapToGlobal(self.rect().bottomLeft())
-        screen = self.screen()
-        fits_below = (
-            screen is None
-            or below_point.y() + popup.height() <= screen.availableGeometry().bottom()
-        )
-        if fits_below:
-            popup.move(below_point)
+        reposition_combo_popup_below_if_it_fits(self, self.view().window())
 
 
 class _NoScrollTabBar(QTabBar):
