@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Geçerli ayarlarınızla en güncel geliştirmeleri oluşturur ve oyununuza uygular. Önce mevcut global.ini dosyasının yedeği alınır."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Zaten uygulandı: en son uyguladığınızdan bu yana hiçbir şey değişmedi."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Geçerli ayarlarınızı kullanır (Gelişmiş görünümde gösterilenlerle aynı).\nİlk çalıştırma, DataForge çıkarılırken birkaç dakika sürebilir."

@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Genera gli ultimi miglioramenti con le tue impostazioni attuali e applicali al gioco. Viene prima creato un backup del global.ini attuale."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Già applicato: nulla è cambiato dall'ultima applicazione."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Usa le tue impostazioni attuali (le stesse mostrate nella vista Avanzata).\nLa prima esecuzione può richiedere alcuni minuti mentre DataForge viene estratto."
