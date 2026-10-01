@@ -2,6 +2,7 @@
 import datetime
 import email.utils
 import logging
+import shutil
 import socket
 from pathlib import Path
 from urllib.error import HTTPError
@@ -103,3 +104,23 @@ def download_file_if_changed(url: str, output_path: str | Path) -> bool:
             return False
         logger.error(f"HTTP {e.code} downloading {url}: {e}")
         raise
+
+
+def fetch_language_base(source: str, dest_path: str | Path) -> bool:
+    """Fetch a language's global.ini to *dest_path* from *source* (#367).
+
+    *source* is either an ``http(s)://`` URL (downloaded via
+    :func:`download_file_if_changed`) or a local file path — a language whose
+    community source can't be redistributed (e.g. Korean) is mapped to a file
+    the user already has on disk, so it's copied instead of fetched.
+
+    Returns True if *dest_path* is present and usable afterward. Raises
+    on a failed download or a missing/unreadable local source, same as
+    :func:`download_file_if_changed` and :func:`shutil.copy2`.
+    """
+    dest_path = Path(dest_path)
+    if source.startswith(("http://", "https://")):
+        return download_file_if_changed(source, dest_path)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, dest_path)
+    return True

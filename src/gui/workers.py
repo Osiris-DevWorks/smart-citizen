@@ -6,6 +6,7 @@ isolation, and so the file size of main_window.py stays manageable.
 Contents:
 - AnimatedProgressDialog — reusable indeterminate↔determinate progress dialog
 - FileLoaderWorker        — loads sources, builds StringEntry list, sort keys
+- AppliedStateWorker      — checks off the GUI thread whether the loaded state is already applied
 - StartupSyncWorker       — refreshes URL-backed sources on startup
 - EnhancementsGeneratorWorker — runs scripts/generate_enhancements_ini.py
 - BlueprintLogScanWorker  — scans SC logs for received-blueprint events (#222)
@@ -193,6 +194,45 @@ class FileLoaderWorker(QThread):
             self.error.emit(str(e))
 
 
+class AppliedStateWorker(QThread):
+    """Work out off the GUI thread whether the loaded state already matches
+    the game's global.ini (#398 review).
+
+    The check re-reads every source, re-merges, and parses the applied file,
+    which is seconds of work on a real profile, so it can't run in the slot
+    that follows a reload.
+
+    ``compute(snapshot, should_stop)`` does the work and is injected by
+    MainWindow rather than imported: it shares its merge with Apply to Game,
+    which lives in main_window.py, and importing that here would be a
+    gui <-> gui cycle. *snapshot* is plain data captured on the main thread so
+    nothing in here reads widget or entry state the user may be editing
+    mid-run. *token* is echoed back untouched so MainWindow can tell a stale
+    result from a current one.
+
+    Emits ``finished`` exactly once and stores the same value in ``result``.
+    False means "not verified as applied": a mismatch, an error, or an
+    interruption. It is always the safe (red) direction.
+    """
+
+    finished = pyqtSignal(bool)
+
+    def __init__(self, compute, snapshot, token: int):
+        super().__init__()
+        self._compute = compute
+        self._snapshot = snapshot
+        self.token = token
+        self.result = False
+
+    def run(self):
+        try:
+            self.result = bool(self._compute(self._snapshot, self.isInterruptionRequested))
+        except Exception as e:
+            logger.debug(f"Could not verify already-applied state: {e}")
+            self.result = False
+        self.finished.emit(self.result)
+
+
 class StartupSyncWorker(QThread):
     """Worker thread that syncs all enabled remote sources on startup.
 
@@ -239,34 +279,43 @@ class StartupSyncWorker(QThread):
 
 
 class LanguageBaseDownloadWorker(QThread):
-    """Download a language's global.ini to its per-language base.ini path.
+    """Fetch a language's global.ini to its per-language base.ini path.
 
-    Uses ``download_file_if_changed`` so an unchanged remote (matched via
-    ETag / Last-Modified) is a fast no-op: switching back to a language whose
-    base.ini we already cached doesn't re-download the ~10 MB file.
+    ``source`` is either an ``http(s)://`` URL (the normal case) or a local
+    file path (#367: a language whose community source can't be redistributed,
+    e.g. Korean, is mapped via *Map Language File* to a file the user already
+    has on disk). URLs use ``download_file_if_changed`` so an unchanged remote
+    (matched via ETag / Last-Modified) is a fast no-op: switching back to a
+    language whose base.ini we already cached doesn't re-download the ~10 MB
+    file. A local path is just copied — there's no network round trip to
+    save a conditional request on.
     """
 
     finished = pyqtSignal(bool)  # True = a base.ini is present and usable
     error = pyqtSignal(str)
 
-    def __init__(self, url: str, dest_path):
+    def __init__(self, source: str, dest_path):
         super().__init__()
-        self._url = url
+        self._source = source
         self._dest = dest_path
 
     def run(self):
-        from src.utils.updater import download_file_if_changed
+        from src.utils.updater import fetch_language_base
+        is_url = self._source.startswith(("http://", "https://"))
         try:
-            changed = download_file_if_changed(self._url, self._dest)
-            logger.info(
-                f"Language base.ini ready: {self._dest} "
-                f"({'downloaded' if changed else 'unchanged, used cache'})"
-            )
+            changed = fetch_language_base(self._source, self._dest)
+            if is_url:
+                logger.info(
+                    f"Language base.ini ready: {self._dest} "
+                    f"({'downloaded' if changed else 'unchanged, used cache'})"
+                )
+            else:
+                logger.info(f"Language base.ini ready: {self._dest} (copied from local file)")
             self.finished.emit(True)
         except Exception as e:
-            logger.exception(f"Language base.ini download failed: {e}")
+            logger.exception(f"Language base.ini fetch failed: {e}")
             self.error.emit(str(e))
-            # finished(False): a download failure isn't fatal — the caller
+            # finished(False): a fetch failure isn't fatal — the caller
             # falls back to any cached copy, or to English.
             self.finished.emit(False)
 

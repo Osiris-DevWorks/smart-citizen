@@ -63,6 +63,11 @@ class ConfigTab(QWidget):
     # Emitted when the user picks a different language. MainWindow listens and
     # triggers a merge+reload so the table reflects the new language strings.
     language_changed = pyqtSignal(str)
+    # Emitted when Map Language File changes the override for the *currently
+    # selected* language (#409 follow-up). Switching away and back already
+    # re-ran _apply_language_base_source; without this, a freshly mapped file
+    # only takes effect on the next switch, not immediately.
+    language_source_changed = pyqtSignal(str)
     # Emitted by the Settings Backup buttons. MainWindow owns the file
     # dialogs, the zip I/O (src/utils/settings_profile.py), and the
     # post-import restart flow so this tab stays presentation-only.
@@ -1117,7 +1122,9 @@ class ConfigTab(QWidget):
 
     def _open_language_source_dialog(self):
         """Open the Map Language File dialog to edit per-language base.ini URLs."""
-        LanguageSourceDialog(self).exec()
+        dialog = LanguageSourceDialog(self)
+        dialog.language_source_changed.connect(self.language_source_changed)
+        dialog.exec()
 
     # ── P4K status ───────────────────────────────────────────────────────────
 
@@ -1269,6 +1276,11 @@ class LanguageSourceDialog(QDialog):
     to that language downloads it and uses it as the base strings (issue #30).
     """
 
+    # Emitted after Save when the currently-selected language's own override
+    # changed, so MainWindow can repoint its source immediately (#409 follow-up)
+    # instead of waiting for the next language switch.
+    language_source_changed = pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(tr("config.map_language_title"))
@@ -1291,18 +1303,24 @@ class LanguageSourceDialog(QDialog):
         ]
 
         self._inputs: dict[str, QLineEdit] = {}
+        self._original_overrides: dict[str, str] = {}
         grid = QGridLayout()
         for row, lang in enumerate(sorted(langs)):
             label = QLabel(_LANGUAGE_COMBO_LABEL_OVERRIDES.get(
                 lang, lang.replace("_", " ").title()
             ))
-            edit = QLineEdit(AppSettings.get_language_source_override(lang))
+            original = AppSettings.get_language_source_override(lang)
+            edit = QLineEdit(original)
             edit.setPlaceholderText(
                 bundled.get(lang, "") or tr("config.language_source_placeholder")
             )
+            browse_btn = QPushButton(tr("config.browse_btn"))
+            browse_btn.clicked.connect(lambda checked=False, e=edit: self._browse_for_local_file(e))
             grid.addWidget(label, row, 0)
             grid.addWidget(edit, row, 1)
+            grid.addWidget(browse_btn, row, 2)
             self._inputs[lang] = edit
+            self._original_overrides[lang] = original
         layout.addLayout(grid)
 
         buttons = QDialogButtonBox(
@@ -1312,8 +1330,48 @@ class LanguageSourceDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    def _browse_for_local_file(self, edit: QLineEdit) -> None:
+        """Pick a local global.ini to map (#367): for a language whose
+        community source can't be redistributed (e.g. Korean), the user
+        already has their own file on disk from that community's own
+        installer and just needs to point Smart Citizen at it."""
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("import_flow.select_ini_file_title"), "",
+            tr("import_flow.ini_file_filter"),
+        )
+        if path:
+            edit.setText(path)
+
     def _save(self):
+        # Refuse a local path that resolves to the very file "Apply to Game"
+        # writes for that language (#409 follow-up). Korean's only known-good
+        # source is the player's own already-installed community patch, which
+        # usually sits at exactly that path — mapping it there would feed
+        # Smart Citizen's own merged output back in as the "source" on the
+        # next apply, double-stacking every enhancement.
+        blocked_langs = []
         for lang, edit in self._inputs.items():
-            AppSettings.set_language_source_override(lang, edit.text().strip())
+            new_value = edit.text().strip()
+            if not new_value or new_value.startswith(("http://", "https://")):
+                continue
+            if AppSettings.is_local_source_same_as_apply_target(new_value, lang):
+                blocked_langs.append(lang)
+        if blocked_langs:
+            names = ", ".join(lang.replace("_", " ").title() for lang in blocked_langs)
+            QMessageBox.warning(
+                self, tr("config.map_language_title"),
+                tr("config.map_language_overwrite_warning", languages=names),
+            )
+            return
+
+        current_language = AppSettings.get_selected_language()
+        current_language_source_changed = False
+        for lang, edit in self._inputs.items():
+            new_value = edit.text().strip()
+            if lang == current_language and new_value != self._original_overrides.get(lang, ""):
+                current_language_source_changed = True
+            AppSettings.set_language_source_override(lang, new_value)
         logger.info("Saved language base.ini URL overrides")
+        if current_language_source_changed:
+            self.language_source_changed.emit(current_language)
         self.accept()
