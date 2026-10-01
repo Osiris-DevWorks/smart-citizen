@@ -19,6 +19,39 @@ _LANGUAGE_KV_RE = re.compile(
 )
 
 
+def get_user_cfg_language(channel_path: str | Path | None = None) -> str | None:
+    """Read user.cfg's current g_language value, without modifying anything.
+
+    Returns None if the channel path/user.cfg is missing or unreadable, or
+    no g_language line is present. Pure read -- unlike ensure_user_cfg_
+    language, which also writes. Added for MainWindow._entries_already_
+    applied (#398 review): switching the language selector in Smart
+    Citizen's own UI never touches user.cfg by itself (ensure_user_cfg_
+    language only ever runs at window init and apply-to-game time), so a
+    merged-file-content comparison alone can look "already applied" (green)
+    for a language switched back to from another one, while the game's
+    user.cfg still points at the OTHER language entirely -- green with
+    nothing actually fixable, since Apply (the only path that corrects
+    g_language) is now disabled by that same false-green verdict.
+    """
+    if channel_path is None:
+        channel_path = AppSettings.get_game_install_path()
+    if not channel_path:
+        return None
+    user_cfg_path = Path(channel_path) / "user.cfg"
+    if not user_cfg_path.exists():
+        return None
+    try:
+        content = user_cfg_path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    for line in content.splitlines():
+        if _LANGUAGE_KEY_RE.match(line):
+            match = _LANGUAGE_KV_RE.match(line)
+            return match.group(1).strip() if match else None
+    return None
+
+
 def ensure_user_cfg_language(language: str | None = None) -> bool:
     """Ensure Star Citizen's user.cfg has the correct g_language setting.
 

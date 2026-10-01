@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.gui.main_window import MainWindow, _matches_applied_output
+from src.gui.main_window import MainWindow, _matches_applied_output, _user_cfg_language_matches
 
 pytestmark = pytest.mark.unit
 
@@ -74,6 +74,45 @@ class TestMatchesAppliedOutput:
         # Flip one stock-passthrough key stale -> dirty.
         applied_stale = {"a": "1", "b": "overridden", "c": "STALE"}
         assert _matches_applied_output(stock, merged, applied_stale) is False
+
+
+class TestUserCfgLanguageMatches:
+    """#398 review: _entries_already_applied's file-content comparison alone
+    missed a real bug. Switching the language selector in Smart Citizen's
+    UI never touches user.cfg by itself (only window init and apply-to-game
+    time do) -- so switching back to a language that was fully applied in
+    the past, with no merge change since, read as "already applied" purely
+    on content, even while user.cfg's g_language still pointed at whatever
+    language was applied most recently. Green AND disabled, with Apply (the
+    only thing that fixes g_language) now unreachable.
+    """
+
+    def test_matching_language_is_true(self):
+        assert _user_cfg_language_matches("french", "french_(france)") is True
+
+    def test_mismatched_language_is_false(self):
+        """The exact bug: selected language is French, but user.cfg still
+        has German from whatever was applied most recently."""
+        assert _user_cfg_language_matches("french", "german_(germany)") is False
+
+    def test_case_insensitive_match(self):
+        """user.cfg's own parser is case-insensitive on the value (see
+        ensure_user_cfg_language) -- this comparison must be too, or a
+        cosmetic case difference alone would falsely show dirty forever."""
+        assert _user_cfg_language_matches("french", "French_(France)") is True
+
+    def test_missing_user_cfg_value_is_false(self):
+        """No g_language line in user.cfg at all (fresh install, never
+        applied) -- must not match, since nothing has actually applied yet."""
+        assert _user_cfg_language_matches("french", None) is False
+
+    def test_unmapped_language_falls_back_to_itself(self):
+        """A selected_language not in SC_LANGUAGE_IDS (shouldn't happen in
+        practice, but _entries_already_applied must not crash on it) falls
+        back to comparing the raw value, same as SC_LANGUAGE_IDS.get's own
+        default-to-key behavior everywhere else it's used."""
+        assert _user_cfg_language_matches("klingon", "klingon") is True
+        assert _user_cfg_language_matches("klingon", "english") is False
 
 
 class _Stub:

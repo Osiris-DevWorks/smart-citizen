@@ -114,8 +114,7 @@ class SimpleModeWidget(QWidget):
         """Single chokepoint for this button's tooltip, enabled state, and
         color, so busy-state and dirty-state can't race and leave any of
         them wrong -- busy always wins for enabled (never clickable
-        mid-run), dirty decides color and tooltip always and enabled
-        whenever not busy.
+        mid-run), dirty decides color and tooltip always but NOT enabled.
 
         The tooltip fix is #397 follow-up: this button's tooltip was still
         the single static "here's what clicking does" string from
@@ -124,6 +123,18 @@ class SimpleModeWidget(QWidget):
         already swaps its tooltip text between the two states. Resolved
         via tr() here (not cached) so a language switch picks it up too,
         same as retranslate_ui below already does for everything else.
+
+        #397 review: enabled must NOT also depend on dirty, unlike the
+        Advanced-mode Apply button (main_window.py's apply_btn.setEnabled
+        (dirty)). That button can safely disable on green because Config/
+        Enhancements still offer other always-clickable entry points to
+        force a recheck (e.g. "Extract DataForge from P4K" picking up a
+        game patch). Simple mode hides both tabs -- this button is the
+        ONLY extract/generate/apply entry point -- so a green-and-disabled
+        state after a patch (dirty still reflects the OLD, now-stale
+        comparison) leaves the user with no way to refresh at all. Dirty
+        still drives color/tooltip so a correctly-green state still reads
+        as "nothing to do"; the user can simply choose to click anyway.
         """
         color = get_button_color("needs_apply" if self._apply_dirty else "apply")
         self.generate_apply_btn.setStyleSheet(
@@ -135,7 +146,7 @@ class SimpleModeWidget(QWidget):
             tr("simple_mode.generate_apply_tip") if self._apply_dirty
             else tr("simple_mode.generate_apply_tip_disabled")
         )
-        self.generate_apply_btn.setEnabled(self._apply_dirty and not self._busy)
+        self.generate_apply_btn.setEnabled(not self._busy)
 
     def retranslate_ui(self) -> None:
         """Re-pull strings after a language switch."""

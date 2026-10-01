@@ -62,7 +62,7 @@ from src.utils.build_mode import IS_PORTABLE
 from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices_impl
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.settings import AppSettings
+from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
 from src.utils.i18n import tr
 from src.utils.version import get_version
 
@@ -151,6 +151,28 @@ def _matches_applied_output(stock_dict: dict, merged_dict: dict, applied_dict: d
         if applied_dict.get(key) != merged_dict.get(key, stock_value):
             return False
     return True
+
+
+def _user_cfg_language_matches(selected_language: str, actual_g_language: str | None) -> bool:
+    """True if user.cfg's actual g_language already matches what
+    *selected_language* should resolve to (#398 review).
+
+    Pure/Qt-free, split out of MainWindow._entries_already_applied for the
+    same testability reason _matches_applied_output was (see that
+    function) -- no file I/O here, just the SC_LANGUAGE_IDS resolution and
+    a case-insensitive compare (user.cfg's own parser is itself case-
+    insensitive on the value, per ensure_user_cfg_language).
+
+    Needed because file-content matching alone isn't enough: switching the
+    language selector in Smart Citizen's own UI never touches user.cfg by
+    itself (ensure_user_cfg_language only ever runs at window init and
+    apply-to-game time) -- so switching back to a language that was fully
+    applied in the past, with no merge change since, reads as "already
+    applied" on content alone while the game's user.cfg still points at
+    whatever language was applied most recently.
+    """
+    expected = SC_LANGUAGE_IDS.get(selected_language, selected_language)
+    return (actual_g_language or "").lower() == (expected or "").lower()
 
 
 def _channels_to_scan(active_channel: str, other_enabled: bool, installed_channels) -> list:
@@ -2260,6 +2282,18 @@ class MainWindow(QMainWindow):
         comparison can't be made cheaply and safely -- no applied file yet,
         no stock base.ini loaded, or any error along the way. Getting this
         wrong in the green direction would hide a real pending change.
+
+        Also requires user.cfg's actual g_language to already match the
+        selected language (#398 review). File content alone isn't enough:
+        switching the language selector in Smart Citizen's own UI never
+        touches user.cfg by itself (ensure_user_cfg_language only runs at
+        window init and apply-to-game time), so switching back to a
+        language that was fully applied in the past, and hasn't had its
+        merge change since, reads as "already applied" purely on content
+        -- while the game's user.cfg still points at whatever language was
+        applied most recently, a real mismatch Apply is the only thing
+        that fixes. Without this check that state is green AND disabled,
+        locking the user out of the one action that would correct it.
         """
         target_path = AppSettings.get_global_ini_path()
         if not target_path.exists():
@@ -2274,7 +2308,16 @@ class MainWindow(QMainWindow):
             merged_dict = self._build_apply_merged_dict(sources_dict, hierarchy)
             applied_dict = parse_ini_file(target_path)
 
-            return _matches_applied_output(stock_dict, merged_dict, applied_dict)
+            if not _matches_applied_output(stock_dict, merged_dict, applied_dict):
+                return False
+
+            from src.utils.user_cfg import get_user_cfg_language
+
+            selected = AppSettings.get_selected_language()
+            if not _user_cfg_language_matches(selected, get_user_cfg_language()):
+                return False
+
+            return True
         except Exception as e:
             logger.debug(f"Could not verify already-applied state (#387): {e}")
             return False
