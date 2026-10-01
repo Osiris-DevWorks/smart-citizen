@@ -5,6 +5,11 @@
 #expr FileClose(VersionFile)
 #undef VersionFile
 
+; CreateCustomForm (the uninstall dialog) takes four arguments from Inno Setup 6.6.0.
+#if Ver < EncodeVer(6, 6, 0)
+  #error This installer needs Inno Setup 6.6.0 or newer
+#endif
+
 [Setup]
 AppId={{9A8B7C6D-4E3F-5B2A-0D1E-8F7G6H5I4J3K}
 AppName=Smart Citizen
@@ -99,6 +104,14 @@ var
     and the full opt-in wipe (DeleteAllUserSettings). }
   DeleteAllSettingsChecked: Boolean;
 
+const
+  SCRegNode = 'Software\Osiris DevWorks\Smart Citizen';
+  SCLegacyRegNode = 'Software\Osiris DevWorks\SC Localization Editor';
+  { LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW: see ScChannelName. }
+  ScChannelCount = 5;
+  { Files and folders that prove a Star Citizen channel: see HasScGameData. }
+  ScMarkerCount = 10;
+
 function IsAutoUpdate(): Boolean;
 begin
   { True when this install was spawned by the app's in-app auto-updater
@@ -106,29 +119,6 @@ begin
     src/gui/main_window.py. Drives the [Run] entry that relaunches the app
     after a silent upgrade. }
   Result := ExpandConstant('{param:AUTOUPDATE|0}') = '1';
-end;
-
-function IsVerySilentUninstall(): Boolean;
-var
-  I: Integer;
-begin
-  { #357 review fix: UninstallSilent() is True for BOTH /SILENT and
-    /VERYSILENT, but only /VERYSILENT means genuinely headless -- /SILENT
-    still shows MsgBox prompts, and the "click NO, uninstall old version
-    only" branch of the reinstall-detection prompt below runs its
-    sub-uninstall with exactly /SILENT (an interactive user is sitting
-    right there, mid-click). Checking the actual command line instead of
-    UninstallSilent() distinguishes that case from the truly automated
-    /VERYSILENT auto-update cleanup (UnInstallOldVersion above). }
-  Result := False;
-  for I := 1 to ParamCount do
-  begin
-    if CompareText(ParamStr(I), '/VERYSILENT') = 0 then
-    begin
-      Result := True;
-      Exit;
-    end;
-  end;
 end;
 
 function GetLocalCacheDefault(): String;
@@ -143,15 +133,10 @@ function GetCacheDir(): String;
 var
   OverridePath: String;
 begin
-  { #357: override-aware resolver for the DataForge cache location, mirroring
-    GetDocumentsDir's resolution order for user_data_dir. Needed so the
-    opt-in full-wipe uninstall (DeleteAllUserSettings) deletes wherever the
-    cache ACTUALLY lives, not just the %LOCALAPPDATA% default -- a user who
-    moved it to another drive would otherwise be left with a multi-GB
-    orphaned folder after "delete everything". }
-  if RegQueryStringValue(HKCU,
-    'Software\Osiris DevWorks\Smart Citizen',
-    'cache_dir', OverridePath) and (OverridePath <> '') then
+  { Override-aware, like GetDocumentsDir: the full wipe has to clean where the
+    cache really lives, not just the %LOCALAPPDATA% default. }
+  if RegQueryStringValue(HKCU, SCRegNode, 'cache_dir', OverridePath)
+     and (OverridePath <> '') then
   begin
     Result := OverridePath;
     Exit;
@@ -535,6 +520,18 @@ begin
   end;
 end;
 
+function GetDefaultDocumentsDir(): String;
+begin
+  { The app's default data folder when no user_data_dir override is set. }
+  Result := GetDocumentsBase() + '\Smart Citizen';
+end;
+
+function GetLegacyDocumentsDir(): String;
+begin
+  { The pre-0.9 data folder, from before the rebrand. }
+  Result := GetDocumentsBase() + '\SC Localization Editor';
+end;
+
 function GetDocumentsDir(): String;
 var
   OverridePath: String;
@@ -547,13 +544,13 @@ begin
          survive uninstall.
       2. userdocs \Smart Citizen — the default. }
   if RegQueryStringValue(HKCU,
-    'Software\Osiris DevWorks\Smart Citizen',
+    SCRegNode,
     'user_data_dir', OverridePath) and (OverridePath <> '') then
   begin
     Result := OverridePath;
     Exit;
   end;
-  Result := GetDocumentsBase() + '\Smart Citizen';
+  Result := GetDefaultDocumentsDir();
 end;
 
 procedure MigrateUserDocsFolder();
@@ -564,8 +561,8 @@ begin
     if the old folder exists and the new one does not. User data (user.ini,
     backups, cache) moves with the rename — no copy required. }
   DocsBase := GetDocumentsBase();
-  OldDir := DocsBase + '\SC Localization Editor';
-  NewDir := DocsBase + '\Smart Citizen';
+  OldDir := GetLegacyDocumentsDir();
+  NewDir := GetDefaultDocumentsDir();
   if DirExists(OldDir) and not DirExists(NewDir) then
   begin
     MsgBox('Your user data folder will be renamed as part of this update:' + #13#10 + #13#10 +
@@ -579,9 +576,21 @@ begin
   end;
 end;
 
+function ScChannelName(const I: Integer): String;
+begin
+  { Channel I of ScChannelCount. Keep in step with install_scanner.SC_CHANNELS. }
+  case I of
+    0: Result := 'LIVE';
+    1: Result := 'PTU';
+    2: Result := 'EPTU';
+    3: Result := 'HOTFIX';
+  else
+    Result := 'TECH-PREVIEW';
+  end;
+end;
+
 procedure CleanPerChannelCaches(UserDataDir: String);
 var
-  Channels: array[0..4] of String;
   i: Integer;
   CachePath: String;
   Deleted: Boolean;
@@ -596,14 +605,9 @@ begin
     directory still exists afterwards. Surfaces silent failures (locked
     files under OneDrive sync / Defender real-time scan) in the install
     log so users reporting "cache wasn't removed" can be diagnosed. }
-  Channels[0] := 'LIVE';
-  Channels[1] := 'PTU';
-  Channels[2] := 'EPTU';
-  Channels[3] := 'HOTFIX';
-  Channels[4] := 'TECH-PREVIEW';
-  for i := 0 to 4 do
+  for i := 0 to ScChannelCount - 1 do
   begin
-    CachePath := UserDataDir + '\' + Channels[i] + '\cache';
+    CachePath := UserDataDir + '\' + ScChannelName(i) + '\cache';
     if DirExists(CachePath) then
     begin
       Log('Deleting per-channel cache: ' + CachePath);
@@ -651,15 +655,16 @@ end;
     - user_data_dir is written to the LIVE node (Osiris DevWorks\Smart Citizen)
       via RegWriteStringValue in WriteInstallerChoicesToRegistry, NOT via a
       Registry-section entry, so Inno's own uninstaller has no value to drop;
-    - this script has no Registry section and no code path that deletes
-      values from the live node, so nothing wipes it on uninstall;
+    - the only code path that deletes the live node is DeleteAllUserSettings,
+      reached when the user ticks "Also delete all saved settings" (#357),
+      so every other uninstall leaves it alone;
     - InitializeWizard pre-fills user_data_dir on the next install.
   The real risk vector is a FUTURE change adding live-node deletion to the
   uninstall step (see CurUninstallStepChanged). A former CleanRegistrySettings()
   helper that key-deleted a whole node lived here and was dead code; it was
   removed deliberately so its wipe pattern can't be copied and retargeted at
-  the live node. Do not reintroduce node/value deletion against
-  'Software\Osiris DevWorks\Smart Citizen' in the uninstall path. }
+  the live node. Do not add node/value deletion to any other uninstall path:
+  the #357 opt-in is the one deliberate exception. }
 
 procedure WriteInstallerChoicesToRegistry();
 var
@@ -687,7 +692,7 @@ begin
   FinalPath := SCDirectoryPage.Values[0];
   if FinalPath <> '' then
   begin
-    RegPath := 'Software\Osiris DevWorks\Smart Citizen';
+    RegPath := SCRegNode;
     RegWriteStringValue(HKCU, RegPath, 'sc_directory', FinalPath);
     RegWriteStringValue(HKCU, RegPath, 'game_install_path', FinalPath);
     { Write sc_install_root (parent of the channel folder) so a reinstall
@@ -695,7 +700,7 @@ begin
       migration winning over the freshly chosen directory. }
     RegWriteStringValue(HKCU, RegPath, 'sc_install_root', ExtractFileDir(RemoveBackslash(FinalPath)));
     RegWriteStringValue(HKCU,
-      'Software\Osiris DevWorks\SC Localization Editor',
+      SCLegacyRegNode,
       'sc_directory', FinalPath);
     Log('Saved sc_directory to registry (Smart Citizen + legacy nodes): ' + FinalPath);
   end;
@@ -715,22 +720,22 @@ begin
     app's migrate_registry_appname() preserves it across rebrand
     migrations. }
   DataDir := DataDirPage.Values[0];
-  DocsDefault := GetDocumentsBase() + '\Smart Citizen';
+  DocsDefault := GetDefaultDocumentsDir();
   if (DataDir = '') or (CompareText(DataDir, DocsDefault) = 0) then
   begin
     RegDeleteValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen', 'user_data_dir');
+      SCRegNode, 'user_data_dir');
     RegDeleteValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen', 'UserDataDir');
+      SCRegNode, 'UserDataDir');
     Log('User chose default Documents folder; cleared user_data_dir override.');
   end
   else
   begin
     RegWriteStringValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen',
+      SCRegNode,
       'user_data_dir', DataDir);
     RegDeleteValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen', 'UserDataDir');
+      SCRegNode, 'UserDataDir');
     ForceDirectories(DataDir);
     Log('Saved user_data_dir to registry: ' + DataDir);
   end;
@@ -745,13 +750,13 @@ begin
   if (CacheDir = '') or (CompareText(CacheDir, CacheDefault) = 0) then
   begin
     RegDeleteValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen', 'cache_dir');
+      SCRegNode, 'cache_dir');
     Log('User chose default cache folder; cleared cache_dir override.');
   end
   else
   begin
     RegWriteStringValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen',
+      SCRegNode,
       'cache_dir', CacheDir);
     ForceDirectories(CacheDir);
     Log('Saved cache_dir to registry: ' + CacheDir);
@@ -764,10 +769,10 @@ begin
     on uninstall. }
   if ModeChoicePage.SelectedValueIndex = 1 then
     RegWriteStringValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen', 'ui_mode', 'advanced')
+      SCRegNode, 'ui_mode', 'advanced')
   else
     RegWriteStringValue(HKCU,
-      'Software\Osiris DevWorks\Smart Citizen', 'ui_mode', 'simple');
+      SCRegNode, 'ui_mode', 'simple');
   Log('Saved ui_mode to registry.');
 
   { App UI/string language, matching AppSettings.SELECTED_LANGUAGE. Always
@@ -795,28 +800,28 @@ begin
   begin
     case LanguageChoicePage.SelectedValueIndex of
       1: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'french');
+           SCRegNode, 'selected_language', 'french');
       2: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'portuguese_br');
+           SCRegNode, 'selected_language', 'portuguese_br');
       3: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'spanish');
+           SCRegNode, 'selected_language', 'spanish');
       4: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'japanese');
+           SCRegNode, 'selected_language', 'japanese');
       5: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'chinese');
+           SCRegNode, 'selected_language', 'chinese');
       6: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'italian');
+           SCRegNode, 'selected_language', 'italian');
       7: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'german');
+           SCRegNode, 'selected_language', 'german');
       8: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'turkish');
+           SCRegNode, 'selected_language', 'turkish');
       9: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'korean');
+           SCRegNode, 'selected_language', 'korean');
       10: RegWriteStringValue(HKCU,
-           'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'chinese_traditional');
+           SCRegNode, 'selected_language', 'chinese_traditional');
     else
       RegWriteStringValue(HKCU,
-        'Software\Osiris DevWorks\Smart Citizen', 'selected_language', 'english');
+        SCRegNode, 'selected_language', 'english');
     end;
     Log('Saved selected_language to registry.');
   end;
@@ -881,201 +886,459 @@ begin
   end;
 end;
 
-function UnsafeDeleteRootReason(const Root: String): String;
-var
-  SCInstallRoot: String;
-  Stripped: String;
-  Normalized: String;
+{ ---- #357: opt-in "Also delete all saved settings" ---------------------- }
+
+function CanonDir(const P: String): String;
 begin
-  { #357 review: a custom user_data_dir / cache_dir override is any folder
-    the user (or the install wizard's OneDrive-escape default) picked --
-    GetDocumentsDir/GetCacheDir return it verbatim, with no guaranteed
-    "Smart Citizen" subfolder the way the Documents default has. Treating
-    an override root as fully "owned by the app" and recursively deleting
-    it would also take out whatever else lives there if the user picked
-    D:\, D:\Games (which may hold the SC install itself), their whole
-    Documents folder, or a OneDrive root (which then syncs the loss to the
-    cloud). Refuses -- logging why -- rather than guessing a safe partial
-    cleanup; the caller falls back to DeleteOwnedSubpaths for every other
-    root, which only ever touches the app's own named subpaths. }
-  Result := '';
-  if Root = '' then
-  begin
-    Result := 'empty path';
-    Exit;
-  end;
-  Stripped := RemoveBackslash(Root);
-  if (Length(Stripped) = 2) and (Copy(Stripped, 2, 1) = ':') then
-  begin
-    Result := 'a drive root';
-    Exit;
-  end;
-  Normalized := AddBackslash(LowerCase(Stripped));
-  if Normalized = AddBackslash(LowerCase(RemoveBackslash(GetDocumentsBase()))) then
-  begin
-    Result := 'the Documents folder';
-    Exit;
-  end;
-  if Normalized = AddBackslash(LowerCase(ExpandConstant('{%USERPROFILE}'))) then
-  begin
-    Result := '%USERPROFILE%';
-    Exit;
-  end;
-  if Normalized = AddBackslash(LowerCase(ExpandConstant('{app}'))) then
-  begin
-    Result := 'the Smart Citizen install folder ({app})';
-    Exit;
-  end;
-  SCInstallRoot := '';
-  if not (RegQueryStringValue(HKCU, 'Software\Osiris DevWorks\Smart Citizen',
-            'sc_directory', SCInstallRoot) and (SCInstallRoot <> '')) then
-    RegQueryStringValue(HKCU, 'Software\Osiris DevWorks\Smart Citizen',
-      'game_install_path', SCInstallRoot);
-  if (SCInstallRoot <> '') and PathUnderRoot(SCInstallRoot, Root) then
-  begin
-    Result := 'it contains the Star Citizen install (' + SCInstallRoot + ')';
-    Exit;
+  { The folder Windows will actually touch: slashes turned into backslashes,
+    dot segments resolved, trailing dots/spaces and the last backslash dropped.
+    Every comparison below uses this form. }
+  Result := P;
+  StringChangeEx(Result, '/', '\', True);
+  Result := RemoveBackslash(ExpandFileName(Trim(Result)));
+end;
+
+function IsAbsoluteDir(const P: String): Boolean;
+var
+  S: String;
+begin
+  S := Trim(P);
+  StringChangeEx(S, '/', '\', True);
+  Result := ((Length(S) >= 3) and (Copy(S, 2, 2) = ':\')) or (Copy(S, 1, 2) = '\\');
+end;
+
+function SameDir(const A, B: String): Boolean;
+begin
+  { GetShortName maps a long name and its 8.3 alias (DOCUME~1) to one string. }
+  Result := (A <> '') and (B <> '') and
+            ((CompareText(CanonDir(A), CanonDir(B)) = 0) or
+             (CompareText(GetShortName(CanonDir(A)), GetShortName(CanonDir(B))) = 0));
+end;
+
+function LongPath(const Dir: String): String;
+begin
+  { \\?\ lifts the 260-character limit that Setup otherwise has, and DataForge
+    cache paths run past it. Dir must already be canonical (CanonDir), because
+    Windows does not tidy a \\?\ path. }
+  if Copy(Dir, 1, 2) = '\\' then
+    Result := '\\?\UNC\' + Copy(Dir, 3, Length(Dir))
+  else
+    Result := '\\?\' + Dir;
+end;
+
+function IsLinkDir(const Dir: String): Boolean;
+var
+  FR: TFindRec;
+begin
+  { A junction or symbolic link (FILE_ATTRIBUTE_REPARSE_POINT). Windows may not
+    let the uninstaller see inside one, so its contents cannot be checked. }
+  Result := False;
+  if FindFirst(Dir, FR) then
+  try
+    Result := (FR.Attributes and $400) <> 0;
+  finally
+    FindClose(FR);
   end;
 end;
 
-procedure DeleteOwnedSubpaths(const Root: String);
+function HasScGameData(const Dir: String): Boolean;
 var
-  OwnedDirs: array[0..7] of String;
   i: Integer;
-  SubPath, UserIniPath, Reason: String;
+  Marker: String;
 begin
-  { #357 review: delete only what the app actually writes under Root, never
-    Root itself recursively -- the five channel folders (each nesting its
-    own backups/user.ini/cache/dataforge, per the per-channel layout),
-    plus the non-per-channel \logs, and (defensively, in case an
-    unmigrated pre-channel-layout folder is still in play) a top-level
-    \backups, \cache and user.ini. Root is removed afterward only via
-    RemoveDir, which fails (harmlessly) if anything we don't own is still
-    in there -- the opposite of DelTree, which would take it out anyway. }
-  Reason := UnsafeDeleteRootReason(Root);
-  if Reason <> '' then
+  { Anything a real Star Citizen channel keeps, even after its game data is
+    deleted. Keep in step with install_scanner.SC_CHANNEL_MARKERS. USER (the
+    player's keybinds and settings), ScreenShots, logbackups and Game.log are
+    extra here: they are the player's own data, which outlives the game files.
+    None of these ever appear in Smart Citizen's own folders. }
+  Result := False;
+  for i := 0 to ScMarkerCount - 1 do
   begin
-    Log('Refusing to delete under ' + Root + ' (' + Reason + ') -- ' +
-        'leaving it in place rather than risk deleting data the app does not own.');
+    case i of
+      0: Marker := 'Data.p4k';
+      1: Marker := 'build_manifest.id';
+      2: Marker := 'Bin64';
+      3: Marker := 'StarCitizen_Launcher.exe';
+      4: Marker := 'EasyAntiCheat';
+      5: Marker := 'client.crt';
+      6: Marker := 'USER';
+      7: Marker := 'ScreenShots';
+      8: Marker := 'logbackups';
+      9: Marker := 'Game.log';
+    else
+      { Fails safe if ScMarkerCount ever runs past this list: Dir + '\'
+        always exists, so the folder is refused rather than wiped. }
+      Marker := '';
+    end;
+    if FileExists(Dir + '\' + Marker) or DirExists(Dir + '\' + Marker) then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function LooksLikeScInstall(const Dir: String): Boolean;
+var
+  i: Integer;
+begin
+  { Judged by game files, not the registry, so it still works when every
+    recorded path is stale. Covers the folder itself and each channel folder
+    under it. }
+  Result := HasScGameData(Dir);
+  for i := 0 to ScChannelCount - 1 do
+    if not Result then
+      Result := HasScGameData(Dir + '\' + ScChannelName(i));
+end;
+
+function RegisteredScPathUnder(const Root: String): String;
+var
+  Nodes: array[0..1] of String;
+  Names: array[0..2] of String;
+  Value: String;
+  n, v: Integer;
+begin
+  { Every place the installer or the app records the SC install, in both
+    registry nodes, and ALL of them count (sc_directory is only written by the
+    installer and goes stale; sc_install_root is what the app maintains). }
+  Result := '';
+  Nodes[0] := SCRegNode;
+  Nodes[1] := SCLegacyRegNode;
+  Names[0] := 'sc_install_root';
+  Names[1] := 'game_install_path';
+  Names[2] := 'sc_directory';
+  for n := 0 to 1 do
+    for v := 0 to 2 do
+    begin
+      Value := '';
+      if (Result = '') and RegQueryStringValue(HKCU, Nodes[n], Names[v], Value)
+         and IsAbsoluteDir(Value) and PathUnderRoot(CanonDir(Value), Root) then
+        Result := Value;
+    end;
+end;
+
+function UnsafeDeleteRootReason(const RawRoot: String): String;
+var
+  Root, Hit, T: String;
+begin
+  { A data or cache folder override can be any folder the user picked. Returns
+    why deleting inside it is unsafe, as the end of a sentence the user reads
+    ("... not cleaned because it is a whole drive"), or '' when it is fine. }
+  Result := '';
+  Root := Trim(RawRoot);
+  if Root = '' then
+  begin
+    Result := 'the folder setting is empty';
     Exit;
   end;
-
-  OwnedDirs[0] := 'LIVE';
-  OwnedDirs[1] := 'PTU';
-  OwnedDirs[2] := 'EPTU';
-  OwnedDirs[3] := 'HOTFIX';
-  OwnedDirs[4] := 'TECH-PREVIEW';
-  OwnedDirs[5] := 'logs';
-  OwnedDirs[6] := 'backups';
-  OwnedDirs[7] := 'cache';
-  for i := 0 to 7 do
+  if (Length(Root) = 2) and (Copy(Root, 2, 1) = ':') then
   begin
-    SubPath := Root + '\' + OwnedDirs[i];
-    if DirExists(SubPath) then
+    Result := 'it is a whole drive';
+    Exit;
+  end;
+  if not IsAbsoluteDir(Root) then
+  begin
+    Result := 'it is not a full folder path';
+    Exit;
+  end;
+  T := Root;
+  StringChangeEx(T, '/', '\', True);
+  if (Copy(T, 1, 4) = '\\?\') or (Copy(T, 1, 4) = '\\.\') then
+  begin
+    Result := 'it is a special device path';
+    Exit;
+  end;
+  Root := CanonDir(Root);
+  if (Length(Root) = 2) and (Copy(Root, 2, 1) = ':') then
+  begin
+    Result := 'it is a whole drive';
+    Exit;
+  end;
+  { Checked again after canonicalising: a value such as \\ or // comes out
+    empty, and an empty root would make every path below start at the root of
+    the current drive. }
+  if not IsAbsoluteDir(Root) then
+  begin
+    Result := 'it is not a full folder path';
+    Exit;
+  end;
+  if Copy(Root, 1, 2) = '\\' then
+  begin
+    T := Copy(Root, 3, Length(Root));
+    if Pos('\', T) > 0 then
+      T := Copy(T, Pos('\', T) + 1, Length(T))
+    else
+      T := '';
+    if (Copy(T, 2, 1) = '$') and ((Length(T) = 2) or (Copy(T, 3, 1) = '\')) then
     begin
-      Log('Deleting owned subpath: ' + SubPath);
-      if not DelTree(SubPath, True, True, True) then
-        Log('WARNING: DelTree returned false for ' + SubPath);
+      Result := 'it is a whole drive shared over the network';
+      Exit;
+    end;
+    if Pos('\', T) = 0 then
+    begin
+      Result := 'it is the top of a network share';
+      Exit;
+    end;
+  end;
+  { The local %USERPROFILE%\Documents stays a real folder when OneDrive or the
+    Location tab moves the shell's Documents, and the data page even suggests
+    a path inside it (SuggestLocalDataDir). }
+  if SameDir(Root, GetDocumentsBase()) or SameDir(Root, ExpandConstant('{userdocs}')) or
+     SameDir(Root, ExpandConstant('{%USERPROFILE}\Documents')) then
+  begin
+    Result := 'it is the Documents folder';
+    Exit;
+  end;
+  if SameDir(Root, ExpandConstant('{%USERPROFILE}')) then
+  begin
+    Result := 'it is your user profile folder';
+    Exit;
+  end;
+  if SameDir(Root, ExpandConstant('{app}')) then
+  begin
+    Result := 'it is the folder Smart Citizen is installed in';
+    Exit;
+  end;
+  if IsLinkDir(Root) then
+  begin
+    Result := 'it is a junction or symbolic link';
+    Exit;
+  end;
+  Hit := RegisteredScPathUnder(Root);
+  if Hit <> '' then
+  begin
+    if SameDir(Hit, Root) then
+      Result := 'it is the Star Citizen install folder'
+    else
+      Result := 'it contains the Star Citizen install (' + Hit + ')';
+    Exit;
+  end;
+  if LooksLikeScInstall(Root) then
+    Result := 'it holds Star Citizen game files';
+end;
+
+procedure RemoveEmptyIfSafe(const Dir: String);
+begin
+  if (Dir <> '') and (UnsafeDeleteRootReason(Dir) = '') and DirExists(CanonDir(Dir)) then
+  begin
+    if RemoveDir(CanonDir(Dir)) then
+      Log('Removed now-empty folder: ' + CanonDir(Dir))
+    else
+      Log('Folder left in place (not empty, or in use): ' + CanonDir(Dir));
+  end;
+end;
+
+function DeleteOwnedItem(const Path: String; const IsDir: Boolean): String;
+begin
+  { Deletes one app-owned folder and everything in it (IsDir), or one file.
+    Path must be canonical and must not hold a wildcard: Windows matches
+    wildcards against 8.3 short names too. Returns a line for the summary when
+    something was left behind, '' otherwise. }
+  Result := '';
+  Log('Deleting owned item: ' + Path);
+  if not DelTree(LongPath(Path), IsDir, True, IsDir) then
+    Result := '  ' + Path + ': could not delete all of it' + #13#10;
+end;
+
+function DeleteAppLogs(const LogsDir: String): String;
+var
+  FR: TFindRec;
+  Names: TStringList;
+  Name: String;
+  i: Integer;
+  Failed: Boolean;
+begin
+  { logs may be a folder the user already had, so only the app's own files go:
+    crash_*.log (crash_handler.py) and smart_citizen_*.log (the Log tab's
+    export), judged by their long names, then the folder if that emptied it. }
+  Result := '';
+  if IsLinkDir(LogsDir) then
+  begin
+    Log('Refusing to clean logs through a link: ' + LogsDir);
+    Result := '  ' + LogsDir + ': not cleaned because it is a junction or symbolic link' + #13#10;
+    Exit;
+  end;
+  Names := TStringList.Create;
+  try
+    if FindFirst(LongPath(LogsDir) + '\*', FR) then
+    try
+      repeat
+        Name := FR.Name;
+        if ((FR.Attributes and $10) = 0) and
+           ((CompareText(Copy(Name, 1, 6), 'crash_') = 0) or
+            (CompareText(Copy(Name, 1, 14), 'smart_citizen_') = 0)) and
+           (Length(Name) > 4) and
+           (CompareText(Copy(Name, Length(Name) - 3, 4), '.log') = 0) then
+          Names.Add(Name);
+      until not FindNext(FR);
+    finally
+      FindClose(FR);
+    end;
+    Failed := False;
+    for i := 0 to Names.Count - 1 do
+      if DeleteOwnedItem(LogsDir + '\' + Names[i], False) <> '' then
+        Failed := True;
+  finally
+    Names.Free;
+  end;
+  if Failed then
+    Result := '  ' + LogsDir + ': could not delete all of Smart Citizen''s log files' + #13#10;
+  RemoveEmptyIfSafe(LogsDir);
+end;
+
+function DeleteOwnedSubpaths(const RawRoot: String; const IsCacheRoot: Boolean): String;
+var
+  Root, Reason, Item: String;
+  i: Integer;
+begin
+  { Deletes only what the app writes under Root and never Root itself:
+      data folder:  the channel folders, Smart Citizen's own files in logs,
+                    the old root-level user.ini / overrides.ini / base.ini,
+                    and the pre-0.9.3 flat cache (a normal uninstall clears
+                    that one too)
+      cache folder: the channel folders (each holds cache\dataforge)
+    Root is removed afterwards only if that left it empty. Returns a line for
+    every folder it refused or could not clear, '' when all went well. }
+  Result := '';
+  Reason := UnsafeDeleteRootReason(RawRoot);
+  if Reason <> '' then
+  begin
+    Log('Refusing to delete under ' + RawRoot + ' (' + Reason + ').');
+    Result := '  ' + RawRoot + ': not cleaned because ' + Reason + #13#10;
+    Exit;
+  end;
+  Root := CanonDir(RawRoot);
+
+  for i := 0 to ScChannelCount - 1 do
+  begin
+    Item := Root + '\' + ScChannelName(i);
+    if DirExists(Item) then
+      Result := Result + DeleteOwnedItem(Item, True);
+  end;
+
+  if not IsCacheRoot then
+  begin
+    Item := Root + '\logs';
+    if DirExists(Item) then
+      Result := Result + DeleteAppLogs(Item);
+    Item := Root + '\cache';
+    if DirExists(Item) then
+      Result := Result + DeleteOwnedItem(Item, True);
+    for i := 0 to 2 do
+    begin
+      case i of
+        0: Item := Root + '\user.ini';
+        1: Item := Root + '\overrides.ini';
+      else
+        Item := Root + '\base.ini';
+      end;
+      if FileExists(Item) then
+        Result := Result + DeleteOwnedItem(Item, False);
     end;
   end;
 
-  UserIniPath := Root + '\user.ini';
-  if FileExists(UserIniPath) then
-  begin
-    Log('Deleting owned file: ' + UserIniPath);
-    if not DeleteFile(UserIniPath) then
-      Log('WARNING: DeleteFile returned false for ' + UserIniPath);
-  end;
+  RemoveEmptyIfSafe(Root);
+end;
 
-  if DirExists(Root) then
+function IsScChannelName(const Name: String): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to ScChannelCount - 1 do
+    if CompareText(Name, ScChannelName(i)) = 0 then
+      Result := True;
+end;
+
+function DeleteQueuedOldCache(const RawLeaf: String): String;
+var
+  Leaf, CacheDir, ChannelDir, Base, Reason: String;
+begin
+  { After a cache move the app queues the old DataForge tree,
+    <base>\<channel>\cache\dataforge, for deletion after the next re-extract
+    (pending_cache_cleanup). The wipe deletes the registry value that remembers
+    it, so it deletes the tree now: that exact shape only, and only when <base>
+    passes the same safety checks as any other root. }
+  Result := '';
+  if not IsAbsoluteDir(RawLeaf) then
+    Exit;
+  Leaf := CanonDir(RawLeaf);
+  CacheDir := ExtractFileDir(Leaf);
+  ChannelDir := ExtractFileDir(CacheDir);
+  Base := ExtractFileDir(ChannelDir);
+  if (CompareText(ExtractFileName(Leaf), 'dataforge') <> 0) or
+     (CompareText(ExtractFileName(CacheDir), 'cache') <> 0) or
+     not IsScChannelName(ExtractFileName(ChannelDir)) or not DirExists(Leaf) then
+    Exit;
+  Reason := UnsafeDeleteRootReason(Base);
+  if Reason <> '' then
   begin
-    if RemoveDir(Root) then
-      Log('Removed now-empty root: ' + Root)
-    else
-      Log('Root left in place (not empty after owned-subpath cleanup, ' +
-          'or still in use): ' + Root);
+    Log('Refusing to delete queued old cache ' + Leaf + ' (' + Reason + ').');
+    Result := '  ' + Base + ': not cleaned because ' + Reason +
+              ', so the old DataForge cache in it was left' + #13#10;
+    Exit;
   end;
+  Result := DeleteOwnedItem(Leaf, True);
+  RemoveEmptyIfSafe(CacheDir);
+  RemoveEmptyIfSafe(ChannelDir);
+  RemoveEmptyIfSafe(Base);
 end;
 
 procedure DeleteAllUserSettings();
 var
-  UserDataDir, CacheDir, LegacyUserDataDir: String;
+  UserDataDir, CacheDir, DefaultDataDir, DefaultCacheDir, QueuedOldCache: String;
+  LegacyDir, Notes, Advice: String;
 begin
-  { #357: the ONE deliberate exception to the #172 persistence lock
-    documented in CurUninstallStepChanged below — only reached when the
-    user explicitly ticked "also delete all saved settings" on the custom
-    uninstall confirmation dialog (see InitializeUninstall). Removes the
-    three locations the app's settings/data can live in:
-      1. HKCU registry node (sc_directory, user_data_dir, cache_dir,
-         ui_mode, selected_language, the owned-blueprints set, everything
-         AppSettings persists in registry mode).
-      2. The user data folder's app-owned contents (per-channel LIVE/PTU/
-         EPTU/HOTFIX/TECH-PREVIEW folders, \logs, and any top-level
-         \backups, \cache or user.ini left from before the per-channel
-         migration) — wherever the folder ACTUALLY resolves to, matching
-         GetDocumentsDir's own override-aware resolution, not just the
-         Documents default.
-      3. The separate DataForge cache folder's app-owned contents
-         (~1.4 GB) — wherever it ACTUALLY resolves to (GetCacheDir). This
-         one is never touched by the normal uninstall path at all
-         (CleanCachedData only ever reaches into the user data folder's
-         per-channel \cache subfolders), so leaving it out here would
-         defeat the point of a "full" wipe for anyone who moved it to a
-         custom drive.
-    Per the #357 review, (2) and (3) delete only the app's own named
-    subpaths, via DeleteOwnedSubpaths -- never the chosen root itself
-    recursively. A custom user_data_dir/cache_dir override can point
-    anywhere (a drive root, Documents, a folder that also holds the SC
-    install, a OneDrive root), and DelTree'ing that root outright would
-    take out whatever else lives there along with it. DeleteOwnedSubpaths
-    also refuses outright (logging why, deleting nothing) for exactly
-    those dangerous roots; see UnsafeDeleteRootReason.
-    Path resolution happens BEFORE the registry delete on purpose: both
-    overrides (user_data_dir / cache_dir) live in that registry node, so
-    deleting it first would make GetDocumentsDir/GetCacheDir fall back to
-    the wrong (default) location and silently miss a custom folder. }
+  { The one deliberate exception to the #172 persistence lock, reached only from
+    the opt-in checkbox. Everything is resolved BEFORE the registry node goes,
+    because the user_data_dir / cache_dir overrides and the queued old cache
+    live in it. The default folders are cleaned too when an override points
+    elsewhere: they are named for the app, and an old copy may still be there. }
   Log('User opted in to full settings wipe (issue #357).');
-
   UserDataDir := GetDocumentsDir();
   CacheDir := GetCacheDir();
+  DefaultDataDir := GetDefaultDocumentsDir();
+  DefaultCacheDir := GetLocalCacheDefault();
+  if not RegQueryStringValue(HKCU, SCRegNode, 'pending_cache_cleanup', QueuedOldCache) then
+    QueuedOldCache := '';
 
-  Log('Deleting app-owned contents of user data folder: ' + UserDataDir);
-  DeleteOwnedSubpaths(UserDataDir);
+  Notes := DeleteOwnedSubpaths(UserDataDir, False);
+  if not SameDir(DefaultDataDir, UserDataDir) and DirExists(DefaultDataDir) then
+    Notes := Notes + DeleteOwnedSubpaths(DefaultDataDir, False);
 
-  { #357 review: the pre-0.9.0, pre-rebrand Documents folder (mirrors
-    MigrateUserDocsFolder's OldDir). GetDocumentsDir() only ever resolves to
-    the current "Smart Citizen" name -- an install that never launched a
-    post-rebrand build (so the migration rename never ran) would otherwise
-    keep its old user.ini/backups/cache here even after a "full wipe". Not
-    gated on user_data_dir being unset: the rename is unconditional on the
-    Documents base, independent of whether a later version's override is
-    also in play, so this folder can exist (or not) regardless. }
-  LegacyUserDataDir := GetDocumentsBase() + '\SC Localization Editor';
-  if DirExists(LegacyUserDataDir) then
-  begin
-    Log('Deleting legacy pre-rebrand user data folder: ' + LegacyUserDataDir);
-    if not DelTree(LegacyUserDataDir, True, True, True) then
-      Log('WARNING: DelTree returned false for legacy user data folder: ' + LegacyUserDataDir);
-  end;
+  { Named for the old app, so it is safe to delete whole. }
+  LegacyDir := CanonDir(GetLegacyDocumentsDir());
+  if DirExists(LegacyDir) then
+    Notes := Notes + DeleteOwnedItem(LegacyDir, True);
 
-  { Skip if it's the same folder as (or nested under) the user data folder
-    already just cleaned above -- a custom cache_dir is normally a wholly
-    separate location, but avoid a redundant/confusing second pass over the
-    same path either way. PathUnderRoot covers both cases: it matches an
-    exact match too, since normalizing both sides the same way before the
-    prefix test makes a path trivially "under" itself. }
-  if (CacheDir <> '') and (not PathUnderRoot(CacheDir, UserDataDir)) then
-  begin
-    Log('Deleting app-owned contents of DataForge cache folder: ' + CacheDir);
-    DeleteOwnedSubpaths(CacheDir);
-  end;
+  if not SameDir(CacheDir, UserDataDir) then
+    Notes := Notes + DeleteOwnedSubpaths(CacheDir, True);
+  if not SameDir(DefaultCacheDir, CacheDir) and not SameDir(DefaultCacheDir, UserDataDir)
+     and DirExists(DefaultCacheDir) then
+    Notes := Notes + DeleteOwnedSubpaths(DefaultCacheDir, True);
+  Notes := Notes + DeleteQueuedOldCache(QueuedOldCache);
+  { A cache folder nested in the data folder only empties it after this pass. }
+  RemoveEmptyIfSafe(UserDataDir);
 
-  if RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Osiris DevWorks\Smart Citizen') then
-    Log('Deleted HKCU registry node: Software\Osiris DevWorks\Smart Citizen')
+  if RegDeleteKeyIncludingSubkeys(HKCU, SCRegNode) then
+    Log('Deleted HKCU registry node: ' + SCRegNode)
   else
     Log('HKCU registry node delete returned false (may already be absent).');
-  { Legacy pre-rebrand node, in case an ancient install never migrated. }
-  RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Osiris DevWorks\SC Localization Editor');
+  RegDeleteKeyIncludingSubkeys(HKCU, SCLegacyRegNode);
+
+  if Notes <> '' then
+  begin
+    Advice := '';
+    if Pos(': not cleaned because ', Notes) > 0 then
+      Advice := Advice + 'Smart Citizen did not clean a folder marked "not cleaned", so ' +
+                'its own files there are still in place. Folders named for Smart Citizen ' +
+                'inside it, such as Documents\Smart Citizen, may still have been cleaned. ';
+    if Pos(': could not delete', Notes) > 0 then
+      Advice := Advice + 'Anything that could not be deleted may be open in another ' +
+                'program. Close it and delete what is left yourself if you want it gone.';
+    MsgBox('Smart Citizen did not remove everything:' + #13#10 + #13#10 + Notes + #13#10 +
+           Trim(Advice), mbInformation, MB_OK);
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -1084,11 +1347,10 @@ begin
   begin
     if DeleteAllSettingsChecked then
     begin
-      { #357: user explicitly opted in via the uninstall confirmation
-        dialog's checkbox -- see DeleteAllUserSettings for what this
-        deletes and why it supersedes the normal CleanCachedData() call
-        below (it deletes the whole user data folder, a superset of the
-        per-channel \cache CleanCachedData targets). }
+      { #357: explicit opt-in on the uninstall dialog. It replaces the
+        cache-only cleanup below and deletes everything that cleanup would,
+        except in a folder it refuses (folders named for the app inside one are
+        still cleaned). }
       DeleteAllUserSettings();
     end
     else
@@ -1102,9 +1364,7 @@ begin
         user_data_dir (and the other settings) MUST survive uninstall so the
         next install pre-fills the user's chosen data folder. Wiping the node
         is exactly the regression that let the data-folder choice revert.
-        (The one deliberate exception is DeleteAllUserSettings above, gated
-        on the user's explicit opt-in checkbox — issue #357 — every other
-        path through here, this branch, leaves the node untouched.) }
+        (Exception: the #357 opt-in branch above.) }
       Log('Cleaning cached data during uninstall');
       CleanCachedData();
     end;
@@ -1116,26 +1376,22 @@ var
   CB: TNewCheckBox;
   Response: Integer;
 begin
-  { #357: the warning is delivered here, as an explicit acknowledge-to-
-    proceed popup fired the moment the box is TICKED, rather than as
-    passive text sitting on the main dialog (easy to skim past, and — per
-    the first version of this dialog — it also doesn't fit: TNewCheckBox
-    doesn't word-wrap its caption, so a long inline warning either got
-    clipped or ran off the dialog entirely). Sender is the checkbox itself,
-    since this is wired up as its OnClick handler below. }
+  { The warning is a popup when the box is ticked, not text on the dialog:
+    TNewCheckBox does not word-wrap its caption, so a long inline warning runs
+    off the form. Declining unticks the box again. }
   CB := TNewCheckBox(Sender);
   if not CB.Checked then
-    Exit;  { Only warn on the OFF -> ON transition; unchecking needs no prompt. }
+    Exit;
 
   Response := MsgBox(
     'This will permanently delete:' + #13#10 +
-    '  - Your saved Star Citizen directory and other settings (registry)' + #13#10 +
-    '  - Your user data folder (custom edits, owned blueprints list, backups)' + #13#10 +
+    '  - Your Smart Citizen settings (registry), including your owned blueprints list' + #13#10 +
+    '  - The Smart Citizen files in your user data folder (custom edits, backups, logs)' + #13#10 +
     '  - The cached DataForge data' + #13#10 + #13#10 +
     'This cannot be undone. Click OK to confirm, or Cancel to keep your settings.',
     mbError, MB_OKCANCEL);
   if Response <> IDOK then
-    CB.Checked := False;  { Not acknowledged -- revert to the safe default. }
+    CB.Checked := False;
 end;
 
 function InitializeUninstall(): Boolean;
@@ -1148,30 +1404,14 @@ begin
   Result := True;
   DeleteAllSettingsChecked := False;
 
-  { #357: never show the custom dialog during a truly headless uninstall --
-    e.g. the old-version cleanup step of an in-app auto-update, which runs
-    its uninstaller with /VERYSILENT (see UnInstallOldVersion above and
-    _launch_installer_and_quit in src/gui/main_window.py). /SUPPRESSMSGBOXES
-    only silences calls to SuppressibleMsgBox specifically -- a plain MsgBox
-    (and, same as one, this raw custom VCL form) is never auto-suppressed by
-    any silent flag, so skipping it here is required explicitly -- otherwise
-    a fully automated upgrade would hang forever waiting for a click on a
-    dialog nobody can see.
-    Defaults to False (the safe, non-destructive choice): an
-    automated/background uninstall must never accidentally wipe settings.
-
-    Deliberately checks IsVerySilentUninstall(), not UninstallSilent():
-    the latter is also True for plain /SILENT, which the interactive
-    "click NO, uninstall old version only" reinstall-detection flow further
-    below uses for its sub-uninstall -- that's a user sitting at the
-    installer mid-click, not a headless run, and skipping the dialog there
-    would silently deny them the choice this feature exists to offer. }
-  if IsVerySilentUninstall() then
+  { A silent uninstall must never wait on a dialog: /SILENT is the quiet string
+    Inno registers (winget, Intune), /VERYSILENT is the auto-updater's cleanup.
+    The one silent run with a person present is the "uninstall old version only"
+    branch of InitializeSetup, which passes /SHOWDELETEOPTION=1 to opt back in. }
+  if UninstallSilent() and (ExpandConstant('{param:SHOWDELETEOPTION|0}') <> '1') then
     Exit;
 
-  { Fixed size (AAllowResize=False): a static confirmation dialog has no
-    controls that benefit from resizing. DoubleBuffered=True for smooth
-    rendering, matching CreateCustomForm's documented example usage. }
+  { The last two arguments are KeepSizeX=False, KeepSizeY=True. }
   ConfirmForm := CreateCustomForm(ScaleX(420), ScaleY(150), False, True);
   try
     ConfirmForm.Caption := 'Uninstall Smart Citizen';
@@ -1184,18 +1424,10 @@ begin
     MsgLabel.AutoSize := False;
     MsgLabel.WordWrap := True;
     MsgLabel.Height := ScaleY(32);
-    { #357 review: not phrased as a question -- Inno's own built-in "Are you
-      sure you want to completely remove Smart Citizen..." confirmation
-      follows immediately after this dialog's Uninstall button, so asking
-      the same thing here too read as a redundant double confirmation. This
-      dialog's own job is the options choice below, not the are-you-sure
-      gate. }
+    { A statement, not a question: Inno's own "Are you sure..." follows. }
     MsgLabel.Caption := 'You are about to uninstall Smart Citizen.';
 
-    { Short, single-line caption on purpose: TNewCheckBox renders its
-      Caption as one line and clips anything that doesn't fit, unlike
-      TNewStaticText -- the full explanation lives in the acknowledge
-      popup (DeleteAllCheckBoxOnClick) instead. }
+    { One short line on purpose: a TNewCheckBox clips a long caption. }
     DeleteCheckBox := TNewCheckBox.Create(ConfirmForm);
     DeleteCheckBox.Parent := ConfirmForm;
     DeleteCheckBox.Left := ScaleX(16);
@@ -1228,9 +1460,7 @@ begin
 
     if ConfirmForm.ShowModal() = mrOk then
     begin
-      { By the time we get here, a checked box has already been through
-        the acknowledge popup above (and would have reverted to
-        unchecked if not confirmed) -- no need to re-warn on this click. }
+      { A ticked box has already been through the warning popup. }
       DeleteAllSettingsChecked := DeleteCheckBox.Checked;
       Result := True;
     end
@@ -1283,7 +1513,8 @@ begin
       IDNO: begin
         { Uninstall only, without installing new version }
         UninstallString := RemoveQuotes(UninstallString);
-        Exec(UninstallString, '/SILENT /NORESTART /SUPPRESSMSGBOXES','', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        { A person is present, so let the uninstaller show its delete option. }
+        Exec(UninstallString, '/SILENT /NORESTART /SUPPRESSMSGBOXES /SHOWDELETEOPTION=1','', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         Result := False;
       end;
       IDCANCEL: begin
@@ -1363,7 +1594,7 @@ begin
     doesn't match a known option. }
   LanguageIndex := 0;
   LanguageChoiceUnknownSaved := False;
-  if RegQueryStringValue(HKCU, 'Software\Osiris DevWorks\Smart Citizen',
+  if RegQueryStringValue(HKCU, SCRegNode,
        'selected_language', SavedLanguage) then
   begin
     if CompareText(SavedLanguage, 'french') = 0 then
@@ -1409,8 +1640,8 @@ begin
          WriteInstallerChoicesToRegistry (called from CurStepChanged
          at ssPostInstall) writes to the NEW node regardless, so
          subsequent reinstalls resolve via path 1. }
-  NewRegPath := 'Software\Osiris DevWorks\Smart Citizen';
-  LegacyRegPath := 'Software\Osiris DevWorks\SC Localization Editor';
+  NewRegPath := SCRegNode;
+  LegacyRegPath := SCLegacyRegNode;
   DefaultPath := '';
 
   { 0.9.3+: the app stores the SC install root (parent of LIVE/PTU/...) in
@@ -1534,7 +1765,7 @@ begin
   else if IsDocsOnOneDrive() then
     DataDirPage.Values[0] := SuggestLocalDataDir()
   else
-    DataDirPage.Values[0] := GetDocumentsBase() + '\Smart Citizen';
+    DataDirPage.Values[0] := GetDefaultDocumentsDir();
 
   { 1.4.1+: DataForge cache lives on its own page so users can split it
     off the user-data folder. The app's runtime default is
