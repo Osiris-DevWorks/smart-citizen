@@ -1616,10 +1616,13 @@ class MainWindow(QMainWindow):
         in which case the app keeps running and startup proceeds normally.
 
         Installer switches: /SILENT /NORESTART run the upgrade with just a
-        progress bar; /SUPPRESSMSGBOXES auto-answers the "previous version
-        found" box with its default (Yes = upgrade in place); /AUTOUPDATE=1
-        tells installer.iss to relaunch Smart Citizen when the install
-        finishes (the normal postinstall Run entry is skipifsilent).
+        progress bar. /SUPPRESSMSGBOXES makes installer.iss take the default
+        answer of each SuppressibleMsgBox, e.g. Yes (upgrade in place) for
+        the "previous version found" box. It has no effect on a plain
+        MsgBox, so installer.iss keeps those off the silent path; the
+        missing-uninstaller error is the one it shows on purpose.
+        /AUTOUPDATE=1 tells installer.iss to relaunch Smart Citizen when the
+        install finishes (the normal postinstall Run entry is skipifsilent).
         """
         import ctypes
 
