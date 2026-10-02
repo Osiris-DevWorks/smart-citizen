@@ -904,6 +904,25 @@ class TestCloseEventSettlesTheCheck:
         event.ignore.assert_called_once_with()
         me._refresh_apply_dirty_after_reload.assert_called_once_with()
 
+    def test_exiting_without_applying_starts_no_check(self, monkeypatch):
+        """The window is closing, and a check thread started now would have to
+        be gone before the process exits."""
+        buttons = [MagicMock(name="apply"), MagicMock(name="exit"), MagicMock(name="cancel")]
+        box = MagicMock()
+        box.addButton.side_effect = list(buttons)
+        box.clickedButton.return_value = buttons[1]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        for setter in ("set_window_state", "set_window_geometry", "set_string_column_widths"):
+            monkeypatch.setattr(AppSettings, setter, staticmethod(lambda *a, **k: None))
+        me = self._closing_self([], unapplied=True)
+        event = MagicMock()
+
+        MainWindow.closeEvent(me, event)
+
+        event.accept.assert_called_once_with()
+        me.apply_to_game.assert_not_called()
+        me._refresh_apply_dirty_after_reload.assert_not_called()
+
     @pytest.mark.parametrize(
         "applied, touched_button, rechecks",
         [

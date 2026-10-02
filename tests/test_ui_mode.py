@@ -166,12 +166,15 @@ def test_main_window_forwards_apply_state_to_the_simple_button(qapp):
 
     stub = _Stub()
     stub._set_apply_btn_dirty(False)
+    # Recorded too: a theme, language or mode switch re-applies it from here.
+    assert stub._apply_dirty is False
     button = stub.simple_page.generate_apply_btn
     assert button.isEnabled()  # green never disables the Simple button
     assert get_button_color("apply") in button.styleSheet()
     assert button.toolTip() == tr("simple_mode.generate_apply_tip_disabled")
 
     stub._set_apply_btn_dirty(True)
+    assert stub._apply_dirty is True
     assert get_button_color("needs_apply") in button.styleSheet()
     assert button.toolTip() == tr("simple_mode.generate_apply_tip")
 
