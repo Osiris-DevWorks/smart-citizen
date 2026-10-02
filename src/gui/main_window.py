@@ -2446,8 +2446,10 @@ class MainWindow(QMainWindow):
         """Start re-verifying, in the background, whether Apply is needed
         (#387, #397). Runs after every reload, not just the first: Simple mode
         applies and then reloads, and a reload on its own must not leave the
-        button red over state that was just applied. The verdict lands in
-        _on_applied_state_ready.
+        button red over state that was just applied. A failed restore, a
+        cancelled close prompt and an Apply Now that stopped before it touched
+        the button call it too, since each can leave the button without a
+        current verdict. The verdict lands in _on_applied_state_ready.
 
         One check runs at a time. A reload that arrives mid-check interrupts
         it and queues a rerun, which snapshots the newer state when it starts.

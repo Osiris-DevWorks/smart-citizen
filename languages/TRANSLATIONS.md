@@ -66,7 +66,13 @@ them against the new source.
   button stays clickable when green, and the check compares the game file
   with the current settings rather than tracking changes. Refreshed the `at`
   in all 10 other languages to match. No language had an `ht` for this key,
-  so nothing needs human re-review.
+  so nothing needs human re-review. The same change added one sentence to
+  `docs/HELP.md` and the 10 translated `HELP.md` files (Claude Sonnet 5.5):
+  restoring a backup or clearing the localization turns the Apply button
+  red, but closing afterwards does not ask. The translations are AI-written,
+  styled on each file's existing register, and each names the action with
+  that language's own menu label. HELP files have no `ht`/`at` split, so
+  this log is their only record.
 - **2.4.0 cycle (2026-10-01, Claude Sonnet 5):** Merged `release/2.4.0` into
   Korean's PR branch (#409) and backfilled the 50 English keys that had
   landed since Korean's own translation pass: the duplicate-install-detection
