@@ -435,6 +435,14 @@ class TestShallowScan:
         (data / "user.ini").write_text("k=v\n", encoding="utf-8")
         assert self._found(tmp_path) == []
 
+    def test_game_data_in_any_channel_counts(self, tmp_path):
+        """The launcher can keep PTU in a library folder of its own with no LIVE
+        in it, and an old LIVE shell can sit beside the real PTU data."""
+        ptu_only = make_install(tmp_path / "SC PTU" / "StarCitizen", "PTU")
+        mixed = make_install(tmp_path / "Mixed" / "StarCitizen", "LIVE", game_data=False)
+        make_install(mixed, "PTU")
+        assert self._found(tmp_path) == [mixed, ptu_only]
+
     def test_does_not_go_two_folders_down(self, tmp_path):
         make_install(tmp_path / "Games" / "PC" / "Roberts Space Industries" / "StarCitizen")
         assert self._found(tmp_path) == []

@@ -712,6 +712,19 @@ class TestScanUsesLauncherLog:
         log = _launcher_log(tmp_path, (library, "2026-09-30 21:01:02.003"))
         assert scan(common=[leftover], log=log) == str(library)
 
+    @pytest.mark.parametrize("behind_days, winner", [(80, "lagging"), (100, "fresh")])
+    def test_the_active_channel_counts_as_current_until_about_three_months_behind(
+        self, tmp_path, scan, behind_days, winner
+    ):
+        """The 90 day limit, from both sides. A LIVE Data.p4k a little under
+        three months behind the newest one found is still the player's game and
+        keeps its place first. One a little over is a leftover, and the newer
+        PTU-only library takes the pick (#370)."""
+        lagging = _fake_install(tmp_path, "Games", "StarCitizen", ages={"LIVE": behind_days})
+        fresh = _fake_install(tmp_path, "SC PTU", "StarCitizen", ages={"PTU": 0})
+        expected = lagging if winner == "lagging" else fresh
+        assert scan(common=[lagging], shallow=[fresh]) == str(expected)
+
     def test_the_active_channel_s_own_age_ranks_roots_that_both_hold_it(self, tmp_path, scan):
         """An old library kept its PTU patched, but its LIVE was left behind two
         months ago (recent enough to still count as current) when LIVE moved to

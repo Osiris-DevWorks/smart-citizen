@@ -73,10 +73,11 @@ def test_single_candidate_is_returned_unchanged(tmp_path):
 
 def test_scan_order_breaks_ties(tmp_path):
     """Equal timestamps fall back to the order the scan produced, so a machine
-    where the heuristic cannot discriminate behaves exactly as before."""
-    a = _install(tmp_path / "a", mtime=5_000_000)
-    b = _install(tmp_path / "b", mtime=5_000_000)
-    assert _pick_live_sc_install([a, b], channel="LIVE") == a
+    where the heuristic cannot discriminate behaves exactly as before. The
+    names run against alphabetical order, so a sort by path would show."""
+    scanned_first = _install(tmp_path / "z_first", mtime=5_000_000)
+    scanned_second = _install(tmp_path / "a_second", mtime=5_000_000)
+    assert _pick_live_sc_install([scanned_first, scanned_second], channel="LIVE") == scanned_first
 
 
 def test_candidate_without_a_readable_p4k_loses(tmp_path):
