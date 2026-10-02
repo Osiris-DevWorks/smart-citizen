@@ -751,27 +751,44 @@ class TestScanUsesLauncherLog:
         assert str(live) in message and str(ptu) in message
         assert "LIVE none" in message  # the PTU library's missing LIVE is spelled out
 
+    @staticmethod
+    def _stamp_p4k(monkeypatch, root, stamp):
+        """Make every Data.p4k under *root* report ``st_mtime == stamp``."""
+        from types import SimpleNamespace
+
+        real_stat = Path.stat
+
+        def stat(self, *args, **kwargs):
+            if self.name == "Data.p4k" and str(self).startswith(str(root)):
+                return SimpleNamespace(st_mtime=stamp)
+            return real_stat(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "stat", stat)
+
     def test_a_data_p4k_dated_before_1970_does_not_break_detection(
         self, tmp_path, scan, monkeypatch, caplog
     ):
         """A copy or restore tool that dropped timestamps leaves a pre-epoch
         mtime. It cannot be compared or printed on Windows, so it reads as
         missing and the support log still gets written."""
-        from types import SimpleNamespace
-
         undated = _fake_install(tmp_path, "A", "StarCitizen")
         current = _fake_install(tmp_path, "B", "StarCitizen")
-        real_stat = Path.stat
-
-        def stat(self, *args, **kwargs):
-            if self.name == "Data.p4k" and str(self).startswith(str(undated)):
-                return SimpleNamespace(st_mtime=-86400.0)
-            return real_stat(self, *args, **kwargs)
-
-        monkeypatch.setattr(Path, "stat", stat)
+        self._stamp_p4k(monkeypatch, undated, -86400.0)
         with caplog.at_level("WARNING", logger="src.utils.settings"):
             assert scan(common=[undated, current]) == str(current)
         assert f"{undated} (Data.p4k none" in caplog.text
+
+    def test_a_data_p4k_dated_beyond_any_calendar_does_not_break_the_support_log(
+        self, tmp_path, scan, monkeypatch, caplog
+    ):
+        """A wrong clock can leave a stamp no date can print (year 33658 here).
+        The log says "unknown" for it and detection still completes."""
+        bogus = _fake_install(tmp_path, "A", "StarCitizen")
+        normal = _fake_install(tmp_path, "B", "StarCitizen")
+        self._stamp_p4k(monkeypatch, bogus, 1e12)
+        with caplog.at_level("WARNING", logger="src.utils.settings"):
+            assert scan(common=[bogus, normal]) in (str(bogus), str(normal))
+        assert f"{bogus} (Data.p4k unknown" in caplog.text
 
     def test_a_no_install_profile_walks_the_drives_once_across_channel_switches(
         self, monkeypatch
