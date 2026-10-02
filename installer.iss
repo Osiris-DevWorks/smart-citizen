@@ -499,17 +499,21 @@ begin
       actively-syncing-OneDrive + Defender-on-access environments. When
       the timeout *does* fire, surface a wizard error dialog instead of
       only logging — a log-only warning meant users discovered the broken
-      state days later when Apps & Features had no entry. }
+      state days later when Apps & Features had no entry.
+      SuppressibleMsgBox: a /SUPPRESSMSGBOXES run (the in-app auto-updater
+      of #211) only logs the warning, because it is a "may happen" notice.
+      If the new unins000.exe really is deleted, the ssPostInstall check in
+      CurStepChanged still shows its error box, which is not suppressible. }
     if WaitForUninstallerCleanup(sUnInstallString, 180) then
       Log('Old uninstaller cleanup finished.')
     else
     begin
       Log('WARNING: timed out waiting for old uninstaller to finish (180s). The new install may produce a broken uninstaller; user should uninstall + reinstall manually if the Apps & Features entry is missing.');
-      MsgBox('The previous version''s uninstaller did not finish within 3 minutes.' + #13#10 + #13#10 +
+      SuppressibleMsgBox('The previous version''s uninstaller did not finish within 3 minutes.' + #13#10 + #13#10 +
              'The install will continue, but the new uninstaller file (unins000.exe) may be deleted by the old uninstaller''s delayed cleanup. If that happens, Smart Citizen will install successfully but will not appear in Apps & Features.' + #13#10 + #13#10 +
              'If you later cannot uninstall Smart Citizen, re-run this installer and choose the Uninstall option, or delete the install folder manually.' + #13#10 + #13#10 +
              'Closing other apps (especially OneDrive sync, antivirus scans, and the Search Indexer) before the install can avoid this.',
-             mbError, MB_OK);
+             mbError, MB_OK, IDOK);
     end;
     Result := 3;
   end
@@ -562,17 +566,20 @@ var
 begin
   { Rebrand: rename Documents\SC Localization Editor\ → Documents\Smart Citizen\
     if the old folder exists and the new one does not. User data (user.ini,
-    backups, cache) moves with the rename — no copy required. }
+    backups, cache) moves with the rename — no copy required.
+    The notice is a SuppressibleMsgBox: the rename happens whatever the
+    click, so a /SUPPRESSMSGBOXES run (the in-app auto-updater, #211) logs
+    it below instead of stopping on an OK box. }
   DocsBase := GetDocumentsBase();
   OldDir := DocsBase + '\SC Localization Editor';
   NewDir := DocsBase + '\Smart Citizen';
   if DirExists(OldDir) and not DirExists(NewDir) then
   begin
-    MsgBox('Your user data folder will be renamed as part of this update:' + #13#10 + #13#10 +
+    SuppressibleMsgBox('Your user data folder will be renamed as part of this update:' + #13#10 + #13#10 +
            '  ' + OldDir + #13#10 +
            '  →  ' + NewDir + #13#10 + #13#10 +
            'Your custom edits, backups, and cached files will move with it — nothing is lost.',
-           mbInformation, MB_OK);
+           mbInformation, MB_OK, IDOK);
     Log('Renaming user data folder: ' + OldDir + ' -> ' + NewDir);
     if not RenameFile(OldDir, NewDir) then
       Log('WARNING: rename failed; data remains at old location');
@@ -865,6 +872,14 @@ begin
     // Inno constant syntax below (curly-brace form) closes Pascal block
     // comments early — both block forms in Pascal have non-nesting
     // terminators and are tripped by literal references to that syntax.
+    // Deliberately a plain MsgBox, so /SUPPRESSMSGBOXES does not hide it:
+    // it reports a failure that has already happened and that the user
+    // must act on, and the setup log in %TEMP% is otherwise the only
+    // trace. It has only an OK button, so it cannot change what Setup
+    // does. The in-app auto-updater (#211) runs /SILENT, so the user who
+    // just answered its UAC prompt sees the progress window and this box.
+    // It never delays that update's relaunch: Setup runs the Run section
+    // entries before ssPostInstall, so the app is already up by now.
     if not FileExists(ExpandConstant('{app}\unins000.exe')) then
     begin
       Log('ERROR: unins000.exe missing from {app} post-install. Install completed but uninstall is broken.');
@@ -1267,13 +1282,20 @@ begin
       Exit;  { Result is already True — proceed with fresh install }
     end;
 
-    { Show custom dialog with three options }
-    ButtonPressed := MsgBox('A previous version of this application is already installed.' + #13#10 + #13#10 +
+    { Show custom dialog with three options. SuppressibleMsgBox, not MsgBox:
+      the in-app auto-updater (#211) runs this installer with
+      /SILENT /SUPPRESSMSGBOXES /AUTOUPDATE=1 (_launch_installer_and_quit in
+      src/gui/main_window.py), and /SUPPRESSMSGBOXES only answers
+      SuppressibleMsgBox calls. As a plain MsgBox this stopped every
+      auto-update on the question, and a click on NO uninstalled the app
+      instead of updating it. Suppressed, it returns IDYES (upgrade in
+      place). Interactive and plain /SILENT runs still show the box. }
+    ButtonPressed := SuppressibleMsgBox('A previous version of this application is already installed.' + #13#10 + #13#10 +
                             'Choose an option:' + #13#10 +
                             '  - Click YES to uninstall the old version and install this new version' + #13#10 +
                             '  - Click NO to uninstall the old version only (without installing)' + #13#10 +
                             '  - Click CANCEL to exit without making any changes',
-                            mbConfirmation, MB_YESNOCANCEL);
+                            mbConfirmation, MB_YESNOCANCEL, IDYES);
 
     case ButtonPressed of
       IDYES: begin
@@ -1618,6 +1640,17 @@ begin
     "Move to a Local Folder" so both surfaces behave identically. }
   Result := True;
   if (DataDirPage = nil) or (CurPageID <> DataDirPage.ID) then
+    Exit;
+
+  { Silent installs, including the in-app auto-updater's /SILENT run (#211),
+    never show this page, but Setup still "clicks" Next through it, so this
+    function runs. The box below is a plain MsgBox, so /SUPPRESSMSGBOXES
+    does not answer it and the run stops on the question. Its YES branch
+    returns False, and a silent Setup that gets False here exits without
+    installing. So keep the folder as it is (the NO answer). After the
+    relaunch the app shows its own OneDrive warning (#174,
+    _maybe_warn_onedrive_data_dir in src/gui/main_window.py). }
+  if WizardSilent() then
     Exit;
 
   Chosen := Trim(DataDirPage.Values[0]);
