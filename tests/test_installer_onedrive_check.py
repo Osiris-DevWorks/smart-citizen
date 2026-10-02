@@ -35,19 +35,6 @@ import pytest
 
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
-# The functions the probe cuts out of installer.iss, in the order they must be
-# declared. The first four are the OneDrive checks, the rest the pre-fill's helpers.
-_FUNCTIONS = (
-    "IsOneDriveSegment",
-    "PathUnderRoot",
-    "IsPathOnOneDrive",
-    "IsDocsOnOneDrive",
-    "GetDocumentsBase",
-    "SuggestLocalDataDir",
-    "HasVersionedAppSegment",
-    "IsStalePrefill",
-)
-
 
 def _iscc():
     candidates = [
@@ -67,6 +54,27 @@ def _pascal_function(source, name):
     match = re.search(rf"^function {name}\(.*?^end;$", source, re.S | re.M)
     assert match, f"function {name} not found in installer.iss"
     return match.group(0)
+
+
+def _needed_functions(source, text, needed=None):
+    """The installer.iss functions that *text* calls, directly or through each
+    other, as ``{name: source}`` with every callee ahead of its callers (Pascal
+    Script needs a function declared before it is used). Following the calls
+    keeps the probe working when a helper is added to or renamed in the code
+    it cuts out."""
+    needed = {} if needed is None else needed
+    for name in re.findall(r"\b([A-Za-z_]\w*)\(", re.sub(r"\{.*?\}", "", text, flags=re.S)):
+        match = (
+            None
+            if name in needed
+            else re.search(rf"^function {name}\(.*?^end;$", source, re.S | re.M)
+        )
+        if match:
+            needed[name] = None  # in place first, so a call cycle ends
+            _needed_functions(source, match.group(0), needed)
+            del needed[name]
+            needed[name] = match.group(0)
+    return needed
 
 
 def _pascal_string(value):
@@ -243,18 +251,28 @@ def _fake_reads(text):
     return text
 
 
-def _cut_functions(source):
-    return _fake_reads("\n\n".join(_pascal_function(source, name) for name in _FUNCTIONS))
-
-
-def _prefill_function(source):
-    """The pre-fill ladder, verbatim, wrapped in a function that returns the
-    value InitializeWizard would put on the data-folder page."""
+def _prefill_block(source):
+    """The pre-fill ladder from InitializeWizard, verbatim, assigning to
+    ``Result`` instead of the data-folder page."""
     start = _PREFILL_START.search(source)
     assert start, "data-folder pre-fill not found in installer.iss"
     begin = start.start()
     end = source.index(";", begin) + 1  # the whole if/else chain is one statement
-    block = source[begin:end].replace("DataDirPage.Values[0]", "Result")
+    return source[begin:end].replace("DataDirPage.Values[0]", "Result")
+
+
+def _cut_functions(source, block):
+    """The OneDrive checks, and every function the pre-fill *block* calls, cut
+    verbatim out of *source* with their registry and environment reads pointed
+    at the fakes."""
+    needed = _needed_functions(source, block + "\nIsDocsOnOneDrive(); IsPathOnOneDrive('');")
+    assert "IsDocsOnOneDrive" in needed and "IsPathOnOneDrive" in needed
+    return _fake_reads("\n\n".join(needed.values()))
+
+
+def _prefill_function(block):
+    """*block* wrapped in a function that returns the value InitializeWizard
+    would put on the data-folder page."""
     return f"""function DataDirPrefill(): String;
 var
   NewRegPath: String;
@@ -267,6 +285,7 @@ end;
 
 
 def _probe_script(source, cases, prefill_cases, out):
+    block = _prefill_block(source)
     steps = []
     for i, (_, docs, roots, _) in enumerate(cases):
         steps.append(
@@ -298,9 +317,9 @@ OutputBaseFilename=probe
 
 [Code]
 {_FAKES}
-{_cut_functions(source)}
+{_cut_functions(source, block)}
 
-{_prefill_function(source)}
+{_prefill_function(block)}
 function InitializeSetup(): Boolean;
 var
   Lines: TArrayOfString;
