@@ -661,10 +661,14 @@ end;
   the live node. Do not reintroduce node/value deletion against
   'Software\Osiris DevWorks\Smart Citizen' in the uninstall path. }
 
+{ Defined with the other SC path checks, further down. }
+function IsValidSCRoot(const Path: String): Boolean; forward;
+
 procedure WriteInstallerChoicesToRegistry();
 var
   RegPath: String;
   FinalPath: String;
+  SCRoot: String;
   DataDir: String;
   DocsDefault: String;
   CacheDir: String;
@@ -690,10 +694,17 @@ begin
     RegPath := 'Software\Osiris DevWorks\Smart Citizen';
     RegWriteStringValue(HKCU, RegPath, 'sc_directory', FinalPath);
     RegWriteStringValue(HKCU, RegPath, 'game_install_path', FinalPath);
-    { Write sc_install_root (parent of the channel folder) so a reinstall
-      with a changed SC path doesn't leave the stale root from a prior
-      migration winning over the freshly chosen directory. }
-    RegWriteStringValue(HKCU, RegPath, 'sc_install_root', ExtractFileDir(RemoveBackslash(FinalPath)));
+    { Write sc_install_root (the folder that holds the channel folders) so a
+      reinstall with a changed SC path doesn't leave the stale root from a
+      prior migration winning over the freshly chosen directory. The page
+      normally holds a channel folder, whose parent is the root. It can also
+      hold the root itself (a saved root is pre-filled unchanged, or the user
+      types one), and then its parent is the wrong folder. }
+    if IsValidSCRoot(FinalPath) then
+      SCRoot := RemoveBackslashUnlessRoot(FinalPath)
+    else
+      SCRoot := ExtractFileDir(RemoveBackslash(FinalPath));
+    RegWriteStringValue(HKCU, RegPath, 'sc_install_root', SCRoot);
     RegWriteStringValue(HKCU,
       'Software\Osiris DevWorks\SC Localization Editor',
       'sc_directory', FinalPath);
