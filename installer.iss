@@ -159,26 +159,6 @@ begin
   Result := GetLocalCacheDefault();
 end;
 
-function IsDocsOnOneDrive(): Boolean;
-var
-  DocsPath: String;
-begin
-  { Read the invoking user's Documents shell-folder path. When Windows has
-    folder-redirected Documents into OneDrive (the default on most OneDrive
-    installs now), this string contains "\OneDrive\". Cache extraction +
-    50,000-file rmtree under an actively-synced OneDrive tree is 3-5x
-    slower and routinely fails with WinError 5 — worth warning the user
-    and offering a local-only alternative. }
-  Result := False;
-  if RegQueryStringValue(HKCU,
-    'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders',
-    'Personal', DocsPath) then
-  begin
-    Result := (Pos('\OneDrive\', DocsPath) > 0) or
-              (Pos('\OneDrive/', DocsPath) > 0);
-  end;
-end;
-
 function SuggestLocalDataDir(): String;
 begin
   { Build a sensible default pointing at the local (non-OneDrive) profile.
@@ -222,7 +202,7 @@ function IsPathOnOneDrive(const Path: String): Boolean;
 var
   Roots: array[0..2] of String;
   i, P: Integer;
-  Remaining, Seg: String;
+  Norm, Remaining, Seg: String;
 begin
   { Mirror of onedrive.py:is_onedrive_path. Two independent signals, either
     sufficient:
@@ -238,12 +218,18 @@ begin
   if Path = '' then
     Exit;
 
+  { Windows takes '/' as a separator too, and the data-folder edit box passes
+    on whatever was typed. Compare with '\' only (the app's check gets this
+    from os.path.normpath). }
+  Norm := Path;
+  StringChangeEx(Norm, '/', '\', True);
+
   Roots[0] := GetEnv('OneDrive');
   Roots[1] := GetEnv('OneDriveConsumer');
   Roots[2] := GetEnv('OneDriveCommercial');
   for i := 0 to 2 do
   begin
-    if PathUnderRoot(Path, Roots[i]) then
+    if PathUnderRoot(Norm, Roots[i]) then
     begin
       Result := True;
       Exit;
@@ -251,7 +237,7 @@ begin
   end;
 
   { Segment fallback: split on '\' and test each component. }
-  Remaining := Path;
+  Remaining := Norm;
   while Remaining <> '' do
   begin
     P := Pos('\', Remaining);
@@ -271,6 +257,26 @@ begin
       Exit;
     end;
   end;
+end;
+
+function IsDocsOnOneDrive(): Boolean;
+var
+  DocsPath: String;
+begin
+  { Read the invoking user's Documents shell-folder path. When Windows has
+    folder-redirected Documents into OneDrive (the default on most OneDrive
+    installs now), the path runs through a OneDrive folder: "OneDrive" for a
+    personal account, "OneDrive - Contoso" for a work or school one. Cache
+    extraction + 50,000-file rmtree under an actively-synced OneDrive tree is
+    3-5x slower and routinely fails with WinError 5 — worth warning the user
+    and offering a local-only alternative. IsPathOnOneDrive does the
+    matching, so this pre-fill, the Next-click warning and the app all agree
+    on what counts as OneDrive. }
+  Result := False;
+  if RegQueryStringValue(HKCU,
+    'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders',
+    'Personal', DocsPath) then
+    Result := IsPathOnOneDrive(DocsPath);
 end;
 
 function HasVersionedAppSegment(const Path: String): Boolean;
@@ -499,17 +505,21 @@ begin
       actively-syncing-OneDrive + Defender-on-access environments. When
       the timeout *does* fire, surface a wizard error dialog instead of
       only logging — a log-only warning meant users discovered the broken
-      state days later when Apps & Features had no entry. }
+      state days later when Apps & Features had no entry.
+      SuppressibleMsgBox: a /SUPPRESSMSGBOXES run (the in-app auto-updater
+      of #211) only logs the warning, because it is a "may happen" notice.
+      If the new unins000.exe really is deleted, the ssPostInstall check in
+      CurStepChanged still shows its error box, which is not suppressible. }
     if WaitForUninstallerCleanup(sUnInstallString, 180) then
       Log('Old uninstaller cleanup finished.')
     else
     begin
       Log('WARNING: timed out waiting for old uninstaller to finish (180s). The new install may produce a broken uninstaller; user should uninstall + reinstall manually if the Apps & Features entry is missing.');
-      MsgBox('The previous version''s uninstaller did not finish within 3 minutes.' + #13#10 + #13#10 +
+      SuppressibleMsgBox('The previous version''s uninstaller did not finish within 3 minutes.' + #13#10 + #13#10 +
              'The install will continue, but the new uninstaller file (unins000.exe) may be deleted by the old uninstaller''s delayed cleanup. If that happens, Smart Citizen will install successfully but will not appear in Apps & Features.' + #13#10 + #13#10 +
              'If you later cannot uninstall Smart Citizen, re-run this installer and choose the Uninstall option, or delete the install folder manually.' + #13#10 + #13#10 +
              'Closing other apps (especially OneDrive sync, antivirus scans, and the Search Indexer) before the install can avoid this.',
-             mbError, MB_OK);
+             mbError, MB_OK, IDOK);
     end;
     Result := 3;
   end
@@ -562,17 +572,20 @@ var
 begin
   { Rebrand: rename Documents\SC Localization Editor\ → Documents\Smart Citizen\
     if the old folder exists and the new one does not. User data (user.ini,
-    backups, cache) moves with the rename — no copy required. }
+    backups, cache) moves with the rename — no copy required.
+    The notice is a SuppressibleMsgBox: the rename happens whatever the
+    click, so a /SUPPRESSMSGBOXES run (the in-app auto-updater, #211) logs
+    it below instead of stopping on an OK box. }
   DocsBase := GetDocumentsBase();
   OldDir := DocsBase + '\SC Localization Editor';
   NewDir := DocsBase + '\Smart Citizen';
   if DirExists(OldDir) and not DirExists(NewDir) then
   begin
-    MsgBox('Your user data folder will be renamed as part of this update:' + #13#10 + #13#10 +
+    SuppressibleMsgBox('Your user data folder will be renamed as part of this update:' + #13#10 + #13#10 +
            '  ' + OldDir + #13#10 +
            '  →  ' + NewDir + #13#10 + #13#10 +
            'Your custom edits, backups, and cached files will move with it — nothing is lost.',
-           mbInformation, MB_OK);
+           mbInformation, MB_OK, IDOK);
     Log('Renaming user data folder: ' + OldDir + ' -> ' + NewDir);
     if not RenameFile(OldDir, NewDir) then
       Log('WARNING: rename failed; data remains at old location');
@@ -865,6 +878,14 @@ begin
     // Inno constant syntax below (curly-brace form) closes Pascal block
     // comments early — both block forms in Pascal have non-nesting
     // terminators and are tripped by literal references to that syntax.
+    // Deliberately a plain MsgBox, so /SUPPRESSMSGBOXES does not hide it:
+    // it reports a failure that has already happened and that the user
+    // must act on, and the setup log in %TEMP% is otherwise the only
+    // trace. It has only an OK button, so it cannot change what Setup
+    // does. The in-app auto-updater (#211) runs /SILENT, so the user who
+    // just answered its UAC prompt sees the progress window and this box.
+    // It never delays that update's relaunch: Setup runs the Run section
+    // entries before ssPostInstall, so the app is already up by now.
     if not FileExists(ExpandConstant('{app}\unins000.exe')) then
     begin
       Log('ERROR: unins000.exe missing from {app} post-install. Install completed but uninstall is broken.');
@@ -1267,13 +1288,20 @@ begin
       Exit;  { Result is already True — proceed with fresh install }
     end;
 
-    { Show custom dialog with three options }
-    ButtonPressed := MsgBox('A previous version of this application is already installed.' + #13#10 + #13#10 +
+    { Show custom dialog with three options. SuppressibleMsgBox, not MsgBox:
+      the in-app auto-updater (#211) runs this installer with
+      /SILENT /SUPPRESSMSGBOXES /AUTOUPDATE=1 (_launch_installer_and_quit in
+      src/gui/main_window.py), and /SUPPRESSMSGBOXES only answers
+      SuppressibleMsgBox calls. As a plain MsgBox this stopped every
+      auto-update on the question, and a click on NO uninstalled the app
+      instead of updating it. Suppressed, it returns IDYES (upgrade in
+      place). Interactive and plain /SILENT runs still show the box. }
+    ButtonPressed := SuppressibleMsgBox('A previous version of this application is already installed.' + #13#10 + #13#10 +
                             'Choose an option:' + #13#10 +
                             '  - Click YES to uninstall the old version and install this new version' + #13#10 +
                             '  - Click NO to uninstall the old version only (without installing)' + #13#10 +
                             '  - Click CANCEL to exit without making any changes',
-                            mbConfirmation, MB_YESNOCANCEL);
+                            mbConfirmation, MB_YESNOCANCEL, IDYES);
 
     case ButtonPressed of
       IDYES: begin
@@ -1492,8 +1520,9 @@ begin
     adapts:
       1. If a prior override exists, pre-fill it (respects the user's
          previous choice across reinstalls).
-      2. Else if Documents is OneDrive-synced, suggest the local
-         %USERPROFILE%\Documents\Smart Citizen junction (escapes the sync).
+      2. Else if Documents is OneDrive-synced and has no Smart Citizen
+         folder yet, suggest the local %USERPROFILE%\Documents\Smart Citizen
+         junction (escapes the sync).
       3. Else pre-fill Documents\Smart Citizen (the natural default).
     WriteInstallerChoicesToRegistry compares the final value against the
     natural default and only writes user_data_dir when the user actually
@@ -1527,11 +1556,18 @@ begin
 
   { Pre-fill: existing override > OneDrive suggestion > Documents default.
     A stale value (missing folder or versioned leftover) falls through to
-    the default rather than prefilling a bad path. Issue #120. }
+    the default rather than prefilling a bad path. Issue #120.
+    The OneDrive suggestion is for a NEW data folder only. With no override,
+    an existing Documents\Smart Citizen is where the app already keeps its
+    data, and moving off it would leave user.ini behind. A silent update
+    (the in-app updater) never shows this page, so nobody could stop that.
+    The app's own startup warning offers the one-click move, which migrates
+    the data. }
   if RegQueryStringValue(HKCU, NewRegPath, 'user_data_dir', SavedDataDir) and
      (SavedDataDir <> '') and not IsStalePrefill(SavedDataDir) then
     DataDirPage.Values[0] := SavedDataDir
-  else if IsDocsOnOneDrive() then
+  else if IsDocsOnOneDrive() and
+          not DirExists(GetDocumentsBase() + '\Smart Citizen') then
     DataDirPage.Values[0] := SuggestLocalDataDir()
   else
     DataDirPage.Values[0] := GetDocumentsBase() + '\Smart Citizen';
@@ -1618,6 +1654,17 @@ begin
     "Move to a Local Folder" so both surfaces behave identically. }
   Result := True;
   if (DataDirPage = nil) or (CurPageID <> DataDirPage.ID) then
+    Exit;
+
+  { Silent installs, including the in-app auto-updater's /SILENT run (#211),
+    never show this page, but Setup still "clicks" Next through it, so this
+    function runs. The box below is a plain MsgBox, so /SUPPRESSMSGBOXES
+    does not answer it and the run stops on the question. Its YES branch
+    returns False, and a silent Setup that gets False here exits without
+    installing. So keep the folder as it is (the NO answer). After the
+    relaunch the app shows its own OneDrive warning (#174,
+    _maybe_warn_onedrive_data_dir in src/gui/main_window.py). }
+  if WizardSilent() then
     Exit;
 
   Chosen := Trim(DataDirPage.Values[0]);
