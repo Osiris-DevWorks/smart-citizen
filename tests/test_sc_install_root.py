@@ -751,6 +751,32 @@ class TestScanUsesLauncherLog:
         )
         assert settings_mod._scan_common_sc_install_locations() == str(ptu)
 
+    def test_a_repeat_call_on_the_same_channel_is_answered_from_the_cache(
+        self, tmp_path, scan, monkeypatch, caplog
+    ):
+        """The pick is remembered per channel. A profile whose picked root lacks
+        the active channel folder never saves a path, so it asks on every call,
+        and each ask must not rank the candidates or log the multi-install
+        warning again."""
+        import src.utils.settings as settings_mod
+
+        newer = _fake_install(tmp_path, "Games", "StarCitizen", ages={"LIVE": 3})
+        older = _fake_install(tmp_path, "Other Games", "StarCitizen", ages={"LIVE": 30})
+        ranked_for = []
+        real_pick = settings_mod._pick_live_sc_install
+        monkeypatch.setattr(
+            settings_mod, "_pick_live_sc_install",
+            lambda candidates, channel: ranked_for.append(channel) or real_pick(candidates, channel=channel),
+        )
+        with caplog.at_level("WARNING", logger="src.utils.settings"):
+            first = scan(common=[older, newer])
+            second = settings_mod._scan_common_sc_install_locations()
+            third = settings_mod._scan_common_sc_install_locations()
+
+        assert first == second == third == str(newer)
+        assert ranked_for == ["LIVE"]
+        assert caplog.text.count("Multiple Star Citizen installs found") == 1
+
     def test_the_support_log_names_the_pick_and_every_candidate_with_its_dates(
         self, tmp_path, scan, caplog
     ):
