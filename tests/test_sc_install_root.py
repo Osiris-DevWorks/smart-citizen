@@ -803,7 +803,7 @@ class TestScanUsesLauncherLog:
         assert calls == {"common": 1, "log": 1, "probe": 1}
 
     def test_a_junction_to_an_install_is_not_a_second_install(self, tmp_path, scan, ranked):
-        """The game moved off C: the usual way: the data sits at D:\StarCitizen
+        r"""The game moved off C: the usual way: the data sits at D:\StarCitizen
         and a junction at its old Program Files path points to it. The common
         walk sees the junction, the probe sees the real folder."""
         import subprocess
