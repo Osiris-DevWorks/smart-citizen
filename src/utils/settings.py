@@ -2672,8 +2672,10 @@ class AppSettings:
              shape, or one nested under a personal "Games" folder, plus
              library folders one level below the top of each fixed
              drive. A root whose active channel is current wins.
-             Persists the result once found, so this scan only runs once
-             per profile.
+             Persists the result once found. The scan runs again only when
+             the saved root has stopped being valid (its drive is offline,
+             or the game was moved), and what it finds then replaces the
+             saved value.
 
         Returns an empty string when nothing resolves — the Config tab shows
         a placeholder in that case.
