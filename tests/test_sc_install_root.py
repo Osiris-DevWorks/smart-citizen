@@ -7,6 +7,7 @@ cause spurious mismatches.
 """
 from __future__ import annotations
 
+import datetime
 import os
 import sys
 import time
@@ -441,7 +442,7 @@ class TestScanCommonScInstallLocations:
         )
         seen_candidates = []
 
-        def _spy_pick(candidates, channel=None):
+        def _spy_pick(candidates, channel):
             seen_candidates.extend(candidates)
             return candidates[-1]
 
@@ -469,11 +470,18 @@ class TestScanCommonScInstallLocations:
         )
 
 
-def _fake_install(tmp_path, *parts):
-    """A minimal real-looking install: <parts>/LIVE/Data.p4k."""
+def _fake_install(tmp_path, *parts, ages=None):
+    """A minimal real-looking install at <tmp_path>/<parts>, with a Data.p4k in
+    each channel of *ages* (``{channel: days old}``, e.g. ``{"LIVE": 3, "PTU": 0}``).
+    The default is a LIVE one of no particular age."""
     root = tmp_path.joinpath(*parts)
-    (root / "LIVE").mkdir(parents=True)
-    (root / "LIVE" / "Data.p4k").write_bytes(b"x" * 16)
+    for channel, age_days in (ages or {"LIVE": None}).items():
+        p4k = root / channel / "Data.p4k"
+        p4k.parent.mkdir(parents=True)
+        p4k.write_bytes(b"x" * 16)
+        if age_days is not None:
+            stamp = time.time() - age_days * 24 * 3600
+            os.utime(p4k, (stamp, stamp))
     return root
 
 
@@ -539,7 +547,7 @@ class TestScanUsesLauncherLog:
         seen = []
         monkeypatch.setattr(
             settings_mod, "_pick_live_sc_install",
-            lambda c, channel=None: seen.extend(c) or c[0],
+            lambda c, channel: seen.extend(c) or c[0],
         )
         return seen
 
@@ -658,44 +666,33 @@ class TestScanUsesLauncherLog:
         scan(common=[shell], shallow=[real])
         assert ranked == [str(shell), str(real)]
 
-    @staticmethod
-    def _install_with(tmp_path, ages, *parts):
-        """An install whose channels carry Data.p4k files of the given ages,
-        e.g. ``{"LIVE": 3, "PTU": 0}`` (days old)."""
-        root = tmp_path.joinpath(*parts)
-        for channel, age_days in ages.items():
-            (root / channel).mkdir(parents=True)
-            p4k = root / channel / "Data.p4k"
-            p4k.write_bytes(b"x" * 16)
-            stamp = time.time() - age_days * 24 * 3600
-            os.utime(p4k, (stamp, stamp))
-        return root
-
     def test_a_root_holding_the_active_channel_beats_a_newer_library_without_it(
         self, tmp_path, scan
     ):
         """The launcher can keep a channel in its own library folder. During a
         PTU cycle that folder's Data.p4k is the newest, but with LIVE active a
         root without LIVE would leave every LIVE path pointing nowhere."""
-        live = self._install_with(
-            tmp_path, {"LIVE": 3}, "Program Files", "Roberts Space Industries", "StarCitizen"
+        live = _fake_install(
+            tmp_path, "Program Files", "Roberts Space Industries", "StarCitizen",
+            ages={"LIVE": 3},
         )
-        ptu = self._install_with(tmp_path, {"PTU": 0}, "SC PTU", "StarCitizen")
+        ptu = _fake_install(tmp_path, "SC PTU", "StarCitizen", ages={"PTU": 0})
         assert scan(common=[live], shallow=[ptu]) == str(live)
 
     def test_the_active_channel_decides_which_library_wins(self, tmp_path, scan):
-        live = self._install_with(
-            tmp_path, {"LIVE": 0}, "Program Files", "Roberts Space Industries", "StarCitizen"
+        live = _fake_install(
+            tmp_path, "Program Files", "Roberts Space Industries", "StarCitizen",
+            ages={"LIVE": 0},
         )
-        ptu = self._install_with(tmp_path, {"PTU": 3}, "SC PTU", "StarCitizen")
+        ptu = _fake_install(tmp_path, "SC PTU", "StarCitizen", ages={"PTU": 3})
         assert scan(common=[live], shallow=[ptu], channel="PTU") == str(ptu)
 
     def test_a_log_named_library_without_the_active_channel_loses_to_one_with_it(
         self, tmp_path, scan
     ):
         """The log naming a PTU-only library says nothing about where LIVE is."""
-        ptu = self._install_with(tmp_path, {"PTU": 0}, "SC PTU", "StarCitizen")
-        live = self._install_with(tmp_path, {"LIVE": 3}, "Other Games", "StarCitizen")
+        ptu = _fake_install(tmp_path, "SC PTU", "StarCitizen", ages={"PTU": 0})
+        live = _fake_install(tmp_path, "Other Games", "StarCitizen", ages={"LIVE": 3})
         log = _launcher_log(tmp_path, (ptu, "2026-09-30 21:01:02.003"))
         assert scan(log=log, shallow=[live]) == str(live)
 
@@ -704,10 +701,13 @@ class TestScanUsesLauncherLog:
         holds a LIVE Data.p4k nobody has patched for over a year, while the
         library the launcher maintains holds only PTU. The leftover's LIVE is
         not current, so it gets no preference and the live library wins."""
-        leftover = self._install_with(
-            tmp_path, {"LIVE": 400}, "Program Files", "Roberts Space Industries", "StarCitizen"
+        leftover = _fake_install(
+            tmp_path, "Program Files", "Roberts Space Industries", "StarCitizen",
+            ages={"LIVE": 400},
         )
-        library = self._install_with(tmp_path, {"PTU": 1}, "Roberts Space Industries", "StarCitizen")
+        library = _fake_install(
+            tmp_path, "Roberts Space Industries", "StarCitizen", ages={"PTU": 1}
+        )
         log = _launcher_log(tmp_path, (library, "2026-09-30 21:01:02.003"))
         assert scan(common=[leftover], log=log) == str(library)
 
@@ -716,11 +716,11 @@ class TestScanUsesLauncherLog:
         months ago (recent enough to still count as current) when LIVE moved to
         a new library. With LIVE active, the newest Data.p4k in any channel
         would pick the old library; LIVE's own age picks the new one."""
-        old = self._install_with(
-            tmp_path, {"LIVE": 60, "PTU": 0},
-            "Program Files", "Roberts Space Industries", "StarCitizen",
+        old = _fake_install(
+            tmp_path, "Program Files", "Roberts Space Industries", "StarCitizen",
+            ages={"LIVE": 60, "PTU": 0},
         )
-        new = self._install_with(tmp_path, {"LIVE": 3}, "Other Games", "StarCitizen")
+        new = _fake_install(tmp_path, "Other Games", "StarCitizen", ages={"LIVE": 3})
         assert scan(common=[old], shallow=[new]) == str(new)
 
     def test_the_cached_pick_is_kept_per_channel(self, tmp_path, scan, monkeypatch):
@@ -729,27 +729,42 @@ class TestScanUsesLauncherLog:
         channel and then re-detect in the same session)."""
         import src.utils.settings as settings_mod
 
-        live = self._install_with(tmp_path, {"LIVE": 3}, "Games", "StarCitizen")
-        ptu = self._install_with(tmp_path, {"PTU": 0}, "SC PTU", "StarCitizen")
+        live = _fake_install(tmp_path, "Games", "StarCitizen", ages={"LIVE": 3})
+        ptu = _fake_install(tmp_path, "SC PTU", "StarCitizen", ages={"PTU": 0})
         assert scan(common=[live], shallow=[ptu]) == str(live)
         monkeypatch.setattr(
             settings_mod.AppSettings, "get_active_channel", staticmethod(lambda: "PTU")
         )
         assert settings_mod._scan_common_sc_install_locations() == str(ptu)
 
-    def test_every_candidate_is_logged_with_its_active_channel_date(
+    def test_the_support_log_names_the_pick_and_every_candidate_with_its_dates(
         self, tmp_path, scan, caplog
     ):
-        live = self._install_with(
-            tmp_path, {"LIVE": 3}, "Program Files", "Roberts Space Industries", "StarCitizen"
+        """The audit trail for a wrong pick: the chosen root, then each candidate
+        in rank order (the reverse of scan order here) with its newest Data.p4k
+        and the active channel's own, the PTU-only library's missing LIVE
+        spelled out."""
+        live = _fake_install(
+            tmp_path, "Program Files", "Roberts Space Industries", "StarCitizen",
+            ages={"LIVE": 3},
         )
-        ptu = self._install_with(tmp_path, {"PTU": 0}, "SC PTU", "StarCitizen")
+        ptu = _fake_install(tmp_path, "SC PTU", "StarCitizen", ages={"PTU": 0})
         with caplog.at_level("WARNING", logger="src.utils.settings"):
-            scan(common=[live], shallow=[ptu])
+            scan(common=[ptu], shallow=[live])
+
+        def day(root, channel):
+            stamp = (root / channel / "Data.p4k").stat().st_mtime
+            return datetime.datetime.fromtimestamp(stamp).strftime("%Y-%m-%d")
+
+        live_day, ptu_day = day(live, "LIVE"), day(ptu, "PTU")
+        assert live_day != ptu_day
         message = caplog.text
         assert "Multiple Star Citizen installs found" in message
-        assert str(live) in message and str(ptu) in message
-        assert "LIVE none" in message  # the PTU library's missing LIVE is spelled out
+        assert f"using {live} (a current LIVE first" in message
+        assert (
+            f"{live} (Data.p4k {live_day}, LIVE {live_day}), "
+            f"{ptu} (Data.p4k {ptu_day}, LIVE none)"
+        ) in message
 
     @staticmethod
     def _stamp_p4k(monkeypatch, root, stamp):
@@ -819,10 +834,11 @@ class TestScanUsesLauncherLog:
             assert settings_mod._scan_common_sc_install_locations() is None
         assert calls == {"common": 1, "log": 1, "probe": 1}
 
-    def test_a_junction_to_an_install_is_not_a_second_install(self, tmp_path, scan, ranked):
+    @staticmethod
+    def _install_and_junction(tmp_path):
         r"""The game moved off C: the usual way: the data sits at D:\StarCitizen
-        and a junction at its old Program Files path points to it. The common
-        walk sees the junction, the probe sees the real folder."""
+        and a junction at its old Program Files path points to it. Returns
+        ``(real, link)``, or skips where a junction cannot be made."""
         import subprocess
 
         real = _fake_install(tmp_path, "D", "StarCitizen")
@@ -833,8 +849,39 @@ class TestScanUsesLauncherLog:
         )
         if made.returncode != 0 or not link.exists():
             pytest.skip("cannot create a junction here")
+        return real, link
+
+    def test_a_junction_to_an_install_is_not_a_second_install(self, tmp_path, scan, ranked):
+        """The common walk sees the junction, the probe sees the real folder."""
+        real, link = self._install_and_junction(tmp_path)
         scan(common=[link], shallow=[real])
         assert ranked == [str(link)]
+
+    @pytest.mark.parametrize("source", ["common", "log", "shallow"])
+    def test_a_junction_and_its_target_from_one_source_count_once(
+        self, tmp_path, scan, ranked, source
+    ):
+        """Both can come from the same source: two common paths, a launcher log
+        that mentions the install before and after the move, or a top-level
+        junction that the probe lists twice."""
+        real, link = self._install_and_junction(tmp_path)
+        if source == "log":
+            log = _launcher_log(
+                tmp_path, (link, "2026-08-01 10:00:00.000"), (real, "2026-09-30 21:01:02.003")
+            )
+            scan(log=log)
+        else:
+            scan(**{source: [link, real]})
+        assert len(ranked) == 1
+
+    def test_the_same_root_twice_from_one_source_reaches_the_ranker_once(
+        self, tmp_path, scan, ranked
+    ):
+        """The within-source dedup does not depend on junctions: spellings that
+        differ only in casing, both from the common walk."""
+        root = _fake_install(tmp_path, "Roberts Space Industries", "StarCitizen")
+        scan(common=[root, Path(str(root).upper())])
+        assert ranked == [str(root)]
 
     def test_the_ranker_stats_each_candidate_once(self, tmp_path, monkeypatch):
         """Ranking and the support log report the same Data.p4k dates, so the

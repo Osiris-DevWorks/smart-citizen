@@ -1,6 +1,7 @@
 """Settings management using QSettings."""
 import base64
 import datetime
+import itertools
 import json
 import logging
 import os
@@ -126,9 +127,9 @@ def _scan_common_sc_install_locations() -> "str | None":
     Candidates come from up to three sources:
 
     - The RSI Launcher's own log, which names the install the launcher
-      maintains wherever the player put it. No fixed list of folder shapes
-      can match that (an install under a folder called "Other Games" was the
-      one that surfaced this). A root it names must still pass
+      maintains wherever the player put it, at any depth under any folder
+      name (an install under a folder called "Other Games" was the one that
+      surfaced this). A root it names must still pass
       :func:`install_scanner.is_sc_install_root`, real Star Citizen files in
       a channel folder.
     - The common RSI install paths on every drive letter
@@ -143,6 +144,8 @@ def _scan_common_sc_install_locations() -> "str | None":
       when an old install or its empty shell is still at a common path. It is
       one directory listing per fixed drive, so it always runs.
 
+    A root found more than once, by any of them or twice by one (a junction
+    to an install and the install itself), is kept once.
     :func:`_pick_live_sc_install` ranks them all with the active channel: a
     root whose own active-channel ``Data.p4k`` is current comes first, then
     the rest by their newest ``Data.p4k``. Every candidate is logged.
@@ -180,21 +183,24 @@ def _scan_common_sc_install_locations() -> "str | None":
     logged = sorted(
         read_launcher_installs()[0].values(), key=lambda hit: hit[1], reverse=True
     )
-    candidates = [str(root) for root, _seen in logged]
-    candidates += [
-        c for c in common if not any(_same_install(c, known) for known in candidates)
-    ]
 
-    # One folder below the top of each fixed drive, always. Neither of the
-    # sources above proves where the live install is: the log can be cleared
-    # or name only another channel's library, and a common path can hold a
-    # leftover shell or an abandoned install (#370). The ranker sorts it out.
-    # The probe overlaps the common paths (Program Files and RSI's own folder
-    # are both one level down), so a root found both ways is added once.
-    candidates += [
-        s for s in map(str, iter_shallow_sc_install_locations())
-        if not any(_same_install(s, known) for known in candidates)
-    ]
+    # The probe looks one folder below the top of each fixed drive, always.
+    # Neither of the other sources proves where the live install is: the log
+    # can be cleared or name only another channel's library, and a common path
+    # can hold a leftover shell or an abandoned install (#370). The ranker
+    # sorts it out. Every hit is checked against all that were kept before it,
+    # those of its own source included, so one install counts once. The probe
+    # overlaps the common paths (Program Files and RSI's own folder are both
+    # one level down), and a game moved off C: leaves a junction at its old
+    # path that the log or either walk can name beside the real folder.
+    candidates: "list[str]" = []
+    for path in itertools.chain(
+        (str(root) for root, _seen in logged),
+        common,
+        map(str, iter_shallow_sc_install_locations()),
+    ):
+        if not any(_same_install(path, known) for known in candidates):
+            candidates.append(path)
 
     result = _pick_live_sc_install(candidates, channel=active) if candidates else None
     _sc_scan_cache = (candidates, {active: result})
@@ -231,16 +237,6 @@ def _p4k_mtimes(root: str) -> "dict[str, float]":
     return mtimes
 
 
-def _newest_p4k_mtime(root: str) -> float:
-    """Most recent Data.p4k mtime across *root*'s channel folders, or 0.0.
-
-    Every channel is checked rather than LIVE alone: a user who plays PTU
-    keeps that channel current while LIVE sits untouched, and picking the
-    install by its stalest channel would get the comparison backwards.
-    """
-    return max(_p4k_mtimes(root).values(), default=0.0)
-
-
 # How far a channel's Data.p4k may trail the newest Data.p4k found and still
 # count as maintained. LIVE is patched every few weeks, so a channel nothing
 # has touched for three months while another install kept being patched is a
@@ -248,7 +244,7 @@ def _newest_p4k_mtime(root: str) -> float:
 _CHANNEL_STALE_SECONDS = 90 * 24 * 3600
 
 
-def _pick_live_sc_install(candidates: "list[str]", channel: "str | None" = None) -> str:
+def _pick_live_sc_install(candidates: "list[str]", channel: str) -> str:
     r"""Choose the install the RSI Launcher is actually maintaining.
 
     The scan used to return its first hit and stop. That is drive-major over
@@ -270,7 +266,7 @@ def _pick_live_sc_install(candidates: "list[str]", channel: "str | None" = None)
     timestamps fall back to the original scan order, so a single-install
     machine behaves exactly as before.
 
-    With *channel* (the active one), a root whose own *channel* Data.p4k is
+    *channel* is the active one, and a root whose own *channel* Data.p4k is
     current comes first, newest first. Every channel path resolves against
     the chosen root, and the launcher can keep a channel in its own library
     folder, so a PTU-only library patched an hour ago must not win while LIVE
@@ -286,10 +282,13 @@ def _pick_live_sc_install(candidates: "list[str]", channel: "str | None" = None)
     # One stat per channel per candidate, reused for both the ranking and the
     # log line below. Reading the disk a second time while building the
     # message would not just double the stat calls; the install we ranked and
-    # the date we report could disagree about the same file.
+    # the date we report could disagree about the same file. A root's newest
+    # date takes every channel, not LIVE alone: a user who plays PTU keeps
+    # that channel current while LIVE sits untouched, and going by the stalest
+    # channel would get the comparison backwards.
     per_channel = {c: _p4k_mtimes(c) for c in candidates}
     mtimes = {c: max(per_channel[c].values(), default=0.0) for c in candidates}
-    own = {c: per_channel[c].get(channel, 0.0) if channel else 0.0 for c in candidates}
+    own = {c: per_channel[c].get(channel, 0.0) for c in candidates}
     newest = max(mtimes.values(), default=0.0)
 
     def rank(c: str) -> tuple:
@@ -309,16 +308,13 @@ def _pick_live_sc_install(candidates: "list[str]", channel: "str | None" = None)
     chosen = ranked[0]
     if len(candidates) > 1:
         listing = ", ".join(
-            f"{c} (Data.p4k {day(mtimes[c])}"
-            + (f", {channel} {day(own[c])}" if channel else "")
-            + ")"
-            for c in ranked
+            f"{c} (Data.p4k {day(mtimes[c])}, {channel} {day(own[c])})" for c in ranked
         )
-        preference = f"a current {channel} first, then " if channel else ""
         logger.warning(
             f"Multiple Star Citizen installs found; using {chosen} "
-            f"({preference}the newest Data.p4k). All candidates: {listing}. If "
-            f"the wrong one was picked, set the install path in the Config tab."
+            f"(a current {channel} first, then the newest Data.p4k). All "
+            f"candidates: {listing}. If the wrong one was picked, set the "
+            f"install path in the Config tab."
         )
     else:
         logger.info(f"Auto-detected Star Citizen install: {chosen}")
