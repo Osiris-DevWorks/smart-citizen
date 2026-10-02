@@ -10,6 +10,7 @@ from PyQt6.QtCore import QSettings
 import winreg
 
 from src.utils.install_scanner import (
+    GAME_DATA_FILE,
     SC_CHANNELS,
     iter_common_sc_install_locations,
     iter_shallow_sc_install_locations,
@@ -106,9 +107,11 @@ def _path_ends_in_channel(path: str) -> bool:
 
 
 # Sentinel distinct from a real scan outcome — the scan legitimately returns
-# None ("nothing found"), so that value can't double as "not run yet".
+# None ("nothing found"), so that value can't double as "not run yet". Once
+# set, the cache is ``(candidates, {active_channel: pick})``: the walk over the
+# drives happens once, and only the cheap ranking is redone per channel.
 _SC_SCAN_UNSET = object()
-_sc_scan_cache: "str | None | object" = _SC_SCAN_UNSET
+_sc_scan_cache: "tuple[list[str], dict[str, str | None]] | object" = _SC_SCAN_UNSET
 
 
 def _scan_common_sc_install_locations() -> "str | None":
@@ -120,8 +123,7 @@ def _scan_common_sc_install_locations() -> "str | None":
     none of those do: a portable build's first run, or a fresh profile,
     where the only way to find an install on a non-default drive is to look.
 
-    Candidates come from two sources, ranked together by
-    :func:`_pick_live_sc_install`:
+    Candidates come from up to three sources:
 
     - The RSI Launcher's own log, which names the install the launcher
       maintains wherever the player put it. No fixed list of folder shapes
@@ -134,22 +136,36 @@ def _scan_common_sc_install_locations() -> "str | None":
       most drive letters don't exist and short-circuit on the first
       ``exists()`` check. These only need a channel folder
       (:func:`install_scanner.looks_like_sc_root`).
+    - One folder below the top of each fixed drive
+      (:func:`install_scanner.iter_shallow_sc_install_locations`), which only
+      accepts a root with ``Data.p4k``. That covers a library folder the log
+      does not name, for example after the launcher's logs were cleared, even
+      when an old install or its empty shell is still at a common path. It is
+      one directory listing per fixed drive, so it always runs.
 
-    When neither finds anything, one folder below the top of each fixed drive
-    is checked too (:func:`install_scanner.iter_shallow_sc_install_locations`),
-    which only accepts a root with ``Data.p4k``. That covers a library folder
-    the log does not name, for example after the launcher's logs were cleared.
+    :func:`_pick_live_sc_install` ranks them all with the active channel: a
+    root whose own active-channel ``Data.p4k`` is current comes first, then
+    the rest by their newest ``Data.p4k``. Every candidate is logged.
 
     Cached in-memory for the process's lifetime, including a "found
     nothing" result -- without this, a no-install profile re-walks every
     drive letter on every call (e.g. after each channel switch clears
     GAME_INSTALL_PATH), and a disconnected network drive can make a single
     ``exists()`` check hang for seconds. The cache resets naturally on app
-    restart since it's a plain module global, not persisted to settings.
+    restart since it's a plain module global, not persisted to settings. The
+    candidates are cached once, and the pick per active channel, since the
+    ranking depends on the channel but the walk does not.
     """
     global _sc_scan_cache
+    active = AppSettings.get_active_channel()
     if _sc_scan_cache is not _SC_SCAN_UNSET:
-        return _sc_scan_cache
+        cached_candidates, picks = _sc_scan_cache
+        if active not in picks:
+            picks[active] = (
+                _pick_live_sc_install(cached_candidates, channel=active)
+                if cached_candidates else None
+            )
+        return picks[active]
 
     # The shared generator walks drive letters and common subpaths -- the
     # "find them all" consumer is the Config tab's install check
@@ -166,18 +182,53 @@ def _scan_common_sc_install_locations() -> "str | None":
     )
     candidates = [str(root) for root, _seen in logged]
     candidates += [
-        c for c in common if not any(same_path(c, known) for known in candidates)
+        c for c in common if not any(_same_install(c, known) for known in candidates)
     ]
 
-    if not candidates:
-        candidates = [str(p) for p in iter_shallow_sc_install_locations()]
+    # One folder below the top of each fixed drive, always. Neither of the
+    # sources above proves where the live install is: the log can be cleared
+    # or name only another channel's library, and a common path can hold a
+    # leftover shell or an abandoned install (#370). The ranker sorts it out.
+    # The probe overlaps the common paths (Program Files and RSI's own folder
+    # are both one level down), so a root found both ways is added once.
+    candidates += [
+        s for s in map(str, iter_shallow_sc_install_locations())
+        if not any(_same_install(s, known) for known in candidates)
+    ]
 
-    if not candidates:
-        _sc_scan_cache = None
-        return None
+    result = _pick_live_sc_install(candidates, channel=active) if candidates else None
+    _sc_scan_cache = (candidates, {active: result})
+    return result
 
-    _sc_scan_cache = _pick_live_sc_install(candidates)
-    return _sc_scan_cache
+
+def _same_install(a: str, b: str) -> bool:
+    r"""True if *a* and *b* are the same folder, by spelling or once any
+    junction or symlink is resolved. A game moved off C: the usual way sits at
+    ``D:\StarCitizen`` with a junction at its old Program Files path, and the
+    log and the one-folder probe would otherwise list it twice."""
+    if same_path(a, b):
+        return True
+    try:
+        return same_path(os.path.realpath(a), os.path.realpath(b))
+    except (OSError, ValueError):
+        return False
+
+
+def _p4k_mtimes(root: str) -> "dict[str, float]":
+    r"""Each channel's ``<root>\<channel>\Data.p4k`` mtime, 0.0 when missing.
+
+    One stat per channel, so the ranking and the support log report the same
+    value for the same file. A timestamp before 1970 (a copy tool that
+    dropped them) reads as missing: it cannot be compared or printed, and a
+    Data.p4k nobody has patched since then is not a live install anyway.
+    """
+    mtimes = {}
+    for channel in AppSettings.AVAILABLE_CHANNELS:
+        try:
+            mtimes[channel] = max(0.0, (Path(root) / channel / GAME_DATA_FILE).stat().st_mtime)
+        except (OSError, ValueError):
+            mtimes[channel] = 0.0
+    return mtimes
 
 
 def _newest_p4k_mtime(root: str) -> float:
@@ -187,16 +238,17 @@ def _newest_p4k_mtime(root: str) -> float:
     keeps that channel current while LIVE sits untouched, and picking the
     install by its stalest channel would get the comparison backwards.
     """
-    newest = 0.0
-    for channel in AppSettings.AVAILABLE_CHANNELS:
-        try:
-            newest = max(newest, (Path(root) / channel / "Data.p4k").stat().st_mtime)
-        except (OSError, ValueError):
-            continue
-    return newest
+    return max(_p4k_mtimes(root).values(), default=0.0)
 
 
-def _pick_live_sc_install(candidates: "list[str]") -> str:
+# How far a channel's Data.p4k may trail the newest Data.p4k found and still
+# count as maintained. LIVE is patched every few weeks, so a channel nothing
+# has touched for three months while another install kept being patched is a
+# leftover (#370), not the player's game.
+_CHANNEL_STALE_SECONDS = 90 * 24 * 3600
+
+
+def _pick_live_sc_install(candidates: "list[str]", channel: "str | None" = None) -> str:
     r"""Choose the install the RSI Launcher is actually maintaining.
 
     The scan used to return its first hit and stop. That is drive-major over
@@ -218,32 +270,55 @@ def _pick_live_sc_install(candidates: "list[str]") -> str:
     timestamps fall back to the original scan order, so a single-install
     machine behaves exactly as before.
 
+    With *channel* (the active one), a root whose own *channel* Data.p4k is
+    current comes first, newest first. Every channel path resolves against
+    the chosen root, and the launcher can keep a channel in its own library
+    folder, so a PTU-only library patched an hour ago must not win while LIVE
+    is active. "Current" means within :data:`_CHANNEL_STALE_SECONDS` of the
+    newest Data.p4k found, so an abandoned install whose *channel* stopped
+    being patched still loses to the live one, even when that one only holds
+    another channel. The rest follow, newest Data.p4k in any channel first.
+
     Every candidate is logged either way. The heuristic can still be wrong,
     and when it is, a support log that names the alternatives turns a long
     diagnostic thread into one line someone can read.
     """
-    # One filesystem walk per candidate, reused for both the ranking and the
-    # log line below. Calling _newest_p4k_mtime again while building the
-    # message would not just double the stat calls; it would read the disk a
-    # second time, so the install we ranked and the date we report could
-    # disagree about the same folder.
-    mtimes = {c: _newest_p4k_mtime(c) for c in candidates}
-    ranked = sorted(candidates, key=lambda c: -mtimes[c])
+    # One stat per channel per candidate, reused for both the ranking and the
+    # log line below. Reading the disk a second time while building the
+    # message would not just double the stat calls; the install we ranked and
+    # the date we report could disagree about the same file.
+    per_channel = {c: _p4k_mtimes(c) for c in candidates}
+    mtimes = {c: max(per_channel[c].values(), default=0.0) for c in candidates}
+    own = {c: per_channel[c].get(channel, 0.0) if channel else 0.0 for c in candidates}
+    newest = max(mtimes.values(), default=0.0)
+
+    def rank(c: str) -> tuple:
+        if own[c] and newest - own[c] <= _CHANNEL_STALE_SECONDS:
+            return (0, -own[c])
+        return (1, -mtimes[c])
+
+    def day(stamp: float) -> str:
+        if not stamp:
+            return "none"
+        try:
+            return datetime.datetime.fromtimestamp(stamp).strftime("%Y-%m-%d")
+        except (OSError, OverflowError, ValueError):  # a bogus stamp must not break detection
+            return "unknown"
+
+    ranked = sorted(candidates, key=rank)
     chosen = ranked[0]
     if len(candidates) > 1:
         listing = ", ".join(
-            f"{c} (Data.p4k "
-            + (
-                datetime.datetime.fromtimestamp(mtimes[c]).strftime("%Y-%m-%d")
-                if mtimes[c] else "none"
-            )
+            f"{c} (Data.p4k {day(mtimes[c])}"
+            + (f", {channel} {day(own[c])}" if channel else "")
             + ")"
             for c in ranked
         )
+        preference = f"a current {channel} first, then " if channel else ""
         logger.warning(
-            f"Multiple Star Citizen installs found; using the one with the "
-            f"newest Data.p4k: {chosen}. All candidates: {listing}. If the "
-            f"wrong one was picked, set the install path in the Config tab."
+            f"Multiple Star Citizen installs found; using {chosen} "
+            f"({preference}the newest Data.p4k). All candidates: {listing}. If "
+            f"the wrong one was picked, set the install path in the Config tab."
         )
     else:
         logger.info(f"Auto-detected Star Citizen install: {chosen}")
@@ -2598,10 +2673,11 @@ class AppSettings:
              maintains wherever the player put it, plus every local
              drive letter at a common RSI Launcher install path -- a
              default C:\\ install, a secondary drive kept in the same
-             shape, or one nested under a personal "Games" folder. If
-             neither finds one, a library folder one level below the top
-             of a fixed drive. Persists the result once found, so this
-             scan only runs once per profile.
+             shape, or one nested under a personal "Games" folder, plus
+             library folders one level below the top of each fixed
+             drive. A root whose active channel is current wins.
+             Persists the result once found, so this scan only runs once
+             per profile.
 
         Returns an empty string when nothing resolves — the Config tab shows
         a placeholder in that case.

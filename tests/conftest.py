@@ -18,6 +18,35 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
+@pytest.fixture(scope="session", autouse=True)
+def no_real_install_detection_inputs():
+    """First-run install detection (settings._scan_common_sc_install_locations)
+    reads the RSI Launcher log under the real %APPDATA% and lists the top of
+    every fixed drive. Any test that
+    resolves an install root with nothing saved reaches both, and on a
+    developer's machine either can find their real install. Stub them for the
+    whole session, so module-scoped fixtures that build a MainWindow are
+    covered too; tests of those inputs patch in their own (see
+    test_sc_install_root.py), and their patches undo back to these stubs.
+    Tests import settings both as src.utils.settings and as utils.settings,
+    two separate module objects, so each one that is loaded gets patched."""
+    try:
+        import src.utils.settings  # noqa: F401  (load it so it is always patched)
+    except ImportError:  # no PyQt6: nothing in this run can reach detection
+        pass
+
+    with pytest.MonkeyPatch.context() as patcher:
+        for name in ("src.utils.settings", "utils.settings"):
+            module = sys.modules.get(name)
+            if module is None:
+                continue
+            patcher.setattr(module, "read_launcher_installs", lambda log_path=None: ({}, False))
+            patcher.setattr(
+                module, "iter_shallow_sc_install_locations", lambda drives=None: iter(())
+            )
+        yield
+
+
 @pytest.fixture
 def temp_dir():
     """Provide a temporary directory that's cleaned up after test"""

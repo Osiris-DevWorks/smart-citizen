@@ -28,8 +28,8 @@ Evidence is gathered in three tiers, cheapest first:
    bother with it.)
 2. **Cheap** -- the common RSI install paths on every drive letter, shared with
    settings.py via ``iter_common_sc_install_locations``. First-run detection
-   in settings.py also has ``iter_shallow_sc_install_locations``, one folder
-   below the top of each fixed drive, as a last resort.
+   in settings.py also ranks hits from ``iter_shallow_sc_install_locations``,
+   one folder below the top of each fixed drive.
 3. **Opt-in** -- :func:`deep_scan_roots`, a depth-bounded walk of the fixed
    drives for installs at custom paths. Slow enough to need a worker thread,
    a progress callback, and a cancel hook, so it is never run implicitly.
@@ -707,8 +707,10 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
 
     Keys are :func:`_normcase`-normalized strings so callers can match them
     against other candidates without worrying about case or separators; the
-    value keeps the path in its real on-disk casing, because these end up in
-    front of the user and ``c:\\program files\\...`` reads like a bug. Lines
+    value keeps the path as the launcher wrote it, not lowercased, because
+    these end up in front of the user and ``c:\\program files\\...`` reads
+    like a bug. The launcher writes the folder picked in its own dialog, so
+    that normally matches the casing on disk, but nothing here checks. Lines
     with no timestamp inherit the last one seen, so a wrapped or continuation
     line still dates correctly.
     """
@@ -840,8 +842,10 @@ def iter_shallow_sc_install_locations(
 ) -> Iterator[Path]:
     r"""Yield installs with game data one folder below the top of each fixed drive.
 
-    First-run detection's last resort, for when neither the launcher log nor a
-    common path names the install. It costs one directory listing per fixed
+    First-run detection adds these hits to its ranking, so a custom library
+    folder is found even when the launcher log does not name it and an old
+    install or its shell sits at a common path. It costs one directory
+    listing per fixed
     drive plus a few probes per top-level folder, so it can run on the GUI
     thread like the common-path walk. Checks ``<drive>\StarCitizen`` and each
     top-level folder joined with :data:`SHALLOW_SC_SUBPATHS`, skipping
