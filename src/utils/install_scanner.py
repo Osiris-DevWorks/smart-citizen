@@ -617,14 +617,20 @@ _LOG_TIMESTAMP_RE = re.compile(
     r'"t"\s*:\s*"(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?)"'
 )
 
-# Any drive-rooted Windows path in a log line. Commas are excluded because the
-# launcher logs comma-separated path *lists*
-# (``[validateNonExistantDirectories] C:\a,C:\a\StarCitizen,...``) and one
-# match per path is what we want. Parentheses are deliberately NOT excluded --
-# ``C:\Program Files (x86)\...`` is a real install location, and the trailing
-# noise parentheses introduce (`` (type: install``) are stripped afterwards by
-# :func:`resolve_logged_root`.
-_LOG_PATH_RE = re.compile(r"[A-Za-z]:\\[^\"'*?<>|,\r\n]*")
+# Any drive-rooted Windows path in a log line, up to a character no folder name
+# can hold. Parentheses, apostrophes and commas are deliberately NOT excluded:
+# ``C:\Program Files (x86)\...``, ``D:\Dad's Games\...`` and ``E:\Games, Apps\...``
+# are real install locations. The launcher's own noise comes along too
+# (`` (type: install``, a closing quote, the next entry of a list) and is cut
+# back by :data:`_LOG_PATH_LIST_SPLIT_RE` and :func:`_logged_path_candidates`.
+_LOG_PATH_RE = re.compile(r"[A-Za-z]:\\[^\"*?<>|\r\n]*")
+
+# The launcher logs comma-separated path *lists*
+# (``[validateNonExistantDirectories] C:\a,C:\a\StarCitizen,...``). A comma
+# followed by another drive path, with or without spaces after it, is the only
+# place one entry ends and the next begins, so a match is split there. A folder
+# name cannot hold a colon, so any other comma belongs to a folder name.
+_LOG_PATH_LIST_SPLIT_RE = re.compile(r",\s*(?=[A-Za-z]:\\)")
 
 # The launcher always creates its ``StarCitizen\<channel>`` tree inside the
 # user's chosen library folder, so this substring is a safe, cheap filter that
@@ -633,8 +639,18 @@ _LOG_PATH_HINT = "starcitizen"
 
 # Bound on how many trimmed variants of one logged path get probed. Real paths
 # resolve within a handful; the cap just stops a pathological log line from
-# turning into thousands of stat calls.
+# turning into thousands of stat calls. The cuts at a quote or comma and the
+# word and folder trimming that follows each get this many, so a path with a
+# great many quotes or commas still reaches the folder walk.
 _MAX_PATH_CANDIDATES = 24
+
+# How much of the log gets read and parsed, counted back from its end. First-run
+# detection reads it on the GUI thread, and the per-folder memo bounds the work
+# per folder but not per distinct path, so a runaway log (hundreds of thousands
+# of distinct per-file paths under a folder that no longer exists) could stall
+# the window for tens of seconds. The launcher's own log is about 40 KB, so
+# this is a hundred times what a real one needs.
+_LOG_READ_BUDGET_BYTES = 4 * 1024 * 1024
 
 
 def default_launcher_log_path() -> Optional[Path]:
@@ -649,11 +665,14 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
     r"""Yield plausible truncations of *raw*, longest first.
 
     A logged path arrives with the launcher's own prose stuck to the end
-    (``...\StarCitizen (type: install``, ``...\LIVE - required: 110085069``).
-    Two passes clean that up: first trim whitespace-separated words off the
-    final segment, then walk up whole segments. Between them they recover the
-    real root from every line shape the launcher currently emits, without this
-    module having to know any of those shapes.
+    (``...\StarCitizen (type: install``, ``...\LIVE - required: 110085069``,
+    ``...\StarCitizen' is missing``). Three passes clean that up: first cut at
+    each apostrophe or comma, last one first (a quote or a comma that ends the
+    path, while a folder name such as ``Dad's Games`` is kept whole by the
+    full path being tried before any cut), then trim whitespace-separated
+    words off the final segment, then walk up whole segments. Between them
+    they recover the real root from every line shape the launcher currently
+    emits, without this module having to know any of those shapes.
     """
     raw = raw.strip().rstrip("\\/")
     if not raw:
@@ -661,6 +680,15 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
     yield raw
 
     emitted = 1
+    for match in reversed(list(re.finditer(r"[',]", raw))):
+        if emitted >= _MAX_PATH_CANDIDATES:
+            break
+        cut = raw[: match.start()].rstrip("\\/ ")
+        if cut:
+            yield cut
+            emitted += 1
+
+    emitted = 1  # the cuts above must not eat the budget of the passes below
     head, sep, tail = raw.rpartition("\\")
     words = tail.split(" ")
     for count in range(len(words) - 1, 0, -1):
@@ -732,7 +760,12 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
             continue
         # The log is JSON-escaped, so on-disk ``C:\a\b`` appears as ``C:\\a\\b``.
         unescaped = line.replace("\\\\", "\\")
-        for raw in _LOG_PATH_RE.findall(unescaped):
+        raws = [
+            entry
+            for match in _LOG_PATH_RE.findall(unescaped)
+            for entry in _LOG_PATH_LIST_SPLIT_RE.split(match)
+        ]
+        for raw in raws:
             if _LOG_PATH_HINT not in raw.lower():
                 continue
             if raw not in resolved:
@@ -745,6 +778,23 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
             if key not in seen or stamp > seen[key][1]:
                 seen[key] = (root, stamp)
     return seen
+
+
+def _read_log_tail(path: Path) -> str:
+    """Read *path*, or only its last :data:`_LOG_READ_BUDGET_BYTES` when it is bigger.
+
+    The launcher only ever appends, so the newest mentions are at the end and
+    those are what the ranking wants. The cut usually lands inside a line, so
+    the first line of a trimmed read is dropped rather than parsed half.
+    """
+    with path.open("rb") as handle:
+        size = handle.seek(0, os.SEEK_END)
+        trimmed = size > _LOG_READ_BUDGET_BYTES
+        handle.seek(size - _LOG_READ_BUDGET_BYTES if trimmed else 0)
+        text = handle.read().decode("utf-8", errors="replace")
+    if trimmed:
+        text = text.partition("\n")[2]
+    return text
 
 
 def read_launcher_installs(
@@ -760,7 +810,7 @@ def read_launcher_installs(
     if path is None:
         return {}, False
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = _read_log_tail(path)
     except OSError as exc:
         logger.debug("RSI Launcher log unreadable at %s: %s", path, exc)
         return {}, False
