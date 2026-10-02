@@ -1040,6 +1040,28 @@ class TestApplyToGameKeepsTheCheckHonest:
         assert MainWindow.apply_to_game(env.me) is False
         assert env.calls == ["dialog-warning"]
 
+    def test_no_loaded_entries_writes_nothing_and_reports_false(self, env):
+        env.me.entries = []
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-warning"]
+
+    def test_no_game_path_writes_nothing_and_reports_false(self, env, monkeypatch):
+        monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: ""))
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-warning"]
+
+    def test_a_failed_user_ini_save_writes_nothing_and_reports_false(self, env, monkeypatch):
+        """user.ini is saved first, so a failure there leaves the game file
+        alone and nothing was applied."""
+        import src.utils.user_ini_manager as user_ini_manager
+
+        def refuse(entries, path):
+            raise PermissionError(13, "Access is denied")
+
+        monkeypatch.setattr(user_ini_manager, "save_user_ini", refuse)
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-critical"]
+
 
 class TestOtherEntryPointsMarkTheButton:
     @pytest.fixture
