@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Zaten uygulandı: son Oyuna Uygula işleminden bu yana hiçbir şey değişmedi."
+      "at": "Zaten uygulandı: oyun mevcut ayarlarınızla eşleşiyor."
     },
     "feedback_fallback_text": {
       "ht": "",

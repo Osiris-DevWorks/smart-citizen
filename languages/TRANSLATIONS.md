@@ -66,7 +66,11 @@ them against the new source.
   button stays clickable when green, and the check compares the game file
   with the current settings rather than tracking changes. Refreshed the `at`
   in all 10 other languages to match. No language had an `ht` for this key,
-  so nothing needs human re-review. The same change added one sentence to
+  so nothing needs human re-review. The Advanced-mode green tooltip
+  `toolbar.apply_disabled_tooltip` got the same reword in English, without
+  the click hint (that button is disabled while green), and its `at` was
+  refreshed in the 10 other languages (Claude Sonnet 5.5), again with no `ht`
+  to protect. The same change added one sentence to
   `docs/HELP.md` and the 10 translated `HELP.md` files (Claude Sonnet 5.5):
   restoring a backup or clearing the localization turns the Apply button
   red, but closing afterwards does not ask. The translations are AI-written,

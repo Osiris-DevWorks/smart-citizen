@@ -213,7 +213,7 @@
       "at": ""
     },
     "apply_disabled_tooltip": {
-      "ht": "Already applied: nothing has changed since the last Apply to Game.",
+      "ht": "Already applied: the game matches your current settings.",
       "at": ""
     },
     "feedback_fallback_text": {

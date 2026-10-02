@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "已经应用：自上次应用到游戏以来没有任何更改。"
+      "at": "已经应用：游戏已与当前设置一致。"
     },
     "feedback_fallback_text": {
       "ht": "",

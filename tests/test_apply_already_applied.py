@@ -408,6 +408,21 @@ class TestComputeAlreadyApplied:
         # ...while an override still in memory is expected, as before.
         assert _compute_already_applied(self._snapshot(env, overrides={"a": "mine"})) is True
 
+    def test_an_override_with_whitespace_reads_as_applied_after_a_real_apply(self, env, tmp_path):
+        """A space favourite prefix (#100) is written verbatim, so the applied
+        file holds it and the check must read it back verbatim too. Stripping
+        the applied values made such an override compare unequal after every
+        real apply, and the button stayed red."""
+        from src.merger.ini_merger import merge_ini_files
+
+        base = tmp_path / "base.ini"
+        base.write_text("a=stock a\nb=stock b\n", encoding="utf-8")
+        merge_ini_files(str(base), {"a": " *mine ", "b": "stock b"}, str(env.applied))
+
+        assert _compute_already_applied(self._snapshot(env, overrides={"a": " *mine "})) is True
+        # A different amount of whitespace is a real difference, not a match.
+        assert _compute_already_applied(self._snapshot(env, overrides={"a": "*mine"})) is False
+
     def test_false_when_user_cfg_points_at_another_language(self, env):
         """Content matches, but switching language in the UI never touches
         user.cfg, so the game would still load the other language."""

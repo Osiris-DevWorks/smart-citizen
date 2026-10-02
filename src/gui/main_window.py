@@ -426,7 +426,11 @@ def _compute_already_applied(snapshot: _AppliedStateSnapshot, should_stop=lambda
     if should_stop():
         return False
 
-    applied_dict = parse_ini_file(snapshot.target_path)
+    # strip_values=False: the writer puts every merged value in verbatim, and a
+    # user override can start or end with a space (a space favourite prefix,
+    # #100). Stripping the applied side made such an override compare unequal
+    # after every real apply, so the button stayed red.
+    applied_dict = parse_ini_file(snapshot.target_path, strip_values=False)
     if should_stop() or not _matches_applied_output(stock_dict, merged_dict, applied_dict):
         return False
 

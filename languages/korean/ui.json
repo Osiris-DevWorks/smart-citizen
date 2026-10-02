@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "이미 적용됨: 마지막으로 게임에 적용한 이후 변경된 사항이 없습니다."
+      "at": "이미 적용됨: 게임이 현재 설정과 일치합니다."
     },
     "feedback_fallback_text": {
       "ht": "",

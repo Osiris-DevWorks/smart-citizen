@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Déjà appliqué — rien n'a changé depuis la dernière application au jeu."
+      "at": "Déjà appliqué : le jeu correspond à vos réglages actuels."
     },
     "feedback_fallback_text": {
       "ht": "",
