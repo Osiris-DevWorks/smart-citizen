@@ -661,10 +661,14 @@ end;
   the live node. Do not reintroduce node/value deletion against
   'Software\Osiris DevWorks\Smart Citizen' in the uninstall path. }
 
+{ Defined with the other SC path checks, further down. }
+function IsValidSCRoot(const Path: String): Boolean; forward;
+
 procedure WriteInstallerChoicesToRegistry();
 var
   RegPath: String;
   FinalPath: String;
+  SCRoot: String;
   DataDir: String;
   DocsDefault: String;
   CacheDir: String;
@@ -690,10 +694,17 @@ begin
     RegPath := 'Software\Osiris DevWorks\Smart Citizen';
     RegWriteStringValue(HKCU, RegPath, 'sc_directory', FinalPath);
     RegWriteStringValue(HKCU, RegPath, 'game_install_path', FinalPath);
-    { Write sc_install_root (parent of the channel folder) so a reinstall
-      with a changed SC path doesn't leave the stale root from a prior
-      migration winning over the freshly chosen directory. }
-    RegWriteStringValue(HKCU, RegPath, 'sc_install_root', ExtractFileDir(RemoveBackslash(FinalPath)));
+    { Write sc_install_root (the folder that holds the channel folders) so a
+      reinstall with a changed SC path doesn't leave the stale root from a
+      prior migration winning over the freshly chosen directory. The page
+      normally holds a channel folder, whose parent is the root. It can also
+      hold the root itself (a saved root is pre-filled unchanged, or the user
+      types one), and then its parent is the wrong folder. }
+    if IsValidSCRoot(FinalPath) then
+      SCRoot := RemoveBackslashUnlessRoot(FinalPath)
+    else
+      SCRoot := ExtractFileDir(RemoveBackslash(FinalPath));
+    RegWriteStringValue(HKCU, RegPath, 'sc_install_root', SCRoot);
     RegWriteStringValue(HKCU,
       'Software\Osiris DevWorks\SC Localization Editor',
       'sc_directory', FinalPath);
@@ -1294,25 +1305,39 @@ begin
   end;
 end;
 
-function IsValidSCPath(const Path: String): Boolean;
+function IsValidSCRoot(const Path: String): Boolean;
 var
   BasePath: String;
+begin
+  { Returns True if Path is an SC install root: it contains at least one
+    channel subdirectory (LIVE, PTU, etc.). Mirrors the app's
+    _is_valid_sc_root(). Guards against stale registry values like
+    'SmartCitizen 1.4.1'. }
+  BasePath := RemoveBackslash(Path) + '\';
+  Result := DirExists(BasePath + 'LIVE') or DirExists(BasePath + 'PTU') or
+            DirExists(BasePath + 'EPTU') or DirExists(BasePath + 'HOTFIX') or
+            DirExists(BasePath + 'TECH-PREVIEW');
+end;
+
+function IsValidSCPath(const Path: String): Boolean;
+var
+  ChannelDir: String;
   LastName: String;
 begin
   { Returns True if Path looks like a valid Star Citizen install path.
     Accepts either:
-      - a root containing channel subdirectories (LIVE, PTU, etc.), or
-      - a channel path (last component is a channel name like LIVE).
-    Guards against stale registry values like 'SmartCitizen 1.4.1'. }
-  BasePath := RemoveBackslash(Path) + '\';
-  LastName := LowerCase(ExtractFileName(BasePath));
-  if (LastName = 'live') or (LastName = 'ptu') or (LastName = 'eptu') or
-     (LastName = 'hotfix') or (LastName = 'tech-preview') then
-    Result := True
-  else
-    Result := DirExists(BasePath + 'LIVE') or DirExists(BasePath + 'PTU') or
-              DirExists(BasePath + 'EPTU') or DirExists(BasePath + 'HOTFIX') or
-              DirExists(BasePath + 'TECH-PREVIEW');
+      - a root containing channel subdirectories (IsValidSCRoot), or
+      - an existing channel folder (last component is a channel name like
+        LIVE). It must exist, so a path left behind by a moved or removed
+        install falls through to auto-detect instead of being pre-filled.
+    The last component is read with the trailing backslash removed, since
+    ExtractFileName of a path ending in '\' is always ''. }
+  ChannelDir := RemoveBackslash(Path);
+  LastName := LowerCase(ExtractFileName(ChannelDir));
+  Result := (((LastName = 'live') or (LastName = 'ptu') or (LastName = 'eptu') or
+              (LastName = 'hotfix') or (LastName = 'tech-preview')) and
+             DirExists(ChannelDir)) or
+            IsValidSCRoot(Path);
 end;
 
 procedure InitializeWizard();
@@ -1323,6 +1348,7 @@ var
   SavedPath: String;
   SCRoot: String;
   ActiveChannel: String;
+  DefaultLeaf: String;
   SavedDataDir: String;
   SavedLanguage: String;
   LanguageIndex: Integer;
@@ -1419,17 +1445,18 @@ begin
     users consistently expect LIVE to be offered regardless of which
     channel the app is currently pointed at. The active_channel value is
     ignored here on purpose; the app-side channel switcher handles
-    per-channel paths at runtime. }
-  if RegQueryStringValue(HKCU, NewRegPath, 'sc_install_root', SCRoot) and (SCRoot <> '') and IsValidSCPath(SCRoot) then
+    per-channel paths at runtime. The value must be a root, not a channel
+    path, or the LIVE suffix below would double up (...\LIVE\LIVE). }
+  if RegQueryStringValue(HKCU, NewRegPath, 'sc_install_root', SCRoot) and (SCRoot <> '') and IsValidSCRoot(SCRoot) then
   begin
     ActiveChannel := 'LIVE';
-    DefaultPath := SCRoot + '\' + ActiveChannel;
+    DefaultPath := AddBackslash(SCRoot) + ActiveChannel;
   end;
 
   { Fall back to previously saved sc_directory / game_install_path in the
     NEW node, then the LEGACY node.  Each value is validated to ensure it
-    actually looks like a valid SC install path (either ends with a channel
-    name, or contains channel subdirectories).  Validation is folded into
+    actually looks like a valid SC install path (either an existing channel
+    folder, or contains channel subdirectories).  Validation is folded into
     the condition so a stale value causes fallthrough to the next option. }
   if DefaultPath = '' then
   begin
@@ -1454,14 +1481,13 @@ begin
     game_install_path as the channel-suffixed path while the friend was
     on a non-LIVE channel), swap the suffix for \LIVE. The page is
     specifically asking for the LIVE directory; offering a non-LIVE one
-    as the default confuses users whose main SC install is LIVE. }
-  if LowerCase(ExtractFileName(DefaultPath)) = 'ptu' then
-    DefaultPath := ExtractFilePath(DefaultPath) + 'LIVE'
-  else if LowerCase(ExtractFileName(DefaultPath)) = 'eptu' then
-    DefaultPath := ExtractFilePath(DefaultPath) + 'LIVE'
-  else if LowerCase(ExtractFileName(DefaultPath)) = 'hotfix' then
-    DefaultPath := ExtractFilePath(DefaultPath) + 'LIVE'
-  else if LowerCase(ExtractFileName(DefaultPath)) = 'tech-preview' then
+    as the default confuses users whose main SC install is LIVE. A saved
+    value may end in a backslash, which would hide its last component from
+    ExtractFileName, so drop it first (a drive root like D:\ keeps it). }
+  DefaultPath := RemoveBackslashUnlessRoot(DefaultPath);
+  DefaultLeaf := LowerCase(ExtractFileName(DefaultPath));
+  if (DefaultLeaf = 'ptu') or (DefaultLeaf = 'eptu') or (DefaultLeaf = 'hotfix') or
+     (DefaultLeaf = 'tech-preview') then
     DefaultPath := ExtractFilePath(DefaultPath) + 'LIVE';
 
   SCDirectoryPage := CreateInputDirPage(
