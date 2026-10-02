@@ -175,6 +175,11 @@ class TestApplyToGameWiring:
                             staticmethod(lambda name: True))
         monkeypatch.setattr(AppSettings, "get_language_languages_ini_path",
                             staticmethod(lambda: None))
+        # With no languages.ini, apply_to_game builds a debug message that
+        # reads the selected language, so stub it or the test reads the real
+        # settings store.
+        monkeypatch.setattr(AppSettings, "get_selected_language",
+                            staticmethod(lambda: "english"))
         monkeypatch.setattr(user_ini_manager, "save_user_ini", lambda entries, path: 0)
         monkeypatch.setattr(ini_merger, "merge_ini_files", lambda b, m, t: None)
         monkeypatch.setattr(user_cfg, "ensure_user_cfg_language", lambda: None)
