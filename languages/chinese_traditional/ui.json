@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "已應用：自上次應用以來沒有任何變更。"
+      "at": "已應用：遊戲已與當前設定一致。仍可點選重新生成並再次應用，例如在遊戲更新後。"
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "已經應用：自上次應用到遊戲以來沒有任何更改。"
+      "at": "已經應用：遊戲已與當前設定一致。"
     },
     "feedback_fallback_text": {
       "ht": "",
