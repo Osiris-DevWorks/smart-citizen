@@ -19,6 +19,7 @@ Coverage:
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from datetime import datetime
@@ -442,6 +443,25 @@ class TestShallowScan:
         mixed = make_install(tmp_path / "Mixed" / "StarCitizen", "LIVE", game_data=False)
         make_install(mixed, "PTU")
         assert self._found(tmp_path) == [mixed, ptu_only]
+
+    def test_hits_are_ordered_by_folder_name_whatever_order_the_drive_lists_them(
+        self, tmp_path, monkeypatch
+    ):
+        """NTFS lists folders by name, but exFAT and FAT32 drives list them in the
+        order they were made. The probe sorts them, ignoring case, so a tie in the
+        ranking goes the same way on every drive."""
+        zeta = make_install(tmp_path / "Zeta" / "StarCitizen")
+        alpha = make_install(tmp_path / "alpha" / "StarCitizen")
+        real_scandir = os.scandir
+
+        def listed_by_raw_name(path):
+            if Path(path) != tmp_path:
+                return real_scandir(path)
+            with real_scandir(path) as entries:
+                return contextlib.nullcontext(sorted(entries, key=lambda e: e.name))
+
+        monkeypatch.setattr(os, "scandir", listed_by_raw_name)
+        assert self._found(tmp_path) == [alpha, zeta]
 
     def test_does_not_go_two_folders_down(self, tmp_path):
         make_install(tmp_path / "Games" / "PC" / "Roberts Space Industries" / "StarCitizen")
