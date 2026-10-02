@@ -1,9 +1,12 @@
 """AppliedStateWorker: the thin QThread around the already-applied check.
 
 The logic it runs is covered in test_apply_already_applied.py; this runs the
-real thread. Results are collected over a DirectConnection so no event loop
-is needed (the slot runs on the worker thread, which is fine for a list
-append), same offscreen-Qt approach as the other widget tests, no pytest-qt.
+real thread. The worker-only tests collect results over a DirectConnection, so
+they need no event loop (the slot runs on the worker thread, which is fine for
+a list append). The second half runs MainWindow's real check lifecycle on a
+real thread and pumps the event loop, so the verdict arrives through the real
+queued connection. Same offscreen-Qt approach as the other widget tests, no
+pytest-qt.
 """
 from __future__ import annotations
 

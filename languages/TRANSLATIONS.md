@@ -74,8 +74,9 @@ them against the new source.
   `blueprint_tracker.auto_scan_*` / `scan_logs_already_running_tooltip` keys.
   All `at`-only, styled on Korean's existing formal register. One further key
   (`simple_mode.generate_apply_tip_disabled`) was still on an unmerged PR at
-  backfill time. Its Korean `at` was added on the same branch once #398 had
-  merged, before #409 itself merged.
+  backfill time. Its Korean `at` was added later on #409's branch (1f22a15),
+  after #398's still-unmerged branch had been merged into it. #398 and then
+  #409 merged minutes later.
   Also added `config.map_language_overwrite_warning` (new #409-follow-up
   guard against mapping a language's own apply target as its source) across
   all 10 languages, backfilled turkish's own missing `dialogs.language_copying`

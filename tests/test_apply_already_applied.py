@@ -460,6 +460,7 @@ class _FakeWorker:
         self.started = False
         self.quit_called = False
         self.delete_later_called = False
+        self.wait_called = False
         self.interrupted = False
         self.waits_to_finish = True
         self.finished = _FakeSignal()
@@ -479,6 +480,7 @@ class _FakeWorker:
 
     def wait(self, timeout=None):
         # Once interrupted, a stuck worker finishes too unless a test says otherwise.
+        self.wait_called = True
         return self.waits_to_finish
 
     def finish(self, result):
@@ -499,6 +501,7 @@ class _Window:
     _settle_applied_state_check = MainWindow._settle_applied_state_check
     _mark_apply_dirty = MainWindow._mark_apply_dirty
     _mark_applied = MainWindow._mark_applied
+    _mark_game_file_changed = MainWindow._mark_game_file_changed
 
     def __init__(self):
         self._applied_state_worker = None
@@ -556,11 +559,12 @@ class TestAppliedStateLifecycle:
         assert window._applied_state_worker is None
 
     def test_a_finished_worker_gets_the_standard_cleanup(self, window):
-        """quit() + wait(), then deleteLater() (root CLAUDE.md threading model)."""
+        """quit() + wait(), as the root CLAUDE.md threading model asks, then
+        deleteLater() so the finished thread object is freed."""
         window._refresh_apply_dirty_after_reload()
         worker = _FakeWorker.instances[0]
         worker.finish(True)
-        assert worker.quit_called and worker.delete_later_called
+        assert worker.quit_called and worker.wait_called and worker.delete_later_called
 
     def test_not_applied_stays_red_and_leaves_the_session_flag_alone(self, window):
         """A genuinely dirty reload (e.g. just regenerated enhancements, not
@@ -629,6 +633,7 @@ class TestSettleOnClose:
         worker = _FakeWorker.instances[0]
         worker.result = True
         window._settle_applied_state_check()
+        assert worker.quit_called and worker.wait_called  # the threading model's cleanup
         assert window.dirty_calls == [False]
         assert window._session_has_unapplied_edit is False
         assert window._applied_state_worker is None
@@ -708,6 +713,26 @@ class TestEntryPointsKeepTheCheckHonest:
         window._session_has_unapplied_edit = False
         window._mark_apply_dirty()
         assert window.dirty_calls == [True]
+        assert window._session_has_unapplied_edit is False
+
+    def test_a_game_file_change_marks_red_and_clears_the_close_reminder(self, window):
+        """Clear Localization and Restore Backup change the game file, not what
+        Apply would write. The button goes red and any verdict about the old
+        file is dropped, and closing must not then offer (as its default
+        button) to re-apply over a deliberate revert."""
+        window._mark_game_file_changed()
+        assert window.dirty_calls == [True]
+        assert window._session_has_unapplied_edit is False
+
+    def test_a_revert_during_a_check_does_not_strand_a_provisional_reminder(self, window):
+        """A reload sets the reminder only until its check answers. A revert
+        that lands mid-check drops that answer, so the reminder it left behind
+        would never be cleared, and closing would offer Apply Now over the
+        revert."""
+        window._refresh_apply_dirty_after_reload()  # flag still provisionally True
+        window._mark_game_file_changed()
+        _FakeWorker.instances[0].finish(True)  # the dropped "already applied" answer
+        assert window.dirty_calls == [True]  # red, not the stale green
         assert window._session_has_unapplied_edit is False
 
 
@@ -879,6 +904,45 @@ class TestCloseEventSettlesTheCheck:
         event.ignore.assert_called_once_with()
         me._refresh_apply_dirty_after_reload.assert_called_once_with()
 
+    @pytest.mark.parametrize(
+        "applied, touched_button, rechecks",
+        [
+            (True, True, False),    # a real apply set the button green itself
+            (False, True, False),   # a failed write or validation marked it red itself
+            (False, False, True),   # a declined prompt or failed save left it alone
+        ],
+    )
+    def test_apply_now_re_checks_only_when_the_apply_left_the_button_alone(
+        self, monkeypatch, applied, touched_button, rechecks
+    ):
+        """Apply Now keeps the window open too. An apply that stopped before
+        it touched the button leaves it where settling left it, so it needs the
+        same fresh check as Cancel. One that set the button itself (green on
+        success, red on a failed write or validation) must keep that state,
+        or a re-check could paint green over an apply the user just saw fail."""
+        order = []
+        buttons = [MagicMock(name="apply"), MagicMock(name="exit"), MagicMock(name="cancel")]
+        box = MagicMock()
+        box.addButton.side_effect = list(buttons)
+        box.clickedButton.return_value = buttons[0]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        me = self._closing_self(order, unapplied=True)
+        me._applied_check_token = 0
+
+        def fake_apply():
+            if touched_button:  # every mark goes through _invalidate_applied_check
+                me._applied_check_token += 1
+            return applied
+
+        me.apply_to_game.side_effect = fake_apply
+        event = MagicMock()
+
+        MainWindow.closeEvent(me, event)
+
+        me.apply_to_game.assert_called_once_with()
+        event.ignore.assert_called_once_with()
+        assert me._refresh_apply_dirty_after_reload.called is rechecks
+
 
 class _RecordingMessageBox:
     """Stands in for QMessageBox: records each dialog into a shared call list
@@ -978,7 +1042,8 @@ class TestApplyToGameKeepsTheCheckHonest:
 
 
 class TestOtherEntryPointsMarkTheButton:
-    def test_clear_localization_marks_dirty(self, tmp_path, monkeypatch):
+    @pytest.fixture
+    def clear_env(self, tmp_path, monkeypatch):
         game_ini = tmp_path / "global.ini"
         game_ini.write_text("a=x\n", encoding="utf-8")
         box = MagicMock()
@@ -988,30 +1053,117 @@ class TestOtherEntryPointsMarkTheButton:
         monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: str(tmp_path)))
         monkeypatch.setattr(AppSettings, "get_global_ini_path", staticmethod(lambda: game_ini))
         me = MagicMock()
+        return type("Env", (), {"me": me, "box": box, "game_ini": game_ini})
 
-        MainWindow.clear_localization(me)
+    def test_clear_localization_marks_the_game_file_changed(self, clear_env):
+        """Red, but through the marker that is not an unapplied edit: a
+        deliberate revert must not make closing offer to re-apply over it."""
+        MainWindow.clear_localization(clear_env.me)
 
-        assert not game_ini.exists()
-        me._mark_apply_dirty.assert_called_once_with()
+        assert not clear_env.game_ini.exists()
+        clear_env.me._mark_game_file_changed.assert_called_once_with()
+        clear_env.me._mark_apply_dirty.assert_not_called()
 
-    def test_restore_backup_marks_dirty_before_reloading(self, tmp_path, monkeypatch):
+    def test_clear_localization_marks_only_after_the_file_is_gone(self, clear_env):
+        """The mark clears the close reminder, which is right for a revert that
+        happened and wrong for one that did not."""
+        seen = []
+        clear_env.me._mark_game_file_changed.side_effect = lambda: seen.append(
+            clear_env.game_ini.exists()
+        )
+        MainWindow.clear_localization(clear_env.me)
+        assert seen == [False]
+
+    def test_a_clear_that_fails_to_delete_marks_nothing(self, clear_env, monkeypatch):
+        """Controlled Folder Access or a read-only global.ini: the game file is
+        unchanged, so a pending edit keeps its close reminder."""
+        def denied(self, missing_ok=False):
+            raise PermissionError(13, "Access is denied")
+
+        monkeypatch.setattr(Path, "unlink", denied)
+        MainWindow.clear_localization(clear_env.me)
+
+        clear_env.me._mark_game_file_changed.assert_not_called()
+        clear_env.box.critical.assert_called_once()
+
+    def test_a_file_already_gone_counts_as_cleared(self, clear_env):
+        """The file can be deleted outside the app while the confirmation is
+        open. It is as cleared as one we delete, so the button is marked and
+        the user is not told the clear failed."""
+        clear_env.box.question.side_effect = lambda *a, **k: (
+            clear_env.game_ini.unlink() or "yes"
+        )
+        MainWindow.clear_localization(clear_env.me)
+
+        clear_env.me._mark_game_file_changed.assert_called_once_with()
+        clear_env.box.critical.assert_not_called()
+
+    @pytest.fixture
+    def restore_env(self, tmp_path, monkeypatch):
         backup = tmp_path / "global.ini.bak_1"
         backup.write_text("a=old\n", encoding="utf-8")
         target = tmp_path / "global.ini"
+        calls: list = []
         dialog = MagicMock()
         dialog.getOpenFileName.return_value = (str(backup), "")
+        box = MagicMock()
+        box.critical.side_effect = lambda *a, **k: calls.append("dialog-critical")
         monkeypatch.setattr(main_window, "QFileDialog", dialog)
-        monkeypatch.setattr(main_window, "QMessageBox", MagicMock())
+        monkeypatch.setattr(main_window, "QMessageBox", box)
         monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: str(tmp_path)))
         monkeypatch.setattr(AppSettings, "get_backups_dir", staticmethod(lambda: tmp_path))
         monkeypatch.setattr(AppSettings, "get_global_ini_path", staticmethod(lambda: target))
         me = MagicMock()
+        me._session_has_unapplied_edit = False
+        me._mark_game_file_changed.side_effect = lambda: calls.append(
+            "marked-with-target-present" if target.exists() else "marked"
+        )
+        me._refresh_apply_dirty_after_reload.side_effect = lambda: calls.append("recheck")
 
-        MainWindow.restore_backup(me)
+        def reload():
+            # What the real reload does to the flag: _recompute_owned calls
+            # _mark_apply_dirty, which counts as an edit after the first load.
+            calls.append("reload")
+            me._session_has_unapplied_edit = True
 
-        assert target.read_text(encoding="utf-8") == "a=old\n"
-        names = _call_names(me)
-        assert names.index("_mark_apply_dirty") < names.index("perform_merge_and_reload")
+        me.perform_merge_and_reload.side_effect = reload
+        return type("Env", (), {"me": me, "calls": calls, "target": target})
+
+    def test_restore_backup_marks_after_copying_and_before_reloading(self, restore_env):
+        MainWindow.restore_backup(restore_env.me)
+
+        assert restore_env.target.read_text(encoding="utf-8") == "a=old\n"
+        assert restore_env.calls == ["marked-with-target-present", "reload"]
+        restore_env.me._mark_apply_dirty.assert_not_called()
+
+    @pytest.mark.parametrize("had_flag", [False, True])
+    def test_a_restore_clears_the_close_reminder_its_reload_set(self, restore_env, had_flag):
+        """The reload would count as an unapplied edit, and closing would then
+        offer Apply Now (the default button) over the backup the user just
+        chose. Like _mark_game_file_changed, the restore leaves it cleared."""
+        restore_env.me._session_has_unapplied_edit = had_flag
+        MainWindow.restore_backup(restore_env.me)
+        assert restore_env.me._session_has_unapplied_edit is False
+
+    def test_a_failed_restore_keeps_the_reminder_and_rechecks_before_its_error_dialog(
+        self, restore_env, monkeypatch
+    ):
+        """A failed restore is no revert, so a pending edit keeps its close
+        reminder. The copy may still have changed the file part-way, and the
+        error dialog's event loop could deliver a verdict about the old one,
+        so a fresh check (which drops that verdict) runs before the dialog."""
+        import shutil
+
+        def failing_copy(src, dst):
+            raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(shutil, "copy2", failing_copy)
+        restore_env.me._session_has_unapplied_edit = True
+        MainWindow.restore_backup(restore_env.me)
+
+        assert restore_env.calls == ["recheck", "dialog-critical"]
+        assert restore_env.me._session_has_unapplied_edit is True
+        restore_env.me.perform_merge_and_reload.assert_not_called()
 
     def test_a_synchronous_reload_requests_a_check_after_the_dirty_marking(self, monkeypatch):
         """Channel switch, Config save, restore and the rest reload through
