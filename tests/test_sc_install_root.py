@@ -503,10 +503,11 @@ def _launcher_log(tmp_path, *mentions):
 
 class TestScanUsesLauncherLog:
     """First-run detection also reads the RSI Launcher log, which names the install
-    the launcher maintains wherever the player put it. A fixed list of folder
-    shapes can never cover that: an install under ``E:\\Other Games\\Roberts Space
-    Industries\\StarCitizen`` hit the "Star Citizen Path Required" dialog on a
-    portable's first run even though the launcher had been verifying it for weeks."""
+    the launcher maintains wherever the player put it, at any depth. The common
+    paths and the one-folder probe only cover a few folder shapes. An install under
+    ``E:\\Other Games\\Roberts Space Industries\\StarCitizen`` was the one that first
+    hit the "Star Citizen Path Required" dialog on a portable's first run, even
+    though the launcher had been verifying it for weeks."""
 
     @pytest.fixture
     def scan(self, monkeypatch):
