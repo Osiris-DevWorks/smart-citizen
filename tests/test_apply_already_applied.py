@@ -1096,6 +1096,18 @@ class TestOtherEntryPointsMarkTheButton:
         MainWindow.clear_localization(clear_env.me)
         assert seen == [False]
 
+    def test_clear_localization_marks_before_its_success_dialog(self, clear_env):
+        """The dialog runs its own event loop, which can deliver a verdict about
+        the file that was just deleted. The mark drops that verdict, so it has
+        to come first."""
+        order = []
+        clear_env.me._mark_game_file_changed.side_effect = lambda: order.append("mark")
+        clear_env.box.information.side_effect = lambda *a, **k: order.append("dialog")
+
+        MainWindow.clear_localization(clear_env.me)
+
+        assert order == ["mark", "dialog"]
+
     def test_a_clear_that_fails_to_delete_marks_nothing(self, clear_env, monkeypatch):
         """Controlled Folder Access or a read-only global.ini: the game file is
         unchanged, so a pending edit keeps its close reminder."""
