@@ -1195,16 +1195,22 @@ class ConfigTab(QWidget):
         a status (Modified / Enhanced / Unmodified / New) tally.
         """
         try:
-            from collections import Counter
-            from src.parser.ini_parser import load_sources_from_settings, load_source_files
+            from src.parser.ini_parser import (
+                count_enhancement_categories, load_source_files, load_sources_from_settings,
+            )
 
-            sources_dict, hierarchy, _enhancements_cats = load_sources_from_settings()
+            sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
 
             if not sources_dict:
                 QMessageBox.warning(self, tr("dialogs.warning_title"), tr("config.no_sources_warning"))
                 return
 
-            entries = load_source_files(sources_dict, hierarchy)
+            # The map keeps this breakdown in step with the Apply dialog (#399):
+            # by key prefix alone, medical consumables would read as Gear.
+            entries = load_source_files(
+                sources_dict, hierarchy,
+                enhancements_key_categories=enhancements_key_categories,
+            )
 
             # Count contributions per source. The merge engine overlays later
             # sources on top of earlier ones, with user.ini always winning —
@@ -1214,18 +1220,27 @@ class ConfigTab(QWidget):
             # preview always reads 0 unless the user added a brand-new key.
             from src.utils.settings import AppSettings as _AS
             source_counts: dict[str, int] = {}
-            # Per-category counter for the enhancements source so we can
-            # mirror the Apply-to-game dialog's breakdown. Other sources
-            # don't get the category split — they're either "Global" (the
-            # whole base) or "User" (always small enough to read at a
-            # glance).
-            enhancement_categories: Counter[str] = Counter()
-            ENHANCEMENTS_SRC = "enhancements"
+            # The Enhancements row and its category list are not counted per
+            # winning source. They come from the one function the Apply dialog
+            # uses, over the same enhancements source with the discovered
+            # ("New") keys dropped when Include discovered items is off, so the
+            # two totals cannot drift apart (#443). An overridden enhancement
+            # key therefore counts here and under User, as it does in the Apply
+            # dialog.
+            if not _AS.get_include_new_lines() and _AS.SOURCE_ENHANCEMENTS in sources_dict:
+                discarded = {e.key for e in entries if not e.custom_value and e.status == "New"}
+                sources_dict[_AS.SOURCE_ENHANCEMENTS] = {
+                    key: value
+                    for key, value in sources_dict[_AS.SOURCE_ENHANCEMENTS].items()
+                    if key not in discarded
+                }
+            enhancement_categories = count_enhancement_categories(
+                sources_dict, enhancements_key_categories
+            )
             for entry in entries:
                 contributing = _AS.SOURCE_USER if entry.custom_value else entry.source_file
                 source_counts[contributing] = source_counts.get(contributing, 0) + 1
-                if contributing == ENHANCEMENTS_SRC:
-                    enhancement_categories[entry.category] += 1
+            source_counts[_AS.SOURCE_ENHANCEMENTS] = sum(enhancement_categories.values())
 
             # Filter out zero-key entries before displaying — leftover
             # `contracts` / `components` / `commodities` / `gear` source
@@ -1243,7 +1258,7 @@ class ConfigTab(QWidget):
                 if count == 0:
                     continue
                 visible_index += 1
-                if name == ENHANCEMENTS_SRC:
+                if name == _AS.SOURCE_ENHANCEMENTS:
                     text += f"  {visible_index}. Smart Citizen Enhancements ({count:,} keys total):\n"
                     if enhancement_categories:
                         for cat, ccount in enhancement_categories.most_common():

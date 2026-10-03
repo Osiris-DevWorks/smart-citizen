@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -58,6 +57,8 @@ from src.models.string_model import (
     CATEGORY_MISSIONS, StringEntry, is_favoritable_ship,
 )
 from src.parser.ini_parser import load_source_files, load_sources_from_settings, parse_ini_file
+# Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
+from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
 from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
@@ -167,45 +168,6 @@ def _user_cfg_language_matches(selected_language: str, actual_g_language: str | 
     """
     expected = SC_LANGUAGE_IDS.get(selected_language, selected_language)
     return (actual_g_language or "").lower() == (expected or "").lower()
-
-
-def _count_enhancement_categories(
-    sources_dict: dict, enhancements_key_categories: dict | None = None,
-) -> Counter:
-    """Category breakdown of the enhancement source that's about to be
-    applied, for apply_to_game()'s success-dialog summary (#399).
-
-    Counts sources_dict["enhancements"]'s own keys -- deliberately NOT
-    self.entries, which can be stale relative to a just-completed
-    generation. Simple mode's one-button flow calls apply_to_game() before
-    the reload that refreshes self.entries with newly-generated content
-    (that reload runs after, to update the hidden Advanced view), so on a
-    profile that skipped the startup "Generate Enhancements?" prompt and
-    generated for the first time via Simple mode's own click, self.entries
-    was still whatever loaded before generation ran -- typically nothing
-    tagged "enhancements" yet, so the old self.entries-based count reported
-    0 even though the game file itself was written correctly (apply_to_
-    game's own merge is always fresh). sources_dict["enhancements"]
-    reflects exactly what was just merged, including any "Include
-    discovered items" strip already applied to it in place earlier in
-    apply_to_game.
-
-    Each key's category prefers enhancements_key_categories (the same map
-    load_sources_from_settings() builds for the main table's own category
-    column, keyed off each generator's real output category rather than
-    the key's prefix) before falling back to StringEntry.extract_category.
-    The two are not equivalent (#399 review): every medical-consumable key
-    is item_Desccrlf_consumable_*, which extract_category's prefix rules
-    land in "Gear" since it recognizes no ship-component code there, while
-    enhancements_key_categories correctly has it as "Medical Consumables"
-    from the generator that actually produced it. A caller with no map
-    (or one missing a given key) still gets the prefix-based fallback.
-    """
-    categories = enhancements_key_categories or {}
-    return Counter(
-        categories.get(key) or StringEntry.extract_category(key)
-        for key in sources_dict.get(AppSettings.SOURCE_ENHANCEMENTS, {})
-    )
 
 
 def _drop_none_entries(entries: list) -> list:
