@@ -19,6 +19,7 @@ Coverage:
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from datetime import datetime
@@ -368,6 +369,121 @@ class TestLauncherLog:
         roots, was_read = scanner.read_launcher_installs(tmp_path / "absent.log")
         assert roots == {} and was_read is False
 
+    def test_a_folder_name_with_an_apostrophe_resolves(self, tmp_path):
+        root = make_install(tmp_path / "Dad's Games" / "StarCitizen")
+        assert resolve_logged_root(str(root)) == root
+        assert resolve_logged_root(f"{root} (type: install") == root
+
+    def test_a_folder_name_with_a_comma_resolves(self, tmp_path):
+        root = make_install(tmp_path / "Games, Apps" / "StarCitizen")
+        assert resolve_logged_root(str(root)) == root
+        assert resolve_logged_root(f"{root} (type: install") == root
+
+    def test_a_quote_or_comma_that_ends_the_path_is_cut_off(self, tmp_path):
+        """The launcher's prose sticks to a path as a closing quote or a comma
+        too. The whole text is tried first, so a folder name that holds one of
+        them stays whole, and the cut only happens when that fails."""
+        plain = make_install(tmp_path / "SC")
+        odd = make_install(tmp_path / "Dad's Games" / "StarCitizen")
+        assert resolve_logged_root(f"{plain}' is missing") == plain
+        assert resolve_logged_root(f"{plain}, which is missing") == plain
+        assert resolve_logged_root(f"{odd}' is missing") == odd
+        assert resolve_logged_root(f"{odd}, which is missing") == odd
+
+    def test_odd_folder_names_survive_a_real_log_line(self, tmp_path):
+        apostrophe = make_install(tmp_path / "Dad's Games" / "StarCitizen")
+        comma = make_install(tmp_path / "Games, Apps" / "StarCitizen")
+        log = launcher_log(tmp_path / "log.log", [
+            ("2026-08-14 09:12:01.001", apostrophe),
+            ("2026-08-14 09:12:02.002", comma),
+        ])
+        parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
+        assert sorted(root for root, _ in parsed.values()) == sorted([apostrophe, comma])
+
+    def test_a_list_still_splits_when_a_folder_name_holds_a_comma(self, tmp_path):
+        """Only a comma followed by another drive path ends a list entry, so
+        the comma inside ``One, Two`` stays part of its folder name."""
+        first = make_install(tmp_path / "One, Two" / "StarCitizen")
+        second = make_install(tmp_path / "Other" / "StarCitizen")
+        log = tmp_path / "log.log"
+        log.write_text(
+            '{ "t":"2026-08-14 09:12:01.001", "[main][info] ": '
+            '"[LauncherSupport::validateNonExistantDirectories] %s,%s"  },'
+            % (str(first).replace("\\", "\\\\"), str(second).replace("\\", "\\\\")),
+            encoding="utf-8",
+        )
+        parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
+        assert sorted(root for root, _ in parsed.values()) == sorted([first, second])
+
+    def test_a_list_with_spaces_after_the_commas_still_splits(self, tmp_path):
+        """A folder name cannot hold a colon, so a comma followed by a drive path
+        always starts a new entry, with spaces after the comma or without."""
+        first = make_install(tmp_path / "One" / "StarCitizen")
+        second = make_install(tmp_path / "Two, Three" / "StarCitizen")
+        log = tmp_path / "log.log"
+        log.write_text(
+            '{ "t":"2026-08-14 09:12:01.001", "[main][info] ": '
+            '"[LauncherSupport::validateNonExistantDirectories] %s, %s"  },'
+            % (str(first).replace("\\", "\\\\"), str(second).replace("\\", "\\\\")),
+            encoding="utf-8",
+        )
+        parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
+        assert sorted(root for root, _ in parsed.values()) == sorted([first, second])
+
+    def test_many_quotes_or_commas_do_not_starve_the_folder_walk(self, tmp_path):
+        """The cuts at a quote or comma have a budget of their own, so a path with
+        more of them than the cap still reaches the folder walk, which finds the
+        root from the folder the prose is stuck to."""
+        root = make_install(tmp_path / "SC")
+        assert resolve_logged_root(str(root) + "\\LIVE" + ",x" * 40) == root
+
+    def _log_lines(self, count, roots):
+        """*count* padding lines, then one line per root in *roots*."""
+        pad = '{ "t":"2026-08-14 09:12:01.001", "[main][info] ": "padding %s"  },'
+        lines = [pad % ("x" * 60) for _ in range(count)]
+        for number, root in enumerate(roots):
+            escaped = str(root).replace("\\", "\\\\")
+            lines.append(
+                '{ "t":"2026-08-14 09:13:0%d.000", "[main][info] ": "Installing at %s (type: install)"  },'
+                % (number, escaped)
+            )
+        return lines
+
+    def test_only_the_end_of_a_huge_log_is_read(self, tmp_path, monkeypatch):
+        """First-run detection reads the log on the GUI thread, so only the
+        last stretch of it is parsed. The launcher appends, so that is where
+        the newest mentions are."""
+        old = make_install(tmp_path / "Old" / "StarCitizen")
+        new = make_install(tmp_path / "New" / "StarCitizen")
+        lines = self._log_lines(0, [old]) + self._log_lines(400, [new])
+        log = tmp_path / "log.log"
+        log.write_text("\n".join(lines), encoding="utf-8")
+        assert log.stat().st_size > 2000
+
+        everything, read = scanner.read_launcher_installs(log)
+        assert read
+        assert sorted(root for root, _ in everything.values()) == sorted([old, new])
+
+        monkeypatch.setattr(scanner, "_LOG_READ_BUDGET_BYTES", 2000)
+        tail, read = scanner.read_launcher_installs(log)
+        assert read
+        # The old mention sits outside the last 2000 bytes, and the new one inside them.
+        assert [root for root, _ in tail.values()] == [new]
+
+    def test_the_line_the_cut_lands_in_is_dropped_not_parsed_half(self, tmp_path, monkeypatch):
+        cut = make_install(tmp_path / "Cut" / "StarCitizen")
+        last = make_install(tmp_path / "Last" / "StarCitizen")
+        lines = self._log_lines(3, [cut, last])
+        log = tmp_path / "log.log"
+        log.write_text("\n".join(lines), encoding="utf-8")
+        # Land the cut five bytes into the line that names *cut*, so the rest of
+        # that line, its path included, is still there to be parsed by mistake.
+        budget = len(lines[-1].encode()) + 1 + len(lines[-2].encode()) - 5
+        monkeypatch.setattr(scanner, "_LOG_READ_BUDGET_BYTES", budget)
+        tail, read = scanner.read_launcher_installs(log)
+        assert read
+        assert [root for root, _ in tail.values()] == [last]
+
     def test_only_paths_naming_starcitizen_are_considered(self, tmp_path):
         """Documents the cheap filter that keeps the launcher's own program
         and cache directories out of the results. The RSI Launcher always
@@ -383,6 +499,111 @@ class TestLauncherLog:
         ])
         parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
         assert [root for root, _ in parsed.values()] == [named]
+
+    def test_per_file_paths_under_one_install_share_the_folder_walk(
+        self, tmp_path, monkeypatch
+    ):
+        """Each per-file path is a distinct raw string, so without a per-folder
+        memo every one walks up through the same folders again. First-run
+        detection parses on the GUI thread, so that walk has to stay bounded."""
+        root = make_install(tmp_path / "StarCitizen")
+        files = 40
+        lines = [
+            '{ "t":"2026-08-14 09:12:01.001", "[main][info] ": "Patched %s"  },'
+            % str(root / "LIVE" / "Data" / "Objects" / f"file{i}.dds").replace("\\", "\\\\")
+            for i in range(files)
+        ]
+        calls = []
+        real = scanner.is_sc_install_root
+        monkeypatch.setattr(
+            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
+        )
+
+        parsed = parse_launcher_log("\n".join(lines))
+
+        assert [found for found, _ in parsed.values()] == [root]
+        # One test per file path, plus one per folder on the way up. Without
+        # the memo it is five per file path.
+        assert len(calls) <= files + 4
+
+
+# -- One folder below each drive's top ---------------------------------------
+
+class TestShallowScan:
+    def _found(self, drive):
+        return list(scanner.iter_shallow_sc_install_locations([str(drive)]))
+
+    def test_finds_a_library_folder_one_level_down(self, tmp_path):
+        rsi = make_install(tmp_path / "Other Games" / "Roberts Space Industries" / "StarCitizen")
+        plain = make_install(tmp_path / "Library" / "StarCitizen")
+        at_root = make_install(tmp_path / "StarCitizen")
+        assert self._found(tmp_path) == [at_root, plain, rsi]
+
+    def test_a_leftover_without_game_data_is_not_picked(self, tmp_path):
+        """Nobody chose these folders, so the shell of an old install must not
+        be picked for them."""
+        make_install(tmp_path / "Old Games" / "StarCitizen", game_data=False)
+        assert self._found(tmp_path) == []
+
+    def test_smart_citizen_data_is_not_an_install(self, tmp_path):
+        data = tmp_path / "Smart Citizen" / "StarCitizen" / "LIVE"
+        data.mkdir(parents=True)
+        (data / "user.ini").write_text("k=v\n", encoding="utf-8")
+        assert self._found(tmp_path) == []
+
+    def test_game_data_in_any_channel_counts(self, tmp_path):
+        """The launcher can keep PTU in a library folder of its own with no LIVE
+        in it, and an old LIVE shell can sit beside the real PTU data."""
+        ptu_only = make_install(tmp_path / "SC PTU" / "StarCitizen", "PTU")
+        mixed = make_install(tmp_path / "Mixed" / "StarCitizen", "LIVE", game_data=False)
+        make_install(mixed, "PTU")
+        assert self._found(tmp_path) == [mixed, ptu_only]
+
+    def test_hits_are_ordered_by_folder_name_whatever_order_the_drive_lists_them(
+        self, tmp_path, monkeypatch
+    ):
+        """NTFS lists folders by name, but exFAT and FAT32 drives list them in the
+        order they were made. The probe sorts them, ignoring case, so a tie in the
+        ranking goes the same way on every drive."""
+        zeta = make_install(tmp_path / "Zeta" / "StarCitizen")
+        alpha = make_install(tmp_path / "alpha" / "StarCitizen")
+        real_scandir = os.scandir
+
+        def listed_by_raw_name(path):
+            if Path(path) != tmp_path:
+                return real_scandir(path)
+            with real_scandir(path) as entries:
+                return contextlib.nullcontext(sorted(entries, key=lambda e: e.name))
+
+        monkeypatch.setattr(os, "scandir", listed_by_raw_name)
+        assert self._found(tmp_path) == [alpha, zeta]
+
+    def test_does_not_go_two_folders_down(self, tmp_path):
+        make_install(tmp_path / "Games" / "PC" / "Roberts Space Industries" / "StarCitizen")
+        assert self._found(tmp_path) == []
+
+    def test_skips_system_folders(self, tmp_path):
+        make_install(tmp_path / "Windows" / "StarCitizen")
+        make_install(tmp_path / "$Stash" / "StarCitizen")
+        assert self._found(tmp_path) == []
+
+    def test_a_missing_drive_is_skipped(self, tmp_path):
+        found = make_install(tmp_path / "Games2" / "StarCitizen")
+        drives = [str(tmp_path / "no-such-drive"), str(tmp_path)]
+        assert list(scanner.iter_shallow_sc_install_locations(drives)) == [found]
+
+    def test_a_symlinked_top_level_folder_is_not_followed(self, tmp_path):
+        """The probe lists a drive's top folders with ``follow_symlinks=False``,
+        so a symlink to a library folder (a ``Games`` link to another drive, say)
+        is skipped. Following it would report the same install a second time,
+        under the link's path. A junction is not a symlink and is followed, which
+        first-run detection copes with by counting an install once."""
+        real = make_install(tmp_path / "Games" / "StarCitizen")
+        try:
+            os.symlink(tmp_path / "Games", tmp_path / "Link", target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            pytest.skip(f"cannot make a symlink here (it needs a privilege): {exc}")
+        assert self._found(tmp_path) == [real]
 
 
 # -- Verdicts ----------------------------------------------------------------

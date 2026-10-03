@@ -7,8 +7,8 @@ Smart Citizen writes into one install: apply drops ``global.ini`` under
 folder, a second drive, a leftover from a reinstall) and Smart Citizen is
 pointed at the one the player *doesn't* launch, apply reports success,
 ``validate_applied_file`` passes, and nothing changes in game. Nothing in the
-app could previously surface that, because every existing lookup
-(``settings._scan_common_sc_install_locations``) stops at the first hit.
+app could previously surface that, because the only existing lookup
+(``settings._scan_common_sc_install_locations``) returns a single install.
 
 This module is the "find them all" half. It is deliberately Qt-free and
 settings-free -- it takes explicit inputs and returns plain dataclasses, so it
@@ -27,7 +27,9 @@ Evidence is gathered in three tiers, cheapest first:
    ``launcher store.json`` is encrypted in current launcher builds; don't
    bother with it.)
 2. **Cheap** -- the common RSI install paths on every drive letter, shared with
-   settings.py via ``iter_common_sc_install_locations``.
+   settings.py via ``iter_common_sc_install_locations``. First-run detection
+   in settings.py also ranks hits from ``iter_shallow_sc_install_locations``,
+   one folder below the top of each fixed drive.
 3. **Opt-in** -- :func:`deep_scan_roots`, a depth-bounded walk of the fixed
    drives for installs at custom paths. Slow enough to need a worker thread,
    a progress callback, and a cancel hook, so it is never run implicitly.
@@ -615,14 +617,20 @@ _LOG_TIMESTAMP_RE = re.compile(
     r'"t"\s*:\s*"(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?)"'
 )
 
-# Any drive-rooted Windows path in a log line. Commas are excluded because the
-# launcher logs comma-separated path *lists*
-# (``[validateNonExistantDirectories] C:\a,C:\a\StarCitizen,...``) and one
-# match per path is what we want. Parentheses are deliberately NOT excluded --
-# ``C:\Program Files (x86)\...`` is a real install location, and the trailing
-# noise parentheses introduce (`` (type: install``) are stripped afterwards by
-# :func:`resolve_logged_root`.
-_LOG_PATH_RE = re.compile(r"[A-Za-z]:\\[^\"'*?<>|,\r\n]*")
+# Any drive-rooted Windows path in a log line, up to a character no folder name
+# can hold. Parentheses, apostrophes and commas are deliberately NOT excluded:
+# ``C:\Program Files (x86)\...``, ``D:\Dad's Games\...`` and ``E:\Games, Apps\...``
+# are real install locations. The launcher's own noise comes along too
+# (`` (type: install``, a closing quote, the next entry of a list) and is cut
+# back by :data:`_LOG_PATH_LIST_SPLIT_RE` and :func:`_logged_path_candidates`.
+_LOG_PATH_RE = re.compile(r"[A-Za-z]:\\[^\"*?<>|\r\n]*")
+
+# The launcher logs comma-separated path *lists*
+# (``[validateNonExistantDirectories] C:\a,C:\a\StarCitizen,...``). A comma
+# followed by another drive path, with or without spaces after it, is the only
+# place one entry ends and the next begins, so a match is split there. A folder
+# name cannot hold a colon, so any other comma belongs to a folder name.
+_LOG_PATH_LIST_SPLIT_RE = re.compile(r",\s*(?=[A-Za-z]:\\)")
 
 # The launcher always creates its ``StarCitizen\<channel>`` tree inside the
 # user's chosen library folder, so this substring is a safe, cheap filter that
@@ -631,8 +639,18 @@ _LOG_PATH_HINT = "starcitizen"
 
 # Bound on how many trimmed variants of one logged path get probed. Real paths
 # resolve within a handful; the cap just stops a pathological log line from
-# turning into thousands of stat calls.
+# turning into thousands of stat calls. The cuts at a quote or comma and the
+# word and folder trimming that follows each get this many, so a path with a
+# great many quotes or commas still reaches the folder walk.
 _MAX_PATH_CANDIDATES = 24
+
+# How much of the log gets read and parsed, counted back from its end. First-run
+# detection reads it on the GUI thread, and the per-folder memo bounds the work
+# per folder but not per distinct path, so a runaway log (hundreds of thousands
+# of distinct per-file paths under a folder that no longer exists) could stall
+# the window for tens of seconds. The launcher's own log is about 40 KB, so
+# this is a hundred times what a real one needs.
+_LOG_READ_BUDGET_BYTES = 4 * 1024 * 1024
 
 
 def default_launcher_log_path() -> Optional[Path]:
@@ -647,11 +665,14 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
     r"""Yield plausible truncations of *raw*, longest first.
 
     A logged path arrives with the launcher's own prose stuck to the end
-    (``...\StarCitizen (type: install``, ``...\LIVE - required: 110085069``).
-    Two passes clean that up: first trim whitespace-separated words off the
-    final segment, then walk up whole segments. Between them they recover the
-    real root from every line shape the launcher currently emits, without this
-    module having to know any of those shapes.
+    (``...\StarCitizen (type: install``, ``...\LIVE - required: 110085069``,
+    ``...\StarCitizen' is missing``). Three passes clean that up: first cut at
+    each apostrophe or comma, last one first (a quote or a comma that ends the
+    path, while a folder name such as ``Dad's Games`` is kept whole by the
+    full path being tried before any cut), then trim whitespace-separated
+    words off the final segment, then walk up whole segments. Between them
+    they recover the real root from every line shape the launcher currently
+    emits, without this module having to know any of those shapes.
     """
     raw = raw.strip().rstrip("\\/")
     if not raw:
@@ -659,6 +680,15 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
     yield raw
 
     emitted = 1
+    for match in reversed(list(re.finditer(r"[',]", raw))):
+        if emitted >= _MAX_PATH_CANDIDATES:
+            break
+        cut = raw[: match.start()].rstrip("\\/ ")
+        if cut:
+            yield cut
+            emitted += 1
+
+    emitted = 1  # the cuts above must not eat the budget of the passes below
     head, sep, tail = raw.rpartition("\\")
     words = tail.split(" ")
     for count in range(len(words) - 1, 0, -1):
@@ -678,16 +708,25 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
         emitted += 1
 
 
-def resolve_logged_root(raw: str) -> Optional[Path]:
+def resolve_logged_root(
+    raw: str, checked: Optional[dict[str, bool]] = None
+) -> Optional[Path]:
     """Turn one raw path out of the launcher log into an install root on disk.
 
     Returns None when nothing along the path resolves, which covers both junk
-    matches and installs the user has since deleted.
+    matches and installs the user has since deleted. *checked* memoizes the
+    install test per candidate folder, so a caller resolving many paths under
+    one install tests each of its folders once.
     """
     for candidate in _logged_path_candidates(raw):
-        path = Path(candidate)
-        if is_sc_install_root(path):
-            return path
+        if checked is not None and candidate in checked:
+            is_root = checked[candidate]
+        else:
+            is_root = is_sc_install_root(Path(candidate))
+            if checked is not None:
+                checked[candidate] = is_root
+        if is_root:
+            return Path(candidate)
     return None
 
 
@@ -696,13 +735,18 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
 
     Keys are :func:`_normcase`-normalized strings so callers can match them
     against other candidates without worrying about case or separators; the
-    value keeps the path in its real on-disk casing, because these end up in
-    front of the user and ``c:\\program files\\...`` reads like a bug. Lines
+    value keeps the path as the launcher wrote it, not lowercased, because
+    these end up in front of the user and ``c:\\program files\\...`` reads
+    like a bug. The launcher writes the folder picked in its own dialog, so
+    that normally matches the casing on disk, but nothing here checks. Lines
     with no timestamp inherit the last one seen, so a wrapped or continuation
     line still dates correctly.
     """
     seen: dict[str, tuple[Path, datetime]] = {}
     resolved: dict[str, Optional[Path]] = {}  # raw -> root, memo across lines
+    # Folder -> install test, so per-file paths under one install (each a
+    # distinct raw string) share the walk up through its folders.
+    checked: dict[str, bool] = {}
     last_stamp: Optional[datetime] = None
 
     for line in text.splitlines():
@@ -716,11 +760,16 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
             continue
         # The log is JSON-escaped, so on-disk ``C:\a\b`` appears as ``C:\\a\\b``.
         unescaped = line.replace("\\\\", "\\")
-        for raw in _LOG_PATH_RE.findall(unescaped):
+        raws = [
+            entry
+            for match in _LOG_PATH_RE.findall(unescaped)
+            for entry in _LOG_PATH_LIST_SPLIT_RE.split(match)
+        ]
+        for raw in raws:
             if _LOG_PATH_HINT not in raw.lower():
                 continue
             if raw not in resolved:
-                resolved[raw] = resolve_logged_root(raw)
+                resolved[raw] = resolve_logged_root(raw, checked)
             root = resolved[raw]
             if root is None:
                 continue
@@ -729,6 +778,23 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
             if key not in seen or stamp > seen[key][1]:
                 seen[key] = (root, stamp)
     return seen
+
+
+def _read_log_tail(path: Path) -> str:
+    """Read *path*, or only its last :data:`_LOG_READ_BUDGET_BYTES` when it is bigger.
+
+    The launcher only ever appends, so the newest mentions are at the end and
+    those are what the ranking wants. The cut usually lands inside a line, so
+    the first line of a trimmed read is dropped rather than parsed half.
+    """
+    with path.open("rb") as handle:
+        size = handle.seek(0, os.SEEK_END)
+        trimmed = size > _LOG_READ_BUDGET_BYTES
+        handle.seek(size - _LOG_READ_BUDGET_BYTES if trimmed else 0)
+        text = handle.read().decode("utf-8", errors="replace")
+    if trimmed:
+        text = text.partition("\n")[2]
+    return text
 
 
 def read_launcher_installs(
@@ -744,7 +810,7 @@ def read_launcher_installs(
     if path is None:
         return {}, False
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = _read_log_tail(path)
     except OSError as exc:
         logger.debug("RSI Launcher log unreadable at %s: %s", path, exc)
         return {}, False
@@ -777,11 +843,14 @@ def iter_common_sc_install_locations(
 ) -> Iterator[Path]:
     """Yield every existing install root sitting at a common RSI path.
 
-    The canonical form of the walk ``settings._scan_common_sc_install_locations``
-    does; that function is now just the cached first-hit consumer of this. Drive
-    presence is tested with ``exists()`` rather than :func:`fixed_drives` to
-    keep the pre-existing behaviour exactly (an install on a removable or
-    mapped drive still resolves).
+    Shared by :func:`scan_installs` and first-run detection
+    (``settings._scan_common_sc_install_locations``), which merges these hits
+    with the roots the launcher log names and ranks them all. Hits only need a
+    channel folder (:func:`looks_like_sc_root`), kept that loose so an existing
+    profile keeps resolving to the same path. Drive presence is tested with
+    ``exists()`` rather than :func:`fixed_drives` to keep the pre-existing
+    behaviour exactly (an install on a removable or mapped drive still
+    resolves).
     """
     letters = drives if drives is not None else (f"{c}:\\" for c in string.ascii_uppercase)
     for letter in letters:
@@ -794,6 +863,69 @@ def iter_common_sc_install_locations(
         for subpath in COMMON_SC_SUBPATHS:
             candidate = drive_root / subpath
             if looks_like_sc_root(candidate):
+                yield candidate
+
+
+# The launcher puts ``StarCitizen`` straight inside whatever library folder the
+# player picks, so a library at a drive's root or one folder below it (an
+# ``E:\Other Games`` folder, with or without RSI's own folder inside) puts the
+# install at one of these, relative to each top-level folder.
+SHALLOW_SC_SUBPATHS: tuple[str, ...] = (
+    r"Roberts Space Industries\StarCitizen",
+    "StarCitizen",
+)
+
+
+def _has_game_data(root: Path) -> bool:
+    """Return True if any channel folder under *root* holds ``Data.p4k``."""
+    for channel_dir in channel_dirs(root):
+        try:
+            if (channel_dir / GAME_DATA_FILE).is_file():
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def iter_shallow_sc_install_locations(
+    drives: Optional[Iterable[str]] = None,
+) -> Iterator[Path]:
+    r"""Yield installs with game data one folder below the top of each fixed drive.
+
+    First-run detection adds these hits to its ranking, so a custom library
+    folder is found even when the launcher log does not name it and an old
+    install or its shell sits at a common path. It costs one directory
+    listing per fixed
+    drive plus a few probes per top-level folder, so it can run on the GUI
+    thread like the common-path walk. Checks ``<drive>\StarCitizen`` and each
+    top-level folder joined with :data:`SHALLOW_SC_SUBPATHS`, skipping
+    :data:`_DEEP_SCAN_SKIP_DIRS` and ``$``-prefixed system folders. Only a root
+    with ``Data.p4k`` in some channel counts: nobody chose these folders, so a
+    leftover shell must not be picked for them.
+    """
+    targets = list(drives) if drives is not None else fixed_drives()
+    for drive in targets:
+        drive_root = Path(drive)
+        candidates = [drive_root / "StarCitizen"]
+        try:
+            with os.scandir(drive_root) as entries:
+                tops = []
+                for entry in entries:
+                    name = entry.name.lower()
+                    if name in _DEEP_SCAN_SKIP_DIRS or name.startswith("$"):
+                        continue
+                    try:
+                        if not entry.is_dir(follow_symlinks=False):
+                            continue
+                    except OSError:
+                        continue
+                    tops.append(Path(entry.path))
+        except OSError:
+            continue
+        for top in sorted(tops, key=lambda p: p.name.lower()):
+            candidates.extend(top / subpath for subpath in SHALLOW_SC_SUBPATHS)
+        for candidate in candidates:
+            if _has_game_data(candidate):
                 yield candidate
 
 
