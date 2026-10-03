@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -58,6 +57,8 @@ from src.models.string_model import (
     CATEGORY_MISSIONS, StringEntry, is_favoritable_ship,
 )
 from src.parser.ini_parser import load_source_files, load_sources_from_settings, parse_ini_file
+# Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
+from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
 from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
@@ -167,26 +168,6 @@ def _user_cfg_language_matches(selected_language: str, actual_g_language: str | 
     """
     expected = SC_LANGUAGE_IDS.get(selected_language, selected_language)
     return (actual_g_language or "").lower() == (expected or "").lower()
-
-
-def _count_enhancement_categories(
-    sources_dict: dict, enhancements_key_categories: dict | None = None,
-) -> Counter:
-    """Category breakdown of the enhancements just merged, for the Apply
-    success dialog (#399).
-
-    Counts sources_dict["enhancements"], not self.entries: Simple mode applies
-    before the reload that refreshes self.entries, so on a first-time
-    generation self.entries has no enhancements yet. Each key's category is
-    the generator's own map first, then the key prefix, because the two differ
-    (medical consumables are "Medical Consumables" in the map but "Gear" by
-    prefix).
-    """
-    categories = enhancements_key_categories or {}
-    return Counter(
-        categories.get(key) or StringEntry.extract_category(key)
-        for key in sources_dict.get(AppSettings.SOURCE_ENHANCEMENTS, {})
-    )
 
 
 def _drop_none_entries(entries: list) -> list:
