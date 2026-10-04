@@ -58,6 +58,43 @@ them against the new source.
 
 ## Backfill log
 
+- **2.4.0 cycle (2026-10-04, Claude Sonnet 5.5):** #446 removed the Blueprint
+  Tracker's "Also scan LIVE/HOTFIX" tickbox. Scan Logs now always reads LIVE,
+  plus HOTFIX when it is installed, and never PTU, EPTU or TECH-PREVIEW. In
+  all 10 languages: removed `blueprint_tracker.scan_other_channels_checkbox`
+  and `blueprint_tracker.scan_other_channels_tooltip`, reworded
+  `blueprint_tracker.scan_logs_tooltip` (the existing first sentence is kept
+  word for word and one new sentence follows it), added
+  `enhancements.bp_scan_no_live_hotfix`, and replaced the old LIVE/HOTFIX
+  bullet in each `HELP.md` with a "which servers the scan reads" bullet. All
+  `at`-only (`ht` empty). None of the replaced strings had a human `ht`, so no
+  human translation was overwritten. Each language was translated by its own
+  agent, then back-translated and compared with the English by a separate
+  checker (no meaning errors). Four wording fixes followed the check: korean
+  got the word for "never" back in the dialog and the Help bullet, spanish
+  says "se reinician" instead of "se borran" in the Help bullet (which could
+  read as the servers being deleted), japanese got the "because" back in the
+  Help sentence, and chinese_traditional uses 帳號 instead of 賬號. After the
+  hand test the tooltip was cut to two lines: the existing first sentence and
+  a short second line (LIVE, plus HOTFIX when installed, because the two share
+  a server and account progression). The English second line dropped "too" and
+  "one", and the other ten languages keep their existing second line, which
+  says the same. The sentences about the test servers never being scanned and
+  about the Config tab make no difference now live only in the Help bullet and
+  the dialog.
+  For a native reviewer: most old texts called PTU, EPTU and TECH-PREVIEW "test
+  builds", and the new texts say "test servers" because the English now does
+  (turkish "sunucu" where the old text said "test sürümleri" is the clearest
+  case). "Wiped" is rendered as: chinese 清档, chinese_traditional 重置, french
+  réinitialisés, german zurückgesetzt, italian azzerati, japanese
+  データがより頻繁に消去される, korean 초기화 (the game slang 와이프 is an
+  alternative), portuguese_br zerados, spanish se reinician, turkish
+  sıfırlanan. Each new text names the Config tab with that language's own
+  `tabs.config` label. Older strings in french, italian, japanese and spanish
+  call the same tab by a different name (left as they were). Two splits come
+  from the old text: german "Kontofortschritt" (tooltip) against
+  "Konto-Progression" (Help), and japanese アカウント進捗 against アカウント進行.
+
 - **2.4.0 cycle (2026-10-01, Claude Sonnet 5):** Merged `release/2.4.0` into
   Korean's PR branch (#409) and backfilled the 50 English keys that had
   landed since Korean's own translation pass: the duplicate-install-detection

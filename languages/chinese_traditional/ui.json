@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "未配置《星際公民》安裝路徑，因此沒有可掃描的日誌。請先在配置標籤頁設定你的遊戲資料夾。"
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "在你的《星際公民》安裝路徑中未找到 LIVE 或 HOTFIX 資料夾，因此沒有可掃描的日誌。測試伺服器（PTU、EPTU、TECH-PREVIEW）永遠不會被掃描。"
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "自上次掃描以來沒有發現新的藍圖。"
@@ -1548,15 +1552,7 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "掃描你的《星際公民》日誌檔案（Game.log 及 logbackups）以查詢“已獲得藍圖”獎勵通知，並自動將其標記為已擁有。"
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "同時掃描 LIVE/HOTFIX（無論當前未啟用的是哪一個）"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE 和 HOTFIX 共享相同的賬號進度，因此在其中一個頻道獲得的藍圖也會出現在另一個頻道的日誌中。如果已安裝，也會掃描這兩個頻道中當前非啟用的那一個。PTU、EPTU 和 TECH-PREVIEW 是擁有各自獨立進度的測試版本，永遠不會被掃描。"
+      "at": "掃描你的《星際公民》日誌檔案（Game.log 及 logbackups）以查詢“已獲得藍圖”獎勵通知，並自動將其標記為已擁有。\n始終會掃描 LIVE，如果已安裝 HOTFIX 也會一併掃描，因為這兩者執行在同一個伺服器上，共享相同的帳號進度。"
     },
     "force_rescan_checkbox": {
       "ht": "",

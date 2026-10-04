@@ -497,19 +497,14 @@ class AppSettings:
     # display; this only affects the app's own list, never the in-game
     # mission text, which always shows the tag regardless of this setting.
     BLUEPRINT_SHOW_TAGS = "blueprints/show_tags"
-    # #268: whether "Scan Logs for Owned Blueprints" also scans whichever of
-    # LIVE/HOTFIX isn't the active channel. Enabled by default -- most
-    # players with a HOTFIX-era account run both channels, and scanning the
-    # inactive one too is what makes the Owned set actually complete. Never
-    # covers PTU/EPTU/TECH-PREVIEW -- those are separate test builds with
-    # their own progression, not the same account/blueprint history as
-    # LIVE/HOTFIX.
-    BLUEPRINT_SCAN_OTHER_CHANNELS = "blueprints/scan_other_channels"
+    # #446: no setting for which channels "Scan Logs for Owned Blueprints"
+    # reads (always LIVE, plus HOTFIX when present, never PTU/EPTU/TECH-PREVIEW,
+    # see main_window._SCANNED_CHANNELS). A "blueprints/scan_other_channels"
+    # value stored by #268 is no longer read.
     # #386: whether Smart Citizen runs "Scan Logs for Owned Blueprints"
     # automatically on every launch, instead of only on a manual button
     # click. Off by default -- opt-in, since it's an extra background log
-    # read on every startup and BLUEPRINT_SCAN_OTHER_CHANNELS above already
-    # covers the common "also check my other channel" case once it runs.
+    # read on every startup.
     BLUEPRINT_AUTO_SCAN_ON_STARTUP = "blueprints/auto_scan_on_startup"
     # #386 follow-up: whether a startup auto-scan that finds new blueprints
     # shows the manual scan's own summary popup, instead of just a status
@@ -1371,26 +1366,6 @@ class AppSettings:
         """
         AppSettings.settings().setValue(
             AppSettings._blueprint_watermark_key(channel), when.isoformat()
-        )
-        AppSettings.settings().sync()
-
-    @staticmethod
-    def get_scan_other_channels_enabled() -> bool:
-        """Whether "Scan Logs for Owned Blueprints" also scans whichever of
-        LIVE/HOTFIX isn't the active channel (#268). Default True — most
-        players with a HOTFIX-era account run both channels, and scanning
-        the inactive one too is what makes the Owned set actually complete;
-        opting in after the fact means missing blueprints already earned
-        there before the user thinks to enable it."""
-        return bool(AppSettings.settings().value(
-            AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS, True, type=bool
-        ))
-
-    @staticmethod
-    def set_scan_other_channels_enabled(enabled: bool) -> None:
-        """Persist the multi-channel BP Scan checkbox state (#268)."""
-        AppSettings.settings().setValue(
-            AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS, bool(enabled)
         )
         AppSettings.settings().sync()
 
@@ -3309,7 +3284,6 @@ class AppSettings:
             AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
             AppSettings.TUTORIAL_DISABLED: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
-            AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS: True,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
