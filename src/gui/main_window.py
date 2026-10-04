@@ -64,6 +64,7 @@ from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
 from src.utils.build_mode import IS_PORTABLE
 from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices_impl
+from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
 from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
@@ -127,12 +128,15 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
     r"(?:Localizations Enhanced (?:with|by)|Enhanced with <3 by)\s+Smart Citizen\s+v?[^\s|]+\s*$"
 )
 
-# #268: LIVE and HOTFIX share the same account/blueprint progression (HOTFIX
-# is a same-account emergency-patch channel), so a blueprint earned on one
-# shows up in the other's logs too. PTU/EPTU/TECH-PREVIEW are separate test
-# builds with their own progression -- never scanned regardless of the
-# "also scan other channels" checkbox.
-_LINKED_CHANNELS = frozenset({AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX})
+# #268, #446: "Scan Logs for Owned Blueprints" reads LIVE, and HOTFIX when it is
+# present. HOTFIX is a same-account emergency-patch channel on the same server
+# as LIVE, so the two share one account/blueprint progression and a blueprint
+# earned on one shows up in the other's logs too. PTU/EPTU/TECH-PREVIEW are
+# separate test servers with their own progression, wiped more often, so they
+# are NEVER scanned, whichever channel is selected in Config. This tuple is the
+# only list the scan can draw from: _channels_to_scan builds the queue from it
+# and _start_next_blueprint_scan refuses anything that is not in it.
+_SCANNED_CHANNELS = (AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX)
 
 
 def _matches_applied_output(stock_dict: dict, merged_dict: dict, applied_dict: dict) -> bool:
@@ -191,19 +195,42 @@ def _drop_none_entries(entries: list) -> list:
     return clean
 
 
-def _channels_to_scan(active_channel: str, other_enabled: bool, installed_channels) -> list:
-    """Which channels a "Scan Logs for Owned Blueprints" run should cover.
+def _channels_to_scan(present_channels) -> list:
+    """Which channels a "Scan Logs for Owned Blueprints" run covers (#446).
 
-    Always the active channel first. If *other_enabled*, and the active
-    channel is one of the linked pair, also includes whichever other linked
-    channel is actually installed (sorted, for a deterministic queue order).
-    Pure/Qt-free so it's directly testable -- see test_blueprint_scan_channels.py.
+    LIVE, then HOTFIX, each only when it is in *present_channels* (the channel
+    names that exist under the install root). Never anything else: PTU, EPTU
+    and TECH-PREVIEW are separate test servers that are wiped more often, so
+    they are left out whatever *present_channels* holds and whichever channel
+    is selected in Config. Pure/Qt-free so it's directly testable -- see
+    test_blueprint_scan_channels.py.
     """
-    channels = [active_channel]
-    if other_enabled and active_channel in _LINKED_CHANNELS:
-        others = sorted((_LINKED_CHANNELS - {active_channel}) & set(installed_channels))
-        channels.extend(others)
-    return channels
+    present = set(present_channels)
+    return [channel for channel in _SCANNED_CHANNELS if channel in present]
+
+
+def _is_dir_safe(path) -> bool:
+    """Path.is_dir() that treats an unreadable or offline location as "not
+    there". Python 3.11 (what the shipped exe runs) re-raises errors such as
+    access denied or a disconnected network drive from Path.is_dir(), which
+    would escape a Qt slot as a crash dialog."""
+    try:
+        return Path(path).is_dir()
+    except OSError:
+        return False
+
+
+def _scan_queue_for_root(root) -> list:
+    """The channels a scan would cover under the install root *root*: LIVE and
+    HOTFIX, whichever of the two has a folder there (#446). Empty when *root*
+    is unset, unreadable or offline, or neither folder exists (channel_dirs
+    swallows the OSError Path.is_dir() can raise). The only place the scan
+    looks at the disk to choose channels, so the manual button and the startup
+    auto-scan cannot disagree."""
+    if not root:
+        return []
+    present = {folder.name for folder in channel_dirs(Path(root))}
+    return _channels_to_scan(present)
 
 
 def _stamp_frontend_version(merged: dict) -> dict:
@@ -4307,25 +4334,24 @@ class MainWindow(QMainWindow):
         nothing new.
 
         Silently does nothing (no warning dialog, unlike the manual scan)
-        when the setting is off or the active channel has no valid install
-        path yet -- a fresh profile with no game configured shouldn't see an
-        install-path warning it never asked for on every launch.
+        when the setting is off or there is no LIVE or HOTFIX folder to scan
+        yet -- a fresh profile with no game configured shouldn't see an
+        install-path warning it never asked for on every launch. Covers the
+        same channels as the manual scan (LIVE, plus HOTFIX when present,
+        never a test channel) and, like it, ignores the channel selected in
+        Config (#446).
         """
         if not AppSettings.get_auto_scan_blueprints_enabled():
             return
         if self._bp_log_scan_worker is not None:
             return  # a scan is already running somehow; don't queue a second
 
-        channel_path = AppSettings.get_channel_install_path()
-        if not channel_path or not Path(channel_path).is_dir():
-            logger.info("BP auto-scan: skipped, no valid install path configured yet")
+        queue = _scan_queue_for_root(AppSettings.get_sc_install_root())
+        if not queue:
+            logger.info("BP auto-scan: skipped, no LIVE or HOTFIX folder found in the install path")
             return
 
-        installed = AppSettings.get_available_channels()
-        other_enabled = AppSettings.get_scan_other_channels_enabled()
-        self._bp_scan_queue = _channels_to_scan(
-            AppSettings.get_active_channel(), other_enabled, installed
-        )
+        self._bp_scan_queue = queue
         self._bp_scan_new_names = set()
         # Always a normal incremental scan -- "Rescan all logs" is a
         # deliberate one-shot the user ticks before a manual click, not
@@ -6432,12 +6458,12 @@ class MainWindow(QMainWindow):
         still-growing Game.log doesn't re-walk the player's whole history
         every time.
 
-        Always covers the active channel. If the Blueprint Tracker's "also
-        scan other channels" checkbox is on and the active channel is LIVE or
-        HOTFIX, also queues whichever of the two isn't active -- they share
-        the same account progression, so a blueprint earned on one shows up
-        in the other's logs too (#268). PTU/EPTU/TECH-PREVIEW are never
-        included; those are separate test builds with their own progression.
+        Always covers LIVE, plus HOTFIX when its folder is present -- they run
+        on the same server and share one account progression, so a blueprint
+        earned on one shows up in the other's logs too (#268). There is no
+        checkbox for it, and the channel selected in Config makes no
+        difference (#446). PTU/EPTU/TECH-PREVIEW are never included; those are
+        separate test servers with their own progression, wiped more often.
         Each queued channel runs through the same single-channel worker in
         turn; only one combined summary/owned-set write happens once every
         queued channel has been scanned.
@@ -6446,8 +6472,8 @@ class MainWindow(QMainWindow):
             return  # already scanning
         self._bp_scan_silent = False  # #386: a manual click always reports normally
 
-        channel_path = AppSettings.get_channel_install_path()
-        if not channel_path or not Path(channel_path).is_dir():
+        root = AppSettings.get_sc_install_root()
+        if not root or not _is_dir_safe(root):
             QMessageBox.warning(
                 self,
                 tr("enhancements.bp_scan_title"),
@@ -6455,11 +6481,16 @@ class MainWindow(QMainWindow):
             )
             return
 
-        installed = AppSettings.get_available_channels()
-        other_enabled = AppSettings.get_scan_other_channels_enabled()
-        self._bp_scan_queue = _channels_to_scan(
-            AppSettings.get_active_channel(), other_enabled, installed
-        )
+        queue = _scan_queue_for_root(root)
+        if not queue:
+            QMessageBox.information(
+                self,
+                tr("enhancements.bp_scan_title"),
+                tr("enhancements.bp_scan_no_live_hotfix"),
+            )
+            return
+
+        self._bp_scan_queue = queue
         self._bp_scan_new_names = set()
         # #308: "Rescan all logs" bypasses the saved watermark for every
         # queued channel this run, re-walking each back to the scanner's
@@ -6473,22 +6504,30 @@ class MainWindow(QMainWindow):
         """Pop the next queued channel and start its worker (#268).
 
         Silently skips a queued channel with no valid install path (logged,
-        not surfaced as a dialog -- the active channel's own path was already
-        validated with a user-facing warning in _run_blueprint_log_scan;
-        this only guards the rarer case of a secondary channel whose install
-        turns out to be incomplete) and moves on to the next one. Finalizes
-        once the queue is empty.
+        not surfaced as a dialog -- the install root was already validated
+        with a user-facing warning in _run_blueprint_log_scan; this only
+        guards the rarer case of a channel whose install turns out to be
+        incomplete) and moves on to the next one. Finalizes once the queue is
+        empty.
+
+        The one place a scan worker is started, so it is also where a channel
+        outside _SCANNED_CHANNELS is refused (#446): PTU, EPTU and
+        TECH-PREVIEW are never scanned, even if something put one in the queue.
         """
         if not self._bp_scan_queue:
             self._finish_blueprint_scan_queue()
             return
 
         channel = self._bp_scan_queue.pop(0)
+        if channel not in _SCANNED_CHANNELS:
+            logger.error(f"BP Scan: refusing to scan {channel!r}; only LIVE and HOTFIX are ever scanned (#446)")
+            self._start_next_blueprint_scan()
+            return
         self._bp_scan_channel = channel
 
         root = AppSettings.get_sc_install_root()
         channel_path = str(Path(root) / channel) if root else ""
-        if not channel_path or not Path(channel_path).is_dir():
+        if not channel_path or not _is_dir_safe(channel_path):
             logger.warning(f"BP Scan: skipping {channel} -- no valid install path")
             self._start_next_blueprint_scan()
             return
@@ -6568,8 +6607,15 @@ class MainWindow(QMainWindow):
             # mission's reward pool this patch would misread as "foreign" and
             # could resolve into an unrelated shorter item (see
             # owned_items.repair_foreign_owned_names' docstring).
+            # #446: _known_item_names is the item list of the channel selected
+            # in Config, and the scan no longer follows Config. Recovery is only
+            # trustworthy when that list belongs to the same family as the logs
+            # (LIVE and HOTFIX, near-identical builds). With a test channel
+            # selected, a LIVE log name missing from the test build's list could
+            # resolve to a shorter real item and mark the wrong blueprint owned,
+            # so recovery is skipped and the name is kept as logged.
             catalogue = self._known_item_names or set()
-            if catalogue:
+            if catalogue and AppSettings.get_active_channel() in _SCANNED_CHANNELS:
                 recovered = set()
                 for nm in sorted(scanned - catalogue):
                     real = resolve_against_catalogue(nm, catalogue)

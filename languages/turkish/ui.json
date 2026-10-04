@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "Yapılandırılmış bir Star Citizen kurulum yolu olmadığından taranacak günlük yok. Önce Yapılandırma sekmesinden oyun klasörünüzü ayarlayın."
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "Star Citizen kurulumunuzda LIVE veya HOTFIX klasörü bulunamadı, bu nedenle taranacak günlük yok. Test sunucuları (PTU, EPTU, TECH-PREVIEW) hiçbir zaman taranmaz."
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "Son taramadan bu yana yeni plan bulunamadı."
@@ -1548,19 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Star Citizen günlük dosyalarınızı (Game.log ve logbackups) \"Received Blueprint\" ödül bildirimleri için tarayın ve bunları otomatik olarak sahip olunan olarak işaretleyin."
+      "at": "Star Citizen günlük dosyalarınızı (Game.log ve logbackups) \"Received Blueprint\" ödül bildirimleri için tarayın ve bunları otomatik olarak sahip olunan olarak işaretleyin.\nHer zaman LIVE taranır, HOTFIX yüklüyse o da taranır, çünkü ikisi aynı sunucuda çalışır ve tek bir hesap ilerlemesini paylaşır."
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
       "at": "Zaten bir tarama çalışıyor (bu, otomatik başlangıç taraması olabilir)."
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "LIVE/HOTFIX'i de tara (hangisi etkin değilse)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE ve HOTFIX aynı hesap ilerlemesini paylaşır; bu nedenle birinde kazanılan bir plan diğerinin günlüklerinde de görünür. İkisinden hangisi etkin kanalınız değilse, yüklüyse o da taranır. PTU, EPTU ve TECH-PREVIEW kendi ilerlemelerine sahip ayrı test sürümleridir ve hiçbir zaman taranmaz."
     },
     "force_rescan_checkbox": {
       "ht": "",

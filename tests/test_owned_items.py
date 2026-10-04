@@ -687,22 +687,6 @@ class TestBlueprintWatermark:
         assert AppSettings.get_blueprint_log_watermark() == when
 
 
-class TestScanOtherChannelsSetting:
-    """#268: persistence for the "also scan LIVE/HOTFIX" checkbox."""
-
-    def test_default_enabled(self, isolated_settings):
-        """Defaults on: opting in after the fact would miss blueprints
-        already earned on the inactive channel before a user thinks to
-        enable it."""
-        assert AppSettings.get_scan_other_channels_enabled() is True
-
-    def test_roundtrip(self, isolated_settings):
-        AppSettings.set_scan_other_channels_enabled(False)
-        assert AppSettings.get_scan_other_channels_enabled() is False
-        AppSettings.set_scan_other_channels_enabled(True)
-        assert AppSettings.get_scan_other_channels_enabled() is True
-
-
 class TestModelOwnedColumn:
     def _model(self, qapp):
         from src.gui.string_table_model import StringTableModel
