@@ -171,18 +171,15 @@ def _user_cfg_language_matches(selected_language: str, actual_g_language: str | 
 
 
 def _drop_none_entries(entries: list) -> list:
-    """Strip stray ``None`` items out of a freshly loaded/merged entries list.
+    """Strip stray ``None`` items out of a freshly loaded entries list (#389).
 
-    Filtering only where a crash was actually observed (``update_category_
-    combo``'s ``e.category`` read, #389) isn't enough -- ``_restore_pending_
-    user_edits`` reads ``e.key`` on every entry earlier in the same reload
-    path and would crash there first whenever the snapshot is non-empty, and
-    the table model reads entries straight from ``self.entries`` afterward
-    regardless. A ``None`` has to be removed at the source, once, so every
-    downstream consumer sees a clean list. #389's own reported crash was a
-    native heap-corruption fault (0xC0000374); this can't undo memory
-    corruption, only stop it from also taking down the UI thread with an
-    AttributeError once the (already corrupted) entries reach Python code.
+    Runs once where entries are first received, so every consumer
+    (``_restore_pending_user_edits``, ``update_category_combo``, the table
+    model) sees a clean list. It can't undo the native heap corruption behind
+    #389, only stop a corrupted list from also crashing the UI thread.
+
+    Anything index-aligned with *entries* (the loader's ``sort_keys``) goes
+    stale when this drops an item, so a caller holding one must rebuild it.
     """
     clean = [e for e in entries if e is not None]
     dropped = len(entries) - len(clean)
@@ -1578,10 +1575,13 @@ class MainWindow(QMainWindow):
         in which case the app keeps running and startup proceeds normally.
 
         Installer switches: /SILENT /NORESTART run the upgrade with just a
-        progress bar; /SUPPRESSMSGBOXES auto-answers the "previous version
-        found" box with its default (Yes = upgrade in place); /AUTOUPDATE=1
-        tells installer.iss to relaunch Smart Citizen when the install
-        finishes (the normal postinstall Run entry is skipifsilent).
+        progress bar. /SUPPRESSMSGBOXES makes installer.iss take the default
+        answer of each SuppressibleMsgBox, e.g. Yes (upgrade in place) for
+        the "previous version found" box. It has no effect on a plain
+        MsgBox, so installer.iss keeps those off the silent path; the
+        missing-uninstaller error is the one it shows on purpose.
+        /AUTOUPDATE=1 tells installer.iss to relaunch Smart Citizen when the
+        install finishes (the normal postinstall Run entry is skipifsilent).
         """
         import ctypes
 
@@ -5445,7 +5445,11 @@ class MainWindow(QMainWindow):
             self._loader_worker.wait()
             self._loader_worker = None
 
-        entries = _drop_none_entries(entries)
+        clean_entries = _drop_none_entries(entries)
+        # The worker built sort_keys with one key per original entry. If any
+        # entry was dropped it no longer lines up, so let the model recompute it.
+        model_sort_keys = sort_keys if len(clean_entries) == len(entries) else None
+        entries = clean_entries
 
         # Preserve in-memory edits the user hasn't Applied yet — Generate
         # Enhancements (and other reload paths) hit this slot with freshly
@@ -5472,7 +5476,7 @@ class MainWindow(QMainWindow):
             self.entries,
             self.default_values,
             AppSettings.get_favorite_prefix(),
-            sort_keys=sort_keys,
+            sort_keys=model_sort_keys,
         )
         self.apply_filters()
         self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
