@@ -17,6 +17,10 @@ tree and read its verdicts back. They are skipped where Inno Setup is not
 installed or an Application Control policy refuses to run the unsigned probe.
 GitHub's Windows runner image ships Inno Setup 6, so they run in CI as well as
 on a developer machine that has Inno Setup.
+
+The last tests cover the ``sc_install_root`` that ``WriteInstallerChoicesToRegistry``
+saves (#438). It took the parent of whatever the page held, which is the root
+for a channel folder but the wrong folder when the page holds the root itself.
 """
 
 import os
@@ -48,7 +52,9 @@ def _installer_source():
 
 
 def _pascal_function(source, name):
-    """Return ``function <name>(...)`` through its closing ``end;``."""
+    """Return ``function <name>(...)`` through its closing ``end;``. A
+    ``forward;`` declaration of it is not the function, so it is skipped."""
+    source = re.sub(rf"^function {name}\([^\n]*\bforward;$", "", source, flags=re.M)
     match = re.search(rf"^function {name}\(.*?^end;$", source, re.S | re.M)
     assert match, f"function {name} not found in installer.iss"
     return match.group(0)
@@ -60,7 +66,7 @@ def test_install_root_check_is_root_only():
         (
             line
             for line in _installer_source().splitlines()
-            if "'sc_install_root', SCRoot)" in line
+            if "RegQueryStringValue" in line and "'sc_install_root', SCRoot)" in line
         ),
         None,
     )
@@ -346,6 +352,124 @@ end;
     wrong = [
         f"{name}: got {have!r}, expected {want!r}"
         for (name, _, want), have in zip(cases, got)
+        if have != want
+    ]
+    assert not wrong, "\n".join(wrong)
+
+
+# -- The sc_install_root write -----------------------------------------------------
+# WriteInstallerChoicesToRegistry saves the folder on the Star Citizen directory
+# page as sc_directory, and sc_install_root as the folder that holds the channel
+# folders. The page usually holds a channel folder, whose parent is the root. It
+# can also hold the root itself (a saved root is pre-filled unchanged, or the user
+# types one), and the parent of that is the wrong folder.
+
+_SC_WRITE_START = re.compile(r"^  FinalPath := SCDirectoryPage\.Values\[0\];$", re.M)
+_SC_WRITE_LOG = "    Log('Saved sc_directory to registry (Smart Citizen + legacy nodes): ' + FinalPath);"
+
+
+def _sc_write_block(source):
+    """The Star Citizen directory part of WriteInstallerChoicesToRegistry, from
+    the page value to the end of its ``if``, cut verbatim with the page value
+    and the registry writes pointed at fakes."""
+    start = _SC_WRITE_START.search(source)
+    assert start, "SC directory write not found in installer.iss"
+    begin = start.start()
+    log = source.index(_SC_WRITE_LOG, begin)
+    end = source.index("\n  end;", log) + len("\n  end;")
+    block = source[begin:end].replace("SCDirectoryPage.Values[0]", "PageValue")
+    block = re.sub(r"RegWriteStringValue\(HKCU,\s*", "FakeWrite(", block)
+    assert "RegWriteStringValue" not in block, "the SC directory write still writes the registry"
+    assert "sc_install_root" in block
+    return block
+
+
+def test_sc_install_root_write_knows_a_root():
+    source = _installer_source()
+    forward = "function IsValidSCRoot(const Path: String): Boolean; forward;"
+    # Pascal Script needs a function declared before it is used, and
+    # IsValidSCRoot is defined further down than the registry write.
+    assert source.index(forward) < source.index("procedure WriteInstallerChoicesToRegistry")
+    assert "if IsValidSCRoot(FinalPath) then" in _sc_write_block(source)
+
+
+def _root_cases(t):
+    """(name, what the page holds, sc_install_root that gets saved) against the
+    tree _make_tree builds. ``<none>`` means nothing is saved."""
+    sc = f"{t}\\StarCitizen"
+    only_ptu = f"{t}\\OnlyPTU\\StarCitizen"
+    return [
+        ("a channel folder", sc + "\\LIVE", sc),
+        ("a channel folder with a trailing backslash", sc + "\\PTU\\", sc),
+        ("the root", sc, sc),
+        ("the root with a trailing backslash", sc + "\\", sc),
+        ("a root with only one channel folder", only_ptu, only_ptu),
+        ("a folder that is not an install", f"{t}\\SmartCitizen 1.4.1", str(t)),
+        ("a path that no longer exists", f"{t}\\Gone\\StarCitizen", f"{t}\\Gone"),
+        ("nothing chosen", "", "<none>"),
+    ]
+
+
+@pytest.mark.skipif(_iscc() is None, reason="Inno Setup (ISCC.exe) not installed")
+def test_sc_install_root_write_in_compiled_installer_code(tmp_path):
+    tree = tmp_path / "tree"
+    out = tmp_path / "out"
+    _make_tree(tree)
+    cases = _root_cases(tree)
+    source = _installer_source()
+
+    steps = "\n".join(
+        f"  PageValue := {_pascal_string(value)};\n  Lines[{i}] := WriteSC();"
+        for i, (_, value, _) in enumerate(cases)
+    )
+    script = f"""[Setup]
+AppName=SC install root probe
+AppVersion=1.0
+CreateAppDir=no
+Uninstallable=no
+PrivilegesRequired=lowest
+OutputDir={out}
+OutputBaseFilename=probe
+
+[Code]
+var
+  PageValue: String;
+  WroteRoot: String;
+
+{_pascal_function(source, "IsValidSCRoot")}
+
+procedure FakeWrite(const SubKey, Name, Value: String);
+begin
+  if (Name = 'sc_install_root') and (Pos('SC Localization Editor', SubKey) = 0) then
+    WroteRoot := Value;
+end;
+
+function WriteSC(): String;
+var
+  RegPath: String;
+  FinalPath: String;
+  SCRoot: String;
+begin
+  WroteRoot := '<none>';
+{_sc_write_block(source)}
+  Result := WroteRoot;
+end;
+
+function InitializeSetup(): Boolean;
+var
+  Lines: TArrayOfString;
+begin
+  SetArrayLength(Lines, {len(cases)});
+{steps}
+  SaveStringsToFile({_pascal_string(str(out / "result.txt"))}, Lines, False);
+  Result := False;
+end;
+"""
+    got = _run_probe(script, tmp_path, out)
+    assert len(got) == len(cases)
+    wrong = [
+        f"{name}: page {value!r}, saved {have!r}, expected {want!r}"
+        for (name, value, want), have in zip(cases, got)
         if have != want
     ]
     assert not wrong, "\n".join(wrong)
