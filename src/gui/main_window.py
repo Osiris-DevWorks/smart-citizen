@@ -172,34 +172,15 @@ def _user_cfg_language_matches(selected_language: str, actual_g_language: str | 
 def _count_enhancement_categories(
     sources_dict: dict, enhancements_key_categories: dict | None = None,
 ) -> Counter:
-    """Category breakdown of the enhancement source that's about to be
-    applied, for apply_to_game()'s success-dialog summary (#399).
+    """Category breakdown of the enhancements just merged, for the Apply
+    success dialog (#399).
 
-    Counts sources_dict["enhancements"]'s own keys -- deliberately NOT
-    self.entries, which can be stale relative to a just-completed
-    generation. Simple mode's one-button flow calls apply_to_game() before
-    the reload that refreshes self.entries with newly-generated content
-    (that reload runs after, to update the hidden Advanced view), so on a
-    profile that skipped the startup "Generate Enhancements?" prompt and
-    generated for the first time via Simple mode's own click, self.entries
-    was still whatever loaded before generation ran -- typically nothing
-    tagged "enhancements" yet, so the old self.entries-based count reported
-    0 even though the game file itself was written correctly (apply_to_
-    game's own merge is always fresh). sources_dict["enhancements"]
-    reflects exactly what was just merged, including any "Include
-    discovered items" strip already applied to it in place earlier in
-    apply_to_game.
-
-    Each key's category prefers enhancements_key_categories (the same map
-    load_sources_from_settings() builds for the main table's own category
-    column, keyed off each generator's real output category rather than
-    the key's prefix) before falling back to StringEntry.extract_category.
-    The two are not equivalent (#399 review): every medical-consumable key
-    is item_Desccrlf_consumable_*, which extract_category's prefix rules
-    land in "Gear" since it recognizes no ship-component code there, while
-    enhancements_key_categories correctly has it as "Medical Consumables"
-    from the generator that actually produced it. A caller with no map
-    (or one missing a given key) still gets the prefix-based fallback.
+    Counts sources_dict["enhancements"], not self.entries: Simple mode applies
+    before the reload that refreshes self.entries, so on a first-time
+    generation self.entries has no enhancements yet. Each key's category is
+    the generator's own map first, then the key prefix, because the two differ
+    (medical consumables are "Medical Consumables" in the map but "Gear" by
+    prefix).
     """
     categories = enhancements_key_categories or {}
     return Counter(
