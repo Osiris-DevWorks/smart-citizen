@@ -1,5 +1,6 @@
 """INI file parser for localization strings."""
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -233,6 +234,34 @@ def load_source_files(
 
     logger.info(f"Created {len(entries)} StringEntry objects successfully")
     return entries
+
+
+def count_enhancement_categories(
+    sources_dict: Dict[str, Dict[str, str]],
+    enhancements_key_categories: Optional[Dict[str, str]] = None,
+) -> Counter:
+    """Category breakdown of the enhancements merged into the game file.
+
+    Shared by the Apply success dialog (#399) and the Config tab's Apply
+    Preview (#443), so the two cannot report different totals. Both drop the
+    discovered ("New") keys from the enhancements source first when Include
+    discovered items is off, then count what is left.
+
+    Counts sources_dict["enhancements"], not the table's entries: Simple mode
+    applies before the reload that refreshes the entries, so on a first-time
+    generation they have no enhancements yet. Each key's category is the
+    generator's own map first, then the key prefix, because the two differ
+    (medical consumables are "Medical Consumables" in the map but "Gear" by
+    prefix). A key a user has overridden is still counted: it is still in the
+    enhancements source.
+    """
+    from src.utils.settings import AppSettings
+
+    categories = enhancements_key_categories or {}
+    return Counter(
+        categories.get(key) or StringEntry.extract_category(key)
+        for key in sources_dict.get(AppSettings.SOURCE_ENHANCEMENTS, {})
+    )
 
 
 @timed
