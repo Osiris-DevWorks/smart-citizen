@@ -7524,12 +7524,15 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         _sink.set_total(phase_total)
     _tick(f"Loaded base.ini ({len(loc):,} keys)")
 
-    # ── Parallel build of independent lookups (Group A) ───────────────────────
+    # ── Build of independent lookups (Group A) ────────────────────────────────
     # vehicle_ammo, fps_ammo, scitem_lookups, controller_lookup, armor_lookup,
     # and reputation_lookup have no cross-dependencies and are dominated by
-    # XML parse + file I/O. Builders are pure: each returns a dict that is
-    # never mutated again, so thread-safe by construction. _cached_lookup
-    # writes to per-name pickle files, so parallel cache writes don't collide.
+    # XML parse + file I/O. They run in a thread pool when it would get more
+    # than one worker, min(max_workers, number of lookups), and inline
+    # otherwise (always in the GUI, whose worker passes max_workers=1, #389).
+    # Builders are pure: each returns a dict that is never mutated again, so
+    # thread-safe by construction. _cached_lookup writes to per-name pickle
+    # files, so parallel cache writes don't collide.
     vehicle_ammo: dict = {}
     fps_ammo: dict = {}
     mag_lookup: dict = {}
@@ -7658,31 +7661,13 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
 
     if lookup_jobs:
         if min(max_workers, len(lookup_jobs)) == 1:
-            # A pool of one buys no parallelism, and spins up a background
-            # thread for nothing -- and a background thread spinning up a
-            # further nested thread to run lxml-based XML parsing is the
-            # exact shape issue #389 traced a native heap-corruption crash
-            # (0xC0000374) to. The precise mechanism was never conclusively
-            # pinned down, but not creating a thread that buys nothing is
-            # the defensible fix regardless.
-            #
-            # Checking len(lookup_jobs) == 1 alone (the original #389 fix)
-            # missed the actual GUI path: EnhancementsGeneratorWorker always
-            # calls main(..., max_workers=1) (src/gui/workers.py), so a
-            # normal multi-category run with several lookup_jobs still built
-            # ThreadPoolExecutor(max_workers=1) below -- the exact crash
-            # shape, just with more than one job queued onto that one
-            # worker. min(max_workers, len(lookup_jobs)) catches both ways
-            # the pool can end up with exactly one worker.
-            if len(lookup_jobs) == 1:
-                name, fn = next(iter(lookup_jobs.items()))
-                logger.info(f"Building 1 lookup ({name})…")
-                _flush()
-                results = {name: fn()}
-            else:
-                logger.info(f"Building {len(lookup_jobs)} lookups serially (max_workers=1)…")
-                _flush()
-                results = {name: fn() for name, fn in lookup_jobs.items()}
+            # A pool of one adds no parallelism, and #389 traced a native heap
+            # corruption (0xC0000374) to a QThread nesting a pool thread that
+            # runs lxml parsing. EnhancementsGeneratorWorker always passes
+            # max_workers=1, so this is the path a normal GUI run takes.
+            logger.info(f"Building {len(lookup_jobs)} lookup(s) serially…")
+            _flush()
+            results = {name: fn() for name, fn in lookup_jobs.items()}
         else:
             logger.info(f"Building {len(lookup_jobs)} lookups in parallel (workers={min(max_workers, len(lookup_jobs))})…")
             _flush()
@@ -7722,12 +7707,15 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             )
             _tick("Built standings + track lookups")
 
-    # ── Output-file generators (parallel wave) ────────────────────────────────
-    # Generators run in a ThreadPoolExecutor. Each is a module-level function
-    # (not a closure) receiving shared read-only state via a context dict.
-    # Internal sub-phases within each generator stay serial since each step
-    # consumes the prior step's in-memory result. Across generators there is
-    # no shared mutable state, so they run safely on independent threads.
+    # ── Output-file generators ────────────────────────────────────────────────
+    # Generators run in a thread pool when it would get more than one worker,
+    # min(max_workers, number of generators), and inline otherwise (always in
+    # the GUI, #389). Each is a
+    # module-level function (not a closure) receiving shared read-only state
+    # via a context dict. Internal sub-phases within each generator stay
+    # serial since each step consumes the prior step's in-memory result.
+    # Across generators there is no shared mutable state, so they run safely
+    # on independent threads.
     ships_scitem = records / "entities" / "scitem" / "ships"
     scitem_dir   = records / "entities" / "scitem"
 
@@ -7784,46 +7772,27 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     out_medical_consumables: dict[str, str] = {}
 
     if gen_jobs:
-        results: dict = {}
-        if min(max_workers, len(gen_jobs)) == 1:
-            # Same reasoning as the lookup pool above (#389): a pool of one
-            # buys no parallelism, and is the exact shape a reported native
-            # heap-corruption crash (0xC0000374) traced back to -- a
-            # background QThread spinning up a further nested thread to run
-            # a single lxml-based generator.
-            #
-            # Checking len(gen_jobs) == 1 alone (the original #389 fix)
-            # missed the actual GUI path: EnhancementsGeneratorWorker always
-            # calls main(..., max_workers=1), so a normal multi-category run
-            # still built ThreadPoolExecutor(max_workers=1) below -- the
-            # exact crash shape, just with more than one job queued onto
-            # that one worker. min(max_workers, len(gen_jobs)) catches both
-            # ways the pool can end up with exactly one worker; when more
-            # than one job is selected, run each in turn instead of pooling.
-            if len(gen_jobs) == 1:
-                name, fn = next(iter(gen_jobs.items()))
-                logger.info(f"Running 1 output generator ({name})…")
-                _flush()
-                results[name] = fn(ctx)
+        n_workers = min(max_workers, len(gen_jobs))
+        gen_results: dict = {}
+        if n_workers == 1:
+            # Same reason as the lookup pool above (#389): a pool of one adds
+            # no parallelism, so run the generators inline.
+            logger.info(f"Running {len(gen_jobs)} output generator(s) serially…")
+            _flush()
+            for name, fn in gen_jobs.items():
+                gen_results[name] = fn(ctx)
                 _tick(f"Finished {name}")
-            else:
-                logger.info(f"Running {len(gen_jobs)} output generators serially (max_workers=1)…")
-                _flush()
-                for name, fn in gen_jobs.items():
-                    results[name] = fn(ctx)
-                    _tick(f"Finished {name}")
         else:
-            n_workers = min(max_workers, len(gen_jobs))
             logger.info(f"Running {len(gen_jobs)} output generators in parallel (workers={n_workers}, pool=thread)…")
             _flush()
             with ThreadPoolExecutor(max_workers=n_workers,
                                     thread_name_prefix="gen") as pool:
                 futs = {name: pool.submit(fn, ctx) for name, fn in gen_jobs.items()}
                 for name, fut in futs.items():
-                    results[name] = fut.result()
+                    gen_results[name] = fut.result()
                     _tick(f"Finished {name}")
 
-        for name, result in results.items():
+        for name, result in gen_results.items():
             if name == "components":          out_components   = result
             elif name == "missiles":          out_missiles     = result
             elif name == "ship_weapons":      out_ship_weapons = result
