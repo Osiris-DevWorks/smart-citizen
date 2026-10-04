@@ -372,6 +372,11 @@ def _compute_already_applied(snapshot: _AppliedStateSnapshot, should_stop=lambda
     if not snapshot.target_path.exists():
         return False
     sources_dict, hierarchy, _mrk = load_sources_from_settings()
+    # Apply saves user.ini from the loaded entries before it reloads the
+    # sources, so the user source it merges is exactly the snapshot's
+    # overrides. The copy on disk can still hold an override the user has
+    # since cleared, which would make a pending change read as applied.
+    sources_dict.pop(AppSettings.SOURCE_USER, None)
     stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
     if not stock_dict or should_stop():
         return False
@@ -380,7 +385,11 @@ def _compute_already_applied(snapshot: _AppliedStateSnapshot, should_stop=lambda
     if should_stop():
         return False
 
-    applied_dict = parse_ini_file(snapshot.target_path)
+    # strip_values=False: the writer puts every merged value in verbatim, and a
+    # user override can start or end with a space (a space favourite prefix,
+    # #100). Stripping the applied side made such an override compare unequal
+    # after every real apply, so the button stayed red.
+    applied_dict = parse_ini_file(snapshot.target_path, strip_values=False)
     if should_stop() or not _matches_applied_output(stock_dict, merged_dict, applied_dict):
         return False
 
@@ -614,10 +623,11 @@ class MainWindow(QMainWindow):
 
         # Background already-applied check (AppliedStateWorker). One runs at a
         # time. _applied_check_token changes whenever something makes an
-        # in-flight result untrustworthy (a new reload, an edit, a successful
-        # apply), so a stale verdict is dropped instead of overwriting newer
-        # state. A reload that lands mid-check sets _applied_check_rerun_
-        # pending instead of starting a second thread.
+        # in-flight result untrustworthy (a new reload, an edit, Apply's write,
+        # a successful apply, the game file changing outside Apply), so a
+        # stale verdict is dropped instead of overwriting newer state. A reload
+        # that lands mid-check sets _applied_check_rerun_pending instead of
+        # starting a second thread.
         self._applied_state_worker: Optional[AppliedStateWorker] = None
         self._applied_check_token = 0
         self._applied_check_rerun_pending = False
@@ -2344,6 +2354,22 @@ class MainWindow(QMainWindow):
         if self._initial_load_done:
             self._session_has_unapplied_edit = True
 
+    def _mark_game_file_changed(self) -> None:
+        """The game's global.ini changed outside Apply (Clear Localization
+        deleted it, or Restore Backup replaced it): drop any verdict about the
+        old file and show the button red.
+
+        It also clears the close reminder. The user chose to leave the game
+        without what is loaded, so closing must not offer Apply Now (the
+        default button) over the revert; the red button still says an apply
+        is due. Clearing rather than keeping the flag is deliberate: a reload
+        sets it provisionally until the check answers, and a revert drops that
+        answer, so a kept flag could be a placeholder nobody would clear.
+        Restore Backup reloads after this, so it clears the flag again."""
+        self._invalidate_applied_check()
+        self._set_apply_btn_dirty(True)
+        self._session_has_unapplied_edit = False
+
     def _mark_applied(self) -> None:
         """Apply to Game just wrote the loaded state: the button goes clean,
         and anything an in-flight already-applied check is working from is
@@ -2386,8 +2412,10 @@ class MainWindow(QMainWindow):
         """Start re-verifying, in the background, whether Apply is needed
         (#387, #397). Runs after every reload, not just the first: Simple mode
         applies and then reloads, and a reload on its own must not leave the
-        button red over state that was just applied. The verdict lands in
-        _on_applied_state_ready.
+        button red over state that was just applied. A failed restore, a
+        cancelled close prompt and an Apply Now that stopped before it touched
+        the button call it too, since each can leave the button without a
+        current verdict. The verdict lands in _on_applied_state_ready.
 
         One check runs at a time. A reload that arrives mid-check interrupts
         it and queues a rerun, which snapshots the newer state when it starts.
@@ -2400,10 +2428,12 @@ class MainWindow(QMainWindow):
         self._launch_applied_state_check()
 
     def _invalidate_applied_check(self) -> None:
-        """Make any in-flight already-applied result untrustworthy. An edit, a
-        successful apply or a newer reload changed the answer after the
-        check's snapshot was taken, and whatever did so has already put the
-        button in the right state, so a late verdict must not overwrite it."""
+        """Make any in-flight already-applied result untrustworthy. An edit,
+        Apply's write, a successful apply, the game file changing outside
+        Apply, or a newer reload changed the answer after the check's snapshot
+        was taken. The caller then sets the button itself, or leaves it to the
+        outcome that follows (Apply's write) or to a fresh check, so a late
+        verdict must not overwrite it."""
         self._applied_check_token += 1
 
     def _launch_applied_state_check(self) -> None:
@@ -2426,7 +2456,9 @@ class MainWindow(QMainWindow):
         worker.start()
 
     def _on_applied_state_ready(self, worker, already_applied: bool) -> None:
+        worker.quit()
         worker.wait()
+        worker.deleteLater()  # deferred, so reading worker.token below is still safe
         if self._applied_state_worker is not worker:
             return  # already handled (e.g. settled on close); a late delivery is a no-op
         self._applied_state_worker = None
@@ -2451,6 +2483,7 @@ class MainWindow(QMainWindow):
         worker = self._applied_state_worker
         if worker is None:
             return
+        worker.quit()
         if not worker.wait(timeout_ms):
             worker.requestInterruption()
             if not worker.wait(timeout_ms):
@@ -2463,15 +2496,18 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     @timed
-    def apply_to_game(self):
-        """Apply merged sources + user edits to game installation and backup existing file."""
+    def apply_to_game(self) -> bool:
+        """Apply merged sources + user edits to game installation and backup existing file.
+
+        Returns True only when the game file was written and validated, so a
+        caller can tell a real apply from a cancelled or failed one."""
         if not self.entries:
             QMessageBox.warning(self, tr("dialogs.warning_title"), tr("dialogs.no_file_loaded"))
-            return
+            return False
 
         if not AppSettings.get_game_install_path():
             QMessageBox.warning(self, tr("dialogs.warning_title"), tr("dialogs.no_game_path"))
-            return
+            return False
 
         # Save user.ini FIRST, before touching the game file. Pre-1.4.1 the
         # save ran AFTER the game write succeeded; an OS-level write failure
@@ -2492,7 +2528,7 @@ class MainWindow(QMainWindow):
                 tr("apply.cannot_save_edits_body",
                    path=user_ini_path, error_type=type(e).__name__, error=e),
             )
-            return
+            return False
 
         target_path = AppSettings.get_global_ini_path()
 
@@ -2549,7 +2585,7 @@ class MainWindow(QMainWindow):
                     QMessageBox.StandardButton.No,
                 )
                 if reply != QMessageBox.StandardButton.Yes:
-                    return
+                    return False
 
             # Build final merged dict (#387: the same _merge_for_apply the
             # already-applied check uses, so it can never compute different
@@ -2580,8 +2616,11 @@ class MainWindow(QMainWindow):
             if not base_file:
                 raise FileNotFoundError("No base file found. Configure sources and download them first.")
 
-            # Use merger to preserve original file structure
+            # Use merger to preserve original file structure. Any check verdict
+            # still in flight describes the file this replaces, and a dialog
+            # below can deliver it, so drop it before writing.
             from src.merger.ini_merger import merge_ini_files
+            self._invalidate_applied_check()
             merge_ini_files(str(base_file), merged_dict, str(target_path))
 
             # Validate written file against stock base. Pass the already-parsed
@@ -2615,12 +2654,13 @@ class MainWindow(QMainWindow):
                 else:
                     restore_note = "\n\nNo backup was available to restore."
 
+                self._mark_apply_dirty()  # the game file is not what was loaded
                 self.statusBar().showMessage(tr("dialogs.apply_failed_status"))
                 QMessageBox.critical(
                     self, tr("dialogs.validation_failed_title"),
                     tr("dialogs.validation_failed_body", msg=validation_msg, restore_note=restore_note),
                 )
-                return
+                return False
 
             # user.ini was already saved at the top of apply_to_game (before
             # the game-side writes). Reach for the count here purely for the
@@ -2675,9 +2715,13 @@ class MainWindow(QMainWindow):
                    enhancement_block=enhancement_block),
             )
             self._mark_applied()
+            return True
         except Exception as e:
+            # Mark first: the dialog's event loop can deliver a queued verdict.
+            self._mark_apply_dirty()
             QMessageBox.critical(self, tr("dialogs.error_title"), tr("apply.failed_body", error=e))
             logger.error(f"Error applying to game: {e}")
+            return False
 
     def _validate_applied_file(
         self,
@@ -2721,7 +2765,10 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            global_ini.unlink()
+            # A file that is already gone (deleted outside the app while the
+            # confirmation was open) is as cleared as one we delete.
+            global_ini.unlink(missing_ok=True)
+            self._mark_game_file_changed()
             logger.info(f"Deleted {global_ini}")
             self.statusBar().showMessage(tr("dialogs.clear_localization_status"))
             QMessageBox.information(self, tr("dialogs.clear_localization_done_title"),
@@ -2999,6 +3046,9 @@ class MainWindow(QMainWindow):
                 self.apply_filters()
                 self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
                 self._recompute_owned()  # #157
+                # Same as an async reload: _recompute_owned marked it red, and
+                # only the background check can say it's already applied.
+                self._refresh_apply_dirty_after_reload()
 
                 # Update status bar with entry counts and per-source status
                 self._update_status_bar()
@@ -3670,14 +3720,22 @@ class MainWindow(QMainWindow):
             target_path = AppSettings.get_global_ini_path()
             backup_file_path = Path(backup_file)
 
-            # Restore the backup
+            # Restore the backup. Marked only once the copy succeeded, as Clear
+            # Localization marks only after its delete: a failed restore is no
+            # revert, so it must not clear the close reminder. The except
+            # branch below covers a copy that fails part-way.
             shutil.copy2(str(backup_file_path), str(target_path))
+            self._mark_game_file_changed()
 
             # Refresh the table from configured sources. The restore writes the
             # game's global.ini (merged output); the editor view is source-backed
             # (base.ini + user.ini + enhancements), so reload from settings rather
             # than parsing the restored output file as if it were a source.
+            # The reload's _recompute_owned calls _mark_apply_dirty, which sets
+            # the close reminder again. Clear it, as _mark_game_file_changed
+            # did: the user picked this file on purpose.
             self.perform_merge_and_reload()
+            self._session_has_unapplied_edit = False
 
             logger.info(f"Restored backup from {backup_file} to {target_path}")
             QMessageBox.information(
@@ -3685,6 +3743,11 @@ class MainWindow(QMainWindow):
                 tr("restore_backup.success_body", name=backup_file_path.name),
             )
         except Exception as e:
+            # The copy may have failed part-way and changed the file, or not
+            # touched it at all. Re-check before the dialog: that drops any
+            # verdict about the old file (the dialog runs the event loop) and
+            # reads what is on disk now.
+            self._refresh_apply_dirty_after_reload()
             QMessageBox.critical(
                 self, tr("dialogs.error_title"),
                 tr("restore_backup.error_body", error=e),
@@ -5513,6 +5576,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(str)
     def _on_loading_error(self, error_msg: str):
         """Handle file loading error."""
+        self._reload_follows_clean_apply = False  # the reload it was waiting for failed
         self._loading_progress.close()
         self._loading_progress = None
         QMessageBox.critical(self, tr("dialogs.error_title"), tr("dialogs.failed_to_load_sources", error=error_msg))
@@ -5702,10 +5766,11 @@ class MainWindow(QMainWindow):
             if self._simple_run_active:
                 self._end_simple_run()
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_applying"))
-                self.apply_to_game()
-                # A successful apply leaves the button clean, and the reload
-                # below only refreshes that applied state (see _on_loading_finished).
-                self._reload_follows_clean_apply = not self._apply_dirty
+                applied = self.apply_to_game()
+                # Only a real apply makes the reload below a refresh of applied
+                # state (see _on_loading_finished). A button that was already
+                # green says nothing about whether this apply worked.
+                self._reload_follows_clean_apply = applied is True
             else:
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_reloading"))
             self._show_loading_progress(tr("progress.reloading_with_enhancements"))
@@ -5861,17 +5926,20 @@ class MainWindow(QMainWindow):
 
             if clicked is cancel_btn:
                 event.ignore()
+                # Settling may have dropped a verdict or a queued rerun to
+                # close quickly. The window stays, so re-check the button.
+                self._refresh_apply_dirty_after_reload()
                 return
             if clicked is apply_btn:
-                # Apply, then stay open — Apply to Game only updates
-                # _apply_dirty in memory for this run; closing immediately
-                # after would still start the *next* launch red regardless
-                # (that boot-time default can't cheaply verify the game file
-                # already matches — see _apply_dirty's comment), which read
-                # as "my apply didn't work." Leaving the window open lets the
-                # user see the button turn green and close normally whenever
-                # they're ready.
-                self.apply_to_game()
+                # Apply, then stay open, so the user sees the button turn
+                # green (or stay red) and closes when they're ready.
+                token = self._applied_check_token
+                if not self.apply_to_game() and self._applied_check_token == token:
+                    # The apply stopped before it touched the button (a
+                    # declined prompt, a failed user.ini save), so as with
+                    # Cancel it needs the check settling may have dropped. A
+                    # failed write or validation already marked it red.
+                    self._refresh_apply_dirty_after_reload()
                 event.ignore()
                 return
             # exit_btn: fall through to the normal close sequence below,
