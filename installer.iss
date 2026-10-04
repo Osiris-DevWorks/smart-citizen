@@ -157,26 +157,6 @@ begin
   Result := GetLocalCacheDefault();
 end;
 
-function IsDocsOnOneDrive(): Boolean;
-var
-  DocsPath: String;
-begin
-  { Read the invoking user's Documents shell-folder path. When Windows has
-    folder-redirected Documents into OneDrive (the default on most OneDrive
-    installs now), this string contains "\OneDrive\". Cache extraction +
-    50,000-file rmtree under an actively-synced OneDrive tree is 3-5x
-    slower and routinely fails with WinError 5 — worth warning the user
-    and offering a local-only alternative. }
-  Result := False;
-  if RegQueryStringValue(HKCU,
-    'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders',
-    'Personal', DocsPath) then
-  begin
-    Result := (Pos('\OneDrive\', DocsPath) > 0) or
-              (Pos('\OneDrive/', DocsPath) > 0);
-  end;
-end;
-
 function SuggestLocalDataDir(): String;
 begin
   { Build a sensible default pointing at the local (non-OneDrive) profile.
@@ -220,7 +200,7 @@ function IsPathOnOneDrive(const Path: String): Boolean;
 var
   Roots: array[0..2] of String;
   i, P: Integer;
-  Remaining, Seg: String;
+  Norm, Remaining, Seg: String;
 begin
   { Mirror of onedrive.py:is_onedrive_path. Two independent signals, either
     sufficient:
@@ -236,12 +216,18 @@ begin
   if Path = '' then
     Exit;
 
+  { Windows takes '/' as a separator too, and the data-folder edit box passes
+    on whatever was typed. Compare with '\' only (the app's check gets this
+    from os.path.normpath). }
+  Norm := Path;
+  StringChangeEx(Norm, '/', '\', True);
+
   Roots[0] := GetEnv('OneDrive');
   Roots[1] := GetEnv('OneDriveConsumer');
   Roots[2] := GetEnv('OneDriveCommercial');
   for i := 0 to 2 do
   begin
-    if PathUnderRoot(Path, Roots[i]) then
+    if PathUnderRoot(Norm, Roots[i]) then
     begin
       Result := True;
       Exit;
@@ -249,7 +235,7 @@ begin
   end;
 
   { Segment fallback: split on '\' and test each component. }
-  Remaining := Path;
+  Remaining := Norm;
   while Remaining <> '' do
   begin
     P := Pos('\', Remaining);
@@ -269,6 +255,26 @@ begin
       Exit;
     end;
   end;
+end;
+
+function IsDocsOnOneDrive(): Boolean;
+var
+  DocsPath: String;
+begin
+  { Read the invoking user's Documents shell-folder path. When Windows has
+    folder-redirected Documents into OneDrive (the default on most OneDrive
+    installs now), the path runs through a OneDrive folder: "OneDrive" for a
+    personal account, "OneDrive - Contoso" for a work or school one. Cache
+    extraction + 50,000-file rmtree under an actively-synced OneDrive tree is
+    3-5x slower and routinely fails with WinError 5 — worth warning the user
+    and offering a local-only alternative. IsPathOnOneDrive does the
+    matching, so this pre-fill, the Next-click warning and the app all agree
+    on what counts as OneDrive. }
+  Result := False;
+  if RegQueryStringValue(HKCU,
+    'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders',
+    'Personal', DocsPath) then
+    Result := IsPathOnOneDrive(DocsPath);
 end;
 
 function HasVersionedAppSegment(const Path: String): Boolean;
@@ -1531,8 +1537,9 @@ begin
     adapts:
       1. If a prior override exists, pre-fill it (respects the user's
          previous choice across reinstalls).
-      2. Else if Documents is OneDrive-synced, suggest the local
-         %USERPROFILE%\Documents\Smart Citizen junction (escapes the sync).
+      2. Else if Documents is OneDrive-synced and has no Smart Citizen
+         folder yet, suggest the local %USERPROFILE%\Documents\Smart Citizen
+         junction (escapes the sync).
       3. Else pre-fill Documents\Smart Citizen (the natural default).
     WriteInstallerChoicesToRegistry compares the final value against the
     natural default and only writes user_data_dir when the user actually
@@ -1566,11 +1573,18 @@ begin
 
   { Pre-fill: existing override > OneDrive suggestion > Documents default.
     A stale value (missing folder or versioned leftover) falls through to
-    the default rather than prefilling a bad path. Issue #120. }
+    the default rather than prefilling a bad path. Issue #120.
+    The OneDrive suggestion is for a NEW data folder only. With no override,
+    an existing Documents\Smart Citizen is where the app already keeps its
+    data, and moving off it would leave user.ini behind. A silent update
+    (the in-app updater) never shows this page, so nobody could stop that.
+    The app's own startup warning offers the one-click move, which migrates
+    the data. }
   if RegQueryStringValue(HKCU, NewRegPath, 'user_data_dir', SavedDataDir) and
      (SavedDataDir <> '') and not IsStalePrefill(SavedDataDir) then
     DataDirPage.Values[0] := SavedDataDir
-  else if IsDocsOnOneDrive() then
+  else if IsDocsOnOneDrive() and
+          not DirExists(GetDocumentsBase() + '\Smart Citizen') then
     DataDirPage.Values[0] := SuggestLocalDataDir()
   else
     DataDirPage.Values[0] := GetDocumentsBase() + '\Smart Citizen';
