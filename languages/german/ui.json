@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Bereits angewendet: Es hat sich seit der letzten Anwendung nichts geändert."
+      "at": "Bereits angewendet: Das Spiel entspricht deinen aktuellen Einstellungen. Klicke trotzdem, um neu zu erzeugen und erneut anzuwenden, zum Beispiel nach einem Spiel-Patch."
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Bereits angewendet: Es hat sich seit dem letzten „Auf Spiel anwenden“ nichts geändert."
+      "at": "Bereits angewendet: Das Spiel entspricht deinen aktuellen Einstellungen."
     },
     "feedback_fallback_text": {
       "ht": "",

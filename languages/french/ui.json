@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Déjà appliqué : rien n'a changé depuis la dernière application."
+      "at": "Déjà appliqué : le jeu correspond à vos réglages actuels. Cliquez pour régénérer et réappliquer quand même, par exemple après un patch du jeu."
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Déjà appliqué — rien n'a changé depuis la dernière application au jeu."
+      "at": "Déjà appliqué : le jeu correspond à vos réglages actuels."
     },
     "feedback_fallback_text": {
       "ht": "",

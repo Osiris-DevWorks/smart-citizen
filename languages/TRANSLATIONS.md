@@ -95,14 +95,35 @@ them against the new source.
   from the old text: german "Kontofortschritt" (tooltip) against
   "Konto-Progression" (Help), and japanese アカウント進捗 against アカウント進行.
 
+- **2.4.0 cycle (2026-10-02, Claude Opus 5.5):** #398 follow-up reworded the
+  English `simple_mode.generate_apply_tip_disabled` (the green Simple-mode
+  button's tooltip) from "nothing has changed since the last time you
+  applied" to say the game matches the current settings and that a click
+  still regenerates and re-applies, for example after a game patch. The
+  button stays clickable when green, and the check compares the game file
+  with the current settings rather than tracking changes. Refreshed the `at`
+  in all 10 other languages to match. No language had an `ht` for this key,
+  so nothing needs human re-review. The Advanced-mode green tooltip
+  `toolbar.apply_disabled_tooltip` got the same reword in English, without
+  the click hint (that button is disabled while green), and its `at` was
+  refreshed in the 10 other languages (Claude Sonnet 5.5), again with no `ht`
+  to protect. The same change added one sentence to
+  `docs/HELP.md` and the 10 translated `HELP.md` files (Claude Sonnet 5.5):
+  restoring a backup or clearing the localization turns the Apply button
+  red, but closing afterwards does not ask. The translations are AI-written,
+  styled on each file's existing register, and each names the action with
+  that language's own menu label. HELP files have no `ht`/`at` split, so
+  this log is their only record.
 - **2.4.0 cycle (2026-10-01, Claude Sonnet 5):** Merged `release/2.4.0` into
   Korean's PR branch (#409) and backfilled the 50 English keys that had
   landed since Korean's own translation pass: the duplicate-install-detection
   feature's 44 `config.dupe_*` keys and the blueprint auto-scan feature's 6
   `blueprint_tracker.auto_scan_*` / `scan_logs_already_running_tooltip` keys.
   All `at`-only, styled on Korean's existing formal register. One further key
-  (`simple_mode.generate_apply_tip_disabled`) remains outstanding: it ships on
-  a PR still pending merge at backfill time, so it isn't visible to diff yet.
+  (`simple_mode.generate_apply_tip_disabled`) was still on an unmerged PR at
+  backfill time. Its Korean `at` was added later on #409's branch (1f22a15),
+  after #398's still-unmerged branch had been merged into it. #398 and then
+  #409 merged minutes later.
   Also added `config.map_language_overwrite_warning` (new #409-follow-up
   guard against mapping a language's own apply target as its source) across
   all 10 languages, backfilled turkish's own missing `dialogs.language_copying`
