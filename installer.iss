@@ -53,13 +53,11 @@ Name: "{commondesktop}\Smart Citizen"; Filename: "{app}\SmartCitizen.exe"
 
 [Run]
 Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citizen}"; Flags: nowait postinstall skipifsilent
-; #211 in-app auto-update: relaunch Smart Citizen after a silent upgrade. The
-; postinstall entry above only fires from the finish page, which a /SILENT
-; install never shows. Gated on the /AUTOUPDATE=1 switch the app passes, so
-; manual silent installs are unaffected. runasoriginaluser is required: the
-; installer runs elevated, and without it the relaunched app would run as
-; admin (and write user.ini / caches with admin ownership).
-Filename: "{app}\SmartCitizen.exe"; Flags: nowait runasoriginaluser; Check: IsAutoUpdate
+; The #211 in-app auto-update relaunch is not a [Run] entry. Setup runs [Run]
+; entries that are not postinstall BEFORE it signals ssPostInstall, and
+; WriteInstallerChoicesToRegistry runs at ssPostInstall, so an entry here
+; started the app before its settings were written. CurStepChanged relaunches
+; it after the writes instead.
 
 [Code]
 var
@@ -830,6 +828,8 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
 begin
   if (CurStep=ssInstall) then
   begin
@@ -858,6 +858,23 @@ begin
       after a user reported the data-dir choice not carrying over. }
     WriteInstallerChoicesToRegistry();
 
+    // #211 in-app auto-update: relaunch Smart Citizen now that its settings
+    // are in the registry. Gated on the /AUTOUPDATE=1 switch the app passes,
+    // so manual silent installs are unaffected. This used to be a [Run]
+    // entry, but Setup runs those before ssPostInstall, so the app started
+    // before the writes above. ExecAsOriginalUser is the runasoriginaluser
+    // flag that entry had: the installer runs elevated, and without it the
+    // relaunched app would run as admin (and write user.ini / caches with
+    // admin ownership). It sits ahead of the unins000.exe check below, so a
+    // failure box there never delays the relaunch.
+    if IsAutoUpdate() then
+    begin
+      if not ExecAsOriginalUser(ExpandConstant('{app}\SmartCitizen.exe'), '',
+                                ExpandConstant('{app}'), SW_SHOWNORMAL,
+                                ewNoWait, ResultCode) then
+        Log('WARNING: could not relaunch Smart Citizen after the auto-update (code ' + IntToStr(ResultCode) + ').');
+    end;
+
     // Catch-all sanity check: by ssPostInstall, Inno has written its
     // generated uninstaller to the install dir. If it isn't there,
     // something removed it between [Files] completion and now — most
@@ -878,8 +895,8 @@ begin
     // trace. It has only an OK button, so it cannot change what Setup
     // does. The in-app auto-updater (#211) runs /SILENT, so the user who
     // just answered its UAC prompt sees the progress window and this box.
-    // It never delays that update's relaunch: Setup runs the Run section
-    // entries before ssPostInstall, so the app is already up by now.
+    // It never delays that update's relaunch: the app is started above,
+    // before this check.
     if not FileExists(ExpandConstant('{app}\unins000.exe')) then
     begin
       Log('ERROR: unins000.exe missing from {app} post-install. Install completed but uninstall is broken.');
