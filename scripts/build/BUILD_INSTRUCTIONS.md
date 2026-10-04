@@ -25,7 +25,7 @@ build_all.bat
 
 ### Download Inno Setup (Optional)
 
-For creating the installer, download from: https://jrsoftware.org/isdl.php
+For creating the installer, download Inno Setup 6.6.0 or newer from: https://jrsoftware.org/isdl.php (`installer.iss` stops with an error on older versions)
 - Install the Unicode version
 - Default installation is fine
 
@@ -179,7 +179,7 @@ Make sure all dependencies are installed:
 This is normal for PyQt6 applications. PyInstaller bundles the entire Python runtime and all libraries (60-100MB is standard).
 
 ### Inno Setup not found
-Install from: https://jrsoftware.org/isdl.php
+Install Inno Setup 6.6.0 or newer from: https://jrsoftware.org/isdl.php
 
 Or compile the installer manually by:
 1. Opening `installer.iss` in Inno Setup Compiler

@@ -1,14 +1,15 @@
 """Tests for the #389 mitigation: main() must not spin up a ThreadPoolExecutor
-when exactly one lookup/generator job is selected.
+whenever the pool would have exactly one worker, i.e.
+min(max_workers, len(jobs)) == 1.
 
 A pool of one buys no parallelism, and issue #389 traced a native heap-
 corruption fault (0xC0000374) to a background thread nested under another
-background thread doing lxml-based XML parsing. The single-job branches in
-both the lookup-jobs and gen-jobs sections of main() (scripts/
-generate_enhancements_ini.py) now run the job inline instead of through a
-pool. These tests prove that branch is real -- not just present in the
-source -- by patching ThreadPoolExecutor and asserting it's never
-constructed for a single-category run, while still producing correct output.
+background thread doing lxml-based XML parsing. Both the lookup-jobs and
+gen-jobs sections of main() (scripts/generate_enhancements_ini.py) run their
+jobs inline in that case. EnhancementsGeneratorWorker always passes
+max_workers=1, so the real GUI path is several jobs at one worker, not one job.
+These tests patch ThreadPoolExecutor to prove no pool is built, and check the
+inline paths still run every job and write their output.
 """
 from __future__ import annotations
 
@@ -49,6 +50,12 @@ def forge_layout(tmp_path):
     return base_ini, forge_dir
 
 
+def _assert_no_pool(pool_cls):
+    # Not assert_not_called(): its failure message repeats every call's arguments,
+    # and main()'s ctx holds the whole parsed base.ini (about 20 MB of output).
+    assert pool_cls.call_count == 0
+
+
 class TestSingleJobSkipsThreadPool:
     def test_single_category_never_constructs_a_pool(self, gen_module, forge_layout):
         base_ini, forge_dir = forge_layout
@@ -59,7 +66,7 @@ class TestSingleJobSkipsThreadPool:
                 categories={"medical_consumables"},
                 max_workers=6,
             )
-        pool_cls.assert_not_called()
+        _assert_no_pool(pool_cls)
 
     def test_single_category_still_writes_correct_output(self, gen_module, forge_layout):
         base_ini, forge_dir = forge_layout
@@ -78,21 +85,22 @@ class TestSingleJobSkipsThreadPool:
     ):
         """#389 follow-up (Osiris review on #395): the real GUI path always
         calls main(..., max_workers=1) via EnhancementsGeneratorWorker
-        (src/gui/workers.py), regardless of how many categories are
-        selected. Checking len(jobs) == 1 alone missed this -- a normal
-        multi-category run still built ThreadPoolExecutor(max_workers=1),
-        the exact crash shape, just with more than one job queued onto it.
+        (src/gui/workers.py), however many categories are selected, so a
+        multi-category run must not build ThreadPoolExecutor(max_workers=1)
+        either.
 
         categories={"medical_consumables", "ship_descs"} gives two gen_jobs
         (medical_consumables, ships) and two lookup_jobs (controller, armor,
-        both populated by the ship_descs branch). _run_gen_ships is stubbed
-        so this doesn't need real ship XML data; controller/armor lookups
-        run for real against the empty fixture tree, which they already
-        tolerate (see build_controller_lookup/build_armor_lookup's own
-        missing-dir guards).
+        both populated by the ship_descs branch). The ships generator and the
+        two lookup builders are stubbed with empty results, so this needs no
+        real ship XML and can see that each one ran.
         """
         base_ini, forge_dir = forge_layout
-        with patch.object(gen_module, "_run_gen_ships", return_value={}), \
+        with patch.object(gen_module, "_run_gen_ships", return_value={}) as ships, \
+             patch.object(gen_module, "build_controller_lookup",
+                          return_value={}) as controller, \
+             patch.object(gen_module, "build_armor_lookup",
+                          return_value={}) as armor, \
              patch.object(gen_module, "ThreadPoolExecutor") as pool_cls:
             gen_module.main(
                 base_ini_path=base_ini,
@@ -100,4 +108,32 @@ class TestSingleJobSkipsThreadPool:
                 categories={"medical_consumables", "ship_descs"},
                 max_workers=1,
             )
-        pool_cls.assert_not_called()
+        _assert_no_pool(pool_cls)
+        # The inline paths still ran every lookup and generator and wrote their output.
+        controller.assert_called_once()
+        armor.assert_called_once()
+        ships.assert_called_once()
+        out_path = base_ini.parent / "medical_consumables_enhancements.ini"
+        assert out_path.read_text(encoding="utf-8").strip() != ""
+
+    def test_one_lookup_with_several_workers_never_constructs_a_pool(
+        self, gen_module, forge_layout
+    ):
+        """The other half of min(max_workers, len(jobs)) == 1 at the lookup
+        pool: one job, several workers. commodity_crafting needs only the
+        scitem lookup, and its generator is stubbed, so this needs no XML."""
+        base_ini, forge_dir = forge_layout
+        with patch.object(gen_module, "build_scitem_lookups",
+                          return_value=({}, {}, {}, {})) as scitem, \
+             patch.object(gen_module, "_run_gen_commodity_journal",
+                          return_value=({}, {})) as commodity, \
+             patch.object(gen_module, "ThreadPoolExecutor") as pool_cls:
+            gen_module.main(
+                base_ini_path=base_ini,
+                forge_dir=forge_dir,
+                categories={"commodity_crafting"},
+                max_workers=6,
+            )
+        _assert_no_pool(pool_cls)
+        scitem.assert_called_once()
+        commodity.assert_called_once()

@@ -1,18 +1,18 @@
 """Tests for _drop_none_entries (#389): a fresh entries list must never carry
-a stray ``None`` past the point it's first received.
-
-Filtering only where a crash was actually observed (update_category_combo's
-``e.category`` read) wasn't enough -- ``_restore_pending_user_edits`` reads
-``e.key`` on every entry earlier in the same reload path and would crash
-there first whenever the snapshot is non-empty, and the table model reads
-entries straight from ``self.entries`` afterward regardless. The fix filters
-once, at the source, so every downstream consumer sees a clean list.
+a stray ``None`` past the point it's first received, and the loader's
+per-entry sort keys must not be left misaligned when one is dropped.
 """
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
-from src.gui.main_window import _drop_none_entries
+from src.gui import main_window
+from src.gui.main_window import MainWindow, _drop_none_entries
+from src.gui.string_table_model import StringTableModel, _group_sort_key
+from src.models.string_model import StringEntry
+from src.utils.settings import AppSettings
 
 pytestmark = pytest.mark.unit
 
@@ -51,3 +51,55 @@ class TestDropNoneEntries:
             _drop_none_entries([_FakeEntry("a"), None])
         assert len(caplog.records) == 1
         assert "#389" in caplog.records[0].message
+
+
+def _entry(key):
+    return StringEntry(key=key, source_file="global", category="Misc",
+                       original_value=key, custom_value="", status="Unmodified")
+
+
+def _window(model):
+    """A stand-in for MainWindow carrying just what _on_loading_finished touches."""
+    win = MagicMock()
+    win._loading_progress = None
+    win._loader_worker = None
+    win._snapshot_pending_user_edits.return_value = {}
+    win._restore_pending_user_edits.return_value = 0
+    win._check_enhancements_after_loading = False
+    win._initial_load_done = True
+    win._model = model
+    return win
+
+
+class TestLoadingFinishedSortKeys:
+    """FileLoaderWorker builds one sort key per entry before the slot runs, so
+    dropping an entry would leave every later key one slot off."""
+
+    KEYS = ("item_NameCharlie", "item_NameAlpha", "item_DescCharlie",
+            "item_NameBravo", "item_DescAlpha", "item_DescBravo")
+
+    @pytest.fixture(autouse=True)
+    def _isolate(self, monkeypatch):
+        monkeypatch.setattr(
+            AppSettings, "get_favorite_prefix", staticmethod(lambda: "*"))
+        monkeypatch.setattr(main_window, "QTimer", MagicMock())
+
+    def test_keys_reach_the_model_untouched_when_nothing_was_dropped(self):
+        entries = [_entry(k) for k in self.KEYS]
+        sort_keys = [_group_sort_key(k) for k in self.KEYS]
+        model = MagicMock()
+
+        MainWindow._on_loading_finished(_window(model), entries, {}, sort_keys)
+
+        assert model.set_data_source.call_args.kwargs["sort_keys"] is sort_keys
+
+    def test_keys_stay_aligned_with_entries_after_a_drop(self):
+        entries = [_entry(k) for k in self.KEYS]
+        sort_keys = [_group_sort_key(k) for k in self.KEYS]
+        entries[1] = None
+        model = StringTableModel()
+
+        MainWindow._on_loading_finished(_window(model), entries, {}, sort_keys)
+
+        assert len(model._entries) == len(self.KEYS) - 1
+        assert model._sort_keys == [_group_sort_key(e.key) for e in model._entries]

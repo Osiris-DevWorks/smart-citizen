@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from collections import Counter
 from pathlib import Path
 from typing import Optional
 
@@ -58,6 +57,8 @@ from src.models.string_model import (
     CATEGORY_MISSIONS, StringEntry, is_favoritable_ship,
 )
 from src.parser.ini_parser import load_source_files, load_sources_from_settings, parse_ini_file
+# Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
+from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
 from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
@@ -169,58 +170,16 @@ def _user_cfg_language_matches(selected_language: str, actual_g_language: str | 
     return (actual_g_language or "").lower() == (expected or "").lower()
 
 
-def _count_enhancement_categories(
-    sources_dict: dict, enhancements_key_categories: dict | None = None,
-) -> Counter:
-    """Category breakdown of the enhancement source that's about to be
-    applied, for apply_to_game()'s success-dialog summary (#399).
-
-    Counts sources_dict["enhancements"]'s own keys -- deliberately NOT
-    self.entries, which can be stale relative to a just-completed
-    generation. Simple mode's one-button flow calls apply_to_game() before
-    the reload that refreshes self.entries with newly-generated content
-    (that reload runs after, to update the hidden Advanced view), so on a
-    profile that skipped the startup "Generate Enhancements?" prompt and
-    generated for the first time via Simple mode's own click, self.entries
-    was still whatever loaded before generation ran -- typically nothing
-    tagged "enhancements" yet, so the old self.entries-based count reported
-    0 even though the game file itself was written correctly (apply_to_
-    game's own merge is always fresh). sources_dict["enhancements"]
-    reflects exactly what was just merged, including any "Include
-    discovered items" strip already applied to it in place earlier in
-    apply_to_game.
-
-    Each key's category prefers enhancements_key_categories (the same map
-    load_sources_from_settings() builds for the main table's own category
-    column, keyed off each generator's real output category rather than
-    the key's prefix) before falling back to StringEntry.extract_category.
-    The two are not equivalent (#399 review): every medical-consumable key
-    is item_Desccrlf_consumable_*, which extract_category's prefix rules
-    land in "Gear" since it recognizes no ship-component code there, while
-    enhancements_key_categories correctly has it as "Medical Consumables"
-    from the generator that actually produced it. A caller with no map
-    (or one missing a given key) still gets the prefix-based fallback.
-    """
-    categories = enhancements_key_categories or {}
-    return Counter(
-        categories.get(key) or StringEntry.extract_category(key)
-        for key in sources_dict.get(AppSettings.SOURCE_ENHANCEMENTS, {})
-    )
-
-
 def _drop_none_entries(entries: list) -> list:
-    """Strip stray ``None`` items out of a freshly loaded/merged entries list.
+    """Strip stray ``None`` items out of a freshly loaded entries list (#389).
 
-    Filtering only where a crash was actually observed (``update_category_
-    combo``'s ``e.category`` read, #389) isn't enough -- ``_restore_pending_
-    user_edits`` reads ``e.key`` on every entry earlier in the same reload
-    path and would crash there first whenever the snapshot is non-empty, and
-    the table model reads entries straight from ``self.entries`` afterward
-    regardless. A ``None`` has to be removed at the source, once, so every
-    downstream consumer sees a clean list. #389's own reported crash was a
-    native heap-corruption fault (0xC0000374); this can't undo memory
-    corruption, only stop it from also taking down the UI thread with an
-    AttributeError once the (already corrupted) entries reach Python code.
+    Runs once where entries are first received, so every consumer
+    (``_restore_pending_user_edits``, ``update_category_combo``, the table
+    model) sees a clean list. It can't undo the native heap corruption behind
+    #389, only stop a corrupted list from also crashing the UI thread.
+
+    Anything index-aligned with *entries* (the loader's ``sort_keys``) goes
+    stale when this drops an item, so a caller holding one must rebuild it.
     """
     clean = [e for e in entries if e is not None]
     dropped = len(entries) - len(clean)
@@ -1626,10 +1585,13 @@ class MainWindow(QMainWindow):
         in which case the app keeps running and startup proceeds normally.
 
         Installer switches: /SILENT /NORESTART run the upgrade with just a
-        progress bar; /SUPPRESSMSGBOXES auto-answers the "previous version
-        found" box with its default (Yes = upgrade in place); /AUTOUPDATE=1
-        tells installer.iss to relaunch Smart Citizen when the install
-        finishes (the normal postinstall Run entry is skipifsilent).
+        progress bar. /SUPPRESSMSGBOXES makes installer.iss take the default
+        answer of each SuppressibleMsgBox, e.g. Yes (upgrade in place) for
+        the "previous version found" box. It has no effect on a plain
+        MsgBox, so installer.iss keeps those off the silent path; the
+        missing-uninstaller error is the one it shows on purpose.
+        /AUTOUPDATE=1 tells installer.iss to relaunch Smart Citizen when the
+        install finishes (the normal postinstall Run entry is skipifsilent).
         """
         import ctypes
 
@@ -5546,7 +5508,11 @@ class MainWindow(QMainWindow):
             self._loader_worker.wait()
             self._loader_worker = None
 
-        entries = _drop_none_entries(entries)
+        clean_entries = _drop_none_entries(entries)
+        # The worker built sort_keys with one key per original entry. If any
+        # entry was dropped it no longer lines up, so let the model recompute it.
+        model_sort_keys = sort_keys if len(clean_entries) == len(entries) else None
+        entries = clean_entries
 
         # Preserve in-memory edits the user hasn't Applied yet — Generate
         # Enhancements (and other reload paths) hit this slot with freshly
@@ -5573,7 +5539,7 @@ class MainWindow(QMainWindow):
             self.entries,
             self.default_values,
             AppSettings.get_favorite_prefix(),
-            sort_keys=sort_keys,
+            sort_keys=model_sort_keys,
         )
         self.apply_filters()
         self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
