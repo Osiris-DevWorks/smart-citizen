@@ -89,21 +89,32 @@ class _ScanStub:
         MainWindow._maybe_auto_scan_blueprints(self)
 
 
+def _install_root(tmp_path, *channels):
+    """A fake Star Citizen install root holding one folder per named channel."""
+    for channel in channels:
+        (tmp_path / channel).mkdir()
+    return str(tmp_path)
+
+
+def _use_root(monkeypatch, root):
+    monkeypatch.setattr(AppSettings, "get_sc_install_root", staticmethod(lambda: root))
+
+
 class TestMaybeAutoScanGating:
     def test_does_nothing_when_setting_is_off(self, json_backend, monkeypatch, tmp_path):
-        # A valid install path is deliberately supplied here -- if the
-        # setting-off check were missing or broken, the scan would still
-        # start on the strength of the path alone, so this isolates the
-        # setting itself as what gates the call (not just "no path set").
+        # A real install with a LIVE folder is deliberately supplied here -- if
+        # the setting-off check were missing or broken, the scan would still
+        # start on the strength of the install alone, so this isolates the
+        # setting itself as what gates the call (not just "nothing to scan").
         AppSettings.set_auto_scan_blueprints_enabled(False)
-        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: str(tmp_path)))
+        _use_root(monkeypatch, _install_root(tmp_path, "LIVE"))
         stub = _ScanStub()
         stub.maybe_auto_scan()
         assert stub.scan_started is False
 
     def test_does_nothing_with_no_install_path(self, json_backend, monkeypatch):
         AppSettings.set_auto_scan_blueprints_enabled(True)
-        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: ""))
+        _use_root(monkeypatch, "")
         stub = _ScanStub()
         stub.maybe_auto_scan()
         assert stub.scan_started is False
@@ -111,26 +122,54 @@ class TestMaybeAutoScanGating:
 
     def test_does_nothing_with_a_nonexistent_install_path(self, json_backend, monkeypatch, tmp_path):
         AppSettings.set_auto_scan_blueprints_enabled(True)
-        missing = str(tmp_path / "does-not-exist")
-        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: missing))
+        _use_root(monkeypatch, str(tmp_path / "does-not-exist"))
         stub = _ScanStub()
         stub.maybe_auto_scan()
         assert stub.scan_started is False
 
+    def test_does_nothing_when_the_install_has_no_live_or_hotfix_folder(self, json_backend, monkeypatch, tmp_path):
+        """#446: only test servers installed means nothing is scanned, and
+        nothing pops up either."""
+        AppSettings.set_auto_scan_blueprints_enabled(True)
+        _use_root(monkeypatch, _install_root(tmp_path, "PTU", "EPTU", "TECH-PREVIEW"))
+        stub = _ScanStub()
+        stub.maybe_auto_scan()
+        assert stub.scan_started is False
+        assert stub._bp_scan_silent is False
+        assert stub.blueprint_tracker_tab.scan_logs_enabled_calls == []
+
     def test_skips_when_a_scan_is_already_running(self, json_backend, monkeypatch, tmp_path):
         AppSettings.set_auto_scan_blueprints_enabled(True)
-        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: str(tmp_path)))
+        _use_root(monkeypatch, _install_root(tmp_path, "LIVE"))
         stub = _ScanStub(worker=object())
         stub.maybe_auto_scan()
         assert stub.scan_started is False
 
+    def test_scans_live_and_hotfix_whatever_channel_config_has_selected(self, json_backend, monkeypatch, tmp_path):
+        """#446: the startup scan covers the same channels as the button and
+        ignores the Config channel. A test channel selected there, with every
+        channel installed, still queues only LIVE and HOTFIX."""
+        AppSettings.set_auto_scan_blueprints_enabled(True)
+        _use_root(monkeypatch, _install_root(tmp_path, "LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"))
+        monkeypatch.setattr(AppSettings, "get_active_channel", staticmethod(lambda: "PTU"))
+
+        def config_channel_must_not_matter(*args, **kwargs):
+            raise AssertionError("the scan must not depend on the channel selected in Config")
+
+        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(config_channel_must_not_matter))
+        stub = _ScanStub()
+        stub.maybe_auto_scan()
+        assert stub.scan_started is True
+        assert stub._bp_scan_queue == ["LIVE", "HOTFIX"]
+
     def test_starts_a_silent_scan_when_enabled_with_a_valid_path(self, json_backend, monkeypatch, tmp_path):
         AppSettings.set_auto_scan_blueprints_enabled(True)
-        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: str(tmp_path)))
+        _use_root(monkeypatch, _install_root(tmp_path, "LIVE"))
         stub = _ScanStub()
         stub.maybe_auto_scan()
         assert stub.scan_started is True
         assert stub._bp_scan_silent is True
+        assert stub._bp_scan_queue == ["LIVE"]
         # Never a forced full rescan -- that's a deliberate one-shot the
         # user ticks before a manual click, not something startup should do.
         assert stub._bp_scan_force_rescan is False

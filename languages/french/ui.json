@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Déjà appliqué : rien n'a changé depuis la dernière application."
+      "at": "Déjà appliqué : le jeu correspond à vos réglages actuels. Cliquez pour régénérer et réappliquer quand même, par exemple après un patch du jeu."
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Déjà appliqué — rien n'a changé depuis la dernière application au jeu."
+      "at": "Déjà appliqué : le jeu correspond à vos réglages actuels."
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "Aucun chemin d'installation de Star Citizen n'est configuré, il n'y a donc aucun journal à analyser. Définissez d'abord le dossier du jeu dans l'onglet Config."
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "Aucun dossier LIVE ou HOTFIX n'a été trouvé dans votre installation de Star Citizen, il n'y a donc aucun journal à analyser. Les serveurs de test (PTU, EPTU, TECH-PREVIEW) ne sont jamais analysés."
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "Aucun nouveau plan trouvé depuis la dernière analyse."
@@ -1548,19 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Analyse les fichiers journaux de Star Citizen (Game.log et logbackups) à la recherche des notifications de récompense « Received Blueprint » et marque automatiquement ces plans comme possédés."
+      "at": "Analyse les fichiers journaux de Star Citizen (Game.log et logbackups) à la recherche des notifications de récompense « Received Blueprint » et marque automatiquement ces plans comme possédés.\nAnalyse toujours LIVE, et aussi HOTFIX s'il est installé, car les deux tournent sur le même serveur et partagent une seule progression de compte."
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
       "at": "Une analyse est déjà en cours (il peut s'agir de l'analyse automatique au démarrage)."
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "Analyser aussi LIVE/HOTFIX (celui qui n'est pas actif)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE et HOTFIX partagent la même progression de compte, donc un plan gagné sur l'un apparaît aussi dans les journaux de l'autre. Analyse aussi celui des deux qui n'est pas votre canal actif, s'il est installé. PTU, EPTU et TECH-PREVIEW sont des versions de test séparées avec leur propre progression et ne sont jamais analysées."
     },
     "force_rescan_checkbox": {
       "ht": "",

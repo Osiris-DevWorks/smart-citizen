@@ -33,7 +33,7 @@
       "at": ""
     },
     "generate_apply_tip_disabled": {
-      "ht": "Already applied: nothing has changed since the last time you applied.",
+      "ht": "Already applied: the game matches your current settings. Click to regenerate and re-apply anyway, for example after a game patch.",
       "at": ""
     },
     "defaults_hint": {
@@ -213,7 +213,7 @@
       "at": ""
     },
     "apply_disabled_tooltip": {
-      "ht": "Already applied: nothing has changed since the last Apply to Game.",
+      "ht": "Already applied: the game matches your current settings.",
       "at": ""
     },
     "feedback_fallback_text": {
@@ -1208,6 +1208,10 @@
       "ht": "No Star Citizen install path is configured, so there are no logs to scan. Set your game folder on the Config tab first.",
       "at": ""
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "No LIVE or HOTFIX folder was found in your Star Citizen install, so there are no logs to scan. The test servers (PTU, EPTU, TECH-PREVIEW) are never scanned.",
+      "at": ""
+    },
     "bp_scan_none": {
       "ht": "No new blueprints found since the last scan.",
       "at": ""
@@ -1547,19 +1551,11 @@
       "at": ""
     },
     "scan_logs_tooltip": {
-      "ht": "Scan your Star Citizen log files (Game.log and logbackups) for \"Received Blueprint\" reward notifications and automatically mark them as owned.",
+      "ht": "Scan your Star Citizen log files (Game.log and logbackups) for \"Received Blueprint\" reward notifications and automatically mark them as owned.\nAlways scans LIVE, and HOTFIX when it is installed, because the two run on the same server and share account progression.",
       "at": ""
     },
     "scan_logs_already_running_tooltip": {
       "ht": "A scan is already running (this may be the automatic startup scan).",
-      "at": ""
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "Also scan LIVE/HOTFIX (whichever isn't active)",
-      "at": ""
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "LIVE and HOTFIX share the same account progression, so a blueprint earned on one shows up in the other's logs too. Also scans whichever of the two isn't your active channel, if it's installed. PTU, EPTU, and TECH-PREVIEW are separate test builds with their own progression and are never scanned.",
       "at": ""
     },
     "force_rescan_checkbox": {

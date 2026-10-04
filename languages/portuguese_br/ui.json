@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Já aplicado — nada mudou desde a última aplicação."
+      "at": "Já aplicado: o jogo corresponde às suas configurações atuais. Clique para gerar e aplicar novamente mesmo assim, por exemplo após um patch do jogo."
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Já aplicado — nada mudou desde a última aplicação ao jogo."
+      "at": "Já aplicado: o jogo corresponde às suas configurações atuais."
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "Nenhum caminho de instalação do Star Citizen está configurado, então não há logs para escanear. Defina a pasta do jogo na aba Config primeiro."
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "Nenhuma pasta LIVE ou HOTFIX foi encontrada na sua instalação do Star Citizen, então não há logs para escanear. Os servidores de teste (PTU, EPTU, TECH-PREVIEW) nunca são escaneados."
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "Nenhum blueprint novo encontrado desde o último escaneamento."
@@ -1548,19 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Escaneia os arquivos de log do Star Citizen (Game.log e logbackups) em busca de notificações de recompensa \"Received Blueprint\" e marca esses blueprints automaticamente como adquiridos."
+      "at": "Escaneia os arquivos de log do Star Citizen (Game.log e logbackups) em busca de notificações de recompensa \"Received Blueprint\" e marca esses blueprints automaticamente como adquiridos.\nSempre escaneia o LIVE, e também o HOTFIX quando ele está instalado, porque os dois rodam no mesmo servidor e compartilham uma única progressão de conta."
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
       "at": "Já há uma varredura em andamento (pode ser a varredura automática de inicialização)."
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "Também escanear LIVE/HOTFIX (o que não estiver ativo)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE e HOTFIX compartilham o mesmo progresso de conta, então uma planta obtida em um aparece também nos registros do outro. Também escaneia o que não for seu canal ativo entre os dois, se estiver instalado. PTU, EPTU e TECH-PREVIEW são builds de teste separadas com progresso próprio e nunca são escaneadas."
     },
     "force_rescan_checkbox": {
       "ht": "",

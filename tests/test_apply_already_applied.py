@@ -23,7 +23,7 @@ launch even immediately after a genuine apply.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -100,7 +100,7 @@ class TestMatchesAppliedOutput:
 
 
 class TestUserCfgLanguageMatches:
-    """#398 review: _entries_already_applied's file-content comparison alone
+    """#398 review: _compute_already_applied's file-content comparison alone
     missed a real bug. Switching the language selector in Smart Citizen's
     UI never touches user.cfg by itself (only window init and apply-to-game
     time do) -- so switching back to a language that was fully applied in
@@ -131,7 +131,7 @@ class TestUserCfgLanguageMatches:
 
     def test_unmapped_language_falls_back_to_itself(self):
         """A selected_language not in SC_LANGUAGE_IDS (shouldn't happen in
-        practice, but _entries_already_applied must not crash on it) falls
+        practice, but _compute_already_applied must not crash on it) falls
         back to comparing the raw value, same as SC_LANGUAGE_IDS.get's own
         default-to-key behavior everywhere else it's used."""
         assert _user_cfg_language_matches("klingon", "klingon") is True
@@ -395,6 +395,34 @@ class TestComputeAlreadyApplied:
         self._write_applied(env, self.STOCK)
         assert _compute_already_applied(self._snapshot(env, overrides={"a": "mine"})) is False
 
+    def test_an_override_cleared_in_memory_is_not_read_back_from_user_ini(self, env, monkeypatch):
+        """user.ini on disk still holds an override the user has since cleared
+        (Apply hasn't saved yet). Apply rewrites user.ini from the loaded
+        entries first, so it would write stock "a"; the check must not read the
+        stale override back and call the old applied file current."""
+        self._write_applied(env, {"a": "mine", "b": "stock b"})
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: (
+            {"global": dict(self.STOCK), "user": {"a": "mine"}}, ["global", "user"], {},
+        ))
+        assert _compute_already_applied(self._snapshot(env, overrides={})) is False
+        # ...while an override still in memory is expected, as before.
+        assert _compute_already_applied(self._snapshot(env, overrides={"a": "mine"})) is True
+
+    def test_an_override_with_whitespace_reads_as_applied_after_a_real_apply(self, env, tmp_path):
+        """A space favourite prefix (#100) is written verbatim, so the applied
+        file holds it and the check must read it back verbatim too. Stripping
+        the applied values made such an override compare unequal after every
+        real apply, and the button stayed red."""
+        from src.merger.ini_merger import merge_ini_files
+
+        base = tmp_path / "base.ini"
+        base.write_text("a=stock a\nb=stock b\n", encoding="utf-8")
+        merge_ini_files(str(base), {"a": " *mine ", "b": "stock b"}, str(env.applied))
+
+        assert _compute_already_applied(self._snapshot(env, overrides={"a": " *mine "})) is True
+        # A different amount of whitespace is a real difference, not a match.
+        assert _compute_already_applied(self._snapshot(env, overrides={"a": "*mine"})) is False
+
     def test_false_when_user_cfg_points_at_another_language(self, env):
         """Content matches, but switching language in the UI never touches
         user.cfg, so the game would still load the other language."""
@@ -428,11 +456,6 @@ class _FakeSignal:
     def connect(self, callback):
         self.callbacks.append(callback)
 
-    def disconnect(self):
-        if not self.callbacks:
-            raise TypeError("nothing connected")
-        self.callbacks.clear()
-
     def emit(self, value):
         for callback in list(self.callbacks):
             callback(value)
@@ -450,6 +473,9 @@ class _FakeWorker:
         self.token = token
         self.result = False
         self.started = False
+        self.quit_called = False
+        self.delete_later_called = False
+        self.wait_called = False
         self.interrupted = False
         self.waits_to_finish = True
         self.finished = _FakeSignal()
@@ -458,11 +484,18 @@ class _FakeWorker:
     def start(self):
         self.started = True
 
+    def quit(self):
+        self.quit_called = True
+
+    def deleteLater(self):
+        self.delete_later_called = True
+
     def requestInterruption(self):
         self.interrupted = True
 
     def wait(self, timeout=None):
         # Once interrupted, a stuck worker finishes too unless a test says otherwise.
+        self.wait_called = True
         return self.waits_to_finish
 
     def finish(self, result):
@@ -483,6 +516,7 @@ class _Window:
     _settle_applied_state_check = MainWindow._settle_applied_state_check
     _mark_apply_dirty = MainWindow._mark_apply_dirty
     _mark_applied = MainWindow._mark_applied
+    _mark_game_file_changed = MainWindow._mark_game_file_changed
 
     def __init__(self):
         self._applied_state_worker = None
@@ -538,6 +572,14 @@ class TestAppliedStateLifecycle:
         assert window.dirty_calls == [False]
         assert window._session_has_unapplied_edit is False
         assert window._applied_state_worker is None
+
+    def test_a_finished_worker_gets_the_standard_cleanup(self, window):
+        """quit() + wait(), as the root CLAUDE.md threading model asks, then
+        deleteLater() so the finished thread object is freed."""
+        window._refresh_apply_dirty_after_reload()
+        worker = _FakeWorker.instances[0]
+        worker.finish(True)
+        assert worker.quit_called and worker.wait_called and worker.delete_later_called
 
     def test_not_applied_stays_red_and_leaves_the_session_flag_alone(self, window):
         """A genuinely dirty reload (e.g. just regenerated enhancements, not
@@ -606,6 +648,7 @@ class TestSettleOnClose:
         worker = _FakeWorker.instances[0]
         worker.result = True
         window._settle_applied_state_check()
+        assert worker.quit_called and worker.wait_called  # the threading model's cleanup
         assert window.dirty_calls == [False]
         assert window._session_has_unapplied_edit is False
         assert window._applied_state_worker is None
@@ -620,8 +663,8 @@ class TestSettleOnClose:
         assert window._applied_state_worker is None
 
     def test_a_late_signal_after_settling_cannot_start_another_run(self, window):
-        """Qt can still deliver a result that was already queued when the
-        signal got disconnected. It must not start a new thread mid-shutdown."""
+        """Qt can still deliver a result that was already queued when closing
+        settled the check. It must not start a new thread mid-shutdown."""
         window._refresh_apply_dirty_after_reload()
         window._refresh_apply_dirty_after_reload()  # rerun now pending
         worker = _FakeWorker.instances[0]
@@ -687,6 +730,26 @@ class TestEntryPointsKeepTheCheckHonest:
         assert window.dirty_calls == [True]
         assert window._session_has_unapplied_edit is False
 
+    def test_a_game_file_change_marks_red_and_clears_the_close_reminder(self, window):
+        """Clear Localization and Restore Backup change the game file, not what
+        Apply would write. The button goes red and any verdict about the old
+        file is dropped, and closing must not then offer (as its default
+        button) to re-apply over a deliberate revert."""
+        window._mark_game_file_changed()
+        assert window.dirty_calls == [True]
+        assert window._session_has_unapplied_edit is False
+
+    def test_a_revert_during_a_check_does_not_strand_a_provisional_reminder(self, window):
+        """A reload sets the reminder only until its check answers. A revert
+        that lands mid-check drops that answer, so the reminder it left behind
+        would never be cleared, and closing would offer Apply Now over the
+        revert."""
+        window._refresh_apply_dirty_after_reload()  # flag still provisionally True
+        window._mark_game_file_changed()
+        _FakeWorker.instances[0].finish(True)  # the dropped "already applied" answer
+        assert window.dirty_calls == [True]  # red, not the stale green
+        assert window._session_has_unapplied_edit is False
+
 
 def _loading_self(clean_reload: bool):
     """A MagicMock standing in for MainWindow, so the real
@@ -740,16 +803,17 @@ class TestReloadAfterACleanApply:
             me._refresh_apply_dirty_after_reload.assert_called_once_with()
 
 
-def _generation_self(simple: bool, apply_cleans: bool):
+def _generation_self(simple: bool, apply_cleans: bool, starts_dirty: bool = True):
     me = MagicMock()
     me._enhancements_progress_dialog = None
     me._simple_run_active = simple
-    me._apply_dirty = True
+    me._apply_dirty = starts_dirty
     me._reload_follows_clean_apply = False
 
     def fake_apply():
         if apply_cleans:
             me._apply_dirty = False
+        return apply_cleans  # apply_to_game reports whether it really applied
 
     me.apply_to_game.side_effect = fake_apply
     return me
@@ -768,6 +832,22 @@ class TestSimpleFlowFlagsTheCleanReload:
     def test_a_failed_or_cancelled_apply_does_not(self):
         me = _generation_self(simple=True, apply_cleans=False)
         MainWindow._on_enhancements_generation_finished(me, True)
+        assert me._reload_follows_clean_apply is False
+
+    def test_a_failed_apply_does_not_flag_even_when_the_button_was_already_green(self):
+        """Simple mode keeps its button clickable on green (to re-apply after a
+        game patch). A run that starts green and then fails to apply must not
+        dress the reload up as a refresh of applied state."""
+        me = _generation_self(simple=True, apply_cleans=False, starts_dirty=False)
+        MainWindow._on_enhancements_generation_finished(me, True)
+        assert me._reload_follows_clean_apply is False
+
+    def test_a_failed_reload_clears_the_one_shot(self):
+        me = MagicMock()
+        me._reload_follows_clean_apply = True
+        me._loader_worker = None
+        with patch.object(main_window, "QMessageBox"):
+            MainWindow._on_loading_error(me, "boom")
         assert me._reload_follows_clean_apply is False
 
     def test_a_manual_generate_does_not_apply_or_flag(self):
@@ -820,3 +900,353 @@ class TestCloseEventSettlesTheCheck:
         MainWindow.closeEvent(self._closing_self(order, unapplied=False), MagicMock())
 
         assert order == ["settle"]
+
+    def test_cancelling_the_close_re_checks_the_button(self, monkeypatch):
+        """Settling may drop a verdict or a queued rerun so the window can close
+        quickly. When the user cancels instead, the window stays, so the button
+        gets a fresh check rather than keeping a provisional red."""
+        order = []
+        buttons = [MagicMock(name="apply"), MagicMock(name="exit"), MagicMock(name="cancel")]
+        box = MagicMock()
+        box.addButton.side_effect = list(buttons)
+        box.clickedButton.return_value = buttons[2]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        me = self._closing_self(order, unapplied=True)
+        event = MagicMock()
+
+        MainWindow.closeEvent(me, event)
+
+        event.ignore.assert_called_once_with()
+        me._refresh_apply_dirty_after_reload.assert_called_once_with()
+
+    def test_exiting_without_applying_starts_no_check(self, monkeypatch):
+        """The window is closing, and a check thread started now would have to
+        be gone before the process exits."""
+        buttons = [MagicMock(name="apply"), MagicMock(name="exit"), MagicMock(name="cancel")]
+        box = MagicMock()
+        box.addButton.side_effect = list(buttons)
+        box.clickedButton.return_value = buttons[1]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        for setter in ("set_window_state", "set_window_geometry", "set_string_column_widths"):
+            monkeypatch.setattr(AppSettings, setter, staticmethod(lambda *a, **k: None))
+        me = self._closing_self([], unapplied=True)
+        event = MagicMock()
+
+        MainWindow.closeEvent(me, event)
+
+        event.accept.assert_called_once_with()
+        me.apply_to_game.assert_not_called()
+        me._refresh_apply_dirty_after_reload.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "applied, touched_button, rechecks",
+        [
+            (True, True, False),    # a real apply set the button green itself
+            (False, True, False),   # a failed write or validation marked it red itself
+            (False, False, True),   # a declined prompt or failed save left it alone
+        ],
+    )
+    def test_apply_now_re_checks_only_when_the_apply_left_the_button_alone(
+        self, monkeypatch, applied, touched_button, rechecks
+    ):
+        """Apply Now keeps the window open too. An apply that stopped before
+        it touched the button leaves it where settling left it, so it needs the
+        same fresh check as Cancel. One that set the button itself (green on
+        success, red on a failed write or validation) must keep that state,
+        or a re-check could paint green over an apply the user just saw fail."""
+        order = []
+        buttons = [MagicMock(name="apply"), MagicMock(name="exit"), MagicMock(name="cancel")]
+        box = MagicMock()
+        box.addButton.side_effect = list(buttons)
+        box.clickedButton.return_value = buttons[0]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        me = self._closing_self(order, unapplied=True)
+        me._applied_check_token = 0
+
+        def fake_apply():
+            if touched_button:  # every mark goes through _invalidate_applied_check
+                me._applied_check_token += 1
+            return applied
+
+        me.apply_to_game.side_effect = fake_apply
+        event = MagicMock()
+
+        MainWindow.closeEvent(me, event)
+
+        me.apply_to_game.assert_called_once_with()
+        event.ignore.assert_called_once_with()
+        assert me._refresh_apply_dirty_after_reload.called is rechecks
+
+
+class _RecordingMessageBox:
+    """Stands in for QMessageBox: records each dialog into a shared call list
+    and answers No to any question."""
+
+    calls: list = []
+
+    class StandardButton:
+        Yes = 1
+        No = 2
+
+    @classmethod
+    def _record(cls, kind):
+        cls.calls.append(f"dialog-{kind}")
+
+    @classmethod
+    def information(cls, *args, **kwargs):
+        cls._record("information")
+
+    @classmethod
+    def warning(cls, *args, **kwargs):
+        cls._record("warning")
+        return cls.StandardButton.No
+
+    @classmethod
+    def critical(cls, *args, **kwargs):
+        cls._record("critical")
+
+
+class TestApplyToGameKeepsTheCheckHonest:
+    """The real apply_to_game on a MagicMock self, with file I/O stubbed. A
+    verdict computed from the file Apply is replacing must not land later (a
+    dialog's event loop can deliver it), and a failed apply must not be left
+    looking clean. apply_to_game also reports whether it really applied."""
+
+    @pytest.fixture
+    def env(self, tmp_path, monkeypatch):
+        import src.merger.ini_merger as ini_merger
+        import src.utils.user_cfg as user_cfg
+        import src.utils.user_ini_manager as user_ini_manager
+
+        calls: list = []
+        _RecordingMessageBox.calls = calls
+        base = tmp_path / "base.ini"
+        base.write_text("a=stock a\n", encoding="utf-8")
+        state = type("State", (), {"merge_raises": False, "sources": None})
+
+        def fake_merge(base_file, merged, target):
+            calls.append("write")
+            if state.merge_raises:
+                raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(main_window, "QMessageBox", _RecordingMessageBox)
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: state.sources or (
+            {AppSettings.SOURCE_GLOBAL: {"a": "stock a"}}, [AppSettings.SOURCE_GLOBAL], {},
+        ))
+        monkeypatch.setattr(ini_merger, "merge_ini_files", fake_merge)
+        monkeypatch.setattr(user_ini_manager, "save_user_ini", lambda entries, path: 0)
+        monkeypatch.setattr(user_cfg, "ensure_user_cfg_language", lambda: None)
+        for name, value in (
+            ("get_game_install_path", lambda: str(tmp_path)),
+            ("get_user_ini_path", lambda: tmp_path / "user.ini"),
+            ("get_global_ini_path", lambda: tmp_path / "game" / "global.ini"),
+            ("get_source_path", lambda name: str(base)),
+            ("is_source_enabled", lambda name: True),
+            ("get_language_languages_ini_path", lambda: None),
+        ):
+            monkeypatch.setattr(AppSettings, name, staticmethod(value))
+
+        me = MagicMock()
+        me.entries = [object()]
+        me._build_apply_merged_dict.return_value = {"a": "mine"}
+        me._validate_applied_file.return_value = ""
+        me._invalidate_applied_check.side_effect = lambda: calls.append("invalidate")
+        me._mark_apply_dirty.side_effect = lambda: calls.append("dirty")
+        me._mark_applied.side_effect = lambda: calls.append("applied")
+        return type("Env", (), {"me": me, "calls": calls, "state": state})
+
+    def test_a_successful_apply_invalidates_before_writing_and_reports_true(self, env):
+        assert MainWindow.apply_to_game(env.me) is True
+        assert env.calls == ["invalidate", "write", "dialog-information", "applied"]
+
+    def test_a_failed_write_is_marked_dirty_before_its_error_dialog(self, env):
+        env.state.merge_raises = True
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["invalidate", "write", "dirty", "dialog-critical"]
+
+    def test_a_failed_validation_is_marked_dirty_before_its_error_dialog(self, env):
+        env.me._validate_applied_file.return_value = "missing keys"
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["invalidate", "write", "dirty", "dialog-critical"]
+
+    def test_declining_missing_sources_writes_nothing_and_reports_false(self, env):
+        env.state.sources = ({}, [AppSettings.SOURCE_GLOBAL], {})
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-warning"]
+
+    def test_no_loaded_entries_writes_nothing_and_reports_false(self, env):
+        env.me.entries = []
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-warning"]
+
+    def test_no_game_path_writes_nothing_and_reports_false(self, env, monkeypatch):
+        monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: ""))
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-warning"]
+
+    def test_a_failed_user_ini_save_writes_nothing_and_reports_false(self, env, monkeypatch):
+        """user.ini is saved first, so a failure there leaves the game file
+        alone and nothing was applied."""
+        import src.utils.user_ini_manager as user_ini_manager
+
+        def refuse(entries, path):
+            raise PermissionError(13, "Access is denied")
+
+        monkeypatch.setattr(user_ini_manager, "save_user_ini", refuse)
+        assert MainWindow.apply_to_game(env.me) is False
+        assert env.calls == ["dialog-critical"]
+
+
+class TestOtherEntryPointsMarkTheButton:
+    @pytest.fixture
+    def clear_env(self, tmp_path, monkeypatch):
+        game_ini = tmp_path / "global.ini"
+        game_ini.write_text("a=x\n", encoding="utf-8")
+        box = MagicMock()
+        box.StandardButton.Yes = "yes"
+        box.question.return_value = "yes"
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_global_ini_path", staticmethod(lambda: game_ini))
+        me = MagicMock()
+        return type("Env", (), {"me": me, "box": box, "game_ini": game_ini})
+
+    def test_clear_localization_marks_the_game_file_changed(self, clear_env):
+        """Red, but through the marker that is not an unapplied edit: a
+        deliberate revert must not make closing offer to re-apply over it."""
+        MainWindow.clear_localization(clear_env.me)
+
+        assert not clear_env.game_ini.exists()
+        clear_env.me._mark_game_file_changed.assert_called_once_with()
+        clear_env.me._mark_apply_dirty.assert_not_called()
+
+    def test_clear_localization_marks_only_after_the_file_is_gone(self, clear_env):
+        """The mark clears the close reminder, which is right for a revert that
+        happened and wrong for one that did not."""
+        seen = []
+        clear_env.me._mark_game_file_changed.side_effect = lambda: seen.append(
+            clear_env.game_ini.exists()
+        )
+        MainWindow.clear_localization(clear_env.me)
+        assert seen == [False]
+
+    def test_clear_localization_marks_before_its_success_dialog(self, clear_env):
+        """The dialog runs its own event loop, which can deliver a verdict about
+        the file that was just deleted. The mark drops that verdict, so it has
+        to come first."""
+        order = []
+        clear_env.me._mark_game_file_changed.side_effect = lambda: order.append("mark")
+        clear_env.box.information.side_effect = lambda *a, **k: order.append("dialog")
+
+        MainWindow.clear_localization(clear_env.me)
+
+        assert order == ["mark", "dialog"]
+
+    def test_a_clear_that_fails_to_delete_marks_nothing(self, clear_env, monkeypatch):
+        """Controlled Folder Access or a read-only global.ini: the game file is
+        unchanged, so a pending edit keeps its close reminder."""
+        def denied(self, missing_ok=False):
+            raise PermissionError(13, "Access is denied")
+
+        monkeypatch.setattr(Path, "unlink", denied)
+        MainWindow.clear_localization(clear_env.me)
+
+        clear_env.me._mark_game_file_changed.assert_not_called()
+        clear_env.box.critical.assert_called_once()
+
+    def test_a_file_already_gone_counts_as_cleared(self, clear_env):
+        """The file can be deleted outside the app while the confirmation is
+        open. It is as cleared as one we delete, so the button is marked and
+        the user is not told the clear failed."""
+        clear_env.box.question.side_effect = lambda *a, **k: (
+            clear_env.game_ini.unlink() or "yes"
+        )
+        MainWindow.clear_localization(clear_env.me)
+
+        clear_env.me._mark_game_file_changed.assert_called_once_with()
+        clear_env.box.critical.assert_not_called()
+
+    @pytest.fixture
+    def restore_env(self, tmp_path, monkeypatch):
+        backup = tmp_path / "global.ini.bak_1"
+        backup.write_text("a=old\n", encoding="utf-8")
+        target = tmp_path / "global.ini"
+        calls: list = []
+        dialog = MagicMock()
+        dialog.getOpenFileName.return_value = (str(backup), "")
+        box = MagicMock()
+        box.critical.side_effect = lambda *a, **k: calls.append("dialog-critical")
+        monkeypatch.setattr(main_window, "QFileDialog", dialog)
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        monkeypatch.setattr(AppSettings, "get_game_install_path", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_backups_dir", staticmethod(lambda: tmp_path))
+        monkeypatch.setattr(AppSettings, "get_global_ini_path", staticmethod(lambda: target))
+        me = MagicMock()
+        me._session_has_unapplied_edit = False
+        me._mark_game_file_changed.side_effect = lambda: calls.append(
+            "marked-with-target-present" if target.exists() else "marked"
+        )
+        me._refresh_apply_dirty_after_reload.side_effect = lambda: calls.append("recheck")
+
+        def reload():
+            # What the real reload does to the flag: _recompute_owned calls
+            # _mark_apply_dirty, which counts as an edit after the first load.
+            calls.append("reload")
+            me._session_has_unapplied_edit = True
+
+        me.perform_merge_and_reload.side_effect = reload
+        return type("Env", (), {"me": me, "calls": calls, "target": target})
+
+    def test_restore_backup_marks_after_copying_and_before_reloading(self, restore_env):
+        MainWindow.restore_backup(restore_env.me)
+
+        assert restore_env.target.read_text(encoding="utf-8") == "a=old\n"
+        assert restore_env.calls == ["marked-with-target-present", "reload"]
+        restore_env.me._mark_apply_dirty.assert_not_called()
+
+    @pytest.mark.parametrize("had_flag", [False, True])
+    def test_a_restore_clears_the_close_reminder_its_reload_set(self, restore_env, had_flag):
+        """The reload would count as an unapplied edit, and closing would then
+        offer Apply Now (the default button) over the backup the user just
+        chose. Like _mark_game_file_changed, the restore leaves it cleared."""
+        restore_env.me._session_has_unapplied_edit = had_flag
+        MainWindow.restore_backup(restore_env.me)
+        assert restore_env.me._session_has_unapplied_edit is False
+
+    def test_a_failed_restore_keeps_the_reminder_and_rechecks_before_its_error_dialog(
+        self, restore_env, monkeypatch
+    ):
+        """A failed restore is no revert, so a pending edit keeps its close
+        reminder. The copy may still have changed the file part-way, and the
+        error dialog's event loop could deliver a verdict about the old one,
+        so a fresh check (which drops that verdict) runs before the dialog."""
+        import shutil
+
+        def failing_copy(src, dst):
+            raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(shutil, "copy2", failing_copy)
+        restore_env.me._session_has_unapplied_edit = True
+        MainWindow.restore_backup(restore_env.me)
+
+        assert restore_env.calls == ["recheck", "dialog-critical"]
+        assert restore_env.me._session_has_unapplied_edit is True
+        restore_env.me.perform_merge_and_reload.assert_not_called()
+
+    def test_a_synchronous_reload_requests_a_check_after_the_dirty_marking(self, monkeypatch):
+        """Channel switch, Config save, restore and the rest reload through
+        perform_merge_and_reload, not the async loader; they need the same
+        authoritative check, after _recompute_owned marks everything red."""
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: (
+            {AppSettings.SOURCE_GLOBAL: {}}, [AppSettings.SOURCE_GLOBAL], {},
+        ))
+        monkeypatch.setattr(main_window, "load_source_files", lambda *a, **k: [])
+        me = MagicMock()
+        me._snapshot_pending_user_edits.return_value = {}
+        me._restore_pending_user_edits.return_value = 0
+
+        MainWindow.perform_merge_and_reload(me)
+
+        names = _call_names(me)
+        me._refresh_apply_dirty_after_reload.assert_called_once_with()
+        assert names.index("_recompute_owned") < names.index("_refresh_apply_dirty_after_reload")
