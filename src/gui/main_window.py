@@ -6,18 +6,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QThread, pyqtSignal, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QCheckBox,
     QFileDialog, QMessageBox, QTabWidget,
-    QHeaderView, QStatusBar, QFrame, QStyledItemDelegate,
-    QAbstractItemView, QMenu, QProgressDialog, QProgressBar, QTextBrowser,
+    QHeaderView, QFrame,
+    QAbstractItemView, QMenu, QProgressDialog, QTextBrowser,
     QTableView, QStackedLayout, QGraphicsOpacityEffect,
     QDockWidget, QPlainTextEdit, QInputDialog, QScrollArea, QStyle,
     QSizePolicy,
 )
-from PyQt6.QtGui import QColor, QFont, QCursor, QPixmap, QIcon, QPalette
+from PyQt6.QtGui import QFont, QCursor, QPixmap, QIcon, QPalette
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 
@@ -33,7 +33,6 @@ from src.gui.markdown_renderer import markdown_to_html as _md_to_html
 from src.gui.string_table_model import (
     StringTableModel, COL_CATEGORY, COL_KEY, COL_DEFAULT, COL_CURRENT,
     COL_STAR, COL_ORDER, COL_CUSTOM, COL_STATUS, COL_OWNED,
-    status_color,
 )
 from src.gui.theme import (
     BRAND_FONT_FAMILY, get_button_color, get_button_text_color,
@@ -2735,7 +2734,7 @@ class MainWindow(QMainWindow):
                     f"{breakdown}"
                 )
             else:
-                enhancement_block = f"  Smart Citizen enhancements: 0"
+                enhancement_block = "  Smart Citizen enhancements: 0"
             QMessageBox.information(
                 self, tr("dialogs.success_title"),
                 tr("apply.applied_body", target_path=target_path, user_count=f"{user_count:,}",
@@ -2807,7 +2806,6 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def clear_cache(self):
         """Delete cached source files from the cache directory. Optionally clear DataForge cache."""
-        import shutil
         from PyQt6.QtWidgets import QApplication
         cache_dir = AppSettings.get_cache_dir()
         cached_files = list(cache_dir.glob("*.ini")) + list(cache_dir.glob("*.txt"))
@@ -2895,7 +2893,7 @@ class MainWindow(QMainWindow):
 
         msg = f"Deleted {len(deleted)} item(s) from cache."
         if failed:
-            msg += f"\n\nFailed to delete:\n" + "\n".join(failed)
+            msg += "\n\nFailed to delete:\n" + "\n".join(failed)
         QMessageBox.information(self, tr("dialogs.cache_cleared_title"), msg)
 
         # Re-sync all remote sources so they're available for the next Apply.
@@ -3548,10 +3546,7 @@ class MainWindow(QMainWindow):
 
     def _handle_import_ini(self):
         """Handle Import INI button: get source, validate, resolve conflicts, merge."""
-        from PyQt6.QtWidgets import (
-            QDialog, QVBoxLayout, QHBoxLayout, QLineEdit,
-            QPushButton, QLabel, QDialogButtonBox, QFileDialog
-        )
+        from PyQt6.QtWidgets import QDialog
         from src.parser.ini_parser import parse_ini_file
         from src.utils.user_ini_manager import save_user_ini_dict
         import tempfile
@@ -5942,7 +5937,7 @@ class MainWindow(QMainWindow):
             apply_btn = box.addButton(
                 tr("dialogs.unapplied_changes_apply_now"), QMessageBox.ButtonRole.AcceptRole
             )
-            exit_btn = box.addButton(
+            box.addButton(
                 tr("dialogs.unapplied_changes_exit"), QMessageBox.ButtonRole.DestructiveRole
             )
             cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)

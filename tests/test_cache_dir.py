@@ -31,7 +31,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from src.utils import build_mode  # noqa: E402
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
 
@@ -55,8 +54,8 @@ def registry_mode(monkeypatch):
     """Ensure build_mode.IS_PORTABLE is False for registry-mode tests.
 
     Patches via the dotted-string form so the attribute lookup happens
-    at apply-time against ``sys.modules["src.utils.build_mode"]``. The
-    module-level ``build_mode`` import above can go stale when
+    at apply-time against ``sys.modules["src.utils.build_mode"]``. A
+    module-level ``build_mode`` import would go stale when
     test_build_info_fallback.py reloads the module via ``sys.modules.pop``
     — keying the patch by string instead avoids that staleness.
     """

@@ -14,29 +14,20 @@ against a real QListWidget -- no stub, no constructed tab, no pytest-qt.
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
 from PyQt6.QtCore import Qt  # noqa: E402
 from PyQt6.QtWidgets import (  # noqa: E402
-    QAbstractItemView, QApplication, QListWidget, QListWidgetItem,
+    QAbstractItemView, QListWidget, QListWidgetItem,
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 def _list_with(names, hidden=()) -> QListWidget:

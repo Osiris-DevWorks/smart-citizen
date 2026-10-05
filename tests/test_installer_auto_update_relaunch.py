@@ -20,25 +20,18 @@ does not otherwise compile installer.iss and a mistake in a ``[Code]`` call
 would only show up when a release is built. It never runs the compiled setup.
 """
 
-import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
-import pytest
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tests.inno_setup import require_iscc  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 INSTALLER = ROOT / "installer.iss"
-
-
-def _iscc():
-    candidates = [
-        shutil.which("ISCC"),
-        os.path.expandvars(r"%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"),
-        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"),
-    ]
-    return next((c for c in candidates if c and os.path.isfile(c)), None)
 
 
 def _installer_source():
@@ -98,8 +91,8 @@ def test_relaunch_follows_the_registry_writes_and_precedes_the_uninstaller_check
     assert "IsAutoUpdate()" in block[write.end() : first]
 
 
-@pytest.mark.skipif(_iscc() is None, reason="Inno Setup (ISCC.exe) not installed")
 def test_whole_installer_compiles(tmp_path):
+    iscc = require_iscc()
     # The files installer.iss reads at compile time. Add any new one here.
     (tmp_path / "assets").mkdir()
     shutil.copyfile(ROOT / "assets" / "logo.ico", tmp_path / "assets" / "logo.ico")
@@ -109,7 +102,7 @@ def test_whole_installer_compiles(tmp_path):
     (tmp_path / "dist" / "SmartCitizen" / "stub.txt").write_text("stub", encoding="utf-8")
     out = tmp_path / "out"
     compiled = subprocess.run(
-        [_iscc(), "/Q", f"/O{out}", str(tmp_path / "installer.iss")],
+        [iscc, "/Q", f"/O{out}", str(tmp_path / "installer.iss")],
         capture_output=True,
         text=True,
         timeout=300,

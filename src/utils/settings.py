@@ -1646,7 +1646,6 @@ class AppSettings:
         # Legacy path stored under the old key.
         saved = AppSettings.settings().value(AppSettings.GAME_INSTALL_PATH, "")
         if saved:
-            saved_path = Path(saved)
             if _path_ends_in_channel(saved):
                 # Ends with a channel name — trust it.
                 return saved
@@ -3151,7 +3150,7 @@ class AppSettings:
         if old_overrides.exists() and not new_overrides.exists():
             try:
                 shutil.copy2(old_overrides, new_overrides)
-                logger.info(f"Migrated overrides.ini to Documents")
+                logger.info("Migrated overrides.ini to Documents")
             except Exception as e:
                 logger.warning(f"Could not migrate overrides.ini: {e}")
 

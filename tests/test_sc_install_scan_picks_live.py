@@ -1,4 +1,4 @@
-"""The install scan must not pick an abandoned Star Citizen folder (#370).
+r"""The install scan must not pick an abandoned Star Citizen folder (#370).
 
 A user's DataForge extraction hung for 30 minutes on every run. The chain of
 symptoms pointed everywhere except the cause: unforge stalling, memory at 99%,
