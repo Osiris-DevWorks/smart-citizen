@@ -384,6 +384,23 @@ def _sc_write_block(source):
     return block
 
 
+# The block names its registry nodes with constants that installer.iss declares once
+# (#418). The probe has no copy of them, so it cuts the real lines out as well.
+_SC_REG_NODES = ("SCRegNode", "SCLegacyRegNode")
+
+
+def _sc_reg_node_consts(source):
+    """A ``const`` section holding the registry node constants the write block
+    uses, cut verbatim out of installer.iss. A rename fails here, naming the
+    constant, instead of as a compile error inside the probe."""
+    lines = []
+    for name in _SC_REG_NODES:
+        match = re.search(rf"^[ \t]*{name} = [^\n]*;$", source, re.M)
+        assert match, f"const {name} not found in installer.iss"
+        lines.append("  " + match.group(0).strip())
+    return "const\n" + "\n".join(lines)
+
+
 def test_sc_install_root_write_knows_a_root():
     source = _installer_source()
     forward = "function IsValidSCRoot(const Path: String): Boolean; forward;"
@@ -391,6 +408,14 @@ def test_sc_install_root_write_knows_a_root():
     # IsValidSCRoot is defined further down than the registry write.
     assert source.index(forward) < source.index("procedure WriteInstallerChoicesToRegistry")
     assert "if IsValidSCRoot(FinalPath) then" in _sc_write_block(source)
+
+
+def test_sc_install_root_write_constants_reach_the_probe():
+    source = _installer_source()
+    _sc_reg_node_consts(source)
+    used = {name.lower() for name in re.findall(r"\bSC\w*RegNode\b", _sc_write_block(source), re.I)}
+    unknown = sorted(used - {name.lower() for name in _SC_REG_NODES})
+    assert not unknown, f"the SC directory write uses {unknown}: add them to _SC_REG_NODES"
 
 
 def _root_cases(t):
@@ -432,6 +457,8 @@ OutputDir={out}
 OutputBaseFilename=probe
 
 [Code]
+{_sc_reg_node_consts(source)}
+
 var
   PageValue: String;
   WroteRoot: String;
