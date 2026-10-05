@@ -124,6 +124,16 @@ def launcher_log(path: Path, entries) -> Path:
     return path
 
 
+@pytest.fixture
+def probe_calls(monkeypatch):
+    """Every folder ``is_sc_install_root`` is asked about, in order, while the
+    real test still answers. The tests that count probes read this list."""
+    calls = []
+    real = scanner.is_sc_install_root
+    monkeypatch.setattr(scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p))
+    return calls
+
+
 # -- Channel / install reads -------------------------------------------------
 
 class TestReadInstall:
@@ -751,14 +761,10 @@ class TestLauncherLog:
 
     @pytest.mark.parametrize(("ending", "probes"), [("\\n", 3), ("\\r\\n", 4)])
     def test_each_line_break_on_the_end_costs_one_probe_more(
-        self, tmp_path, monkeypatch, ending, probes
+        self, tmp_path, probe_calls, ending, probes
     ):
         root = make_install(tmp_path / "Library" / "StarCitizen")
-        calls = []
-        real = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
-        )
+        calls = probe_calls
         assert resolve_logged_root(f"{root}\\LIVE{ending}") == root
         assert len(calls) == probes
 
@@ -877,17 +883,13 @@ class TestLauncherLog:
         ids=["prose", "quoted-pair", "quote", "comma", "file", "many-commas"],
     )
     def test_the_hint_folder_costs_two_probes_after_any_prose(
-        self, tmp_path, monkeypatch, tail
+        self, tmp_path, probe_calls, tail
     ):
         """The whole path first, then the folder named for the hint: the root. The
         quote and comma cuts and the walk up never get a turn. A line break left
         on the end adds one probe for each escape (see below)."""
         root = make_install(tmp_path / "Library" / "StarCitizen")
-        calls = []
-        real = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
-        )
+        calls = probe_calls
         assert resolve_logged_root(f"{root}{tail}") == root
         assert len(calls) <= 2
 
@@ -955,7 +957,7 @@ class TestLauncherLog:
         assert self._found(f"rename '{apostrophe}\\LIVE' -> '{comma}\\LIVE'") == both
 
     @pytest.mark.parametrize("separator", [",", ", "], ids=["no-spaces", "spaces"])
-    def test_a_comma_list_costs_one_probe_per_entry(self, tmp_path, monkeypatch, separator):
+    def test_a_comma_list_costs_one_probe_per_entry(self, tmp_path, probe_calls, separator):
         """The comma and the spaces after it go with the split, so every entry
         reaches the folder test as a clean path. Entries that kept their comma
         would each cost a failed probe before the cut at it."""
@@ -963,11 +965,7 @@ class TestLauncherLog:
             make_install(tmp_path / name / "StarCitizen")
             for name in ("One", "Two, Three", "Four")
         ]
-        calls = []
-        real = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
-        )
+        calls = probe_calls
         message = "[validateNonExistantDirectories] " + separator.join(str(r) for r in roots)
         assert self._found(message) == sorted(roots)
         assert len(calls) == len(roots)
@@ -1051,34 +1049,26 @@ class TestLauncherLog:
         ],
     )
     def test_a_long_run_of_junk_after_a_path_costs_a_bounded_number_of_probes(
-        self, tmp_path, monkeypatch, junk
+        self, tmp_path, probe_calls, junk
     ):
         """The cuts, the word trimming and the walk up each work from a budget, so
         a string that is mostly quotes, commas, words and folders (folders named
         for the hint too), and holds no install, cannot turn into thousands of
         stat calls. The junk offers hundreds of candidates, and a few dozen get
         probed."""
-        calls = []
-        real = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
-        )
+        calls = probe_calls
         assert self._found(f"{tmp_path}\\StarCitizen\\{junk}") == []
         assert len(calls) < 100
         # One budget for the whole path and the cuts, another for the words and the walk.
         assert len(calls) <= 2 * scanner._MAX_PATH_CANDIDATES
 
     def test_the_hint_cuts_and_the_quote_and_comma_cuts_share_one_budget(
-        self, tmp_path, monkeypatch
+        self, tmp_path, probe_calls
     ):
         """Folders named for the hint, and quotes and commas, can each offer
         hundreds of cuts. Together they get one budget, so the whole path, those
         cuts and the walk up cost about one cap's worth of probes, not two."""
-        calls = []
-        real = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
-        )
+        calls = probe_calls
         junk = "\\".join(["StarCitizen_a, 'b"] * 500)
         assert self._found(f"{tmp_path}\\StarCitizen\\{junk}") == []
         assert len(calls) <= scanner._MAX_PATH_CANDIDATES + 5
@@ -1219,7 +1209,7 @@ class TestLauncherLog:
         assert [root for root, _ in parsed.values()] == [named]
 
     def test_per_file_paths_under_one_install_share_the_folder_walk(
-        self, tmp_path, monkeypatch
+        self, tmp_path, probe_calls
     ):
         """Each per-file path is a distinct raw string, so without a per-folder
         memo every one walks up through the same folders again. First-run
@@ -1231,11 +1221,7 @@ class TestLauncherLog:
             % str(root / "LIVE" / "Data" / "Objects" / f"file{i}.dds").replace("\\", "\\\\")
             for i in range(files)
         ]
-        calls = []
-        real = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: calls.append(p) or real(p)
-        )
+        calls = probe_calls
 
         parsed = parse_launcher_log("\n".join(lines))
 
