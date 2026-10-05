@@ -39,7 +39,10 @@ _PERSON_PRESENT = {
     ),
 }
 
-_ROUTINE = re.compile(r"^(?:function|procedure) (\w+)", re.M)
+# A routine header in any spelling Pascal Script accepts (any case, any gap after
+# the keyword), so a box is always charged to the routine it sits in, never to
+# the one above it, where a listed routine's allowance could cover it.
+_ROUTINE = re.compile(r"^(?:function|procedure)\s+(\w+)", re.M | re.I)
 # A plain box call however it is spelled: Pascal Script ignores case and the
 # whitespace before the bracket, and TaskDialogMsgBox is no more answered by
 # /SUPPRESSMSGBOXES than MsgBox is. The lookbehind lets SuppressibleMsgBox,
@@ -185,6 +188,29 @@ def test_a_gap_that_runs_over_lines_is_caught():
     for gap in ("\n    ", "\r\n    ", " // why\n    ", " { why }\n    "):
         source = _source(("Unlisted", f"  MsgBox{gap}('x', mbInformation, MB_OK);"))
         assert _unexpected_plain_msgboxes(source) == {"Unlisted": [_line_of(source, "begin") + 1]}
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        "Procedure Sneaky;",
+        "PROCEDURE Sneaky;",
+        "procedure  Sneaky;",
+        "procedure\tSneaky;",
+        "Function Sneaky(): Boolean;",
+        "function  Sneaky(): Boolean;",
+    ],
+)
+def test_a_box_is_charged_to_its_own_routine_however_that_is_declared(declaration):
+    # CurStepChanged may hold one plain box. Sneaky, declared in another spelling
+    # right after it, must not slip its box in under that allowance.
+    box = "  MsgBox('x', mbInformation, MB_OK);"
+    source = (
+        "[Setup]\nAppName=x\n\n[Code]\n"
+        "procedure CurStepChanged;\nbegin\n  Log('x');\nend;\n\n"
+        f"{declaration}\nbegin\n{box}\nend;\n"
+    )
+    assert _unexpected_plain_msgboxes(source) == {"Sneaky": [_line_of(source, box)]}
 
 
 @pytest.mark.parametrize(
