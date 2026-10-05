@@ -1,9 +1,10 @@
 """Inno Setup's compiler, for the tests that compile installer.iss or a probe.
 
-Three test files compile with ISCC.exe (``test_installer_auto_update_relaunch``,
-``test_installer_onedrive_check`` and ``test_installer_sc_path_checks``). They
-used to carry a copy each of a lookup that only knew ``Inno Setup 6`` folders,
-so a machine or runner with Inno Setup 7 skipped them without a word.
+Four test files compile with ISCC.exe (``test_installer_auto_update_relaunch``,
+``test_installer_onedrive_check``, ``test_installer_sc_path_checks`` and
+``test_installer_wipe_safety``). They used to carry a copy each of a lookup
+that only knew ``Inno Setup 6`` folders, so a machine or runner with Inno
+Setup 7 skipped them without a word.
 
 ``find_iscc`` looks on PATH first, then in every ``Inno Setup *`` folder under
 Program Files (x86), Program Files and the per-user ``%LOCALAPPDATA%\\Programs``
@@ -13,12 +14,17 @@ Program Files (x86), Program Files and the per-user ``%LOCALAPPDATA%\\Programs``
 Inno Setup is not installed, as before, except under CI, where it fails: a runner
 image that dropped Inno Setup (or moved it) must turn these compile checks red,
 not into skips nobody reads. GitHub Actions sets ``CI=true``.
+
+``run_probe`` and ``pascal_string`` are the rest of what the probe tests
+share: compiling a throwaway setup, running it silently and reading back the
+lines it saved, and quoting a value for the Pascal source they generate.
 """
 
 import glob
 import os
 import re
 import shutil
+import subprocess
 
 import pytest
 
@@ -71,3 +77,30 @@ def require_iscc():
             pytrace=False,
         )
     pytest.skip(reason)
+
+
+def pascal_string(value):
+    """*value* as a Pascal string literal, with every quote doubled."""
+    return "'" + value.replace("'", "''") + "'"
+
+
+def run_probe(script, tmp_path, out):
+    """Compile *script* with ISCC, run the resulting setup silently and return
+    the lines it saved to ``out / "result.txt"``. Skips the test where Inno
+    Setup is not installed (``require_iscc`` fails it under CI instead) or when
+    an Application Control policy refuses to run the unsigned probe. The probe's
+    InitializeSetup returns False, so it exits without installing anything."""
+    iscc = require_iscc()
+    probe = tmp_path / "probe.iss"
+    probe.write_text(script, encoding="utf-8-sig")
+    compiled = subprocess.run([iscc, "/Q", str(probe)], capture_output=True, text=True, timeout=120)
+    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
+    try:
+        subprocess.run([str(out / "probe.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES"], timeout=120)
+    except OSError as exc:
+        # ERROR_SYSTEM_INTEGRITY_POLICY_VIOLATION: an Application Control
+        # policy (e.g. a sandboxed shell) refused to run the unsigned probe.
+        if getattr(exc, "winerror", None) == 4551:
+            pytest.skip(f"probe setup blocked by Application Control: {exc}")
+        raise
+    return (out / "result.txt").read_text(encoding="mbcs").splitlines()

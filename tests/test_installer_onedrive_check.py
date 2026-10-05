@@ -27,15 +27,12 @@ on a developer machine that has Inno Setup. The two text checks run everywhere.
 
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tests.inno_setup import require_iscc  # noqa: E402
+from tests.inno_setup import pascal_string, run_probe  # noqa: E402
 
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
@@ -70,10 +67,6 @@ def _needed_functions(source, text, needed=None):
             del needed[name]
             needed[name] = match.group(0)
     return needed
-
-
-def _pascal_string(value):
-    return "'" + value.replace("'", "''") + "'"
 
 
 # -- Text checks, which need no Inno Setup ---------------------------------------
@@ -211,7 +204,7 @@ begin
     if Result then
       Data := FakeDocs;
   end
-  else if (Name = 'user_data_dir') and (SubKey = {_pascal_string(_PREFILL_NODE)}) then
+  else if (Name = 'user_data_dir') and (SubKey = {pascal_string(_PREFILL_NODE)}) then
   begin
     Result := FakeHasOverride;
     if Result then
@@ -273,7 +266,7 @@ var
   NewRegPath: String;
   SavedDataDir: String;
 begin
-  NewRegPath := {_pascal_string(_PREFILL_NODE)};
+  NewRegPath := {pascal_string(_PREFILL_NODE)};
 {_fake_reads(block)}
 end;
 """
@@ -285,19 +278,19 @@ def _probe_script(source, cases, prefill_cases, out):
     for i, (_, docs, roots, _) in enumerate(cases):
         steps.append(
             f"  FakeHasDocs := {'False' if docs is None else 'True'}; "
-            f"FakeDocs := {_pascal_string(docs or '')};"
+            f"FakeDocs := {pascal_string(docs or '')};"
         )
         steps.append(
             "  FakeRoot0 := {}; FakeRoot1 := {}; FakeRoot2 := {};".format(
-                *(_pascal_string(r) for r in roots)
+                *(pascal_string(r) for r in roots)
             )
         )
         steps.append(f"  Lines[{i}] := B(IsDocsOnOneDrive()) + B(IsPathOnOneDrive(FakeDocs));")
     for j, (_, docs, override, _) in enumerate(prefill_cases, start=len(cases)):
         steps.append(
-            f"  FakeHasDocs := True; FakeDocs := {_pascal_string(docs)}; "
+            f"  FakeHasDocs := True; FakeDocs := {pascal_string(docs)}; "
             f"FakeHasOverride := {'False' if override is None else 'True'}; "
-            f"FakeOverride := {_pascal_string(override or '')};"
+            f"FakeOverride := {pascal_string(override or '')};"
         )
         steps.append("  FakeRoot0 := ''; FakeRoot1 := ''; FakeRoot2 := '';")
         steps.append(f"  Lines[{j}] := DataDirPrefill();")
@@ -321,32 +314,10 @@ var
 begin
   SetArrayLength(Lines, {len(cases) + len(prefill_cases)});
 {chr(10).join(steps)}
-  SaveStringsToFile({_pascal_string(str(out / "result.txt"))}, Lines, False);
+  SaveStringsToFile({pascal_string(str(out / "result.txt"))}, Lines, False);
   Result := False;
 end;
 """
-
-
-def _run_probe(script, tmp_path, out):
-    """Compile *script* with ISCC, run the resulting setup silently and return
-    the lines it saved to ``out / "result.txt"``. Skips the test where Inno
-    Setup is not installed (``require_iscc`` fails it under CI instead) or when
-    an Application Control policy refuses to run the unsigned probe."""
-    iscc = require_iscc()
-    probe = tmp_path / "probe.iss"
-    probe.write_text(script, encoding="utf-8-sig")
-    compiled = subprocess.run([iscc, "/Q", str(probe)], capture_output=True, text=True, timeout=120)
-    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
-    # InitializeSetup returns False, so the setup exits without installing.
-    try:
-        subprocess.run([str(out / "probe.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES"], timeout=120)
-    except OSError as exc:
-        # ERROR_SYSTEM_INTEGRITY_POLICY_VIOLATION: an Application Control
-        # policy (e.g. a sandboxed shell) refused to run the unsigned probe.
-        if getattr(exc, "winerror", None) == 4551:
-            pytest.skip(f"probe setup blocked by Application Control: {exc}")
-        raise
-    return (out / "result.txt").read_text(encoding="mbcs").splitlines()
 
 
 def test_onedrive_checks_in_compiled_installer_code(tmp_path):
@@ -354,7 +325,7 @@ def test_onedrive_checks_in_compiled_installer_code(tmp_path):
     out = tmp_path / "out"
     prefill_cases = _make_prefill_tree(tree, _prefill_cases(tree))
     script = _probe_script(_installer_source(), _CASES, prefill_cases, out)
-    verdicts = _run_probe(script, tmp_path, out)
+    verdicts = run_probe(script, tmp_path, out)
     first_prefill = len(_CASES)
     assert len(verdicts) == first_prefill + len(prefill_cases)
     wrong = [

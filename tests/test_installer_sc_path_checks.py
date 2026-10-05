@@ -24,11 +24,8 @@ for a channel folder but the wrong folder when the page holds the root itself.
 """
 
 import re
-import subprocess
 import sys
 from pathlib import Path
-
-import pytest
 
 # The app's channel list, so a channel added there but not to the installer's
 # checks fails here.
@@ -36,7 +33,7 @@ from src.utils.install_scanner import SC_CHANNELS as CHANNELS
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tests.inno_setup import require_iscc  # noqa: E402
+from tests.inno_setup import pascal_string, run_probe  # noqa: E402
 
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
@@ -98,34 +95,6 @@ def _make_tree(t):
     (t / "LIVE-backup" / "data").mkdir(parents=True)
 
 
-def _pascal_string(value):
-    return "'" + value.replace("'", "''") + "'"
-
-
-def _run_probe(script, tmp_path, out):
-    """Compile *script* with ISCC, run the resulting setup silently and return
-    the lines it saved to ``out / "result.txt"``. Skips the test where Inno
-    Setup is not installed (``require_iscc`` fails it under CI instead) or when
-    an Application Control policy refuses to run the unsigned probe."""
-    iscc = require_iscc()
-    probe = tmp_path / "probe.iss"
-    probe.write_text(script, encoding="utf-8-sig")
-    compiled = subprocess.run([iscc, "/Q", str(probe)], capture_output=True, text=True, timeout=120)
-    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
-    # InitializeSetup returns False, so the setup exits without installing.
-    try:
-        subprocess.run(
-            [str(out / "probe.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES"], timeout=120
-        )
-    except OSError as exc:
-        # ERROR_SYSTEM_INTEGRITY_POLICY_VIOLATION: an Application Control
-        # policy (e.g. a sandboxed shell) refused to run the unsigned probe.
-        if getattr(exc, "winerror", None) == 4551:
-            pytest.skip(f"probe setup blocked by Application Control: {exc}")
-        raise
-    return (out / "result.txt").read_text(encoding="mbcs").splitlines()
-
-
 def test_path_checks_in_compiled_installer_code(tmp_path):
     tree = tmp_path / "tree"
     out = tmp_path / "out"
@@ -134,8 +103,8 @@ def test_path_checks_in_compiled_installer_code(tmp_path):
     source = _installer_source()
 
     checks = "\n".join(
-        f"  Lines[{i}] := B(IsValidSCPath({_pascal_string(p)})) + "
-        f"B(IsValidSCRoot({_pascal_string(p)}));"
+        f"  Lines[{i}] := B(IsValidSCPath({pascal_string(p)})) + "
+        f"B(IsValidSCRoot({pascal_string(p)}));"
         for i, (p, _, _) in enumerate(cases)
     )
     script = f"""[Setup]
@@ -163,11 +132,11 @@ var
 begin
   SetArrayLength(Lines, {len(cases)});
 {checks}
-  SaveStringsToFile({_pascal_string(str(out / "result.txt"))}, Lines, False);
+  SaveStringsToFile({pascal_string(str(out / "result.txt"))}, Lines, False);
   Result := False;
 end;
 """
-    verdicts = _run_probe(script, tmp_path, out)
+    verdicts = run_probe(script, tmp_path, out)
     assert len(verdicts) == len(cases)
     wrong = [
         f"{p}: IsValidSCPath={got[0]} IsValidSCRoot={got[1]}, "
@@ -257,7 +226,7 @@ def test_wizard_prefill_in_compiled_installer_code(tmp_path):
     for i, (_, values, _) in enumerate(cases):
         steps.append("  FakeClear();")
         steps.extend(
-            f"  FakeSet({_pascal_string(node)}, {_pascal_string(name)}, {_pascal_string(data)});"
+            f"  FakeSet({pascal_string(node)}, {pascal_string(name)}, {pascal_string(data)});"
             for node, name, data in values
         )
         steps.append(f"  Lines[{i}] := Prefill();")
@@ -335,11 +304,11 @@ var
 begin
   SetArrayLength(Lines, {len(cases)});
 {chr(10).join(steps)}
-  SaveStringsToFile({_pascal_string(str(out / "result.txt"))}, Lines, False);
+  SaveStringsToFile({pascal_string(str(out / "result.txt"))}, Lines, False);
   Result := False;
 end;
 """
-    got = _run_probe(script, tmp_path, out)
+    got = run_probe(script, tmp_path, out)
     assert len(got) == len(cases)
     wrong = [
         f"{name}: got {have!r}, expected {want!r}"
@@ -435,7 +404,7 @@ def test_sc_install_root_write_in_compiled_installer_code(tmp_path):
     source = _installer_source()
 
     steps = "\n".join(
-        f"  PageValue := {_pascal_string(value)};\n  Lines[{i}] := WriteSC();"
+        f"  PageValue := {pascal_string(value)};\n  Lines[{i}] := WriteSC();"
         for i, (_, value, _) in enumerate(cases)
     )
     script = f"""[Setup]
@@ -479,11 +448,11 @@ var
 begin
   SetArrayLength(Lines, {len(cases)});
 {steps}
-  SaveStringsToFile({_pascal_string(str(out / "result.txt"))}, Lines, False);
+  SaveStringsToFile({pascal_string(str(out / "result.txt"))}, Lines, False);
   Result := False;
 end;
 """
-    got = _run_probe(script, tmp_path, out)
+    got = run_probe(script, tmp_path, out)
     assert len(got) == len(cases)
     wrong = [
         f"{name}: page {value!r}, saved {have!r}, expected {want!r}"
