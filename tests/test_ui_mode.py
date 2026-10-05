@@ -743,6 +743,12 @@ class _SizeStub:
     def isFullScreen(self):
         return False
 
+    def _shrink_to_fit_if_simple(self):
+        # The un-maximize path queues this on a 0 ms timer. The session-wide
+        # QApplication outlives this module, so a later module's event loop
+        # fires it; without it PyQt6 aborts on the missing attribute.
+        pass
+
 
 def test_advanced_mode_sizes_window_before_maximizing(qapp):
     """Advanced must set a real windowed size *before* maximizing.
