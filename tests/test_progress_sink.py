@@ -1,8 +1,5 @@
 """Tests for src.utils.progress_sink.ProgressSink."""
 import threading
-import time
-
-import pytest
 
 from utils.progress_sink import ProgressSink
 

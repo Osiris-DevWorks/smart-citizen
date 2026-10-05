@@ -114,8 +114,9 @@ function IsAutoUpdate(): Boolean;
 begin
   { True when this install was spawned by the app's in-app auto-updater
     (#211), which passes /AUTOUPDATE=1 — see _launch_installer_and_quit in
-    src/gui/main_window.py. Drives the [Run] entry that relaunches the app
-    after a silent upgrade. }
+    src/gui/main_window.py. Drives the ExecAsOriginalUser call in
+    CurStepChanged (ssPostInstall) that relaunches the app after a silent
+    upgrade (#434). }
   Result := ExpandConstant('{param:AUTOUPDATE|0}') = '1';
 end;
 
@@ -600,10 +601,42 @@ begin
   end;
 end;
 
+{ Defined with the other delete-safety checks, further down. }
+function UnsafeDeleteRootReason(const RawRoot: String): String; forward;
+
+function LooksLikeScCache(const Dir: String): Boolean;
+var
+  i: Integer;
+begin
+  { True when Dir holds something only a Smart Citizen cache holds, so a folder
+    named "cache" that belongs to another program is never taken for ours. The
+    name is generic and the data folder can be any folder the user picked. The
+    three marks cover every layout the app has written:
+      base.ini         the cached global source. It sits in a per-channel cache
+                       (<data folder>\<channel>\cache) and in the pre-0.9.3
+                       flat cache (<data folder>\cache), with the enhancement
+                       INIs next to it.
+      dataforge        the pre-0.9.3 flat cache only, which held the DataForge
+                       XML tree directly (<data folder>\cache\dataforge) until
+                       1.x moved it to %LOCALAPPDATA%.
+      <channel>\cache  a DataForge cache folder, the default under
+                       %LOCALAPPDATA% or one chosen in the installer or the
+                       Config tab. It holds <cache folder>\<channel>\cache\
+                       dataforge, never a dataforge folder directly under it.
+    An empty or missing folder, and one holding anything else, is not ours. }
+  Result := False;
+  if not DirExists(Dir) then
+    Exit;
+  Result := FileExists(Dir + '\base.ini') or DirExists(Dir + '\dataforge');
+  for i := 0 to ScChannelCount - 1 do
+    if not Result then
+      Result := DirExists(Dir + '\' + ScChannelName(i) + '\cache');
+end;
+
 procedure CleanPerChannelCaches(UserDataDir: String);
 var
   i: Integer;
-  CachePath: String;
+  CachePath, Reason: String;
   Deleted: Boolean;
 begin
   { Per-channel layout (0.9.3+): each Star Citizen channel has its own
@@ -615,7 +648,19 @@ begin
     Logs the path tried, the DelTree return value, and whether the
     directory still exists afterwards. Surfaces silent failures (locked
     files under OneDrive sync / Defender real-time scan) in the install
-    log so users reporting "cache wasn't removed" can be diagnosed. }
+    log so users reporting "cache wasn't removed" can be diagnosed.
+
+    The data folder can be any folder the user picked, and this runs on every
+    install, upgrade and auto-update with nobody to ask. So it first asks
+    UnsafeDeleteRootReason, and does nothing (with the reason in the log, never
+    a dialog) in a folder that is not safe to delete in: a whole drive,
+    Documents, a folder holding the Star Citizen install, and so on. }
+  Reason := UnsafeDeleteRootReason(UserDataDir);
+  if Reason <> '' then
+  begin
+    Log('Not cleaning per-channel caches under ' + UserDataDir + ' (' + Reason + ').');
+    Exit;
+  end;
   for i := 0 to ScChannelCount - 1 do
   begin
     CachePath := UserDataDir + '\' + ScChannelName(i) + '\cache';
@@ -639,11 +684,21 @@ end;
 
 procedure CleanCachedData();
 var
-  UserDataDir, LegacyCache: String;
+  UserDataDir, LegacyCache, Reason: String;
 begin
   UserDataDir := GetDocumentsDir();
   if DirExists(UserDataDir) then
   begin
+    { Nothing here is deleted unless the folder is safe to delete in. The Config
+      tab lets the user pick a whole drive, and this runs on every install,
+      upgrade and auto-update, so "D:\" would have lost D:\cache. Silent, like
+      the cleaning itself: the reason goes to the log. }
+    Reason := UnsafeDeleteRootReason(UserDataDir);
+    if Reason <> '' then
+    begin
+      Log('Not cleaning cached data under ' + UserDataDir + ' (' + Reason + ').');
+      Exit;
+    end;
     Log('Cleaning cached data from: ' + UserDataDir);
     { Current layout — delete \cache under each channel subtree. }
     CleanPerChannelCaches(UserDataDir);
@@ -651,12 +706,18 @@ begin
       The channel migrator runs at app launch and should have moved this
       already, but if a user is upgrading from a state where the migrator
       never ran (e.g. they uninstalled before first launching 0.9.3+),
-      mop it up here. }
+      mop it up here. Only when it holds a Smart Citizen cache: "cache" is
+      a generic name, and the data folder can be any folder the user picked. }
     LegacyCache := UserDataDir + '\cache';
     if DirExists(LegacyCache) then
     begin
-      Log('Deleting legacy flat-layout cache: ' + LegacyCache);
-      DelTree(LegacyCache, True, True, True);
+      if LooksLikeScCache(LegacyCache) then
+      begin
+        Log('Deleting legacy flat-layout cache: ' + LegacyCache);
+        DelTree(LegacyCache, True, True, True);
+      end
+      else
+        Log('Leaving ' + LegacyCache + ' alone: it holds no Smart Citizen cache (no base.ini, dataforge folder or channel cache).');
     end;
   end;
 end;
@@ -1243,8 +1304,10 @@ begin
   { Deletes only what the app writes under Root and never Root itself:
       data folder:  the channel folders, Smart Citizen's own files in logs,
                     the old root-level user.ini / overrides.ini / base.ini,
-                    and the pre-0.9.3 flat cache (a normal uninstall clears
-                    that one too)
+                    and the pre-0.9.3 flat cache, but only when it holds a
+                    Smart Citizen cache (LooksLikeScCache). Another program's
+                    folder named "cache" stays, and so does Root. A normal
+                    uninstall clears the flat cache under the same rule.
       cache folder: the channel folders (each holds cache\dataforge)
     Root is removed afterwards only if that left it empty. Returns a line for
     every folder it refused or could not clear, '' when all went well. }
@@ -1272,7 +1335,12 @@ begin
       Result := Result + DeleteAppLogs(Item);
     Item := Root + '\cache';
     if DirExists(Item) then
-      Result := Result + DeleteOwnedItem(Item, True);
+    begin
+      if LooksLikeScCache(Item) then
+        Result := Result + DeleteOwnedItem(Item, True)
+      else
+        Log('Leaving ' + Item + ' alone: it holds no Smart Citizen cache (no base.ini, dataforge folder or channel cache).');
+    end;
     for i := 0 to 2 do
     begin
       case i of
@@ -1406,7 +1474,8 @@ begin
     begin
       { Same cleanup contract as install/upgrade: per-channel \cache gets
         nuked, \backups + user.ini survive so a reinstall picks up where
-        the user left off. Only \cache is disposable.
+        the user left off. Only \cache is disposable, and a data folder that is
+        not safe to delete in is left alone (see CleanCachedData).
 
         Persistence lock (#172): do NOT delete the live registry node
         'Software\Osiris DevWorks\Smart Citizen' or any of its values here —

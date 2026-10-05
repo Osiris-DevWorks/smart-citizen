@@ -147,7 +147,7 @@ def write_report(
     # ── Newly BP-tagged (most actionable section) ─────────────────────────
     out_lines.append(f"## Newly BP-tagged titles ({len(newly_bp)})")
     out_lines.append("")
-    out_lines.append(f"Missions present in BOTH channels whose title gained a `[BP]` / `[BP?]` tag")
+    out_lines.append("Missions present in BOTH channels whose title gained a `[BP]` / `[BP?]` tag")
     out_lines.append(f"in {b_label} that wasn't there in {a_label}. CIG added these missions to a")
     out_lines.append("blueprint reward pool in this patch.")
     out_lines.append("")
