@@ -55,7 +55,7 @@ pytest tests/ -n auto                                            # parallel (pyt
 
 # Code Quality
 black src/ tests/ scripts/        # format
-flake8 src/ tests/ scripts/       # lint
+flake8 src/ tests/ scripts/       # lint, settings in .flake8
 isort src/ tests/ scripts/        # sort imports
 mypy src/                         # types
 
