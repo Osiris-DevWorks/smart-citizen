@@ -19,10 +19,11 @@ the user picked (the Config tab allows any folder, a whole drive included):
 The behaviour test cuts the real routines verbatim out of installer.iss, points
 their registry reads, ``{app}`` and log at fakes, compiles them into a throwaway
 setup with Inno Setup's ISCC, runs it silently against folders it deletes in
-under ``tmp_path`` (nothing outside that tree is ever named), and checks which
-files are left. It is skipped where Inno Setup is not installed (under CI it
-fails instead, see ``tests/inno_setup.py``) or an Application Control policy
-refuses to run the unsigned probe. GitHub's Windows
+under ``tmp_path``, and checks which files are left. Nothing outside that tree
+is deleted in: the only outside paths, a drive and network paths, go to the
+delete check on its own, which reads them as text. It is skipped where Inno
+Setup is not installed (under CI it fails instead, see ``tests/inno_setup.py``)
+or an Application Control policy refuses to run the unsigned probe. GitHub's Windows
 runner image ships Inno Setup 6, so it runs in CI as well as on a developer
 machine that has Inno Setup. The text checks run everywhere. They are structural
 tripwires on the shape of each guard (see the note above them), and the compiled
@@ -30,7 +31,6 @@ test is the semantic check.
 """
 
 import re
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -39,17 +39,13 @@ import pytest
 # The app's channel list, so a channel added there but not to the installer's
 # checks fails here.
 from src.utils.install_scanner import SC_CHANNELS as CHANNELS
-from tests.inno_setup import require_iscc
+from tests.inno_setup import pascal_string, run_probe
 
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
 
 def _installer_source():
     return INSTALLER.read_text(encoding="utf-8-sig")
-
-
-def _pascal_string(value):
-    return "'" + value.replace("'", "''") + "'"
 
 
 # Strings, { } comments and // comments: what is not code.
@@ -333,7 +329,7 @@ class Case:
     it, the rest must still be there)."""
 
     name: str
-    kind: str  # cache, clean, channels, wipe or wipe-cache-root
+    kind: str  # cache, clean, channels, wipe, wipe-cache-root or reason
     entries: list
     target: str  # the folder under test, relative to the case's folder
     gone: list = field(default_factory=list)
@@ -341,7 +337,8 @@ class Case:
     sc_root: str = ""  # relative path saved as sc_install_root
     app: str = "App"  # the fake {app}
     docs: str = "Docs"  # the fake shell Documents folder
-    expect: str = ""  # cache: "1" or "0"
+    expect: str = ""  # cache: "1" or "0", reason: the reason, "" for none
+    outside: str = ""  # reason: a path outside the tree, which the check only reads as text
     notes: str = ""  # wipe: "" for no summary, else text it must hold
     log: object = None  # text the log must hold, "" for an empty log, None for either
     base: Path = None
@@ -630,6 +627,24 @@ def _cases(t):
         gone=["CacheDir/LIVE"],
     )
 
+    # UnsafeDeleteRootReason on its own, for the folders no tree under tmp_path
+    # can be: the issue's own example, a whole drive, and network paths. The
+    # check reads each of them as text and returns before any disk or network
+    # access, and nothing deletes in them.
+    for name, outside, reason in (
+        ("a drive root", "Z:\\", "it is a whole drive"),
+        ("a drive", "Z:", "it is a whole drive"),
+        ("the top of a network share", r"\\server\share", "it is the top of a network share"),
+        (
+            "Documents through an admin share",
+            r"\\localhost\C$\Users\Someone\Documents",
+            "it is a whole drive shared over the network",
+        ),
+        ("a device path", r"\\?\C:\Data", "it is a special device path"),
+    ):
+        add(f"reason: {name}", "reason", [], "", outside=outside, expect=reason)
+    add("reason: an ordinary folder", "reason", ["Data/"], "Data", expect="")
+
     for i, case in enumerate(cases):
         case.base = t / f"case{i:02d}"
     return cases
@@ -735,9 +750,21 @@ begin
   FakeSet(Docs, '', ScRoot, App);
   Result := FakeReport(DeleteOwnedSubpaths(Root, IsCacheRoot));
 end;
+
+function CaseReason(const Docs, App, Dir: String): String;
+begin
+  FakeSet(Docs, '', '', App);
+  Result := UnsafeDeleteRootReason(Dir);
+end;
 """
 
-_ROOTS = ("CleanCachedData", "CleanPerChannelCaches", "DeleteOwnedSubpaths", "LooksLikeScCache")
+_ROOTS = (
+    "CleanCachedData",
+    "CleanPerChannelCaches",
+    "DeleteOwnedSubpaths",
+    "LooksLikeScCache",
+    "UnsafeDeleteRootReason",
+)
 
 
 def _cut_routines(source):
@@ -778,16 +805,17 @@ def _constants(source):
 
 def _steps(cases, tree):
     """The Pascal that runs each case and puts its result line in ``Lines``.
-    Every path it names is inside *tree*."""
+    Every path it names is inside *tree*, apart from the reason cases' outside
+    paths, which the check only reads as text."""
 
     def p(relative, case):
         path = case.base / relative
         assert str(path).startswith(str(tree)), f"{path} is outside the test tree"
-        return _pascal_string(str(path))
+        return pascal_string(str(path))
 
     steps = []
     for i, case in enumerate(cases):
-        target = p(case.target, case)
+        target = pascal_string(case.outside) if case.outside else p(case.target, case)
         docs, app = p(case.docs, case), p(case.app, case)
         sc = p(case.sc_root, case) if case.sc_root else "''"
         override = target if case.override else "''"
@@ -797,6 +825,7 @@ def _steps(cases, tree):
             "channels": f"CaseChannels({docs}, {override}, {sc}, {app}, {target})",
             "wipe": f"CaseWipe({docs}, {sc}, {app}, {target}, False)",
             "wipe-cache-root": f"CaseWipe({docs}, {sc}, {app}, {target}, True)",
+            "reason": f"CaseReason({docs}, {app}, {target})",
         }[case.kind]
         steps.append(f"  Lines[{i}] := {call};")
     return "\n".join(steps)
@@ -827,36 +856,14 @@ var
   Lines: TArrayOfString;
 begin
   SetArrayLength(Lines, {len(cases)});
-  FakeSet({_pascal_string(str(tree / "NoDocs"))}, '', '', {_pascal_string(str(tree / "NoApp"))});
+  FakeSet({pascal_string(str(tree / "NoDocs"))}, '', '', {pascal_string(str(tree / "NoApp"))});
 {{ steps: begin }}
 {_steps(cases, tree)}
 {{ steps: end }}
-  SaveStringsToFile({_pascal_string(str(out / "result.txt"))}, Lines, False);
+  SaveStringsToFile({pascal_string(str(out / "result.txt"))}, Lines, False);
   Result := False;
 end;
 """
-
-
-def _run_probe(script, tmp_path, out):
-    """Compile *script* with ISCC, run the resulting setup silently and return
-    the lines it saved to ``out / "result.txt"``. Skips the test where Inno
-    Setup is not installed (``require_iscc`` fails it under CI instead) or when
-    an Application Control policy refuses to run the unsigned probe."""
-    iscc = require_iscc()
-    probe = tmp_path / "probe.iss"
-    probe.write_text(script, encoding="utf-8-sig")
-    compiled = subprocess.run([iscc, "/Q", str(probe)], capture_output=True, text=True, timeout=120)
-    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
-    # InitializeSetup returns False, so the setup exits without installing.
-    try:
-        subprocess.run([str(out / "probe.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES"], timeout=120)
-    except OSError as exc:
-        # ERROR_SYSTEM_INTEGRITY_POLICY_VIOLATION: an Application Control
-        # policy (e.g. a sandboxed shell) refused to run the unsigned probe.
-        if getattr(exc, "winerror", None) == 4551:
-            pytest.skip(f"probe setup blocked by Application Control: {exc}")
-        raise
-    return (out / "result.txt").read_text(encoding="mbcs").splitlines()
 
 
 def _problems(cases, lines):
@@ -869,6 +876,12 @@ def _problems(cases, lines):
             if line != case.expect:
                 problems.append(
                     f"{case.name}: LooksLikeScCache said {line!r}, expected {case.expect!r}"
+                )
+            continue
+        if case.kind == "reason":
+            if line != case.expect:
+                problems.append(
+                    f"{case.name}: UnsafeDeleteRootReason said {line!r}, expected {case.expect!r}"
                 )
             continue
         notes, _, log = line.partition("\t")
@@ -899,6 +912,6 @@ def test_cache_cleaning_and_the_wipe_in_compiled_installer_code(tmp_path):
     cases = _cases(tree)
     _make_trees(cases)
     script = _probe_script(_installer_source(), cases, tree, out)
-    lines = _run_probe(script, tmp_path, out)
+    lines = run_probe(script, tmp_path, out)
     problems = _problems(cases, lines)
     assert not problems, "\n".join(problems)
