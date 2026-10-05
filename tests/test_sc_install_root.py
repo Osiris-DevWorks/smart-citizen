@@ -557,6 +557,14 @@ class TestScanUsesLauncherLog:
         log = _launcher_log(tmp_path, (root, "2026-09-30 21:01:02.003"))
         assert scan(log=log) == str(root)
 
+    @pytest.mark.parametrize("folder", ["Dad's Games", "Games, Apps"])
+    def test_finds_an_install_in_a_folder_named_with_an_apostrophe_or_a_comma(
+        self, tmp_path, scan, folder
+    ):
+        root = _fake_install(tmp_path, folder, "Roberts Space Industries", "StarCitizen")
+        log = _launcher_log(tmp_path, (root, "2026-09-30 21:01:02.003"))
+        assert scan(log=log) == str(root)
+
     def test_install_the_log_names_but_is_gone_is_ignored(self, tmp_path, scan):
         gone = tmp_path / "Other Games" / "Roberts Space Industries" / "StarCitizen"
         log = _launcher_log(tmp_path, (gone, "2026-09-30 21:01:02.003"))
