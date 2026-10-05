@@ -19,13 +19,10 @@ Three layers:
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QSettings, QSize, QRect  # noqa: E402
 from PyQt6.QtWidgets import (  # noqa: E402
@@ -42,12 +39,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from src.utils.settings import AppSettings  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 @pytest.fixture

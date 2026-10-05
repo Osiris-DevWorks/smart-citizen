@@ -10,24 +10,15 @@ pytest-qt.
 """
 from __future__ import annotations
 
-import os
 import threading
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
 from PyQt6.QtCore import Qt  # noqa: E402
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 from src.gui.workers import AppliedStateWorker  # noqa: E402
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def _run(worker):

@@ -9,13 +9,11 @@ their objects, Qt reused the memory, and ``findChildren`` then handed back a
 dead QScrollBar wrapper for a live QVBoxLayout. That was the intermittent
 access violation in tests/test_tab_scrollbar_placement.py.
 
-tests/conftest.py now keeps one QApplication for the whole run, and its
-``session_qapplication_still_in_place`` guard fails any module that destroys
-or replaces it. This file checks the effect PyQt6 depends on. It fails if
-the run had a second app before this file ran (the GUI modules that sort
-after it are covered by the guard alone), and it errors at setup if the
-session fixture is removed. The session fixture also sets QT_QPA_PLATFORM
-before any widget here is built.
+tests/conftest.py now keeps one QApplication for the whole run (the ``qapp``
+fixture), and its ``qapp_still_in_place`` guard fails any module that
+destroys or replaces it, or makes its own. This file checks the effect PyQt6
+depends on. It fails if the run had a second app before this file ran (the
+GUI modules that sort after it are covered by the guard alone).
 """
 from __future__ import annotations
 
@@ -45,16 +43,16 @@ def _status_bar_of_a_window():
     _scroll_bar_of_a_table,
     _action_of_a_menu,
     _status_bar_of_a_window,
-], ids=["scroll bar", "menu action", "status bar"])
-def test_wrapper_of_a_qt_created_child_dies_with_its_parent(make, one_qapplication_per_session):
-    assert one_qapplication_per_session is not None
+], ids=["scroll_bar", "menu_action", "status_bar"])
+def test_wrapper_of_a_qt_created_child_dies_with_its_parent(make, qapp):
     parent, child = make()
     assert not sip.isdeleted(child)
 
     sip.delete(parent)
 
     assert sip.isdeleted(child), (
-        f"PyQt6 no longer tracks Qt-created {type(child).__name__} objects, so "
-        "the run has had more than one QApplication; see "
-        "one_qapplication_per_session in tests/conftest.py"
+        f"PyQt6 no longer marks a dead Qt-created {type(child).__name__} as "
+        "deleted. Either the run has had more than one QApplication (see the "
+        "qapp fixture in tests/conftest.py) or PyQt6 changed how it tracks "
+        "objects Qt creates itself"
     )

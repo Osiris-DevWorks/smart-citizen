@@ -25,7 +25,7 @@ by whoever writes the third such file:
   tests/conftest.py guarantees. Before it did, each GUI module's own app was
   destroyed at the end of that module and took these windows with it, and
   once the first app was gone PyQt6 could no longer tell when Qt deleted a
-  child it had created itself (see ``one_qapplication_per_session``).
+  child it had created itself (see the ``qapp`` fixture in tests/conftest.py).
 
 Settings, user-data and cache directories are all redirected into the caller's
 tmp path, so construction touches nothing real.

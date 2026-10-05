@@ -8,11 +8,9 @@ regressing that behavior.
 """
 from __future__ import annotations
 
-import importlib
 import logging
 import sys
 import threading
-from pathlib import Path
 
 import pytest
 
@@ -32,8 +30,9 @@ def fresh_crash_module(monkeypatch):
     """
     original_sys = sys.excepthook
     original_thread = threading.excepthook
-    # The run keeps one QApplication alive throughout (tests/conftest.py), so
-    # the real crash dialog would open modally here and hang the test. These
+    # In a run with GUI tests one QApplication stays alive throughout (the
+    # qapp fixture in tests/conftest.py), so the real crash dialog would open
+    # modally here and hang the test. These
     # tests check the dump and the hook chain. TestCrashDialogWiring checks
     # the dialog call with stubs of its own, which replace this one, and
     # tests/test_crash_logger.py runs the real dialog.
