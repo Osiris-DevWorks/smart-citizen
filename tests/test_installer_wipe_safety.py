@@ -300,10 +300,14 @@ def test_no_program_is_started_to_delete_folders():
     ), f"installer.iss names a shell or a delete command: {shellish}. Review it as a new delete."
 
 
-# The one delete entry outside [Code]. NOTE: it empties whatever install folder the
-# user picks on the directory page. That is a pre-existing hazard, #454. This pin
-# only makes a NEW delete entry get reviewed, it does not endorse this one.
-_INSTALL_DELETE = ['Type: filesandordirs; Name: "{app}\\*"']
+# The delete entries outside [Code]. They name only what a previous install put in
+# the app folder (the exe and PyInstaller's _internal), never a wildcard over the
+# whole folder, which emptied any existing folder the user picked (#454).
+_INSTALL_DELETE = [
+    'Type: filesandordirs; Name: "{app}\\_internal"',
+    'Type: files; Name: "{app}\\SmartCitizen.exe"',
+    'Type: files; Name: "{app}\\SmartCitizen-v*.exe"',
+]
 
 
 def test_install_and_uninstall_delete_entries_are_pinned():

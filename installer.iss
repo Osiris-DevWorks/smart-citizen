@@ -45,8 +45,13 @@ SCDirectoryDefaultDesc=This is typically located at:
 SCDirectoryDefaultPath=C:\Program Files\Roberts Space Industries\StarCitizen\LIVE
 
 [InstallDelete]
-; Clear previous install directory completely before installing new files
-Type: filesandordirs; Name: "{app}\*"
+; Remove only what a previous Smart Citizen install put here, never the whole
+; folder: the user can type any existing folder on the directory page (#454).
+; Every build is a PyInstaller 6 onedir: the launcher exe plus _internal\.
+; SmartCitizen-v*.exe covers the early builds that versioned the exe name.
+Type: filesandordirs; Name: "{app}\_internal"
+Type: files; Name: "{app}\SmartCitizen.exe"
+Type: files; Name: "{app}\SmartCitizen-v*.exe"
 
 [Files]
 Source: "dist\SmartCitizen\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -450,7 +455,7 @@ begin
   // file gone 4 ms later).
   //
   // The old uninstaller adds nothing in the same-dir case:
-  //   - old files     -> the InstallDelete filesandordirs entry wipes them
+  //   - old files     -> the InstallDelete entries remove the old exe and _internal
   //   - uninstall key -> same AppId; the new install overwrites it
   //   - icons         -> same group/desktop names; recreated by [Icons]
   //   - cache cleanup -> CleanCachedData() runs install-side at ssInstall
@@ -461,7 +466,7 @@ begin
   OldAppDir := RemoveBackslash(ExtractFileDir(sUnInstallString));
   NewAppDir := RemoveBackslash(ExpandConstant('{app}'));
   if CompareText(OldAppDir, NewAppDir) = 0 then begin
-    Log('Same-directory upgrade (' + NewAppDir + '): skipping old uninstaller; InstallDelete clears the directory and the new install rewrites the uninstall key.');
+    Log('Same-directory upgrade (' + NewAppDir + '): skipping old uninstaller; InstallDelete removes the old app files and the new install rewrites the uninstall key.');
     Result := 5;
     Exit;
   end;
