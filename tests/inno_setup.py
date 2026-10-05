@@ -1,9 +1,10 @@
 """Inno Setup's compiler, for the tests that compile installer.iss or a probe.
 
-Three test files compile with ISCC.exe (``test_installer_auto_update_relaunch``,
-``test_installer_onedrive_check`` and ``test_installer_sc_path_checks``). They
-used to carry a copy each of a lookup that only knew ``Inno Setup 6`` folders,
-so a machine or runner with Inno Setup 7 skipped them without a word.
+Four test files compile with ISCC.exe (``test_installer_auto_update_relaunch``,
+``test_installer_onedrive_check``, ``test_installer_sc_path_checks`` and
+``test_installer_wipe_safety``). They used to carry a copy each of a lookup
+that only knew ``Inno Setup 6`` folders, so a machine or runner with Inno
+Setup 7 skipped them without a word.
 
 ``find_iscc`` looks on PATH first, then in every ``Inno Setup *`` folder under
 Program Files (x86), Program Files and the per-user ``%LOCALAPPDATA%\\Programs``
