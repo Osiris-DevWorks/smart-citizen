@@ -48,6 +48,7 @@ import logging
 import os
 import re
 import string
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
@@ -621,28 +622,65 @@ _LOG_TIMESTAMP_RE = re.compile(
 # can hold. Parentheses, apostrophes and commas are deliberately NOT excluded:
 # ``C:\Program Files (x86)\...``, ``D:\Dad's Games\...`` and ``E:\Games, Apps\...``
 # are real install locations. The launcher's own noise comes along too
-# (`` (type: install``, a closing quote, the next entry of a list) and is cut
-# back by :data:`_LOG_PATH_LIST_SPLIT_RE` and :func:`_logged_path_candidates`.
+# (`` (type: install``, a closing quote, every later path in the same string)
+# and is cut back by :data:`_LOG_PATH_LIST_SPLIT_RE` and
+# :func:`_logged_path_candidates`.
 _LOG_PATH_RE = re.compile(r"[A-Za-z]:\\[^\"*?<>|\r\n]*")
 
-# The launcher logs comma-separated path *lists*
-# (``[validateNonExistantDirectories] C:\a,C:\a\StarCitizen,...``). A comma
-# followed by another drive path, with or without spaces after it, is the only
-# place one entry ends and the next begins, so a match is split there. A folder
-# name cannot hold a colon, so any other comma belongs to a folder name.
-_LOG_PATH_LIST_SPLIT_RE = re.compile(r",\s*(?=[A-Za-z]:\\)")
+# One logged string can name several paths: a list
+# (``[validateNonExistantDirectories] C:\a,C:\a\StarCitizen,...``) or a
+# sentence such as
+# ``copy 'F:\Old\StarCitizen\LIVE' to 'G:\New\StarCitizen\LIVE'``
+# (Node's file errors read ``rename 'A' -> 'B'``). A folder name cannot hold a
+# colon, so a drive path in the middle of a match always starts a new entry,
+# whatever sits between the two paths, and a match is split before each one.
+# A list separator, a comma or a semicolon with any spaces after it, goes with
+# the split, so list entries come out clean: one left on would cost every
+# entry a failed probe before the cut at it. The last entry can still end in
+# one (``A;B;``), and the cuts take that off. A comma or a semicolon in a
+# folder name (``Games, Apps``, ``Games; Apps``) has no drive path after it, so
+# it stays. Any other text between two paths (``' to '``) stays on the end of
+# the earlier entry, where :func:`_logged_path_candidates` trims it. Inside a
+# match the lookbehind keeps the drive letter standing alone, so the ``c:\`` in
+# ``...\abc:\x`` does not start an entry. :data:`_LOG_PATH_RE` has no such
+# check, so text that starts with ``abc:\x`` is still matched from its ``c:\``.
+# The log is JSON, so a line break between two paths is the two characters
+# ``\n`` (``\r`` and ``\t`` likewise), and the letter of that escape would hide
+# the drive letter behind it from the lookbehind: a drive path right after one
+# of them starts an entry as well. That cannot split a real path, since a
+# folder name cannot hold the colon that makes it a drive path. The split
+# leaves empty pieces, one at the front (every match starts at a drive path)
+# and one after each separator it consumed, which the :data:`_LOG_PATH_HINT`
+# check in :func:`parse_launcher_log` drops.
+_LOG_PATH_LIST_SPLIT_RE = re.compile(
+    r"(?:[,;]\s*)?(?:(?<![A-Za-z])|(?<=\\[nrt]))(?=[A-Za-z]:\\)"
+)
 
 # The launcher always creates its ``StarCitizen\<channel>`` tree inside the
 # user's chosen library folder, so this substring is a safe, cheap filter that
 # keeps the launcher's own program directory and its cache paths out.
 _LOG_PATH_HINT = "starcitizen"
 
+# A folder whose name starts with the hint: group 1 is the hint itself, group 2
+# the rest of that folder's name (or of the text stuck to it).
+_LOG_HINT_FOLDER_RE = re.compile(
+    r"(?<=[\\/])(" + re.escape(_LOG_PATH_HINT) + r")([^\\/]*)", re.IGNORECASE
+)
+
 # Bound on how many trimmed variants of one logged path get probed. Real paths
 # resolve within a handful; the cap just stops a pathological log line from
-# turning into thousands of stat calls. The cuts at a quote or comma and the
-# word and folder trimming that follows each get this many, so a path with a
-# great many quotes or commas still reaches the folder walk.
+# turning into thousands of stat calls. The path as logged, the same path with
+# each line break left on its end taken off, and the cuts (at a folder named
+# for the hint, then at a quote, comma or semicolon) share one budget of this
+# size. The word and folder trimming that follows has another, so a path with
+# a great many quotes or commas still reaches the folder walk. The cut passes
+# take their matches last first and spend one budget at most, so they keep
+# only this many.
 _MAX_PATH_CANDIDATES = 24
+
+# Windows takes no path longer than this many characters, so a candidate cut
+# from a logged path cannot be an install once it is longer.
+_LONGEST_WINDOWS_PATH = 32_767
 
 # How much of the log gets read and parsed, counted back from its end. First-run
 # detection reads it on the GUI thread, and the per-folder memo bounds the work
@@ -651,6 +689,19 @@ _MAX_PATH_CANDIDATES = 24
 # the window for tens of seconds. The launcher's own log is about 40 KB, so
 # this is a hundred times what a real one needs.
 _LOG_READ_BUDGET_BYTES = 4 * 1024 * 1024
+
+# How many folders one read of the log may probe in all. The per-folder memo
+# bounds the work per folder but not per distinct path, and first-run
+# detection reads the log on the GUI thread. Measured on a 4 MiB log of
+# distinct per-file paths under a library folder that no longer exists (about
+# 22 microseconds a probe on the PC it was measured on): plain paths take
+# 16,000 probes, ENOENT errors 28,000 and rename errors 42,000, so this cap
+# leaves them alone. Contrived lines are what it stops. A quoted path followed
+# by thirty ``, x`` and thirty `` w`` took 474,000 probes and 11.6 s, and stops
+# here at 2.2 s. Once it is reached, a path the log has not named before is
+# not checked any more (a debug line says so once), while one already checked
+# still updates its newest mention.
+_MAX_LOG_PROBES = 100_000
 
 
 def default_launcher_log_path() -> Optional[Path]:
@@ -661,26 +712,120 @@ def default_launcher_log_path() -> Optional[Path]:
     return Path(appdata) / "rsilauncher" / "logs" / "log.log"
 
 
+def _trailing_break_ends(raw: str) -> Iterator[int]:
+    r"""Yield where *raw* ends as each JSON line break at its end comes off.
+
+    The log is JSON, so a message that ends in a line break ends in the two
+    characters ``\n`` (``\r`` and ``\t`` likewise), and a path at the end of
+    such a message carries them. They come off one at a time, last first, each
+    with the spaces and separators next to it, and every new end is yielded:
+    ``...\Hub\t\n`` gives ``...\Hub\t``, which may be a folder really called
+    ``t``, and then ``...\Hub``. It works back from the end one character at a
+    time, so it stays linear on any line.
+    """
+    end = len(raw)
+    while end >= 2 and raw[end - 2] == "\\" and raw[end - 1] in "nrt":
+        end -= 2
+        while end and (raw[end - 1].isspace() or raw[end - 1] in "\\/"):
+            end -= 1
+        yield end
+
+
+def _hint_folder_cuts(raw: str) -> Iterator[str]:
+    r"""Yield the prefixes of *raw* that end at a folder named for the hint.
+
+    Last folder first, so ``D:\StarCitizen\StarCitizen\LIVE`` offers the inner
+    folder before the outer one. A folder qualifies when its name starts with
+    the hint, in any case, so ``MyStarCitizen`` does not. The whole name is
+    offered and never a shorter one: ``StarCitizen_old`` and
+    ``StarCitizen Old`` give those folders, not the ``StarCitizen`` beside
+    them, which may be a different install. The one exception mirrors the cut
+    at a quote, comma or semicolon in :func:`_logged_path_candidates`: where
+    one of those follows the hint (``...\StarCitizen, Error: x``,
+    ``...\StarCitizen' is missing``, ``...\StarCitizen;``) the bare name comes
+    first, as that cut would have reached it before any walk up.
+
+    These come before the walk up, so an install nested inside a folder named
+    for the hint gives way to that folder: with installs at ``...\StarCitizen``
+    and ``...\StarCitizen\Backup``, the path ``...\StarCitizen\Backup\LIVE``
+    resolves to ``...\StarCitizen``. That is a decision. The launcher always
+    names its own folder ``StarCitizen``, and a second install inside it is not
+    a layout the launcher makes.
+
+    Only the last :data:`_MAX_PATH_CANDIDATES` folders are kept, so the matches
+    take no more memory on a line of hundreds of thousands of folders than on
+    a short one. The caller spends at most one budget of that size here, every
+    folder yields at least one prefix, and only one prefix can be skipped (the
+    last folder's whole name, when that is the whole path), so no earlier
+    folder is ever reached. Each prefix yielded is still a full copy of the
+    text up to its folder, and :func:`parse_launcher_log` keeps every one it
+    probes as a key of its memo. That is why :func:`_logged_path_candidates`
+    first cuts the text to the longest path Windows takes.
+    """
+    matches = deque(
+        _LOG_HINT_FOLDER_RE.finditer(raw), maxlen=_MAX_PATH_CANDIDATES
+    )
+    for match in reversed(matches):
+        if match.group(2)[:1] in ("'", ",", ";"):
+            yield raw[: match.end(1)]
+        yield raw[: match.end()]
+
+
 def _logged_path_candidates(raw: str) -> Iterator[str]:
-    r"""Yield plausible truncations of *raw*, longest first.
+    r"""Yield plausible truncations of *raw*, the whole path first.
 
     A logged path arrives with the launcher's own prose stuck to the end
     (``...\StarCitizen (type: install``, ``...\LIVE - required: 110085069``,
-    ``...\StarCitizen' is missing``). Three passes clean that up: first cut at
-    each apostrophe or comma, last one first (a quote or a comma that ends the
-    path, while a folder name such as ``Dad's Games`` is kept whole by the
-    full path being tried before any cut), then trim whitespace-separated
-    words off the final segment, then walk up whole segments. Between them
-    they recover the real root from every line shape the launcher currently
-    emits, without this module having to know any of those shapes.
+    ``...\StarCitizen' is missing``, the ``' to '`` between two quoted paths,
+    which :data:`_LOG_PATH_LIST_SPLIT_RE` leaves on the earlier one, or a whole
+    stack trace). A message that ends in a line break also leaves its JSON
+    escape (``\n``) on the end, so after the path as logged come the same path
+    with one escape taken off, then two, and so on
+    (:func:`_trailing_break_ends`), and the rest works from the last of them.
+    Four passes then clean it up.
+    First the prefixes that end at a folder named for the hint
+    (:func:`_hint_folder_cuts`): the launcher always creates ``StarCitizen``,
+    so the root is nearly always one of them, however much text follows. Then
+    a cut at each apostrophe, comma or semicolon, last one first (one that ends
+    the path, while a folder name such as ``Dad's Games`` is kept whole by the
+    full path being tried before any cut). Then whitespace-separated words
+    trimmed off the final segment, from as many as the budget has room for
+    down to the first word alone. Last a walk up whole segments. The path, the
+    paths without their line breaks and the first two passes share one budget
+    of :data:`_MAX_PATH_CANDIDATES` candidates, and the last two share another.
+    Between them they recover the real root from every line shape the
+    launcher currently emits, without this module having to know any of
+    those shapes.
     """
-    raw = raw.strip().rstrip("\\/")
+    # Every candidate is a prefix of the path (the walk up also tidies its
+    # separators, which only shortens it), and no path longer than Windows
+    # takes can be an install, so the text past that length can go. It also
+    # keeps every copy below, and every key of a caller's memo, that short.
+    raw = raw[:_LONGEST_WINDOWS_PATH].strip().rstrip("\\/")
     if not raw:
         return
     yield raw
 
     emitted = 1
-    for match in reversed(list(re.finditer(r"[',]", raw))):
+    # The path as logged went first, since a ``\n``, ``\r`` or ``\t`` on its
+    # end may be a folder really called n, r or t. Each escape taken off gives
+    # one more path to try, and the passes below work from the shortest.
+    end = len(raw)
+    for end in _trailing_break_ends(raw):
+        if end <= 3:  # only a drive is left, never an install
+            return
+        if emitted < _MAX_PATH_CANDIDATES:
+            yield raw[:end]
+            emitted += 1
+    raw = raw[:end]
+    for cut in _hint_folder_cuts(raw):
+        if emitted >= _MAX_PATH_CANDIDATES:
+            break
+        if cut != raw:
+            yield cut
+            emitted += 1
+    quotes = deque(re.finditer(r"[',;]", raw), maxlen=_MAX_PATH_CANDIDATES)
+    for match in reversed(quotes):
         if emitted >= _MAX_PATH_CANDIDATES:
             break
         cut = raw[: match.start()].rstrip("\\/ ")
@@ -691,12 +836,18 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
     emitted = 1  # the cuts above must not eat the budget of the passes below
     head, sep, tail = raw.rpartition("\\")
     words = tail.split(" ")
-    for count in range(len(words) - 1, 0, -1):
-        if emitted >= _MAX_PATH_CANDIDATES:
-            return
+    # With more words than the budget has room for, the trim starts at as many
+    # as fit, so it still gets down to the first word alone (the name the prose
+    # follows), and a longer name such as ``StarCitizen Old`` comes before it.
+    longest = min(len(words) - 1, _MAX_PATH_CANDIDATES - emitted)
+    for count in range(longest, 0, -1):
         yield head + sep + " ".join(words[:count])
         emitted += 1
 
+    # A root not named for the hint has only this walk, so with a quote and a
+    # long trace after it (five ``node:internal`` frames or more) the budget
+    # runs out before the walk gets there. The launcher always names its root
+    # ``StarCitizen``, so that takes a folder it did not make, and is left so.
     current = Path(raw)
     for parent in current.parents:
         if emitted >= _MAX_PATH_CANDIDATES:
@@ -747,6 +898,7 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
     # Folder -> install test, so per-file paths under one install (each a
     # distinct raw string) share the walk up through its folders.
     checked: dict[str, bool] = {}
+    out_of_probes = False
     last_stamp: Optional[datetime] = None
 
     for line in text.splitlines():
@@ -760,6 +912,8 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
             continue
         # The log is JSON-escaped, so on-disk ``C:\a\b`` appears as ``C:\\a\\b``.
         unescaped = line.replace("\\\\", "\\")
+        # A match can hold several paths, so it is split into one entry each.
+        # The empty pieces the split leaves fail the hint check below.
         raws = [
             entry
             for match in _LOG_PATH_RE.findall(unescaped)
@@ -767,6 +921,15 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
         ]
         for raw in raws:
             if _LOG_PATH_HINT not in raw.lower():
+                continue
+            if raw not in resolved and len(checked) >= _MAX_LOG_PROBES:
+                if not out_of_probes:
+                    out_of_probes = True
+                    logger.debug(
+                        "RSI Launcher log: %d folders probed, later new paths "
+                        "in it are not checked",
+                        len(checked),
+                    )
                 continue
             if raw not in resolved:
                 resolved[raw] = resolve_logged_root(raw, checked)
