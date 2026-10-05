@@ -114,8 +114,9 @@ function IsAutoUpdate(): Boolean;
 begin
   { True when this install was spawned by the app's in-app auto-updater
     (#211), which passes /AUTOUPDATE=1 — see _launch_installer_and_quit in
-    src/gui/main_window.py. Drives the [Run] entry that relaunches the app
-    after a silent upgrade. }
+    src/gui/main_window.py. Drives the ExecAsOriginalUser call in
+    CurStepChanged (ssPostInstall) that relaunches the app after a silent
+    upgrade (#434). }
   Result := ExpandConstant('{param:AUTOUPDATE|0}') = '1';
 end;
 
