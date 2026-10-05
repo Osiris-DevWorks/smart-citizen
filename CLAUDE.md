@@ -55,7 +55,7 @@ pytest tests/ -n auto                                            # parallel (pyt
 
 # Code Quality
 black src/ tests/ scripts/        # format
-flake8 src/ tests/ scripts/       # lint
+flake8 src/ tests/ scripts/       # lint, settings in .flake8
 isort src/ tests/ scripts/        # sort imports
 mypy src/                         # types
 
@@ -214,7 +214,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change the OneDrive data-root warning | `src/utils/onedrive.py`, `src/gui/main_window.py`, `src/gui/config_tab.py` | `is_onedrive_path()` / `suggest_local_data_dir()`; `_maybe_warn_onedrive_data_dir()` (startup, suppressible) + Config-tab folder-pick warning; `ConfigTab.change_data_dir_to()` for the one-click move (#172) |
 | Change the toolbar More overflow menu | `src/gui/main_window.py` | `more_menu` block in toolbar setup (restore backup, clear loc/cache, import/export, open loc dir) |
 | Change the tester Test Plan panel / content | `src/utils/test_plan.py`, `src/gui/test_plan_panel.py` | `TEST_SECTIONS` (per-release checklist), `TestPlanPanel`, `_ensure_test_plan_dock()` / `show_test_plan()` (#144) |
-| Change the uninstaller's opt-in "Also delete all saved settings" wipe | `installer.iss` | `InitializeUninstall()` (the dialog; skipped on `/SILENT` and `/VERYSILENT` unless `/SHOWDELETEOPTION=1`), `DeleteAllUserSettings()` (also the default data and cache folders when overridden, the legacy `Documents\SC Localization Editor` folder, and the queued `pending_cache_cleanup` tree), `DeleteOwnedSubpaths()` (app-owned names only; a folder is removed only if that left it empty), `UnsafeDeleteRootReason()` (refuses drive and share roots, device paths, Documents (the shell's and the local `%USERPROFILE%\Documents`), `%USERPROFILE%`, `{app}`, links, and any folder that is or contains the SC install, by registry and by `HasScGameData()` markers: `install_scanner.SC_CHANNEL_MARKERS` plus the player-data extras `USER`, `ScreenShots`, `logbackups`, `Game.log`) (#357) |
+| Change the uninstaller's opt-in "Also delete all saved settings" wipe | `installer.iss` | `InitializeUninstall()` (the dialog; skipped on `/SILENT` and `/VERYSILENT` unless `/SHOWDELETEOPTION=1`), `DeleteAllUserSettings()` (also the default data and cache folders when overridden, the legacy `Documents\SC Localization Editor` folder, and the queued `pending_cache_cleanup` tree), `DeleteOwnedSubpaths()` (app-owned names only; the old root-level `cache` only when `LooksLikeScCache()` says it holds a Smart Citizen cache, meaning a `base.ini`, a `dataforge` folder or a `<channel>\cache` folder; a folder is removed only if that left it empty), `UnsafeDeleteRootReason()` (also gates `CleanCachedData()` and `CleanPerChannelCaches()`, the cache cleaning that runs on every install, upgrade and normal uninstall: a refused data folder is skipped with the reason in the log and no dialog, and `CleanCachedData()` clears the flat root-level `cache` under the same `LooksLikeScCache()` rule; refuses drive and share roots, device paths, Documents (the shell's and the local `%USERPROFILE%\Documents`), `%USERPROFILE%`, `{app}`, links, and any folder that is or contains the SC install, by registry and by `HasScGameData()` markers: `install_scanner.SC_CHANNEL_MARKERS` plus the player-data extras `USER`, `ScreenShots`, `logbackups`, `Game.log`) (#357) |
 
 ## Version & Release
 

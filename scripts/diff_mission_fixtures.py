@@ -100,7 +100,7 @@ def compare_kraken(new_csv_path: Path, kraken_path: Path):
     new_records = load_csv(new_csv_path)
     kraken = load_kraken(kraken_path)
 
-    print(f"\n=== Kraken Comparison ===")
+    print("\n=== Kraken Comparison ===")
     print(f"Our missions: {len(new_records)} records")
     print(f"Kraken entries: {len(kraken)} loc keys")
 
@@ -120,7 +120,7 @@ def compare_kraken(new_csv_path: Path, kraken_path: Path):
     missions_with_bp = sum(1 for v in kraken.values() if "POTENTIAL BLUEPRINTS" in v)
     missions_with_rep = sum(1 for v in kraken.values() if "Reputation XP" in v or "Tier " in v)
 
-    print(f"\nKraken content analysis:")
+    print("\nKraken content analysis:")
     print(f"  Entries with MISSION DETAILS: {missions_with_details}")
     print(f"  Entries with POTENTIAL BLUEPRINTS: {missions_with_bp}")
     print(f"  Entries with rep tier info: {missions_with_rep}")

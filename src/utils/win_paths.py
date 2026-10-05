@@ -21,7 +21,7 @@ def win_long_path(path) -> str:
 
     Uses ``os.path.abspath`` (absolute + normalized: no ``.``/``..``, no
     symlink/junction resolution) rather than ``Path.resolve()`` — the
-    ``\\?\`` prefix only needs a fully qualified path, and resolving
+    ``\\\\?\\`` prefix only needs a fully qualified path, and resolving
     symlinks would quietly rewrite a cache root behind a junction or subst
     drive to its real path everywhere downstream (logs, error messages),
     which is more than this fix is asking for.
