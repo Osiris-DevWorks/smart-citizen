@@ -79,19 +79,27 @@ def one_qapplication_per_session():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def session_qapplication_still_in_place(one_qapplication_per_session):
-    """Fail at the start of the next module if a test destroyed or replaced
-    the session's QApplication, instead of leaving it to the intermittent
-    crash that losing it causes (see one_qapplication_per_session)."""
+def session_qapplication_still_in_place(request, one_qapplication_per_session):
+    """Fail as soon as a test has destroyed or replaced the session's
+    QApplication, instead of leaving it to the intermittent crash that losing
+    it causes (see one_qapplication_per_session). Checked when each module
+    starts and again when it ends, so the module that did it is the one that
+    fails, the run's last module included."""
     app = one_qapplication_per_session
-    if app is not None:
+
+    def check(problem):
+        if app is None:
+            return
         from PyQt6 import sip
         from PyQt6.QtWidgets import QApplication
         assert not sip.isdeleted(app) and QApplication.instance() is app, (
-            "an earlier test destroyed or replaced the session QApplication; "
-            "every test must share the one from tests/conftest.py"
+            f"{problem}. Every test must share the one from tests/conftest.py"
         )
+
+    module = request.module.__name__
+    check(f"the session QApplication was already gone or replaced when {module} started")
     yield
+    check(f"a test in {module} destroyed or replaced the session QApplication")
 
 
 @pytest.fixture

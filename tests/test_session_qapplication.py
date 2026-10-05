@@ -9,21 +9,19 @@ their objects, Qt reused the memory, and ``findChildren`` then handed back a
 dead QScrollBar wrapper for a live QVBoxLayout. That was the intermittent
 access violation in tests/test_tab_scrollbar_placement.py.
 
-tests/conftest.py now keeps one QApplication for the whole run. If anything
-brings the churn back, these checks fail on every full run instead of the
-crash coming back about one run in five, and without that fixture they
-error at setup. On their own they only show that one app is enough.
+tests/conftest.py now keeps one QApplication for the whole run, and its
+``session_qapplication_still_in_place`` guard fails any module that destroys
+or replaces it. This file checks the effect PyQt6 depends on. It fails if
+the run had a second app before this file ran (the GUI modules that sort
+after it are covered by the guard alone), and it errors at setup if the
+session fixture is removed. The session fixture also sets QT_QPA_PLATFORM
+before any widget here is built.
 """
 from __future__ import annotations
 
-import os
-
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PyQt6 import sip  # noqa: E402
-from PyQt6.QtWidgets import QMainWindow, QMenu, QTableView  # noqa: E402
+from PyQt6 import sip
+from PyQt6.QtWidgets import QMainWindow, QMenu, QTableView
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
