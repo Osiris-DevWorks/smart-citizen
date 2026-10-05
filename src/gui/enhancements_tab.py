@@ -1,6 +1,5 @@
 """Enhancements tab for Smart Citizen."""
 import logging
-from dataclasses import replace as dc_replace
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -19,7 +18,7 @@ from src.utils.tag_builder import (
     MAPPED_KIND_NAMES, MISSION_TITLE_PLACEMENTS, PLACEMENTS, RANK_SEPARATORS,
     REMOVE_WORD_OPTIONS, ROUTE_ARROWS, SEPARATORS, SHORTEN_PHRASE_OPTIONS,
     SIZE_ABBREV_BY_WORD, STYLES_BY_KIND, TITLE_SEPARATORS, TagConfig,
-    UNDERLINE_OPTIONS, USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
+    USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
     default_config, render_route, render_tag, route_enabled,
 )
 
@@ -695,7 +694,6 @@ class EnhancementsTab(QWidget):
     # ── Mission Labels ──────────────────────────────────────────────────────
 
     def _build_mission_labels_group(self) -> QGroupBox:
-        from PyQt6.QtWidgets import QLineEdit
         self.mission_labels_group = QGroupBox(tr("enhancements.mission_labels_group"))
         group = self.mission_labels_group
         gl = QVBoxLayout(group)

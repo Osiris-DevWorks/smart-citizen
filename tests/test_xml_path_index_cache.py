@@ -1,4 +1,4 @@
-"""Regression test for the xml_path_index lookup-cache invalidation bug.
+r"""Regression test for the xml_path_index lookup-cache invalidation bug.
 
 xml_path_index had no entry in _LOOKUP_VERSIONS before this fix, so it
 silently defaulted to "v1" forever. #231 started wrapping forge_dir (and

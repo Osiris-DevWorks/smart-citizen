@@ -4,8 +4,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from utils.dataforge_patcher import (
     LocstringWorkaround,
     apply_locstring_workarounds,

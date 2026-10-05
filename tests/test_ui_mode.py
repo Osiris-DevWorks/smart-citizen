@@ -312,8 +312,6 @@ class _ResetStub:
     """Stand-in carrying what _reset_window_proportions touches."""
 
     def __init__(self):
-        from src.gui.main_window import MainWindow
-
         self.calls = []
         self._default_window_state = b"DOCKSTATE"
         self._user_resized_columns = True
