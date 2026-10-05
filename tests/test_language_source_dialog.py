@@ -11,17 +11,14 @@ as test_mission_titles_page_dirty_signal.py — no pytest-qt.
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
 from PyQt6.QtCore import QObject, pyqtSignal  # noqa: E402
-from PyQt6.QtWidgets import QApplication, QDialog  # noqa: E402
+from PyQt6.QtWidgets import QDialog  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
@@ -32,11 +29,6 @@ from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
 
 pytestmark = pytest.mark.unit
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 @pytest.fixture

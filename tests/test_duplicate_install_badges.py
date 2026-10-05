@@ -29,15 +29,11 @@ and tests/test_restore_backup.py -- no pytest-qt.
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
@@ -54,11 +50,6 @@ from src.utils.install_scanner import (  # noqa: E402
 )
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def _channel(name="LIVE", has_data=True):
