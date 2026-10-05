@@ -131,3 +131,68 @@ def test_unreadable_root_scores_zero_rather_than_raising(tmp_path):
     real = _install(tmp_path / "real", mtime=9_000_000)
     assert set(_p4k_mtimes(gone).values()) == {0.0}
     assert _pick_live_sc_install([gone, real], channel="LIVE") == real
+
+
+def _shell(root: Path) -> str:
+    """A folder the game has left: a channel folder with Bin64, no Data.p4k."""
+    (root / "LIVE" / "Bin64").mkdir(parents=True)
+    return str(root)
+
+
+def test_a_folder_without_a_p4k_is_never_returned(tmp_path):
+    """#431 review: returning a shell gets it saved as the install, where it
+    stays. None makes the app ask for the path instead."""
+    assert _pick_live_sc_install([_shell(tmp_path / "one")], channel="LIVE") is None
+    shells = [_shell(tmp_path / "a"), _shell(tmp_path / "b")]
+    assert _pick_live_sc_install(shells, channel="LIVE") is None
+
+
+def test_nothing_picked_is_logged_with_every_candidate(tmp_path, caplog):
+    shells = [_shell(tmp_path / "a"), _shell(tmp_path / "b")]
+    with caplog.at_level(logging.WARNING):
+        _pick_live_sc_install(shells, channel="LIVE")
+    logged = "\n".join(r.message for r in caplog.records)
+    assert "none holds a Data.p4k" in logged
+    assert all(shell in logged for shell in shells)
+    assert "Config tab" in logged
+
+
+def _undated(monkeypatch, *roots):
+    """Make every Data.p4k under *roots* read as undated (a pre-1970 stamp)
+    while the files stay on disk."""
+    import src.utils.settings as settings_mod
+
+    real = settings_mod._p4k_mtimes
+    monkeypatch.setattr(
+        settings_mod, "_p4k_mtimes",
+        lambda root: {c: 0.0 for c in real(root)} if root in roots else real(root),
+    )
+
+
+def test_an_undated_p4k_still_counts_and_beats_a_shell(tmp_path, monkeypatch):
+    """An undated archive is still the game. Scan order used to decide
+    between it and a shell, since neither had a date to compare."""
+    real = _install(tmp_path / "real")
+    _undated(monkeypatch, real)
+    assert _pick_live_sc_install([real], channel="LIVE") == real
+    assert _pick_live_sc_install([_shell(tmp_path / "shell"), real], channel="LIVE") == real
+
+
+def test_a_dated_p4k_needs_no_second_look_at_the_disk(tmp_path, monkeypatch):
+    """The extra check is only for candidates with no usable date, which rank
+    last, so a normal pick costs nothing more than before."""
+    import src.utils.settings as settings_mod
+
+    looked = []
+    real_check = settings_mod.has_game_data
+    monkeypatch.setattr(
+        settings_mod, "has_game_data", lambda root: looked.append(root) or real_check(root)
+    )
+    live = _install(tmp_path / "live", mtime=2_000_000)
+    orphan = _install(tmp_path / "orphan", mtime=1_000_000)
+    shell = _shell(tmp_path / "shell")
+    assert _pick_live_sc_install([shell, orphan, live], channel="LIVE") == live
+    # A library whose only dated Data.p4k is in another channel is dated too.
+    ptu = _install(tmp_path / "ptu", "PTU", mtime=3_000_000)
+    assert _pick_live_sc_install([ptu], channel="LIVE") == ptu
+    assert looked == []

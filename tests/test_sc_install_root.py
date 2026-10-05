@@ -380,6 +380,12 @@ class TestScanCommonScInstallLocations:
             "src.utils.install_scanner.looks_like_sc_root",
             lambda p: os.path.normcase(str(p)) == os.path.normcase(target),
         )
+        # Nothing is on disk at this made-up path, and the scan never picks a
+        # folder without a Data.p4k, so the target is said to hold one.
+        monkeypatch.setattr(
+            settings_mod, "has_game_data",
+            lambda p: os.path.normcase(str(p)) == os.path.normcase(target),
+        )
         assert _scan_common_sc_install_locations() == target
 
     def test_returns_none_when_nothing_valid_anywhere(self, monkeypatch):
@@ -403,6 +409,12 @@ class TestScanCommonScInstallLocations:
         target = r"C:\Games\Roberts Space Industries\StarCitizen"
         monkeypatch.setattr(
             "src.utils.install_scanner.looks_like_sc_root",
+            lambda p: os.path.normcase(str(p)) == os.path.normcase(target),
+        )
+        # Nothing is on disk at this made-up path, and the scan never picks a
+        # folder without a Data.p4k, so the target is said to hold one.
+        monkeypatch.setattr(
+            settings_mod, "has_game_data",
             lambda p: os.path.normcase(str(p)) == os.path.normcase(target),
         )
         assert _scan_common_sc_install_locations() == target
@@ -675,6 +687,77 @@ class TestScanUsesLauncherLog:
         scan(common=[shell], shallow=[real])
         assert ranked == [str(shell), str(real)]
 
+    @pytest.mark.parametrize("leftover", ["Bin64", "build_manifest.id"])
+    @pytest.mark.parametrize("source", ["common", "log"])
+    def test_a_shell_on_its_own_is_not_picked(self, tmp_path, scan, source, leftover):
+        """#431 review: the game moved and its old folder kept a channel folder
+        with Bin64 or a build manifest but no Data.p4k. That passes as an
+        install, and a saved root is only checked for a channel folder, so
+        picking it would stick and every extraction would fail on it. Nothing
+        is picked, so the user is asked for the path."""
+        shell = tmp_path / "Old Games" / "StarCitizen"
+        (shell / "LIVE").mkdir(parents=True)
+        if leftover == "Bin64":
+            (shell / "LIVE" / leftover).mkdir()
+        else:
+            (shell / "LIVE" / leftover).write_text("{}", encoding="utf-8")
+        if source == "log":
+            assert scan(log=_launcher_log(tmp_path, (shell, "2026-09-30 21:01:02.003"))) is None
+        else:
+            assert scan(common=[shell]) is None
+
+    def test_shells_alone_pick_nothing_and_the_support_log_says_why(
+        self, tmp_path, scan, caplog
+    ):
+        moved = tmp_path / "Old Games" / "StarCitizen"
+        (moved / "LIVE" / "Bin64").mkdir(parents=True)
+        leftover = tmp_path / "Program Files" / "Roberts Space Industries" / "StarCitizen"
+        (leftover / "PTU" / "USER").mkdir(parents=True)
+        log = _launcher_log(tmp_path, (moved, "2026-09-30 21:01:02.003"))
+        with caplog.at_level("WARNING", logger="src.utils.settings"):
+            assert scan(common=[leftover], log=log) is None
+        assert "No Star Citizen install picked: 2 folder(s)" in caplog.text
+        assert str(moved) in caplog.text and str(leftover) in caplog.text
+        assert "Set the install path in the Config tab" in caplog.text
+
+    @staticmethod
+    def _undate(monkeypatch, *roots):
+        """Make every Data.p4k under *roots* read as undated, the way one dated
+        before 1970 reads, while the files stay on disk."""
+        import src.utils.settings as settings_mod
+
+        real = settings_mod._p4k_mtimes
+        undated = {str(r) for r in roots}
+        monkeypatch.setattr(
+            settings_mod, "_p4k_mtimes",
+            lambda root: dict.fromkeys(AppSettings.AVAILABLE_CHANNELS, 0.0)
+            if root in undated else real(root),
+        )
+
+    def test_an_install_whose_data_p4k_reads_as_undated_is_still_picked(
+        self, tmp_path, scan, monkeypatch
+    ):
+        """Only the date is unusable. The file is there, so the folder is the
+        game."""
+        real = _fake_install(tmp_path, "Other Games", "StarCitizen")
+        self._undate(monkeypatch, real)
+        assert scan(shallow=[real]) == str(real)
+
+    def test_an_undated_install_beats_a_shell_found_before_it(
+        self, tmp_path, scan, monkeypatch, caplog
+    ):
+        """With no date on either side, scan order used to decide, and the
+        common-path shell comes first. The support log lists the pick as
+        undated, not as having no Data.p4k."""
+        shell = tmp_path / "Program Files" / "Roberts Space Industries" / "StarCitizen"
+        (shell / "LIVE" / "Bin64").mkdir(parents=True)
+        real = _fake_install(tmp_path, "Other Games", "StarCitizen")
+        self._undate(monkeypatch, real)
+        with caplog.at_level("WARNING", logger="src.utils.settings"):
+            assert scan(common=[shell], shallow=[real]) == str(real)
+        assert f"{shell} (Data.p4k none, LIVE none)" in caplog.text
+        assert f"{real} (Data.p4k undated, LIVE undated)" in caplog.text
+
     def test_a_root_holding_the_active_channel_beats_a_newer_library_without_it(
         self, tmp_path, scan
     ):
@@ -893,10 +976,15 @@ class TestScanUsesLauncherLog:
         link = tmp_path / "C" / "Program Files" / "Roberts Space Industries" / "StarCitizen"
         link.parent.mkdir(parents=True)
         made = subprocess.run(
-            ["cmd", "/c", "mklink", "/J", str(link), str(real)], capture_output=True
+            ["cmd", "/c", "mklink", "/J", str(link), str(real)], capture_output=True, text=True
         )
         if made.returncode != 0 or not link.exists():
-            pytest.skip("cannot create a junction here")
+            reason = f"cannot create a junction here: {(made.stdout + made.stderr).strip()}"
+            # Any account can make a junction, so on CI this is a broken runner,
+            # not a reason to drop the check without a word.
+            if os.environ.get("CI"):
+                pytest.fail(reason, pytrace=False)
+            pytest.skip(reason)
         return real, link
 
     def test_a_junction_to_an_install_is_not_a_second_install(self, tmp_path, scan, ranked):
@@ -990,6 +1078,37 @@ class TestScanUsesLauncherLog:
             lambda drives=None: scanner.iter_shallow_sc_install_locations([str(drive)]),
         )
 
+        assert AppSettings.get_sc_install_root() == str(root)
+        assert AppSettings.settings().value(AppSettings.SC_INSTALL_ROOT, "") == str(root)
+
+    def test_fresh_profile_saves_nothing_for_a_shell_and_finds_the_game_later(
+        self, tmp_path, json_backend, monkeypatch
+    ):
+        """End to end through get_sc_install_root(): the log names a folder the
+        game has left. Nothing is returned or saved, so the user is asked for
+        the path, and the next start (a new process, so a fresh scan) finds
+        the game once it is installed there again."""
+        import src.utils.install_scanner as scanner
+        import src.utils.settings as settings_mod
+
+        root = tmp_path / "Other Games" / "Roberts Space Industries" / "StarCitizen"
+        (root / "LIVE" / "Bin64").mkdir(parents=True)
+        appdata = tmp_path / "appdata"
+        log_dir = appdata / "rsilauncher" / "logs"
+        log_dir.mkdir(parents=True)
+        _launcher_log(log_dir, (root, "2026-09-30 21:01:02.003"))
+        monkeypatch.setenv("APPDATA", str(appdata))
+        monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
+        monkeypatch.setattr(
+            settings_mod, "iter_common_sc_install_locations", lambda drives=None: iter(())
+        )
+        monkeypatch.setattr(settings_mod, "read_launcher_installs", scanner.read_launcher_installs)
+
+        assert AppSettings.get_sc_install_root() == ""
+        assert AppSettings.settings().value(AppSettings.SC_INSTALL_ROOT, "") == ""
+
+        (root / "LIVE" / "Data.p4k").write_bytes(b"x" * 16)
+        monkeypatch.setattr(settings_mod, "_sc_scan_cache", settings_mod._SC_SCAN_UNSET)
         assert AppSettings.get_sc_install_root() == str(root)
         assert AppSettings.settings().value(AppSettings.SC_INSTALL_ROOT, "") == str(root)
 

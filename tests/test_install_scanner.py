@@ -1230,6 +1230,57 @@ class TestLauncherLog:
         # the memo it is five per file path.
         assert len(calls) <= files + 4
 
+    def test_a_missing_drive_is_checked_once_and_nothing_on_it_is_probed(
+        self, tmp_path, monkeypatch, probe_calls
+    ):
+        """#431 review: a log can name a mapped drive that is no longer
+        connected, where every probe waits for a network timeout, and first-run
+        detection parses on the GUI thread. One check per drive, in any letter
+        case, and no probe at all on a drive that is not there."""
+        real = make_install(tmp_path / "StarCitizen")
+        gone = [
+            r"Q:\Games\StarCitizen",
+            r"q:\Other\StarCitizen\LIVE\Data.p4k",
+            r"Q:\Third\StarCitizen (type: install",
+        ]
+        log = launcher_log(tmp_path / "log.log", [
+            (f"2026-08-14 09:12:0{i}.001", path) for i, path in enumerate(gone + [str(real)])
+        ])
+        checked_drives = []
+        monkeypatch.setattr(
+            scanner, "_drive_exists", lambda drive: checked_drives.append(drive) or drive != "Q:"
+        )
+
+        parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
+
+        assert [found for found, _ in parsed.values()] == [real]
+        assert sorted(checked_drives) == sorted(["Q:", real.drive.upper()])
+        assert not [p for p in probe_calls if str(p)[:2].upper() == "Q:"]
+
+    def test_the_drive_check_reads_the_real_drive(self, tmp_path, probe_calls):
+        """A letter with no drive behind it at all reads as missing, and the
+        drive this test runs on reads as there."""
+        import ctypes
+        import string
+
+        windll = getattr(ctypes, "windll", None)
+        if windll is None:
+            pytest.skip("drive letters are a Windows thing")
+        in_use = windll.kernel32.GetLogicalDrives()
+        free = [
+            f"{letter}:" for bit, letter in enumerate(string.ascii_uppercase)
+            if bit > 2 and not in_use & (1 << bit)
+        ]
+        if not free:
+            pytest.skip("every drive letter is in use")
+        assert scanner._drive_exists(free[-1]) is False
+        assert scanner._drive_exists(tmp_path.drive) is True
+        log = launcher_log(tmp_path / "log.log", [
+            ("2026-08-14 09:12:01.001", free[-1] + r"\Games\StarCitizen"),
+        ])
+        assert parse_launcher_log(log.read_text(encoding="utf-8")) == {}
+        assert probe_calls == []
+
 
 # -- One folder below each drive's top ---------------------------------------
 
@@ -1308,6 +1359,32 @@ class TestShallowScan:
         except (OSError, NotImplementedError) as exc:
             pytest.skip(f"cannot make a symlink here (it needs a privilege): {exc}")
         assert self._found(tmp_path) == [real]
+
+    def test_a_junction_at_the_top_of_a_drive_is_followed(self, tmp_path):
+        """Moving a folder to another drive and leaving a junction behind is
+        the usual way to free space, and any account can make one. The probe
+        lists it like a folder, so a library only the junction reaches (two
+        levels down on the other drive) is still found, under the junction's
+        path. First-run detection counts it once with the real folder."""
+        import subprocess
+
+        drive = tmp_path / "drive"
+        drive.mkdir()
+        target = tmp_path / "other" / "Stuff" / "Games"
+        make_install(target / "StarCitizen")
+        made = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(drive / "Games"), str(target)],
+            capture_output=True,
+            text=True,
+        )
+        if made.returncode != 0 or not (drive / "Games").exists():
+            reason = f"cannot make a junction here: {(made.stdout + made.stderr).strip()}"
+            # Any account can make a junction, so on CI this is a broken runner,
+            # not a reason to drop the check without a word.
+            if os.environ.get("CI"):
+                pytest.fail(reason, pytrace=False)
+            pytest.skip(reason)
+        assert self._found(drive) == [drive / "Games" / "StarCitizen"]
 
 
 # -- Verdicts ----------------------------------------------------------------
