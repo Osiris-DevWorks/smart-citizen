@@ -424,7 +424,8 @@ class TestExtract:
             "(?:" + re.escape(BP_SECTION_HEADER) + "|"
             + re.escape(_ALT_BP_SECTION_HEADER) + ")", re.IGNORECASE)
         anchored = _build_bp_header_re(None)
-        missed = [line for line in lines if bare.search(line) and not anchored.search(line)]
+        missed = [line for line in lines
+                  if bare.search(line) and not anchored.search(line)]
         assert not missed, (
             f"{len(missed)} header-bearing lines in the real fixture are no "
             f"longer recognised, e.g. {missed[0][:160]!r}"
