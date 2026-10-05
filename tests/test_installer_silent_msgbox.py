@@ -39,10 +39,11 @@ _PERSON_PRESENT = {
     ),
 }
 
-# A routine header in any spelling Pascal Script accepts (any case, any gap after
-# the keyword), so a box is always charged to the routine it sits in, never to
-# the one above it, where a listed routine's allowance could cover it.
-_ROUTINE = re.compile(r"^(?:function|procedure)\s+(\w+)", re.M | re.I)
+# A routine header in any spelling Pascal Script accepts (any case, spaces in
+# front, any gap after the keyword), so a box is always charged to the routine it
+# sits in, never to the one above it, where a listed routine's allowance could
+# cover it.
+_ROUTINE = re.compile(r"^[ \t]*(?:function|procedure)\s+(\w+)", re.M | re.I)
 # A plain box call however it is spelled: Pascal Script ignores case and the
 # whitespace before the bracket, and TaskDialogMsgBox is no more answered by
 # /SUPPRESSMSGBOXES than MsgBox is. The lookbehind lets SuppressibleMsgBox,
@@ -199,6 +200,8 @@ def test_a_gap_that_runs_over_lines_is_caught():
         "procedure\tSneaky;",
         "Function Sneaky(): Boolean;",
         "function  Sneaky(): Boolean;",
+        "  procedure Sneaky;",
+        "\tfunction Sneaky(): Boolean;",
     ],
 )
 def test_a_box_is_charged_to_its_own_routine_however_that_is_declared(declaration):
