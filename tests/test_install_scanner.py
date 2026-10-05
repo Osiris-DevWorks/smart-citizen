@@ -1231,7 +1231,7 @@ class TestLauncherLog:
         assert len(calls) <= files + 4
 
     def test_a_missing_drive_is_checked_once_and_nothing_on_it_is_probed(
-        self, tmp_path, monkeypatch
+        self, tmp_path, monkeypatch, probe_calls
     ):
         """#431 review: a log can name a mapped drive that is no longer
         connected, where every probe waits for a network timeout, and first-run
@@ -1250,19 +1250,14 @@ class TestLauncherLog:
         monkeypatch.setattr(
             scanner, "_drive_exists", lambda drive: checked_drives.append(drive) or drive != "Q:"
         )
-        probed = []
-        real_probe = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: probed.append(str(p)) or real_probe(p)
-        )
 
         parsed = parse_launcher_log(log.read_text(encoding="utf-8"))
 
         assert [found for found, _ in parsed.values()] == [real]
         assert sorted(checked_drives) == sorted(["Q:", real.drive.upper()])
-        assert not [p for p in probed if p[:2].upper() == "Q:"]
+        assert not [p for p in probe_calls if str(p)[:2].upper() == "Q:"]
 
-    def test_the_drive_check_reads_the_real_drive(self, tmp_path, monkeypatch):
+    def test_the_drive_check_reads_the_real_drive(self, tmp_path, probe_calls):
         """A letter with no drive behind it at all reads as missing, and the
         drive this test runs on reads as there."""
         import ctypes
@@ -1283,13 +1278,8 @@ class TestLauncherLog:
         log = launcher_log(tmp_path / "log.log", [
             ("2026-08-14 09:12:01.001", free[-1] + r"\Games\StarCitizen"),
         ])
-        probed = []
-        real_probe = scanner.is_sc_install_root
-        monkeypatch.setattr(
-            scanner, "is_sc_install_root", lambda p: probed.append(str(p)) or real_probe(p)
-        )
         assert parse_launcher_log(log.read_text(encoding="utf-8")) == {}
-        assert probed == []
+        assert probe_calls == []
 
 
 # -- One folder below each drive's top ---------------------------------------
