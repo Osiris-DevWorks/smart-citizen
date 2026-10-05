@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Già applicato: nulla è cambiato dall'ultima applicazione."
+      "at": "Già applicato: il gioco corrisponde alle tue impostazioni attuali. Clicca comunque per rigenerare e riapplicare, ad esempio dopo una patch del gioco."
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Già applicato: nulla è cambiato dall'ultima applicazione al gioco."
+      "at": "Già applicato: il gioco corrisponde alle tue impostazioni attuali."
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "Non è configurato alcun percorso di installazione di Star Citizen, quindi non ci sono log da scansionare. Imposta prima la cartella di gioco nella scheda Configurazione."
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "Nella tua installazione di Star Citizen non è stata trovata alcuna cartella LIVE o HOTFIX, quindi non ci sono log da scansionare. I server di test (PTU, EPTU, TECH-PREVIEW) non vengono mai scansionati."
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "Nessun nuovo blueprint trovato dall'ultima scansione."
@@ -1548,19 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Analizza i file di log di Star Citizen (Game.log e logbackups) alla ricerca delle notifiche di ricompensa \"Received Blueprint\" e li contrassegna automaticamente come posseduti."
+      "at": "Analizza i file di log di Star Citizen (Game.log e logbackups) alla ricerca delle notifiche di ricompensa \"Received Blueprint\" e li contrassegna automaticamente come posseduti.\nAnalizza sempre LIVE, e anche HOTFIX quando è installato, perché i due girano sullo stesso server e condividono un'unica progressione dell'account."
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
       "at": "È già in corso una scansione (potrebbe essere la scansione automatica all'avvio)."
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "Analizza anche LIVE/HOTFIX (quello non attivo)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE e HOTFIX condividono la stessa progressione dell'account, quindi un blueprint ottenuto in uno appare anche nei log dell'altro. Analizza anche quello dei due che non è il tuo canale attivo, se installato. PTU, EPTU e TECH-PREVIEW sono build di test separate con una propria progressione e non vengono mai analizzate."
     },
     "force_rescan_checkbox": {
       "ht": "",

@@ -1,9 +1,12 @@
 """AppliedStateWorker: the thin QThread around the already-applied check.
 
 The logic it runs is covered in test_apply_already_applied.py; this runs the
-real thread. Results are collected over a DirectConnection so no event loop
-is needed (the slot runs on the worker thread, which is fine for a list
-append), same offscreen-Qt approach as the other widget tests, no pytest-qt.
+real thread. The worker-only tests collect results over a DirectConnection, so
+they need no event loop (the slot runs on the worker thread, which is fine for
+a list append). The second half runs MainWindow's real check lifecycle on a
+real thread and pumps the event loop, so the verdict arrives through the real
+queued connection. Same offscreen-Qt approach as the other widget tests, no
+pytest-qt.
 """
 from __future__ import annotations
 
@@ -110,8 +113,8 @@ def test_should_stop_reflects_interruption_requests(qapp, interrupt, expected):
 # The fake-worker tests in test_apply_already_applied.py prove the decisions;
 # these prove the Qt mechanics they rely on: the verdict really is delivered
 # to the GUI thread through a queued lambda connection, the slot's worker.wait()
-# doesn't deadlock, a disconnect on close really stops delivery, and a stale
-# result from a real thread is dropped.
+# doesn't deadlock, settling on close waits for a running check without
+# starting a queued rerun, and a stale result from a real thread is dropped.
 
 import time  # noqa: E402
 

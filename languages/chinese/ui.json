@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "已应用：自上次应用以来没有任何更改。"
+      "at": "已应用：游戏已与当前设置一致。仍可点击重新生成并再次应用，例如在游戏更新后。"
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "已经应用：自上次应用到游戏以来没有任何更改。"
+      "at": "已经应用：游戏已与当前设置一致。"
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "未配置《星际公民》安装路径，因此没有可扫描的日志。请先在配置标签页设置你的游戏文件夹。"
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "在你的《星际公民》安装根目录中未找到 LIVE 或 HOTFIX 文件夹，因此没有可扫描的日志。测试服务器（PTU、EPTU、TECH-PREVIEW）永远不会被扫描。"
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "自上次扫描以来没有发现新的蓝图。"
@@ -1548,19 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "扫描你的《星际公民》日志文件（Game.log 及 logbackups）以查找“已获得蓝图”奖励通知，并自动将其标记为已拥有。"
+      "at": "扫描你的《星际公民》日志文件（Game.log 及 logbackups）以查找“已获得蓝图”奖励通知，并自动将其标记为已拥有。\n始终会扫描 LIVE，如果已安装 HOTFIX，也会一并扫描，因为这两者运行在同一服务器上，共用同一账号进度。"
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
       "at": "已有扫描正在进行（可能是启动时的自动扫描）。"
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "同时扫描 LIVE/HOTFIX（无论当前未激活的是哪一个）"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE 和 HOTFIX 共享相同的账号进度，因此在其中一个频道获得的蓝图也会出现在另一个频道的日志中。如果已安装，也会扫描这两个频道中当前非激活的那一个。PTU、EPTU 和 TECH-PREVIEW 是拥有各自独立进度的测试版本，永远不会被扫描。"
     },
     "force_rescan_checkbox": {
       "ht": "",

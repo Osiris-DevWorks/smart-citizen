@@ -216,11 +216,11 @@ class BlueprintTrackerTab(QWidget):
         # visible regardless of the empty-state gate below, since scanning
         # logs doesn't need mission data loaded, it reads the player's own
         # earned-blueprint history straight from Star Citizen's log files.
-        # Row 1: scan-behavior checkboxes (cols 0-1: which channels to cover
-        # #268, whether to ignore the watermark #308, whether to run the scan
-        # automatically on startup #386, and whether that auto-scan pops the
-        # normal summary dialog or just a status bar message -- all four only
-        # affecting "Scan Logs for Owned Blueprints") | Export/Import the Owned set
+        # Row 1: scan-behavior checkboxes (cols 0-1: whether to ignore the
+        # watermark #308, whether to run the scan automatically on startup
+        # #386, and whether that auto-scan pops the normal summary dialog or
+        # just a status bar message -- all three only affecting "Scan Logs for
+        # Owned Blueprints") | Export/Import the Owned set
         # (#234, cols 2-3) -- secondary actions, smaller than the primary
         # scan/apply buttons above them, sharing the row since neither
         # checkbox nor export/import needs mission data loaded.
@@ -242,26 +242,6 @@ class BlueprintTrackerTab(QWidget):
 
         checkboxes_row = QHBoxLayout()
 
-        # #268: also scan whichever of LIVE/HOTFIX isn't the active channel
-        # when the user clicks "Scan Logs for Owned Blueprints". Enabled by
-        # default; they share the same account progression, so it's cheap
-        # coverage most users want. Never covers PTU/EPTU/TECH-PREVIEW: those
-        # are separate test builds with their own progression, not the same
-        # account history as LIVE/HOTFIX.
-        self._scan_other_channels_checkbox = QCheckBox(
-            tr("blueprint_tracker.scan_other_channels_checkbox")
-        )
-        self._scan_other_channels_checkbox.setToolTip(
-            tr("blueprint_tracker.scan_other_channels_tooltip")
-        )
-        self._scan_other_channels_checkbox.setChecked(
-            AppSettings.get_scan_other_channels_enabled()
-        )
-        self._scan_other_channels_checkbox.toggled.connect(
-            AppSettings.set_scan_other_channels_enabled
-        )
-        checkboxes_row.addWidget(self._scan_other_channels_checkbox)
-
         # #308: force a full rescan back to the scanner's epoch floor,
         # ignoring the saved watermark -- for the rare case a user's owned
         # set drifted (e.g. an accidental unown) and a normal incremental
@@ -269,7 +249,7 @@ class BlueprintTrackerTab(QWidget):
         # unchecks it once the scan queue finishes, so it doesn't silently
         # keep forcing a full rescan (and the extra time that takes) on
         # every future click. Deliberately not persisted to AppSettings --
-        # this isn't a standing preference like the checkbox above.
+        # this isn't a standing preference.
         self._force_rescan_checkbox = QCheckBox(
             tr("blueprint_tracker.force_rescan_checkbox")
         )
@@ -508,12 +488,6 @@ class BlueprintTrackerTab(QWidget):
         self._export_owned_btn.setToolTip(tr("blueprint_tracker.export_owned_tooltip"))
         self._import_owned_btn.setText(tr("blueprint_tracker.import_owned_btn"))
         self._import_owned_btn.setToolTip(tr("blueprint_tracker.import_owned_tooltip"))
-        self._scan_other_channels_checkbox.setText(
-            tr("blueprint_tracker.scan_other_channels_checkbox")
-        )
-        self._scan_other_channels_checkbox.setToolTip(
-            tr("blueprint_tracker.scan_other_channels_tooltip")
-        )
         self._force_rescan_checkbox.setText(
             tr("blueprint_tracker.force_rescan_checkbox")
         )

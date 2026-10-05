@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "すでに適用済みです：前回の適用以降、変更はありません。"
+      "at": "すでに適用済みです：ゲームは現在の設定と一致しています。ゲームのパッチ後など、それでも再生成して再適用する場合はクリックしてください。"
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "すでに適用済みです：前回のゲームへの適用以降、変更はありません。"
+      "at": "すでに適用済みです：ゲームは現在の設定と一致しています。"
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "Star Citizen のインストールパスが設定されていないため、スキャンするログがありません。先に Config タブでゲームフォルダーを設定してください。"
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "Star Citizen のインストール内に LIVE または HOTFIX フォルダーが見つからなかったため、スキャンするログがありません。テストサーバー（PTU、EPTU、TECH-PREVIEW）がスキャンされることはありません。"
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "前回のスキャン以降、新しいブループリントは見つかりませんでした。"
@@ -1548,19 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Star Citizen のログファイル（Game.log および logbackups）で「Received Blueprint」報酬通知をスキャンし、自動的に所有済みとしてマークします。"
+      "at": "Star Citizen のログファイル（Game.log および logbackups）で「Received Blueprint」報酬通知をスキャンし、自動的に所有済みとしてマークします。\n常に LIVE をスキャンし、HOTFIX もインストールされている場合はあわせてスキャンします。この 2 つは同じサーバーで動作し、同じアカウント進捗を共有しているためです。"
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
       "at": "すでにスキャンが実行中です（起動時の自動スキャンの可能性があります）。"
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "LIVE/HOTFIX も同時にスキャン（アクティブでない方）"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE と HOTFIX は同じアカウント進捗を共有しているため、一方で獲得したブループリントはもう一方のログにも表示されます。インストールされていれば、アクティブでない方のチャンネルも同時にスキャンします。PTU、EPTU、TECH-PREVIEW はそれぞれ独自の進捗を持つ別のテストビルドであり、スキャン対象には含まれません。"
     },
     "force_rescan_checkbox": {
       "ht": "",

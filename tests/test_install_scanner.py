@@ -15,13 +15,15 @@ Coverage:
   onto its logged paths
 * the verdicts, above all `mismatch` — configured install != the one the
   launcher starts, which is the bug this whole feature exists to catch
-* the `SC_CHANNELS` / `AppSettings.AVAILABLE_CHANNELS` sync contract
+* the `SC_CHANNELS` / `AppSettings.AVAILABLE_CHANNELS` sync contract, and
+  installer.iss's own copies of the channel and marker lists
 """
 from __future__ import annotations
 
 import contextlib
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -30,6 +32,7 @@ import pytest
 from src.utils import install_scanner as scanner
 from src.utils.install_scanner import (
     APPLY_STAMP_MARKER,
+    SC_CHANNEL_MARKERS,
     SC_CHANNELS,
     VERDICT_MATCH,
     VERDICT_MATCH_LEFTOVER,
@@ -797,6 +800,8 @@ class TestDeepScan:
 # -- Contracts ---------------------------------------------------------------
 
 class TestSharedContracts:
+    INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
+
     def test_app_settings_channels_track_the_scanner(self):
         """AppSettings.AVAILABLE_CHANNELS is built from SC_CHANNELS; the named
         CHANNEL_* constants must keep naming the same values in the same
@@ -821,6 +826,41 @@ class TestSharedContracts:
             Path(__file__).resolve().parent.parent / "src" / "gui" / "main_window.py"
         ).read_text(encoding="utf-8")
         assert APPLY_STAMP_MARKER in source
+
+    def _installer_function(self, name: str) -> str:
+        source = self.INSTALLER.read_text(encoding="utf-8")
+        match = re.search(rf"^function {name}\(.*?^end;", source, re.M | re.S)
+        assert match, f"installer.iss has no function {name}"
+        return match.group(0)
+
+    def _installer_const(self, name: str) -> int:
+        source = self.INSTALLER.read_text(encoding="utf-8")
+        match = re.search(rf"^\s*{name}\s*=\s*(\d+);", source, re.M)
+        assert match, f"installer.iss has no const {name}"
+        return int(match.group(1))
+
+    def test_installer_channels_track_the_scanner(self):
+        """The uninstaller's opt-in wipe (#357) keeps its own channel list,
+        because Pascal can't import this module. A channel added here but not
+        there would be skipped by both the wipe and its game-file check."""
+        body = self._installer_function("ScChannelName")
+        names = re.findall(r"^\s*\d+:\s*Result := '([^']+)';", body, re.M)
+        names += re.findall(r"else\s+Result := '([^']+)';", body)
+        assert tuple(names) == SC_CHANNELS
+        assert self._installer_const("ScChannelCount") == len(SC_CHANNELS)
+
+    def test_installer_markers_track_the_scanner(self):
+        """HasScGameData refuses to wipe any folder holding one of these. It
+        must cover every SC_CHANNEL_MARKERS entry plus its own extras, the
+        player data that outlives the game files (USER holds keybinds), and
+        ScMarkerCount must reach the last case, or a marker is never checked."""
+        body = self._installer_function("HasScGameData")
+        cases = re.findall(r"^\s*(\d+):\s*Marker := '([^']+)';", body, re.M)
+        assert [int(i) for i, _ in cases] == list(range(len(cases)))
+        markers = {m for _, m in cases}
+        assert set(SC_CHANNEL_MARKERS) <= markers
+        assert {"USER", "ScreenShots", "logbackups", "Game.log"} <= markers
+        assert self._installer_const("ScMarkerCount") == len(cases)
 
     @pytest.mark.parametrize("version,expected_greater", [
         ("4.9.188.23497", "4.8.3.12122953"),

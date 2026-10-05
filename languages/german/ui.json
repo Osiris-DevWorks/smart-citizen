@@ -34,7 +34,7 @@
     },
     "generate_apply_tip_disabled": {
       "ht": "",
-      "at": "Bereits angewendet: Es hat sich seit der letzten Anwendung nichts geändert."
+      "at": "Bereits angewendet: Das Spiel entspricht deinen aktuellen Einstellungen. Klicke trotzdem, um neu zu erzeugen und erneut anzuwenden, zum Beispiel nach einem Spiel-Patch."
     },
     "defaults_hint": {
       "ht": "",
@@ -214,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Bereits angewendet: Es hat sich seit dem letzten „Auf Spiel anwenden“ nichts geändert."
+      "at": "Bereits angewendet: Das Spiel entspricht deinen aktuellen Einstellungen."
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -1208,6 +1208,10 @@
       "ht": "",
       "at": "Es ist kein Star-Citizen-Installationspfad konfiguriert, daher gibt es keine Protokolle zu durchsuchen. Lege zuerst deinen Spielordner im Konfiguration-Tab fest."
     },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "In deiner Star-Citizen-Installation wurde kein LIVE- oder HOTFIX-Ordner gefunden, daher gibt es keine Protokolle zu durchsuchen. Die Testserver (PTU, EPTU, TECH-PREVIEW) werden nie gescannt."
+    },
     "bp_scan_none": {
       "ht": "",
       "at": "Seit dem letzten Scan wurden keine neuen Baupläne gefunden."
@@ -1548,7 +1552,7 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Deine Star-Citizen-Protokolldateien (Game.log und logbackups) nach „Received Blueprint“-Belohnungsmeldungen durchsuchen und diese automatisch als besessen markieren."
+      "at": "Deine Star-Citizen-Protokolldateien (Game.log und logbackups) nach „Received Blueprint“-Belohnungsmeldungen durchsuchen und diese automatisch als besessen markieren.\nEs wird immer LIVE gescannt, und HOTFIX ebenfalls, sofern installiert, da beide auf demselben Server laufen und sich denselben Kontofortschritt teilen."
     },
     "scan_logs_already_running_tooltip": {
       "ht": "",
@@ -1697,14 +1701,6 @@
     "owned_added_singular": {
       "ht": "",
       "at": "1 Bauplan zu deiner Liste eigener Baupläne hinzugefügt. Er zeigt überall, wo er in den Bauplan-Belohnungen einer Mission erscheint, die Markierung [Owned] an."
-    },
-    "scan_other_channels_checkbox": {
-      "ht": "",
-      "at": "Auch LIVE/HOTFIX scannen (den jeweils inaktiven)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE und HOTFIX teilen sich denselben Kontofortschritt, daher erscheint ein in einem der beiden erhaltener Bauplan auch in den Logs des anderen. Scannt zusätzlich denjenigen der beiden, der nicht dein aktiver Kanal ist, falls installiert. PTU, EPTU und TECH-PREVIEW sind separate Testversionen mit eigenem Fortschritt und werden nie gescannt."
     },
     "show_added_btn": {
       "ht": "",
