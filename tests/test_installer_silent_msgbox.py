@@ -10,11 +10,15 @@ This reads the ``[Code]`` section of installer.iss as text and fails on a plain
 ``MsgBox`` in any routine that is not on a short list, each with the reason a
 person is always present when it runs. A new plain box has to become a
 ``SuppressibleMsgBox`` with the answer a silent run should take, or earn a line
-on that list.
+on that list. ``TaskDialogMsgBox`` counts as plain too (``/SUPPRESSMSGBOXES``
+does not answer it either), and so does any spelling Pascal Script accepts:
+``MsgBox (`` with a gap before the bracket, ``msgbox(`` in any case.
 """
 
 import re
 from pathlib import Path
+
+import pytest
 
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
@@ -31,19 +35,27 @@ _PERSON_PRESENT = {
     "DeleteAllCheckBoxOnClick": (1, "a click on the uninstall dialog's delete-all box"),
     "DeleteAllUserSettings": (
         1,
-        "the report after the opt-in delete-all, which only runs once that box is ticked "
-        "(listed ahead of #419, which adds it)",
+        "the report after the opt-in delete-all, which only runs once that box is ticked",
     ),
 }
 
 _ROUTINE = re.compile(r"^(?:function|procedure) (\w+)", re.M)
-_PLAIN_MSGBOX = re.compile(r"(?<![A-Za-z])MsgBox\(")
+# A plain box call however it is spelled: Pascal Script ignores case and the
+# whitespace before the bracket, and TaskDialogMsgBox is no more answered by
+# /SUPPRESSMSGBOXES than MsgBox is. The lookbehind lets SuppressibleMsgBox,
+# SuppressibleTaskDialogMsgBox and any other name that only ends in these words
+# (MyMsgBox, My_MsgBox, Box2MsgBox) through.
+_PLAIN_MSGBOX = re.compile(r"(?<![A-Za-z0-9_])(?:TaskDialog)?MsgBox\s*\(", re.I)
 
 
-def _code_section():
-    """The ``[Code]`` section with comments and string literals blanked out
-    (newlines kept, so line numbers still match), leaving only the code."""
-    source = INSTALLER.read_text(encoding="utf-8-sig")
+def _installer_source():
+    return INSTALLER.read_text(encoding="utf-8-sig")
+
+
+def _code_section(source):
+    """The ``[Code]`` section of *source* (the text of installer.iss) with
+    comments and string literals blanked out (newlines kept, so line numbers
+    still match), leaving only the code."""
     start = source.index("\n[Code]")
     code = source[start:]
     out, i, n = [], 0, len(code)
@@ -79,7 +91,7 @@ def _code_section():
 
 
 def _plain_msgbox_routines(code):
-    """``{routine name: [line, ...]}`` for every plain ``MsgBox(`` call."""
+    """``{routine name: [line, ...]}`` for every plain message box call."""
     routines = [(m.start(), m.group(1)) for m in _ROUTINE.finditer(code)]
     found = {}
     for call in _PLAIN_MSGBOX.finditer(code):
@@ -88,15 +100,21 @@ def _plain_msgbox_routines(code):
     return found
 
 
-def test_plain_msgbox_only_where_a_person_is_present():
-    found = _plain_msgbox_routines(_code_section())
-    unexpected = {
+def _unexpected_plain_msgboxes(source):
+    """``{routine name: [line, ...]}`` for the routines of *source* (the text of
+    installer.iss) that call a plain message box they are not allowed to: one
+    that is not on the list, or more calls than the list allows."""
+    return {
         name: lines
-        for name, lines in found.items()
+        for name, lines in _plain_msgbox_routines(_code_section(source)).items()
         if name not in _PERSON_PRESENT or len(lines) > _PERSON_PRESENT[name][0]
     }
+
+
+def test_plain_msgbox_only_where_a_person_is_present():
+    unexpected = _unexpected_plain_msgboxes(_installer_source())
     assert not unexpected, (
-        "installer.iss calls a plain MsgBox in "
+        "installer.iss calls a plain MsgBox (or TaskDialogMsgBox) in "
         + ", ".join(f"{name} (line {lines[-1]})" for name, lines in unexpected.items())
         + ". /SUPPRESSMSGBOXES does not answer a plain MsgBox, so a silent run (the in-app "
         "updater, #211) would wait for a click. Use SuppressibleMsgBox with the answer a silent "
@@ -105,13 +123,113 @@ def test_plain_msgbox_only_where_a_person_is_present():
     )
 
 
+def test_the_guard_finds_the_boxes_in_the_real_installer():
+    # The real file has plain boxes (the allowed ones). A guard that found none
+    # would be passing the test above without having read anything.
+    assert _plain_msgbox_routines(_code_section(_installer_source()))
+
+
 def test_data_folder_warning_leaves_silent_runs_alone():
     # Setup "clicks" Next through every page on a silent run, so NextButtonClick
     # runs there too. Its OneDrive question is a plain MsgBox, which is only
     # allowed because the routine returns first.
-    code = _code_section()
+    code = _code_section(_installer_source())
     body = re.search(r"^function NextButtonClick\(.*?^end;$", code, re.S | re.M)
     assert body, "function NextButtonClick not found in installer.iss"
     silent = body.group(0).find("WizardSilent()")
-    ask = body.group(0).find("MsgBox(")
-    assert 0 <= silent < ask, "NextButtonClick must return on WizardSilent() before its MsgBox"
+    box = _PLAIN_MSGBOX.search(body.group(0))
+    assert box, "NextButtonClick has no plain message box any more, update this check"
+    assert 0 <= silent < box.start(), (
+        "NextButtonClick must return on WizardSilent() before its MsgBox"
+    )
+
+
+# The guard on synthetic sources, so each spelling is tried without editing the
+# real installer.iss.
+
+
+def _source(*routines):
+    """installer.iss text whose ``[Code]`` section holds the ``(name, body)`` routines."""
+    code = "\n".join(f"procedure {name};\nbegin\n{body}\nend;\n" for name, body in routines)
+    return "[Setup]\nAppName=x\n\n[Code]\n" + code
+
+
+def _line_of(source, text):
+    return source.splitlines().index(text) + 1
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        "  MsgBox('x', mbInformation, MB_OK);",
+        "  MsgBox ('x', mbInformation, MB_OK);",
+        "  MsgBox   ('x', mbInformation, MB_OK);",
+        "  MsgBox\t('x', mbInformation, MB_OK);",
+        "  MsgBox { why } ('x', mbInformation, MB_OK);",
+        "  MsgBox (* why *) ('x', mbInformation, MB_OK);",
+        "  TaskDialogMsgBox('T', 'x', mbInformation, MB_OK, ['OK'], 0);",
+        "  TaskDialogMsgBox ('T', 'x', mbInformation, MB_OK, ['OK'], 0);",
+        "  msgbox('x', mbInformation, MB_OK);",
+        "  MSGBOX ('x', mbInformation, MB_OK);",
+        "  taskdialogmsgbox ('T', 'x', mbInformation, MB_OK, ['OK'], 0);",
+        "  Result := MsgBox ('x', mbConfirmation, MB_YESNO) = IDYES;",
+        "  if MsgBox('x', mbConfirmation, MB_YESNO) = IDYES then Exit;",
+    ],
+)
+def test_every_spelling_of_a_plain_box_is_caught(call):
+    source = _source(("Unlisted", call))
+    assert _unexpected_plain_msgboxes(source) == {"Unlisted": [_line_of(source, call)]}
+
+
+def test_a_gap_that_runs_over_lines_is_caught():
+    for gap in ("\n    ", "\r\n    ", " // why\n    ", " { why }\n    "):
+        source = _source(("Unlisted", f"  MsgBox{gap}('x', mbInformation, MB_OK);"))
+        assert _unexpected_plain_msgboxes(source) == {"Unlisted": [_line_of(source, "begin") + 1]}
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        "  SuppressibleMsgBox('x', mbInformation, MB_OK, IDOK);",
+        "  SuppressibleMsgBox ('x', mbInformation, MB_OK, IDOK);",
+        "  SuppressibleTaskDialogMsgBox('T', 'x', mbInformation, MB_OK, [], 0, MB_OK, IDOK);",
+        "  SuppressibleTaskDialogMsgBox ('T', 'x', mbInformation, MB_OK, [], 0, MB_OK, IDOK);",
+        "  MyMsgBox('x');",
+        "  MyTaskDialogMsgBox ('x');",
+        "  ShowMsgBox ('x');",
+        "  My_MsgBox ('x');",
+        "  Box2MsgBox('x');",
+        "  // MsgBox('x') is only a comment",
+        "  { MsgBox ('x') } { TaskDialogMsgBox('x') }",
+        "  (* MsgBox ('x') *)",
+        "  Log('MsgBox(');",
+        "  Log('it''s a MsgBox (' + 'TaskDialogMsgBox(');",
+    ],
+)
+def test_suppressible_wrappers_lookalikes_comments_and_strings_pass(call):
+    assert _unexpected_plain_msgboxes(_source(("Unlisted", call))) == {}
+
+
+@pytest.fixture
+def allowed_once(monkeypatch):
+    monkeypatch.setitem(_PERSON_PRESENT, "Allowed", (1, "a person is always there"))
+
+
+@pytest.mark.parametrize("call", ["  MsgBox('x');", "  TaskDialogMsgBox ('x');"])
+def test_a_listed_routine_may_make_its_one_call(allowed_once, call):
+    assert _unexpected_plain_msgboxes(_source(("Allowed", call))) == {}
+
+
+def test_a_second_call_in_a_listed_routine_is_a_new_decision(allowed_once):
+    # Whichever spelling the second one uses.
+    first, second = "  MsgBox('a');", "  TaskDialogMsgBox ('b');"
+    source = _source(("Allowed", first + "\n" + second))
+    assert _unexpected_plain_msgboxes(source) == {
+        "Allowed": [_line_of(source, first), _line_of(source, second)]
+    }
+
+
+def test_a_call_is_charged_to_its_own_routine_not_a_listed_neighbour(allowed_once):
+    listed, other = "  MsgBox('a');", "  MsgBox ('b');"
+    source = _source(("Allowed", listed), ("Unlisted", other))
+    assert _unexpected_plain_msgboxes(source) == {"Unlisted": [_line_of(source, other)]}

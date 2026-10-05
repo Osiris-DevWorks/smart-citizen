@@ -27,22 +27,17 @@ on a developer machine that has Inno Setup. The two text checks run everywhere.
 
 import os
 import re
-import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tests.inno_setup import require_iscc  # noqa: E402
+
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
-
-
-def _iscc():
-    candidates = [
-        shutil.which("ISCC"),
-        os.path.expandvars(r"%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"),
-        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"),
-    ]
-    return next((c for c in candidates if c and os.path.isfile(c)), None)
 
 
 def _installer_source():
@@ -334,13 +329,13 @@ end;
 
 def _run_probe(script, tmp_path, out):
     """Compile *script* with ISCC, run the resulting setup silently and return
-    the lines it saved to ``out / "result.txt"``. Skips the test when an
-    Application Control policy refuses to run the unsigned probe."""
+    the lines it saved to ``out / "result.txt"``. Skips the test where Inno
+    Setup is not installed (``require_iscc`` fails it under CI instead) or when
+    an Application Control policy refuses to run the unsigned probe."""
+    iscc = require_iscc()
     probe = tmp_path / "probe.iss"
     probe.write_text(script, encoding="utf-8-sig")
-    compiled = subprocess.run(
-        [_iscc(), "/Q", str(probe)], capture_output=True, text=True, timeout=120
-    )
+    compiled = subprocess.run([iscc, "/Q", str(probe)], capture_output=True, text=True, timeout=120)
     assert compiled.returncode == 0, compiled.stdout + compiled.stderr
     # InitializeSetup returns False, so the setup exits without installing.
     try:
@@ -354,7 +349,6 @@ def _run_probe(script, tmp_path, out):
     return (out / "result.txt").read_text(encoding="mbcs").splitlines()
 
 
-@pytest.mark.skipif(_iscc() is None, reason="Inno Setup (ISCC.exe) not installed")
 def test_onedrive_checks_in_compiled_installer_code(tmp_path):
     tree = tmp_path / "tree"
     out = tmp_path / "out"
