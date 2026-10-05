@@ -32,6 +32,12 @@ def fresh_crash_module(monkeypatch):
     """
     original_sys = sys.excepthook
     original_thread = threading.excepthook
+    # The run keeps one QApplication alive throughout (tests/conftest.py), so
+    # the real crash dialog would open modally here and hang the test. These
+    # tests check the dump and the hook chain. TestCrashDialogWiring checks
+    # the dialog call with stubs of its own, which replace this one.
+    from src.utils import crash_logger
+    monkeypatch.setattr(crash_logger, "show_crash_dialog", lambda *a: None)
     monkeypatch.setattr(crash_handler, "_installed", False)
     monkeypatch.setattr(crash_handler, "_buffer_handler", None)
     monkeypatch.setattr(crash_handler, "_original_excepthook", None)
@@ -260,6 +266,77 @@ class TestCrashDialogWiring:
         dumps = list(logs_dir.glob("crash_*.log"))
         assert len(dumps) == 1, "Dump must be written even when the dialog raises"
         assert len(called) == 1, "Original hook must still chain after dialog failure"
+
+
+class TestShowCrashDialog:
+    """The real crash_logger.show_crash_dialog, which the tests above stub.
+
+    Its exec() is replaced so nothing blocks: a QApplication exists for the
+    whole run (tests/conftest.py), so the real modal dialog would wait for a
+    click nobody gives.
+    """
+
+    @staticmethod
+    def _recording_dialog(monkeypatch):
+        from PyQt6 import QtWidgets
+
+        shown = []
+
+        class _RecordingDialog(QtWidgets.QDialog):
+            def exec(self):
+                shown.append(self)
+                return 0
+
+        monkeypatch.setattr(QtWidgets, "QDialog", _RecordingDialog)
+        return shown
+
+    def test_no_qapplication_means_no_dialog(self, monkeypatch):
+        """A crash before the GUI exists has no app to show a dialog on."""
+        from PyQt6 import QtWidgets
+        from src.utils import crash_logger
+
+        class _NoApp:
+            @staticmethod
+            def instance():
+                return None
+
+        shown = self._recording_dialog(monkeypatch)
+        monkeypatch.setattr(QtWidgets, "QApplication", _NoApp)
+
+        crash_logger.show_crash_dialog(RuntimeError, RuntimeError("early"), Path("x.log"))
+
+        assert shown == []
+
+    def test_dialog_shows_the_error_and_copies_the_dump_path(self, monkeypatch, tmp_path):
+        import pyperclip
+        from PyQt6.QtWidgets import QLabel, QPushButton, QTextEdit
+        from src.utils import crash_logger
+
+        shown = self._recording_dialog(monkeypatch)
+        copied = []
+        monkeypatch.setattr(pyperclip, "copy", copied.append)
+        dump = tmp_path / "logs" / "crash_20261005_120000.log"
+
+        crash_logger.show_crash_dialog(ValueError, ValueError("boom"), dump)
+
+        assert len(shown) == 1, "the dialog must be shown exactly once"
+        dlg = shown[0]
+        assert dlg.findChild(QTextEdit).toPlainText() == "ValueError: boom"
+        assert any(str(dump) in label.text() for label in dlg.findChildren(QLabel))
+        copy_btn = next(b for b in dlg.findChildren(QPushButton) if b.text() == "Copy path")
+        copy_btn.click()
+        assert copied == [str(dump)]
+
+    def test_missing_dump_path_says_so(self, monkeypatch):
+        from PyQt6.QtWidgets import QLabel
+        from src.utils import crash_logger
+
+        shown = self._recording_dialog(monkeypatch)
+
+        crash_logger.show_crash_dialog(ValueError, ValueError("boom"), None)
+
+        assert any("(could not write crash log)" in label.text()
+                   for label in shown[0].findChildren(QLabel))
 
 
 class TestGetLogsDir:

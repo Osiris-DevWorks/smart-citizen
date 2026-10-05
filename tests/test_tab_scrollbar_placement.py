@@ -63,6 +63,9 @@ def window(qapp, tmp_path_factory):
     constructions, and this file was the only unstable one). Every test here
     walks all eight tabs from wherever the last one left off, so they don't
     need a fresh window, and one construction is a quarter of the exposure.
+    The crash itself turned out to be stale PyQt wrappers left behind by a
+    destroyed QApplication (fixed by ``one_qapplication_per_session`` in
+    tests/conftest.py), so the module scope is now only about speed.
 
     MonkeyPatch.context() rather than a bare pytest.MonkeyPatch(): the
     built-in fixture is function-scoped so it can't be used here, and calling

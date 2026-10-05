@@ -47,6 +47,53 @@ def no_real_install_detection_inputs():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def one_qapplication_per_session():
+    """Create the run's only QApplication before any test and keep it alive.
+
+    The GUI test modules each get their app from a module-scoped fixture
+    doing ``QApplication.instance() or QApplication([])``. With nothing else
+    holding it, the module that created the app also held the last reference
+    to it, so the app was destroyed at the end of that module and the next GUI
+    module built a new one: 15 apps in one full run. Qt expects one application
+    object per process, and PyQt6 depends on that. Once the first app is gone,
+    PyQt6 no longer notices when Qt deletes an object that Qt itself created
+    (a view's own scroll bars, menu actions, a status bar), so its Python
+    wrapper keeps pointing at freed memory. When Qt reuses that memory for a
+    new object, PyQt6 hands back the old wrapper for it. That is what crashed
+    test_tab_scrollbar_placement with an access violation: findChildren
+    returned a dead QScrollBar wrapper sitting on a live QVBoxLayout of the
+    new window, and isVisible() read the layout as a widget. The app's
+    teardown also deleted the windows tests/gui_window.py keeps alive.
+
+    Every module's ``QApplication.instance()`` now returns this one app.
+    """
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    try:
+        from PyQt6.QtWidgets import QApplication
+    except ImportError:  # no PyQt6: nothing in this run builds a widget
+        yield None
+        return
+    app = QApplication.instance() or QApplication([])
+    yield app
+
+
+@pytest.fixture(scope="module", autouse=True)
+def session_qapplication_still_in_place(one_qapplication_per_session):
+    """Fail at the start of the next module if a test destroyed or replaced
+    the session's QApplication, instead of leaving it to the intermittent
+    crash that losing it causes (see one_qapplication_per_session)."""
+    app = one_qapplication_per_session
+    if app is not None:
+        from PyQt6 import sip
+        from PyQt6.QtWidgets import QApplication
+        assert not sip.isdeleted(app) and QApplication.instance() is app, (
+            "an earlier test destroyed or replaced the session QApplication; "
+            "every test must share the one from tests/conftest.py"
+        )
+    yield
+
+
 @pytest.fixture
 def temp_dir():
     """Provide a temporary directory that's cleaned up after test"""

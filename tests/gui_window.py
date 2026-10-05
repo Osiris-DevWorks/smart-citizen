@@ -21,6 +21,11 @@ by whoever writes the third such file:
   draining ``DeferredDelete`` explicitly made it 3 in 6. Windows are hidden
   and kept alive for the process instead, held in ``_LIVE_WINDOWS`` so
   Python's garbage collector can't delete the C++ object by the back door.
+  That only holds while the run's one QApplication lives, which
+  tests/conftest.py guarantees. Before it did, each GUI module's own app was
+  destroyed at the end of that module and took these windows with it, and
+  once the first app was gone PyQt6 could no longer tell when Qt deleted a
+  child it had created itself (see ``one_qapplication_per_session``).
 
 Settings, user-data and cache directories are all redirected into the caller's
 tmp path, so construction touches nothing real.
