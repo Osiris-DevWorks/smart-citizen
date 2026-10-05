@@ -15,26 +15,17 @@ lightweight stub ``self`` (no full window — no pytest-qt; see tests/CLAUDE.md)
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "src"))
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class _Stub:
