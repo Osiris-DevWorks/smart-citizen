@@ -13,6 +13,7 @@ import winreg
 from src.utils.install_scanner import (
     GAME_DATA_FILE,
     SC_CHANNELS,
+    has_game_data,
     iter_common_sc_install_locations,
     iter_shallow_sc_install_locations,
     looks_like_sc_root,
@@ -148,7 +149,10 @@ def _scan_common_sc_install_locations() -> "str | None":
     to an install and the install itself), is kept once.
     :func:`_pick_live_sc_install` ranks them all with the active channel: a
     root whose own active-channel ``Data.p4k`` is current comes first, then
-    the rest by their newest ``Data.p4k``. Every candidate is logged.
+    the rest by their newest ``Data.p4k``. Every candidate is logged. A
+    folder with no ``Data.p4k`` in any channel is never picked, so when no
+    candidate holds one the scan finds nothing and the user is asked for
+    the path.
 
     Cached in-memory for the process's lifetime, including a "found
     nothing" result -- without this, a no-install profile re-walks every
@@ -244,7 +248,7 @@ def _p4k_mtimes(root: str) -> "dict[str, float]":
 _CHANNEL_STALE_SECONDS = 90 * 24 * 3600
 
 
-def _pick_live_sc_install(candidates: "list[str]", channel: str) -> str:
+def _pick_live_sc_install(candidates: "list[str]", channel: str) -> "str | None":
     r"""Choose the install the RSI Launcher is actually maintaining.
 
     The scan used to return its first hit and stop. That is drive-major over
@@ -263,8 +267,9 @@ def _pick_live_sc_install(candidates: "list[str]", channel: str) -> str:
     whenever it stopped being patched, while the live one moves with every
     game update, so recency is the one signal that separates them without
     asking the launcher where it thinks the game is. Ties and unreadable
-    timestamps fall back to the original scan order, so a single-install
-    machine behaves exactly as before.
+    timestamps among candidates that hold a Data.p4k fall back to the
+    original scan order, so a machine with one real install behaves exactly
+    as before. A candidate with no Data.p4k is never chosen (see below).
 
     *channel* is the active one, and a root whose own *channel* Data.p4k is
     current comes first, newest first. Every channel path resolves against
@@ -278,6 +283,15 @@ def _pick_live_sc_install(candidates: "list[str]", channel: str) -> str:
     Every candidate is logged either way. The heuristic can still be wrong,
     and when it is, a support log that names the alternatives turns a long
     diagnostic thread into one line someone can read.
+
+    A candidate with no ``Data.p4k`` in any channel is never chosen, and
+    when no candidate holds one this returns None, so the user is asked for
+    the path. Such a folder is what the game left behind when it moved (a
+    channel folder with only ``Bin64`` or a build manifest). Once saved it
+    would stay, because a saved root only needs a channel folder (see
+    :meth:`AppSettings.get_sc_install_root`), and every extraction would
+    fail on it instead. A ``Data.p4k`` whose date reads as missing (dated
+    before 1970) still counts, since the file is there.
     """
     # One stat per channel per candidate, reused for both the ranking and the
     # log line below. Reading the disk a second time while building the
@@ -305,11 +319,39 @@ def _pick_live_sc_install(candidates: "list[str]", channel: str) -> str:
             return "unknown"
 
     ranked = sorted(candidates, key=rank)
-    chosen = ranked[0]
-    if len(candidates) > 1:
-        listing = ", ".join(
-            f"{c} (Data.p4k {day(mtimes[c])}, {channel} {day(own[c])})" for c in ranked
+    # A dated Data.p4k proves the folder holds the game. Only a candidate whose
+    # dates all read as missing needs a look at the disk, and those rank last,
+    # so the disk is only read again when no dated Data.p4k was found. One
+    # found that way is listed as undated in the log, not as having none.
+    undated: "set[str]" = set()
+
+    def holds_game(c: str) -> bool:
+        if mtimes[c]:
+            return True
+        if has_game_data(Path(c)):
+            undated.add(c)
+            return True
+        return False
+
+    def shown(c: str, stamp: float, data_file: str) -> str:
+        if c in undated and not stamp and os.path.isfile(data_file):
+            return "undated"
+        return day(stamp)
+
+    chosen = next((c for c in ranked if holds_game(c)), None)
+    listing = ", ".join(
+        f"{c} (Data.p4k {'undated' if c in undated else day(mtimes[c])}, "
+        f"{channel} {shown(c, own[c], os.path.join(c, channel, GAME_DATA_FILE))})"
+        for c in ranked
+    )
+    if chosen is None:
+        logger.warning(
+            f"No Star Citizen install picked: {len(candidates)} folder(s) look like "
+            f"one, but none holds a Data.p4k: {listing}. Set the install path in "
+            f"the Config tab."
         )
+        return None
+    if len(candidates) > 1:
         logger.warning(
             f"Multiple Star Citizen installs found; using {chosen} "
             f"(a current {channel} first, then the newest Data.p4k). All "
@@ -2646,7 +2688,8 @@ class AppSettings:
              default C:\\ install, a secondary drive kept in the same
              shape, or one nested under a personal "Games" folder, plus
              library folders one level below the top of each fixed
-             drive. A root whose active channel is current wins.
+             drive. A root whose active channel is current wins, and a
+             folder with no ``Data.p4k`` is never picked or saved.
              Persists the result once found. The scan runs again only when
              the saved root has stopped being valid (its drive is offline,
              or the game was moved), and what it finds then replaces the

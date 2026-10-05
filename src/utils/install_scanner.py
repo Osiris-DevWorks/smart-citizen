@@ -859,6 +859,15 @@ def _logged_path_candidates(raw: str) -> Iterator[str]:
         emitted += 1
 
 
+def _drive_exists(drive: str) -> bool:
+    r"""Return True if the drive *drive* (``"C:"``) is there.
+
+    ``os.path.isdir`` never raises, so a drive that cannot be read counts as
+    missing.
+    """
+    return os.path.isdir(drive + "\\")
+
+
 def resolve_logged_root(
     raw: str, checked: Optional[dict[str, bool]] = None
 ) -> Optional[Path]:
@@ -898,6 +907,11 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
     # Folder -> install test, so per-file paths under one install (each a
     # distinct raw string) share the walk up through its folders.
     checked: dict[str, bool] = {}
+    # Drive -> whether it is there. The log can name a mapped drive that is no
+    # longer connected, where every probe waits for a network timeout, and
+    # first-run detection runs this on the GUI thread. So each drive is
+    # checked once, and nothing on a missing one is probed.
+    drives: dict[str, bool] = {}
     out_of_probes = False
     last_stamp: Optional[datetime] = None
 
@@ -932,7 +946,13 @@ def parse_launcher_log(text: str) -> dict[str, tuple[Path, datetime]]:
                     )
                 continue
             if raw not in resolved:
-                resolved[raw] = resolve_logged_root(raw, checked)
+                # Every logged path starts with its drive (``C:``).
+                drive = raw[:2].upper()
+                if drive not in drives:
+                    drives[drive] = _drive_exists(drive)
+                resolved[raw] = (
+                    resolve_logged_root(raw, checked) if drives[drive] else None
+                )
             root = resolved[raw]
             if root is None:
                 continue
@@ -1039,7 +1059,7 @@ SHALLOW_SC_SUBPATHS: tuple[str, ...] = (
 )
 
 
-def _has_game_data(root: Path) -> bool:
+def has_game_data(root: Path) -> bool:
     """Return True if any channel folder under *root* holds ``Data.p4k``."""
     for channel_dir in channel_dirs(root):
         try:
@@ -1088,7 +1108,7 @@ def iter_shallow_sc_install_locations(
         for top in sorted(tops, key=lambda p: p.name.lower()):
             candidates.extend(top / subpath for subpath in SHALLOW_SC_SUBPATHS)
         for candidate in candidates:
-            if _has_game_data(candidate):
+            if has_game_data(candidate):
                 yield candidate
 
 
