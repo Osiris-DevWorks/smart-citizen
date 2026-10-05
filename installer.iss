@@ -1863,9 +1863,10 @@ begin
     adapts:
       1. If a prior override exists, pre-fill it (respects the user's
          previous choice across reinstalls).
-      2. Else if Documents is OneDrive-synced and has no Smart Citizen
-         folder yet, suggest the local %USERPROFILE%\Documents\Smart Citizen
-         junction (escapes the sync).
+      2. Else if Documents is OneDrive-synced and holds no data folder yet
+         (no Smart Citizen folder, and no pre-0.9 SC Localization Editor one
+         for the installer to rename), suggest the local
+         %USERPROFILE%\Documents\Smart Citizen junction (escapes the sync).
       3. Else pre-fill Documents\Smart Citizen (the natural default).
     WriteInstallerChoicesToRegistry compares the final value against the
     natural default and only writes user_data_dir when the user actually
@@ -1904,13 +1905,19 @@ begin
     an existing Documents\Smart Citizen is where the app already keeps its
     data, and moving off it would leave user.ini behind. A silent update
     (the in-app updater) never shows this page, so nobody could stop that.
+    A pre-0.9 Documents\SC Localization Editor is existing data too.
+    MigrateUserDocsFolder renames it to Documents\Smart Citizen at ssInstall,
+    so its user.ini follows the rename. A local folder suggested here would be
+    saved as the override, point at an empty folder and leave user.ini behind.
+    Both folder names come from the helpers that migration uses.
     The app's own startup warning offers the one-click move, which migrates
     the data. }
   if RegQueryStringValue(HKCU, NewRegPath, 'user_data_dir', SavedDataDir) and
      (SavedDataDir <> '') and not IsStalePrefill(SavedDataDir) then
     DataDirPage.Values[0] := SavedDataDir
   else if IsDocsOnOneDrive() and
-          not DirExists(GetDocumentsBase() + '\Smart Citizen') then
+          not DirExists(GetDefaultDocumentsDir()) and
+          not DirExists(GetLegacyDocumentsDir()) then
     DataDirPage.Values[0] := SuggestLocalDataDir()
   else
     DataDirPage.Values[0] := GetDefaultDocumentsDir();
@@ -2021,6 +2028,12 @@ begin
     'OneDrive syncs and can dehydrate or empty files under its tree. Smart Citizen '
     + 'has lost user.ini data this way (your favorited ships and custom edits live there). '
     + 'A local folder outside OneDrive is strongly recommended.' + #13#10 + #13#10 +
+    'Switching does not move your existing data. If you already have data in that '
+    + 'OneDrive folder (user.ini, backups), it stays there and Smart Citizen will use '
+    + 'the new folder instead, so your saved edits will not show up. To keep them, '
+    + 'click NO. Smart Citizen then offers to move your data to a local folder the '
+    + 'next time it starts, and the data folder setting on the Config tab (Advanced '
+    + 'view) can do it too.' + #13#10 + #13#10 +
     'Switch to a local folder?' + #13#10 +
     '  - Click YES to use ' + Suggested + #13#10 +
     '  - Click NO to keep the OneDrive folder anyway',
@@ -2028,6 +2041,10 @@ begin
 
   if Response = IDYES then
   begin
+    { Only the folder name changes. WriteInstallerChoicesToRegistry saves it as
+      user_data_dir (it clears the override instead when the folder equals the
+      natural default), and nothing copies the old data across (the box says
+      so). }
     DataDirPage.Values[0] := Suggested;
     { Stay on the page so the user sees the swapped-in local path before
       committing. Mirrors #174 keeping the user on the data-dir surface. }

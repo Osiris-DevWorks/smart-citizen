@@ -14,7 +14,15 @@ forward slashes.
 Recognising those machines would have let a silent update (the in-app
 updater, which never shows the page) move an existing install's data folder to
 the local path and leave ``user.ini`` behind. So the pre-fill only suggests the
-local folder when ``Documents\\Smart Citizen`` does not exist yet.
+local folder when ``Documents\\Smart Citizen`` does not exist yet. A pre-0.9
+``Documents\\SC Localization Editor`` counts as existing data too: Setup renames it
+to ``Documents\\Smart Citizen`` at install time (``user.ini`` goes with it), so a
+local folder suggested for it would be saved as an override that points at an
+empty folder.
+
+The Next-click warning offers to switch to the local folder. That only changes
+the folder Setup saves: nothing copies the old data across. The warning says so,
+and a text check keeps that sentence and that behaviour in step.
 
 The behaviour test cuts the OneDrive functions and the pre-fill ladder
 verbatim out of installer.iss, points their registry and environment reads at
@@ -22,7 +30,7 @@ fakes, compiles them into a throwaway setup with Inno Setup's ISCC, runs it
 silently and reads its verdicts back. It is skipped where Inno Setup is not
 installed or an Application Control policy refuses to run the unsigned probe.
 GitHub's Windows runner image ships Inno Setup 6, so it runs in CI as well as
-on a developer machine that has Inno Setup. The two text checks run everywhere.
+on a developer machine that has Inno Setup. The four text checks run everywhere.
 """
 
 import os
@@ -79,11 +87,36 @@ def test_docs_check_asks_the_shared_path_check():
 
 
 def test_path_check_is_declared_before_the_docs_check():
-    # Pascal Script needs a function declared before it is used, and CI does
-    # not compile installer.iss (release.yml does), so a wrong order would only
-    # show up when a release is built.
+    # Pascal Script needs a function declared before it is used. This check
+    # runs everywhere, also where Inno Setup is not installed and the compile
+    # tests skip.
     source = _installer_source()
     assert source.index("function IsPathOnOneDrive(") < source.index("function IsDocsOnOneDrive(")
+
+
+def test_prefill_suggestion_asks_both_data_folder_names_through_their_helpers():
+    # The OneDrive suggestion is for a new data folder: neither the current
+    # Documents\Smart Citizen nor the pre-0.9 folder that MigrateUserDocsFolder
+    # renames to it. The names come from the helpers that migration uses, not
+    # from another copy of the literals.
+    block = _prefill_block(_installer_source())
+    branch = " ".join(re.search(r"else if (.*?) then", block, re.S).group(1).split())
+    assert "not DirExists(GetDefaultDocumentsDir())" in branch
+    assert "not DirExists(GetLegacyDocumentsDir())" in branch
+    assert "\\Smart Citizen" not in block and "SC Localization Editor" not in block
+
+
+def test_next_click_warning_says_yes_leaves_existing_data_behind():
+    # YES only swaps the folder in the edit box, and WriteInstallerChoicesToRegistry
+    # saves it as user_data_dir. Nothing copies the old data across, so the
+    # warning has to say so. If NextButtonClick ever moves data, reword it.
+    function = _pascal_function(_installer_source(), "NextButtonClick")
+    code = re.sub(r"\{.*?\}", "", function, flags=re.S)
+    message = re.sub(r"'\s*\+\s*'", "", code)
+    assert "Switching does not move your existing data." in message
+    assert message.index("Switching does not move") < message.index("Switch to a local folder?")
+    for mover in ("FileCopy(", "RenameFile(", "DelTree(", "DeleteFile(", "RemoveDir(", "Exec("):
+        assert mover not in code, f"NextButtonClick calls {mover}: the warning says no data moves"
 
 
 # -- Behaviour, in the compiled installer code -----------------------------------
@@ -145,7 +178,8 @@ _PREFILL_NODE = "Probe\\Smart Citizen"
 
 def _prefill_cases(tree):
     """(name, (folder Documents sits in, saved user_data_dir or None, whether
-    ``Documents\\Smart Citizen`` already exists, expected pre-fill)), for folders
+    ``Documents\\Smart Citizen`` already exists, whether the pre-0.9
+    ``Documents\\SC Localization Editor`` exists, expected pre-fill)), for folders
     made under *tree*. The expected pre-fill is ``"default"``
     (Documents\\Smart Citizen), ``"local"`` (the %USERPROFILE% folder) or the
     saved override's own path."""
@@ -154,18 +188,34 @@ def _prefill_cases(tree):
     versioned = str(tree / "Data" / "Smart Citizen 1.4.1")
     gone = str(tree / "Data" / "Gone")
     return [
-        ("work OneDrive, nothing there yet", (onedrive_work, None, False, "local")),
-        ("work OneDrive, data already there", (onedrive_work, None, True, "default")),
-        ("personal OneDrive, nothing there yet", ("OneDrive", None, False, "local")),
-        ("personal OneDrive, data already there", ("OneDrive", None, True, "default")),
-        ("plain Documents, nothing there yet", ("Plain", None, False, "default")),
-        ("plain Documents, data already there", ("Plain", None, True, "default")),
-        ("saved override beats the suggestion", (onedrive_work, saved, False, saved)),
-        ("saved override, data already there", (onedrive_work, saved, True, saved)),
-        ("gone override, nothing there yet", (onedrive_work, gone, False, "local")),
-        ("gone override, data already there", (onedrive_work, gone, True, "default")),
-        ("versioned leftover override", (onedrive_work, versioned, False, "local")),
-        ("empty override", (onedrive_work, "", False, "local")),
+        ("work OneDrive, nothing there yet", (onedrive_work, None, False, False, "local")),
+        ("work OneDrive, data already there", (onedrive_work, None, True, False, "default")),
+        ("personal OneDrive, nothing there yet", ("OneDrive", None, False, False, "local")),
+        ("personal OneDrive, data already there", ("OneDrive", None, True, False, "default")),
+        ("plain Documents, nothing there yet", ("Plain", None, False, False, "default")),
+        ("plain Documents, data already there", ("Plain", None, True, False, "default")),
+        ("saved override beats the suggestion", (onedrive_work, saved, False, False, saved)),
+        ("saved override, data already there", (onedrive_work, saved, True, False, saved)),
+        ("gone override, nothing there yet", (onedrive_work, gone, False, False, "local")),
+        ("gone override, data already there", (onedrive_work, gone, True, False, "default")),
+        ("versioned leftover override", (onedrive_work, versioned, False, False, "local")),
+        ("empty override", (onedrive_work, "", False, False, "local")),
+        # Setup renames the pre-0.9 folder to Documents\Smart Citizen, so it is data
+        # that is already there. A local suggestion would strand its user.ini.
+        ("work OneDrive, pre-0.9 folder only", (onedrive_work, None, False, True, "default")),
+        ("personal OneDrive, pre-0.9 folder only", ("OneDrive", None, False, True, "default")),
+        (
+            "work OneDrive, pre-0.9 and current folders",
+            (onedrive_work, None, True, True, "default"),
+        ),
+        ("plain Documents, pre-0.9 folder only", ("Plain", None, False, True, "default")),
+        ("saved override beats the pre-0.9 folder", (onedrive_work, saved, False, True, saved)),
+        ("gone override, pre-0.9 folder only", (onedrive_work, gone, False, True, "default")),
+        ("empty override, pre-0.9 folder only", (onedrive_work, "", False, True, "default")),
+        (
+            "versioned leftover override, pre-0.9 folder only",
+            (onedrive_work, versioned, False, True, "default"),
+        ),
     ]
 
 
@@ -176,11 +226,13 @@ def _make_prefill_tree(tree, cases):
     (tree / "Data" / "Smart Citizen 1.4.1").mkdir(parents=True)
     local = os.environ["USERPROFILE"] + "\\Documents\\Smart Citizen"
     resolved = []
-    for i, (name, (folder, override, existing, expected)) in enumerate(cases):
+    for i, (name, (folder, override, existing, legacy, expected)) in enumerate(cases):
         docs = tree / f"case{i}" / "Users" / "Sam" / folder / "Documents"
         docs.mkdir(parents=True)
         if existing:
             (docs / "Smart Citizen").mkdir()
+        if legacy:
+            (docs / "SC Localization Editor").mkdir()
         want = {"default": f"{docs}\\Smart Citizen", "local": local}.get(expected, expected)
         resolved.append((name, str(docs), override, want))
     return resolved
