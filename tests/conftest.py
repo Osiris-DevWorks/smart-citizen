@@ -5,17 +5,20 @@ Provides:
 - Temporary directories for file-based tests
 - Mock fixtures for external dependencies
 - Logging configuration
-- Custom markers
+- The run's one QApplication (qapp)
 """
 
 import pytest
 import tempfile
 import os
 import sys
-from pathlib import Path
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# GUI tests run headless. Set here, before any test module is imported, so no
+# module needs its own copy.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -45,6 +48,87 @@ def no_real_install_detection_inputs():
                 module, "iter_shallow_sc_install_locations", lambda drives=None: iter(())
             )
         yield
+
+
+# The run's one QApplication, once _session_qapp has made it (at the first
+# qapp request, or before the first test in a run with GUI tests).
+_SESSION_QAPP: list = []
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    """The run's only QApplication. Request this in any test or fixture that
+    builds a widget, and never create or destroy a QApplication yourself.
+
+    It used to be one module-scoped fixture per GUI test module, each doing
+    ``QApplication.instance() or QApplication([])``. Nothing else held the
+    app, so it was destroyed at the end of the module that made it and the
+    next GUI module built a new one: 15 apps in one full run. Qt expects one
+    application object per process, and PyQt6 depends on that. Once the first
+    app is gone, PyQt6 no longer notices when Qt deletes an object that Qt
+    itself created (a view's own scroll bars, menu actions, a status bar), so
+    its Python wrapper keeps pointing at freed memory. When Qt reuses that
+    memory for a new object, PyQt6 hands back the old wrapper for it. That is
+    what crashed test_tab_scrollbar_placement with an access violation:
+    findChildren returned a dead QScrollBar wrapper sitting on a live
+    QVBoxLayout of the new window, and isVisible() read the layout as a
+    widget. The app's teardown also deleted the windows tests/gui_window.py
+    keeps alive.
+    """
+    return _session_qapp()
+
+
+def _session_qapp():
+    if not _SESSION_QAPP:
+        from PyQt6.QtWidgets import QApplication
+
+        _SESSION_QAPP.append(QApplication.instance() or QApplication([]))
+    return _SESSION_QAPP[0]
+
+
+@pytest.fixture(scope="session", autouse=True)
+def qapp_before_the_first_gui_test():
+    """In a run with GUI tests, make the app before the first test, so it is
+    already there whatever any module does. Collection has imported every
+    test module by now, so Qt widgets being loaded means the run has GUI
+    tests. A run without them (pytest tests/test_core.py) builds no app."""
+    if "PyQt6.QtWidgets" in sys.modules:
+        _session_qapp()
+    yield
+    _SESSION_QAPP.clear()
+
+
+def _check_qapp(when):
+    if "PyQt6.QtWidgets" not in sys.modules:
+        return  # nothing in this run has touched Qt widgets
+    from PyQt6 import sip
+    from PyQt6.QtWidgets import QApplication
+
+    current = QApplication.instance()
+    if not _SESSION_QAPP:
+        assert current is None, (
+            f"a QApplication the qapp fixture did not make existed {when}. "
+            "Request qapp from tests/conftest.py instead of creating one"
+        )
+        return
+    app = _SESSION_QAPP[0]
+    assert not sip.isdeleted(app) and current is app, (
+        f"the run's QApplication was destroyed or replaced {when}. Every "
+        "test must share the one from the qapp fixture in tests/conftest.py"
+    )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def qapp_still_in_place(request):
+    """Fail as soon as a test has destroyed or replaced the run's
+    QApplication, or made its own, instead of leaving it to the intermittent
+    crash that losing it causes (see qapp). Checked when each module starts
+    and again when it ends, so the module that did it is the one that fails,
+    the run's last module included."""
+    module = request.module.__name__
+    _check_qapp(f"when {module} started")
+    yield
+    _check_qapp(f"after {module} ran")
 
 
 @pytest.fixture
@@ -129,28 +213,6 @@ def mock_p4k_path(temp_dir):
     with open(p4k_path, 'wb') as f:
         f.write(b'DUMMY_P4K_DATA')
     return p4k_path
-
-
-def pytest_configure(config):
-    """Configure pytest with custom markers"""
-    config.addinivalue_line(
-        "markers", "unit: Unit test (fast, no I/O)"
-    )
-    config.addinivalue_line(
-        "markers", "integration: Integration test (file I/O or external tools)"
-    )
-    config.addinivalue_line(
-        "markers", "slow: Slow test (P4K extraction, large file operations)"
-    )
-    config.addinivalue_line(
-        "markers", "critical: Critical feature test (must pass before release)"
-    )
-    config.addinivalue_line(
-        "markers", "regression: Regression test for previously found bugs"
-    )
-    config.addinivalue_line(
-        "markers", "gui: GUI test (requires PyQt6, requires manual testing)"
-    )
 
 
 def pytest_collection_modifyitems(config, items):

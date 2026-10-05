@@ -590,10 +590,7 @@ class TestApply:
 
 # ── AppSettings owned-set persistence + model rendering ──────────────────────
 
-import os as _os  # noqa: E402
-_os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QSettings, Qt  # noqa: E402
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
 
 
@@ -601,11 +598,6 @@ from src.utils.settings import AppSettings  # noqa: E402
 def isolated_settings(tmp_path, monkeypatch):
     shared = QSettings(str(tmp_path / "reg.ini"), QSettings.Format.IniFormat)
     monkeypatch.setattr(AppSettings, "settings", staticmethod(lambda: shared))
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class TestOwnedSettings:

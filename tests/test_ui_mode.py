@@ -19,13 +19,10 @@ Three layers:
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QSettings, QSize, QRect  # noqa: E402
 from PyQt6.QtWidgets import (  # noqa: E402
@@ -42,12 +39,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from src.utils.settings import AppSettings  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 @pytest.fixture
@@ -749,6 +740,12 @@ class _SizeStub:
 
     def isFullScreen(self):
         return False
+
+    def _shrink_to_fit_if_simple(self):
+        # The un-maximize path queues this on a 0 ms timer. The session-wide
+        # QApplication outlives this module, so a later module's event loop
+        # fires it; without it PyQt6 aborts on the missing attribute.
+        pass
 
 
 def test_advanced_mode_sizes_window_before_maximizing(qapp):
