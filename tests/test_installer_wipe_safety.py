@@ -815,6 +815,11 @@ def _steps(cases, tree):
 
     steps = []
     for i, case in enumerate(cases):
+        # Only the delete check on its own may see an outside path. A cleaner or
+        # the wipe pointed at one would delete for real outside the tree.
+        assert not case.outside or case.kind == "reason", (
+            f"{case.name}: only a reason case may name a path outside the tree"
+        )
         target = pascal_string(case.outside) if case.outside else p(case.target, case)
         docs, app = p(case.docs, case), p(case.app, case)
         sc = p(case.sc_root, case) if case.sc_root else "''"
@@ -904,6 +909,14 @@ def _problems(cases, lines):
         if case.log is not None and (log != "" if case.log == "" else case.log not in log):
             problems.append(f"{case.name}: the log was {log!r}, expected {case.log or 'nothing'!r}")
     return problems
+
+
+@pytest.mark.parametrize("kind", ["cache", "clean", "channels", "wipe", "wipe-cache-root"])
+def test_only_a_reason_case_may_name_a_path_outside_the_tree(tmp_path, kind):
+    case = Case("outside", kind, [], "", outside="Z:\\")
+    case.base = tmp_path / "case00"
+    with pytest.raises(AssertionError, match="only a reason case"):
+        _steps([case], tmp_path)
 
 
 def test_cache_cleaning_and_the_wipe_in_compiled_installer_code(tmp_path):
