@@ -418,13 +418,13 @@ class TestExtract:
         fixture = Path(__file__).parent / "fixtures" / "kraken_global_latest.ini"
         if not fixture.exists():                       # optional large fixture
             pytest.skip("kraken_global_latest.ini not present")
-        lines = [l for l in fixture.read_text(encoding="utf-8", errors="replace")
-                 .splitlines() if "=" in l]
+        lines = [line for line in fixture.read_text(encoding="utf-8", errors="replace")
+                 .splitlines() if "=" in line]
         bare = re.compile(
             "(?:" + re.escape(BP_SECTION_HEADER) + "|"
             + re.escape(_ALT_BP_SECTION_HEADER) + ")", re.IGNORECASE)
         anchored = _build_bp_header_re(None)
-        missed = [l for l in lines if bare.search(l) and not anchored.search(l)]
+        missed = [line for line in lines if bare.search(line) and not anchored.search(line)]
         assert not missed, (
             f"{len(missed)} header-bearing lines in the real fixture are no "
             f"longer recognised, e.g. {missed[0][:160]!r}"
