@@ -10,6 +10,9 @@ Locks the activation done for the Korean language addition:
   * every ``{placeholder}`` in the English source survives into the Korean
     ``at`` (a dropped/renamed token would crash ``str.format`` at runtime),
   * the guided tour (``tutorial.*``) is translated,
+  * no value runs two sentences together (a ``.``, ``?`` or ``!`` straight
+    into a Hangul syllable): Korean spaces after a sentence end, unlike
+    Chinese and Japanese,
   * Korean appears in the language selector (it is not a stub),
   * the SC language id maps to ``korean_(south_korea)`` — one of the
     official CIG Localization slots, so apply-to-game writes the
@@ -49,6 +52,8 @@ pytestmark = [pytest.mark.unit, pytest.mark.regression]
 _KO_UI = REPO / "languages" / "korean" / "ui.json"
 _EN_UI = REPO / "languages" / "english" / "ui.json"
 _PLACEHOLDER = re.compile(r"\{[^}]+\}")
+# Korean puts a space after a sentence-ending mark (Chinese and Japanese do not).
+_RUN_TOGETHER = re.compile(r"[.?!][가-힣]")
 
 
 def _leaves(node, prefix=""):
@@ -130,6 +135,21 @@ def test_korean_translates_the_guided_tour():
     for step_id, step in tour.items():
         assert step["title"]["at"].strip(), f"tutorial.{step_id}.title not translated"
         assert step["description"]["at"].strip(), f"tutorial.{step_id}.description not translated"
+
+
+def test_korean_sentences_are_not_run_together():
+    # blueprint_tracker.scan_logs_tooltip once shipped a second sentence glued
+    # to the first (found in the review of the #446 change).
+    data = json.loads(_KO_UI.read_text(encoding="utf-8"))
+    run_together = []
+    for path, leaf in _leaves(data):
+        for field in ("ht", "at"):
+            value = leaf[field]
+            for match in _RUN_TOGETHER.finditer(value):
+                start, end = max(0, match.start() - 10), match.end() + 10
+                around = value[start:end]
+                run_together.append(f"{path}.{field}: ...{around}...")
+    assert not run_together, f"no space after a sentence-ending mark: {run_together[:5]}"
 
 
 def test_korean_is_available_in_selector():
