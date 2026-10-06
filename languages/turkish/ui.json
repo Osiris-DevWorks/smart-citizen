@@ -2720,6 +2720,22 @@
       "ht": "",
       "at": "DataForge çıkarma başarısız oldu — ayrıntılar için Günlük sekmesine bakın"
     },
+    "dataforge_stop_title": {
+      "ht": "",
+      "at": "DataForge Çıkarma Durdurulsun mu?"
+    },
+    "dataforge_stop_body": {
+      "ht": "",
+      "at": "DataForge çıkarma işlemi hâlâ çalışıyor.\n\nŞimdi durdurulsun mu? Daha sonra Geliştirmeler sekmesinden yeniden çalıştırabilirsiniz."
+    },
+    "dataforge_stopping": {
+      "ht": "",
+      "at": "DataForge çıkarma işlemi durduruluyor…"
+    },
+    "dataforge_stopped": {
+      "ht": "",
+      "at": "DataForge çıkarma işlemi durduruldu"
+    },
     "p4k_extracting_label": {
       "ht": "",
       "at": "global.ini Data.p4k'dan çıkarılıyor..."

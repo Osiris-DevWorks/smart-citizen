@@ -8,11 +8,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.generate_enhancements_ini import (
     DEFAULT_BASE_INI, DEFAULT_FORGE_DIR, parse_ini, write_ini, APP_CACHE_DIR,
+    DATAFORGE_RECORDS_SUBPATH,
 )
 
 base_ini = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_BASE_INI
 dataforge_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_FORGE_DIR
-candidate_records_dir = dataforge_dir / "raw" / "libs" / "foundry" / "records"
+candidate_records_dir = dataforge_dir / DATAFORGE_RECORDS_SUBPATH
 records_dir = candidate_records_dir if candidate_records_dir.exists() else dataforge_dir
 scitem_dir = records_dir / "entities" / "scitem"
 bp_dir = records_dir / "crafting" / "blueprints" / "crafting"

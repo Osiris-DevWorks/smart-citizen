@@ -2720,6 +2720,22 @@
       "ht": "",
       "at": "DataForge-Extraktion fehlgeschlagen — Details im Log-Tab"
     },
+    "dataforge_stop_title": {
+      "ht": "",
+      "at": "DataForge-Extraktion stoppen?"
+    },
+    "dataforge_stop_body": {
+      "ht": "",
+      "at": "Die DataForge-Extraktion läuft noch.\n\nJetzt stoppen? Du kannst sie später über den Erweiterungen-Tab erneut starten."
+    },
+    "dataforge_stopping": {
+      "ht": "",
+      "at": "DataForge-Extraktion wird gestoppt…"
+    },
+    "dataforge_stopped": {
+      "ht": "",
+      "at": "DataForge-Extraktion gestoppt"
+    },
     "p4k_extracting_label": {
       "ht": "",
       "at": "global.ini wird aus Data.p4k extrahiert..."

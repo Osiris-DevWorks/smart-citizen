@@ -52,6 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
 from src.utils.win_paths import win_long_path
 
 logger = logging.getLogger(__name__)
@@ -101,9 +102,9 @@ class LocstringWorkaround:
     patch_source: str = ""     # source .patch.json filename, for logs
 
 
-# DataForge XMLs live under {cache}/raw/libs/foundry/records/... — patch
-# targets are expressed relative to that records/ root.
-_DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
+# DataForge XMLs live under {cache}/raw/libs/foundry/records/...
+# (pak_extractor.DATAFORGE_RECORDS_SUBPATH) — patch targets are expressed
+# relative to that records/ root.
 
 
 def apply_patches(
@@ -126,7 +127,7 @@ def apply_patches(
     # records_root inherits long-path safety — see win_paths.win_long_path
     # (#221; this module hits the same 260-char MAX_PATH limit as
     # pak_extractor's copy/cleanup step).
-    records_root = Path(win_long_path(dataforge_cache_dir / _DATAFORGE_RECORDS_SUBPATH))
+    records_root = Path(win_long_path(dataforge_cache_dir / DATAFORGE_RECORDS_SUBPATH))
     if not records_root.exists():
         msg = f"DataForge records dir not found: {records_root}"
         logger.warning(msg)

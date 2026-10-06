@@ -78,6 +78,7 @@ class AnimatedProgressDialog(QProgressDialog):
         # caller-supplied string, not a bool + an internal tr() lookup, so
         # this generic/reusable dialog carries no feature-specific string key.
         super().__init__(message, cancel_text, 0, 0, parent)
+        self._close_guard = None
         self.setWindowTitle(title)
         self.setModal(True)
         self.setMinimumWidth(400)
@@ -96,6 +97,39 @@ class AnimatedProgressDialog(QProgressDialog):
             # to determinate and a real percentage exists to display.
             self._bar.setTextVisible(False)
         self.show()
+
+    def set_close_guard(self, guard) -> None:
+        """Ask *guard* before Esc or the title-bar X dismisses the dialog (#471).
+
+        ``guard()`` returns True to let the dialog go the way it always has,
+        False to keep it open. None (the default) removes the guard. Only the
+        user's own dismissal is asked about: a programmatic ``close()`` or
+        ``hide()`` never is, so callers keep closing the dialog exactly as
+        before. The DataForge extraction uses this to ask "stop the
+        extraction?" instead of silently hiding a run that keeps going.
+        """
+        self._close_guard = guard
+
+    def _user_may_dismiss(self) -> bool:
+        guard = self._close_guard
+        return guard is None or bool(guard())
+
+    def closeEvent(self, event):
+        # The title-bar X (and Alt+F4) arrive as a spontaneous close event; a
+        # programmatic close() does not, and is never asked about.
+        if event.spontaneous() and not self._user_may_dismiss():
+            event.ignore()
+            return
+        super().closeEvent(event)
+
+    def reject(self):
+        # Esc lands here. A close (the X or a programmatic close()) never
+        # does: QProgressDialog.closeEvent emits canceled, whose built-in
+        # cancel() hides the dialog before QDialog.closeEvent would reach
+        # reject(). tests/test_extraction_stop.py fails if that ever changes.
+        if not self._user_may_dismiss():
+            return
+        super().reject()
 
     def set_progress(self, completed: int, total: int, message: str = "") -> None:
         """Drive the bar from a ProgressSink. total=0 ⇒ indeterminate.
@@ -507,7 +541,8 @@ class EnhancementsGeneratorWorker(QThread):
             # None  → no manifest yet, run everything.
             # set() → nothing changed, skip entirely.
             # {...} → only re-run the categories whose source XMLs changed.
-            libs_dir = forge_dir / "raw" / "libs"
+            from src.utils.pak_extractor import DATAFORGE_LIBS_SUBPATH
+            libs_dir = forge_dir / DATAFORGE_LIBS_SUBPATH
             diff = dirty_categories(libs_dir)
             # If enhancement files are missing, force regeneration even if the
             # manifest says nothing changed — the manifest may have been written
@@ -609,28 +644,46 @@ class EnhancementsGeneratorWorker(QThread):
 
 
 class P4kExtractWorker(QThread):
-    """Worker thread for extracting global.ini from Data.p4k via unp4k.exe."""
+    """Worker thread for extracting global.ini from Data.p4k via unp4k.exe.
+
+    requestInterruption() stops it (#471): MainWindow.closeEvent does this so
+    closing never leaves unp4k running on its own. extract_global_ini polls
+    isInterruptionRequested, kills unp4k, deletes its working folder and
+    raises ExtractionCancelled. A stop is not a failure, so it ends with
+    finished(False), no error signal and nothing logged at ERROR.
+    """
 
     progress = pyqtSignal(str)   # status message
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
     finished = pyqtSignal(bool)  # True = success
     error = pyqtSignal(str)      # error message (emitted before finished(False))
 
-    def __init__(self, p4k_path, output_path, unp4k_exe):
+    def __init__(self, p4k_path, output_path, unp4k_exe, scratch_near=None):
         super().__init__()
         self._p4k = p4k_path
         self._out = output_path
         self._exe = unp4k_exe
+        # The DataForge cache folder, captured on the main thread: unp4k
+        # works beside it rather than in %TEMP% (#471).
+        self._scratch_near = scratch_near
 
     def run(self):
-        from src.utils.pak_extractor import P4kLockedError, extract_global_ini
+        from src.utils.pak_extractor import (
+            ExtractionCancelled, P4kLockedError, extract_global_ini,
+        )
         try:
             extract_global_ini(
                 self._p4k, self._out, self._exe,
                 progress_callback=self.progress.emit,
                 progress_pct_callback=lambda c, t, m: self.progress_pct.emit(c, t, m),
+                should_cancel=self.isInterruptionRequested,
+                scratch_near=self._scratch_near,
             )
             self.finished.emit(True)
+        except ExtractionCancelled as e:
+            # Closing stopped it (#471). Not a failure: see the class docstring.
+            logger.info(f"global.ini extraction stopped ({e})")
+            self.finished.emit(False)
         except P4kLockedError as e:
             # Anticipated, already logged at WARNING by _raise_unp4k_failure
             # with full diagnostic detail — logger.exception() here would
@@ -641,13 +694,29 @@ class P4kExtractWorker(QThread):
             self.error.emit(str(e))
             self.finished.emit(False)
         except Exception as e:
+            if self.isInterruptionRequested():
+                # A failure on the way out of a stop (#471) belongs to the
+                # stop: report it the same quiet way.
+                logger.warning(f"P4K extraction ended with an error after a stop: {e}")
+                self.finished.emit(False)
+                return
             logger.exception(f"P4K extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
 
 
 class DataForgeExtractWorker(QThread):
-    """Worker thread for extracting DataForge entity XMLs from Data.p4k."""
+    """Worker thread for extracting DataForge entity XMLs from Data.p4k.
+
+    requestInterruption() stops it (#471). MainWindow does this when the
+    window closes (_stop_extractions_for_close) and when the user confirms
+    "stop the extraction?" from the progress dialog. extract_dataforge polls
+    isInterruptionRequested, kills unp4k or unforge, deletes its working
+    folder and raises ExtractionCancelled. A stop is not a failure, so it
+    ends with finished(False), no error signal and nothing logged at ERROR,
+    which would fire the global ErrorDialogHandler for something the user
+    asked for.
+    """
 
     progress = pyqtSignal(str)
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
@@ -660,10 +729,15 @@ class DataForgeExtractWorker(QThread):
         self._unp4k_exe = unp4k_exe
         self._unforge_exe = unforge_exe
         self._cache_dir = cache_dir
+        # True once a run ended because a stop was requested (#471). Read it
+        # rather than isInterruptionRequested() after the thread is done:
+        # QThread reports no interruption once the thread has finished, so a
+        # finished slot that waits for the thread first would always see False.
+        self.stopped = False
 
     def run(self):
         from src.utils.pak_extractor import (
-            DataForgeTimeoutError, P4kLockedError, extract_dataforge,
+            DataForgeTimeoutError, ExtractionCancelled, P4kLockedError, extract_dataforge,
         )
         from src.utils.dataforge_patcher import apply_patches
         try:
@@ -674,7 +748,16 @@ class DataForgeExtractWorker(QThread):
                 self._cache_dir,
                 progress_callback=self.progress.emit,
                 progress_pct_callback=lambda c, t, m: self.progress_pct.emit(c, t, m),
+                should_cancel=self.isInterruptionRequested,
             )
+            if self.isInterruptionRequested():
+                # Stopped after the cache was written and stamped (#471). The
+                # generator re-applies the patches before every run, so
+                # skipping them here loses nothing.
+                logger.info("DataForge extraction stopped before its patches")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             # Apply declarative patches over known CIG data bugs so downstream
             # consumers (enhancement generator, future tooling) see corrected
             # data. Patch failures are recorded in the report but don't block
@@ -695,7 +778,20 @@ class DataForgeExtractWorker(QThread):
             if report.errors:
                 for err in report.errors:
                     logger.warning(f"  patch error: {err}")
+            if self.isInterruptionRequested():
+                # The stop question was answered Yes while the patches ran
+                # (#471). The cache is complete, but the user asked to stop,
+                # so nothing may chain into generation or a Simple-mode apply.
+                logger.info("DataForge extraction stopped after its patches")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             self.finished.emit(True)
+        except ExtractionCancelled as e:
+            # A stop (#471). Not a failure: see the class docstring.
+            logger.info(f"DataForge extraction stopped ({e})")
+            self.stopped = True
+            self.finished.emit(False)
         except P4kLockedError as e:
             # See the matching comment in P4kExtractWorker.run(): already
             # logged at WARNING by _raise_unp4k_failure; logger.exception()
@@ -714,6 +810,14 @@ class DataForgeExtractWorker(QThread):
             self.error.emit(str(e))
             self.finished.emit(False)
         except Exception as e:
+            if self.isInterruptionRequested():
+                # A failure on the way out of a stop (a file the killed tool
+                # still held, a full disk during the last copy) belongs to the
+                # stop (#471). Report it the same quiet way.
+                logger.warning(f"DataForge extraction ended with an error after a stop: {e}")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             logger.exception(f"DataForge extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)

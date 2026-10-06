@@ -2720,6 +2720,22 @@
       "ht": "",
       "at": "Falló la extracción de DataForge — consulta la pestaña Registro para más detalles"
     },
+    "dataforge_stop_title": {
+      "ht": "",
+      "at": "¿Detener la extracción de DataForge?"
+    },
+    "dataforge_stop_body": {
+      "ht": "",
+      "at": "La extracción de DataForge sigue en curso.\n\n¿Detenerla ahora? Puedes volver a ejecutarla más tarde desde la pestaña Mejoras."
+    },
+    "dataforge_stopping": {
+      "ht": "",
+      "at": "Deteniendo la extracción de DataForge…"
+    },
+    "dataforge_stopped": {
+      "ht": "",
+      "at": "Extracción de DataForge detenida"
+    },
     "p4k_extracting_label": {
       "ht": "",
       "at": "Extrayendo global.ini desde Data.p4k..."

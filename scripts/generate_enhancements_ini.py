@@ -112,6 +112,16 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
                 return stem[len(prefix):], True
         return stem, False
 
+# Same deferred-import pattern for the DataForge cache layout, which
+# pak_extractor (the module that writes it) names once for every reader.
+try:
+    _gen_root = Path(__file__).parent.parent
+    if str(_gen_root) not in sys.path:
+        sys.path.insert(0, str(_gen_root))
+    from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
+
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -397,7 +407,7 @@ def _dataforge_cache_key(forge_dir: Path) -> str:
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — fall through to the records-dir heuristic.
             pass
-    records = forge_dir / "raw" / "libs" / "foundry" / "records"
+    records = forge_dir / DATAFORGE_RECORDS_SUBPATH
     if records.exists():
         return f"mtime:{int(records.stat().st_mtime)}"
     return "unknown"
@@ -7482,7 +7492,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # it calls with forge_dir/records) inherits long-path safety — see the
     # win_long_path import comment near the top of this file.
     forge_dir = Path(win_long_path(forge_dir))
-    records = forge_dir / "raw" / "libs" / "foundry" / "records"
+    records = forge_dir / DATAFORGE_RECORDS_SUBPATH
     if not forge_dir.exists() or not records.exists():
         raise FileNotFoundError(
             f"DataForge cache not found at {forge_dir}\n"
