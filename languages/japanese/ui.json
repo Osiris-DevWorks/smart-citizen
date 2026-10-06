@@ -2720,13 +2720,17 @@
       "ht": "",
       "at": "DataForge の抽出に失敗しました — 詳細はログタブを参照してください"
     },
-    "dataforge_stop_title": {
+    "dataforge_running_title": {
       "ht": "",
-      "at": "DataForge の抽出を停止しますか？"
+      "at": "DataForge の抽出を実行中"
     },
-    "dataforge_stop_body": {
+    "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？後で拡張タブからもう一度実行できます。"
+      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？後でもう一度実行できます。"
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "停止"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2743,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "P4K 抽出"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "global.ini の抽出を停止しています…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "global.ini の抽出を停止しました"
     },
     "extraction_error_title": {
       "ht": "",

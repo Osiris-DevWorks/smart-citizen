@@ -102,11 +102,6 @@ class LocstringWorkaround:
     patch_source: str = ""     # source .patch.json filename, for logs
 
 
-# DataForge XMLs live under {cache}/raw/libs/foundry/records/...
-# (pak_extractor.DATAFORGE_RECORDS_SUBPATH) — patch targets are expressed
-# relative to that records/ root.
-
-
 def apply_patches(
     patch_root: Path,
     dataforge_cache_dir: Path,
@@ -127,6 +122,7 @@ def apply_patches(
     # records_root inherits long-path safety — see win_paths.win_long_path
     # (#221; this module hits the same 260-char MAX_PATH limit as
     # pak_extractor's copy/cleanup step).
+    # Patch targets are expressed relative to the cache's records/ root.
     records_root = Path(win_long_path(dataforge_cache_dir / DATAFORGE_RECORDS_SUBPATH))
     if not records_root.exists():
         msg = f"DataForge records dir not found: {records_root}"

@@ -2720,12 +2720,16 @@
       "ht": "DataForge extraction failed — check the Log tab for details",
       "at": ""
     },
-    "dataforge_stop_title": {
-      "ht": "Stop DataForge Extraction?",
+    "dataforge_running_title": {
+      "ht": "DataForge Extraction Running",
       "at": ""
     },
-    "dataforge_stop_body": {
-      "ht": "The DataForge extraction is still running.\n\nStop it now? You can run it again later from the Enhancements tab.",
+    "dataforge_running_body": {
+      "ht": "The DataForge extraction is still running.\n\nStop it now? You can run it again later.",
+      "at": ""
+    },
+    "dataforge_stop_btn": {
+      "ht": "Stop",
       "at": ""
     },
     "dataforge_stopping": {
@@ -2742,6 +2746,14 @@
     },
     "p4k_extraction_title": {
       "ht": "P4K Extraction",
+      "at": ""
+    },
+    "p4k_stopping": {
+      "ht": "Stopping the global.ini extraction…",
+      "at": ""
+    },
+    "p4k_stopped": {
+      "ht": "global.ini extraction stopped",
       "at": ""
     },
     "extraction_error_title": {

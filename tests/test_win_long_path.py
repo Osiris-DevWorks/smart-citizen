@@ -31,7 +31,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from utils.win_paths import win_long_path  # noqa: E402
+from utils.win_paths import win_long_path, win_plain_path  # noqa: E402
 from utils import dataforge_diff  # noqa: E402
 from utils.pak_extractor import dataforge_cache_is_fresh  # noqa: E402
 
@@ -81,6 +81,34 @@ class TestWinLongPath:
         with patch("sys.platform", "win32"):
             result = win_long_path(Path("C:\\Users\\test\\file.xml"))
             assert result.startswith("\\\\?\\")
+
+
+class TestWinPlainPath:
+    """The inverse, for paths handed to the P4K tools or compared as text (#471)."""
+
+    def test_round_trips_a_drive_path(self):
+        with patch("sys.platform", "win32"):
+            plain = "C:\\Users\\test\\cache\\dataforge"
+            assert win_plain_path(win_long_path(plain)) == plain
+
+    def test_round_trips_a_share(self):
+        with patch("sys.platform", "win32"):
+            share = "\\\\server\\share\\SC\\cache"
+            long = win_long_path(share)
+            assert long.startswith("\\\\?\\UNC\\")
+            assert win_plain_path(long) == share
+
+    def test_a_plain_path_comes_back_absolute(self):
+        with patch("sys.platform", "win32"):
+            assert win_plain_path("C:\\a\\b\\..\\c") == "C:\\a\\c"
+
+    def test_accepts_path_object(self):
+        with patch("sys.platform", "win32"):
+            assert win_plain_path(Path("\\\\?\\C:\\x")) == "C:\\x"
+
+    def test_noop_on_non_windows(self):
+        with patch("sys.platform", "linux"):
+            assert win_plain_path("/home/test") == "/home/test"
 
 
 class TestDataforgeDiffLongPath:

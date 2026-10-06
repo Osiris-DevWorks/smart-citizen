@@ -2720,13 +2720,17 @@
       "ht": "",
       "at": "Estrazione di DataForge fallita — controlla la scheda Log per i dettagli"
     },
-    "dataforge_stop_title": {
+    "dataforge_running_title": {
       "ht": "",
-      "at": "Interrompere l'Estrazione DataForge?"
+      "at": "Estrazione DataForge in Corso"
     },
-    "dataforge_stop_body": {
+    "dataforge_running_body": {
       "ht": "",
-      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora? Puoi eseguirla di nuovo più tardi dalla scheda Miglioramenti."
+      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora? Puoi eseguirla di nuovo più tardi."
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "Interrompi"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2743,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "Estrazione P4K"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "Interruzione dell'estrazione di global.ini…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "Estrazione di global.ini interrotta"
     },
     "extraction_error_title": {
       "ht": "",

@@ -2720,13 +2720,17 @@
       "ht": "",
       "at": "DataForge 추출 실패. 자세한 내용은 로그 탭을 확인하세요"
     },
-    "dataforge_stop_title": {
+    "dataforge_running_title": {
       "ht": "",
-      "at": "DataForge 추출을 중지할까요?"
+      "at": "DataForge 추출 진행 중"
     },
-    "dataforge_stop_body": {
+    "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요? 나중에 강화 탭에서 다시 실행할 수 있습니다."
+      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요? 나중에 다시 실행할 수 있습니다."
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "중지"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2743,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "P4K 추출"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "global.ini 추출을 중지하는 중…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "global.ini 추출이 중지되었습니다"
     },
     "extraction_error_title": {
       "ht": "",

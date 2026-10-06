@@ -16,6 +16,7 @@ from src.utils.dataforge_diff import update_manifest
 from src.utils.i18n import tr
 from src.utils.onedrive import is_onedrive_path
 from src.utils.win_paths import win_long_path as _win_long_path
+from src.utils.win_paths import win_plain_path
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +274,7 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # can delete, which keeps it off a live run in another window.
 DATAFORGE_SCRATCH_PREFIX = "dataforge.extracting-"
 GLOBAL_INI_SCRATCH_PREFIX = "globalini.extracting-"
-_TEMP_SCRATCH_PREFIX = "SmartCitizen-DataForge-"      # like %TEMP%\SmartCitizen-Update
+_DATAFORGE_TEMP_PREFIX = "SmartCitizen-DataForge-"    # like %TEMP%\SmartCitizen-Update
 _GLOBAL_INI_TEMP_PREFIX = "SmartCitizen-GlobalIni-"
 _SCRATCH_MARKER = ".in_use"
 _MKDTEMP_RANDOM_CHARS = 8            # length of tempfile.mkdtemp's random suffix
@@ -282,20 +283,6 @@ _MAX_SCRATCH_CHARS = 190
 # the marker, or a removal that got part-way. Only an old one is a leftover.
 _UNMARKED_SCRATCH_GRACE_SECONDS = 10 * 60
 _DRIVE_REMOVABLE, _DRIVE_REMOTE = 2, 4   # GetDriveTypeW
-
-
-def _plain_path(path) -> str:
-    """*path* without a long-path prefix, with the UNC form turned back into a
-    plain share path. The tools are only ever given plain paths (whether
-    unp4k and unforge accept the prefix was never tested), and
-    is_onedrive_path cannot match its environment roots against a prefixed
-    path either."""
-    text = str(path)
-    if text.startswith("\\\\?\\UNC\\"):
-        return "\\\\" + text[8:]
-    if text.startswith("\\\\?\\"):
-        return text[4:]
-    return text
 
 
 def _drive_is_removable_or_network(path) -> bool:
@@ -315,7 +302,7 @@ def _drive_is_removable_or_network(path) -> bool:
 
 
 def _scratch_location(plain_leaf: Path, prefix: str = DATAFORGE_SCRATCH_PREFIX,
-                      temp_prefix: str = _TEMP_SCRATCH_PREFIX) -> tuple[Path, str]:
+                      temp_prefix: str = _DATAFORGE_TEMP_PREFIX) -> tuple[Path, str]:
     """Parent folder and name prefix for a run's working folder: beside the
     DataForge cache leaf with *prefix*, or %TEMP% with *temp_prefix* (see the
     comment above). *plain_leaf* carries no long-path prefix."""
@@ -396,6 +383,35 @@ def _close_scratch(run_dir: Path, marker) -> None:
         )
 
 
+def _begin_scratch(near, prefix: str, temp_prefix: str, *, temp_if_refused: bool = False):
+    """Sweep earlier leftovers and open this run's working folder (#471):
+    beside the DataForge cache folder *near* by the _scratch_location rules,
+    or in %TEMP% when *near* is None. Returns ``(folder, marker)``; end the
+    run with :func:`_close_scratch`.
+
+    *temp_if_refused* falls back to %TEMP% when the folder beside the cache
+    cannot be made (permissions, Controlled Folder Access, a drive turned
+    read-only). The global.ini extraction wants that: it only ever needed
+    %TEMP% before #471, and its output goes to the data folder, not the
+    cache. The DataForge run does not, because its cache writes go to that
+    same drive and would fail anyway, after a minute of unforge.
+    """
+    temp_root = Path(tempfile.gettempdir())
+    _sweep_stale_scratch(temp_root, temp_prefix)
+    if near is None:
+        return _open_scratch(temp_root, temp_prefix)
+    plain_leaf = Path(win_plain_path(near))
+    parent, run_prefix = _scratch_location(plain_leaf, prefix, temp_prefix)
+    _sweep_stale_scratch(plain_leaf.parent, prefix)
+    try:
+        return _open_scratch(parent, run_prefix)
+    except OSError as e:
+        if not temp_if_refused or parent == temp_root:
+            raise
+        logger.info(f"Could not make a working folder in {parent} ({e}); working in {temp_root}")
+        return _open_scratch(temp_root, temp_prefix)
+
+
 # Path of global.ini inside the p4k archive (unp4k preserves directory structure)
 _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 
@@ -462,7 +478,8 @@ def _copy_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
 
     if not records_src.exists():
         raise FileNotFoundError(
-            f"unforge output missing expected 'foundry/records/' layout at {records_src}"
+            f"unforge output missing expected '{DATAFORGE_RECORDS_UNDER_LIBS.as_posix()}/' "
+            f"layout at {records_src}"
         )
 
     Path(_win_long_path(records_dst)).mkdir(parents=True, exist_ok=True)
@@ -492,10 +509,7 @@ def _copy_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
 
 def _get_subprocess_kwargs() -> dict:
     """Return subprocess kwargs to suppress window on Windows."""
-    kwargs = {
-        "capture_output": True,
-        "text": True,
-    }
+    kwargs = {"text": True}
     # On Windows, suppress the subprocess window completely
     if sys.platform == "win32":
         # CREATE_NO_WINDOW = 0x08000000
@@ -539,7 +553,6 @@ def _run_tool(args, *, cwd, timeout, should_cancel=None) -> subprocess.Completed
     name = Path(args[0]).name
     _raise_if_cancelled(should_cancel, f"{name} was not started")
     kwargs = _get_subprocess_kwargs()
-    kwargs.pop("capture_output", None)   # run()-only; Popen gets the pipes below
     proc = subprocess.Popen(
         args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
     )
@@ -628,17 +641,10 @@ def extract_global_ini(
     # DataForge run it works beside the DataForge cache, gets an owned name,
     # a stoppable run and the leftover sweep (#471): it used to work in
     # %TEMP%, and a close left this folder and a running unp4k behind.
-    temp_root = Path(tempfile.gettempdir())
-    if scratch_near is not None:
-        plain_leaf = Path(os.path.abspath(_plain_path(scratch_near)))
-        scratch_parent, scratch_prefix = _scratch_location(
-            plain_leaf, GLOBAL_INI_SCRATCH_PREFIX, _GLOBAL_INI_TEMP_PREFIX
-        )
-        _sweep_stale_scratch(plain_leaf.parent, GLOBAL_INI_SCRATCH_PREFIX)
-    else:
-        scratch_parent, scratch_prefix = temp_root, _GLOBAL_INI_TEMP_PREFIX
-    _sweep_stale_scratch(temp_root, _GLOBAL_INI_TEMP_PREFIX)
-    run_dir, marker = _open_scratch(scratch_parent, scratch_prefix)
+    run_dir, marker = _begin_scratch(
+        scratch_near, GLOBAL_INI_SCRATCH_PREFIX, _GLOBAL_INI_TEMP_PREFIX,
+        temp_if_refused=True,
+    )
     tmp_dir = str(run_dir)
     try:
         if progress_callback:
@@ -731,22 +737,17 @@ def extract_dataforge(
     if not p4k_path.exists():
         raise FileNotFoundError(f"Data.p4k not found at: {p4k_path}")
 
-    # Where unp4k and unforge work (#471), decided from the plain path: the
-    # tools only ever get unprefixed paths, and is_onedrive_path cannot match
-    # a prefixed one. Leftovers of earlier runs go first, from both places,
-    # whichever this run uses.
-    plain_leaf = Path(os.path.abspath(_plain_path(dataforge_cache_dir)))
-    scratch_parent, scratch_prefix = _scratch_location(plain_leaf)
-    _sweep_stale_scratch(plain_leaf.parent, DATAFORGE_SCRATCH_PREFIX)
-    _sweep_stale_scratch(Path(tempfile.gettempdir()), _TEMP_SCRATCH_PREFIX)
-
     # Wrap once here so every use below (mkdir, exists checks, and whatever
     # this function hands to _copy_filtered_records/update_manifest) inherits
     # long-path safety — see win_paths.win_long_path (#221).
     dataforge_cache_dir = Path(_win_long_path(dataforge_cache_dir))
 
     TOTAL_PHASES = 3
-    run_dir, marker = _open_scratch(scratch_parent, scratch_prefix)
+    # Where unp4k and unforge work (#471), with leftovers of earlier runs
+    # swept first from both places, whichever this run uses.
+    run_dir, marker = _begin_scratch(
+        dataforge_cache_dir, DATAFORGE_SCRATCH_PREFIX, _DATAFORGE_TEMP_PREFIX
+    )
     logger.info(f"DataForge working folder: {run_dir}")
     try:
         # ── Step 1: Extract Game2.dcb ─────────────────────────────────────────

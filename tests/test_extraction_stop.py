@@ -9,10 +9,11 @@ extraction carried on unseen. This pins the Qt side of the fix:
 * DataForgeExtractWorker / P4kExtractWorker on real threads: a stop ends with
   finished(False), no error signal and nothing at ERROR (an ERROR record would
   pop the global error dialog), while a real failure still reports.
-* MainWindow on stub selves (no full window): the stop prompt, the
-  identity-bound slots, the guards that keep anything new from starting once
-  the close is committed, and closeEvent's order (commit, ask the tools to
-  stop ahead of the loader wait, save the window state, then wait).
+* MainWindow on stub selves (no full window): the DataForge stop prompt,
+  the global.ini dialog's stop, the identity-bound slots, the guards that
+  keep anything new from starting once the close is committed, and
+  closeEvent's order (commit, ask the tools to stop ahead of the loader
+  wait, save the window state, then wait).
 
 The P4K-side work (the stoppable runner, the working folder) is covered
 Qt-free in test_extraction_working_folder.py. Offscreen Qt via the session
@@ -214,7 +215,7 @@ class TestDataForgeExtractWorker:
         assert worker.stopped is True
 
     def test_a_stop_during_the_patches_still_stops(self, qapp, monkeypatch):
-        """Yes on the stop question while 'Applying DataForge patches' shows:
+        """Stop picked in the question while 'Applying DataForge patches' shows:
         the run must end stopped, not chain into generation (and a
         Simple-mode apply)."""
         holder = {}
@@ -254,6 +255,7 @@ class TestDataForgeExtractWorker:
         assert finished == [False]
         assert errors == []
         assert _error_records(caplog) == []
+        assert worker.stopped is True
 
     def test_a_real_failure_still_reports(self, qapp, monkeypatch, patches, caplog):
         def extract(*args, **kwargs):
@@ -305,6 +307,7 @@ class TestP4kExtractWorker:
         assert worker.wait(5000)
         assert finished == [True]
         assert seen["near"] == "E:/SC/LIVE/cache/dataforge"
+        assert worker.stopped is False
 
     def test_a_stop_ends_quietly(self, qapp, monkeypatch, caplog):
         started = threading.Event()
@@ -325,6 +328,7 @@ class TestP4kExtractWorker:
         assert finished == [False]
         assert errors == []
         assert _error_records(caplog) == []
+        assert worker.stopped is True
 
     def test_a_failure_on_the_way_out_of_a_stop_is_quiet(self, qapp, monkeypatch, caplog):
         holder = {}
@@ -341,6 +345,20 @@ class TestP4kExtractWorker:
         assert finished == [False]
         assert errors == []
         assert _error_records(caplog) == []
+        assert worker.stopped is True
+
+    def test_a_real_failure_still_reports(self, qapp, monkeypatch, caplog):
+        def extract(*args, **kwargs):
+            raise RuntimeError("unp4k exited with code 3")
+
+        monkeypatch.setattr(pe, "extract_global_ini", extract)
+        worker = P4kExtractWorker("Data.p4k", "base.ini", "unp4k.exe")
+        finished, errors = _collect(worker)
+        worker.start()
+        assert worker.wait(5000)
+        assert finished == [False]
+        assert errors == ["unp4k exited with code 3"]
+        assert worker.stopped is False
 
 
 # ── MainWindow, on stub selves ──────────────────────────────────────────────
@@ -353,11 +371,16 @@ class _Signal:
     def connect(self, slot, *args):
         self.slots.append(slot)
 
-    def disconnect(self):
+    def disconnect(self, slot=None):
         self.disconnects += 1
-        if not self.slots:
-            raise TypeError("nothing connected")
-        self.slots.clear()
+        if slot is None:
+            if not self.slots:
+                raise TypeError("nothing connected")
+            self.slots.clear()
+        elif slot in self.slots:
+            self.slots.remove(slot)
+        else:
+            raise TypeError("not connected")
 
 
 class _Worker:
@@ -407,7 +430,11 @@ def _window(**attrs):
     me._p4k_worker = None
     me._forge_progress_dialog = None
     me._p4k_progress = None
+    me._after_unfinished_p4k_extraction = None
+    me._p4k_error_box_open = False
+    me._p4k_follow_up_after_error = None
     me._EXTRACTION_WORKER_ATTRS = MainWindow._EXTRACTION_WORKER_ATTRS
+    me._detach_progress_dialog = MainWindow._detach_progress_dialog
     for name, value in attrs.items():
         setattr(me, name, value)
     return me
@@ -416,9 +443,11 @@ def _window(**attrs):
 class TestStopExtractionsForClose:
     def test_both_extractions_are_stopped_hidden_and_released(self):
         p4k, forge = _Worker(), _Worker()
-        p4k.progress.connect(print)
-        forge.progress_pct.connect(print)
         p4k_dialog, forge_dialog = MagicMock(), MagicMock()
+        for worker, dlg in ((p4k, p4k_dialog), (forge, forge_dialog)):
+            worker.progress.connect(dlg.setLabelText)
+            worker.progress_pct.connect(dlg.set_progress)
+        forge.progress.connect(print)   # stands in for the status bar
         me = _window(_p4k_worker=p4k, _p4k_progress=p4k_dialog,
                      _forge_worker=forge, _forge_progress_dialog=forge_dialog)
 
@@ -426,10 +455,14 @@ class TestStopExtractionsForClose:
 
         assert p4k.interrupted and forge.interrupted
         for dlg in (p4k_dialog, forge_dialog):
-            # hide, not close: close() would ask the stop question again
-            dlg.hide.assert_called_once_with()
+            # Detached, and cancelled rather than hidden: a hidden one comes
+            # back while progress keeps arriving, or by itself when it is
+            # under 4 s old (TestDismissedDialogStaysHidden).
+            dlg.cancel.assert_called_once_with()
+            dlg.hide.assert_not_called()
             dlg.close.assert_not_called()
-        assert p4k.progress.slots == [] and forge.progress_pct.slots == []
+        assert p4k.progress.slots == [] and p4k.progress_pct.slots == []
+        assert forge.progress.slots == [print] and forge.progress_pct.slots == []
         me.hide.assert_called_once_with()
         assert me._p4k_worker is None and me._forge_worker is None
         assert me._p4k_progress is None and me._forge_progress_dialog is None
@@ -607,13 +640,330 @@ class TestP4kSlots:
         assert me._p4k_worker is None
         me._show_loading_progress.assert_not_called()
 
-    def test_an_error_while_closing_opens_no_dialog(self, monkeypatch):
+    @pytest.mark.parametrize("released, closing", [(True, False), (False, True)])
+    def test_an_error_while_closing_opens_no_dialog(self, monkeypatch, released, closing):
         box = MagicMock()
         monkeypatch.setattr(main_window, "QMessageBox", box)
         worker = _Worker()
-        me = _window(_p4k_worker=worker, _close_committed=True)
+        me = _window(_p4k_worker=None if released else worker, _close_committed=closing)
         MainWindow._on_p4k_extract_error(me, "boom", worker)
         box.warning.assert_not_called()
+
+    def test_an_ordinary_error_still_shows_its_dialog(self, monkeypatch):
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = _Worker()
+        me = _window(_p4k_worker=worker)
+        MainWindow._on_p4k_extract_error(me, "boom", worker)
+        box.warning.assert_called_once()
+
+    def test_a_stop_from_the_dialog_says_stopped(self):
+        worker = _Worker(running=False)
+        worker.stopped = True
+        progress = MagicMock()
+        me = _window(_p4k_worker=worker, _p4k_progress=progress)
+        MainWindow._on_p4k_extract_finished(me, False, worker)
+        progress.close.assert_called_once_with()
+        assert me._p4k_worker is None
+        me.statusBar().showMessage.assert_called_once_with(tr("extract.p4k_stopped"))
+        me._show_loading_progress.assert_not_called()
+
+    def test_a_failure_adds_nothing_to_its_error_dialog(self):
+        worker = _Worker(running=False)
+        me = _window(_p4k_worker=worker)
+        MainWindow._on_p4k_extract_finished(me, False, worker)
+        me.statusBar().showMessage.assert_not_called()
+
+    @pytest.mark.parametrize("stopped", [True, False])
+    def test_an_unfinished_run_carries_on_as_if_declined(self, stopped):
+        """Startup, a channel switch and a data-folder change leave their
+        reload to the extraction. Only a success used to reload, so a stop
+        (or a failure such as a locked Data.p4k) left no strings, or the old
+        channel's, until a restart."""
+        worker = _Worker(running=False)
+        worker.stopped = stopped
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=worker, _after_unfinished_p4k_extraction=carry_on)
+        MainWindow._on_p4k_extract_finished(me, False, worker)
+        carry_on.assert_called_once_with()
+        assert me._after_unfinished_p4k_extraction is None
+
+    def test_a_success_reloads_once_and_drops_the_fallback(self, monkeypatch):
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        worker = _Worker(running=False)
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=worker, _after_unfinished_p4k_extraction=carry_on)
+        MainWindow._on_p4k_extract_finished(me, True, worker)
+        me._show_loading_progress.assert_called_once()
+        carry_on.assert_not_called()
+        assert me._after_unfinished_p4k_extraction is None
+
+    def test_the_fallback_is_dropped_when_closing(self):
+        worker = _Worker(running=False)
+        worker.stopped = True
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=worker, _after_unfinished_p4k_extraction=carry_on,
+                     _close_committed=True)
+        MainWindow._on_p4k_extract_finished(me, False, worker)
+        carry_on.assert_not_called()
+        me.statusBar().showMessage.assert_not_called()
+        assert me._after_unfinished_p4k_extraction is None
+
+    def test_a_failed_runs_follow_up_waits_for_its_error_box(self, monkeypatch):
+        """The worker emits error, then finished, so the finished slot runs
+        inside the error box's own event loop. The caller's follow-up (a
+        reload, maybe a prompt) must wait until the box has closed."""
+        worker = _Worker(running=False)
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=worker, _after_unfinished_p4k_extraction=carry_on)
+        box = MagicMock()
+        inside = []
+
+        def warning(*args):
+            MainWindow._on_p4k_extract_finished(me, False, worker)   # its nested loop
+            inside.append(carry_on.called)
+
+        box.warning.side_effect = warning
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+
+        MainWindow._on_p4k_extract_error(me, "Data.p4k is locked", worker)
+
+        assert inside == [False]
+        carry_on.assert_called_once_with()
+        assert me._p4k_error_box_open is False
+        assert me._p4k_follow_up_after_error is None
+
+    def test_a_follow_up_parked_by_the_error_box_is_dropped_when_closing(self, monkeypatch):
+        worker = _Worker(running=False)
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=worker, _after_unfinished_p4k_extraction=carry_on)
+        box = MagicMock()
+
+        def warning(*args):
+            MainWindow._on_p4k_extract_finished(me, False, worker)
+            me._close_committed = True   # e.g. the update installer's relaunch
+
+        box.warning.side_effect = warning
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+
+        MainWindow._on_p4k_extract_error(me, "boom", worker)
+
+        carry_on.assert_not_called()
+        assert me._p4k_follow_up_after_error is None
+
+    def test_a_follow_up_with_no_error_box_runs_at_once(self):
+        worker = _Worker(running=False)
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=worker, _after_unfinished_p4k_extraction=carry_on)
+        MainWindow._on_p4k_extract_finished(me, False, worker)
+        carry_on.assert_called_once_with()
+        assert me._p4k_follow_up_after_error is None
+
+    def test_a_released_worker_leaves_the_fallback_alone(self):
+        stale, current = _Worker(running=False), _Worker()
+        carry_on = MagicMock()
+        me = _window(_p4k_worker=current, _after_unfinished_p4k_extraction=carry_on)
+        MainWindow._on_p4k_extract_finished(me, False, stale)
+        carry_on.assert_not_called()
+        assert me._after_unfinished_p4k_extraction is carry_on
+
+
+class TestCallersCarryOnAfterAnUnfinishedExtraction:
+    """_check_p4k_freshness records what its caller does when the extraction
+    is declined, and each caller that leaves its reload to the extraction
+    passes exactly that (#471)."""
+
+    @pytest.fixture
+    def stale(self, monkeypatch, tmp_path):
+        """A missing base.ini with unp4k and Data.p4k present: the prompt fires."""
+        (tmp_path / "unp4k.exe").write_text("", encoding="utf-8")
+        (tmp_path / "Data.p4k").write_text("", encoding="utf-8")
+        settings = MagicMock()
+        settings.get_unp4k_exe_path.return_value = tmp_path / "unp4k.exe"
+        settings.get_p4k_path.return_value = tmp_path / "Data.p4k"
+        settings.get_cache_dir.return_value = tmp_path / "cache"
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        box = MagicMock()
+        box.StandardButton = main_window.QMessageBox.StandardButton
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        return box
+
+    def test_yes_records_the_fallback(self, stale):
+        stale.question.return_value = stale.StandardButton.Yes
+        me = _window()
+        me._run_p4k_extraction.return_value = True
+        carry_on = MagicMock()
+        assert MainWindow._check_p4k_freshness(me, if_unfinished=carry_on) is True
+        assert me._after_unfinished_p4k_extraction is carry_on
+
+    def test_yes_while_one_is_running_carries_on_at_once(self, stale):
+        stale.question.return_value = stale.StandardButton.Yes
+        me = _window()
+        me._run_p4k_extraction.return_value = False
+        carry_on = MagicMock()
+        assert MainWindow._check_p4k_freshness(me, if_unfinished=carry_on) is False
+        assert me._after_unfinished_p4k_extraction is None
+
+    def test_no_records_nothing(self, stale):
+        stale.question.return_value = stale.StandardButton.No
+        me = _window()
+        assert MainWindow._check_p4k_freshness(me, if_unfinished=MagicMock()) is False
+        me._run_p4k_extraction.assert_not_called()
+        assert me._after_unfinished_p4k_extraction is None
+
+    @pytest.mark.parametrize("started", [True, False])
+    def test_startup(self, monkeypatch, started):
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        me = _window(_startup_sync_worker=None, _startup_progress=None)
+        me._check_p4k_freshness.return_value = started
+        MainWindow._on_startup_sync_finished(me)
+        me._check_p4k_freshness.assert_called_once_with(if_unfinished=me._finish_startup_load)
+        assert me._finish_startup_load.called is not started
+
+    @pytest.mark.parametrize("started", [True, False])
+    def test_a_channel_switch(self, monkeypatch, started):
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        me = _window()
+        me._check_p4k_freshness.return_value = started
+        MainWindow._on_channel_changed(me, "PTU")
+        carry_on = me._check_p4k_freshness.call_args.kwargs["if_unfinished"]
+        assert me._reload_after_channel_switch.called is not started
+        me._reload_after_channel_switch.reset_mock()
+        carry_on()
+        me._reload_after_channel_switch.assert_called_once_with("PTU")
+
+    @pytest.mark.parametrize("started", [True, False])
+    def test_a_data_folder_change(self, monkeypatch, started):
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        me = _window()
+        me._check_p4k_freshness.return_value = started
+        MainWindow._on_data_dir_changed(me, "E:/SC data")
+        carry_on = me._check_p4k_freshness.call_args.kwargs["if_unfinished"]
+        assert me._reload_after_data_dir_change.called is not started
+        me._reload_after_data_dir_change.reset_mock()
+        carry_on()
+        me._reload_after_data_dir_change.assert_called_once_with("E:/SC data")
+
+
+class TestDeclinedPaths:
+    """The declined paths themselves, moved into methods unchanged (#471)."""
+
+    def test_startup_with_no_base_ini_loads_nothing(self, monkeypatch, tmp_path):
+        settings = MagicMock()
+        settings.get_cache_dir.return_value = tmp_path
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        me = _window()
+        MainWindow._finish_startup_load(me)
+        me.statusBar().showMessage.assert_called_once_with(tr("status_bar.no_strings_loaded"))
+        me._show_loading_progress.assert_not_called()
+        me._maybe_prompt_dataforge_refresh.assert_not_called()
+
+    def test_startup_with_a_base_ini_loads_it(self, monkeypatch, tmp_path):
+        (tmp_path / "base.ini").write_text("item_Name=Thing\n", encoding="utf-8")
+        settings = MagicMock()
+        settings.get_cache_dir.return_value = tmp_path
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        me = _window()
+        me._check_enhancements_after_loading = False
+        MainWindow._finish_startup_load(me)
+        me._maybe_prompt_dataforge_refresh.assert_called_once_with()
+        assert me._check_enhancements_after_loading is True
+        me._show_loading_progress.assert_called_once_with()
+
+    def test_a_channel_switch_reloads(self):
+        me = _window()
+        MainWindow._reload_after_channel_switch(me, "PTU")
+        me._maybe_prompt_dataforge_refresh.assert_called_once_with()
+        me.statusBar().showMessage.assert_called_once_with(
+            tr("status_bar.channel_switched_reloading", channel="PTU"))
+        me.perform_merge_and_reload.assert_called_once_with()
+
+    def test_a_data_folder_change_reloads(self):
+        me = _window()
+        MainWindow._reload_after_data_dir_change(me, "E:/SC data")
+        me._maybe_prompt_dataforge_refresh.assert_called_once_with()
+        me.statusBar().showMessage.assert_called_once_with(
+            tr("status_bar.data_folder_changed_reloading", data_dir="E:/SC data"))
+        me.perform_merge_and_reload.assert_called_once_with()
+
+
+class TestGlobalIniDialogStops:
+    """Esc or the X on the global.ini dialog stops the extraction (#471).
+    It used to hide the dialog while unp4k carried on unseen, and with one
+    run at a time the Extract button then did nothing until it ended."""
+
+    @staticmethod
+    def _setup(**worker_kwargs):
+        worker = _Worker(**worker_kwargs)
+        dialog = MagicMock()
+        worker.progress.connect(dialog.setLabelText)
+        worker.progress_pct.connect(dialog.set_progress)
+        me = _window(_p4k_worker=worker, _p4k_progress=dialog)
+        return worker, dialog, me
+
+    def test_a_running_extraction_is_stopped(self):
+        worker, dialog, me = self._setup()
+        assert MainWindow._stop_p4k_extraction_from_dialog(me, worker) is True
+        assert worker.interrupted
+        me.statusBar().showMessage.assert_called_once_with(tr("extract.p4k_stopping"))
+        # dismissed for good: no progress may bring it back, nor its timer
+        assert worker.progress.slots == [] and worker.progress_pct.slots == []
+        dialog.cancel.assert_called_once_with()
+        assert me._p4k_progress is dialog   # the finished slot closes it
+
+    @pytest.mark.parametrize("state", ["over", "stopping", "released"])
+    def test_otherwise_the_dialog_just_closes(self, state):
+        worker, dialog, me = self._setup(running=state != "over")
+        if state == "stopping":
+            worker.interrupted = True
+        if state == "released":
+            me._p4k_worker = _Worker()
+        assert MainWindow._stop_p4k_extraction_from_dialog(me, worker) is True
+        assert worker.interrupted is (state == "stopping")
+        me.statusBar().showMessage.assert_not_called()
+        assert worker.progress.slots == [dialog.setLabelText]
+        dialog.cancel.assert_not_called()
+
+    @pytest.mark.parametrize("how", ["esc", "x"])
+    def test_the_real_dialog_stops_a_real_thread(self, qapp, monkeypatch, how):
+        started = threading.Event()
+
+        def extract(*args, should_cancel=None, progress_callback=None, **kwargs):
+            progress_callback("Launching unp4k…")
+            started.set()
+            while not should_cancel():
+                time.sleep(0.01)
+            raise pe.ExtractionCancelled("unp4k.exe was stopped")
+
+        monkeypatch.setattr(pe, "extract_global_ini", extract)
+        worker = P4kExtractWorker("Data.p4k", "base.ini", "unp4k.exe")
+        dialog = AnimatedProgressDialog("Extracting global.ini…", title="P4K Extraction")
+        worker.progress.connect(dialog.setLabelText)
+        worker.progress_pct.connect(dialog.set_progress)
+        me = _window(_p4k_worker=worker, _p4k_progress=dialog)
+        dialog.set_close_guard(
+            lambda w=worker: MainWindow._stop_p4k_extraction_from_dialog(me, w))
+        try:
+            worker.start()
+            assert started.wait(5)
+            qapp.processEvents()
+            if how == "esc":
+                QTest.keyClick(dialog, Qt.Key.Key_Escape)
+            else:
+                dialog.closeEvent(_TitleBarClose())
+            assert not dialog.isVisible()
+            assert worker.wait(5000)
+            assert worker.stopped is True
+
+            MainWindow._on_p4k_extract_finished(me, False, worker)
+
+            assert me._p4k_worker is None and me._p4k_progress is None
+            me.statusBar().showMessage.assert_called_with(tr("extract.p4k_stopped"))
+        finally:
+            dialog.set_close_guard(None)
+            dialog.close()
+            dialog.deleteLater()
+            qapp.processEvents()
 
 
 class TestNothingStartsOnceClosing:
@@ -633,6 +983,14 @@ class TestNothingStartsOnceClosing:
         made = MagicMock()
         monkeypatch.setattr(main_window, "P4kExtractWorker", made)
         MainWindow._run_p4k_extraction(_window(_close_committed=True))
+        made.assert_not_called()
+
+    def test_no_second_global_ini_extraction_while_one_runs(self, monkeypatch, settings):
+        """Closing stops only the worker that _p4k_worker holds, and one
+        stopped from its dialog takes a moment to end."""
+        made = MagicMock()
+        monkeypatch.setattr(main_window, "P4kExtractWorker", made)
+        assert MainWindow._run_p4k_extraction(_window(_p4k_worker=_Worker())) is False
         made.assert_not_called()
 
     def test_no_generation(self, monkeypatch, settings):
@@ -705,71 +1063,198 @@ class TestStartupRefreshPrompt:
 
 
 class TestStopPrompt:
+    """Esc or X on the DataForge dialog asks: Stop or Cancel. The dialog stays
+    modal while the run goes on, so nothing it depends on can change."""
+
     @pytest.fixture
     def box(self, monkeypatch):
-        fake = MagicMock()
-        monkeypatch.setattr(main_window, "QMessageBox", fake)
-        return fake
+        cls = MagicMock()
+        box = cls.return_value
+        box.choices = {name: MagicMock(name=name) for name in ("stop", "cancel")}
+        box.addButton.side_effect = [box.choices["stop"], box.choices["cancel"]]
+        monkeypatch.setattr(main_window, "QMessageBox", cls)
+        return box
+
+    @staticmethod
+    def _answer(box, choice, meanwhile=None):
+        box.exec.side_effect = lambda: meanwhile() if meanwhile else None
+        box.clickedButton.return_value = box.choices[choice]
+
+    @staticmethod
+    def _setup():
+        worker, dialog = _Worker(), MagicMock(name="dialog")
+        worker.progress.connect(dialog.setLabelText)
+        worker.progress_pct.connect(dialog.set_progress)
+        worker.progress.connect(print)   # stands in for the status bar
+        return worker, dialog, _window(_forge_worker=worker, _forge_progress_dialog=dialog)
 
     def test_an_extraction_that_is_over_closes_without_asking(self, box):
         worker = _Worker()
         me = _window(_forge_worker=None)
         assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is True
-        box.question.assert_not_called()
+        box.exec.assert_not_called()
 
-    def test_no_keeps_it_running(self, box):
-        box.question.return_value = box.StandardButton.No
-        worker = _Worker()
-        me = _window(_forge_worker=worker)
+    def test_cancel_keeps_the_dialog_and_the_run(self, box):
+        self._answer(box, "cancel")
+        worker, dialog, me = self._setup()
         assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is False
         assert not worker.interrupted
+        assert me._forge_progress_dialog is dialog
+        assert dialog.set_progress in worker.progress_pct.slots
+        me._end_simple_run.assert_not_called()
 
-    def test_yes_stops_it(self, box):
-        box.question.return_value = box.StandardButton.Yes
-        worker = _Worker()
-        me = _window(_forge_worker=worker)
+    def test_stop_stops_it_and_dismisses_the_dialog_for_good(self, box):
+        self._answer(box, "stop")
+        worker, dialog, me = self._setup()
         assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is True
         assert worker.interrupted
         me.statusBar().showMessage.assert_called_with(tr("extract.dataforge_stopping"))
-        # Whatever the worker does next, a Simple-mode run can't apply now.
-        me._end_simple_run.assert_called_once_with()
+        # Whatever the worker does next, a Simple-mode run can't apply now,
+        # but the Simple page stays busy until the stop has finished (the
+        # finished slot ends the run), so its button never looks ready.
+        assert me._simple_run_active is False
+        me._end_simple_run.assert_not_called()
+        # A hidden QProgressDialog comes back while progress keeps arriving.
+        assert worker.progress.slots == [print] and worker.progress_pct.slots == []
+        assert me._forge_progress_dialog is None
+        dialog.deleteLater.assert_called_once_with()
 
-    def test_yes_after_it_finished_meanwhile_still_keeps_simple_mode_from_applying(self, box):
+    def test_stop_after_it_finished_meanwhile_still_keeps_simple_mode_from_applying(self, box):
         """The run finished while the question was open, so its slot already
-        handed over to generation. There is nothing left to stop, but Yes
+        handed over to generation. There is nothing left to stop, but Stop
         must still keep a Simple-mode run from applying to the game."""
-        worker = _Worker()
-
-        def finish_while_asking(*args, **kwargs):
-            worker.running = False
-            return box.StandardButton.Yes
-
-        box.question.side_effect = finish_while_asking
-        me = _window(_forge_worker=worker)
+        worker, dialog, me = self._setup()
+        self._answer(box, "stop", meanwhile=lambda: setattr(worker, "running", False))
         assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is True
         assert not worker.interrupted
         me._end_simple_run.assert_called_once_with()
+        dialog.deleteLater.assert_not_called()   # generation owns it now
 
-    def test_no_after_it_finished_meanwhile_leaves_simple_mode_alone(self, box):
+    def test_the_question_and_its_safe_default(self, box):
+        self._answer(box, "cancel")
+        worker, _dialog, me = self._setup()
+        MainWindow._confirm_stop_dataforge_extraction(me, worker)
+        box.setWindowTitle.assert_called_once_with(tr("extract.dataforge_running_title"))
+        box.setText.assert_called_once_with(tr("extract.dataforge_running_body"))
+        assert box.addButton.call_count == 2   # Stop and Cancel, nothing else
+        assert box.addButton.call_args_list[0].args[0] == tr("extract.dataforge_stop_btn")
+        # Enter and Esc both mean Cancel: nothing is stopped by accident.
+        box.setDefaultButton.assert_called_once_with(box.choices["cancel"])
+        box.setEscapeButton.assert_called_once_with(box.choices["cancel"])
+
+
+class TestDismissedDialogStaysHidden:
+    """A hidden QProgressDialog shows itself again while progress keeps
+    arriving (measured: within a second, after Esc as well as the X), so a
+    dialog dismissed with Stop (or for a close) is detached from the
+    worker. Real dialog, real worker signals."""
+
+    @staticmethod
+    def _keep_reporting(qapp, worker, seconds=2.0):
+        # Slow progress, like the real snapshot: QProgressDialog shows a
+        # hidden dialog again once its own estimate of the time left passes
+        # its 4 s minimum duration (or the phase has run that long already).
+        deadline = time.monotonic() + seconds
+        step = 0
+        while time.monotonic() < deadline:
+            step += 1
+            worker.progress_pct.emit(step * 100, 30000, "Snapshotting cache for diff…")
+            worker.progress.emit("Snapshotting cache for diff…")
+            qapp.processEvents()
+            time.sleep(0.05)
+
+    @staticmethod
+    def _dialog(worker):
+        dlg = AnimatedProgressDialog("Snapshotting cache for diff…", title="DataForge Extraction")
+        worker.progress.connect(dlg.setLabelText)
+        worker.progress_pct.connect(dlg.set_progress)
+        worker.progress_pct.emit(0, 30000, "Snapshotting cache for diff…")
+        return dlg
+
+    def test_without_the_detach_it_comes_back(self, qapp):
+        """The control: proves the next test can tell the two apart."""
+        worker = _forge_worker()   # never started: its signals are emitted here
+        dlg = self._dialog(worker)
+        dlg.hide()
+        self._keep_reporting(qapp, worker)
+        try:
+            assert dlg.isVisible()
+        finally:
+            dlg.close()
+            dlg.deleteLater()
+
+    def test_a_detached_dialog_stays_hidden(self, qapp):
+        worker = _forge_worker()
+        dlg = self._dialog(worker)
+        MainWindow._detach_progress_dialog(worker, dlg)
+        dlg.hide()
+        self._keep_reporting(qapp, worker)
+        try:
+            assert not dlg.isVisible()
+        finally:
+            dlg.close()
+            dlg.deleteLater()
+
+    @staticmethod
+    def _watch(qapp, dialog, seconds):
+        """True if *dialog* shows itself within *seconds*."""
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            qapp.processEvents()
+            if dialog.isVisible():
+                return True
+            time.sleep(0.02)
+        return False
+
+    @pytest.mark.parametrize("dismiss, comes_back", [("hide", True), ("cancel", False)])
+    def test_a_young_dialog_comes_back_after_a_hide_but_not_a_cancel(
+        self, qapp, dismiss, comes_back
+    ):
+        """Esc only hides, and a QProgressDialog under 4 s old shows itself
+        again when its show timer fires, with no progress at all. The
+        control (hide) proves the timer is real here; cancel() stops it."""
+        dialog = AnimatedProgressDialog("Launching unp4k…", title="P4K Extraction")
+        try:
+            dialog.set_progress(0, 2, "Launching")
+            qapp.processEvents()
+            getattr(dialog, dismiss)()
+            assert not dialog.isVisible()
+            # 8 s: the timer fires about 4 s in, with room for a slow runner.
+            assert self._watch(qapp, dialog, 8.0) is comes_back
+        finally:
+            dialog.close()
+            dialog.deleteLater()
+            qapp.processEvents()
+
+    def test_esc_on_a_young_global_ini_dialog_stays_dismissed_while_it_stops(
+        self, qapp
+    ):
+        """The global.ini stop (Esc) on a dialog under 4 s old, with the
+        stop taking longer than that, must not let the dialog come back."""
         worker = _Worker()
+        dialog = AnimatedProgressDialog("Launching unp4k…", title="P4K Extraction")
+        me = _window(_p4k_worker=worker, _p4k_progress=dialog)
+        dialog.set_close_guard(
+            lambda w=worker: MainWindow._stop_p4k_extraction_from_dialog(me, w))
+        try:
+            dialog.set_progress(0, 2, "Launching")
+            qapp.processEvents()
+            QTest.keyClick(dialog, Qt.Key.Key_Escape)
+            assert worker.interrupted and not dialog.isVisible()
+            assert self._watch(qapp, dialog, 8.0) is False
+        finally:
+            dialog.set_close_guard(None)
+            dialog.close()
+            dialog.deleteLater()
+            qapp.processEvents()
 
-        def finish_while_asking(*args, **kwargs):
-            worker.running = False
-            return box.StandardButton.No
-
-        box.question.side_effect = finish_while_asking
-        me = _window(_forge_worker=worker)
-        assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is False
-        me._end_simple_run.assert_not_called()
-
-    def test_the_question_defaults_to_no(self, box):
-        box.question.return_value = box.StandardButton.No
-        worker = _Worker()
-        MainWindow._confirm_stop_dataforge_extraction(_window(_forge_worker=worker), worker)
-        args = box.question.call_args.args
-        assert args[1] == tr("extract.dataforge_stop_title")
-        assert args[2] == tr("extract.dataforge_stop_body")
-        assert args[4] is box.StandardButton.No
+    def test_detaching_twice_is_harmless(self, qapp):
+        worker = _forge_worker()
+        dlg = self._dialog(worker)
+        MainWindow._detach_progress_dialog(worker, dlg)
+        MainWindow._detach_progress_dialog(worker, dlg)
+        dlg.close()
+        dlg.deleteLater()
 
 
 class TestExtractionWiring:
@@ -819,6 +1304,28 @@ class TestExtractionWiring:
         worker.error.slots[0]("boom")
         me._on_p4k_extract_error.assert_called_once_with("boom", worker)
 
+    def test_the_global_ini_dialog_stops_it_on_esc_or_x(self, monkeypatch):
+        made = []
+
+        def make_worker(*args, **kwargs):
+            made.append(_Worker(*args))
+            return made[-1]
+
+        dialog = MagicMock()
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        monkeypatch.setattr(main_window, "P4kExtractWorker", make_worker)
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock(return_value=dialog))
+        me = _window()
+        me._stop_p4k_extraction_from_dialog.return_value = True
+
+        assert MainWindow._run_p4k_extraction(me) is True
+
+        worker = made[0]
+        assert me._p4k_worker is worker and me._p4k_progress is dialog
+        guard = dialog.set_close_guard.call_args.args[0]
+        assert guard() is True
+        me._stop_p4k_extraction_from_dialog.assert_called_once_with(worker)
+
     @pytest.mark.parametrize("offline", [False, True])
     def test_the_global_ini_extraction_works_beside_the_dataforge_cache(
         self, monkeypatch, offline
@@ -858,3 +1365,19 @@ class TestExtractionWiring:
 
         handed_over.set_close_guard.assert_called_once_with(None)
         assert me._enhancements_progress_dialog is handed_over
+
+    @pytest.mark.parametrize("simple_run", [False, True])
+    def test_generation_that_ends_releases_the_simple_page(self, monkeypatch, simple_run):
+        """A Stop that came too late to stop anything (the run had already
+        finished) leaves the Simple page busy with no Simple run active. The
+        generation that follows releases it, and still applies only for a
+        real Simple run."""
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        me = _window(_simple_run_active=simple_run)
+        me._enhancements_progress_dialog = None
+        me._enhancements_worker = MagicMock()
+
+        MainWindow._on_enhancements_generation_finished(me, True)
+
+        me._end_simple_run.assert_called_once_with()
+        assert me.apply_to_game.called is simple_run

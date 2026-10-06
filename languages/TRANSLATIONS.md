@@ -58,16 +58,25 @@ them against the new source.
 
 ## Backfill log
 
-- **2.4.0 cycle (2026-10-06, Claude Opus 5.5):** #471 added four `extract.*`
-  keys for stopping a DataForge extraction: `dataforge_stop_title` and
-  `dataforge_stop_body` (the question Esc or the X on the extraction dialog
-  now asks) and the status-bar `dataforge_stopping` and `dataforge_stopped`.
+- **2.4.0 cycle (2026-10-06, Claude Opus 5.5):** #471 added seven `extract.*`
+  keys. Five are for a running DataForge extraction: `dataforge_running_title`,
+  `dataforge_running_body` and `dataforge_stop_btn` (the Stop / Cancel
+  question Esc or the X on the extraction dialog now asks) and the
+  status-bar `dataforge_stopping` and `dataforge_stopped`. The three question
+  keys replaced a Yes/No pair (`dataforge_stop_title`, `dataforge_stop_body`)
+  during the review, before any release. A Run in Background button
+  (`dataforge_background_btn`) came and went in the same review, and the
+  body was translated again without it. The other two, `p4k_stopping` and `p4k_stopped`, are
+  the status bar's global.ini counterparts, shown when Esc or the X on the
+  P4K Extraction dialog stops that extraction.
   In all 10 languages, `at`-only (`ht` empty), each worded in that file's own
-  register and with its existing names for the Enhancements tab and the
-  DataForge extraction. A separate checker back-translated every string and
-  compared it with the English: no meaning errors, register and terms matched
-  each file, and the Korean sentence-spacing rule holds. No existing string
-  changed.
+  register and with its existing name for the DataForge extraction (the
+  `p4k_*` pair mirrors that file's DataForge pair
+  and keeps `global.ini` as written). A separate checker back-translated
+  every string and compared it with the English (again after the
+  two-button rewording, and for the `p4k_*` pair): no meaning errors,
+  register and terms matched each file, and the Korean sentence-spacing
+  rule holds. No existing string changed.
 - **2.4.0 cycle (2026-10-04, Claude Sonnet 5.5):** #446 removed the Blueprint
   Tracker's "Also scan LIVE/HOTFIX" tickbox. Scan Logs now always reads LIVE,
   plus HOTFIX when it is installed, and never PTU, EPTU or TECH-PREVIEW. In

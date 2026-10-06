@@ -684,21 +684,25 @@ class TestCacheLayoutNamedOnce:
     """pak_extractor names the DataForge cache layout (raw/libs and
     foundry/records) once, and every reader joins DATAFORGE_LIBS_SUBPATH /
     DATAFORGE_RECORDS_SUBPATH (root CLAUDE.md, "Magic literals"). The only
-    other spelling allowed is the generator's fallback for a missing src/,
-    the same deferred-import pattern as its other src imports."""
+    other spellings allowed are the generator's fallback for a missing src/,
+    the same deferred-import pattern as its other src imports, and the
+    legacy build cleaner, which still targets the pre-1.x Documents cache."""
 
-    _SPELLED = re.compile(
-        r"""["']raw["']\)?\s*/\s*["']libs["']|["']foundry["']\)?\s*/\s*["']records["']"""
-    )
+    # Any quoted "raw" or "foundry" path segment: joined with / one at a
+    # time ("raw" / "libs", or a variable / "raw" with "libs" added later),
+    # a Path("raw") or joinpath("raw", ...) argument, or the start of a
+    # "raw/libs" string. Neither word is used for anything else here.
+    _SPELLED = re.compile(r"""["'](?:raw|foundry)(?:["']|[/\\])""")
     _REPO = Path(__file__).resolve().parent.parent
     _ALLOWED = {
         "src/utils/pak_extractor.py": 2,             # the definitions
         "scripts/generate_enhancements_ini.py": 2,   # the src/-missing fallback (one line)
+        "scripts/build/clean_cache_for_distribution.py": 2,   # legacy, pre-1.x cache
     }
 
     def _spellings(self):
         found = {}
-        for pattern in ("src/**/*.py", "scripts/*.py"):
+        for pattern in ("src/**/*.py", "scripts/**/*.py"):
             for path in self._REPO.glob(pattern):
                 count = len(self._SPELLED.findall(path.read_text(encoding="utf-8")))
                 if count:
@@ -720,4 +724,8 @@ class TestCacheLayoutNamedOnce:
         """Prove the pattern bites, so the guard can't pass by reading nothing."""
         assert self._SPELLED.search('records = forge_dir / "raw" / "libs" / "foundry"')
         assert self._SPELLED.search("x = Path('foundry') / 'records'")
+        assert self._SPELLED.search('raw_dir = cache / "raw"')      # the split form
+        assert self._SPELLED.search('cache.joinpath("raw", "libs")')
+        assert self._SPELLED.search('libs = cache / "raw/libs"')
         assert not self._SPELLED.search("records = forge_dir / DATAFORGE_RECORDS_SUBPATH")
+        assert not self._SPELLED.search('rawness = "rawhide"')
