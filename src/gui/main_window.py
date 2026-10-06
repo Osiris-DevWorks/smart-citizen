@@ -673,6 +673,14 @@ class MainWindow(QMainWindow):
 
         # DataForge extraction worker
         self._forge_worker: Optional[DataForgeExtractWorker] = None
+        # Set by closeEvent once every prompt that could call the close off
+        # has been answered (#471). From then on nothing new may start or
+        # prompt: Qt still delivers signals it had already queued after
+        # closeEvent returns (a loader or a stopped extraction finishing), and
+        # those must not start an extraction or a generation on an app that
+        # is exiting, which would bring back the orphaned unforge.exe this
+        # flag exists to prevent.
+        self._close_committed = False
 
         # #180: when True, the Simple-mode one-button flow is running and the
         # enhancements-generation-finished slot should continue into
@@ -5007,10 +5015,8 @@ class MainWindow(QMainWindow):
             self._show_loading_progress(tr("dialogs.merging_sources"))
             return
 
-        records = (
-            AppSettings.get_dataforge_cache_dir()
-            / "raw" / "libs" / "foundry" / "records"
-        )
+        from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+        records = AppSettings.get_dataforge_cache_dir() / DATAFORGE_RECORDS_SUBPATH
         if not records.exists():
             logger.warning(
                 f"{language!r} enhancements are stale/missing but no DataForge "
@@ -5313,17 +5319,25 @@ class MainWindow(QMainWindow):
         Silent no-op when the cache is fresh, when unp4k or Data.p4k is
         missing (no signal to act on), when a DataForge or enhancements
         worker is already running (don't stack prompts), or when the cache
-        has no stamp file yet (that's the "never extracted" case — the
-        existing ``_check_enhancements_freshness`` prompt handles it via a
-        category-selection dialog after the first load).
+        has neither a stamp file nor extracted content yet (that's the "never
+        extracted" case — the existing ``_check_enhancements_freshness``
+        prompt handles it via a category-selection dialog after the first
+        load). Content with no stamp is an extraction cut off between the
+        wipe and the stamps (a crash, or a close that outlasted its wait,
+        #471): that cache is unusable, so it gets this prompt too rather than
+        passing for "never extracted" while the old enhancement INIs keep
+        ``_check_enhancements_freshness`` quiet.
 
         Does NOT defer file loading — unlike the base.ini case, loading
         the table doesn't depend on DataForge. The extract runs in the
         background and chains into enhancements generation on completion.
         """
-        from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
+        from src.utils.pak_extractor import (
+            DATAFORGE_LIBS_SUBPATH, P4K_MTIME_STAMP, dataforge_cache_is_fresh,
+        )
 
-        if self._forge_worker is not None or self._enhancements_worker is not None:
+        if (self._forge_worker is not None or self._enhancements_worker is not None
+                or self._close_committed):
             return
         p4k_path = AppSettings.get_p4k_path()
         unp4k_exe = AppSettings.get_unp4k_exe_path()
@@ -5331,7 +5345,8 @@ class MainWindow(QMainWindow):
         if not p4k_path.exists() or not unp4k_exe.exists() or not unforge_exe.exists():
             return
         forge_dir = AppSettings.get_dataforge_cache_dir()
-        if not (forge_dir / P4K_MTIME_STAMP).exists():
+        if (not (forge_dir / P4K_MTIME_STAMP).exists()
+                and not (forge_dir / DATAFORGE_LIBS_SUBPATH).exists()):
             # Never extracted — handled later by _check_enhancements_freshness,
             # which shows a richer category-selection dialog.
             return
@@ -5359,6 +5374,8 @@ class MainWindow(QMainWindow):
         German with English generated was never prompted to generate the
         German set that did not exist.
         """
+        if self._close_committed:
+            return  # closing (#471): nothing new may start
         if not AppSettings.get_base_ini_path().exists():
             return
         if self._enhancements_worker is not None or self._forge_worker is not None:
@@ -5673,6 +5690,8 @@ class MainWindow(QMainWindow):
         thread and handed to the worker as a concrete value so a mid-run
         language switch can't change what the worker is generating.
         """
+        if self._close_committed:
+            return  # closing (#471): nothing new may start
         if self._enhancements_worker is not None:
             # Defensive: if extraction handed off but a stale enhancements
             # worker is somehow still around, don't orphan the forge dialog.
@@ -5723,6 +5742,9 @@ class MainWindow(QMainWindow):
         if existing is not None:
             self._enhancements_progress_dialog = existing
             self._forge_progress_dialog = None
+            # The extraction is over, so Esc or X no longer asks to stop it
+            # (#471): generation keeps the dialog's old hide-and-continue.
+            existing.set_close_guard(None)
             existing.setWindowTitle(tr("progress.generating_enhancements_title"))
             # Reset bar to indeterminate (0,0) with the new label so the
             # stale "Snapshotting cache (28000/28000)" 100% bar from the
@@ -5801,7 +5823,7 @@ class MainWindow(QMainWindow):
 
     def _run_dataforge_extraction(self):
         """Launch DataForgeExtractWorker in the background (non-blocking)."""
-        if self._forge_worker is not None:
+        if self._forge_worker is not None or self._close_committed:
             return
 
         p4k_path    = AppSettings.get_p4k_path()
@@ -5809,7 +5831,8 @@ class MainWindow(QMainWindow):
         unforge_exe = AppSettings.get_unforge_exe_path()
         forge_dir   = AppSettings.get_dataforge_cache_dir()
 
-        self._forge_worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
+        worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
+        self._forge_worker = worker
         self.enhancements_tab.set_operation_running(tr("enhancements.extracting_dataforge_tooltip"))
         self.statusBar().showMessage(tr("extract.dataforge_extracting_background"))
 
@@ -5818,15 +5841,69 @@ class MainWindow(QMainWindow):
             parent=self,
             title=tr("extract.dataforge_extraction_title"),
         )
+        # Esc or the title-bar X used to hide the dialog while the extraction
+        # carried on unseen, and closing the window after that orphaned
+        # unforge.exe. Now they ask whether to stop it (#471).
+        self._forge_progress_dialog.set_close_guard(
+            lambda w=worker: self._confirm_stop_dataforge_extraction(w)
+        )
 
-        self._forge_worker.progress.connect(self.statusBar().showMessage)
-        self._forge_worker.progress.connect(self._forge_progress_dialog.setLabelText)
-        self._forge_worker.progress_pct.connect(self._forge_progress_dialog.set_progress)
-        self._forge_worker.error.connect(self._on_dataforge_extract_error)
-        self._forge_worker.finished.connect(self._on_dataforge_extract_finished)
-        self._forge_worker.start()
+        worker.progress.connect(self.statusBar().showMessage)
+        worker.progress.connect(self._forge_progress_dialog.setLabelText)
+        worker.progress_pct.connect(self._forge_progress_dialog.set_progress)
+        # Bound to this worker, as _launch_applied_state_check does, so a
+        # worker a close stopped and released is told apart from the current
+        # one (#471).
+        worker.error.connect(lambda message, w=worker: self._on_dataforge_extract_error(message, w))
+        worker.finished.connect(
+            lambda success, w=worker: self._on_dataforge_extract_finished(success, w)
+        )
+        worker.start()
 
-    def _on_dataforge_extract_error(self, message: str):
+    def _confirm_stop_dataforge_extraction(self, worker) -> bool:
+        """Esc or the title-bar X on the DataForge progress dialog (#471).
+
+        Asks whether to stop the extraction. Returns True to let the dialog
+        close, False to keep it open. Once the extraction is over (or already
+        stopping) the dialog just closes as it always did: the same dialog
+        lives on into enhancement generation, which has no stop.
+        """
+        def _still_running() -> bool:
+            return (worker is self._forge_worker and worker.isRunning()
+                    and not worker.isInterruptionRequested())
+
+        if not _still_running():
+            return True
+        reply = QMessageBox.question(
+            self._forge_progress_dialog or self,
+            tr("extract.dataforge_stop_title"),
+            tr("extract.dataforge_stop_body"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return False
+        # The user said stop, so a Simple-mode run must not go on to apply
+        # anything to the game, whichever way the race below goes.
+        self._end_simple_run()
+        if not _still_running():
+            # It finished (or failed) while the question was open, and its
+            # own slot has already moved on: a success hands the dialog to
+            # enhancement generation, which has no stop and only rewrites
+            # the INIs.
+            return True
+        logger.info("DataForge extraction: stop requested from the progress dialog")
+        worker.requestInterruption()
+        self.statusBar().showMessage(tr("extract.dataforge_stopping"))
+        return True
+
+    def _on_dataforge_extract_error(self, message: str, worker=None):
+        if worker is not self._forge_worker or self._close_committed:
+            # Stopped by a close (#471). logger.error would fire the global
+            # ErrorDialogHandler, and the box below would open, both on a
+            # window that is going away.
+            logger.warning(f"DataForge extraction error while closing: {message}")
+            return
         logger.error(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
         self._end_simple_run()
@@ -5838,11 +5915,27 @@ class MainWindow(QMainWindow):
             tr("extract.dataforge_extraction_error_body", message=message),
         )
 
-    def _on_dataforge_extract_finished(self, success: bool):
-        self._forge_worker.quit()
-        self._forge_worker.wait()
+    def _on_dataforge_extract_finished(self, success: bool, worker=None):
+        if worker is None:
+            worker = self._forge_worker
+        if worker is not None:
+            worker.quit()
+            worker.wait()
+            # As _on_applied_state_ready does: frees the thread and the
+            # lambda reference cycle the slot connections hold.
+            worker.deleteLater()
+        if worker is not self._forge_worker:
+            return  # stopped and released by closeEvent (#471): nothing may chain on
         self._forge_worker = None
         self.enhancements_tab.refresh_forge_status()
+
+        if self._close_committed:
+            # Still running when closeEvent stopped waiting, and finished
+            # since (#471). Neither drain the queued old-cache cleanup (a
+            # GUI-thread delete) nor chain into generation (a new thread
+            # during exit).
+            self._end_simple_run()
+            return
 
         if success:
             # Drain any cache-dir-change cleanup queued by the Config tab.
@@ -5859,39 +5952,80 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr("extract.dataforge_extracted_generating"))
             self._run_enhancements_generation()
         else:
-            # #180: extraction failed, so the Simple-mode flow can't continue.
+            # #180: extraction failed (or was stopped), so the Simple-mode
+            # flow can't continue.
             self._end_simple_run()
             if getattr(self, "_forge_progress_dialog", None) is not None:
                 self._forge_progress_dialog.close()
                 self._forge_progress_dialog = None
             self.enhancements_tab.set_operation_idle(success=False)
-            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
+            if getattr(worker, "stopped", False):
+                # The user stopped it from the progress dialog (#471). Not
+                # worker.isInterruptionRequested(): the thread has finished by
+                # now (the wait above), and QThread reports no interruption
+                # for a finished thread.
+                self.statusBar().showMessage(tr("extract.dataforge_stopped"))
+            else:
+                self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
 
     def _run_p4k_extraction(self):
         """Launch P4kExtractWorker with a progress dialog; reload sources on success."""
+        if self._close_committed:
+            return  # closing (#471): nothing new may start
         p4k_path = AppSettings.get_p4k_path()
         output_path = AppSettings.get_cache_dir() / 'base.ini'
         unp4k_exe = AppSettings.get_unp4k_exe_path()
+        # unp4k works beside the DataForge cache, on the drive the user picked
+        # for heavy data, not in %TEMP% (#471). get_dataforge_cache_dir()
+        # creates the folder, so a cache drive that is offline raises here:
+        # work in %TEMP% then, as before, rather than not extracting at all.
+        try:
+            scratch_near = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            logger.warning(f"DataForge cache folder unavailable ({e}); "
+                           "global.ini extraction works in %TEMP%")
+            scratch_near = None
 
-        self._p4k_worker = P4kExtractWorker(p4k_path, output_path, unp4k_exe)
+        worker = P4kExtractWorker(p4k_path, output_path, unp4k_exe, scratch_near=scratch_near)
+        self._p4k_worker = worker
         self._p4k_progress = AnimatedProgressDialog(
             tr("extract.p4k_extracting_label"),
             parent=self,
             title=tr("extract.p4k_extraction_title")
         )
 
-        self._p4k_worker.progress.connect(self._p4k_progress.setLabelText)
-        self._p4k_worker.progress_pct.connect(self._p4k_progress.set_progress)
-        self._p4k_worker.error.connect(lambda err: QMessageBox.warning(self, tr("extract.extraction_error_title"), err))
-        self._p4k_worker.finished.connect(self._on_p4k_extract_finished)
-        self._p4k_worker.start()
+        worker.progress.connect(self._p4k_progress.setLabelText)
+        worker.progress_pct.connect(self._p4k_progress.set_progress)
+        # Bound to this worker for the same reason as the DataForge slots
+        # (#471): closing stops and releases it, and Qt may still deliver
+        # what it had queued.
+        worker.error.connect(lambda err, w=worker: self._on_p4k_extract_error(err, w))
+        worker.finished.connect(lambda success, w=worker: self._on_p4k_extract_finished(success, w))
+        worker.start()
 
-    def _on_p4k_extract_finished(self, success: bool):
+    def _on_p4k_extract_error(self, message: str, worker=None):
+        if worker is not self._p4k_worker or self._close_committed:
+            logger.warning(f"P4K extraction error while closing: {message}")
+            return
+        QMessageBox.warning(self, tr("extract.extraction_error_title"), message)
+
+    def _on_p4k_extract_finished(self, success: bool, worker=None):
         """Handle P4K extraction completion."""
-        self._p4k_progress.close()
-        self._p4k_worker.quit()
-        self._p4k_worker.wait()
+        if worker is None:
+            worker = self._p4k_worker
+        if worker is not None:
+            worker.quit()
+            worker.wait()
+            worker.deleteLater()
+        if worker is not self._p4k_worker:
+            return  # stopped and released by closeEvent (#471)
+        if self._p4k_progress is not None:
+            self._p4k_progress.close()
+            self._p4k_progress = None
         self._p4k_worker = None
+
+        if self._close_committed:
+            return  # finished during the close (#471): don't reload an exiting app
 
         if success:
             # Lock Global source to the local cache path with auto-update off,
@@ -5915,8 +6049,86 @@ class MainWindow(QMainWindow):
             # Show progress dialog while reloading with extracted data
             self._show_loading_progress("Reloading with extracted base.ini...")
 
+    # The extraction workers closeEvent stops, each with the attribute that
+    # holds its progress dialog (#471).
+    _EXTRACTION_WORKER_ATTRS = (
+        ("_p4k_worker", "_p4k_progress"),
+        ("_forge_worker", "_forge_progress_dialog"),
+    )
+
+    def _request_extraction_stops(self) -> None:
+        """Ask every running extraction to stop (#471). Returns at once: the
+        tool dies within a quarter of a second, and the worker then deletes
+        its working folder in the background."""
+        for worker_attr, _dialog_attr in self._EXTRACTION_WORKER_ATTRS:
+            worker = getattr(self, worker_attr, None)
+            if worker is not None:
+                worker.requestInterruption()
+
+    def _stop_extractions_for_close(self, timeout_ms: int = 180_000) -> None:
+        """Stop a running global.ini or DataForge extraction before the window
+        closes (#471).
+
+        closeEvent has normally asked already (_request_extraction_stops,
+        ahead of the loader wait), so unp4k or unforge died within a quarter
+        of a second and the worker is deleting its working folder: up to
+        ~62,000 files for DataForge, which takes a while on a slow disk. The
+        window is hidden first so it can't sit there showing as Not
+        Responding meanwhile. Called last in closeEvent, after the window
+        state is saved, so the hide cannot change what saveState and
+        saveGeometry record.
+
+        Bounded like _settle_applied_state_check, by one deadline shared by
+        both workers. Past it a worker's reference is kept so Qt doesn't
+        destroy a live thread, and the next extraction sweeps what its folder
+        still holds. Within it the reference is released, and the identity
+        check in the worker's slots ignores the finished and error deliveries
+        Qt may still have queued.
+        """
+        import time
+
+        stopping = []
+        for worker_attr, dialog_attr in self._EXTRACTION_WORKER_ATTRS:
+            worker = getattr(self, worker_attr, None)
+            if worker is None:
+                continue
+            worker.requestInterruption()
+            dialog = getattr(self, dialog_attr, None)
+            if dialog is not None:
+                # Disconnect, then hide rather than close. close() would ask
+                # the stop question again (the DataForge dialog's close
+                # guard) and emits canceled, which resets a QProgressDialog
+                # so a progress update the worker queued before it saw the
+                # stop could show it again.
+                for signal in (worker.progress, worker.progress_pct):
+                    try:
+                        signal.disconnect()
+                    except TypeError:
+                        pass  # nothing connected
+                dialog.hide()
+                setattr(self, dialog_attr, None)
+            stopping.append((worker_attr, worker))
+
+        if any(worker.isRunning() for _attr, worker in stopping):
+            logger.info(
+                "Closing during an extraction: stopping it and removing its "
+                "working folder"
+            )
+            self.hide()
+        deadline = time.monotonic() + timeout_ms / 1000
+        for worker_attr, worker in stopping:
+            remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
+            if worker.isRunning() and not worker.wait(remaining_ms):
+                logger.warning(
+                    "An extraction was still cleaning up when Smart Citizen "
+                    "closed; the next extraction removes what is left"
+                )
+                continue  # keep the reference so Qt doesn't destroy a live thread
+            setattr(self, worker_attr, None)
+
     def closeEvent(self, event):
-        """Save state and overrides before closing."""
+        """Save state and overrides, and stop a running extraction (#471),
+        before closing."""
         # Let a running already-applied check finish first: its verdict feeds
         # the unapplied-changes warning below, and the thread must be gone
         # before exit.
@@ -5985,7 +6197,13 @@ class MainWindow(QMainWindow):
         # Detach log handler before widgets are destroyed
         self.log_tab.remove_handler()
 
-        # Clean up workers
+        # Clean up workers. The close is committed from here: every prompt
+        # that could call it off has been answered, so nothing new may start
+        # (#471, see _close_committed). A running extraction is asked to stop
+        # now, ahead of the unbounded loader wait below, so its tool dies at
+        # once; _stop_extractions_for_close waits for it last.
+        self._close_committed = True
+        self._request_extraction_stops()
         if self._loader_worker:
             self._loader_worker.quit()
             self._loader_worker.wait()
@@ -6007,6 +6225,9 @@ class MainWindow(QMainWindow):
                  for i in range(self.filter_header.count())]
             )
 
+        # Last, once the window's state is saved: this hides the window while
+        # a stopped extraction removes its working folder (#471).
+        self._stop_extractions_for_close()
         event.accept()
 
     @timed

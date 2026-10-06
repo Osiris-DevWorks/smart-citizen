@@ -10,6 +10,7 @@ Tests cover:
 
 import pytest
 import logging
+import re
 import tempfile
 import os
 from pathlib import Path
@@ -673,3 +674,50 @@ class TestUnp4kFailureMessage:
         with pytest.raises(RuntimeError) as exc:
             _raise_unp4k_failure(-1, None)
         assert "exited with code -1" in str(exc.value)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The cache layout is named once (#471 review)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCacheLayoutNamedOnce:
+    """pak_extractor names the DataForge cache layout (raw/libs and
+    foundry/records) once, and every reader joins DATAFORGE_LIBS_SUBPATH /
+    DATAFORGE_RECORDS_SUBPATH (root CLAUDE.md, "Magic literals"). The only
+    other spelling allowed is the generator's fallback for a missing src/,
+    the same deferred-import pattern as its other src imports."""
+
+    _SPELLED = re.compile(
+        r"""["']raw["']\)?\s*/\s*["']libs["']|["']foundry["']\)?\s*/\s*["']records["']"""
+    )
+    _REPO = Path(__file__).resolve().parent.parent
+    _ALLOWED = {
+        "src/utils/pak_extractor.py": 2,             # the definitions
+        "scripts/generate_enhancements_ini.py": 2,   # the src/-missing fallback (one line)
+    }
+
+    def _spellings(self):
+        found = {}
+        for pattern in ("src/**/*.py", "scripts/*.py"):
+            for path in self._REPO.glob(pattern):
+                count = len(self._SPELLED.findall(path.read_text(encoding="utf-8")))
+                if count:
+                    found[path.relative_to(self._REPO).as_posix()] = count
+        return found
+
+    def test_nothing_else_spells_the_layout_out(self):
+        assert self._spellings() == self._ALLOWED
+
+    def test_the_names_describe_the_layout_the_extraction_writes(self):
+        from utils.pak_extractor import (
+            DATAFORGE_LIBS_SUBPATH, DATAFORGE_RECORDS_SUBPATH, DATAFORGE_RECORDS_UNDER_LIBS,
+        )
+        assert DATAFORGE_LIBS_SUBPATH.as_posix() == "raw/libs"
+        assert DATAFORGE_RECORDS_UNDER_LIBS.as_posix() == "foundry/records"
+        assert DATAFORGE_RECORDS_SUBPATH.as_posix() == "raw/libs/foundry/records"
+
+    def test_the_guard_sees_a_hand_spelled_path(self):
+        """Prove the pattern bites, so the guard can't pass by reading nothing."""
+        assert self._SPELLED.search('records = forge_dir / "raw" / "libs" / "foundry"')
+        assert self._SPELLED.search("x = Path('foundry') / 'records'")
+        assert not self._SPELLED.search("records = forge_dir / DATAFORGE_RECORDS_SUBPATH")

@@ -3260,7 +3260,7 @@ class AppSettings:
         (see :meth:`get_enhancements_stamp`). Returns 'unknown' when no
         DataForge cache exists yet.
         """
-        from src.utils.pak_extractor import P4K_MTIME_STAMP
+        from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP
         forge_dir = AppSettings.get_dataforge_cache_dir()
         stamp = forge_dir / P4K_MTIME_STAMP
         try:
@@ -3271,7 +3271,7 @@ class AppSettings:
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — fall through to the records-dir heuristic.
             pass
-        records = forge_dir / "raw" / "libs" / "foundry" / "records"
+        records = forge_dir / DATAFORGE_RECORDS_SUBPATH
         try:
             if records.exists():
                 return f"mtime:{int(records.stat().st_mtime)}"

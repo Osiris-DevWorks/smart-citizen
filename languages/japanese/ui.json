@@ -2720,6 +2720,22 @@
       "ht": "",
       "at": "DataForge の抽出に失敗しました — 詳細はログタブを参照してください"
     },
+    "dataforge_stop_title": {
+      "ht": "",
+      "at": "DataForge の抽出を停止しますか？"
+    },
+    "dataforge_stop_body": {
+      "ht": "",
+      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？後で拡張タブからもう一度実行できます。"
+    },
+    "dataforge_stopping": {
+      "ht": "",
+      "at": "DataForge の抽出を停止しています…"
+    },
+    "dataforge_stopped": {
+      "ht": "",
+      "at": "DataForge の抽出を停止しました"
+    },
     "p4k_extracting_label": {
       "ht": "",
       "at": "Data.p4k から global.ini を抽出中..."

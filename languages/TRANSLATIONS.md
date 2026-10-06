@@ -58,6 +58,16 @@ them against the new source.
 
 ## Backfill log
 
+- **2.4.0 cycle (2026-10-06, Claude Opus 5.5):** #471 added four `extract.*`
+  keys for stopping a DataForge extraction: `dataforge_stop_title` and
+  `dataforge_stop_body` (the question Esc or the X on the extraction dialog
+  now asks) and the status-bar `dataforge_stopping` and `dataforge_stopped`.
+  In all 10 languages, `at`-only (`ht` empty), each worded in that file's own
+  register and with its existing names for the Enhancements tab and the
+  DataForge extraction. A separate checker back-translated every string and
+  compared it with the English: no meaning errors, register and terms matched
+  each file, and the Korean sentence-spacing rule holds. No existing string
+  changed.
 - **2.4.0 cycle (2026-10-04, Claude Sonnet 5.5):** #446 removed the Blueprint
   Tracker's "Also scan LIVE/HOTFIX" tickbox. Scan Logs now always reads LIVE,
   plus HOTFIX when it is installed, and never PTU, EPTU or TECH-PREVIEW. In
