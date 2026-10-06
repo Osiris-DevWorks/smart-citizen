@@ -937,6 +937,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
+  UninstallExe: String;
 begin
   if (CurStep=ssInstall) then
   begin
@@ -1007,10 +1008,11 @@ begin
     // #454: {uninstallexe}, the file Setup really wrote, not a fixed
     // unins000.exe. A shared install folder can now keep another program's
     // unins000 files, and Setup then names ours unins001.
-    if not FileExists(ExpandConstant('{uninstallexe}')) then
+    UninstallExe := ExpandConstant('{uninstallexe}');
+    if not FileExists(UninstallExe) then
     begin
-      Log('ERROR: the uninstaller ' + ExpandConstant('{uninstallexe}') + ' is missing post-install. Install completed but uninstall is broken.');
-      MsgBox('Smart Citizen installed successfully, but the uninstaller file (' + ExtractFileName(ExpandConstant('{uninstallexe}')) + ') is missing from:' + #13#10 + #13#10 +
+      Log('ERROR: the uninstaller ' + UninstallExe + ' is missing post-install. Install completed but uninstall is broken.');
+      MsgBox('Smart Citizen installed successfully, but the uninstaller file (' + ExtractFileName(UninstallExe) + ') is missing from:' + #13#10 + #13#10 +
              '  ' + ExpandConstant('{app}') + #13#10 + #13#10 +
              'Smart Citizen will not appear in Apps & Features. The app itself works normally — only uninstall is affected.' + #13#10 + #13#10 +
              'Likely causes:' + #13#10 +
@@ -2154,13 +2156,12 @@ begin
     installed program, and stopping would let the narrow [InstallDelete] take
     the folder's _internal. The previous install's folder (PreviousDir, ''
     for none) is never moved, so an upgrade stays where it is. Nor is a folder
-    whose new path would be longer than MaxInstallDirLength: Setup checks the
-    page against that limit before this runs, but not again after a silent
-    run. TooLong says it stopped there, at a folder that holds files Smart
-    Citizen did not install and is not the previous install's. A person is
-    then asked for another folder (GiveInstallItsOwnFolder). A silent run
-    installs there, and the narrow [InstallDelete] leaves the other files
-    alone. }
+    whose new path would be longer than MaxInstallDirLength, the limit Setup
+    checks the page against (and again when the install starts, where a
+    silent run would stop with an error). TooLong says it stopped there, at a
+    folder that holds files Smart Citizen did not install and is not the
+    previous install's, and GiveInstallItsOwnFolder then keeps Setup out of
+    it. }
   TooLong := False;
   Result := Chosen;
   for i := 1 to 3 do
@@ -2194,18 +2195,23 @@ begin
     new folder set here is the one it installs in. A silent run takes the new
     folder and goes on, because False there ends Setup without installing. A
     person stays on the page to see it. Where a folder of its own would make
-    the path too long (TooLong), a person is asked for a shorter or empty
-    folder instead, and the page keeps what they typed. A silent run installs
-    in the folder NewInstallDir stopped at, which it has logged. }
+    the path too long (TooLong), Setup does not install there, because the
+    narrow [InstallDelete] would still take a shared folder's _internal: a
+    person is asked for a shorter or empty folder and the page keeps what they
+    typed, and a silent run stops without installing. The in-app updater never
+    gets here, because the previous install's folder is never moved. }
   Result := True;
   Chosen := WizardDirValue();
   Own := NewInstallDir(Chosen, ExtractFileDir(RemoveQuotes(GetUninstallString())), TooLong);
-  if TooLong and not WizardSilent() then
+  if TooLong then
   begin
-    SuppressibleMsgBox('This folder already holds other files, and its path is too long to add a Smart Citizen folder inside it:' + #13#10 + #13#10 +
-                       '  ' + Own + #13#10 + #13#10 +
-                       'Choose a shorter folder, or an empty one.',
-                       mbInformation, MB_OK, IDOK);
+    if WizardSilent() then
+      Log('Install folder ' + Own + ' holds files Smart Citizen did not install, and a folder of its own would make the path too long, so Setup stops without installing (#454).')
+    else
+      SuppressibleMsgBox('This folder already holds other files, and its path is too long to add a Smart Citizen folder inside it:' + #13#10 + #13#10 +
+                         '  ' + Own + #13#10 + #13#10 +
+                         'Choose a shorter folder, or an empty one.',
+                         mbInformation, MB_OK, IDOK);
     Result := False;
     Exit;
   end;

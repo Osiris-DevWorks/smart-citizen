@@ -53,7 +53,7 @@ import pytest
 # The app's channel list, so a channel added there but not to the installer's
 # checks fails here.
 from src.utils.install_scanner import SC_CHANNELS as CHANNELS
-from tests.inno_setup import pascal_string, run_probe
+from tests.inno_setup import pascal_string, require_iscc, run_probe
 
 INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 
@@ -412,13 +412,14 @@ def test_install_folder_deletes_name_only_smart_citizens_files():
     assert started and set(started) <= {m["name"] for m in matches}
 
 
-# Where a folder of its own would make the path too long, a person is asked for
-# another folder and stays on the page, and a silent run goes on (False there ends
-# Setup without installing). Strings are blanked, so the box's arguments hold no
-# semicolon.
-_TOO_LONG_BOX = re.compile(
-    r"if TooLong and not WizardSilent\(\) then begin "
-    r"SuppressibleMsgBox\([^;]*\bOwn\b[^;]*, MB_OK, IDOK\); Result := False; Exit; end;"
+# Where a folder of its own would make the path too long, Setup does not install
+# there: a person is asked for another folder and stays on the page, and a silent
+# run logs why and stops (False ends a silent Setup without installing, and the
+# in-app updater never gets here, because the previous install's folder is never
+# moved). Strings are blanked, so the arguments hold no semicolon.
+_TOO_LONG_STOP = re.compile(
+    r"if TooLong then begin if WizardSilent\(\) then Log\([^;]*\bOwn\b[^;]*\) "
+    r"else SuppressibleMsgBox\([^;]*\bOwn\b[^;]*, MB_OK, IDOK\); Result := False; Exit; end;"
 )
 
 
@@ -447,15 +448,15 @@ def test_the_folder_page_gives_a_shared_folder_its_own_folder():
         "if WizardSilent() then Exit;",
     ):
         assert statement in give, f"GiveInstallItsOwnFolder lost: {statement}"
-    too_long = _TOO_LONG_BOX.search(give)
+    too_long = _TOO_LONG_STOP.search(give)
     assert too_long, (
-        "GiveInstallItsOwnFolder must ask a person for another folder where a folder of "
-        "its own would be too long, and never on a silent run: if TooLong and not "
-        "WizardSilent() then begin SuppressibleMsgBox(...Own...); Result := False; Exit; end;"
+        "GiveInstallItsOwnFolder must keep Setup out of a folder where a folder of its own "
+        "would be too long: if TooLong then begin if WizardSilent() then Log(...Own...) "
+        "else SuppressibleMsgBox(...Own...); Result := False; Exit; end;"
     )
-    # A silent Setup that gets False on this page ends without installing (after
-    # the in-app updater has closed the app), so each False comes after a silent
-    # check: the too-long box's, and the move's after its silent exit.
+    # A silent Setup that gets False on this page ends without installing. That is
+    # wanted only where the path is too long, which the in-app updater never reaches,
+    # so the move's False comes after its silent exit.
     assert give.count("Result := False;") == 2 and give.count("SuppressibleMsgBox(") == 2
     order = [
         "Result := True;",
@@ -518,7 +519,7 @@ def test_install_folder_name_matches_setup():
     default = [e for e in _section(source, "Setup") if e.startswith("DefaultDirName=")]
     assert len(default) == 1
     name = re.search(r"^  AppFolderName = '(.*)';$", source, re.M)
-    assert name and default[0].split("\\")[-1] == name.group(1)
+    assert name and default[0].split("\\")[-1] == name.group(1) == _OWN
     assert "Result := AddBackslash(Result) + AppFolderName;" in _routine_code(
         source, "NewInstallDir"
     )
@@ -546,7 +547,7 @@ def test_the_guard_stops_only_where_it_must():
     # asked for another one.
     assert guard.index(keep) < guard.index(too_long), f"NewInstallDir must ask {keep} first"
     assert guard.count("TooLong :=") == 2
-    assert re.search(r"^  MaxInstallDirLength = 240;$", source, re.M)
+    assert re.search(rf"^  MaxInstallDirLength = {_MAX_DIR};$", source, re.M)
 
 
 # -- Behaviour, in the compiled installer code ------------------------------------
@@ -601,6 +602,11 @@ _REFILL_DATA = "LIVE/user.ini"
 # The kinds whose checks read a folder as text and delete nothing, the only ones
 # that may name a path outside the tree.
 _TEXT_ONLY_KINDS = ("reason", "install-reason")
+# installer.iss's AppFolderName and MaxInstallDirLength, the folder the guard adds
+# and Setup's own length limit, pinned to the installer by
+# test_install_folder_name_matches_setup and test_the_guard_stops_only_where_it_must.
+_OWN = "Smart Citizen"
+_MAX_DIR = 240
 
 
 def _channel_caches(root):
@@ -920,6 +926,11 @@ def _cases(t):
         """What emptying *root* deletes: its top-level items."""
         return sorted({f"{root}/{item.split('/')[0]}" for item in items})
 
+    def moved_away(name, entries):
+        # Inst is not an install, so the guard gives it a folder of its own, which
+        # is missing: it is emptied whole, and nothing in Inst is deleted.
+        install(name, entries, "whole", moved=f"Inst/{_OWN}")
+
     def install(name, entries, expect, target="Inst", **kwargs):
         log = _INSTALL_LOG[expect]
         add(f"install: {name}", "install", entries, target, expect=expect, log=log, **kwargs)
@@ -1003,7 +1014,7 @@ def _cases(t):
         gone=[f"{data}/SmartCitizen.exe"],
         previous=data,
     )
-    named = "Smart Citizen"
+    named = _OWN
     install(
         "a folder named Smart Citizen keeps loose files Smart Citizen did not install",
         under(named, ["SmartCitizen.exe", *internal, *uninstaller, "notes.txt", "desktop.ini"]),
@@ -1046,12 +1057,13 @@ def _cases(t):
         gone=[f"{named}/_internal"],
         previous=named,
     )
-    # No case has an install folder that is itself a link. Setup turns on
-    # Windows' RedirectionGuard where the system has it (Windows 11, Windows 10
-    # 22H2), which stops it following a junction a normal user made, so such a
-    # folder cannot be listed and nothing is deleted through it. Without it the
-    # folder reads like any other. The result depends on the Windows version,
-    # and neither way deletes anything Smart Citizen did not install.
+    # No case has an install folder that is itself a link. A Setup built with
+    # Inno Setup 6.7.0 or newer turns on Windows' RedirectionGuard where the
+    # system has it (Windows 11, Windows 10 22H2), which stops it following a
+    # junction a normal user made, so such a folder cannot be listed and nothing
+    # is deleted through it. With an older compiler, or on older Windows, the
+    # folder reads like any other. The result depends on both, and neither way
+    # deletes anything Smart Citizen did not install.
     install(
         "a link in the install folder stays, and so does what it points at",
         ["Inst/SmartCitizen.exe", "Lib/book.txt"],
@@ -1072,12 +1084,7 @@ def _cases(t):
     # moves away from it, and the folder is not emptied even as the previous
     # install's.
     leftovers = under("Inst", uninstaller)
-    install(
-        "another program's leftover uninstaller is not an install",
-        leftovers,
-        "whole",
-        moved="Inst/Smart Citizen",
-    )
+    moved_away("another program's leftover uninstaller is not an install", leftovers)
     install(
         "another program's leftover uninstaller is not emptied",
         leftovers,
@@ -1088,11 +1095,8 @@ def _cases(t):
     # The guard: a folder that holds files Smart Citizen did not install gets a
     # Smart Citizen folder of its own, unless it is the previous install's. A new
     # folder is missing, so it is emptied whole, which deletes nothing.
-    install(
-        "a folder of other files gets its own folder",
-        ["Inst/Game/game.exe", "Inst/readme.txt"],
-        "whole",
-        moved="Inst/Smart Citizen",
+    moved_away(
+        "a folder of other files gets its own folder", ["Inst/Game/game.exe", "Inst/readme.txt"]
     )
     install(
         "the previous install's folder is never moved",
@@ -1100,30 +1104,28 @@ def _cases(t):
         "narrow",
         previous="Inst",
     )
-    install(
+    moved_away(
         "a loose old program among another app's files does not keep Setup there",
         under("Inst", ["SCLocalizationEditor-v0.7.0.exe", "OtherApp.exe", "_internal/x.pyd"]),
-        "whole",
-        moved="Inst/Smart Citizen",
     )
     install(
         "a Smart Citizen folder of other files gets one too",
-        ["D2/other.txt", "D2/Smart Citizen/LIVE/user.ini"],
+        ["D2/other.txt", f"D2/{_OWN}/LIVE/user.ini"],
         "whole",
         target="D2",
-        moved="D2/Smart Citizen/Smart Citizen",
+        moved=f"D2/{_OWN}/{_OWN}",
     )
     install(
         "an install in the folder it would add is found, and emptied",
-        ["G/game.exe", "G/Smart Citizen/SmartCitizen.exe"],
+        ["G/game.exe", f"G/{_OWN}/SmartCitizen.exe"],
         "whole",
         target="G",
-        moved="G/Smart Citizen",
-        gone=["G/Smart Citizen/SmartCitizen.exe"],
+        moved=f"G/{_OWN}",
+        gone=[f"G/{_OWN}/SmartCitizen.exe"],
     )
     nested = ["X"]
     while len(nested) < 4:
-        nested.append(f"{nested[-1]}/Smart Citizen")
+        nested.append(f"{nested[-1]}/{_OWN}")
     install(
         "the guard adds its folder at most three times",
         [f"{folder}/a.txt" for folder in nested],
@@ -1170,30 +1172,15 @@ def _cases(t):
             gone=["Inst/SmartCitizen.exe"],
             previous="Inst",
         )
-        install(
-            f"{name} on its own is not an install",
-            [f"Inst/{name}"],
-            "whole",
-            moved="Inst/Smart Citizen",
-        )
+        moved_away(f"{name} on its own is not an install", [f"Inst/{name}"])
     # Dots in their places and a letter for a digit: only the digit test turns
     # these away. The ?.?.? entries delete them beside an install (Windows lets a
     # ? match any character), so only the guard shows the test: on its own, such
     # a file must be moved away from.
     for name in ("SmartCitizen-v1.4.x.exe", "SCLocalizationEditor-v0.8.x.exe"):
-        install(
-            f"{name} on its own is not an install",
-            [f"Inst/{name}"],
-            "whole",
-            moved="Inst/Smart Citizen",
-        )
-    # The files entry for the program must pass over a folder of that name.
-    install(
-        "a folder named SmartCitizen.exe is not an install",
-        ["Inst/SmartCitizen.exe/x"],
-        "whole",
-        moved="Inst/Smart Citizen",
-    )
+        moved_away(f"{name} on its own is not an install", [f"Inst/{name}"])
+    # ScanInstallDir must not count a folder of that name as the program.
+    moved_away("a folder named SmartCitizen.exe is not an install", ["Inst/SmartCitizen.exe/x"])
 
     # Setup asks the delete Check on the Preparing page and again just before the
     # delete, and in between MigrateUserDocsFolder can rename the old data folder
@@ -1220,19 +1207,19 @@ def _cases(t):
         [],
         "",
         outside="Inst",
-        expect=f"{not_full} > Inst\\Smart Citizen\\Smart Citizen\\Smart Citizen > not too long",
+        expect=f"{not_full} > Inst\\{_OWN}\\{_OWN}\\{_OWN} > not too long",
     )
     # One Smart Citizen folder brings it to exactly Setup's 240 characters, and a
     # second would pass them, so the guard stops there and says it stopped for
     # length (an interactive Setup then asks for another folder).
-    long_folder = "L" * (240 - len("\\Smart Citizen"))
+    long_folder = "L" * (_MAX_DIR - len("\\" + _OWN))
     add(
         "install reason: the guard stops at Setup's 240 characters",
         "install-reason",
         [],
         "",
         outside=long_folder,
-        expect=f"{not_full} > {long_folder}\\Smart Citizen > too long",
+        expect=f"{not_full} > {long_folder}\\{_OWN} > too long",
     )
     # One character more and not even one fits: the folder is kept as chosen.
     longer = long_folder + "L"
@@ -1689,7 +1676,10 @@ def test_only_the_text_checks_may_name_a_path_outside_the_tree(tmp_path, kind):
         _steps([case], tmp_path)
 
 
-def test_cache_cleaning_and_the_wipe_in_compiled_installer_code(tmp_path):
+def test_folder_deletes_in_compiled_installer_code(tmp_path):
+    # Before the trees, which make junctions: where Inno Setup is missing the test
+    # skips (or fails under CI) without touching the file system.
+    require_iscc()
     tree = tmp_path / "tree"
     out = tmp_path / "out"
     cases = _cases(tree)

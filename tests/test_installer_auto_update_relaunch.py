@@ -82,7 +82,11 @@ def test_relaunch_follows_the_registry_writes_and_precedes_the_uninstaller_check
     relaunch = re.search(r"ExecAsOriginalUser\(", block)
     # #454: the uninstaller Setup really wrote. In a shared install folder another
     # program's unins000 files can stay, and Setup then names ours unins001.
-    check = re.search(r"FileExists\(ExpandConstant\('\{uninstallexe\}'\)\)", block)
+    check = re.search(
+        r"UninstallExe := ExpandConstant\('\{uninstallexe\}'\);\s*"
+        r"if not FileExists\(UninstallExe\)",
+        block,
+    )
     assert (
         write and relaunch and check
     ), "the relaunch, the registry writes or the uninstaller check is gone"
