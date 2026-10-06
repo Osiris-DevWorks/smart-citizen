@@ -45,8 +45,26 @@ SCDirectoryDefaultDesc=This is typically located at:
 SCDirectoryDefaultPath=C:\Program Files\Roberts Space Industries\StarCitizen\LIVE
 
 [InstallDelete]
-; Clear previous install directory completely before installing new files
-Type: filesandordirs; Name: "{app}\*"
+; #454: the install folder can be any folder (a typed path, /DIR=, or one that
+; filled up after Smart Citizen went in), so it is emptied whole, as before,
+; only when InstallDirMayBeEmptied says nothing but Smart Citizen's own files
+; are in it. The other entries delete only Smart Citizen's own files, in any
+; folder: the program file each version installed, by its exact name, and its
+; _internal folder. They never match a download whose name starts the same
+; way, such as an old SCLocalizationEditor-v0.1.1-Setup.exe or a portable
+; SmartCitizen-Portable-v2.3.1.exe. Each ? is one digit of a version: every
+; release from 0.1.1 to 1.x had three one-digit parts. Windows lets a ? match
+; any one character, or none before a dot, so a name like
+; SmartCitizen-va.b.c.exe would go too, but no release ever used one. A
+; wildcard here needs more than 8 fixed characters in front of it, because
+; Windows also matches wildcards against 8.3 short names. Keep the program
+; names in step with IsOwnProgramFile.
+Type: filesandordirs; Name: "{app}\*"; Check: InstallDirMayBeEmptied
+Type: files; Name: "{app}\SmartCitizen.exe"
+Type: filesandordirs; Name: "{app}\_internal"
+Type: files; Name: "{app}\SmartCitizen-v?.?.?.exe"
+Type: files; Name: "{app}\SCLocalizationEditor.exe"
+Type: files; Name: "{app}\SCLocalizationEditor-v?.?.?.exe"
 
 [Files]
 Source: "dist\SmartCitizen\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -109,6 +127,13 @@ const
   ScChannelCount = 5;
   { Files and folders that prove a Star Citizen channel: see HasScGameData. }
   ScMarkerCount = 10;
+  { #454: the folder Browse adds to a picked install folder (the last part of
+    DefaultDirName). The install folder page adds it too, to a folder that
+    already holds other files: see NewInstallDir. }
+  AppFolderName = 'Smart Citizen';
+  { #454: the longest install folder Setup accepts on its folder page
+    (ValidateCustomDirEdit refuses a longer one). }
+  MaxInstallDirLength = 240;
 
 function IsAutoUpdate(): Boolean;
 begin
@@ -450,7 +475,7 @@ begin
   // file gone 4 ms later).
   //
   // The old uninstaller adds nothing in the same-dir case:
-  //   - old files     -> the InstallDelete filesandordirs entry wipes them
+  //   - old files     -> [InstallDelete] deletes them (the whole folder only when InstallDirMayBeEmptied says it is Smart Citizen's own, #454)
   //   - uninstall key -> same AppId; the new install overwrites it
   //   - icons         -> same group/desktop names; recreated by [Icons]
   //   - cache cleanup -> CleanCachedData() runs install-side at ssInstall
@@ -461,7 +486,7 @@ begin
   OldAppDir := RemoveBackslash(ExtractFileDir(sUnInstallString));
   NewAppDir := RemoveBackslash(ExpandConstant('{app}'));
   if CompareText(OldAppDir, NewAppDir) = 0 then begin
-    Log('Same-directory upgrade (' + NewAppDir + '): skipping old uninstaller; InstallDelete clears the directory and the new install rewrites the uninstall key.');
+    Log('Same-directory upgrade (' + NewAppDir + '): skipping old uninstaller; [InstallDelete] removes the old files and the new install rewrites the uninstall key.');
     Result := 5;
     Exit;
   end;
@@ -500,7 +525,7 @@ begin
     begin
       Log('WARNING: timed out waiting for old uninstaller to finish (180s). The new install may produce a broken uninstaller; user should uninstall + reinstall manually if the Apps & Features entry is missing.');
       SuppressibleMsgBox('The previous version''s uninstaller did not finish within 3 minutes.' + #13#10 + #13#10 +
-             'The install will continue, but the new uninstaller file (unins000.exe) may be deleted by the old uninstaller''s delayed cleanup. If that happens, Smart Citizen will install successfully but will not appear in Apps & Features.' + #13#10 + #13#10 +
+             'The install will continue, but the new uninstaller file may be deleted by the old uninstaller''s delayed cleanup. If that happens, Smart Citizen will install successfully but will not appear in Apps & Features.' + #13#10 + #13#10 +
              'If you later cannot uninstall Smart Citizen, re-run this installer and choose the Uninstall option, or delete the install folder manually.' + #13#10 + #13#10 +
              'Closing other apps (especially OneDrive sync, antivirus scans, and the Search Indexer) before the install can avoid this.',
              mbError, MB_OK, IDOK);
@@ -913,6 +938,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
+  UninstallExe: String;
 begin
   if (CurStep=ssInstall) then
   begin
@@ -948,7 +974,7 @@ begin
     // before the writes above. ExecAsOriginalUser is the runasoriginaluser
     // flag that entry had: the installer runs elevated, and without it the
     // relaunched app would run as admin (and write user.ini / caches with
-    // admin ownership). It sits ahead of the unins000.exe check below, so a
+    // admin ownership). It sits ahead of the uninstaller check below, so a
     // failure box there never delays the relaunch.
     if IsAutoUpdate() then
     begin
@@ -980,10 +1006,14 @@ begin
     // just answered its UAC prompt sees the progress window and this box.
     // It never delays that update's relaunch: the app is started above,
     // before this check.
-    if not FileExists(ExpandConstant('{app}\unins000.exe')) then
+    // #454: {uninstallexe}, the file Setup really wrote, not a fixed
+    // unins000.exe. A shared install folder can now keep another program's
+    // unins000 files, and Setup then names ours unins001.
+    UninstallExe := ExpandConstant('{uninstallexe}');
+    if not FileExists(UninstallExe) then
     begin
-      Log('ERROR: unins000.exe missing from {app} post-install. Install completed but uninstall is broken.');
-      MsgBox('Smart Citizen installed successfully, but the uninstaller file (unins000.exe) is missing from:' + #13#10 + #13#10 +
+      Log('ERROR: the uninstaller ' + UninstallExe + ' is missing post-install. Install completed but uninstall is broken.');
+      MsgBox('Smart Citizen installed successfully, but the uninstaller file (' + ExtractFileName(UninstallExe) + ') is missing from:' + #13#10 + #13#10 +
              '  ' + ExpandConstant('{app}') + #13#10 + #13#10 +
              'Smart Citizen will not appear in Apps & Features. The app itself works normally — only uninstall is affected.' + #13#10 + #13#10 +
              'Likely causes:' + #13#10 +
@@ -1987,12 +2017,238 @@ begin
     ModeChoicePage.SelectedValueIndex := 0;
 end;
 
+{ ---- #454: the install folder ------------------------------------------- }
+{ No line in these routines may start with a bracket, a comment line too:
+  ISCC reads it as a section tag. }
+
+function IsVersionedProgramName(const Low, Prefix: String): Boolean;
+var
+  i: Integer;
+begin
+  { Low, a lower-case file name, is Prefix, then a version of three one-digit
+    parts, then .exe, such as smartcitizen-v1.4.2.exe: the name that the
+    Prefix?.?.?.exe entry of [InstallDelete] deletes, with a digit for each ?. }
+  Result := (Length(Low) = Length(Prefix) + 9) and (Copy(Low, 1, Length(Prefix)) = Prefix) and
+            (Copy(Low, Length(Prefix) + 6, 4) = '.exe');
+  for i := 1 to 5 do
+    if Result then
+    begin
+      if (i mod 2) = 1 then
+        Result := Pos(Low[Length(Prefix) + i], '0123456789') > 0
+      else
+        Result := Low[Length(Prefix) + i] = '.';
+    end;
+end;
+
+function IsOwnProgramFile(const Name: String): Boolean;
+var
+  Low: String;
+begin
+  { The program file of every Smart Citizen version, by its long name and in
+    any case, as the program entries of [InstallDelete] name it:
+    SmartCitizen.exe (2.0 on), SmartCitizen-v<x.y.z>.exe (0.9 to 1.x),
+    SCLocalizationEditor.exe (0.1.0) and SCLocalizationEditor-v<x.y.z>.exe
+    (0.1.1 to 0.8), each x, y and z one digit. Never a download whose name
+    starts the same way, such as an old installer
+    (SCLocalizationEditor-v0.1.1-Setup.exe) or a portable copy
+    (SmartCitizen-Portable-v<version>.exe), which keeps its data folder beside
+    it. Keep in step with those entries. }
+  Low := LowerCase(Name);
+  Result := (Low = 'smartcitizen.exe') or (Low = 'sclocalizationeditor.exe') or
+            IsVersionedProgramName(Low, 'smartcitizen-v') or
+            IsVersionedProgramName(Low, 'sclocalizationeditor-v');
+end;
+
+procedure ScanInstallDir(const Dir: String; var Listed, OnlyOwn: Boolean);
+var
+  Root: String;
+  FR: TFindRec;
+  IsFolder, HasApp, HasUninstaller, HasOther: Boolean;
+begin
+  { Reads the top of an install folder by long names, as DeleteAppLogs does,
+    never below it. Listed: Dir is a full path, and it is missing or its
+    contents could be listed. OnlyOwn: nothing is there but what the narrow
+    entries of [InstallDelete] delete in any folder (a Smart Citizen program
+    file, and _internal as a file, a folder or a link) and the uninstaller
+    Setup writes (unins000.exe, .dat and .msg). Those uninstaller files count
+    only beside a program file or _internal, because on their own they can be
+    another program's leftovers. A missing or empty folder is only Smart
+    Citizen's. One that is not a full path or cannot be listed is not. }
+  Listed := False;
+  OnlyOwn := False;
+  if not IsAbsoluteDir(Dir) then
+    Exit;
+  Root := CanonDir(Dir);
+  if not DirExists(Root) then
+  begin
+    Listed := True;
+    OnlyOwn := True;
+    Exit;
+  end;
+  HasApp := False;
+  HasUninstaller := False;
+  HasOther := False;
+  if FindFirst(LongPath(Root) + '\*', FR) then
+  try
+    Listed := True;
+    repeat
+      if (FR.Name <> '.') and (FR.Name <> '..') then
+      begin
+        IsFolder := (FR.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0;
+        if (CompareText(FR.Name, '_internal') = 0) or
+           (not IsFolder and IsOwnProgramFile(FR.Name)) then
+          HasApp := True
+        else if not IsFolder and ((CompareText(FR.Name, 'unins000.exe') = 0) or
+                                  (CompareText(FR.Name, 'unins000.dat') = 0) or
+                                  (CompareText(FR.Name, 'unins000.msg') = 0)) then
+          HasUninstaller := True
+        else
+          HasOther := True;
+      end;
+    until not FindNext(FR);
+  finally
+    FindClose(FR);
+  end;
+  OnlyOwn := Listed and not HasOther and (HasApp or not HasUninstaller);
+end;
+
+function WholeInstallDirReason(const AppDir: String): String;
+var
+  Listed, OnlyOwn: Boolean;
+begin
+  { '' when Setup may empty the install folder AppDir whole before it copies
+    the new files, as it always did: nothing in it is anything but Smart
+    Citizen's own (every layout a release has installed), or it is missing or
+    empty. Otherwise why only Smart Citizen's own files there are deleted, as
+    the end of a log sentence. }
+  ScanInstallDir(AppDir, Listed, OnlyOwn);
+  if OnlyOwn then
+    Result := ''
+  else if not Listed then
+    Result := 'it is not a full folder path or Setup could not list what is in it'
+  else
+    Result := 'it holds files Smart Citizen did not install';
+end;
+
+function InstallDirMayBeEmptied(): Boolean;
+var
+  Dir, Reason: String;
+begin
+  // #454: the Check of the [InstallDelete] entry that empties the install
+  // folder. Setup asks it while it gets ready to install (which files to
+  // close) and again just before it deletes, after CurStepChanged(ssInstall)
+  // has run. Not cached on purpose: the answer just before the delete is the
+  // one that counts (MigrateUserDocsFolder can rename the old data folder into
+  // an install folder that was not there yet). Line comments: the install
+  // folder constant below closes brace comments early.
+  Dir := ExpandConstant('{app}');
+  Reason := WholeInstallDirReason(Dir);
+  Result := (Reason = '');
+  if Result then
+    Log('Install folder ' + Dir + ' is Smart Citizen''s own folder, so it is emptied before the new files go in (#454).')
+  else
+    Log('Install folder ' + Dir + ': only Smart Citizen''s own files there are deleted, because ' + Reason + ' (#454).');
+end;
+
+function NewInstallDir(const Chosen, PreviousDir: String; var TooLong: Boolean): String;
+var
+  Listed, OnlyOwn: Boolean;
+  i: Integer;
+begin
+  { The folder to install in when Chosen is picked on the install folder page
+    or given with /DIR=. A folder that holds files Smart Citizen did not
+    install gets AppFolderName added, the way Browse adds it, and so does that
+    one if it holds such files too (Documents, then the data folder
+    Documents\Smart Citizen), at most three times. A Smart Citizen program
+    there does not stop it: a loose old portable copy has the same name as an
+    installed program, and stopping would let the narrow [InstallDelete] take
+    the folder's _internal. The previous install's folder (PreviousDir, ''
+    for none) is never moved, so an upgrade stays where it is. Nor is a folder
+    whose new path would be longer than MaxInstallDirLength, the limit Setup
+    checks the page against (and again when the install starts, where a
+    silent run would stop with an error). TooLong says it stopped there, at a
+    folder that holds files Smart Citizen did not install and is not the
+    previous install's, and GiveInstallItsOwnFolder then keeps Setup out of
+    it. }
+  TooLong := False;
+  Result := Chosen;
+  for i := 1 to 3 do
+  begin
+    ScanInstallDir(Result, Listed, OnlyOwn);
+    if OnlyOwn or SameDir(Result, PreviousDir) then
+      Exit;
+    if Length(AddBackslash(Result) + AppFolderName) > MaxInstallDirLength then
+    begin
+      Log('Install folder ' + Result + ' holds files Smart Citizen did not install, but ' +
+          AppFolderName + ' is not added to it: the path would be longer than ' +
+          IntToStr(MaxInstallDirLength) + ' characters (#454).');
+      TooLong := True;
+      Exit;
+    end;
+    Result := AddBackslash(Result) + AppFolderName;
+  end;
+end;
+
+function GiveInstallItsOwnFolder(): Boolean;
+var
+  Chosen, Own: String;
+  TooLong: Boolean;
+begin
+  { #454: Next on the install folder page. A folder that holds files Smart
+    Citizen did not install gets a folder of its own inside it (see
+    NewInstallDir). Setup clicks Next on a silent run too, so this also covers
+    /DIR= and the in-app updater (no /DIR, so the previous install's folder,
+    which is never moved). WizardDirValue is the folder on the page now, and
+    Setup takes the folder from the page again after this returns True, so a
+    new folder set here is the one it installs in. A silent run takes the new
+    folder and goes on, because False there ends Setup without installing. A
+    person stays on the page to see it. Where a folder of its own would make
+    the path too long (TooLong), Setup does not install there, because the
+    narrow [InstallDelete] would still take a shared folder's _internal: a
+    person is asked for a shorter or empty folder and the page keeps what they
+    typed, and a silent run stops without installing. The in-app updater never
+    gets here, because the previous install's folder is never moved. }
+  Result := True;
+  Chosen := WizardDirValue();
+  Own := NewInstallDir(Chosen, ExtractFileDir(RemoveQuotes(GetUninstallString())), TooLong);
+  if TooLong then
+  begin
+    if WizardSilent() then
+      Log('Install folder ' + Own + ' holds files Smart Citizen did not install, and a folder of its own would make the path too long, so Setup stops without installing (#454).')
+    else
+      SuppressibleMsgBox('This folder already holds other files, and its path is too long to add a Smart Citizen folder inside it:' + #13#10 + #13#10 +
+                         '  ' + Own + #13#10 + #13#10 +
+                         'Choose a shorter folder, or an empty one.',
+                         mbInformation, MB_OK, IDOK);
+    Result := False;
+    Exit;
+  end;
+  if Own = Chosen then
+    Exit;
+  WizardForm.DirEdit.Text := Own;
+  Log('Install folder ' + Chosen + ' holds files Smart Citizen did not install, so Smart Citizen goes in ' + Own + ' (#454).');
+  if WizardSilent() then
+    Exit;
+  SuppressibleMsgBox('The folder you chose already holds other files:' + #13#10 + #13#10 +
+                     '  ' + Chosen + #13#10 + #13#10 +
+                     'Smart Citizen will be installed in a folder of its own inside it, so those files are left alone:' + #13#10 + #13#10 +
+                     '  ' + Own + #13#10 + #13#10 +
+                     'Click Next to continue, or choose another folder.',
+                     mbInformation, MB_OK, IDOK);
+  Result := False;
+end;
+
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
   Chosen: String;
   Suggested: String;
   Response: Integer;
 begin
+  { Two pages: wpSelectDir (the install folder, #454) and DataDirPage (the OneDrive warning, #172). }
+  Result := True;
+  { #454: the install folder page, see GiveInstallItsOwnFolder. }
+  if CurPageID = wpSelectDir then
+    Result := GiveInstallItsOwnFolder();
   { Active OneDrive warning (#172). The data-folder page's pre-fill only
     *steers* the default away from a OneDrive-redirected Documents; it does
     nothing about a user who browses to a OneDrive folder by hand, or a
@@ -2002,7 +2258,6 @@ begin
     installer-side mirror of the app's startup / Config-tab warning (#174),
     and the "switch to a local folder" path matches #174's
     "Move to a Local Folder" so both surfaces behave identically. }
-  Result := True;
   if (DataDirPage = nil) or (CurPageID <> DataDirPage.ID) then
     Exit;
 

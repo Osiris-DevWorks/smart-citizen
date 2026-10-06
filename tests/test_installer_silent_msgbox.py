@@ -28,7 +28,7 @@ INSTALLER = Path(__file__).resolve().parent.parent / "installer.iss"
 _PERSON_PRESENT = {
     "CurStepChanged": (
         1,
-        "the missing-unins000.exe notice: it reports a failure that has already "
+        "the missing-uninstaller notice: it reports a failure that has already "
         "happened and has only an OK button, so it is deliberately not suppressible",
     ),
     "NextButtonClick": (1, "returns early on a silent run (WizardSilent) before it asks anything"),

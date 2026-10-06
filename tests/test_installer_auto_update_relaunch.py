@@ -80,10 +80,19 @@ def test_relaunch_follows_the_registry_writes_and_precedes_the_uninstaller_check
     block = _post_install_block(_installer_source())
     write = re.search(r"^\s*WriteInstallerChoicesToRegistry\(\);", block, re.M)
     relaunch = re.search(r"ExecAsOriginalUser\(", block)
-    check = re.search(r"FileExists\(ExpandConstant\('\{app\}\\unins000\.exe'\)\)", block)
+    # #454: the uninstaller Setup really wrote. In a shared install folder another
+    # program's unins000 files can stay, and Setup then names ours unins001.
+    check = re.search(
+        r"UninstallExe := ExpandConstant\('\{uninstallexe\}'\);\s*"
+        r"if not FileExists\(UninstallExe\)",
+        block,
+    )
     assert (
         write and relaunch and check
     ), "the relaunch, the registry writes or the uninstaller check is gone"
+    assert not re.search(
+        r"\{app\}\\unins\d", block
+    ), "the uninstaller check must ask for {uninstallexe}"
     assert write.start() < relaunch.start() < check.start()
     # Only an auto-update relaunches, and it launches the app.
     first, last = relaunch.start(), check.start()
