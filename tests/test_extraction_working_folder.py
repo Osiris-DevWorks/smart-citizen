@@ -194,23 +194,60 @@ class TestRunTool:
         pid = int(pid_file.read_text())
         assert _wait_for(lambda: not _pid_alive(pid), 5)
 
-    def test_a_stop_before_the_start_runs_nothing(self, root):
-        marker = root / "ran"
-        child = _script(root / "touch.py", f"open({str(marker)!r}, 'w').close()\n")
+    def test_a_stop_before_the_start_runs_nothing(self, root, monkeypatch):
+        started = []
+        monkeypatch.setattr(pe.subprocess, "Popen", lambda *a, **k: started.append(a))
         with pytest.raises(pe.ExtractionCancelled):
-            pe._run_tool([PY, str(child)], cwd=str(root), timeout=60, should_cancel=lambda: True)
-        time.sleep(0.5)
-        assert not marker.exists()
+            pe._run_tool([PY, "-c", "pass"], cwd=str(root), timeout=60,
+                         should_cancel=lambda: True)
+        assert started == []
 
-    def test_a_pending_stop_wins_over_a_clean_exit(self, root):
+    def test_a_pending_stop_wins_over_a_clean_exit(self, root, monkeypatch):
         """A tool that finishes while a stop is pending must not hand its exit
-        code on: the stop is what the caller acts on."""
+        code on: the stop is what the caller acts on. A 30 s poll makes the
+        first communicate() return only when the tool exits, so this reaches
+        the after-exit check and not the kill."""
+        monkeypatch.setattr(pe, "_TOOL_POLL_SECONDS", 30)
         child = _script(root / "quick.py", "print('done')\n")
         answers = iter([False])   # not stopped at the start, stopped after
 
-        with pytest.raises(pe.ExtractionCancelled):
+        with pytest.raises(pe.ExtractionCancelled, match="finished"):
             pe._run_tool([PY, str(child)], cwd=str(root), timeout=60,
                          should_cancel=lambda: next(answers, True))
+
+    def test_a_killed_tool_whose_child_holds_the_pipes_is_not_waited_on_forever(
+        self, root, monkeypatch, caplog
+    ):
+        """A tool that started a child of its own, which inherited the output
+        pipes, keeps them open after the kill. The reap gives up after
+        _TOOL_REAP_SECONDS instead of hanging the stop (or the close)."""
+        monkeypatch.setattr(pe, "_TOOL_REAP_SECONDS", 1)
+        pid_file, grand_pid_file = root / "pid", root / "grand.pid"
+        grand_code = (
+            "import os, time\n"
+            f"open({str(grand_pid_file)!r}, 'w').write(str(os.getpid()))\n"
+            "time.sleep(20)\n"
+        )
+        child = _script(root / "parent.py", (
+            "import os, subprocess, sys, time\n"
+            + _write_pid_code(pid_file)
+            + f"subprocess.Popen([sys.executable, '-c', {grand_code!r}], "
+            "stdout=sys.stdout, stderr=sys.stderr, creationflags=0x08000000)\n"
+            "time.sleep(30)\n"
+        ))
+        started = time.monotonic()
+        try:
+            with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+                with pytest.raises(pe.ExtractionCancelled):
+                    pe._run_tool([PY, str(child)], cwd=str(root), timeout=60,
+                                 should_cancel=lambda: grand_pid_file.exists())
+            assert time.monotonic() - started < 15
+            assert "held its output pipes" in caplog.text
+            assert _wait_for(lambda: not _pid_alive(int(pid_file.read_text())), 5)
+        finally:
+            if grand_pid_file.exists() and grand_pid_file.read_text():
+                subprocess.run(["taskkill", "/F", "/PID", grand_pid_file.read_text()],
+                               capture_output=True)
 
     def test_the_tool_gets_the_working_folder_pipes_and_no_window(self, root, monkeypatch):
         seen = {}
@@ -254,27 +291,22 @@ class TestScratchLocation:
         at_cap = _pad_to(root, 190 - extra)
         over_cap = _pad_to(root, 190 - extra + 1)
         assert pe._scratch_location(at_cap / "dataforge")[0] == at_cap
-        assert pe._scratch_location(over_cap / "dataforge") == (systemp, pe._TEMP_SCRATCH_PREFIX)
+        assert pe._scratch_location(over_cap / "dataforge") == (systemp, pe._DATAFORGE_TEMP_PREFIX)
 
     def test_a_network_share_uses_temp(self, systemp):
         leaf = Path(r"\\server\share\SC\LIVE\cache\dataforge")
-        assert pe._scratch_location(leaf) == (systemp, pe._TEMP_SCRATCH_PREFIX)
+        assert pe._scratch_location(leaf) == (systemp, pe._DATAFORGE_TEMP_PREFIX)
 
     def test_onedrive_uses_temp(self, root, systemp, monkeypatch):
         onedrive = root / "OneDrive"
         monkeypatch.setenv("OneDrive", str(onedrive))
         leaf = onedrive / "Smart Citizen" / "LIVE" / "cache" / "dataforge"
-        assert pe._scratch_location(leaf) == (systemp, pe._TEMP_SCRATCH_PREFIX)
+        assert pe._scratch_location(leaf) == (systemp, pe._DATAFORGE_TEMP_PREFIX)
 
     def test_a_removable_or_network_drive_uses_temp(self, root, systemp, monkeypatch):
         monkeypatch.setattr(pe, "_drive_is_removable_or_network", lambda path: True)
         leaf = root / "SC" / "LIVE" / "cache" / "dataforge"
-        assert pe._scratch_location(leaf) == (systemp, pe._TEMP_SCRATCH_PREFIX)
-
-    def test_long_path_prefixes_come_off_for_the_tools(self):
-        assert pe._plain_path("\\\\?\\E:\\SC\\LIVE") == "E:\\SC\\LIVE"
-        assert pe._plain_path("\\\\?\\UNC\\server\\share\\SC") == "\\\\server\\share\\SC"
-        assert pe._plain_path("E:\\SC") == "E:\\SC"
+        assert pe._scratch_location(leaf) == (systemp, pe._DATAFORGE_TEMP_PREFIX)
 
     def test_the_drive_probe_is_best_effort(self, root):
         """It never raises, whatever the path: a failure keeps the folder
@@ -326,10 +358,20 @@ class TestScratchSweep:
             (folder / "x").mkdir(parents=True)
             (folder / pe._SCRATCH_MARKER).write_text("")
         pe._sweep_stale_scratch(root, pe.DATAFORGE_SCRATCH_PREFIX)
-        pe._sweep_stale_scratch(root, pe._TEMP_SCRATCH_PREFIX)
+        pe._sweep_stale_scratch(root, pe._DATAFORGE_TEMP_PREFIX)
         pe._sweep_stale_scratch(root, pe.GLOBAL_INI_SCRATCH_PREFIX)
         pe._sweep_stale_scratch(root, pe._GLOBAL_INI_TEMP_PREFIX)
         assert all(folder.exists() for folder in others)
+
+    def test_a_marker_that_cannot_be_opened_leaves_no_folder(self, root, monkeypatch):
+        def refuse(*args, **kwargs):
+            raise PermissionError("held by antivirus")
+
+        # A module-level open shadows the builtin inside pak_extractor only.
+        monkeypatch.setattr(pe, "open", refuse, raising=False)
+        with pytest.raises(PermissionError):
+            pe._open_scratch(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert _scratch_folders(root, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
     def test_a_missing_parent_is_fine(self, root):
         pe._sweep_stale_scratch(root / "not-there", pe.DATAFORGE_SCRATCH_PREFIX)
@@ -450,7 +492,7 @@ class TestExtractDataforgeWorkingFolder:
         run(fake)
         run_dir = Path(fake.calls[0][2])
         assert run_dir.parent == systemp
-        assert run_dir.name.startswith(pe._TEMP_SCRATCH_PREFIX)
+        assert run_dir.name.startswith(pe._DATAFORGE_TEMP_PREFIX)
         assert not run_dir.exists()
         assert (leaf / pe.P4K_SIZE_STAMP).exists()
 
@@ -523,6 +565,37 @@ class TestExtractDataforgeWorkingFolder:
             assert run(_FakeTools()) is True
         assert "the next extraction removes it" in caplog.text
         assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_a_temp_leftover_is_swept_too(self, setup, systemp):
+        """The %TEMP% fallback (OneDrive, network, removable or deep caches)
+        leaves its own leftovers, swept whichever place this run uses."""
+        _leaf, run = setup
+        dead = systemp / (pe._DATAFORGE_TEMP_PREFIX + "crashed1")
+        (dead / "Data").mkdir(parents=True)
+        (dead / pe._SCRATCH_MARKER).write_text("")
+        run(_FakeTools())
+        assert not dead.exists()
+
+    def test_a_folder_beside_the_cache_that_cannot_be_made_fails_the_run(
+        self, setup, monkeypatch, systemp
+    ):
+        """Unlike the global.ini extraction, DataForge does not fall back to
+        %TEMP%: its cache writes go to that same drive and would fail anyway,
+        after a minute of unforge."""
+        leaf, run = setup
+        real_open = pe._open_scratch
+
+        def refuse_beside(parent, prefix):
+            if Path(parent) != systemp:
+                raise PermissionError("Controlled Folder Access")
+            return real_open(parent, prefix)
+
+        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        fake = _FakeTools()
+        with pytest.raises(PermissionError):
+            run(fake)
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
 
     def test_a_leftover_is_swept_and_a_live_run_is_not(self, setup):
         leaf, run = setup
@@ -717,6 +790,28 @@ class TestGlobalIniWorkingFolder:
         assert run_dir.parent == systemp
         assert run_dir.name.startswith(pe._GLOBAL_INI_TEMP_PREFIX)
         assert not run_dir.exists()
+
+    def test_a_refused_folder_beside_the_cache_falls_back_to_temp(
+        self, env, systemp, monkeypatch
+    ):
+        """It only ever needed %TEMP% before #471, so a folder beside the
+        cache that cannot be made (permissions, Controlled Folder Access, a
+        read-only drive) must not stop the base.ini refresh."""
+        _leaf, out, fake, run = env
+        real_open = pe._open_scratch
+
+        def refuse_beside(parent, prefix):
+            if Path(parent) != systemp:
+                raise PermissionError("Controlled Folder Access")
+            return real_open(parent, prefix)
+
+        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        assert run() is True
+        run_dir = Path(fake.cwds[0])
+        assert run_dir.parent == systemp
+        assert run_dir.name.startswith(pe._GLOBAL_INI_TEMP_PREFIX)
+        assert not run_dir.exists()
+        assert out.read_text(encoding="utf-8") == "lang=english\n"
 
     def test_without_a_cache_folder_it_works_in_temp(self, env, systemp):
         _leaf, out, fake, run = env

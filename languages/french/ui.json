@@ -2720,13 +2720,17 @@
       "ht": "",
       "at": "Échec de l'extraction DataForge — consultez l'onglet Journal pour les détails"
     },
-    "dataforge_stop_title": {
+    "dataforge_running_title": {
       "ht": "",
-      "at": "Arrêter l'extraction DataForge ?"
+      "at": "Extraction DataForge en cours"
     },
-    "dataforge_stop_body": {
+    "dataforge_running_body": {
       "ht": "",
-      "at": "L'extraction DataForge est toujours en cours.\n\nL'arrêter maintenant ? Vous pourrez la relancer plus tard depuis l'onglet Enrichissements."
+      "at": "L'extraction DataForge est toujours en cours.\n\nL'arrêter maintenant ? Vous pourrez la relancer plus tard."
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "Arrêter"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2743,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "Extraction P4K"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "Arrêt de l'extraction de global.ini…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "Extraction de global.ini arrêtée"
     },
     "extraction_error_title": {
       "ht": "",

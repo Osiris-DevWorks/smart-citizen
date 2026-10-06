@@ -105,8 +105,15 @@ class AnimatedProgressDialog(QProgressDialog):
         False to keep it open. None (the default) removes the guard. Only the
         user's own dismissal is asked about: a programmatic ``close()`` or
         ``hide()`` never is, so callers keep closing the dialog exactly as
-        before. The DataForge extraction uses this to ask "stop the
-        extraction?" instead of silently hiding a run that keeps going.
+        before. The DataForge extraction uses this to ask whether to stop,
+        the global.ini one to stop without asking.
+
+        Only for a dialog built without a cancel button (``cancel_text=None``,
+        like those two). With a button, QProgressDialog adds its own Escape
+        shortcut and the button, both of which cancel straight away without
+        passing through ``reject()`` or a spontaneous close. Only the
+        title-bar X would still ask, so the guard would cover one of the
+        three ways to dismiss the dialog.
         """
         self._close_guard = guard
 
@@ -123,7 +130,8 @@ class AnimatedProgressDialog(QProgressDialog):
         super().closeEvent(event)
 
     def reject(self):
-        # Esc lands here. A close (the X or a programmatic close()) never
+        # Esc lands here (on a dialog without a cancel button, see
+        # set_close_guard). A close (the X or a programmatic close()) never
         # does: QProgressDialog.closeEvent emits canceled, whose built-in
         # cancel() hides the dialog before QDialog.closeEvent would reach
         # reject(). tests/test_extraction_stop.py fails if that ever changes.
@@ -647,7 +655,8 @@ class P4kExtractWorker(QThread):
     """Worker thread for extracting global.ini from Data.p4k via unp4k.exe.
 
     requestInterruption() stops it (#471): MainWindow.closeEvent does this so
-    closing never leaves unp4k running on its own. extract_global_ini polls
+    closing never leaves unp4k running on its own, and so does Esc or the
+    title-bar X on its progress dialog. extract_global_ini polls
     isInterruptionRequested, kills unp4k, deletes its working folder and
     raises ExtractionCancelled. A stop is not a failure, so it ends with
     finished(False), no error signal and nothing logged at ERROR.
@@ -666,6 +675,9 @@ class P4kExtractWorker(QThread):
         # The DataForge cache folder, captured on the main thread: unp4k
         # works beside it rather than in %TEMP% (#471).
         self._scratch_near = scratch_near
+        # True once a run ended because a stop was requested (#471), read
+        # after the thread is done, as DataForgeExtractWorker.stopped is.
+        self.stopped = False
 
     def run(self):
         from src.utils.pak_extractor import (
@@ -681,8 +693,10 @@ class P4kExtractWorker(QThread):
             )
             self.finished.emit(True)
         except ExtractionCancelled as e:
-            # Closing stopped it (#471). Not a failure: see the class docstring.
+            # Closing or its dialog stopped it (#471). Not a failure: see the
+            # class docstring.
             logger.info(f"global.ini extraction stopped ({e})")
+            self.stopped = True
             self.finished.emit(False)
         except P4kLockedError as e:
             # Anticipated, already logged at WARNING by _raise_unp4k_failure
@@ -698,6 +712,7 @@ class P4kExtractWorker(QThread):
                 # A failure on the way out of a stop (#471) belongs to the
                 # stop: report it the same quiet way.
                 logger.warning(f"P4K extraction ended with an error after a stop: {e}")
+                self.stopped = True
                 self.finished.emit(False)
                 return
             logger.exception(f"P4K extraction failed: {e}")
@@ -709,8 +724,8 @@ class DataForgeExtractWorker(QThread):
     """Worker thread for extracting DataForge entity XMLs from Data.p4k.
 
     requestInterruption() stops it (#471). MainWindow does this when the
-    window closes (_stop_extractions_for_close) and when the user confirms
-    "stop the extraction?" from the progress dialog. extract_dataforge polls
+    window closes (_stop_extractions_for_close) and when the user picks Stop
+    in the progress dialog's question. extract_dataforge polls
     isInterruptionRequested, kills unp4k or unforge, deletes its working
     folder and raises ExtractionCancelled. A stop is not a failure, so it
     ends with finished(False), no error signal and nothing logged at ERROR,
@@ -779,7 +794,7 @@ class DataForgeExtractWorker(QThread):
                 for err in report.errors:
                     logger.warning(f"  patch error: {err}")
             if self.isInterruptionRequested():
-                # The stop question was answered Yes while the patches ran
+                # Stop was picked in the dialog's question while the patches ran
                 # (#471). The cache is complete, but the user asked to stop,
                 # so nothing may chain into generation or a Simple-mode apply.
                 logger.info("DataForge extraction stopped after its patches")

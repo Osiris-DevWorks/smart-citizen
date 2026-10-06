@@ -713,6 +713,14 @@ class MainWindow(QMainWindow):
         self._enhancements_prompted_on_startup = False
         # Flag to defer enhancements checking until after file loading completes (avoid I/O contention)
         self._check_enhancements_after_loading = False
+        # What the caller of _check_p4k_freshness does when the extraction is
+        # declined. It left its reload to the extraction, so the finished
+        # slot runs this if the run stops or fails instead (#471).
+        self._after_unfinished_p4k_extraction = None
+        # While the global.ini error box is open, the finished slot parks
+        # that follow-up here for the error slot to run once it closes.
+        self._p4k_error_box_open = False
+        self._p4k_follow_up_after_error = None
 
         # Status bar state (composed message) - tracks sync status per source
         self._source_status: dict[str, str] = {}  # source_name -> status_string
@@ -4689,15 +4697,21 @@ class MainWindow(QMainWindow):
         # prompts "Extract from Data.p4k now?" when base.ini is missing or
         # stale. Returns True if extraction was started, in which case the
         # finished handler will trigger the reload itself (don't double-run).
-        if self._check_p4k_freshness():
+        if self._check_p4k_freshness(
+            if_unfinished=lambda c=channel: self._reload_after_channel_switch(c)
+        ):
             self.statusBar().showMessage(
                 tr("status_bar.channel_switched_extracting", channel=channel)
             )
             return
+        self._reload_after_channel_switch(channel)
 
-        # base.ini is present and fresh for the new channel. Check whether
-        # the channel's DataForge cache is stale relative to its p4k and
-        # offer to re-extract if so (background — doesn't block reload).
+    def _reload_after_channel_switch(self, channel: str) -> None:
+        """The rest of a channel switch, once no global.ini extraction is
+        pending (none was needed, it was declined, or it stopped or failed)."""
+        # Check whether the channel's DataForge cache is stale relative to
+        # its p4k and offer to re-extract if so (background — doesn't block
+        # reload).
         self._maybe_prompt_dataforge_refresh()
 
         self.statusBar().showMessage(tr("status_bar.channel_switched_reloading", channel=channel))
@@ -5044,12 +5058,18 @@ class MainWindow(QMainWindow):
 
         self._enhancements_prompted_on_startup = False
 
-        if self._check_p4k_freshness():
+        if self._check_p4k_freshness(
+            if_unfinished=lambda d=data_dir: self._reload_after_data_dir_change(d)
+        ):
             self.statusBar().showMessage(
                 tr("status_bar.data_folder_changed_extracting", data_dir=data_dir)
             )
             return
+        self._reload_after_data_dir_change(data_dir)
 
+    def _reload_after_data_dir_change(self, data_dir: str) -> None:
+        """The rest of a data-folder change, once no global.ini extraction is
+        pending (none was needed, it was declined, or it stopped or failed)."""
         self._maybe_prompt_dataforge_refresh()
         self.statusBar().showMessage(
             tr("status_bar.data_folder_changed_reloading", data_dir=data_dir)
@@ -5238,19 +5258,22 @@ class MainWindow(QMainWindow):
                 self.tabs.setCurrentIndex(config_idx)
             return
 
-        # Prompt user to extract from p4k if base.ini is missing or outdated
-        p4k_extraction_started = self._check_p4k_freshness()
-
-        # If P4K extraction was started, don't load files yet.
-        # The P4K extraction finished handler will do the loading.
-        if p4k_extraction_started:
+        # Prompt user to extract from p4k if base.ini is missing or outdated.
+        # If P4K extraction was started, don't load files yet: the P4K
+        # extraction finished handler will do the loading, or carry on as
+        # below if the run stops or fails (#471).
+        if self._check_p4k_freshness(if_unfinished=self._finish_startup_load):
             return
+        self._finish_startup_load()
 
+    def _finish_startup_load(self) -> None:
+        """Startup's last step, once no global.ini extraction is pending."""
         # User declined the extraction prompt (or it didn't fire, e.g. unp4k
-        # missing) and there's still no cached base.ini. Loading sources now
-        # would just fail with "file not found" — skip it instead of
-        # surfacing error popups for a state the user just chose to leave.
-        if not base_ini.exists():
+        # missing, or the extraction stopped or failed) and there's still no
+        # cached base.ini. Loading sources now would just fail with "file
+        # not found" — skip it instead of surfacing error popups for a state
+        # the user just chose to leave.
+        if not (AppSettings.get_cache_dir() / "base.ini").exists():
             self.statusBar().showMessage(tr("status_bar.no_strings_loaded"))
             return
 
@@ -5269,8 +5292,13 @@ class MainWindow(QMainWindow):
         # Show progress dialog during file loading
         self._show_loading_progress()
 
-    def _check_p4k_freshness(self) -> bool:
+    def _check_p4k_freshness(self, if_unfinished=None) -> bool:
         """Prompt to extract from Data.p4k if base.ini is missing or outdated.
+
+        *if_unfinished* is what the caller does when the extraction is
+        declined. A caller that leaves its reload to the extraction passes
+        it, and the finished slot runs it if the run stops or fails (#471),
+        so the strings still load (or the new channel's do).
 
         Returns:
             True if P4K extraction was started (caller should defer file loading).
@@ -5299,7 +5327,9 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self._run_p4k_extraction()
+            if not self._run_p4k_extraction():
+                return False  # one is already running (#471): carry on as if declined
+            self._after_unfinished_p4k_extraction = if_unfinished
             return True
         return False
 
@@ -5815,6 +5845,9 @@ class MainWindow(QMainWindow):
                 # green says nothing about whether this apply worked.
                 self._reload_follows_clean_apply = applied is True
             else:
+                # Releases a Simple page left busy by a stop that came too
+                # late to stop anything (#471). No-op otherwise.
+                self._end_simple_run()
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_reloading"))
             self._show_loading_progress(tr("progress.reloading_with_enhancements"))
         else:
@@ -5863,8 +5896,11 @@ class MainWindow(QMainWindow):
     def _confirm_stop_dataforge_extraction(self, worker) -> bool:
         """Esc or the title-bar X on the DataForge progress dialog (#471).
 
-        Asks whether to stop the extraction. Returns True to let the dialog
-        close, False to keep it open. Once the extraction is over (or already
+        Asks whether to stop the running extraction: Stop, or Cancel to keep
+        the dialog. Returns True to let the dialog close, False to keep it
+        open. The dialog stays modal while the extraction runs, so nothing
+        the run depends on (the channel, the language, the data or cache
+        folder) can change under it. Once the extraction is over (or already
         stopping) the dialog just closes as it always did: the same dialog
         lives on into enhancement generation, which has no stop.
         """
@@ -5874,30 +5910,65 @@ class MainWindow(QMainWindow):
 
         if not _still_running():
             return True
-        reply = QMessageBox.question(
-            self._forge_progress_dialog or self,
-            tr("extract.dataforge_stop_title"),
-            tr("extract.dataforge_stop_body"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+        dialog = self._forge_progress_dialog
+        box = QMessageBox(dialog or self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(tr("extract.dataforge_running_title"))
+        box.setText(tr("extract.dataforge_running_body"))
+        stop_btn = box.addButton(
+            tr("extract.dataforge_stop_btn"), QMessageBox.ButtonRole.DestructiveRole
         )
-        if reply != QMessageBox.StandardButton.Yes:
-            return False
-        # The user said stop, so a Simple-mode run must not go on to apply
-        # anything to the game, whichever way the race below goes.
-        self._end_simple_run()
+        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(cancel_btn)
+        box.setEscapeButton(cancel_btn)
+        box.exec()
+        if box.clickedButton() is not stop_btn:
+            return False   # Cancel: keep the dialog
         if not _still_running():
             # It finished (or failed) while the question was open, and its
             # own slot has already moved on: a success hands the dialog to
             # enhancement generation, which has no stop and only rewrites
-            # the INIs.
+            # the INIs. The user said stop, so a Simple-mode run must not go
+            # on to apply anything to the game.
+            self._end_simple_run()
             return True
+        # Nothing may be applied after a stop, but the Simple page stays busy
+        # until the stop has finished (the finished slot ends the run), so its
+        # button never looks ready while a click would be turned away.
+        self._simple_run_active = False
+        # Dismissed for good. A hidden QProgressDialog shows itself again
+        # while progress keeps arriving, so it gets no more of it.
+        if dialog is not None:
+            self._detach_progress_dialog(worker, dialog)
+            self._forge_progress_dialog = None
+            dialog.deleteLater()
         logger.info("DataForge extraction: stop requested from the progress dialog")
         worker.requestInterruption()
         self.statusBar().showMessage(tr("extract.dataforge_stopping"))
         return True
 
-    def _on_dataforge_extract_error(self, message: str, worker=None):
+    @staticmethod
+    def _detach_progress_dialog(worker, dialog) -> None:
+        """Stop *worker*'s progress from reaching *dialog* (#471).
+
+        A hidden QProgressDialog shows itself again while progress keeps
+        arriving (measured: within a second, after Esc as well as the X), so
+        a dialog that was dismissed, or is being hidden for a close, must get
+        no more of it. The worker's status-bar connection stays.
+
+        A plain hide() (what Esc does) is also undone by the dialog's own
+        show timer when the dialog is under 4 s old (measured: back 3.5 s
+        after an Esc at 0.5 s). Callers that keep the dialog dismiss it with
+        cancel() as well, which stops that timer; the X already cancels.
+        """
+        for signal, slot in ((worker.progress, dialog.setLabelText),
+                             (worker.progress_pct, dialog.set_progress)):
+            try:
+                signal.disconnect(slot)
+            except TypeError:
+                pass  # not connected, e.g. already detached
+
+    def _on_dataforge_extract_error(self, message: str, worker):
         if worker is not self._forge_worker or self._close_committed:
             # Stopped by a close (#471). logger.error would fire the global
             # ErrorDialogHandler, and the box below would open, both on a
@@ -5915,15 +5986,12 @@ class MainWindow(QMainWindow):
             tr("extract.dataforge_extraction_error_body", message=message),
         )
 
-    def _on_dataforge_extract_finished(self, success: bool, worker=None):
-        if worker is None:
-            worker = self._forge_worker
-        if worker is not None:
-            worker.quit()
-            worker.wait()
-            # As _on_applied_state_ready does: frees the thread and the
-            # lambda reference cycle the slot connections hold.
-            worker.deleteLater()
+    def _on_dataforge_extract_finished(self, success: bool, worker):
+        worker.quit()
+        worker.wait()
+        # As _on_applied_state_ready does: frees the thread and the lambda
+        # reference cycle the slot connections hold.
+        worker.deleteLater()
         if worker is not self._forge_worker:
             return  # stopped and released by closeEvent (#471): nothing may chain on
         self._forge_worker = None
@@ -5969,9 +6037,15 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
 
     def _run_p4k_extraction(self):
-        """Launch P4kExtractWorker with a progress dialog; reload sources on success."""
-        if self._close_committed:
-            return  # closing (#471): nothing new may start
+        """Launch P4kExtractWorker with a progress dialog; reload sources on success.
+
+        Returns True if a run started.
+        """
+        if self._p4k_worker is not None or self._close_committed:
+            # One at a time: closing stops only the worker this attribute
+            # holds, and one stopped from its dialog takes a moment to end
+            # (#471). Closing: nothing new may start.
+            return False
         p4k_path = AppSettings.get_p4k_path()
         output_path = AppSettings.get_cache_dir() / 'base.ini'
         unp4k_exe = AppSettings.get_unp4k_exe_path()
@@ -5996,33 +6070,71 @@ class MainWindow(QMainWindow):
 
         worker.progress.connect(self._p4k_progress.setLabelText)
         worker.progress_pct.connect(self._p4k_progress.set_progress)
+        # Esc or the X stops the run (#471). It used to hide the dialog while
+        # unp4k carried on unseen, and Extract then started a second run
+        # that closing could not stop.
+        self._p4k_progress.set_close_guard(
+            lambda w=worker: self._stop_p4k_extraction_from_dialog(w)
+        )
         # Bound to this worker for the same reason as the DataForge slots
         # (#471): closing stops and releases it, and Qt may still deliver
         # what it had queued.
         worker.error.connect(lambda err, w=worker: self._on_p4k_extract_error(err, w))
         worker.finished.connect(lambda success, w=worker: self._on_p4k_extract_finished(success, w))
         worker.start()
+        return True
 
-    def _on_p4k_extract_error(self, message: str, worker=None):
+    def _stop_p4k_extraction_from_dialog(self, worker) -> bool:
+        """Esc or the title-bar X on the global.ini progress dialog (#471).
+
+        Stops the extraction rather than asking: it is a short job that
+        writes base.ini only at its very end, so a stop leaves the old one as
+        it was. Always lets the dialog close.
+        """
+        if (worker is not self._p4k_worker or not worker.isRunning()
+                or worker.isInterruptionRequested()):
+            return True   # over or already stopping: just close
+        logger.info("global.ini extraction: stop requested from the progress dialog")
+        if self._p4k_progress is not None:
+            # Dismissed for good while the stop winds down: see
+            # _detach_progress_dialog. The finished slot closes it.
+            self._detach_progress_dialog(worker, self._p4k_progress)
+            self._p4k_progress.cancel()
+        worker.requestInterruption()
+        self.statusBar().showMessage(tr("extract.p4k_stopping"))
+        return True
+
+    def _on_p4k_extract_error(self, message: str, worker):
         if worker is not self._p4k_worker or self._close_committed:
             logger.warning(f"P4K extraction error while closing: {message}")
             return
-        QMessageBox.warning(self, tr("extract.extraction_error_title"), message)
+        # The worker emits finished right after error, so the finished slot
+        # usually runs inside this box's own event loop. It leaves the
+        # caller's follow-up (a reload, maybe a prompt) for after the box
+        # closes rather than stacking it on top (#471).
+        self._p4k_error_box_open = True
+        try:
+            QMessageBox.warning(self, tr("extract.extraction_error_title"), message)
+        finally:
+            self._p4k_error_box_open = False
+        follow_up = self._p4k_follow_up_after_error
+        self._p4k_follow_up_after_error = None
+        if follow_up is not None and not self._close_committed:
+            follow_up()
 
-    def _on_p4k_extract_finished(self, success: bool, worker=None):
+    def _on_p4k_extract_finished(self, success: bool, worker):
         """Handle P4K extraction completion."""
-        if worker is None:
-            worker = self._p4k_worker
-        if worker is not None:
-            worker.quit()
-            worker.wait()
-            worker.deleteLater()
+        worker.quit()
+        worker.wait()
+        worker.deleteLater()
         if worker is not self._p4k_worker:
             return  # stopped and released by closeEvent (#471)
         if self._p4k_progress is not None:
             self._p4k_progress.close()
             self._p4k_progress = None
         self._p4k_worker = None
+        if_unfinished = self._after_unfinished_p4k_extraction
+        self._after_unfinished_p4k_extraction = None
 
         if self._close_committed:
             return  # finished during the close (#471): don't reload an exiting app
@@ -6048,6 +6160,18 @@ class MainWindow(QMainWindow):
 
             # Show progress dialog while reloading with extracted data
             self._show_loading_progress("Reloading with extracted base.ini...")
+        else:
+            if getattr(worker, "stopped", False):
+                # Stopped from its dialog (#471): base.ini is as it was.
+                self.statusBar().showMessage(tr("extract.p4k_stopped"))
+            if if_unfinished is not None:
+                # Startup, a channel switch or a data-folder change left its
+                # reload to this run: carry on as if it had been declined,
+                # rather than leaving no strings (or the old channel's).
+                if self._p4k_error_box_open:
+                    self._p4k_follow_up_after_error = if_unfinished
+                else:
+                    if_unfinished()
 
     # The extraction workers closeEvent stops, each with the attribute that
     # holds its progress dialog (#471).
@@ -6095,17 +6219,10 @@ class MainWindow(QMainWindow):
             worker.requestInterruption()
             dialog = getattr(self, dialog_attr, None)
             if dialog is not None:
-                # Disconnect, then hide rather than close. close() would ask
-                # the stop question again (the DataForge dialog's close
-                # guard) and emits canceled, which resets a QProgressDialog
-                # so a progress update the worker queued before it saw the
-                # stop could show it again.
-                for signal in (worker.progress, worker.progress_pct):
-                    try:
-                        signal.disconnect()
-                    except TypeError:
-                        pass  # nothing connected
-                dialog.hide()
+                # Dismissed for good while the wait below runs: see
+                # _detach_progress_dialog.
+                self._detach_progress_dialog(worker, dialog)
+                dialog.cancel()
                 setattr(self, dialog_attr, None)
             stopping.append((worker_attr, worker))
 

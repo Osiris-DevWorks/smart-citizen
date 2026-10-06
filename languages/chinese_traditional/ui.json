@@ -2720,13 +2720,17 @@
       "ht": "",
       "at": "DataForge 提取失敗 — 詳情請檢視日誌標籤頁"
     },
-    "dataforge_stop_title": {
+    "dataforge_running_title": {
       "ht": "",
-      "at": "停止 DataForge 提取？"
+      "at": "DataForge 提取正在進行"
     },
-    "dataforge_stop_body": {
+    "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 提取仍在進行中。\n\n現在停止嗎？你可以稍後從增強內容標籤頁重新執行。"
+      "at": "DataForge 提取仍在進行中。\n\n現在停止嗎？你可以稍後重新執行。"
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "停止"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2743,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "P4K 提取"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "正在停止 global.ini 提取…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "global.ini 提取已停止"
     },
     "extraction_error_title": {
       "ht": "",

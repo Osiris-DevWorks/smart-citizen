@@ -105,6 +105,9 @@ try:
     if str(_gen_root) not in sys.path:
         sys.path.insert(0, str(_gen_root))
     from src.utils.blueprint_meta import strip_raw_blueprint_filename_prefix
+    # The DataForge cache layout, which pak_extractor (the module that
+    # writes it) names once for every reader.
+    from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
     def strip_raw_blueprint_filename_prefix(stem):  # type: ignore[misc]
         for prefix in ("bp_craft_", "bp_rewards_", "bp_"):
@@ -112,14 +115,6 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
                 return stem[len(prefix):], True
         return stem, False
 
-# Same deferred-import pattern for the DataForge cache layout, which
-# pak_extractor (the module that writes it) names once for every reader.
-try:
-    _gen_root = Path(__file__).parent.parent
-    if str(_gen_root) not in sys.path:
-        sys.path.insert(0, str(_gen_root))
-    from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
-except ImportError:  # pragma: no cover — only triggers if src/ is removed
     DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
 
 

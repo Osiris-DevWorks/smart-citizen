@@ -2720,13 +2720,17 @@
       "ht": "",
       "at": "Falha na extração do DataForge — consulte a aba Log para detalhes"
     },
-    "dataforge_stop_title": {
+    "dataforge_running_title": {
       "ht": "",
-      "at": "Parar a extração do DataForge?"
+      "at": "Extração do DataForge em andamento"
     },
-    "dataforge_stop_body": {
+    "dataforge_running_body": {
       "ht": "",
-      "at": "A extração do DataForge ainda está em andamento.\n\nParar agora? Você pode executá-la novamente mais tarde na aba Aprimoramentos."
+      "at": "A extração do DataForge ainda está em andamento.\n\nParar agora? Você pode executá-la novamente mais tarde."
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "Parar"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2743,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "Extração P4K"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "Parando a extração do global.ini…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "Extração do global.ini interrompida"
     },
     "extraction_error_title": {
       "ht": "",
