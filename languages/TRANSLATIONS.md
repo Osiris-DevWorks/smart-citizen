@@ -58,6 +58,21 @@ them against the new source.
 
 ## Backfill log
 
+- **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
+  current with English after the pre-release docs sync. In all 10 languages:
+  `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge
+  extraction, plus a new *DataForge cache folder* bullet (default
+  `%LOCALAPPDATA%`, the ~2 GB extraction work beside it since #471); `ABOUT.md`
+  gained the *Verify Install Location* feature line (#385) and the startup
+  auto-scan clause on the Blueprint Tracker line (#386). Eight languages (all
+  but korean and turkish) gained the Blueprint Tracker "hover any blueprint"
+  bullet. korean, turkish and chinese_traditional, translated earlier this
+  cycle from an older English, also gained the two auto-scan bullets, the
+  Verify Install Location bullet, the "Apply says it worked but the game
+  looks unchanged" troubleshooting entry and missing Supporters lines, and got
+  a full parity pass (language lists, the Export Settings defaults sentence,
+  the current PayPal link). Bold UI labels use each file's own `ui.json`
+  strings. All AI translation; no human text existed in these docs.
 - **2.4.0 cycle (2026-10-06, Claude Opus 5.5):** #471 added seven `extract.*`
   keys. Five are for a running DataForge extraction: `dataforge_running_title`,
   `dataforge_running_body` and `dataforge_stop_btn` (the Stop / Cancel
