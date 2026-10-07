@@ -3,6 +3,7 @@ import logging
 import re
 from pathlib import Path
 
+from src.utils.install_scanner import USER_CFG_FILE
 from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def get_user_cfg_language(channel_path: str | Path | None = None) -> str | None:
         channel_path = AppSettings.get_game_install_path()
     if not channel_path:
         return None
-    user_cfg_path = Path(channel_path) / "user.cfg"
+    user_cfg_path = Path(channel_path) / USER_CFG_FILE
     if not user_cfg_path.exists():
         return None
     try:
@@ -76,7 +77,7 @@ def ensure_user_cfg_language(language: str | None = None) -> bool:
         )
         return False
 
-    user_cfg_path = channel_dir / "user.cfg"
+    user_cfg_path = channel_dir / USER_CFG_FILE
     language_line = f"g_language = {language}"
 
     try:
