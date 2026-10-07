@@ -3623,14 +3623,9 @@ def _build_template_lookup(
     return lookup
 
 
-# CIG doesn't expose a per-ore "RS" (resonance-signature) number anywhere in
-# DataForge — checked the full PTU 4.9 cache for both the literal values and
-# any per-mineable stat registry, found neither — so this is a curated table
-# sourced from community reference data (MrKraken/StarStrings; the original 8
-# from the ptu/4.9 branch mining.ini, the rest cross-checked against
-# starminersdepot.com's Alpha 4.8 scanner table — the 7 ores present in both
-# sources agree exactly). "ice" has no confirmed reference for this patch but
-# is kept from the original 4.9 source. Two consumers:
+# Per-ore base "RS" (resource signature) values. The curated table and its
+# sourcing live in src/utils/mining_signatures.py, shared with the Smart
+# Citizen Overlay's scan decoder. Two consumers here:
 #   - Recco Battaglia's Scan/Mining contracts (4.9+, "Battaglia_RPT_Scan_*" /
 #     "Battaglia_RPT_ScanMine_*" title keys), each targeting 1-3 specific
 #     mineable ores via sibling MissionProperty overrides with
@@ -3641,35 +3636,14 @@ def _build_template_lookup(
 #     ore's base RS next to its mining locations.
 # Not every ore in either consumer has a known value; unmatched ores are
 # simply left without an RS line/tag (see each consumer for its own
-# unmatched-key handling).
-MINEABLE_RS_VALUES = {
-    "agricium":      3885,
-    "aluminium":     4285,
-    "aslarite":      3840,
-    "beryl":         3540,
-    "bexalite":      3600,
-    "borase":        3570,
-    "copper":        4240,
-    "corundum":      4225,
-    "gold":          3585,
-    "hephaestanite": 4180,
-    "ice":           4300,
-    "iron":          4270,
-    "laranite":      3825,
-    "lindinium":     3400,
-    "ouratite":      3370,
-    "quantainium":   3170,
-    "quartz":        4210,
-    "riccite":       3385,
-    "savrillium":    3200,
-    "silicon":       4255,
-    "stileron":      3185,
-    "taranite":      3555,
-    "tin":           4195,
-    "titanium":      3855,
-    "torite":        3900,
-    "tungsten":      3870,
-}
+# unmatched-key handling). Same deferred-import pattern as tag_builder.
+try:
+    _gen_root = Path(__file__).parent.parent
+    if str(_gen_root) not in sys.path:
+        sys.path.insert(0, str(_gen_root))
+    from src.utils.mining_signatures import MINEABLE_RS_VALUES
+except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
 
 # The Mining Compendium journal's own prose spells a couple of ore names
 # differently from their DataForge loc-key spelling (a CIG typo, not a
