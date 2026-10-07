@@ -223,6 +223,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Overlay"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen Overlay (SCO) starten oder beenden: Entschlüsselung von Bergbau-Signaturen und eine Blaupausen-Schublade über dem Spiel. Benötigt den randlosen Fenstermodus."
     }
   },
   "filters": {
@@ -2913,6 +2921,56 @@
     "zip_filter": {
       "ht": "",
       "at": "Einstellungssicherung (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC-Mineral"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS-Mineral"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Bergung"
+    },
+    "drawer_handle": {
+      "ht": "",
+      "at": "BP"
+    },
+    "drawer_handle_tooltip": {
+      "ht": "",
+      "at": "Blaupausen ein- oder ausblenden"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Blaupausen suchen..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Nur besessene"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "{owned} von {total} besessen"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Belohnt von {count} Missionen:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Neu: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Es sind noch keine Blaupausendaten geladen. Lade zuerst die Strings und starte dann das Overlay."
     }
   }
 }

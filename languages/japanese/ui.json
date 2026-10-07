@@ -223,6 +223,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "オーバーレイ"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen Overlay (SCO) を開始または停止します：ゲーム画面上で採掘シグネチャを解読し、設計図ドロワーを表示します。ボーダーレスウィンドウモードが必要です。"
     }
   },
   "filters": {
@@ -2913,6 +2921,56 @@
     "zip_filter": {
       "ht": "",
       "at": "設定バックアップ (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 鉱物"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS 鉱物"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "サルベージ"
+    },
+    "drawer_handle": {
+      "ht": "",
+      "at": "BP"
+    },
+    "drawer_handle_tooltip": {
+      "ht": "",
+      "at": "設計図を表示/非表示"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "設計図を検索..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "所持のみ"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "所持 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "{count} 件のミッションの報酬："
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "新規：{names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "設計図データがまだ読み込まれていません。先に文字列を読み込んでから、オーバーレイを開始してください。"
     }
   }
 }
