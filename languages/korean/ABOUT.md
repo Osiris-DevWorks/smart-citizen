@@ -49,7 +49,6 @@ Smart Citizen의 인터페이스를 번역해 주신 분들께 감사드립니�
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 

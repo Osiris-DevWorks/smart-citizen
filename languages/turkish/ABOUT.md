@@ -49,7 +49,6 @@ Geri bildirimleriyle Smart Citizen'ı şekillendiren test edicilere teşekkürle
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 

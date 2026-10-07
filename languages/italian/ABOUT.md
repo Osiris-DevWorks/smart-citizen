@@ -49,7 +49,6 @@ Grazie ai tester che hanno contribuito a plasmare Smart Citizen con i loro feedb
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 

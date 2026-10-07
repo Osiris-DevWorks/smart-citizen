@@ -49,7 +49,6 @@ Danke an die Tester, die Smart Citizen mit ihrem Feedback mitgestaltet haben:
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 

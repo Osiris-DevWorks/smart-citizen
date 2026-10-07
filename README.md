@@ -218,7 +218,7 @@ Thanks to those who've contributed code to Smart Citizen:
 
 ## Acknowledgments
 
-- **Boogie Man, Perseuscz, Flat Earth, Lord Valium, Zero, Apolleon Phoibos, Epiq, Narull, XaileiShiv, Mindbulletz** — testers who helped shape Smart Citizen with their feedback
+- **Boogie Man, Perseuscz, Flat Earth, Lord Valium, Zero, Apolleon Phoibos, Epiq, XaileiShiv, Mindbulletz** — testers who helped shape Smart Citizen with their feedback
 - **Akwa** — French interface translation
 - **Nxzzin** — Brazilian Portuguese interface translation
 - [**Thord82**](https://github.com/Thord82) — Spanish interface translation, plus the [Spanish `global.ini` source](https://github.com/Thord82/Star_citizen_ES) that powers the Spanish game strings

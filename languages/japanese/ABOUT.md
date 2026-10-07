@@ -49,7 +49,6 @@ Smart Citizen のインターフェースを翻訳してくださった方々に
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 

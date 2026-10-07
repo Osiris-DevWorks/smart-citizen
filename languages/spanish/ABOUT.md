@@ -51,7 +51,6 @@ Gracias a los testers que ayudaron a dar forma a Smart Citizen con sus comentari
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 
