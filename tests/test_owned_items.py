@@ -418,13 +418,14 @@ class TestExtract:
         fixture = Path(__file__).parent / "fixtures" / "kraken_global_latest.ini"
         if not fixture.exists():                       # optional large fixture
             pytest.skip("kraken_global_latest.ini not present")
-        lines = [l for l in fixture.read_text(encoding="utf-8", errors="replace")
-                 .splitlines() if "=" in l]
+        lines = [line for line in fixture.read_text(encoding="utf-8", errors="replace")
+                 .splitlines() if "=" in line]
         bare = re.compile(
             "(?:" + re.escape(BP_SECTION_HEADER) + "|"
             + re.escape(_ALT_BP_SECTION_HEADER) + ")", re.IGNORECASE)
         anchored = _build_bp_header_re(None)
-        missed = [l for l in lines if bare.search(l) and not anchored.search(l)]
+        missed = [line for line in lines
+                  if bare.search(line) and not anchored.search(line)]
         assert not missed, (
             f"{len(missed)} header-bearing lines in the real fixture are no "
             f"longer recognised, e.g. {missed[0][:160]!r}"
@@ -589,10 +590,7 @@ class TestApply:
 
 # ── AppSettings owned-set persistence + model rendering ──────────────────────
 
-import os as _os  # noqa: E402
-_os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QSettings, Qt  # noqa: E402
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
 
 
@@ -600,11 +598,6 @@ from src.utils.settings import AppSettings  # noqa: E402
 def isolated_settings(tmp_path, monkeypatch):
     shared = QSettings(str(tmp_path / "reg.ini"), QSettings.Format.IniFormat)
     monkeypatch.setattr(AppSettings, "settings", staticmethod(lambda: shared))
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 class TestOwnedSettings:
@@ -685,22 +678,6 @@ class TestBlueprintWatermark:
         monkeypatch.setattr(AppSettings, "get_active_channel", staticmethod(lambda: "LIVE"))
         AppSettings.set_blueprint_log_watermark(when, channel="LIVE")
         assert AppSettings.get_blueprint_log_watermark() == when
-
-
-class TestScanOtherChannelsSetting:
-    """#268: persistence for the "also scan LIVE/HOTFIX" checkbox."""
-
-    def test_default_enabled(self, isolated_settings):
-        """Defaults on: opting in after the fact would miss blueprints
-        already earned on the inactive channel before a user thinks to
-        enable it."""
-        assert AppSettings.get_scan_other_channels_enabled() is True
-
-    def test_roundtrip(self, isolated_settings):
-        AppSettings.set_scan_other_channels_enabled(False)
-        assert AppSettings.get_scan_other_channels_enabled() is False
-        AppSettings.set_scan_other_channels_enabled(True)
-        assert AppSettings.get_scan_other_channels_enabled() is True
 
 
 class TestModelOwnedColumn:

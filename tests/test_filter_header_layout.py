@@ -17,13 +17,10 @@ y-gate) goes through it.
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtGui import QStandardItemModel  # noqa: E402
 from PyQt6.QtWidgets import QApplication, QHeaderView, QTableView  # noqa: E402
@@ -36,11 +33,6 @@ from src.gui.filter_header import FilterHeaderView  # noqa: E402
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
 COLUMNS = ["Category", "Key", "Default", "Current"]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    yield QApplication.instance() or QApplication([])
 
 
 @pytest.fixture

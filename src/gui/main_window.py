@@ -2,21 +2,22 @@
 import logging
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QThread, pyqtSignal, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QCheckBox,
     QFileDialog, QMessageBox, QTabWidget,
-    QHeaderView, QStatusBar, QFrame, QStyledItemDelegate,
-    QAbstractItemView, QMenu, QProgressDialog, QProgressBar, QTextBrowser,
+    QHeaderView, QFrame,
+    QAbstractItemView, QMenu, QProgressDialog, QTextBrowser,
     QTableView, QStackedLayout, QGraphicsOpacityEffect,
     QDockWidget, QPlainTextEdit, QInputDialog, QScrollArea, QStyle,
     QSizePolicy,
 )
-from PyQt6.QtGui import QColor, QFont, QCursor, QPixmap, QIcon, QPalette
+from PyQt6.QtGui import QFont, QCursor, QPixmap, QIcon, QPalette
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 
@@ -32,7 +33,6 @@ from src.gui.markdown_renderer import markdown_to_html as _md_to_html
 from src.gui.string_table_model import (
     StringTableModel, COL_CATEGORY, COL_KEY, COL_DEFAULT, COL_CURRENT,
     COL_STAR, COL_ORDER, COL_CUSTOM, COL_STATUS, COL_OWNED,
-    status_color,
 )
 from src.gui.theme import (
     BRAND_FONT_FAMILY, get_button_color, get_button_text_color,
@@ -40,6 +40,7 @@ from src.gui.theme import (
 )
 from src.gui.workers import (
     AnimatedProgressDialog,
+    AppliedStateWorker,
     BlueprintLogScanWorker,
     DataForgeExtractWorker,
     EnhancementsGeneratorWorker,
@@ -55,14 +56,17 @@ from src.models.string_model import (
     CATEGORY_MISSIONS, StringEntry, is_favoritable_ship,
 )
 from src.parser.ini_parser import load_source_files, load_sources_from_settings, parse_ini_file
+# Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
+from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
 from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
 from src.utils.build_mode import IS_PORTABLE
 from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices_impl
+from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.settings import AppSettings
+from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
 from src.utils.i18n import tr
 from src.utils.version import get_version
 
@@ -123,27 +127,109 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
     r"(?:Localizations Enhanced (?:with|by)|Enhanced with <3 by)\s+Smart Citizen\s+v?[^\s|]+\s*$"
 )
 
-# #268: LIVE and HOTFIX share the same account/blueprint progression (HOTFIX
-# is a same-account emergency-patch channel), so a blueprint earned on one
-# shows up in the other's logs too. PTU/EPTU/TECH-PREVIEW are separate test
-# builds with their own progression -- never scanned regardless of the
-# "also scan other channels" checkbox.
-_LINKED_CHANNELS = frozenset({AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX})
+# #268, #446: "Scan Logs for Owned Blueprints" reads LIVE, and HOTFIX when it is
+# present. HOTFIX is a same-account emergency-patch channel on the same server
+# as LIVE, so the two share one account/blueprint progression and a blueprint
+# earned on one shows up in the other's logs too. PTU/EPTU/TECH-PREVIEW are
+# separate test servers with their own progression, wiped more often, so they
+# are NEVER scanned, whichever channel is selected in Config. This tuple is the
+# only list the scan can draw from: _channels_to_scan builds the queue from it
+# and _start_next_blueprint_scan refuses anything that is not in it.
+_SCANNED_CHANNELS = (AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX)
 
 
-def _channels_to_scan(active_channel: str, other_enabled: bool, installed_channels) -> list:
-    """Which channels a "Scan Logs for Owned Blueprints" run should cover.
+def _matches_applied_output(stock_dict: dict, merged_dict: dict, applied_dict: dict) -> bool:
+    """True if *applied_dict* already holds what a real apply would write.
 
-    Always the active channel first. If *other_enabled*, and the active
-    channel is one of the linked pair, also includes whichever other linked
-    channel is actually installed (sorted, for a deterministic queue order).
-    Pure/Qt-free so it's directly testable -- see test_blueprint_scan_channels.py.
+    Pure/Qt-free (#387) so it's directly testable -- see
+    test_apply_already_applied.py. _compute_already_applied resolves the
+    three dicts this takes.
+
+    Only ``stock_dict``'s own keys are ever compared: ``merge_ini_files``
+    (the actual writer) only overwrites a key present in its structure-
+    preservation source file (the stock base.ini), leaving that key's
+    stock value untouched on disk when *merged_dict* doesn't override it,
+    and never writing a key ``stock_dict`` lacks at all regardless of what
+    *merged_dict* carries for it. Comparing every ``merged_dict`` key
+    instead would report a false "dirty" for any profile with such a key,
+    even immediately after a genuine apply.
     """
-    channels = [active_channel]
-    if other_enabled and active_channel in _LINKED_CHANNELS:
-        others = sorted((_LINKED_CHANNELS - {active_channel}) & set(installed_channels))
-        channels.extend(others)
-    return channels
+    for key, stock_value in stock_dict.items():
+        if applied_dict.get(key) != merged_dict.get(key, stock_value):
+            return False
+    return True
+
+
+def _user_cfg_language_matches(selected_language: str, actual_g_language: str | None) -> bool:
+    """True if user.cfg's actual g_language already matches what
+    *selected_language* should resolve to (#398 review).
+
+    Pure/Qt-free so it's directly testable: no file I/O, just the
+    SC_LANGUAGE_IDS resolution and a case-insensitive compare (user.cfg's own
+    parser is case-insensitive on the value, per ensure_user_cfg_language).
+    See _compute_already_applied for why content matching alone isn't enough.
+    """
+    expected = SC_LANGUAGE_IDS.get(selected_language, selected_language)
+    return (actual_g_language or "").lower() == (expected or "").lower()
+
+
+def _drop_none_entries(entries: list) -> list:
+    """Strip stray ``None`` items out of a freshly loaded entries list (#389).
+
+    Runs once where entries are first received, so every consumer
+    (``_restore_pending_user_edits``, ``update_category_combo``, the table
+    model) sees a clean list. It can't undo the native heap corruption behind
+    #389, only stop a corrupted list from also crashing the UI thread.
+
+    Anything index-aligned with *entries* (the loader's ``sort_keys``) goes
+    stale when this drops an item, so a caller holding one must rebuild it.
+    """
+    clean = [e for e in entries if e is not None]
+    dropped = len(entries) - len(clean)
+    if dropped:
+        logger.warning(
+            "Dropped %d None entr%s from a freshly loaded list (#389)",
+            dropped, "y" if dropped == 1 else "ies",
+        )
+    return clean
+
+
+def _channels_to_scan(present_channels) -> list:
+    """Which channels a "Scan Logs for Owned Blueprints" run covers (#446).
+
+    LIVE, then HOTFIX, each only when it is in *present_channels* (the channel
+    names that exist under the install root). Never anything else: PTU, EPTU
+    and TECH-PREVIEW are separate test servers that are wiped more often, so
+    they are left out whatever *present_channels* holds and whichever channel
+    is selected in Config. Pure/Qt-free so it's directly testable -- see
+    test_blueprint_scan_channels.py.
+    """
+    present = set(present_channels)
+    return [channel for channel in _SCANNED_CHANNELS if channel in present]
+
+
+def _is_dir_safe(path) -> bool:
+    """Path.is_dir() that treats an unreadable or offline location as "not
+    there". Python 3.11 (what the shipped exe runs) re-raises errors such as
+    access denied or a disconnected network drive from Path.is_dir(), which
+    would escape a Qt slot as a crash dialog."""
+    try:
+        return Path(path).is_dir()
+    except OSError:
+        return False
+
+
+def _scan_queue_for_root(root) -> list:
+    """The channels a scan would cover under the install root *root*: LIVE and
+    HOTFIX, whichever of the two has a folder there (#446). Empty when *root*
+    is unset, unreadable or offline, or neither folder exists (channel_dirs
+    swallows the OSError Path.is_dir() can raise). The only place the scan
+    looks at the disk to choose channels, so the manual button and the startup
+    auto-scan cannot disagree."""
+    if not root:
+        return []
+    present = {folder.name for folder in channel_dirs(Path(root))}
+    return _channels_to_scan(present)
 
 
 def _stamp_frontend_version(merged: dict) -> dict:
@@ -215,6 +301,131 @@ def _stamp_journal_entries(merged: dict, stock: dict | None = None) -> dict:
 _SENTINEL_MISSING = object()
 
 
+@dataclass(frozen=True)
+class _ApplyMergeInputs:
+    """The window and settings state the Apply merge reads, captured as plain
+    data on the main thread so one merge implementation serves both
+    apply_to_game and the background already-applied check (#398 review)."""
+
+    user_overrides: dict       # key -> custom_value, for entries the user edited
+    discarded_new_keys: frozenset  # "New" entries without an override, when "Include discovered items" is off
+    owned: set
+    enclosings: tuple
+    bp_header: "str | None"
+
+
+def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
+    """Build the merged dict apply_to_game() writes, without writing it.
+
+    Shared by apply_to_game and the already-applied check (#387) so the two
+    can never compute different content for the same loaded state. Mutates
+    *sources_dict* in place (stripping discarded "New" keys from the
+    enhancements source), matching apply_to_game's own behavior; only
+    sources_dict["enhancements"] is touched, so the caller's later reads of
+    sources_dict["global"] are unaffected.
+    """
+    # When "Include discovered items" is off, strip discovered items
+    # (status "New" with no user override) from the enhancements
+    # source so they don't flow into the applied global.ini.
+    if inputs.discarded_new_keys and AppSettings.SOURCE_ENHANCEMENTS in sources_dict:
+        sources_dict[AppSettings.SOURCE_ENHANCEMENTS] = {
+            k: v for k, v in sources_dict[AppSettings.SOURCE_ENHANCEMENTS].items()
+            if k not in inputs.discarded_new_keys
+        }
+
+    # Merge all sources in hierarchy order, with user edits on top
+    merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, inputs.user_overrides)
+
+    # #157: weave [Owned] into blueprint lists so the tag reaches the
+    # applied game file (apply re-loads sources from disk, where the
+    # live owned overlay isn't baked in). Idempotent.
+    if inputs.owned:
+        from src.utils.owned_items import apply_owned_to_value
+        for _k, _v in list(merged_dict.items()):
+            _nv = apply_owned_to_value(
+                _v, inputs.owned, enclosings=inputs.enclosings, bp_header=inputs.bp_header,
+            )
+            if _nv != _v:
+                merged_dict[_k] = _nv
+
+    # Stamp Journal entries Smart Citizen produced or modified —
+    # both user-edited journals AND auto-generated journal
+    # enhancements (Mining Compendium etc.) qualify; stock CIG
+    # content is left alone. Comparison is against the stock
+    # base.ini values from sources_dict["global"], so any merged
+    # value that diverges from stock gets the stamp. Purely
+    # write-time and idempotent across re-applies.
+    stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
+    merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
+
+    # Stamp the main-menu version chip so the game shows that
+    # Smart Citizen is active. Idempotent across re-applies and
+    # version bumps; skipped if stock doesn't ship the key.
+    return _stamp_frontend_version(merged_dict)
+
+
+@dataclass(frozen=True)
+class _AppliedStateSnapshot:
+    """Everything _compute_already_applied needs, captured on the main thread
+    so the worker never reads live widget, entry or settings state."""
+
+    merge_inputs: _ApplyMergeInputs
+    target_path: Path          # the game's applied global.ini
+    channel_path: str          # where user.cfg lives
+    selected_language: str
+
+
+def _compute_already_applied(snapshot: _AppliedStateSnapshot, should_stop=lambda: False) -> bool:
+    """True if what's loaded already matches the game's global.ini on disk
+    (#387): lets the Apply button read green when nothing has changed since
+    the last apply. Resolves the dicts _matches_applied_output needs and
+    delegates the comparison to it (see that function for why only
+    stock_dict's keys are compared).
+
+    Runs on AppliedStateWorker. *should_stop* is polled between the
+    expensive steps so a superseded check gives up early; stopping returns
+    False like every other doubt (no applied file yet, no stock base.ini
+    loaded, a mismatch): wrongly reporting green would hide a real pending
+    change, so every uncertain outcome reads as "not applied".
+
+    Also requires user.cfg's actual g_language to match the selected language
+    (#398 review). File content alone isn't enough: switching language in the
+    UI never touches user.cfg (ensure_user_cfg_language only runs at window
+    init and apply time), so switching back to a language applied earlier
+    reads as "already applied" on content while the game still points at
+    another language. Only Apply fixes that, so it must stay reachable.
+    """
+    if not snapshot.target_path.exists():
+        return False
+    sources_dict, hierarchy, _mrk = load_sources_from_settings()
+    # Apply saves user.ini from the loaded entries before it reloads the
+    # sources, so the user source it merges is exactly the snapshot's
+    # overrides. The copy on disk can still hold an override the user has
+    # since cleared, which would make a pending change read as applied.
+    sources_dict.pop(AppSettings.SOURCE_USER, None)
+    stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
+    if not stock_dict or should_stop():
+        return False
+
+    merged_dict = _merge_for_apply(sources_dict, hierarchy, snapshot.merge_inputs)
+    if should_stop():
+        return False
+
+    # strip_values=False: the writer puts every merged value in verbatim, and a
+    # user override can start or end with a space (a space favourite prefix,
+    # #100). Stripping the applied side made such an override compare unequal
+    # after every real apply, so the button stayed red.
+    applied_dict = parse_ini_file(snapshot.target_path, strip_values=False)
+    if should_stop() or not _matches_applied_output(stock_dict, merged_dict, applied_dict):
+        return False
+
+    from src.utils.user_cfg import get_user_cfg_language
+
+    return _user_cfg_language_matches(
+        snapshot.selected_language, get_user_cfg_language(snapshot.channel_path),
+    )
+
+
 def _blueprint_scan_since(force_rescan: bool, watermark):
     """The effective watermark a "Scan Logs for Owned Blueprints" run should
     pass to the scanner (#308).
@@ -242,7 +453,7 @@ def _journal_stamp_for_entry(entry) -> str | None:
         return None
     if _JOURNAL_TITLE_KEY_RE.search(entry.key):
         return None
-    if not (entry.custom_value or entry.source_file == "enhancements"):
+    if not (entry.custom_value or entry.source_file == AppSettings.SOURCE_ENHANCEMENTS):
         return None
     from src.utils.version import get_version
     return f"[Edited with Smart Citizen v{get_version()}]"
@@ -425,12 +636,31 @@ class MainWindow(QMainWindow):
 
         # Apply-to-game dirty tracking (same grey-until-changed pattern as
         # Generate Enhancements / Save Tag Changes / Apply Owned Tags).
-        # Starts True (clickable) — we can't cheaply verify at launch whether
-        # the loaded state already matches what's live in the game's
-        # global.ini, and wrongly greying out the app's one write-to-disk
+        # Starts True (clickable) as the pre-load default -- nothing is
+        # loaded yet to compare against. After every load,
+        # _refresh_apply_dirty_after_reload (#387) starts a background check
+        # that turns the button green when the loaded state already matches
+        # the game's global.ini, so a launch with nothing to do doesn't stay
+        # red. Any doubt in that check still falls back to this same
+        # conservative True -- wrongly greying out the app's one write-to-disk
         # action would be a much worse failure than an occasional redundant
-        # enabled state. See _mark_apply_dirty / _clear_apply_dirty.
+        # enabled state. See _mark_apply_dirty.
         self._apply_dirty = True
+
+        # Background already-applied check (AppliedStateWorker). One runs at a
+        # time. _applied_check_token changes whenever something makes an
+        # in-flight result untrustworthy (a new reload, an edit, Apply's write,
+        # a successful apply, the game file changing outside Apply), so a
+        # stale verdict is dropped instead of overwriting newer state. A reload
+        # that lands mid-check sets _applied_check_rerun_pending instead of
+        # starting a second thread.
+        self._applied_state_worker: Optional[AppliedStateWorker] = None
+        self._applied_check_token = 0
+        self._applied_check_rerun_pending = False
+        # One-shot: the next reload only refreshes a state that was just
+        # applied cleanly (Simple mode applies, then reloads), so it must not
+        # flash the button red while the background check re-confirms it.
+        self._reload_follows_clean_apply = False
 
         # Tracks whether *this session* has produced a genuine unapplied
         # change, as opposed to _apply_dirty's conservative "we can't verify
@@ -443,6 +673,14 @@ class MainWindow(QMainWindow):
 
         # DataForge extraction worker
         self._forge_worker: Optional[DataForgeExtractWorker] = None
+        # Set by closeEvent once every prompt that could call the close off
+        # has been answered (#471). From then on nothing new may start or
+        # prompt: Qt still delivers signals it had already queued after
+        # closeEvent returns (a loader or a stopped extraction finishing), and
+        # those must not start an extraction or a generation on an app that
+        # is exiting, which would bring back the orphaned unforge.exe this
+        # flag exists to prevent.
+        self._close_committed = False
 
         # #180: when True, the Simple-mode one-button flow is running and the
         # enhancements-generation-finished slot should continue into
@@ -475,6 +713,14 @@ class MainWindow(QMainWindow):
         self._enhancements_prompted_on_startup = False
         # Flag to defer enhancements checking until after file loading completes (avoid I/O contention)
         self._check_enhancements_after_loading = False
+        # What the caller of _check_p4k_freshness does when the extraction is
+        # declined. It left its reload to the extraction, so the finished
+        # slot runs this if the run stops or fails instead (#471).
+        self._after_unfinished_p4k_extraction = None
+        # While the global.ini error box is open, the finished slot parks
+        # that follow-up here for the error slot to run once it closes.
+        self._p4k_error_box_open = False
+        self._p4k_follow_up_after_error = None
 
         # Status bar state (composed message) - tracks sync status per source
         self._source_status: dict[str, str] = {}  # source_name -> status_string
@@ -595,6 +841,7 @@ class MainWindow(QMainWindow):
         self.config_tab.restore_user_ini_requested.connect(self._handle_restore_user_ini)
         self.config_tab.channel_changed.connect(self._on_channel_changed)
         self.config_tab.language_changed.connect(self._on_language_changed)
+        self.config_tab.language_source_changed.connect(self._apply_language_base_source)
         self.config_tab.check_updates_requested.connect(self._on_check_updates_clicked)
         self.config_tab.data_dir_changed.connect(self._on_data_dir_changed)
         self.config_tab.cache_dir_changed.connect(self._on_cache_dir_changed)
@@ -630,6 +877,11 @@ class MainWindow(QMainWindow):
         self._bp_scan_channel = None
         self._bp_scan_new_names = set()
         self._bp_scan_force_rescan = False
+        # #386: True for a run kicked off by the startup auto-scan rather
+        # than a manual button click -- read only in _finish_blueprint_scan_
+        # queue to swap the completion popups for a status bar message, so a
+        # launch with new blueprints doesn't interrupt with a modal dialog.
+        self._bp_scan_silent = False
 
         self.log_tab = LogTab()
         self._log_tab_index = self.tabs.addTab(self.log_tab, tr("tabs.log"))
@@ -1232,7 +1484,7 @@ class MainWindow(QMainWindow):
 
     def open_paypal_donation(self, event):
         """Open PayPal donation link in browser."""
-        paypal_url = "https://paypal.me/RighteousKill"
+        paypal_url = "https://www.paypal.com/ncp/payment/YAWXHMGZH8T76"
         QDesktopServices.openUrl(QUrl(paypal_url))
 
     def open_venmo_donation(self, event):
@@ -1375,10 +1627,13 @@ class MainWindow(QMainWindow):
         in which case the app keeps running and startup proceeds normally.
 
         Installer switches: /SILENT /NORESTART run the upgrade with just a
-        progress bar; /SUPPRESSMSGBOXES auto-answers the "previous version
-        found" box with its default (Yes = upgrade in place); /AUTOUPDATE=1
-        tells installer.iss to relaunch Smart Citizen when the install
-        finishes (the normal postinstall Run entry is skipifsilent).
+        progress bar. /SUPPRESSMSGBOXES makes installer.iss take the default
+        answer of each SuppressibleMsgBox, e.g. Yes (upgrade in place) for
+        the "previous version found" box. It has no effect on a plain
+        MsgBox, so installer.iss keeps those off the silent path; the
+        missing-uninstaller error is the one it shows on purpose.
+        /AUTOUPDATE=1 tells installer.iss to relaunch Smart Citizen when the
+        install finishes (the normal postinstall Run entry is skipifsilent).
         """
         import ctypes
 
@@ -2104,16 +2359,13 @@ class MainWindow(QMainWindow):
             logger.debug(f"Cache file not found: {cache_file}. Default values will be empty until sources are downloaded.")
 
     def _set_apply_btn_dirty(self, dirty: bool) -> None:
-        """Single chokepoint for the button's enabled state, tooltip, and
-        color so none of the three can drift apart. Red (needs_apply) means
-        a change is waiting to be applied; green (apply) means the game
-        already matches what's loaded. The :disabled selector is set
-        explicitly so Qt's native greyed-out look doesn't wash out the
-        color — the color itself is the signal here, not the enabled state.
-        Same enabled/disabled tooltip pattern as the Enhancements tab's
-        Generate Enhancements / Save Tag Changes buttons; resolved via tr()
-        here (not cached class constants) so it always reflects the active
-        language."""
+        """Single chokepoint for the Apply button's enabled state, tooltip and
+        color (and the Simple-mode page's own Apply button) so they can't
+        drift apart. Red (needs_apply) means a change is waiting to be
+        applied; green (apply) means the game already matches what's loaded.
+        The :disabled selector is set explicitly so Qt's greyed-out look
+        doesn't wash out the color, which is the real signal. Tooltips are
+        resolved via tr() on each call so they follow the active language."""
         self._apply_dirty = dirty
         self.apply_btn.setEnabled(dirty)
         self.apply_btn.setToolTip(
@@ -2126,6 +2378,10 @@ class MainWindow(QMainWindow):
             f"font-weight: bold; padding: 6px; }}"
             f"QPushButton:disabled {{ background-color: {color}; color: {text}; }}"
         )
+        # simple_page doesn't exist yet when create_toolbar() makes the first
+        # call, and it starts dirty too, so skipping that call loses nothing.
+        if hasattr(self, "simple_page"):
+            self.simple_page.set_apply_dirty(dirty)
 
     def _mark_apply_dirty(self, *_args):
         """Something that Apply to Game would pick up changed — light the
@@ -2135,21 +2391,165 @@ class MainWindow(QMainWindow):
         switches / import / restore, which all funnel through a reload), and
         the Owned-tag re-weave (which doesn't reload but does change what
         Apply would write)."""
+        self._invalidate_applied_check()
         self._set_apply_btn_dirty(True)
         if self._initial_load_done:
             self._session_has_unapplied_edit = True
 
+    def _mark_game_file_changed(self) -> None:
+        """The game's global.ini changed outside Apply (Clear Localization
+        deleted it, or Restore Backup replaced it): drop any verdict about the
+        old file and show the button red.
+
+        It also clears the close reminder. The user chose to leave the game
+        without what is loaded, so closing must not offer Apply Now (the
+        default button) over the revert; the red button still says an apply
+        is due. Clearing rather than keeping the flag is deliberate: a reload
+        sets it provisionally until the check answers, and a revert drops that
+        answer, so a kept flag could be a placeholder nobody would clear.
+        Restore Backup reloads after this, so it clears the flag again."""
+        self._invalidate_applied_check()
+        self._set_apply_btn_dirty(True)
+        self._session_has_unapplied_edit = False
+
+    def _mark_applied(self) -> None:
+        """Apply to Game just wrote the loaded state: the button goes clean,
+        and anything an in-flight already-applied check is working from is
+        now stale."""
+        self._invalidate_applied_check()
+        self._set_apply_btn_dirty(False)
+        self._session_has_unapplied_edit = False
+
+    def _apply_merge_inputs(self) -> _ApplyMergeInputs:
+        """Capture, on the main thread, what _merge_for_apply reads from the
+        window and settings. One pass over the entries; the result is plain
+        data, so it can also be handed to a worker thread."""
+        include_new = AppSettings.get_include_new_lines()
+        user_overrides: dict = {}
+        discarded_new_keys: set = set()
+        for entry in self.entries:
+            if entry.custom_value:
+                user_overrides[entry.key] = entry.custom_value
+            elif not include_new and entry.status == "New":
+                discarded_new_keys.add(entry.key)
+
+        owned = AppSettings.get_owned_items()
+        enclosings: tuple = ()
+        if owned:
+            from src.utils.owned_items import enclosings_from_tag_configs
+            enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+        return _ApplyMergeInputs(
+            user_overrides=user_overrides,
+            discarded_new_keys=frozenset(discarded_new_keys),
+            owned=owned,
+            enclosings=enclosings,
+            bp_header=self._bp_header(),
+        )
+
+    def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
+        """The merged dict apply_to_game() writes, built from the live window state."""
+        return _merge_for_apply(sources_dict, hierarchy, self._apply_merge_inputs())
+
+    def _refresh_apply_dirty_after_reload(self) -> None:
+        """Start re-verifying, in the background, whether Apply is needed
+        (#387, #397). Runs after every reload, not just the first: Simple mode
+        applies and then reloads, and a reload on its own must not leave the
+        button red over state that was just applied. A failed restore, a
+        cancelled close prompt and an Apply Now that stopped before it touched
+        the button call it too, since each can leave the button without a
+        current verdict. The verdict lands in _on_applied_state_ready.
+
+        One check runs at a time. A reload that arrives mid-check interrupts
+        it and queues a rerun, which snapshots the newer state when it starts.
+        """
+        self._invalidate_applied_check()
+        if self._applied_state_worker is not None:
+            self._applied_state_worker.requestInterruption()
+            self._applied_check_rerun_pending = True
+            return
+        self._launch_applied_state_check()
+
+    def _invalidate_applied_check(self) -> None:
+        """Make any in-flight already-applied result untrustworthy. An edit,
+        Apply's write, a successful apply, the game file changing outside
+        Apply, or a newer reload changed the answer after the check's snapshot
+        was taken. The caller then sets the button itself, or leaves it to the
+        outcome that follows (Apply's write) or to a fresh check, so a late
+        verdict must not overwrite it."""
+        self._applied_check_token += 1
+
+    def _launch_applied_state_check(self) -> None:
+        self._applied_check_rerun_pending = False
+        try:
+            snapshot = _AppliedStateSnapshot(
+                merge_inputs=self._apply_merge_inputs(),
+                target_path=AppSettings.get_global_ini_path(),
+                channel_path=AppSettings.get_game_install_path(),
+                selected_language=AppSettings.get_selected_language(),
+            )
+        except Exception as e:
+            # Same conservative fallback as any other doubt: stay red.
+            logger.debug(f"Could not start the already-applied check: {e}")
+            self._set_apply_btn_dirty(True)
+            return
+        worker = AppliedStateWorker(_compute_already_applied, snapshot, self._applied_check_token)
+        worker.finished.connect(lambda ok, w=worker: self._on_applied_state_ready(w, ok))
+        self._applied_state_worker = worker
+        worker.start()
+
+    def _on_applied_state_ready(self, worker, already_applied: bool) -> None:
+        worker.quit()
+        worker.wait()
+        worker.deleteLater()  # deferred, so reading worker.token below is still safe
+        if self._applied_state_worker is not worker:
+            return  # already handled (e.g. settled on close); a late delivery is a no-op
+        self._applied_state_worker = None
+        if self._applied_check_rerun_pending:
+            self._launch_applied_state_check()
+            return
+        if worker.token != self._applied_check_token:
+            return
+        self._apply_applied_state_verdict(already_applied)
+
+    def _apply_applied_state_verdict(self, already_applied: bool) -> None:
+        self._set_apply_btn_dirty(not already_applied)
+        if already_applied:
+            self._session_has_unapplied_edit = False
+
+    def _settle_applied_state_check(self, timeout_ms: int = 10000) -> None:
+        """Let an in-flight already-applied check finish, and apply its verdict,
+        before the window closes. The thread has to be gone before the process
+        exits, and the verdict decides whether the unapplied-changes warning
+        shows: a reload sets that flag provisionally, so closing right after a
+        clean apply would otherwise warn about changes that don't exist."""
+        worker = self._applied_state_worker
+        if worker is None:
+            return
+        worker.quit()
+        if not worker.wait(timeout_ms):
+            worker.requestInterruption()
+            if not worker.wait(timeout_ms):
+                return  # still running; keep the reference so Qt doesn't destroy a live thread
+            self._applied_state_worker = None
+            return  # interrupted, so its verdict is unknown and must not be applied
+        self._applied_state_worker = None
+        if worker.token == self._applied_check_token:
+            self._apply_applied_state_verdict(worker.result)
+
     @pyqtSlot()
     @timed
-    def apply_to_game(self):
-        """Apply merged sources + user edits to game installation and backup existing file."""
+    def apply_to_game(self) -> bool:
+        """Apply merged sources + user edits to game installation and backup existing file.
+
+        Returns True only when the game file was written and validated, so a
+        caller can tell a real apply from a cancelled or failed one."""
         if not self.entries:
             QMessageBox.warning(self, tr("dialogs.warning_title"), tr("dialogs.no_file_loaded"))
-            return
+            return False
 
         if not AppSettings.get_game_install_path():
             QMessageBox.warning(self, tr("dialogs.warning_title"), tr("dialogs.no_game_path"))
-            return
+            return False
 
         # Save user.ini FIRST, before touching the game file. Pre-1.4.1 the
         # save ran AFTER the game write succeeded; an OS-level write failure
@@ -2170,7 +2570,7 @@ class MainWindow(QMainWindow):
                 tr("apply.cannot_save_edits_body",
                    path=user_ini_path, error_type=type(e).__name__, error=e),
             )
-            return
+            return False
 
         target_path = AppSettings.get_global_ini_path()
 
@@ -2204,17 +2604,17 @@ class MainWindow(QMainWindow):
                 shutil.copy2(target_path, backup_path)
                 logger.info(f"Backed up existing file to {backup_path}")
 
-            # Build final merged dict by re-merging all sources with user edits
-            # This ensures Apply uses latest source versions and user edits
-            sources_dict, hierarchy, _mrk = load_sources_from_settings()
+            # Re-load all sources fresh, so Apply uses the latest source
+            # versions and user edits rather than anything stale in memory.
+            sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
 
             # Warn if any active sources are missing (only check sources actually in AVAILABLE_SOURCES)
             active_source_names = set(AppSettings.AVAILABLE_SOURCES)
-            active_source_names.add("enhancements")
+            active_source_names.add(AppSettings.SOURCE_ENHANCEMENTS)
             missing_sources = [
                 name for name in hierarchy
                 if name in active_source_names
-                and name != AppSettings.SOURCE_USER and name != "enhancements"
+                and name != AppSettings.SOURCE_USER and name != AppSettings.SOURCE_ENHANCEMENTS
                 and name not in sources_dict
                 and AppSettings.is_source_enabled(name)
             ]
@@ -2227,59 +2627,12 @@ class MainWindow(QMainWindow):
                     QMessageBox.StandardButton.No,
                 )
                 if reply != QMessageBox.StandardButton.Yes:
-                    return
+                    return False
 
-            # Build user overrides dict from entries with custom_value
-            user_overrides_dict = {
-                entry.key: entry.custom_value
-                for entry in self.entries
-                if entry.custom_value
-            }
-
-            # When "Include discovered items" is off, strip discovered items
-            # (status "New" with no user override) from the enhancements
-            # source so they don't flow into the applied global.ini.
-            if not AppSettings.get_include_new_lines():
-                new_keys = {
-                    entry.key for entry in self.entries
-                    if entry.status == "New" and not entry.custom_value
-                }
-                if new_keys and "enhancements" in sources_dict:
-                    sources_dict["enhancements"] = {
-                        k: v for k, v in sources_dict["enhancements"].items()
-                        if k not in new_keys
-                    }
-
-            # Merge all sources in hierarchy order, with user edits on top
-            merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, user_overrides_dict)
-
-            # #157: weave [Owned] into blueprint lists so the tag reaches the
-            # applied game file (apply re-loads sources from disk, where the
-            # live owned overlay isn't baked in). Idempotent.
-            _owned = AppSettings.get_owned_items()
-            if _owned:
-                from src.utils.owned_items import apply_owned_to_value, enclosings_from_tag_configs
-                _enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
-                _bp_header = self._bp_header()
-                for _k, _v in list(merged_dict.items()):
-                    _nv = apply_owned_to_value(_v, _owned, enclosings=_enclosings, bp_header=_bp_header)
-                    if _nv != _v:
-                        merged_dict[_k] = _nv
-
-            # Stamp Journal entries Smart Citizen produced or modified —
-            # both user-edited journals AND auto-generated journal
-            # enhancements (Mining Compendium etc.) qualify; stock CIG
-            # content is left alone. Comparison is against the stock
-            # base.ini values from sources_dict["global"], so any merged
-            # value that diverges from stock gets the stamp. Purely
-            # write-time and idempotent across re-applies.
-            stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
-            merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
-
-            # Stamp the main-menu version chip so the game shows that
-            # Smart Citizen is active. Idempotent across re-applies and
-            # version bumps; skipped if stock doesn't ship the key.
-            merged_dict = _stamp_frontend_version(merged_dict)
+            # Build final merged dict (#387: the same _merge_for_apply the
+            # already-applied check uses, so it can never compute different
+            # content than a real apply would).
+            merged_dict = self._build_apply_merged_dict(sources_dict, hierarchy)
 
             # Get a base file to use for structure preservation
             # Use the first source file from hierarchy
@@ -2305,8 +2658,11 @@ class MainWindow(QMainWindow):
             if not base_file:
                 raise FileNotFoundError("No base file found. Configure sources and download them first.")
 
-            # Use merger to preserve original file structure
+            # Use merger to preserve original file structure. Any check verdict
+            # still in flight describes the file this replaces, and a dialog
+            # below can deliver it, so drop it before writing.
             from src.merger.ini_merger import merge_ini_files
+            self._invalidate_applied_check()
             merge_ini_files(str(base_file), merged_dict, str(target_path))
 
             # Validate written file against stock base. Pass the already-parsed
@@ -2340,26 +2696,25 @@ class MainWindow(QMainWindow):
                 else:
                     restore_note = "\n\nNo backup was available to restore."
 
+                self._mark_apply_dirty()  # the game file is not what was loaded
                 self.statusBar().showMessage(tr("dialogs.apply_failed_status"))
                 QMessageBox.critical(
                     self, tr("dialogs.validation_failed_title"),
                     tr("dialogs.validation_failed_body", msg=validation_msg, restore_note=restore_note),
                 )
-                return
+                return False
 
             # user.ini was already saved at the top of apply_to_game (before
             # the game-side writes). Reach for the count here purely for the
             # success-dialog summary — the save itself is locked in by now.
 
-            # Count enhancement entries, broken down by category. Sorted
-            # descending by count so the dialog leads with the biggest
-            # buckets (typically Missions / Ship Items). "SCLE" was the
-            # legacy app name (SC Localization Editor); the label now
-            # matches the rebrand to "Smart Citizen".
-            from collections import Counter
-            enhancement_categories = Counter(
-                entry.category for entry in self.entries
-                if entry.source_file == "enhancements"
+            # Count enhancement entries, broken down by category, for the
+            # success-dialog summary. Sorted descending by count so the
+            # dialog leads with the biggest buckets (typically Missions /
+            # Ship Items). "SCLE" was the legacy app name (SC Localization
+            # Editor); the label now matches the rebrand to "Smart Citizen".
+            enhancement_categories = _count_enhancement_categories(
+                sources_dict, enhancements_key_categories
             )
             enhancement_count = sum(enhancement_categories.values())
 
@@ -2395,17 +2750,20 @@ class MainWindow(QMainWindow):
                     f"{breakdown}"
                 )
             else:
-                enhancement_block = f"  Smart Citizen enhancements: 0"
+                enhancement_block = "  Smart Citizen enhancements: 0"
             QMessageBox.information(
                 self, tr("dialogs.success_title"),
                 tr("apply.applied_body", target_path=target_path, user_count=f"{user_count:,}",
                    enhancement_block=enhancement_block),
             )
-            self._set_apply_btn_dirty(False)
-            self._session_has_unapplied_edit = False
+            self._mark_applied()
+            return True
         except Exception as e:
+            # Mark first: the dialog's event loop can deliver a queued verdict.
+            self._mark_apply_dirty()
             QMessageBox.critical(self, tr("dialogs.error_title"), tr("apply.failed_body", error=e))
             logger.error(f"Error applying to game: {e}")
+            return False
 
     def _validate_applied_file(
         self,
@@ -2449,7 +2807,10 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            global_ini.unlink()
+            # A file that is already gone (deleted outside the app while the
+            # confirmation was open) is as cleared as one we delete.
+            global_ini.unlink(missing_ok=True)
+            self._mark_game_file_changed()
             logger.info(f"Deleted {global_ini}")
             self.statusBar().showMessage(tr("dialogs.clear_localization_status"))
             QMessageBox.information(self, tr("dialogs.clear_localization_done_title"),
@@ -2461,7 +2822,6 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def clear_cache(self):
         """Delete cached source files from the cache directory. Optionally clear DataForge cache."""
-        import shutil
         from PyQt6.QtWidgets import QApplication
         cache_dir = AppSettings.get_cache_dir()
         cached_files = list(cache_dir.glob("*.ini")) + list(cache_dir.glob("*.txt"))
@@ -2549,7 +2909,7 @@ class MainWindow(QMainWindow):
 
         msg = f"Deleted {len(deleted)} item(s) from cache."
         if failed:
-            msg += f"\n\nFailed to delete:\n" + "\n".join(failed)
+            msg += "\n\nFailed to delete:\n" + "\n".join(failed)
         QMessageBox.information(self, tr("dialogs.cache_cleared_title"), msg)
 
         # Re-sync all remote sources so they're available for the next Apply.
@@ -2711,6 +3071,7 @@ class MainWindow(QMainWindow):
                 # Load synchronously in main thread
                 logger.info("Merging configured sources...")
                 entries = load_source_files(sources_dict, hierarchy, enhancements_key_categories=enhancements_key_categories)
+                entries = _drop_none_entries(entries)
                 logger.info(f"Merge complete: {len(entries)} entries")
                 restored = self._restore_pending_user_edits(entries, pending_edits)
                 if restored:
@@ -2726,6 +3087,9 @@ class MainWindow(QMainWindow):
                 self.apply_filters()
                 self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
                 self._recompute_owned()  # #157
+                # Same as an async reload: _recompute_owned marked it red, and
+                # only the background check can say it's already applied.
+                self._refresh_apply_dirty_after_reload()
 
                 # Update status bar with entry counts and per-source status
                 self._update_status_bar()
@@ -3198,10 +3562,7 @@ class MainWindow(QMainWindow):
 
     def _handle_import_ini(self):
         """Handle Import INI button: get source, validate, resolve conflicts, merge."""
-        from PyQt6.QtWidgets import (
-            QDialog, QVBoxLayout, QHBoxLayout, QLineEdit,
-            QPushButton, QLabel, QDialogButtonBox, QFileDialog
-        )
+        from PyQt6.QtWidgets import QDialog
         from src.parser.ini_parser import parse_ini_file
         from src.utils.user_ini_manager import save_user_ini_dict
         import tempfile
@@ -3397,14 +3758,22 @@ class MainWindow(QMainWindow):
             target_path = AppSettings.get_global_ini_path()
             backup_file_path = Path(backup_file)
 
-            # Restore the backup
+            # Restore the backup. Marked only once the copy succeeded, as Clear
+            # Localization marks only after its delete: a failed restore is no
+            # revert, so it must not clear the close reminder. The except
+            # branch below covers a copy that fails part-way.
             shutil.copy2(str(backup_file_path), str(target_path))
+            self._mark_game_file_changed()
 
             # Refresh the table from configured sources. The restore writes the
             # game's global.ini (merged output); the editor view is source-backed
             # (base.ini + user.ini + enhancements), so reload from settings rather
             # than parsing the restored output file as if it were a source.
+            # The reload's _recompute_owned calls _mark_apply_dirty, which sets
+            # the close reminder again. Clear it, as _mark_game_file_changed
+            # did: the user picked this file on purpose.
             self.perform_merge_and_reload()
+            self._session_has_unapplied_edit = False
 
             logger.info(f"Restored backup from {backup_file} to {target_path}")
             QMessageBox.information(
@@ -3412,6 +3781,11 @@ class MainWindow(QMainWindow):
                 tr("restore_backup.success_body", name=backup_file_path.name),
             )
         except Exception as e:
+            # The copy may have failed part-way and changed the file, or not
+            # touched it at all. Re-check before the dialog: that drops any
+            # verdict about the old file (the dialog runs the event loop) and
+            # reads what is on disk now.
+            self._refresh_apply_dirty_after_reload()
             QMessageBox.critical(
                 self, tr("dialogs.error_title"),
                 tr("restore_backup.error_body", error=e),
@@ -3957,6 +4331,46 @@ class MainWindow(QMainWindow):
         self._start_startup_sync()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
+        self._maybe_auto_scan_blueprints()
+
+    def _maybe_auto_scan_blueprints(self) -> None:
+        """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
+
+        Reuses the exact channel-queue/worker pipeline the manual "Scan Logs"
+        button drives (_start_next_blueprint_scan onward) -- the only
+        difference is _bp_scan_silent, which _finish_blueprint_scan_queue
+        checks to swap the completion popups for a status bar message. A
+        launch is not the place for a modal dialog every single time,
+        especially once the owned set is mostly caught up and most runs find
+        nothing new.
+
+        Silently does nothing (no warning dialog, unlike the manual scan)
+        when the setting is off or there is no LIVE or HOTFIX folder to scan
+        yet -- a fresh profile with no game configured shouldn't see an
+        install-path warning it never asked for on every launch. Covers the
+        same channels as the manual scan (LIVE, plus HOTFIX when present,
+        never a test channel) and, like it, ignores the channel selected in
+        Config (#446).
+        """
+        if not AppSettings.get_auto_scan_blueprints_enabled():
+            return
+        if self._bp_log_scan_worker is not None:
+            return  # a scan is already running somehow; don't queue a second
+
+        queue = _scan_queue_for_root(AppSettings.get_sc_install_root())
+        if not queue:
+            logger.info("BP auto-scan: skipped, no LIVE or HOTFIX folder found in the install path")
+            return
+
+        self._bp_scan_queue = queue
+        self._bp_scan_new_names = set()
+        # Always a normal incremental scan -- "Rescan all logs" is a
+        # deliberate one-shot the user ticks before a manual click, not
+        # something an unattended startup run should ever force.
+        self._bp_scan_force_rescan = False
+        self._bp_scan_silent = True
+        self.blueprint_tracker_tab.set_scan_logs_enabled(False)
+        self._start_next_blueprint_scan()
 
     def _maybe_warn_onedrive_data_dir(self) -> None:
         """Warn once when the data root is inside a OneDrive-managed folder (#172).
@@ -4283,15 +4697,21 @@ class MainWindow(QMainWindow):
         # prompts "Extract from Data.p4k now?" when base.ini is missing or
         # stale. Returns True if extraction was started, in which case the
         # finished handler will trigger the reload itself (don't double-run).
-        if self._check_p4k_freshness():
+        if self._check_p4k_freshness(
+            if_unfinished=lambda c=channel: self._reload_after_channel_switch(c)
+        ):
             self.statusBar().showMessage(
                 tr("status_bar.channel_switched_extracting", channel=channel)
             )
             return
+        self._reload_after_channel_switch(channel)
 
-        # base.ini is present and fresh for the new channel. Check whether
-        # the channel's DataForge cache is stale relative to its p4k and
-        # offer to re-extract if so (background — doesn't block reload).
+    def _reload_after_channel_switch(self, channel: str) -> None:
+        """The rest of a channel switch, once no global.ini extraction is
+        pending (none was needed, it was declined, or it stopped or failed)."""
+        # Check whether the channel's DataForge cache is stale relative to
+        # its p4k and offer to re-extract if so (background — doesn't block
+        # reload).
         self._maybe_prompt_dataforge_refresh()
 
         self.statusBar().showMessage(tr("status_bar.channel_switched_reloading", channel=channel))
@@ -4501,8 +4921,9 @@ class MainWindow(QMainWindow):
     def _apply_language_base_source(self, language: str) -> None:
         """Repoint the `global` merge source at *language*'s base.ini, then
         reload. English uses the local P4K base.ini. Other languages use a
-        per-language download; if a mapped URL exists we fetch it (freshness-
-        checked), otherwise we fall back to any cached copy or to English.
+        per-language source; if one is mapped we fetch it (a URL is
+        downloaded, freshness-checked; a local path is copied — see #367),
+        otherwise we fall back to any cached copy or to English.
         """
         english_base = AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
 
@@ -4512,16 +4933,17 @@ class MainWindow(QMainWindow):
             return
 
         dest = AppSettings.get_base_ini_path(language)
-        url = AppSettings.get_language_base_url(language)
+        source = AppSettings.get_language_base_url(language)
 
-        if not url:
-            # No URL mapped for this language. Use a cached copy if we have one,
-            # otherwise fall back to the English base so the table still loads.
+        if not source:
+            # No source mapped for this language. Use a cached copy if we have
+            # one, otherwise fall back to the English base so the table still
+            # loads.
             if dest.exists():
                 AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, str(dest))
                 self._reload_with_language_enhancements(language)
             else:
-                logger.warning(f"No base.ini URL mapped for {language!r}; using English base.")
+                logger.warning(f"No base.ini source mapped for {language!r}; using English base.")
                 AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, str(english_base))
                 self.statusBar().showMessage(
                     tr("dialogs.language_no_url", language=language)
@@ -4529,19 +4951,23 @@ class MainWindow(QMainWindow):
                 self._show_loading_progress(tr("dialogs.merging_sources"))
             return
 
-        # Have a URL — download (freshness-checked) on a worker, then repoint.
+        # Have a source — fetch it (download if a URL, copy if a local path)
+        # on a worker, then repoint.
+        is_url = source.startswith(("http://", "https://"))
         dialog = AnimatedProgressDialog(
-            tr("dialogs.language_downloading", language=language),
+            tr("dialogs.language_downloading" if is_url else "dialogs.language_copying",
+               language=language),
             parent=self, title=tr("dialogs.app_title"),
         )
-        self._lang_dl_worker = LanguageBaseDownloadWorker(url, dest)
+        self._lang_dl_worker = LanguageBaseDownloadWorker(source, dest)
         self._lang_dl_worker.finished.connect(
             lambda ok, lang=language, d=dest, dlg=dialog: self._on_language_base_ready(lang, d, dlg, ok)
         )
         self._lang_dl_worker.start()
 
     def _on_language_base_ready(self, language: str, dest, dialog, ok: bool) -> None:
-        """Finish a language switch once its base.ini download settled."""
+        """Finish a language switch once its base.ini fetch (download or
+        local copy) settled."""
         if dialog is not None:
             dialog.close()
         if self._lang_dl_worker is not None:
@@ -4550,11 +4976,11 @@ class MainWindow(QMainWindow):
             self._lang_dl_worker = None
 
         if dest.exists():
-            # Downloaded fresh, or a usable cached copy is already present.
+            # Fetched fresh, or a usable cached copy is already present.
             AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, str(dest))
             self._reload_with_language_enhancements(language)
         else:
-            # Download failed and nothing cached — fall back to English so the
+            # Fetch failed and nothing cached — fall back to English so the
             # app stays usable, and tell the user.
             logger.warning(f"{language!r} base.ini unavailable; falling back to English base.")
             AppSettings.set_source_path(
@@ -4603,10 +5029,8 @@ class MainWindow(QMainWindow):
             self._show_loading_progress(tr("dialogs.merging_sources"))
             return
 
-        records = (
-            AppSettings.get_dataforge_cache_dir()
-            / "raw" / "libs" / "foundry" / "records"
-        )
+        from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+        records = AppSettings.get_dataforge_cache_dir() / DATAFORGE_RECORDS_SUBPATH
         if not records.exists():
             logger.warning(
                 f"{language!r} enhancements are stale/missing but no DataForge "
@@ -4634,12 +5058,18 @@ class MainWindow(QMainWindow):
 
         self._enhancements_prompted_on_startup = False
 
-        if self._check_p4k_freshness():
+        if self._check_p4k_freshness(
+            if_unfinished=lambda d=data_dir: self._reload_after_data_dir_change(d)
+        ):
             self.statusBar().showMessage(
                 tr("status_bar.data_folder_changed_extracting", data_dir=data_dir)
             )
             return
+        self._reload_after_data_dir_change(data_dir)
 
+    def _reload_after_data_dir_change(self, data_dir: str) -> None:
+        """The rest of a data-folder change, once no global.ini extraction is
+        pending (none was needed, it was declined, or it stopped or failed)."""
         self._maybe_prompt_dataforge_refresh()
         self.statusBar().showMessage(
             tr("status_bar.data_folder_changed_reloading", data_dir=data_dir)
@@ -4828,19 +5258,22 @@ class MainWindow(QMainWindow):
                 self.tabs.setCurrentIndex(config_idx)
             return
 
-        # Prompt user to extract from p4k if base.ini is missing or outdated
-        p4k_extraction_started = self._check_p4k_freshness()
-
-        # If P4K extraction was started, don't load files yet.
-        # The P4K extraction finished handler will do the loading.
-        if p4k_extraction_started:
+        # Prompt user to extract from p4k if base.ini is missing or outdated.
+        # If P4K extraction was started, don't load files yet: the P4K
+        # extraction finished handler will do the loading, or carry on as
+        # below if the run stops or fails (#471).
+        if self._check_p4k_freshness(if_unfinished=self._finish_startup_load):
             return
+        self._finish_startup_load()
 
+    def _finish_startup_load(self) -> None:
+        """Startup's last step, once no global.ini extraction is pending."""
         # User declined the extraction prompt (or it didn't fire, e.g. unp4k
-        # missing) and there's still no cached base.ini. Loading sources now
-        # would just fail with "file not found" — skip it instead of
-        # surfacing error popups for a state the user just chose to leave.
-        if not base_ini.exists():
+        # missing, or the extraction stopped or failed) and there's still no
+        # cached base.ini. Loading sources now would just fail with "file
+        # not found" — skip it instead of surfacing error popups for a state
+        # the user just chose to leave.
+        if not (AppSettings.get_cache_dir() / "base.ini").exists():
             self.statusBar().showMessage(tr("status_bar.no_strings_loaded"))
             return
 
@@ -4859,8 +5292,13 @@ class MainWindow(QMainWindow):
         # Show progress dialog during file loading
         self._show_loading_progress()
 
-    def _check_p4k_freshness(self) -> bool:
+    def _check_p4k_freshness(self, if_unfinished=None) -> bool:
         """Prompt to extract from Data.p4k if base.ini is missing or outdated.
+
+        *if_unfinished* is what the caller does when the extraction is
+        declined. A caller that leaves its reload to the extraction passes
+        it, and the finished slot runs it if the run stops or fails (#471),
+        so the strings still load (or the new channel's do).
 
         Returns:
             True if P4K extraction was started (caller should defer file loading).
@@ -4889,7 +5327,9 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self._run_p4k_extraction()
+            if not self._run_p4k_extraction():
+                return False  # one is already running (#471): carry on as if declined
+            self._after_unfinished_p4k_extraction = if_unfinished
             return True
         return False
 
@@ -4909,17 +5349,25 @@ class MainWindow(QMainWindow):
         Silent no-op when the cache is fresh, when unp4k or Data.p4k is
         missing (no signal to act on), when a DataForge or enhancements
         worker is already running (don't stack prompts), or when the cache
-        has no stamp file yet (that's the "never extracted" case — the
-        existing ``_check_enhancements_freshness`` prompt handles it via a
-        category-selection dialog after the first load).
+        has neither a stamp file nor extracted content yet (that's the "never
+        extracted" case — the existing ``_check_enhancements_freshness``
+        prompt handles it via a category-selection dialog after the first
+        load). Content with no stamp is an extraction cut off between the
+        wipe and the stamps (a crash, or a close that outlasted its wait,
+        #471): that cache is unusable, so it gets this prompt too rather than
+        passing for "never extracted" while the old enhancement INIs keep
+        ``_check_enhancements_freshness`` quiet.
 
         Does NOT defer file loading — unlike the base.ini case, loading
         the table doesn't depend on DataForge. The extract runs in the
         background and chains into enhancements generation on completion.
         """
-        from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
+        from src.utils.pak_extractor import (
+            DATAFORGE_LIBS_SUBPATH, P4K_MTIME_STAMP, dataforge_cache_is_fresh,
+        )
 
-        if self._forge_worker is not None or self._enhancements_worker is not None:
+        if (self._forge_worker is not None or self._enhancements_worker is not None
+                or self._close_committed):
             return
         p4k_path = AppSettings.get_p4k_path()
         unp4k_exe = AppSettings.get_unp4k_exe_path()
@@ -4927,7 +5375,8 @@ class MainWindow(QMainWindow):
         if not p4k_path.exists() or not unp4k_exe.exists() or not unforge_exe.exists():
             return
         forge_dir = AppSettings.get_dataforge_cache_dir()
-        if not (forge_dir / P4K_MTIME_STAMP).exists():
+        if (not (forge_dir / P4K_MTIME_STAMP).exists()
+                and not (forge_dir / DATAFORGE_LIBS_SUBPATH).exists()):
             # Never extracted — handled later by _check_enhancements_freshness,
             # which shows a richer category-selection dialog.
             return
@@ -4955,6 +5404,8 @@ class MainWindow(QMainWindow):
         German with English generated was never prompted to generate the
         German set that did not exist.
         """
+        if self._close_committed:
+            return  # closing (#471): nothing new may start
         if not AppSettings.get_base_ini_path().exists():
             return
         if self._enhancements_worker is not None or self._forge_worker is not None:
@@ -5125,6 +5576,12 @@ class MainWindow(QMainWindow):
             self._loader_worker.wait()
             self._loader_worker = None
 
+        clean_entries = _drop_none_entries(entries)
+        # The worker built sort_keys with one key per original entry. If any
+        # entry was dropped it no longer lines up, so let the model recompute it.
+        model_sort_keys = sort_keys if len(clean_entries) == len(entries) else None
+        entries = clean_entries
+
         # Preserve in-memory edits the user hasn't Applied yet — Generate
         # Enhancements (and other reload paths) hit this slot with freshly
         # loaded entries whose custom_value comes only from user.ini, so
@@ -5150,11 +5607,18 @@ class MainWindow(QMainWindow):
             self.entries,
             self.default_values,
             AppSettings.get_favorite_prefix(),
-            sort_keys=sort_keys,
+            sort_keys=model_sort_keys,
         )
         self.apply_filters()
         self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
         self._recompute_owned()  # #157: weave [Owned] tags + populate Owned stars
+        if self._reload_follows_clean_apply:
+            # This reload only refreshes state that was just applied cleanly,
+            # but _recompute_owned marks every reload dirty. Undo that before
+            # control returns to the event loop, so the button never paints
+            # red while the background check below re-confirms it.
+            self._reload_follows_clean_apply = False
+            self._set_apply_btn_dirty(False)
 
         # Re-fit the default layout now that there are real rows to measure —
         # the ResizeToContents columns can only size themselves once the model
@@ -5171,6 +5635,8 @@ class MainWindow(QMainWindow):
             self._check_enhancements_after_loading = False
             self._check_enhancements_freshness()
 
+        self._refresh_apply_dirty_after_reload()
+
         # From here on, dirty-marking reflects a real in-session change —
         # see _mark_apply_dirty / _session_has_unapplied_edit.
         self._initial_load_done = True
@@ -5178,6 +5644,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(str)
     def _on_loading_error(self, error_msg: str):
         """Handle file loading error."""
+        self._reload_follows_clean_apply = False  # the reload it was waiting for failed
         self._loading_progress.close()
         self._loading_progress = None
         QMessageBox.critical(self, tr("dialogs.error_title"), tr("dialogs.failed_to_load_sources", error=error_msg))
@@ -5253,6 +5720,8 @@ class MainWindow(QMainWindow):
         thread and handed to the worker as a concrete value so a mid-run
         language switch can't change what the worker is generating.
         """
+        if self._close_committed:
+            return  # closing (#471): nothing new may start
         if self._enhancements_worker is not None:
             # Defensive: if extraction handed off but a stale enhancements
             # worker is somehow still around, don't orphan the forge dialog.
@@ -5303,6 +5772,9 @@ class MainWindow(QMainWindow):
         if existing is not None:
             self._enhancements_progress_dialog = existing
             self._forge_progress_dialog = None
+            # The extraction is over, so Esc or X no longer asks to stop it
+            # (#471): generation keeps the dialog's old hide-and-continue.
+            existing.set_close_guard(None)
             existing.setWindowTitle(tr("progress.generating_enhancements_title"))
             # Reset bar to indeterminate (0,0) with the new label so the
             # stale "Snapshotting cache (28000/28000)" 100% bar from the
@@ -5367,8 +5839,15 @@ class MainWindow(QMainWindow):
             if self._simple_run_active:
                 self._end_simple_run()
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_applying"))
-                self.apply_to_game()
+                applied = self.apply_to_game()
+                # Only a real apply makes the reload below a refresh of applied
+                # state (see _on_loading_finished). A button that was already
+                # green says nothing about whether this apply worked.
+                self._reload_follows_clean_apply = applied is True
             else:
+                # Releases a Simple page left busy by a stop that came too
+                # late to stop anything (#471). No-op otherwise.
+                self._end_simple_run()
                 self.statusBar().showMessage(tr("status_bar.enhancements_generated_reloading"))
             self._show_loading_progress(tr("progress.reloading_with_enhancements"))
         else:
@@ -5377,7 +5856,7 @@ class MainWindow(QMainWindow):
 
     def _run_dataforge_extraction(self):
         """Launch DataForgeExtractWorker in the background (non-blocking)."""
-        if self._forge_worker is not None:
+        if self._forge_worker is not None or self._close_committed:
             return
 
         p4k_path    = AppSettings.get_p4k_path()
@@ -5385,7 +5864,8 @@ class MainWindow(QMainWindow):
         unforge_exe = AppSettings.get_unforge_exe_path()
         forge_dir   = AppSettings.get_dataforge_cache_dir()
 
-        self._forge_worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
+        worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
+        self._forge_worker = worker
         self.enhancements_tab.set_operation_running(tr("enhancements.extracting_dataforge_tooltip"))
         self.statusBar().showMessage(tr("extract.dataforge_extracting_background"))
 
@@ -5394,15 +5874,107 @@ class MainWindow(QMainWindow):
             parent=self,
             title=tr("extract.dataforge_extraction_title"),
         )
+        # Esc or the title-bar X used to hide the dialog while the extraction
+        # carried on unseen, and closing the window after that orphaned
+        # unforge.exe. Now they ask whether to stop it (#471).
+        self._forge_progress_dialog.set_close_guard(
+            lambda w=worker: self._confirm_stop_dataforge_extraction(w)
+        )
 
-        self._forge_worker.progress.connect(self.statusBar().showMessage)
-        self._forge_worker.progress.connect(self._forge_progress_dialog.setLabelText)
-        self._forge_worker.progress_pct.connect(self._forge_progress_dialog.set_progress)
-        self._forge_worker.error.connect(self._on_dataforge_extract_error)
-        self._forge_worker.finished.connect(self._on_dataforge_extract_finished)
-        self._forge_worker.start()
+        worker.progress.connect(self.statusBar().showMessage)
+        worker.progress.connect(self._forge_progress_dialog.setLabelText)
+        worker.progress_pct.connect(self._forge_progress_dialog.set_progress)
+        # Bound to this worker, as _launch_applied_state_check does, so a
+        # worker a close stopped and released is told apart from the current
+        # one (#471).
+        worker.error.connect(lambda message, w=worker: self._on_dataforge_extract_error(message, w))
+        worker.finished.connect(
+            lambda success, w=worker: self._on_dataforge_extract_finished(success, w)
+        )
+        worker.start()
 
-    def _on_dataforge_extract_error(self, message: str):
+    def _confirm_stop_dataforge_extraction(self, worker) -> bool:
+        """Esc or the title-bar X on the DataForge progress dialog (#471).
+
+        Asks whether to stop the running extraction: Stop, or Cancel to keep
+        the dialog. Returns True to let the dialog close, False to keep it
+        open. The dialog stays modal while the extraction runs, so nothing
+        the run depends on (the channel, the language, the data or cache
+        folder) can change under it. Once the extraction is over (or already
+        stopping) the dialog just closes as it always did: the same dialog
+        lives on into enhancement generation, which has no stop.
+        """
+        def _still_running() -> bool:
+            return (worker is self._forge_worker and worker.isRunning()
+                    and not worker.isInterruptionRequested())
+
+        if not _still_running():
+            return True
+        dialog = self._forge_progress_dialog
+        box = QMessageBox(dialog or self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(tr("extract.dataforge_running_title"))
+        box.setText(tr("extract.dataforge_running_body"))
+        stop_btn = box.addButton(
+            tr("extract.dataforge_stop_btn"), QMessageBox.ButtonRole.DestructiveRole
+        )
+        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(cancel_btn)
+        box.setEscapeButton(cancel_btn)
+        box.exec()
+        if box.clickedButton() is not stop_btn:
+            return False   # Cancel: keep the dialog
+        if not _still_running():
+            # It finished (or failed) while the question was open, and its
+            # own slot has already moved on: a success hands the dialog to
+            # enhancement generation, which has no stop and only rewrites
+            # the INIs. The user said stop, so a Simple-mode run must not go
+            # on to apply anything to the game.
+            self._end_simple_run()
+            return True
+        # Nothing may be applied after a stop, but the Simple page stays busy
+        # until the stop has finished (the finished slot ends the run), so its
+        # button never looks ready while a click would be turned away.
+        self._simple_run_active = False
+        # Dismissed for good. A hidden QProgressDialog shows itself again
+        # while progress keeps arriving, so it gets no more of it.
+        if dialog is not None:
+            self._detach_progress_dialog(worker, dialog)
+            self._forge_progress_dialog = None
+            dialog.deleteLater()
+        logger.info("DataForge extraction: stop requested from the progress dialog")
+        worker.requestInterruption()
+        self.statusBar().showMessage(tr("extract.dataforge_stopping"))
+        return True
+
+    @staticmethod
+    def _detach_progress_dialog(worker, dialog) -> None:
+        """Stop *worker*'s progress from reaching *dialog* (#471).
+
+        A hidden QProgressDialog shows itself again while progress keeps
+        arriving (measured: within a second, after Esc as well as the X), so
+        a dialog that was dismissed, or is being hidden for a close, must get
+        no more of it. The worker's status-bar connection stays.
+
+        A plain hide() (what Esc does) is also undone by the dialog's own
+        show timer when the dialog is under 4 s old (measured: back 3.5 s
+        after an Esc at 0.5 s). Callers that keep the dialog dismiss it with
+        cancel() as well, which stops that timer; the X already cancels.
+        """
+        for signal, slot in ((worker.progress, dialog.setLabelText),
+                             (worker.progress_pct, dialog.set_progress)):
+            try:
+                signal.disconnect(slot)
+            except TypeError:
+                pass  # not connected, e.g. already detached
+
+    def _on_dataforge_extract_error(self, message: str, worker):
+        if worker is not self._forge_worker or self._close_committed:
+            # Stopped by a close (#471). logger.error would fire the global
+            # ErrorDialogHandler, and the box below would open, both on a
+            # window that is going away.
+            logger.warning(f"DataForge extraction error while closing: {message}")
+            return
         logger.error(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
         self._end_simple_run()
@@ -5414,11 +5986,24 @@ class MainWindow(QMainWindow):
             tr("extract.dataforge_extraction_error_body", message=message),
         )
 
-    def _on_dataforge_extract_finished(self, success: bool):
-        self._forge_worker.quit()
-        self._forge_worker.wait()
+    def _on_dataforge_extract_finished(self, success: bool, worker):
+        worker.quit()
+        worker.wait()
+        # As _on_applied_state_ready does: frees the thread and the lambda
+        # reference cycle the slot connections hold.
+        worker.deleteLater()
+        if worker is not self._forge_worker:
+            return  # stopped and released by closeEvent (#471): nothing may chain on
         self._forge_worker = None
         self.enhancements_tab.refresh_forge_status()
+
+        if self._close_committed:
+            # Still running when closeEvent stopped waiting, and finished
+            # since (#471). Neither drain the queued old-cache cleanup (a
+            # GUI-thread delete) nor chain into generation (a new thread
+            # during exit).
+            self._end_simple_run()
+            return
 
         if success:
             # Drain any cache-dir-change cleanup queued by the Config tab.
@@ -5435,39 +6020,124 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr("extract.dataforge_extracted_generating"))
             self._run_enhancements_generation()
         else:
-            # #180: extraction failed, so the Simple-mode flow can't continue.
+            # #180: extraction failed (or was stopped), so the Simple-mode
+            # flow can't continue.
             self._end_simple_run()
             if getattr(self, "_forge_progress_dialog", None) is not None:
                 self._forge_progress_dialog.close()
                 self._forge_progress_dialog = None
             self.enhancements_tab.set_operation_idle(success=False)
-            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
+            if getattr(worker, "stopped", False):
+                # The user stopped it from the progress dialog (#471). Not
+                # worker.isInterruptionRequested(): the thread has finished by
+                # now (the wait above), and QThread reports no interruption
+                # for a finished thread.
+                self.statusBar().showMessage(tr("extract.dataforge_stopped"))
+            else:
+                self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
 
     def _run_p4k_extraction(self):
-        """Launch P4kExtractWorker with a progress dialog; reload sources on success."""
+        """Launch P4kExtractWorker with a progress dialog; reload sources on success.
+
+        Returns True if a run started.
+        """
+        if self._p4k_worker is not None or self._close_committed:
+            # One at a time: closing stops only the worker this attribute
+            # holds, and one stopped from its dialog takes a moment to end
+            # (#471). Closing: nothing new may start.
+            return False
         p4k_path = AppSettings.get_p4k_path()
         output_path = AppSettings.get_cache_dir() / 'base.ini'
         unp4k_exe = AppSettings.get_unp4k_exe_path()
+        # unp4k works beside the DataForge cache, on the drive the user picked
+        # for heavy data, not in %TEMP% (#471). get_dataforge_cache_dir()
+        # creates the folder, so a cache drive that is offline raises here:
+        # work in %TEMP% then, as before, rather than not extracting at all.
+        try:
+            scratch_near = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            logger.warning(f"DataForge cache folder unavailable ({e}); "
+                           "global.ini extraction works in %TEMP%")
+            scratch_near = None
 
-        self._p4k_worker = P4kExtractWorker(p4k_path, output_path, unp4k_exe)
+        worker = P4kExtractWorker(p4k_path, output_path, unp4k_exe, scratch_near=scratch_near)
+        self._p4k_worker = worker
         self._p4k_progress = AnimatedProgressDialog(
             tr("extract.p4k_extracting_label"),
             parent=self,
             title=tr("extract.p4k_extraction_title")
         )
 
-        self._p4k_worker.progress.connect(self._p4k_progress.setLabelText)
-        self._p4k_worker.progress_pct.connect(self._p4k_progress.set_progress)
-        self._p4k_worker.error.connect(lambda err: QMessageBox.warning(self, tr("extract.extraction_error_title"), err))
-        self._p4k_worker.finished.connect(self._on_p4k_extract_finished)
-        self._p4k_worker.start()
+        worker.progress.connect(self._p4k_progress.setLabelText)
+        worker.progress_pct.connect(self._p4k_progress.set_progress)
+        # Esc or the X stops the run (#471). It used to hide the dialog while
+        # unp4k carried on unseen, and Extract then started a second run
+        # that closing could not stop.
+        self._p4k_progress.set_close_guard(
+            lambda w=worker: self._stop_p4k_extraction_from_dialog(w)
+        )
+        # Bound to this worker for the same reason as the DataForge slots
+        # (#471): closing stops and releases it, and Qt may still deliver
+        # what it had queued.
+        worker.error.connect(lambda err, w=worker: self._on_p4k_extract_error(err, w))
+        worker.finished.connect(lambda success, w=worker: self._on_p4k_extract_finished(success, w))
+        worker.start()
+        return True
 
-    def _on_p4k_extract_finished(self, success: bool):
+    def _stop_p4k_extraction_from_dialog(self, worker) -> bool:
+        """Esc or the title-bar X on the global.ini progress dialog (#471).
+
+        Stops the extraction rather than asking: it is a short job that
+        writes base.ini only at its very end, so a stop leaves the old one as
+        it was. Always lets the dialog close.
+        """
+        if (worker is not self._p4k_worker or not worker.isRunning()
+                or worker.isInterruptionRequested()):
+            return True   # over or already stopping: just close
+        logger.info("global.ini extraction: stop requested from the progress dialog")
+        if self._p4k_progress is not None:
+            # Dismissed for good while the stop winds down: see
+            # _detach_progress_dialog. The finished slot closes it.
+            self._detach_progress_dialog(worker, self._p4k_progress)
+            self._p4k_progress.cancel()
+        worker.requestInterruption()
+        self.statusBar().showMessage(tr("extract.p4k_stopping"))
+        return True
+
+    def _on_p4k_extract_error(self, message: str, worker):
+        if worker is not self._p4k_worker or self._close_committed:
+            logger.warning(f"P4K extraction error while closing: {message}")
+            return
+        # The worker emits finished right after error, so the finished slot
+        # usually runs inside this box's own event loop. It leaves the
+        # caller's follow-up (a reload, maybe a prompt) for after the box
+        # closes rather than stacking it on top (#471).
+        self._p4k_error_box_open = True
+        try:
+            QMessageBox.warning(self, tr("extract.extraction_error_title"), message)
+        finally:
+            self._p4k_error_box_open = False
+        follow_up = self._p4k_follow_up_after_error
+        self._p4k_follow_up_after_error = None
+        if follow_up is not None and not self._close_committed:
+            follow_up()
+
+    def _on_p4k_extract_finished(self, success: bool, worker):
         """Handle P4K extraction completion."""
-        self._p4k_progress.close()
-        self._p4k_worker.quit()
-        self._p4k_worker.wait()
+        worker.quit()
+        worker.wait()
+        worker.deleteLater()
+        if worker is not self._p4k_worker:
+            return  # stopped and released by closeEvent (#471)
+        if self._p4k_progress is not None:
+            self._p4k_progress.close()
+            self._p4k_progress = None
         self._p4k_worker = None
+        if_unfinished = self._after_unfinished_p4k_extraction
+        self._after_unfinished_p4k_extraction = None
+
+        if self._close_committed:
+            return  # finished during the close (#471): don't reload an exiting app
 
         if success:
             # Lock Global source to the local cache path with auto-update off,
@@ -5490,9 +6160,97 @@ class MainWindow(QMainWindow):
 
             # Show progress dialog while reloading with extracted data
             self._show_loading_progress("Reloading with extracted base.ini...")
+        else:
+            if getattr(worker, "stopped", False):
+                # Stopped from its dialog (#471): base.ini is as it was.
+                self.statusBar().showMessage(tr("extract.p4k_stopped"))
+            if if_unfinished is not None:
+                # Startup, a channel switch or a data-folder change left its
+                # reload to this run: carry on as if it had been declined,
+                # rather than leaving no strings (or the old channel's).
+                if self._p4k_error_box_open:
+                    self._p4k_follow_up_after_error = if_unfinished
+                else:
+                    if_unfinished()
+
+    # The extraction workers closeEvent stops, each with the attribute that
+    # holds its progress dialog (#471).
+    _EXTRACTION_WORKER_ATTRS = (
+        ("_p4k_worker", "_p4k_progress"),
+        ("_forge_worker", "_forge_progress_dialog"),
+    )
+
+    def _request_extraction_stops(self) -> None:
+        """Ask every running extraction to stop (#471). Returns at once: the
+        tool dies within a quarter of a second, and the worker then deletes
+        its working folder in the background."""
+        for worker_attr, _dialog_attr in self._EXTRACTION_WORKER_ATTRS:
+            worker = getattr(self, worker_attr, None)
+            if worker is not None:
+                worker.requestInterruption()
+
+    def _stop_extractions_for_close(self, timeout_ms: int = 180_000) -> None:
+        """Stop a running global.ini or DataForge extraction before the window
+        closes (#471).
+
+        closeEvent has normally asked already (_request_extraction_stops,
+        ahead of the loader wait), so unp4k or unforge died within a quarter
+        of a second and the worker is deleting its working folder: up to
+        ~62,000 files for DataForge, which takes a while on a slow disk. The
+        window is hidden first so it can't sit there showing as Not
+        Responding meanwhile. Called last in closeEvent, after the window
+        state is saved, so the hide cannot change what saveState and
+        saveGeometry record.
+
+        Bounded like _settle_applied_state_check, by one deadline shared by
+        both workers. Past it a worker's reference is kept so Qt doesn't
+        destroy a live thread, and the next extraction sweeps what its folder
+        still holds. Within it the reference is released, and the identity
+        check in the worker's slots ignores the finished and error deliveries
+        Qt may still have queued.
+        """
+        import time
+
+        stopping = []
+        for worker_attr, dialog_attr in self._EXTRACTION_WORKER_ATTRS:
+            worker = getattr(self, worker_attr, None)
+            if worker is None:
+                continue
+            worker.requestInterruption()
+            dialog = getattr(self, dialog_attr, None)
+            if dialog is not None:
+                # Dismissed for good while the wait below runs: see
+                # _detach_progress_dialog.
+                self._detach_progress_dialog(worker, dialog)
+                dialog.cancel()
+                setattr(self, dialog_attr, None)
+            stopping.append((worker_attr, worker))
+
+        if any(worker.isRunning() for _attr, worker in stopping):
+            logger.info(
+                "Closing during an extraction: stopping it and removing its "
+                "working folder"
+            )
+            self.hide()
+        deadline = time.monotonic() + timeout_ms / 1000
+        for worker_attr, worker in stopping:
+            remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
+            if worker.isRunning() and not worker.wait(remaining_ms):
+                logger.warning(
+                    "An extraction was still cleaning up when Smart Citizen "
+                    "closed; the next extraction removes what is left"
+                )
+                continue  # keep the reference so Qt doesn't destroy a live thread
+            setattr(self, worker_attr, None)
 
     def closeEvent(self, event):
-        """Save state and overrides before closing."""
+        """Save state and overrides, and stop a running extraction (#471),
+        before closing."""
+        # Let a running already-applied check finish first: its verdict feeds
+        # the unapplied-changes warning below, and the thread must be gone
+        # before exit.
+        self._settle_applied_state_check()
+
         # Warn if something changed this session that Apply Enhancements
         # hasn't picked up yet (the button is still showing red) — e.g. the
         # user clicked Apply Tag Changes but never followed up with Apply
@@ -5508,7 +6266,7 @@ class MainWindow(QMainWindow):
             apply_btn = box.addButton(
                 tr("dialogs.unapplied_changes_apply_now"), QMessageBox.ButtonRole.AcceptRole
             )
-            exit_btn = box.addButton(
+            box.addButton(
                 tr("dialogs.unapplied_changes_exit"), QMessageBox.ButtonRole.DestructiveRole
             )
             cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
@@ -5518,17 +6276,20 @@ class MainWindow(QMainWindow):
 
             if clicked is cancel_btn:
                 event.ignore()
+                # Settling may have dropped a verdict or a queued rerun to
+                # close quickly. The window stays, so re-check the button.
+                self._refresh_apply_dirty_after_reload()
                 return
             if clicked is apply_btn:
-                # Apply, then stay open — Apply to Game only updates
-                # _apply_dirty in memory for this run; closing immediately
-                # after would still start the *next* launch red regardless
-                # (that boot-time default can't cheaply verify the game file
-                # already matches — see _apply_dirty's comment), which read
-                # as "my apply didn't work." Leaving the window open lets the
-                # user see the button turn green and close normally whenever
-                # they're ready.
-                self.apply_to_game()
+                # Apply, then stay open, so the user sees the button turn
+                # green (or stay red) and closes when they're ready.
+                token = self._applied_check_token
+                if not self.apply_to_game() and self._applied_check_token == token:
+                    # The apply stopped before it touched the button (a
+                    # declined prompt, a failed user.ini save), so as with
+                    # Cancel it needs the check settling may have dropped. A
+                    # failed write or validation already marked it red.
+                    self._refresh_apply_dirty_after_reload()
                 event.ignore()
                 return
             # exit_btn: fall through to the normal close sequence below,
@@ -5553,7 +6314,13 @@ class MainWindow(QMainWindow):
         # Detach log handler before widgets are destroyed
         self.log_tab.remove_handler()
 
-        # Clean up workers
+        # Clean up workers. The close is committed from here: every prompt
+        # that could call it off has been answered, so nothing new may start
+        # (#471, see _close_committed). A running extraction is asked to stop
+        # now, ahead of the unbounded loader wait below, so its tool dies at
+        # once; _stop_extractions_for_close waits for it last.
+        self._close_committed = True
+        self._request_extraction_stops()
         if self._loader_worker:
             self._loader_worker.quit()
             self._loader_worker.wait()
@@ -5575,6 +6342,9 @@ class MainWindow(QMainWindow):
                  for i in range(self.filter_header.count())]
             )
 
+        # Last, once the window's state is saved: this hides the window while
+        # a stopped extraction removes its working folder (#471).
+        self._stop_extractions_for_close()
         event.accept()
 
     @timed
@@ -6021,21 +6791,22 @@ class MainWindow(QMainWindow):
         still-growing Game.log doesn't re-walk the player's whole history
         every time.
 
-        Always covers the active channel. If the Blueprint Tracker's "also
-        scan other channels" checkbox is on and the active channel is LIVE or
-        HOTFIX, also queues whichever of the two isn't active -- they share
-        the same account progression, so a blueprint earned on one shows up
-        in the other's logs too (#268). PTU/EPTU/TECH-PREVIEW are never
-        included; those are separate test builds with their own progression.
+        Always covers LIVE, plus HOTFIX when its folder is present -- they run
+        on the same server and share one account progression, so a blueprint
+        earned on one shows up in the other's logs too (#268). There is no
+        checkbox for it, and the channel selected in Config makes no
+        difference (#446). PTU/EPTU/TECH-PREVIEW are never included; those are
+        separate test servers with their own progression, wiped more often.
         Each queued channel runs through the same single-channel worker in
         turn; only one combined summary/owned-set write happens once every
         queued channel has been scanned.
         """
         if self._bp_log_scan_worker is not None:
             return  # already scanning
+        self._bp_scan_silent = False  # #386: a manual click always reports normally
 
-        channel_path = AppSettings.get_channel_install_path()
-        if not channel_path or not Path(channel_path).is_dir():
+        root = AppSettings.get_sc_install_root()
+        if not root or not _is_dir_safe(root):
             QMessageBox.warning(
                 self,
                 tr("enhancements.bp_scan_title"),
@@ -6043,39 +6814,53 @@ class MainWindow(QMainWindow):
             )
             return
 
-        installed = AppSettings.get_available_channels()
-        other_enabled = AppSettings.get_scan_other_channels_enabled()
-        self._bp_scan_queue = _channels_to_scan(
-            AppSettings.get_active_channel(), other_enabled, installed
-        )
+        queue = _scan_queue_for_root(root)
+        if not queue:
+            QMessageBox.information(
+                self,
+                tr("enhancements.bp_scan_title"),
+                tr("enhancements.bp_scan_no_live_hotfix"),
+            )
+            return
+
+        self._bp_scan_queue = queue
         self._bp_scan_new_names = set()
         # #308: "Rescan all logs" bypasses the saved watermark for every
         # queued channel this run, re-walking each back to the scanner's
         # epoch floor. Read once here (not inside the worker) so a scan
         # already in flight isn't affected by the checkbox changing mid-scan.
         self._bp_scan_force_rescan = self.blueprint_tracker_tab.is_force_rescan_checked()
+        self.blueprint_tracker_tab.set_scan_logs_enabled(False)
         self._start_next_blueprint_scan()
 
     def _start_next_blueprint_scan(self):
         """Pop the next queued channel and start its worker (#268).
 
         Silently skips a queued channel with no valid install path (logged,
-        not surfaced as a dialog -- the active channel's own path was already
-        validated with a user-facing warning in _run_blueprint_log_scan;
-        this only guards the rarer case of a secondary channel whose install
-        turns out to be incomplete) and moves on to the next one. Finalizes
-        once the queue is empty.
+        not surfaced as a dialog -- the install root was already validated
+        with a user-facing warning in _run_blueprint_log_scan; this only
+        guards the rarer case of a channel whose install turns out to be
+        incomplete) and moves on to the next one. Finalizes once the queue is
+        empty.
+
+        The one place a scan worker is started, so it is also where a channel
+        outside _SCANNED_CHANNELS is refused (#446): PTU, EPTU and
+        TECH-PREVIEW are never scanned, even if something put one in the queue.
         """
         if not self._bp_scan_queue:
             self._finish_blueprint_scan_queue()
             return
 
         channel = self._bp_scan_queue.pop(0)
+        if channel not in _SCANNED_CHANNELS:
+            logger.error(f"BP Scan: refusing to scan {channel!r}; only LIVE and HOTFIX are ever scanned (#446)")
+            self._start_next_blueprint_scan()
+            return
         self._bp_scan_channel = channel
 
         root = AppSettings.get_sc_install_root()
         channel_path = str(Path(root) / channel) if root else ""
-        if not channel_path or not Path(channel_path).is_dir():
+        if not channel_path or not _is_dir_safe(channel_path):
             logger.warning(f"BP Scan: skipping {channel} -- no valid install path")
             self._start_next_blueprint_scan()
             return
@@ -6084,14 +6869,21 @@ class MainWindow(QMainWindow):
             self._bp_scan_force_rescan, AppSettings.get_blueprint_log_watermark(channel=channel)
         )
         self._bp_log_scan_worker = BlueprintLogScanWorker(channel_path, since)
-        self._bp_log_scan_progress = AnimatedProgressDialog(
-            tr("enhancements.bp_scan_starting"),
-            parent=self,
-            title=tr("enhancements.bp_scan_title"),
-        )
+        # #386: a silent (startup auto-scan) run gets no progress dialog --
+        # it's a background operation, not something the user launched, so
+        # popping a window the moment the app starts would defeat the point.
+        # The status bar connection below still shows its progress text.
+        if self._bp_scan_silent:
+            self._bp_log_scan_progress = None
+        else:
+            self._bp_log_scan_progress = AnimatedProgressDialog(
+                tr("enhancements.bp_scan_starting"),
+                parent=self,
+                title=tr("enhancements.bp_scan_title"),
+            )
+            self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
+            self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
         self._bp_log_scan_worker.progress.connect(self.statusBar().showMessage)
-        self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
-        self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
         self._bp_log_scan_worker.error.connect(self._on_blueprint_log_scan_error)
         self._bp_log_scan_worker.finished.connect(self._on_blueprint_log_scan_finished)
         self._bp_log_scan_worker.start()
@@ -6148,8 +6940,15 @@ class MainWindow(QMainWindow):
             # mission's reward pool this patch would misread as "foreign" and
             # could resolve into an unrelated shorter item (see
             # owned_items.repair_foreign_owned_names' docstring).
+            # #446: _known_item_names is the item list of the channel selected
+            # in Config, and the scan no longer follows Config. Recovery is only
+            # trustworthy when that list belongs to the same family as the logs
+            # (LIVE and HOTFIX, near-identical builds). With a test channel
+            # selected, a LIVE log name missing from the test build's list could
+            # resolve to a shorter real item and mark the wrong blueprint owned,
+            # so recovery is skipped and the name is kept as logged.
             catalogue = self._known_item_names or set()
-            if catalogue:
+            if catalogue and AppSettings.get_active_channel() in _SCANNED_CHANNELS:
                 recovered = set()
                 for nm in sorted(scanned - catalogue):
                     real = resolve_against_catalogue(nm, catalogue)
@@ -6186,8 +6985,21 @@ class MainWindow(QMainWindow):
             self._finish_blueprint_scan_queue()
 
     def _finish_blueprint_scan_queue(self):
-        """Write the combined owned-set change and show one summary dialog
-        covering every channel scanned this run (#268)."""
+        """Write the combined owned-set change and report the result,
+        covering every channel scanned this run (#268).
+
+        #386: a silent (startup auto-scan) run reports via the status bar
+        instead of the modal summary dialogs below -- consumed here, one-shot
+        per run, same as the force-rescan checkbox reset just below. Also the
+        single terminal point for every run regardless of source (manual or
+        auto-scan) or per-channel errors, so it's where the "Scan Logs"
+        button re-enables (#386 review) -- it was disabled the moment this
+        run actually started, in _run_blueprint_log_scan or
+        _maybe_auto_scan_blueprints.
+        """
+        self.blueprint_tracker_tab.set_scan_logs_enabled(True)
+        silent = self._bp_scan_silent
+        self._bp_scan_silent = False
         new_names = sorted(self._bp_scan_new_names)
         self._bp_scan_new_names = set()
         # #308: one-shot -- the checkbox is consumed by the whole queued run
@@ -6196,11 +7008,12 @@ class MainWindow(QMainWindow):
         self.blueprint_tracker_tab.reset_force_rescan_checkbox()
 
         if not new_names:
-            QMessageBox.information(
-                self,
-                tr("enhancements.bp_scan_title"),
-                tr("enhancements.bp_scan_none"),
-            )
+            if not silent:
+                QMessageBox.information(
+                    self,
+                    tr("enhancements.bp_scan_title"),
+                    tr("enhancements.bp_scan_none"),
+                )
             return
 
         owned = AppSettings.get_owned_items()
@@ -6211,6 +7024,16 @@ class MainWindow(QMainWindow):
         # otherwise it stayed red immediately after the summary below told
         # the user its tags were applied.
         self.blueprint_tracker_tab.mark_owned_clean()
+
+        # #386 follow-up: an opt-in escape hatch back to the normal popup,
+        # for anyone who wants the interruption on a launch that finds
+        # something new. A quiet run (the not-new_names branch above)
+        # ignores this setting entirely -- it only ever applies here.
+        if silent and not AppSettings.get_auto_scan_show_popup_enabled():
+            self.statusBar().showMessage(
+                tr("blueprint_tracker.auto_scan_status_added", count=len(new_names))
+            )
+            return
 
         summary = (
             tr("blueprint_tracker.owned_added_singular") if len(new_names) == 1

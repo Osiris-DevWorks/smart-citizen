@@ -4,8 +4,14 @@ Three layers:
 
 * The AppSettings contract: default is 'simple', round-trips, and any
   unrecognized stored value coerces back to 'simple'.
-* The SimpleModeWidget: its two buttons emit the right intent signals and
-  ``set_busy`` disables the action.
+* The SimpleModeWidget: its two buttons emit the right intent signals,
+  ``set_busy`` disables the action, and ``set_apply_dirty`` (#397) mirrors
+  the Advanced-mode Apply button's red/green convention for color/tooltip
+  -- but, unlike that button, dirty never disables this one (#398 review):
+  Simple mode hides Config/Enhancements, so this button is the only
+  extract/generate/apply entry point and must stay clickable even when
+  "nothing to do" so a stale DataForge cache after a game patch can still
+  be refreshed manually. Busy still always wins for enabled state.
 * ``MainWindow._apply_ui_mode``: shows one view and hides the other, along
   with the advanced toolbar. Driven on a lightweight stand-in ``self`` (the
   real unbound method) so we don't construct the whole window, which pulls in
@@ -13,13 +19,10 @@ Three layers:
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QSettings, QSize, QRect  # noqa: E402
 from PyQt6.QtWidgets import (  # noqa: E402
@@ -36,12 +39,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from src.utils.settings import AppSettings  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 @pytest.fixture
@@ -94,6 +91,112 @@ def test_simple_widget_set_busy(qapp):
     assert w.generate_apply_btn.isEnabled()
     w.set_busy(True)
     assert not w.generate_apply_btn.isEnabled()
+    w.set_busy(False)
+    assert w.generate_apply_btn.isEnabled()
+
+
+def test_simple_widget_starts_dirty(qapp):
+    """#397: matches MainWindow._apply_dirty's own pre-load default -- red
+    and clickable from construction, not the old hardcoded-green button."""
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+    from src.utils.i18n import tr
+
+    w = SimpleModeWidget()
+    assert w.generate_apply_btn.isEnabled()
+    assert get_button_color("needs_apply") in w.generate_apply_btn.styleSheet()
+    assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip")
+
+
+def test_simple_widget_set_apply_dirty_toggles_color_and_tooltip_not_enabled(qapp):
+    """#397 follow-up: the tooltip has to swap with dirty state too, not
+    just color -- it was still showing the same static string in both
+    states even after the color half of the fix landed.
+
+    #398 review: enabled must stay True in both states (not toggled by
+    dirty at all) -- see the module docstring above for why: this is
+    Simple mode's only extract/generate/apply entry point, so disabling it
+    on green would leave a user with a stale DataForge cache (e.g. after a
+    game patch) with no way to force a refresh.
+    """
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+    from src.utils.i18n import tr
+
+    w = SimpleModeWidget()
+    w.set_apply_dirty(False)
+    assert w.generate_apply_btn.isEnabled()
+    assert get_button_color("apply") in w.generate_apply_btn.styleSheet()
+    assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip_disabled")
+
+    w.set_apply_dirty(True)
+    assert w.generate_apply_btn.isEnabled()
+    assert get_button_color("needs_apply") in w.generate_apply_btn.styleSheet()
+    assert w.generate_apply_btn.toolTip() == tr("simple_mode.generate_apply_tip")
+
+
+def test_main_window_forwards_apply_state_to_the_simple_button(qapp):
+    """#397's actual wiring: the one chokepoint MainWindow routes every
+    dirty/clean change through must also drive the Simple-mode button,
+    including the language-switch tooltip refresh that goes through it. A
+    window without simple_page yet (create_toolbar runs first) must not raise."""
+    from PyQt6.QtWidgets import QPushButton
+
+    from src.gui.main_window import MainWindow
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+    from src.utils.i18n import tr
+
+    class _Stub:
+        _set_apply_btn_dirty = MainWindow._set_apply_btn_dirty
+
+        def __init__(self, with_page=True):
+            self.apply_btn = QPushButton()
+            if with_page:
+                self.simple_page = SimpleModeWidget()
+
+    stub = _Stub()
+    stub._set_apply_btn_dirty(False)
+    # Recorded too: a theme, language or mode switch re-applies it from here.
+    assert stub._apply_dirty is False
+    button = stub.simple_page.generate_apply_btn
+    assert button.isEnabled()  # green never disables the Simple button
+    assert get_button_color("apply") in button.styleSheet()
+    assert button.toolTip() == tr("simple_mode.generate_apply_tip_disabled")
+
+    stub._set_apply_btn_dirty(True)
+    assert stub._apply_dirty is True
+    assert get_button_color("needs_apply") in button.styleSheet()
+    assert button.toolTip() == tr("simple_mode.generate_apply_tip")
+
+    _Stub(with_page=False)._set_apply_btn_dirty(False)  # construction order guard
+
+
+def test_simple_widget_busy_overrides_everything_for_enabled_not_color(qapp):
+    """A run in progress must disable the button regardless of dirty state,
+    but the color keeps reflecting dirty -- busy is a transient interaction
+    lock, not a verdict about whether there's anything to apply.
+
+    #398 review: once busy clears, enabled always returns to True --
+    dirty no longer gates enabled at all (see test_simple_widget_set_
+    apply_dirty_toggles_color_and_tooltip_not_enabled), so there's no
+    "dirty state set while busy" for it to fall back to anymore.
+    """
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.gui.theme import get_button_color
+
+    w = SimpleModeWidget()
+    w.set_apply_dirty(True)
+    w.set_busy(True)
+    assert not w.generate_apply_btn.isEnabled()
+    assert get_button_color("needs_apply") in w.generate_apply_btn.styleSheet()
+
+    # Clean (green) while busy: still disabled for the busy reason, not
+    # re-enabled just because dirty flipped mid-run.
+    w.set_apply_dirty(False)
+    assert not w.generate_apply_btn.isEnabled()
+
+    # Busy clears: enabled again regardless of the (clean) dirty state.
     w.set_busy(False)
     assert w.generate_apply_btn.isEnabled()
 
@@ -209,8 +312,6 @@ class _ResetStub:
     """Stand-in carrying what _reset_window_proportions touches."""
 
     def __init__(self):
-        from src.gui.main_window import MainWindow
-
         self.calls = []
         self._default_window_state = b"DOCKSTATE"
         self._user_resized_columns = True
@@ -639,6 +740,12 @@ class _SizeStub:
 
     def isFullScreen(self):
         return False
+
+    def _shrink_to_fit_if_simple(self):
+        # The un-maximize path queues this on a 0 ms timer. The session-wide
+        # QApplication outlives this module, so a later module's event loop
+        # fires it; without it PyQt6 aborts on the missing attribute.
+        pass
 
 
 def test_advanced_mode_sizes_window_before_maximizing(qapp):

@@ -19,7 +19,7 @@ import json
 
 # Each section is a title plus a flat list of one-line test items. Keep items
 # imperative and self-contained ("do X, confirm Y") so a tester needs no other
-# doc. This plan covers Smart Citizen 2.3.1 (the diff over its 2.3.0 base).
+# doc. This plan covers Smart Citizen 2.4.0 (the diff over its 2.3.1 base).
 #
 # Keep each item under ~190 characters. tests/test_test_plan.py chunks the
 # submitted report at a 200-char limit and asserts every line survives intact,
@@ -35,79 +35,81 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
-        "title": "Tag Builder enclosing styles (#352)",
+        "title": "Verify Install Location (#385, #429, #440-#442)",
         "items": [
-            "Tag Builder > Ship Weapons: set Enclosing to Angle, Save Tag Changes, Generate Enhancements.",
-            "Blueprint Tracker: NDB-26 Repeater shows its tag in <angle> brackets, and its Type/Class/Size/Grade are filled in, not blank.",
-            "Set the Class filter to Military: the Available list narrows to <MIL-...> items only, and hovering one shows its facets in the tooltip.",
-            "Repeat with Round and Curly on Components: QuadraCell, QuadraCell MT, FR-66 and FR-76 all keep their tag and their facets.",
-            "Set Enclosing to None (space only) and regenerate: those same items still resolve their tag and facets rather than going blank.",
-            "Set every category back to Square and regenerate: everything still resolves, exactly as in 2.3.0.",
+            "Config tab: click Verify Install Location. The dialog names the install the RSI Launcher starts and says whether Smart Citizen points at it.",
+            "With a second (or leftover) Star Citizen folder on the PC: both show as cards; a folder with no Data.p4k is marked as unplayable.",
+            "Press Use this install on the launcher's install: the Config path and channel list update, and the next Apply lands in that install.",
+            "Press Scan all drives with an install in a custom folder: it is found. Cancel a scan midway: the dialog says the list may be short.",
         ],
     },
     {
-        "title": "Renamed blueprints mission header (#353)",
+        "title": "First-run install detection (#429, #453, #438, #439)",
         "items": [
-            "Config > Mission Labels: rename the blueprints header (e.g. to \"LOOT\"), then Generate Enhancements.",
-            "Blueprint Tracker still populates; it does not go empty.",
-            "String Editor: the BP Descriptions filter still finds those mission bodies under the renamed header.",
-            "Mark an item owned and Apply Owned Tags: the [Owned] tag still lands on its bullet under the renamed header in game.",
-            "Set the header back to the default and regenerate: everything still works.",
+            "Fresh install with Star Citizen in a custom folder: first run finds it from the launcher log rather than asking you to browse.",
+            "First run never saves a folder that holds no Data.p4k as the install path.",
         ],
     },
     {
-        "title": "Blueprint names from another editor (#372)",
+        "title": "Apply button state (#387, #397, #398, #428)",
         "items": [
-            "If you have ever run another localization editor (e.g. StarStrings), open Blueprint Tracker and check the Owned list for garbled names like \"Ind/1/B Colossus\".",
-            "Launch the app once: any such stored names are repaired to their real names (Colossus) automatically, and the items show as owned.",
-            "Scan Logs for Owned Blueprints: names recovered from old logs land under their real names, not the other tool's format.",
-            "Items that genuinely are not in your item list are left alone rather than deleted — nothing you owned should disappear from the Owned list.",
+            "Launch with nothing changed since the last Apply: the Apply button starts green, not red.",
+            "Edit a Custom Value: Apply goes red. Apply to Game: it goes green and stays green, and closing gives no unapplied-changes warning.",
+            "Simple mode: Apply Enhancements turns the button green afterwards, and closing gives no unapplied-changes warning.",
+            "Switch language without applying: Apply goes red, because the game's user.cfg still names the old language.",
+            "Make Apply fail (e.g. game running or file read-only): the button stays red for a retry.",
         ],
     },
     {
-        "title": "Blueprint Tracker lists and filters (#354, #374)",
+        "title": "Apply Preview and success counts (#399, #400, #425, #443)",
         "items": [
-            "Type/Class/Size/Grade dropdowns and the search box narrow the Owned list as well as the Available list.",
-            "Clear every filter: both lists show all of their items again.",
-            "No component appears in Available and Owned at the same time (the \"stacking\" report).",
-            "Commodity crafting-material lines (e.g. \"Power Plants: 10 items\") never show up as fake blueprint items in either list.",
-            "In Owned, select several items, then type in the search box so only one stays visible, and click Remove: only the visible one is un-owned.",
+            "Config tab Apply Preview: the enhancement counts per category match the Apply success dialog for the same run.",
+            "First Simple-mode apply on a fresh install: the success dialog reports a non-zero enhancement count.",
         ],
     },
     {
-        "title": "Window layout and String Editor columns (#364)",
+        "title": "Blueprint Tracker scanning (#446, #386, #401)",
         "items": [
-            "Below full screen, every tab has its horizontal scrollbar in the same place, and nothing is clipped or squeezed off the edge.",
-            "Drag a String Editor column divider: the column resizes, and the filter box under it follows to match its new width.",
-            "Double-click a column divider: the column snaps to fit its widest content.",
-            "Scroll the String Editor sideways: the filter boxes stay glued to their own columns instead of stranding.",
-            "Reload (Apply Enhancements, a merge, or a language change): the filter row stays below the column names, never covering them.",
-            "Drag the window narrower than its content: it shrinks freely and scrolls, rather than refusing to resize.",
-            "Simple mode opens with no scrollbar and no dead space above the footer links.",
-            "More > Reset Window Proportions: the confirm dialog says settings and localization data are untouched; window, docks and column widths return to defaults.",
-            "Restart: your window size and column widths are remembered.",
-            "Export Settings and open the zip: it carries no column widths (those stay machine-local).",
+            "Scan Logs for Owned Blueprints with PTU selected: it reads LIVE (and HOTFIX if installed), never PTU, EPTU or TECH-PREVIEW logs.",
+            "Tick Auto-scan logs on startup and restart: the scan runs on its own and reports in the status bar, with no popup.",
+            "Also tick Show popup for new blueprints found by auto-scan: on a restart that finds new ones, the summary popup appears.",
+            "The keyword search box sits beneath the dropdown filters.",
         ],
     },
     {
-        "title": "Star Citizen install detection (#370)",
+        "title": "Extraction (#471, #473, #402, #389)",
         "items": [
-            "With more than one Star Citizen install on the machine, Config shows the one you actually play (the newest Data.p4k), not the first drive letter found.",
-            "Extract DataForge: it completes normally rather than hanging for many minutes on a stale or half-installed copy.",
-            "Point Config at a folder with no usable Data.p4k and extract: the message names the DCB file, its size and the p4k path, and suggests Verify Files.",
+            "Set the DataForge cache folder to another drive and extract: the ~2 GB working folder appears beside it on that drive, not on C:, and is gone when done.",
+            "During a DataForge extraction, press Esc or the X: it asks Stop or Cancel. Cancel keeps it running; Stop ends it and the previous cache still works.",
+            "Close the app during a DataForge extraction: it asks to stop first, and the extraction tools don't keep running after the app closes.",
+            "During Extract from Data.p4k (global.ini), press Esc: the extraction stops, base.ini is unchanged and the status bar says it stopped.",
+            "At startup, answer Yes to extract, then press Esc: the app loads your previous strings rather than an empty table.",
+            "Generate Enhancements with only one category ticked: it completes without a crash.",
         ],
     },
     {
-        "title": "Stale-output detection and translated runs (#363, pool headings)",
+        "title": "New languages (#404, #367, #403)",
         "items": [
-            "Generate Enhancements, then change any Tag Builder setting WITHOUT regenerating, and restart the app.",
-            "At startup, Save Tag Changes and Generate Enhancements are both red: the files on disk no longer match your settings, and the app says so without you cycling a checkbox.",
-            "The reported case: on an install upgraded from an older version, tick \"annotate component tags in mission descriptions\" and restart. The buttons light up, not grey over stale output.",
-            "Regenerate: both buttons go green, and the annotations actually appear in game.",
-            "Import Settings from a backup whose Tag Builder config differs from your current one: the buttons light up instead of clearing.",
-            "Interrupt or fail a generation run: the buttons stay red for a retry, rather than going grey over files the tag config never reached.",
-            "Switch language and restart: the freshness checks and the category status dots read that language's generated files, not English ones.",
-            "On a translated run, a mission offering more than one blueprint pool shows its pool headings translated, not in English.",
+            "Switch to Turkish, then Traditional Chinese: UI, Help and About show in that language and game strings load.",
+            "Korean: Map Language File, Browse to a copy of the community global.ini (outside the SC install), switch to Korean: strings load.",
+            "Korean: try mapping the global.ini Smart Citizen itself applies in your install: it is refused with an explanation.",
+            "Turkish in game: Apply, launch, and confirm Turkish text shows (it uses the game's polish_(poland) slot).",
+        ],
+    },
+    {
+        "title": "Settings backup (#383)",
+        "items": [
+            "Rename a Mission Label, Export Settings, set the label back to default, then Import: the rename comes back. Repeat in reverse: the default comes back.",
+        ],
+    },
+    {
+        "title": "Installer and uninstaller (#357, #418, #452, #454, #432, #451, #420, #434, #422)",
+        "items": [
+            "Install into a folder holding other files: Setup offers <folder>\\Smart Citizen instead, and nothing else in that folder is deleted.",
+            "Upgrade over an existing install: settings, user.ini and backups survive; the app relaunches after an in-app auto-update.",
+            "Uninstall with Also delete all saved settings unticked: user.ini and backups stay. Ticked: Smart Citizen's data and caches go, nothing else.",
+            "With Documents on OneDrive (personal or work/school): the data-folder page suggests a local folder, and cache cleaning runs without errors.",
+            "Upgrade from a pre-0.9 install whose data is on OneDrive: the old data folder is kept, not replaced by a new empty one.",
         ],
     },
     {

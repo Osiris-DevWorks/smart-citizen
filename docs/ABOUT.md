@@ -49,7 +49,6 @@ Thanks to the testers who helped shape Smart Citizen with their feedback:
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 
@@ -65,18 +64,21 @@ Smart Citizen also bundles upstream tooling from:
 
 The non-English game strings are community translations:
 
-- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — the community-maintained `global.ini` translations that power the French, Brazilian Portuguese, and Italian language options. Their translators do the real work here; we just deliver it.
+- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — the community-maintained `global.ini` translations that power the French, Brazilian Portuguese, Italian, and Turkish language options. Their translators do the real work here; we just deliver it.
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES): the community-maintained `global.ini` translation that powers the Spanish language option.
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources) — the community-maintained `global.ini` translation that powers the Japanese language option.
-- [**42Kit**](https://ini.42kit.com/) — the community-maintained `global.ini` translation that powers the Chinese language option.
+- [**42Kit**](https://ini.42kit.com/) — the community-maintained `global.ini` translation that powers the Chinese (Simplified) language option.
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) — the community-maintained `global.ini` translation that powers the German language option.
+- **[스타 시티즌 유저 한국어 프로젝트](https://sc.galaxyhub.kr)** (the Shatagon, MGM Star Fleet, and Falco Rescue guilds) — the community team behind the Korean localization. Their file isn't bundled with Smart Citizen (their license doesn't allow redistribution); Korean is a bring-your-own-file language, mapped via *Map Language File* to a local copy you get directly from them.
+- [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — the community-maintained `global.ini` translation that powers the Traditional Chinese language option. Last updated May 2024, so it covers roughly two-thirds of current in-game strings; the rest fall back to English.
 
 ## Key Features
 
 ### 🎯 Core Features
 - **Load & Edit**: Load `global.ini` from your Star Citizen installation and customize strings in an intuitive table view
 - **Multi-Channel Support**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW each get their own isolated `user.ini`, cache, backups, and DataForge extraction — switch channels from the Config tab without restarting
-- **Multi-Language Support**: Switch the app and game strings between English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, and German from the Config tab. Non-English languages layer a community-translated `global.ini` over the English base, with English fallback for anything untranslated. More languages will be exposed as community translations land (see `languages/TRANSLATIONS.md`)
+- **Verify Install Location**: Finds every Star Citizen install on your PC and reads the RSI Launcher's log to tell you which one the game really starts, so Apply never writes to a copy you don't launch
+- **Multi-Language Support**: Switch the app and game strings between English, French, Spanish, Brazilian Portuguese, Japanese, Chinese (Simplified), Italian, German, Turkish, Korean (bring your own file), and Traditional Chinese from the Config tab. Non-English languages layer a community-translated `global.ini` over the English base, with English fallback for anything untranslated. More languages will be exposed as community translations land (see `languages/TRANSLATIONS.md`)
 - **Mission Contracts**: Edit mission contract and briefing text from the dedicated Missions category
 - **Smart Filtering**: Search strings, filter by category (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other), or modification status
 - **Per-Column Filters**: Type directly into filter boxes below each column header for fine-grained searching
@@ -108,7 +110,7 @@ The non-English game strings are community translations:
 - **Tag Builder**: Customize the bracketed tags on components, missiles, ship weapons, and commodities — reorder elements, change abbreviation length (M / MIL / Military), pick separators and brackets, or place the tag after the name instead of before. Components have an optional Type element (Shield, Cooler, etc.); commodities have a Usage element showing what their crafting materials feed into
 - **Mission Titles**: Lead hauling titles with their route (e.g. `Area18 > Lorville`) — configurable placement, arrow, separator, and location detail, plus optional stock-title shortening, with a live preview
 - **Stats Above or Below**: Choose whether a stat block sits at the top or the bottom of the description
-- **Blueprint Tracker**: A dedicated tab for marking the crafting blueprints you already own. Shuttle items between Available and Owned, filter by Mission / Type / Class / Size / Grade, and owned items get a blue `[Owned]` tag in mission blueprint lists. **Scan Logs for Owned Blueprints** populates ownership automatically from your Star Citizen log files, importing only what's new since the last scan, and **Export / Import Owned Blueprints** moves the owned list between PCs (JSON or CSV; imports only ever add, and scmdb.net exports work too)
+- **Blueprint Tracker**: A dedicated tab for marking the crafting blueprints you already own. Shuttle items between Available and Owned, filter by Mission / Type / Class / Size / Grade, and owned items get a blue `[Owned]` tag in mission blueprint lists. **Scan Logs for Owned Blueprints** populates ownership automatically from your Star Citizen log files, importing only what's new since the last scan (or automatically on startup, when **Auto-scan logs on startup** is on), and **Export / Import Owned Blueprints** moves the owned list between PCs (JSON or CSV; imports only ever add, and scmdb.net exports work too)
 - **Mission Labels**: Rename the section headers (MISSION DETAILS, POTENTIAL BLUEPRINTS, etc.), the XP label, and the emphasis tag used for headers
 - **Declarative CIG Data-Bug Patches**: A patch system applies fixes to known DataForge bugs at extraction time so in-game text reads correctly without waiting on CIG
 - **Selective Categories**: Enable or disable each enhancement category independently from the Enhancements tab
@@ -146,7 +148,7 @@ The non-English game strings are community translations:
 
 ### Support This Project
 Smart Citizen is completely free. If you find it valuable:
-- 💳 [Donate via PayPal](https://paypal.me/RighteousKill)
+- 💳 [Donate via PayPal](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Donate via Venmo](https://venmo.com/u/Amr-Abouelleil)
 
 ## Other Tools by Osiris DevWorks

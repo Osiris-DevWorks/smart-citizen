@@ -47,8 +47,198 @@ them against the new source.
 - `enhancements.apply_tag_changes_btn` — English renamed from "Apply Tag
   Changes" to "Save Tag Changes" (#214, 2.1.2). Affects french,
   portuguese_br, spanish (all three still translate "Apply...").
+- `config.map_language_desc`, `dialogs.language_no_url`,
+  `dialogs.language_download_failed` — English reworded from URL-only to
+  URL-or-local-file phrasing for #367's local-file *Map Language File*
+  support. Affects spanish, whose human `ht` for all three still describes
+  a URL-only flow ("Define una URL al global.ini...", "No hay URL de
+  descarga configurada..."). The AI `at` fallback for every other non-English
+  language had the same staleness (no `ht` to protect there, so the 2026-10-01
+  backfill below refreshed all of them directly instead of just flagging it).
 
 ## Backfill log
+
+- **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
+  current with English after the pre-release docs sync. In all 10 languages:
+  `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge
+  extraction, plus a new *DataForge cache folder* bullet (default
+  `%LOCALAPPDATA%`, the ~2 GB extraction work beside it since #471); `ABOUT.md`
+  gained the *Verify Install Location* feature line (#385) and the startup
+  auto-scan clause on the Blueprint Tracker line (#386). Eight languages (all
+  but korean and turkish) gained the Blueprint Tracker "hover any blueprint"
+  bullet. korean, turkish and chinese_traditional, translated earlier this
+  cycle from an older English, also gained the two auto-scan bullets, the
+  Verify Install Location bullet, the "Apply says it worked but the game
+  looks unchanged" troubleshooting entry and missing Supporters lines, and got
+  a full parity pass (language lists, the Export Settings defaults sentence,
+  the current PayPal link). Bold UI labels use each file's own `ui.json`
+  strings. All AI translation; no human text existed in these docs.
+- **2.4.0 cycle (2026-10-06, Claude Opus 5.5):** #471 added seven `extract.*`
+  keys. Five are for a running DataForge extraction: `dataforge_running_title`,
+  `dataforge_running_body` and `dataforge_stop_btn` (the Stop / Cancel
+  question Esc or the X on the extraction dialog now asks) and the
+  status-bar `dataforge_stopping` and `dataforge_stopped`. The three question
+  keys replaced a Yes/No pair (`dataforge_stop_title`, `dataforge_stop_body`)
+  during the review, before any release. A Run in Background button
+  (`dataforge_background_btn`) came and went in the same review, and the
+  body was translated again without it. The other two, `p4k_stopping` and `p4k_stopped`, are
+  the status bar's global.ini counterparts, shown when Esc or the X on the
+  P4K Extraction dialog stops that extraction.
+  In all 10 languages, `at`-only (`ht` empty), each worded in that file's own
+  register and with its existing name for the DataForge extraction (the
+  `p4k_*` pair mirrors that file's DataForge pair
+  and keeps `global.ini` as written). A separate checker back-translated
+  every string and compared it with the English (again after the
+  two-button rewording, and for the `p4k_*` pair): no meaning errors,
+  register and terms matched each file, and the Korean sentence-spacing
+  rule holds. No existing string changed.
+- **2.4.0 cycle (2026-10-04, Claude Sonnet 5.5):** #446 removed the Blueprint
+  Tracker's "Also scan LIVE/HOTFIX" tickbox. Scan Logs now always reads LIVE,
+  plus HOTFIX when it is installed, and never PTU, EPTU or TECH-PREVIEW. In
+  all 10 languages: removed `blueprint_tracker.scan_other_channels_checkbox`
+  and `blueprint_tracker.scan_other_channels_tooltip`, reworded
+  `blueprint_tracker.scan_logs_tooltip` (the existing first sentence is kept
+  word for word and one new sentence follows it), added
+  `enhancements.bp_scan_no_live_hotfix`, and replaced the old LIVE/HOTFIX
+  bullet in each `HELP.md` with a "which servers the scan reads" bullet. All
+  `at`-only (`ht` empty). None of the replaced strings had a human `ht`, so no
+  human translation was overwritten. Each language was translated by its own
+  agent, then back-translated and compared with the English by a separate
+  checker (no meaning errors). Four wording fixes followed the check: korean
+  got the word for "never" back in the dialog and the Help bullet, spanish
+  says "se reinician" instead of "se borran" in the Help bullet (which could
+  read as the servers being deleted), japanese got the "because" back in the
+  Help sentence, and chinese_traditional uses 帳號 instead of 賬號. After the
+  hand test the tooltip was cut to two lines: the existing first sentence and
+  a short second line (LIVE, plus HOTFIX when installed, because the two share
+  a server and account progression). The English second line dropped "too" and
+  "one", and the other ten languages keep their existing second line, which
+  says the same. The sentences about the test servers never being scanned and
+  about the Config tab make no difference now live only in the Help bullet and
+  the dialog.
+  For a native reviewer: most old texts called PTU, EPTU and TECH-PREVIEW "test
+  builds", and the new texts say "test servers" because the English now does
+  (turkish "sunucu" where the old text said "test sürümleri" is the clearest
+  case). "Wiped" is rendered as: chinese 清档, chinese_traditional 重置, french
+  réinitialisés, german zurückgesetzt, italian azzerati, japanese
+  データがより頻繁に消去される, korean 초기화 (the game slang 와이프 is an
+  alternative), portuguese_br zerados, spanish se reinician, turkish
+  sıfırlanan. Each new text names the Config tab with that language's own
+  `tabs.config` label. Older strings in french, italian, japanese and spanish
+  call the same tab by a different name (left as they were). Two splits come
+  from the old text: german "Kontofortschritt" (tooltip) against
+  "Konto-Progression" (Help), and japanese アカウント進捗 against アカウント進行.
+
+- **2.4.0 cycle (2026-10-02, Claude Opus 5.5):** #398 follow-up reworded the
+  English `simple_mode.generate_apply_tip_disabled` (the green Simple-mode
+  button's tooltip) from "nothing has changed since the last time you
+  applied" to say the game matches the current settings and that a click
+  still regenerates and re-applies, for example after a game patch. The
+  button stays clickable when green, and the check compares the game file
+  with the current settings rather than tracking changes. Refreshed the `at`
+  in all 10 other languages to match. No language had an `ht` for this key,
+  so nothing needs human re-review. The Advanced-mode green tooltip
+  `toolbar.apply_disabled_tooltip` got the same reword in English, without
+  the click hint (that button is disabled while green), and its `at` was
+  refreshed in the 10 other languages (Claude Sonnet 5.5), again with no `ht`
+  to protect. The same change added one sentence to
+  `docs/HELP.md` and the 10 translated `HELP.md` files (Claude Sonnet 5.5):
+  restoring a backup or clearing the localization turns the Apply button
+  red, but closing afterwards does not ask. The translations are AI-written,
+  styled on each file's existing register, and each names the action with
+  that language's own menu label. HELP files have no `ht`/`at` split, so
+  this log is their only record.
+- **2.4.0 cycle (2026-10-01, Claude Sonnet 5):** Merged `release/2.4.0` into
+  Korean's PR branch (#409) and backfilled the 50 English keys that had
+  landed since Korean's own translation pass: the duplicate-install-detection
+  feature's 44 `config.dupe_*` keys and the blueprint auto-scan feature's 6
+  `blueprint_tracker.auto_scan_*` / `scan_logs_already_running_tooltip` keys.
+  All `at`-only, styled on Korean's existing formal register. One further key
+  (`simple_mode.generate_apply_tip_disabled`) was still on an unmerged PR at
+  backfill time. Its Korean `at` was added later on #409's branch (1f22a15),
+  after #398's still-unmerged branch had been merged into it. #398 and then
+  #409 merged minutes later.
+  Also added `config.map_language_overwrite_warning` (new #409-follow-up
+  guard against mapping a language's own apply target as its source) across
+  all 10 languages, backfilled turkish's own missing `dialogs.language_copying`
+  (added by Korean's original pass before turkish existed, #404 never saw
+  it), and refreshed the stale URL-only `at` text on the 4 keys above for
+  french, portuguese_br, japanese, chinese, italian, german, and turkish
+  (Spanish's human `ht` is untouched, per the note above; its one AT-only key
+  among the four, `map_language_tooltip`, was refreshed too).
+- **2.4.0 cycle (2026-10-01, Claude Sonnet 5):** Merged `release/2.4.0` into
+  Traditional Chinese's PR branch (#407) and backfilled the real missing-key
+  gap it exposed (the same duplicate-install-detection and blueprint
+  auto-scan keys Korean's #409 needed, measured fresh rather than reused from
+  that count since the two branches diverged from different points).
+  Renumbered the installer's `LanguageIndex` from 8 to 10: Turkish (#404)
+  had already merged upstream and claimed 8, which this PR's original index
+  assumed was free, and Korean (#409) merged first and took 9. Dropped the hardcoded
+  "(67.3%)" from `_LANGUAGE_COMBO_LABEL_OVERRIDES` and installer.iss's
+  `Chinese (Traditional)` — unified on **"Traditional Chinese"** in both per
+  the review: a hand-measured percentage goes stale the moment the English
+  key set changes, and the two files had drifted to different names for the
+  same language. Reverted an unnecessary realignment of the whole
+  `SC_LANGUAGE_IDS` dict (the original PR widened every column to fit the
+  new key, which only grows future merge-conflict surface for no behavioral
+  benefit) back to the existing narrow alignment, appending the new entry
+  as the review asked.
+  On merging after Korean (#409), added the 3 keys that had landed since
+  (`simple_mode.generate_apply_tip_disabled`, `config.map_language_overwrite_warning`,
+  `dialogs.language_copying`) and refreshed the 4 reworded Map Language File
+  keys from URL-only to URL-or-local-file text, converted from chinese.
+- **2.4.0 cycle (2026-09-10, Claude Sonnet 5):** New language **korean** added
+  (#367), shipped as bring-your-own-file rather than with a bundled source.
+  Full AI translation of all 668 `ui.json` keys plus the 19-step guided tour
+  (`tutorial.*`), all `at`-only (`ht` empty). Translated `HELP.md`, `ABOUT.md`,
+  `LEGAL.md`, and `FAQ.md`. Unlike every other language here, `sources.json`
+  carries no URL for Korean (deliberately blank, with a comment explaining
+  why) — the Star Citizen Korean Localization Project (스타 시티즌 유저
+  한국어 프로젝트, run by the Shatagon/MGM Star Fleet/Falco Rescue guilds at
+  sc.galaxyhub.kr) licenses their `global.ini` for non-redistribution: it can
+  only be downloaded through their own patcher with a daily Discord-issued
+  access code. `SC_LANGUAGE_IDS["korean"] = "korean_(south_korea)"`, one of
+  the twelve official CIG Localization slots (confirmed via the community's
+  own installation guides, since Korean — unlike Turkish in the parallel
+  #404 work this cycle — has a real dedicated slot and needs no borrowing).
+  installer `LanguageChoicePage` gained a Korean option.
+
+  This is the first language to exercise **Map Language File**'s new
+  local-file support, added alongside it: `LanguageBaseDownloadWorker`
+  (`src/gui/workers.py`) now detects whether its mapped source is an
+  `http(s)://` URL (downloaded, freshness-checked, same as every other
+  language) or a local file path (copied via `shutil.copy2`, no network
+  round trip), and the *Map Language File* dialog (`config_tab.py`) gained a
+  per-row **Browse...** button so a user doesn't have to hand-type a Windows
+  path. `AppSettings.get_language_base_url()`'s docstring and the relevant
+  `ui.json` strings (`config.map_language_desc`, `config.map_language_tooltip`,
+  `dialogs.language_no_url`, `dialogs.language_download_failed`) were
+  reworded from URL-specific to source-agnostic language; a new
+  `dialogs.language_copying` key covers the copy-in-progress dialog title a
+  local source shows in place of "Downloading...". All 7 other languages
+  gained an AI `at`-only backfill for that one new key so their
+  key-universe tests stay green. Locked by `tests/test_korean_activation.py`.
+- **2.4.0 cycle (2026-09-08, Claude Sonnet 5):** New language **chinese_traditional** added (#403). Unlike every prior AI-translated language, which independently translated the full English `ui.json` from scratch, this one was generated by converting the existing **chinese** (Simplified) translation to Traditional Chinese via OpenCC's `s2twp` config (Taiwan standard, phrase-aware — not a bare character swap: `软件`→`軟體`, `服务器`→`伺服器`, `文件`→`檔案`, not just `软`→`軟` etc.), since chinese's docs were confirmed section-for-section current with English first (`## ` header counts matched exactly across `HELP.md`/`ABOUT.md`/`LEGAL.md`/`FAQ.md`). All 668 `ui.json` keys plus the 19-step guided tour (`tutorial.*`) converted this way, all `at`-only (`ht` empty) since chinese itself has no `ht` strings yet either. Spot-checked two of the classic Simplified→Traditional ambiguous-character cases across every converted file: `后` (after) vs `后` (empress) — all 56 instances converted correctly to `後`; `并` (and) vs `合并` (merge) — 35 of 36 correct, one genuine miss found and fixed by hand (`并为` "and, for" was rendered `併為`, the "merge" reading, instead of `並為`, the conjunction reading — three occurrences across `ui.json` and `HELP.md`). Base `global.ini` sourced from **Orbit-Startech/StarCitizen-TCTP** (`chinese_(traditional)/global.ini`, GPL-3.0, verified HTTP 200 at wiring time); `SC_LANGUAGE_IDS["chinese_traditional"] = "chinese_(traditional)"`; installer `LanguageChoicePage` gained a "Traditional Chinese" option (index 10 as of the 2026-10-01 follow-up above; originally wired as index 8). **Known, permanent coverage gap**: the source hasn't updated since May 2024 and covered only 67.3% of the English key set measured at issue-filing time — about a third of in-game strings fall back to English, a fraction that only grows as English gains keys. Originally flagged with a hardcoded percentage in the language selector; the 2026-10-01 follow-up above dropped the number (it could only go stale) in favor of just the corrected name. A Traditional-Chinese-speaking reviewer replacing the `at` strings with `ht` (and, ideally, finding a more current source) is the next step.
+- **2.4.0 (2026-09-08, Claude Fable 5.1):** New language **turkish** added
+  (#404). Full AI translation of all 668 UI keys plus the 19-step guided
+  tour (`tutorial.*`), all `at`-only (`ht` empty). Translated `HELP.md`,
+  `ABOUT.md`, `LEGAL.md`, and `FAQ.md`. Base `global.ini` mapped to
+  Dymerz/StarCitizen-Localization
+  (`data/Localization/turkish_(turkey)/global.ini`, 95% key coverage
+  against the current English file) in `sources.json`, the same source
+  repo already used for french, portuguese_br, and italian. **Turkish
+  borrows the game's `polish_(poland)` slot**:
+  `SC_LANGUAGE_IDS["turkish"] = "polish_(poland)"`. `turkish_(turkey)` is
+  not a `g_language` value the game accepts, so Turkish has to ride on an
+  official slot; Polish is unclaimed by our own languages and needs the
+  same Latin Extended-A block Turkish does (ł ą ę ż ź ć ń ś vs ğ ı İ ş),
+  so the game font already draws our glyphs. `russian_(russia)` was tried
+  first and rejected — the game does not recognise it. Dymerz's own guide
+  maps Turkish onto `german_(germany)`, which would collide with our
+  German language. Installer `LanguageChoicePage` gained a Turkish option.
+  The seven other translated `ABOUT.md` files gained Turkish in both the
+  Dymerz credit line and the *Multi-Language Support* bullet, so all nine
+  language lists agree. Locked by `tests/test_turkish_activation.py`.
 
 - **2.3.1 pre-release (2026-08-28, Claude Opus 5):** `ABOUT.md` docs-parity
   follow-up to the `HELP.md` sweep below — the window-layout work (#364) was
@@ -298,3 +488,60 @@ them against the new source.
   `g_language = german_(germany)` (`SC_LANGUAGE_IDS`). A German-speaking
   reviewer replacing the `at` strings with `ht` is the next step to promote
   it from AI-only to human-reviewed.
+- **korean** — AI-translated by **Claude** (#367). No human translator yet, so
+  **every** key is `at`-only (`ht` empty) — the whole UI, the guided tour
+  (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review (grep `"ht": ""` returns the entire
+  file by design). Unlike every other language here, Korean ships with
+  **no bundled `global.ini` source** — `sources.json`'s `korean` entry is
+  deliberately blank. The community source, the Star Citizen Korean
+  Localization Project (스타 시티즌 유저 한국어 프로젝트, sc.galaxyhub.kr),
+  licenses their file for non-redistribution and gates the download behind
+  a daily Discord access code, so there is no public URL Smart Citizen
+  could fetch even if it wanted to. Instead, a Korean-speaking user installs
+  the community patch themselves, then uses the Config tab's *Map Language
+  File* (now with a **Browse...** button, #367) to point Smart Citizen at
+  the `global.ini` they already have locally — Smart Citizen copies it in
+  rather than downloading it, and never redistributes it. Korean writes to
+  the game's `korean_(south_korea)` Localization folder with
+  `g_language = korean_(south_korea)` (`SC_LANGUAGE_IDS`) — one of CIG's
+  twelve official Localization slots. A Korean-speaking reviewer replacing
+  the `at` strings with `ht` is the next step to promote it from AI-only to
+  human-reviewed.
+- **chinese_traditional** — Generated by **Claude** (#403) via OpenCC `s2twp`
+  conversion of the **chinese** (Simplified) translation, not an independent
+  translation from English — see the 2.4.0 backfill-log entry above for the
+  method and the ambiguous-character verification pass. No human translator
+  yet, so **every** key is `at`-only (`ht` empty) — the whole UI, the guided
+  tour (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review (grep `"ht": ""` returns the entire
+  file by design). The base `global.ini` is sourced from
+  **Orbit-Startech/StarCitizen-TCTP** (`chinese_(traditional)/global.ini`),
+  which stopped updating in May 2024 and covers only 67.3% of the current
+  English key set — flagged in the language selector as "Traditional
+  Chinese" (the 2026-10-01 follow-up dropped the hardcoded percentage, which
+  could only go stale, keeping just the corrected name) rather than left as
+  a silent surprise. chinese_traditional writes to the game's
+  `chinese_(traditional)` Localization folder with
+  `g_language = chinese_(traditional)` (`SC_LANGUAGE_IDS`). A
+  Traditional-Chinese-speaking reviewer replacing the `at` strings with `ht`
+  — and ideally finding a more current source — is the next step to promote
+  it from AI-only to human-reviewed.
+- **turkish** — AI-translated by **Claude** (#404). No human translator yet, so
+  **every** key is `at`-only (`ht` empty) — the whole UI, the guided tour
+  (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review (grep `"ht": ""` returns the entire
+  file by design). The base `global.ini` is sourced from
+  **Dymerz/StarCitizen-Localization**
+  (`data/Localization/turkish_(turkey)/global.ini`), the same source repo
+  already used for french, portuguese_br, and italian. Turkish writes to
+  the game's `polish_(poland)` Localization folder with
+  `g_language = polish_(poland)` (`SC_LANGUAGE_IDS`) — a borrowed slot,
+  not a Turkish one: `turkish_(turkey)` is not a `g_language` value the
+  game accepts, `russian_(russia)` was tried first and is not recognised
+  by the game either, and Dymerz's suggested `german_(germany)` is already
+  taken by our German language. Polish is unclaimed by our own languages
+  and shares Turkish's Latin Extended-A glyph needs. A Turkish-speaking
+  reviewer replacing the `at`
+  strings with `ht` is the next step to promote it from AI-only to
+  human-reviewed.

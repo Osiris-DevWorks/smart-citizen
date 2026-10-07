@@ -51,7 +51,6 @@ Obrigado aos testadores que ajudaram a moldar o Smart Citizen com seu feedback:
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 
@@ -67,18 +66,21 @@ O Smart Citizen também embarca ferramentas de terceiros:
 
 As strings do jogo em idiomas diferentes do inglês são traduções da comunidade:
 
-- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization): as traduções comunitárias do `global.ini` que alimentam as opções de idioma francês, português do Brasil e italiano. Os tradutores deles fazem o trabalho de verdade aqui; nós só entregamos.
+- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization): as traduções comunitárias do `global.ini` que alimentam as opções de idioma francês, português do Brasil, italiano e turco. Os tradutores deles fazem o trabalho de verdade aqui; nós só entregamos.
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES): a tradução comunitária do `global.ini` que alimenta a opção de idioma espanhol.
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources): a tradução comunitária do `global.ini` que alimenta a opção de idioma japonês.
-- [**42Kit**](https://ini.42kit.com/): a tradução comunitária do `global.ini` que alimenta a opção de idioma chinês.
+- [**42Kit**](https://ini.42kit.com/): a tradução comunitária do `global.ini` que alimenta a opção de idioma chinês (simplificado).
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): a tradução comunitária do `global.ini` que alimenta a opção de idioma alemão.
+- **[Projeto de Localização Coreana de Star Citizen](https://sc.galaxyhub.kr)** (as guildas Shatagon, MGM Star Fleet e Falco Rescue): a equipe da comunidade por trás da localização coreana. O arquivo deles não é incluído no Smart Citizen (a licença deles não permite redistribuição); o coreano é um idioma "traga seu próprio arquivo", mapeado via *Mapear Arquivo de Idioma* para uma cópia local que você obtém diretamente com eles.
+- [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP): a tradução comunitária do `global.ini` que alimenta a opção de idioma chinês tradicional. Atualizada pela última vez em maio de 2024, cobre cerca de dois terços das strings atuais do jogo; o restante recorre ao inglês.
 
 ## Principais Recursos
 
 ### 🎯 Recursos Centrais
 - **Carregar e Editar**: carregue o `global.ini` da sua instalação do Star Citizen e personalize strings em uma tabela intuitiva
 - **Suporte Multicanal**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW têm cada um seu próprio `user.ini`, cache, backups e extração do DataForge isolados; troque de canal na aba Config sem reiniciar
-- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês, italiano e alemão na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
+- **Verificar local da instalação**: encontra todas as instalações do Star Citizen no seu PC e lê o log do launcher da RSI para dizer qual delas o jogo realmente inicia, para que aplicar nunca grave em uma cópia que você não abre
+- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês (simplificado), italiano, alemão, turco, coreano (arquivo próprio) e chinês tradicional na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
 - **Contratos de Missão**: edite textos de contratos e briefings na categoria Missions dedicada
 - **Filtragem Inteligente**: busque strings, filtre por categoria (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) ou por status de modificação
 - **Filtros por Coluna**: digite direto nas caixas de filtro sob cada cabeçalho de coluna para buscas refinadas
@@ -110,7 +112,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 - **Criador de Tags**: personalize as tags entre colchetes de componentes, mísseis, armas de nave e commodities; reordene elementos, mude o tamanho da abreviação (M / MIL / Military), escolha separadores e colchetes, ou coloque a tag depois do nome. Componentes têm um elemento Type opcional (Escudo, Refrigerador etc.); commodities têm um elemento Usage que mostra para onde vão seus materiais de fabricação
 - **Títulos de Missão**: comece títulos de transporte pela rota (ex.: `Area18 > Lorville`) — posicionamento, seta, separador e nível de detalhe do local configuráveis, além do encurtamento opcional dos títulos originais, com pré-visualização ao vivo
 - **Estatísticas Acima ou Abaixo**: escolha se o bloco de estatísticas fica no topo ou no final da descrição
-- **Rastreador de Blueprints**: uma aba dedicada para marcar os blueprints de fabricação que você já possui. Mova itens entre Disponíveis e Adquiridos, filtre por Missão / Tipo / Classe / Tamanho / Grau, e itens adquiridos ganham uma tag azul `[Owned]` nas listas de blueprints das missões. **Escanear Logs por Blueprints Adquiridos** preenche a coleção automaticamente a partir dos seus arquivos de log do Star Citizen, importando só o que é novo desde o último escaneamento, e **Exportar / Importar Blueprints Adquiridos** move a lista de adquiridos entre PCs (JSON ou CSV; a importação só adiciona, e exportações do scmdb.net também funcionam)
+- **Rastreador de Blueprints**: uma aba dedicada para marcar os blueprints de fabricação que você já possui. Mova itens entre Disponíveis e Adquiridos, filtre por Missão / Tipo / Classe / Tamanho / Grau, e itens adquiridos ganham uma tag azul `[Owned]` nas listas de blueprints das missões. **Escanear Logs por Blueprints Adquiridos** preenche a coleção automaticamente a partir dos seus arquivos de log do Star Citizen, importando só o que é novo desde o último escaneamento (ou automaticamente ao iniciar, quando **Escanear logs automaticamente ao iniciar** está ativado), e **Exportar / Importar Blueprints Adquiridos** move a lista de adquiridos entre PCs (JSON ou CSV; a importação só adiciona, e exportações do scmdb.net também funcionam)
 - **Rótulos de Missão**: renomeie os cabeçalhos de seção (MISSION DETAILS, POTENTIAL BLUEPRINTS etc.), o rótulo de XP e a tag de ênfase dos cabeçalhos
 - **Patches Declarativos para Bugs de Dados da CIG**: um sistema de patches aplica correções a bugs conhecidos do DataForge no momento da extração, para o texto no jogo sair certo sem esperar a CIG
 - **Categorias Seletivas**: ative ou desative cada categoria de aprimoramento de forma independente na aba Aprimoramentos
@@ -148,7 +150,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 
 ### Apoie Este Projeto
 O Smart Citizen é totalmente gratuito. Se ele é útil para você:
-- 💳 [Doe via PayPal](https://paypal.me/RighteousKill)
+- 💳 [Doe via PayPal](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Doe via Venmo](https://venmo.com/u/Amr-Abouelleil)
 
 ## Outras Ferramentas da Osiris DevWorks

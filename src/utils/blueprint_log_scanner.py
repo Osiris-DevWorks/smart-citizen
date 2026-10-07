@@ -19,10 +19,10 @@ watermark *persistence* live elsewhere (``owned_items.normalize_item_name`` and
 ``AppSettings``) — the scanner deliberately returns raw display names so the
 one canonical normalizer does the matching (mirrors ``owned_items.py``'s own
 Qt-free/settings-free design). The caller (a QThread worker, ``workers.py``'s
-``BlueprintLogScanWorker``) resolves the actual log directory via
-``AppSettings.get_channel_install_path()`` and reports progress to the UI
-(#223 moved the button + result UI onto their own Blueprint Tracker tab; the
-scanning internals here are unchanged by that move).
+``BlueprintLogScanWorker``) is handed a channel folder by ``MainWindow``, which
+only ever passes LIVE or HOTFIX under the install root (#446), and reports
+progress to the UI (#223 moved the button + result UI onto their own Blueprint
+Tracker tab; the scanning internals here are unchanged by that move).
 
 Two filters bound the work:
 
