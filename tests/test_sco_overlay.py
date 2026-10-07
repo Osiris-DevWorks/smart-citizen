@@ -1,0 +1,90 @@
+"""Smart Citizen Overlay (SCO) windows, driven headlessly.
+
+``QT_QPA_PLATFORM=offscreen``, same pattern as test_restore_backup.py — no
+pytest-qt. Covers the drawer's list/filter/owned-toggle behaviour, the
+signature label text, and that the capture loop stays off until a digit
+reader exists.
+"""
+from __future__ import annotations
+
+import os
+
+import pytest
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PyQt6.QtCore import QRect, Qt  # noqa: E402
+from PyQt6.QtWidgets import QApplication  # noqa: E402
+
+from src.gui.sco_overlay import (  # noqa: E402
+    SCAN_REGION, BlueprintDrawer, ScoOverlay, format_matches, scan_region_rect,
+)
+from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
+from src.utils.mining_signatures import decode_signature  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def qapp():
+    return QApplication.instance() or QApplication([])
+
+
+def _meta():
+    return {
+        "Agni": BlueprintItem("Agni", frozenset({"Haul cargo"}), "Quantum Drive", "Industrial", "S3", "B"),
+        "Norfield": BlueprintItem("Norfield", frozenset(), "Cooler", "Military", "S1", "A"),
+        "Bracer": BlueprintItem("Bracer"),
+    }
+
+
+def _names(drawer):
+    return [drawer._list.item(i).text() for i in range(drawer._list.count())]
+
+
+def test_drawer_lists_and_filters(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_items(_meta(), {"Agni"})
+    assert _names(drawer) == ["Agni", "Bracer", "Norfield"]
+    assert drawer._summary.text() == "Owned 1 of 3"
+    drawer._owned_only.setChecked(True)
+    assert _names(drawer) == ["Agni"]
+    drawer._owned_only.setChecked(False)
+    drawer._search.setText("nor")
+    assert _names(drawer) == ["Norfield"]
+
+
+def test_drawer_checkbox_emits_owned_toggle(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_items(_meta(), set())
+    seen = []
+    drawer.owned_toggled.connect(lambda n, c: seen.append((n, c)))
+    drawer._list.item(0).setCheckState(Qt.CheckState.Checked)
+    assert seen == [("Agni", True)]
+
+
+def test_drawer_tooltip_shows_details_and_missions(qapp):
+    tip = BlueprintDrawer._tooltip(_meta()["Agni"])
+    assert "Quantum Drive" in tip and "S3" in tip and "Haul cargo" in tip
+
+
+def test_format_matches(qapp):
+    assert format_matches(decode_signature(10200)) == "3 × Lindinium"
+    assert format_matches(decode_signature(12000)).splitlines() == [
+        "3 × ROC Mineable", "4 × FPS Mineable", "6 × Salvage",
+    ]
+
+
+def test_scan_region_scales_with_screen(qapp):
+    r = scan_region_rect(QRect(0, 0, 2560, 1600))
+    assert (r.x(), r.y()) == (int(2560 * SCAN_REGION[0]), int(1600 * SCAN_REGION[1]))
+    # The two sample readouts (7,200 and 10,200) sit inside the box.
+    assert r.contains(1150, 550) and r.contains(1290, 572)
+
+
+def test_no_reader_means_no_capture(qapp):
+    overlay = ScoOverlay()
+    overlay.start()
+    assert not overlay._timer.isActive()
+    overlay.set_reader(lambda image: None)
+    assert overlay._timer.isActive()
+    overlay.stop()
+    assert not overlay._timer.isActive()

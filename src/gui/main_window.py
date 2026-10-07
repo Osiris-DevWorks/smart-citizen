@@ -45,6 +45,7 @@ from src.gui.workers import (
     EnhancementsGeneratorWorker,
     FileLoaderWorker,
     LanguageBaseDownloadWorker,
+    LiveBlueprintLogWorker,
     OrderSpinBoxDelegate,
     P4kExtractWorker,
     SelectAllDelegate,
@@ -619,6 +620,10 @@ class MainWindow(QMainWindow):
         )
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
+        # Smart Citizen Overlay (SCO): windows built on first start; the live
+        # Game.log watcher runs only while the overlay is on.
+        self._sco_overlay = None
+        self._sco_log_worker = None
         # #268/#308: multi-channel scan state. _bp_scan_queue holds channels
         # not yet started (the current one is popped off before its worker
         # starts); _bp_scan_channel is whichever channel the in-flight
@@ -879,6 +884,15 @@ class MainWindow(QMainWindow):
         self.tutorial_btn.setToolTip(tr("toolbar.tutorial_tooltip"))
         self.tutorial_btn.clicked.connect(self._start_tutorial)
         button_layout.addWidget(self.tutorial_btn)
+
+        # Smart Citizen Overlay (SCO): toggles the over-the-game windows and
+        # the live Game.log blueprint watcher.
+        self.sco_btn = QPushButton(tr("toolbar.sco_btn"))
+        self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {get_button_text_color()}; font-weight: bold; padding: 6px;")
+        self.sco_btn.setCheckable(True)
+        self.sco_btn.setToolTip(tr("toolbar.sco_tooltip"))
+        self.sco_btn.toggled.connect(self._toggle_sco_overlay)
+        button_layout.addWidget(self.sco_btn)
 
         # More: overflow menu for the less-frequent actions (rollback, cleanup,
         # import/export, open folder). Keeps the row focused on the core
@@ -4322,6 +4336,8 @@ class MainWindow(QMainWindow):
         self.help_btn.setToolTip(tr("toolbar.help_tooltip"))
         self.tutorial_btn.setText(tr("toolbar.tutorial_btn"))
         self.tutorial_btn.setToolTip(tr("toolbar.tutorial_tooltip"))
+        self.sco_btn.setText(tr("toolbar.sco_btn"))
+        self.sco_btn.setToolTip(tr("toolbar.sco_tooltip"))
         self.more_btn.setText(tr("toolbar.more_btn"))
         self.more_btn.setToolTip(tr("toolbar.more_tooltip"))
 
@@ -5553,6 +5569,9 @@ class MainWindow(QMainWindow):
         # Detach log handler before widgets are destroyed
         self.log_tab.remove_handler()
 
+        # Smart Citizen Overlay: close its windows and the live log watcher.
+        self._stop_sco_overlay()
+
         # Clean up workers
         if self._loader_worker:
             self._loader_worker.quit()
@@ -5996,10 +6015,85 @@ class MainWindow(QMainWindow):
         # see the loaded strings the data is derived from).
         if hasattr(self, "blueprint_tracker_tab"):
             self.blueprint_tracker_tab.set_blueprint_items(self._blueprint_meta)
+        sco = getattr(self, "_sco_overlay", None)  # may run before __init__ sets it
+        if sco is not None:
+            sco.drawer.set_items(self._blueprint_meta, owned)
         # Called after every reload (category/tag/enhancements apply, channel
         # and language switches, import, restore) and every Owned-set change
         # — in every case Apply to Game's output could now differ.
         self._mark_apply_dirty()
+
+    # -- Smart Citizen Overlay (SCO) ------------------------------------------
+
+    def _toggle_sco_overlay(self, checked: bool):
+        """Start or stop the overlay windows and the live Game.log watcher."""
+        if not checked:
+            self._stop_sco_overlay()
+            return
+        if not self._blueprint_meta:
+            QMessageBox.information(
+                self, tr("sco.no_blueprints_title"), tr("sco.no_blueprints_body")
+            )
+            self.sco_btn.setChecked(False)
+            return
+        if self._sco_overlay is None:
+            from src.gui.sco_overlay import ScoOverlay
+            self._sco_overlay = ScoOverlay(self)
+            self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
+        self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
+        self._sco_overlay.start()
+        self._start_sco_log_watcher()
+
+    def _stop_sco_overlay(self):
+        if self._sco_log_worker is not None:
+            self._sco_log_worker.requestInterruption()
+            self._reap_worker(self._sco_log_worker)
+            self._sco_log_worker = None
+        if self._sco_overlay is not None:
+            self._sco_overlay.stop()
+
+    def _start_sco_log_watcher(self):
+        """Watch the active channel's Game.log for blueprints earned mid-session.
+
+        Skipped quietly without a valid install path: the drawer still works,
+        it just won't pick up new blueprints on its own.
+        """
+        from src.utils.blueprint_log_scanner import LIVE_LOG_NAME
+        channel_path = AppSettings.get_channel_install_path()
+        if not channel_path or not Path(channel_path).is_dir():
+            logger.warning("SCO: no valid channel install path; live blueprint watch off")
+            return
+        since = AppSettings.get_blueprint_log_watermark(channel=AppSettings.get_active_channel())
+        self._sco_log_worker = LiveBlueprintLogWorker(Path(channel_path) / LIVE_LOG_NAME, since)
+        self._sco_log_worker.blueprints_found.connect(self._on_sco_blueprints_found)
+        self._sco_log_worker.start()
+
+    def _on_sco_blueprints_found(self, raw_names, newest):
+        """Fold blueprints the live watcher saw into the owned set."""
+        channel = AppSettings.get_active_channel()
+        prev = AppSettings.get_blueprint_log_watermark(channel=channel)
+        AppSettings.set_blueprint_log_watermark(
+            newest if prev is None else max(prev, newest), channel=channel
+        )
+        owned = AppSettings.get_owned_items()
+        new_names = sorted(self._owned_names_from_log(raw_names) - owned)
+        if not new_names:
+            return
+        logger.info(f"SCO: {len(new_names)} new blueprint(s) from Game.log: {new_names}")
+        AppSettings.set_owned_items(owned | set(new_names))
+        self._recompute_owned()
+        if self._sco_overlay is not None:
+            self._sco_overlay.drawer.notify_new(new_names)
+
+    def _on_sco_owned_toggled(self, name: str, owned_now: bool):
+        """The drawer's checkbox: same owned set the Blueprint Tracker edits."""
+        owned = AppSettings.get_owned_items()
+        if owned_now:
+            owned.add(name)
+        else:
+            owned.discard(name)
+        AppSettings.set_owned_items(owned)
+        self._recompute_owned()
 
     def _on_apply_owned_tags_clicked(self):
         """Manual "Apply Owned Tags" button: force a re-weave on demand
@@ -6102,6 +6196,53 @@ class MainWindow(QMainWindow):
             self._bp_log_scan_progress.close()
             self._bp_log_scan_progress = None
 
+    def _owned_names_from_log(self, raw_names) -> set:
+        """Normalize raw blueprint names from SC logs to the owned-set identity.
+
+        Shared by the Blueprint Tracker's Scan and the Smart Citizen Overlay's
+        live Game.log watcher, so both match names the same way.
+        """
+        from src.utils.owned_items import (
+            enclosings_from_tag_configs, normalize_item_name,
+            resolve_against_catalogue,
+        )
+
+        # Normalize raw log names to the shared owned-set identity; drop blanks.
+        enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+        scanned = {normalize_item_name(n, enclosings=enclosings) for n in raw_names}
+        scanned.discard("")
+
+        # #372: Star Citizen logs whatever name it was DISPLAYING, so a
+        # player who previously ran a different localization editor has
+        # that tool's naming baked into their old logs forever. Those names
+        # match nothing here, so their blueprints silently never show as
+        # owned, and regenerating cannot help because the bad names are in
+        # the logs rather than in anything we write.
+        #
+        # Anything that already matches the catalogue is left alone; only
+        # otherwise-unusable names are put through recovery, which anchors
+        # on the real item list instead of on any one tool's format (see
+        # resolve_against_catalogue). Deliberately _known_item_names, not
+        # _bp_item_names: the latter only covers names currently offered
+        # as a mission reward, so a real item merely rotated out of every
+        # mission's reward pool this patch would misread as "foreign" and
+        # could resolve into an unrelated shorter item (see
+        # owned_items.repair_foreign_owned_names' docstring).
+        catalogue = self._known_item_names or set()
+        if catalogue:
+            recovered = set()
+            for nm in sorted(scanned - catalogue):
+                real = resolve_against_catalogue(nm, catalogue)
+                if real is not None:
+                    logger.info(
+                        f"BP scan: recovered {real!r} from foreign-formatted "
+                        f"log name {nm!r} (#372)"
+                    )
+                    scanned.discard(nm)
+                    recovered.add(real)
+            scanned |= recovered
+        return scanned
+
     def _on_blueprint_log_scan_finished(self, result):
         """Fold one queued channel's scan result into the running total, then
         either start the next queued channel or finalize (#268).
@@ -6122,45 +6263,7 @@ class MainWindow(QMainWindow):
         self._bp_scan_channel = None
 
         if result is not None:
-            from src.utils.owned_items import (
-                enclosings_from_tag_configs, normalize_item_name,
-                resolve_against_catalogue,
-            )
-
-            # Normalize raw log names to the shared owned-set identity; drop blanks.
-            enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
-            scanned = {normalize_item_name(n, enclosings=enclosings) for n in result.names}
-            scanned.discard("")
-
-            # #372: Star Citizen logs whatever name it was DISPLAYING, so a
-            # player who previously ran a different localization editor has
-            # that tool's naming baked into their old logs forever. Those names
-            # match nothing here, so their blueprints silently never show as
-            # owned, and regenerating cannot help because the bad names are in
-            # the logs rather than in anything we write.
-            #
-            # Anything that already matches the catalogue is left alone; only
-            # otherwise-unusable names are put through recovery, which anchors
-            # on the real item list instead of on any one tool's format (see
-            # resolve_against_catalogue). Deliberately _known_item_names, not
-            # _bp_item_names: the latter only covers names currently offered
-            # as a mission reward, so a real item merely rotated out of every
-            # mission's reward pool this patch would misread as "foreign" and
-            # could resolve into an unrelated shorter item (see
-            # owned_items.repair_foreign_owned_names' docstring).
-            catalogue = self._known_item_names or set()
-            if catalogue:
-                recovered = set()
-                for nm in sorted(scanned - catalogue):
-                    real = resolve_against_catalogue(nm, catalogue)
-                    if real is not None:
-                        logger.info(
-                            f"BP scan: recovered {real!r} from foreign-formatted "
-                            f"log name {nm!r} (#372)"
-                        )
-                        scanned.discard(nm)
-                        recovered.add(real)
-                scanned |= recovered
+            scanned = self._owned_names_from_log(result.names)
 
             owned = AppSettings.get_owned_items()
             # Exclude names another queued channel already claimed this run,

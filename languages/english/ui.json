@@ -223,6 +223,14 @@
     "venmo_fallback_text": {
       "ht": "Venmo",
       "at": ""
+    },
+    "sco_btn": {
+      "ht": "Overlay",
+      "at": ""
+    },
+    "sco_tooltip": {
+      "ht": "Start or stop the Smart Citizen Overlay (SCO): mining signature decoding and a blueprint drawer over the game. Needs borderless windowed mode.",
+      "at": ""
     }
   },
   "filters": {
@@ -2720,6 +2728,56 @@
     },
     "post_import_apply_later_btn": {
       "ht": "Later",
+      "at": ""
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "ROC Mineable",
+      "at": ""
+    },
+    "kind_fps": {
+      "ht": "FPS Mineable",
+      "at": ""
+    },
+    "kind_salvage": {
+      "ht": "Salvage",
+      "at": ""
+    },
+    "drawer_handle": {
+      "ht": "BP",
+      "at": ""
+    },
+    "drawer_handle_tooltip": {
+      "ht": "Show or hide blueprints",
+      "at": ""
+    },
+    "drawer_search_placeholder": {
+      "ht": "Search blueprints...",
+      "at": ""
+    },
+    "drawer_owned_only": {
+      "ht": "Owned only",
+      "at": ""
+    },
+    "drawer_summary": {
+      "ht": "Owned {owned} of {total}",
+      "at": ""
+    },
+    "drawer_missions": {
+      "ht": "Rewarded by {count} missions:",
+      "at": ""
+    },
+    "drawer_new_blueprints": {
+      "ht": "New: {names}",
+      "at": ""
+    },
+    "no_blueprints_title": {
+      "ht": "Smart Citizen Overlay",
+      "at": ""
+    },
+    "no_blueprints_body": {
+      "ht": "No blueprint data is loaded yet. Load strings first, then start the overlay.",
       "at": ""
     }
   }

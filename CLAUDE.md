@@ -214,6 +214,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change the OneDrive data-root warning | `src/utils/onedrive.py`, `src/gui/main_window.py`, `src/gui/config_tab.py` | `is_onedrive_path()` / `suggest_local_data_dir()`; `_maybe_warn_onedrive_data_dir()` (startup, suppressible) + Config-tab folder-pick warning; `ConfigTab.change_data_dir_to()` for the one-click move (#172) |
 | Change the toolbar More overflow menu | `src/gui/main_window.py` | `more_menu` block in toolbar setup (restore backup, clear loc/cache, import/export, open loc dir) |
 | Change the tester Test Plan panel / content | `src/utils/test_plan.py`, `src/gui/test_plan_panel.py` | `TEST_SECTIONS` (per-release checklist), `TestPlanPanel`, `_ensure_test_plan_dock()` / `show_test_plan()` (#144) |
+| Change the Smart Citizen Overlay (SCO) | `src/gui/sco_overlay.py`, `src/utils/mining_signatures.py`, `src/utils/blueprint_log_scanner.py` | `ScoOverlay`, `BlueprintDrawer`, `SCAN_REGION`, `decode_signature()`, `GameLogTail`; MainWindow `_toggle_sco_overlay()` / `_on_sco_blueprints_found()` |
 
 ## Version & Release
 
