@@ -143,7 +143,13 @@ def scan_region_rect(screen_rect: QRect) -> QRect:
 
 
 def format_matches(matches: list[SignatureMatch]) -> str:
-    """One line per reading: "2 x Bexalite", "3 x ROC Mineable", ..."""
+    """One line per reading: "2 x Bexalite", "3 x ROC Mineable", ...
+
+    No readings (a deposit missing from the table, or a misread) shows
+    "Unidentified".
+    """
+    if not matches:
+        return tr("sco.unidentified")
     lines = []
     for m in matches:
         if m.kind in OTHER_SIGNATURES:
@@ -450,11 +456,8 @@ class ScoOverlay(QObject):
         where = QRect(int(where.x() * scale), int(where.y() * scale),
                       int(where.width() * scale), int(where.height() * scale))
         matches = decode_signature(value)
-        if not matches:
-            if value != self._last_value:
-                logger.debug("SCO: no deposit matches signature %s", value)
-            self._last_value = value
-            return
+        if not matches and value != self._last_value:
+            logger.debug("SCO: no deposit matches signature %s", value)
         self._last_value = value
         # Just under the readout, aligned to its left edge.
         anchor = QPoint(region.x() + where.left(), region.y() + where.bottom() + 4)

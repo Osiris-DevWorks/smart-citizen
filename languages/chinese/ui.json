@@ -2971,6 +2971,10 @@
     "drawer_more_missions": {
       "ht": "",
       "at": "……以及另外 {count} 个"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "未识别"
     }
   }
 }

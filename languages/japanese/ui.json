@@ -2971,6 +2971,10 @@
     "drawer_more_missions": {
       "ht": "",
       "at": "...他 {count} 件"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "不明"
     }
   }
 }

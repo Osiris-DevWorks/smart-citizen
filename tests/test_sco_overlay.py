@@ -78,6 +78,7 @@ def test_tooltip_caps_long_mission_lists(qapp):
 
 def test_format_matches(qapp):
     assert format_matches(decode_signature(10200)) == "3 × Lindinium"
+    assert format_matches(decode_signature(15697)) == "Unidentified"
     assert format_matches(decode_signature(12000)).splitlines() == [
         "3 × ROC Mineable", "4 × FPS Mineable", "6 × Salvage",
     ]

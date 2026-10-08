@@ -2971,6 +2971,10 @@
     "drawer_more_missions": {
       "ht": "",
       "at": "...e mais {count}"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Não identificado"
     }
   }
 }
