@@ -17,7 +17,8 @@ from PyQt6.QtCore import QRect, Qt  # noqa: E402
 from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 from src.gui.sco_overlay import (  # noqa: E402
-    SCAN_REGION, BlueprintDrawer, ScoOverlay, format_matches, scan_region_rect,
+    DEFAULT_OVERLAY_COLORS, SCAN_REGION, BlueprintDrawer, OverlayColors,
+    ScoOverlay, format_matches, scan_region_rect,
 )
 from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
 from src.utils.mining_signatures import decode_signature  # noqa: E402
@@ -80,7 +81,28 @@ def test_scan_region_scales_with_screen(qapp):
     assert r.contains(1150, 550) and r.contains(1290, 572)
 
 
-def test_no_reader_means_no_capture(qapp):
+def test_arrow_flips_with_the_drawer(qapp):
+    drawer = BlueprintDrawer()
+    assert drawer._handle.points_left and not drawer._panel.isVisibleTo(drawer)
+    drawer.toggle()
+    assert not drawer._handle.points_left and drawer._panel.isVisibleTo(drawer)
+    drawer.toggle()
+    assert drawer._handle.points_left
+
+
+def test_drawer_takes_theme_colours(qapp):
+    gold = OverlayColors(background="#12100c", text="#e8e0cc", accent="#C9A961", secondary="#A08C5A")
+    drawer = BlueprintDrawer(gold)
+    assert drawer._handle.colors == gold
+    assert "#C9A961" in drawer._panel.styleSheet()
+    assert "rgba(18, 16, 12," in drawer._panel.styleSheet()   # see-through window colour
+    drawer.apply_colors(DEFAULT_OVERLAY_COLORS)
+    assert drawer._handle.colors == DEFAULT_OVERLAY_COLORS
+
+
+def test_no_reader_means_no_capture(qapp, monkeypatch):
+    # Keep the test off the registry-backed theme setting.
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay()
     overlay.start()
     assert not overlay._timer.isActive()

@@ -24,13 +24,16 @@ owned set. Owned changes made in the drawer go back out through
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Callable, Optional
 
-from PyQt6.QtCore import QObject, QPoint, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QGuiApplication, QImage
+from PyQt6.QtCore import QObject, QPoint, QPointF, QRect, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import (
+    QColor, QGuiApplication, QImage, QPainter, QPainterPath, QPalette, QPen,
+)
 from PyQt6.QtWidgets import (
     QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QPushButton, QVBoxLayout, QWidget,
+    QListWidgetItem, QVBoxLayout, QWidget,
 )
 
 from src.utils.i18n import tr
@@ -51,8 +54,11 @@ CAPTURE_INTERVAL_MS = 250
 LABEL_HOLD_MS = 1500
 NEW_BLUEPRINT_BANNER_MS = 8000
 
-DRAWER_HANDLE_WIDTH = 28
+DRAWER_HANDLE_WIDTH = 16
+DRAWER_HANDLE_HEIGHT = 44
 DRAWER_PANEL_WIDTH = 340
+# How much of the game shows through the drawer: 0 = invisible, 255 = solid.
+DRAWER_ALPHA = 184
 
 # A reader takes a capture of SCAN_REGION and returns the HUD text it found
 # ("10,200") and where, in capture coordinates, or None when nothing is shown.
@@ -63,6 +69,37 @@ _OVERLAY_FLAGS = (
     | Qt.WindowType.FramelessWindowHint
     | Qt.WindowType.WindowStaysOnTopHint
 )
+
+
+@dataclass(frozen=True)
+class OverlayColors:
+    """Drawer colours, taken from the Smart Citizen theme in use."""
+    background: str   # the theme's window colour (drawn at DRAWER_ALPHA)
+    text: str
+    accent: str       # outline, arrow, header, checked boxes
+    secondary: str    # counts, placeholder text
+
+    @classmethod
+    def from_theme(cls) -> "OverlayColors":
+        from src.gui.theme import get_tagline_color, get_title_color
+        palette = QGuiApplication.palette()
+        return cls(
+            background=palette.color(QPalette.ColorRole.Window).name(),
+            text=palette.color(QPalette.ColorRole.WindowText).name(),
+            accent=get_title_color(),
+            secondary=get_tagline_color(),
+        )
+
+
+# The default SCLE theme, used until a theme is applied (and in tests).
+DEFAULT_OVERLAY_COLORS = OverlayColors(
+    background="#0d1826", text="#d8e8f0", accent="#4FD7E8", secondary="#6FB5D0",
+)
+
+
+def _rgba(hex_color: str, alpha: int = DRAWER_ALPHA) -> str:
+    c = QColor(hex_color)
+    return f"rgba({c.red()}, {c.green()}, {c.blue()}, {alpha})"
 
 
 def scan_region_rect(screen_rect: QRect) -> QRect:
@@ -118,24 +155,68 @@ class ScanLabelWindow(QWidget):
         self._hide_timer.start(LABEL_HOLD_MS)
 
 
+class ArrowTab(QWidget):
+    """The drawer's handle: a tapered tab with a chevron. Points left (open
+    me) while the drawer is closed and right (close me) while it's open."""
+
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.colors = DEFAULT_OVERLAY_COLORS
+        self.points_left = True
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+
+    def paintEvent(self, _event):
+        w, h = self.width(), self.height()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # Tall side against the panel / screen edge, tapering outward.
+        tab = QPainterPath()
+        tab.moveTo(w - 0.5, 0.5)
+        tab.lineTo(0.5, h * 0.15)
+        tab.lineTo(0.5, h * 0.85)
+        tab.lineTo(w - 0.5, h - 0.5)
+        tab.closeSubpath()
+        bg = QColor(self.colors.background)
+        bg.setAlpha(DRAWER_ALPHA)
+        p.fillPath(tab, bg)
+        p.setPen(QPen(QColor(self.colors.accent), 1.2))
+        p.drawPath(tab)
+
+        pen = QPen(QColor(self.colors.accent), 2.4)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        p.setPen(pen)
+        cx, cy, dx, dy = w * 0.55, h / 2, w * 0.18, h * 0.16
+        tip, back = (cx - dx, cx + dx) if self.points_left else (cx + dx, cx - dx)
+        p.drawPolyline([QPointF(back, cy - dy), QPointF(tip, cy), QPointF(back, cy + dy)])
+        p.end()
+
+
 class BlueprintDrawer(QWidget):
-    """Right-edge handle that expands into a blueprint list."""
+    """Right-edge arrow tab that expands into a see-through blueprint list."""
 
     owned_toggled = pyqtSignal(str, bool)
 
-    def __init__(self):
+    def __init__(self, colors: OverlayColors = DEFAULT_OVERLAY_COLORS):
         super().__init__(None, _OVERLAY_FLAGS)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self._meta: dict = {}
         self._owned: set = set()
         self._expanded = False
 
-        self._handle = QPushButton(tr("sco.drawer_handle"), self)
-        self._handle.setFixedWidth(DRAWER_HANDLE_WIDTH)
+        self._handle = ArrowTab(self)
         self._handle.setToolTip(tr("sco.drawer_handle_tooltip"))
         self._handle.clicked.connect(self.toggle)
 
         self._panel = QFrame(self)
-        self._panel.setFrameShape(QFrame.Shape.StyledPanel)
+        self._panel.setObjectName("scoDrawerPanel")
         self._panel.setFixedWidth(DRAWER_PANEL_WIDTH)
         self._summary = QLabel(self._panel)
         self._banner = QLabel(self._panel)
@@ -159,13 +240,40 @@ class BlueprintDrawer(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self._handle)
+        layout.addWidget(self._handle, 0, Qt.AlignmentFlag.AlignVCenter)
         layout.addWidget(self._panel)
         self._panel.hide()
 
         self._banner_timer = QTimer(self)
         self._banner_timer.setSingleShot(True)
         self._banner_timer.timeout.connect(self._banner.hide)
+        self.apply_colors(colors)
+
+    def apply_colors(self, colors: OverlayColors) -> None:
+        """Restyle the tab and panel, e.g. after the app theme changes."""
+        self._handle.colors = colors
+        self._handle.update()
+        self._summary.setStyleSheet(f"color: {colors.accent}; font-weight: bold;")
+        self._panel.setStyleSheet(f"""
+            QFrame#scoDrawerPanel {{
+                background: {_rgba(colors.background)};
+                border: 1px solid {colors.accent};
+            }}
+            QLabel, QCheckBox {{ color: {colors.text}; background: transparent; }}
+            QLineEdit {{
+                color: {colors.text}; background: {_rgba(colors.background, 120)};
+                border: 1px solid {colors.secondary}; border-radius: 3px; padding: 2px 4px;
+            }}
+            QListWidget {{ color: {colors.text}; background: transparent; border: none; }}
+            QListWidget::item:selected {{ background: {_rgba(colors.accent, 60)}; }}
+            QCheckBox::indicator, QListWidget::indicator {{
+                width: 10px; height: 10px; border: 1px solid {colors.text};
+                background: transparent;
+            }}
+            QCheckBox::indicator:checked, QListWidget::indicator:checked {{
+                background: {colors.accent}; border-color: {colors.accent};
+            }}
+        """)
 
     def set_items(self, meta: dict, owned: set) -> None:
         """Replace the list contents: ``{name: BlueprintItem}`` + owned names."""
@@ -184,6 +292,8 @@ class BlueprintDrawer(QWidget):
     def toggle(self) -> None:
         self._expanded = not self._expanded
         self._panel.setVisible(self._expanded)
+        self._handle.points_left = not self._expanded
+        self._handle.update()
         self._dock_right()
 
     def show_docked(self) -> None:
@@ -193,7 +303,7 @@ class BlueprintDrawer(QWidget):
     def _dock_right(self) -> None:
         screen = QGuiApplication.primaryScreen().availableGeometry()
         width = DRAWER_HANDLE_WIDTH + (DRAWER_PANEL_WIDTH if self._expanded else 0)
-        height = int(screen.height() * (0.7 if self._expanded else 0.12))
+        height = int(screen.height() * 0.7) if self._expanded else DRAWER_HANDLE_HEIGHT
         self.setFixedSize(width, height)
         self.move(screen.right() - width + 1, screen.y() + (screen.height() - height) // 2)
 
@@ -247,7 +357,7 @@ class ScoOverlay(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.label = ScanLabelWindow()
-        self.drawer = BlueprintDrawer()
+        self.drawer = BlueprintDrawer(OverlayColors.from_theme())
         self.drawer.owned_toggled.connect(self.owned_toggled)
         self._reader: Optional[SignatureReader] = None
         self._timer = QTimer(self)
@@ -264,6 +374,8 @@ class ScoOverlay(QObject):
         return self.drawer.isVisible()
 
     def start(self) -> None:
+        # Pick up a theme change made since the overlay was last shown.
+        self.drawer.apply_colors(OverlayColors.from_theme())
         self.drawer.show_docked()
         self._sync_timer()
 
