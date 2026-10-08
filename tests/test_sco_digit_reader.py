@@ -1,8 +1,10 @@
 """SCO digit reader: the mining signature read off real HUD captures.
 
-Fixtures in ``tests/fixtures/sco/`` are crops of Amr's 2560x1600 screenshots
-(Drake Golem ``g*``, MISC Prospector ``p*``), named ``<shot>_<value>.png``.
-Qt-free: the red channel goes straight to ``read_signature``.
+Fixtures in ``tests/fixtures/sco/`` are named ``<source>_<value>.png``:
+crops of Amr's 2560x1600 screenshots (Drake Golem ``g*``, MISC Prospector
+``p*``), lossless crops SCO saved in-game (``live*``), and other HUD text
+the reader must ignore (``hud*_none``: "UNKNOWN", red "WARNING"). Qt-free:
+the channels go straight to ``read_signature``.
 """
 from pathlib import Path
 
@@ -13,13 +15,16 @@ from src.utils.sco_digit_reader import read_signature
 from src.utils.sco_digit_samples import DIGIT_SAMPLES
 
 FIXTURES = sorted((Path(__file__).parent / "fixtures" / "sco").glob("*.png"))
+READOUTS = [p for p in FIXTURES if not p.stem.endswith("_none")]
+OTHER_TEXT = [p for p in FIXTURES if p.stem.endswith("_none")]
 
 
-def _red_channel(path):
+def _channels(path):
     from PyQt6.QtGui import QImage
 
     img = QImage(str(path)).convertToFormat(QImage.Format.Format_RGB32)
-    return img.width(), img.height(), img.constBits().asstring(img.sizeInBytes())[2::4]
+    data = img.constBits().asstring(img.sizeInBytes())
+    return img.width(), img.height(), data[2::4], data[1::4]
 
 
 def _expected(path):
@@ -27,38 +32,46 @@ def _expected(path):
     return f"{digits[:-3]},{digits[-3:]}"
 
 
-@pytest.mark.parametrize("path", FIXTURES, ids=lambda p: p.stem)
-def test_reads_every_sample(path):
-    w, h, red = _red_channel(path)
-    reading = read_signature(w, h, red, 11)
+def _read(path):
+    w, h, red, green = _channels(path)
+    return read_signature(w, h, red, 11, green=green)
+
+
+@pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
+def test_reads_every_readout(path):
+    reading = _read(path)
     assert reading is not None and reading.text == _expected(path)
 
 
-def test_fixtures_cover_every_digit():
+@pytest.mark.parametrize("path", OTHER_TEXT, ids=lambda p: p.stem)
+def test_ignores_other_hud_text(path):
+    assert _read(path) is None
+
+
+def test_samples_cover_every_digit():
     assert {d for d, *_ in DIGIT_SAMPLES} == set("0123456789")
-    assert len(FIXTURES) == 8
 
 
 def test_box_wraps_the_digits():
-    path = next(p for p in FIXTURES if p.stem == "p2_2000")
-    w, h, red = _red_channel(path)
-    x, y, bw, bh = read_signature(w, h, red, 11).box
+    path = next(p for p in READOUTS if p.stem == "p2_2000")
+    w, h, *_ = _channels(path)
+    x, y, bw, bh = _read(path).box
     assert 9 <= bh <= 13 and 25 <= bw <= 45
     assert 0 < x < w - bw and 0 < y < h - bh
 
 
-def test_decode_breaks_a_look_alike_tie(monkeypatch):
-    # Without the p4 shot's own glyphs its 8 scores as 6 by a hair; 6,540 is
-    # no deposit and 8,540 is 2 x Iron, so the decode check picks 8.
-    src = (Path(sco_digit_reader.__file__).parent / "sco_digit_samples.py").read_text()
-    shots = [line.rsplit("# ", 1)[1] for line in src.splitlines() if line.startswith('    ("')]
-    without_p4 = tuple(s for s, shot in zip(DIGIT_SAMPLES, shots) if shot != "p4")
-    monkeypatch.setattr(sco_digit_reader, "DIGIT_SAMPLES", without_p4)
+@pytest.mark.parametrize("stem", ["live02_8540", "live06_7800", "live24_15600"])
+def test_reads_without_its_own_glyphs(monkeypatch, stem):
+    # Each of these was misread in-game (8 as 0/6/9, 8 as 0, 6 as 8). Read
+    # with that crop's own glyphs removed, so the rest of the set (and the
+    # decode check) has to carry it.
+    source = "live_" + stem[4:6]
+    monkeypatch.setattr(sco_digit_reader, "DIGIT_SAMPLES",
+                        tuple(s for s in DIGIT_SAMPLES if s[4] != source))
     sco_digit_reader._references.cache_clear()
     try:
-        path = next(p for p in FIXTURES if p.stem == "p4_8540")
-        w, h, red = _red_channel(path)
-        assert read_signature(w, h, red, 11).text == "8,540"
+        path = next(p for p in READOUTS if p.stem == stem)
+        assert _read(path).text == _expected(path)
     finally:
         sco_digit_reader._references.cache_clear()
 

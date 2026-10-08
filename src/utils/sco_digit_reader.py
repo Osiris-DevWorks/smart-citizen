@@ -17,8 +17,9 @@ height) with a comma before the last three. Steps:
 3. Match each digit to the nearest reference glyph in
    ``sco_digit_samples.py`` (min-max normalised, coarse grid, correlation).
 4. Prefer the reading that decodes to a known deposit. Where a digit's
-   runner-up is close, try it too: valid signatures are sparse, so this
-   fixes look-alike misses such as 6 vs 8.
+   runners-up are close, try them too: valid signatures are sparse, so this
+   fixes look-alike misses such as 8 read as 0, 6 or 9. A leading zero is
+   never a reading.
 """
 from __future__ import annotations
 
@@ -40,11 +41,24 @@ THRESHOLDS = (180, 210, 150)
 # per-cockpit font weight and JPEG/fringe noise.
 GRID_W, GRID_H = 4, 7
 
-# A runner-up digit within this score of the best is tried as an alternative.
-ALT_MARGIN = 0.15
+# Runner-up digits within this score of the best are tried as alternatives
+# (at most ALT_COUNT per digit).
+ALT_MARGIN = 0.3
+ALT_COUNT = 3
 
-# A reading that decodes to nothing is only reported above this mean score.
-MIN_UNDECODED_SCORE = 0.75
+# A reading must match its reference glyphs at least this well on average,
+# so other white text (desktop clocks and dates while alt-tabbed) stays
+# silent. Real readouts score 0.9+ against the live samples.
+MIN_READING_SCORE = 0.80
+
+# A reading that decodes to nothing is only reported when every digit
+# matches at least this well, so other HUD text ("UNKNOWN") stays silent.
+MIN_UNDECODED_SCORE = 0.85
+
+# The readout digits are white (with colour fringes). Red-heavy HUD text
+# ("WARNING"), green/yellow markers ("UNKNOWN") fall below this green:red
+# ratio over the inked pixels; real readouts sit at 0.69+.
+MIN_GREEN_RATIO = 0.62
 
 
 @dataclass(frozen=True)
@@ -170,7 +184,7 @@ def _features(pixels: list[list[int]]) -> list[float]:
 @lru_cache(maxsize=1)
 def _references() -> tuple[tuple[str, tuple[float, ...]], ...]:
     refs = []
-    for digit, w, h, hexdata in DIGIT_SAMPLES:
+    for digit, w, h, hexdata, _source in DIGIT_SAMPLES:
         raw = bytes.fromhex(hexdata)
         pixels = [list(raw[y * w:(y + 1) * w]) for y in range(h)]
         refs.append((digit, tuple(_features(pixels))))
@@ -207,21 +221,23 @@ def _read_row(width, red, row, threshold) -> Optional[SignatureReading]:
         if pixels is None:
             return None
         ranked.append(_rank_digit(pixels))
-    # Each digit's best guess, plus a runner-up when it's close.
-    options = [[r[0]] + [alt for alt in r[1:2] if r[0][0] - alt[0] <= ALT_MARGIN]
+    # Each digit's best guess, plus runners-up when they're close.
+    options = [[r[0]] + [alt for alt in r[1:ALT_COUNT] if r[0][0] - alt[0] <= ALT_MARGIN]
                for r in ranked]
     best_any = best_decoded = None
     for combo in product(*options):
+        if combo[0][1] == "0":
+            continue
         text = "".join(d for _, d in combo)
         score = sum(s for s, _ in combo) / len(combo)
         if best_any is None or score > best_any[0]:
-            best_any = (score, text)
+            best_any = (score, text, min(s for s, _ in combo))
         if decode_signature(int(text)) and (best_decoded is None or score > best_decoded[0]):
             best_decoded = (score, text)
-    if best_decoded is not None:
+    if best_decoded is not None and best_decoded[0] >= MIN_READING_SCORE:
         score, text = best_decoded
-    elif best_any[0] >= MIN_UNDECODED_SCORE:
-        score, text = best_any
+    elif best_any is not None and best_any[2] >= MIN_UNDECODED_SCORE:
+        score, text, _ = best_any
     else:
         return None
     x0 = boxes[0][0]
@@ -231,20 +247,39 @@ def _read_row(width, red, row, threshold) -> Optional[SignatureReading]:
                             score)
 
 
+def _is_white(width, red, green, row, threshold) -> bool:
+    """True when the row's inked pixels carry enough green to be white text."""
+    boxes, top, base = row
+    x0 = boxes[0][0]
+    x1 = max(b[0] + b[2] for b in boxes)
+    total_r = total_g = 0
+    for y in range(top, base):
+        for i in range(y * width + x0, y * width + x1):
+            if red[i] >= threshold:
+                total_r += red[i]
+                total_g += green[i]
+    return total_r > 0 and total_g >= MIN_GREEN_RATIO * total_r
+
+
 def read_signature(width: int, height: int, red: bytes,
-                   digit_px: float = DIGIT_HEIGHT_AT_1600) -> Optional[SignatureReading]:
+                   digit_px: float = DIGIT_HEIGHT_AT_1600,
+                   green: Optional[bytes] = None) -> Optional[SignatureReading]:
     """Find and read the signature in a ``width`` x ``height`` red channel.
 
-    *digit_px* is the expected digit height in capture pixels. Returns the
-    best reading, preferring one that decodes, or None.
+    *digit_px* is the expected digit height in capture pixels. With the
+    *green* channel too, coloured text (red warnings, green markers) is
+    skipped. Returns the best reading, preferring one that decodes, or None.
     """
     if len(red) != width * height or width <= 0 or height <= 0:
+        return None
+    if green is not None and len(green) != len(red):
         return None
     max_run = int(1.2 * digit_px)
     for threshold in THRESHOLDS:
         mask = _mask(width, height, red, threshold, max_run)
-        readings = [r for row in _candidate_rows(width, height, mask, digit_px)
-                    if (r := _read_row(width, red, row, threshold))]
+        rows = [row for row in _candidate_rows(width, height, mask, digit_px)
+                if green is None or _is_white(width, red, green, row, threshold)]
+        readings = [r for row in rows if (r := _read_row(width, red, row, threshold))]
         if readings:
             decoded = [r for r in readings
                        if decode_signature(int(r.text.replace(",", "")))]

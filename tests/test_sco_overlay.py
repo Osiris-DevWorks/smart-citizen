@@ -189,3 +189,20 @@ def test_label_is_centred_under_the_readout_in_odw_colours(qapp):
     assert label._label.alignment() & Qt.AlignmentFlag.AlignHCenter
     assert ODW_OVERLAY_COLORS.accent in label._label.styleSheet()
     label.hide()
+
+
+def test_own_label_is_blacked_out_of_the_capture(qapp, monkeypatch):
+    from PyQt6.QtCore import QPoint
+    from PyQt6.QtGui import QColor, QImage
+
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay()
+    region = QRect(1000, 500, 400, 200)
+    overlay.label.show_text("2 × Bexalite", QPoint(1200, 550))
+    image = QImage(400, 200, QImage.Format.Format_RGB32)
+    image.fill(QColor(255, 255, 255))
+    overlay._mask_own_label(image, region)
+    inside = overlay.label.geometry().center() - region.topLeft()
+    assert image.pixelColor(inside) == QColor(0, 0, 0)
+    assert image.pixelColor(5, 5) == QColor(255, 255, 255)
+    overlay.stop()

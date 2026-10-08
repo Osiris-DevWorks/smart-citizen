@@ -61,6 +61,9 @@ MAX_SAMPLES_PER_SESSION = 200
 SAMPLE_PADDING = 12
 # Hide a reading this long after the number was last seen.
 LABEL_HOLD_MS = 1500
+# Gap between the readout's baseline and the label, in screen px. Keeps the
+# label clear of the digits while the readout bobs with head movement.
+LABEL_GAP = 10
 # A new reading must repeat on this many captures in a row before it replaces
 # the label, so a one-frame misread can't flash "Unidentified".
 READINGS_TO_CHANGE = 2
@@ -87,10 +90,11 @@ def hud_signature_reader(image: QImage) -> Optional[tuple[str, QRect]]:
     width, height = rgb.width(), rgb.height()
     data = rgb.constBits().asstring(rgb.sizeInBytes())
     # Format_RGB32 is 0xffRRGGBB per pixel: B, G, R, A in memory on x86.
-    red = data[2::4]
+    red, green = data[2::4], data[1::4]
     # The capture spans SCAN_REGION's height, so this is the screen height.
     screen_height = height / SCAN_REGION[3]
-    reading = read_signature(width, height, red, DIGIT_HEIGHT_AT_1600 * screen_height / 1600)
+    reading = read_signature(width, height, red, DIGIT_HEIGHT_AT_1600 * screen_height / 1600,
+                             green=green)
     if reading is None:
         return None
     return reading.text, QRect(*reading.box)
@@ -454,6 +458,7 @@ class ScoOverlay(QObject):
         screen = QGuiApplication.primaryScreen()
         region = scan_region_rect(screen.geometry())
         image = screen.grabWindow(0, region.x(), region.y(), region.width(), region.height()).toImage()
+        self._mask_own_label(image, region)
         try:
             found = self._reader(image) if self._reader else None
         except Exception:
@@ -472,7 +477,7 @@ class ScoOverlay(QObject):
         where = QRect(int(where.x() * scale), int(where.y() * scale),
                       int(where.width() * scale), int(where.height() * scale))
         # Just under the readout, centred on it.
-        anchor = QPoint(region.x() + where.center().x(), region.y() + where.bottom() + 4)
+        anchor = QPoint(region.x() + where.center().x(), region.y() + where.bottom() + LABEL_GAP)
         self._on_reading(value, anchor)
 
     def _on_reading(self, value: int, anchor: QPoint) -> None:
@@ -489,6 +494,22 @@ class ScoOverlay(QObject):
             logger.debug("SCO: no deposit matches signature %s", value)
         self._last_value = self._shown_value = value
         self.label.show_text(format_matches(matches), anchor)
+
+    def _mask_own_label(self, image: QImage, region: QRect) -> None:
+        """Black out our own label in the capture so its text is never read
+        (it can sit over the readout for a moment while the head moves)."""
+        if not self.label.isVisible() or not region.width():
+            return
+        overlap = self.label.geometry().intersected(region)
+        if overlap.isEmpty():
+            return
+        scale = image.width() / region.width()
+        local = overlap.translated(-region.x(), -region.y())
+        painter = QPainter(image)
+        painter.fillRect(QRect(int(local.x() * scale), int(local.y() * scale),
+                               int(local.width() * scale) + 1, int(local.height() * scale) + 1),
+                         QColor(0, 0, 0))
+        painter.end()
 
     def _save_sample(self, image: QImage, text: str, where: QRect) -> None:
         """Keep one crop per distinct reading, named after the text read."""
