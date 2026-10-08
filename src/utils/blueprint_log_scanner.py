@@ -229,3 +229,66 @@ def scan_channel(
     """Discover and scan a channel's logs in one call (the worker entry point)."""
     paths = find_log_files(channel_dir, since=since)
     return scan_files(paths, since=since, progress=progress)
+
+
+class GameLogTail:
+    """Incrementally read new "Received Blueprint" events from one live log.
+
+    The Smart Citizen Overlay polls this while the game runs, so a blueprint
+    earned mid-session shows up without a manual Scan. Each :meth:`poll`
+    reads only the bytes appended since the last call and keeps a trailing
+    partial line for the next poll, so an event the game is mid-way through
+    writing is never half-parsed.
+
+    Star Citizen rotates ``Game.log`` into ``logbackups/`` at launch and starts
+    a fresh file. A file smaller than the saved offset (or gone, then back)
+    means rotation: reading restarts from the top. Events at or before
+    *since* (the watermark) are dropped, so re-reading a rotated file never
+    double-counts. Same epoch floor as :func:`scan_files`.
+    """
+
+    def __init__(self, path, *, since: Optional[datetime] = None):
+        self.path = Path(path)
+        self.since = since
+        self._offset = 0
+        self._partial = ""
+
+    def poll(self) -> List[BlueprintEvent]:
+        """Return new events since the last poll; [] when there are none."""
+        try:
+            size = self.path.stat().st_size
+        except OSError:
+            # Between rotation and the new file appearing; try again later.
+            self._offset, self._partial = 0, ""
+            return []
+        if size < self._offset:
+            self._offset, self._partial = 0, ""
+        if size == self._offset:
+            return []
+        try:
+            with open(self.path, "rb") as fh:
+                fh.seek(self._offset)
+                chunk = fh.read(size - self._offset)
+        except OSError as exc:
+            logger.debug("Live blueprint log read skipped %s: %s", self.path, exc)
+            return []
+        self._offset += len(chunk)
+
+        text = self._partial + chunk.decode("utf-8", errors="replace")
+        complete, sep, self._partial = text.rpartition("\n")
+        if not sep:
+            self._partial, complete = text, ""
+
+        events: List[BlueprintEvent] = []
+        for line in complete.splitlines():
+            if "Received Blueprint:" not in line:
+                continue
+            for ev in parse_events(line):
+                if ev.timestamp < BLUEPRINT_EPOCH:
+                    continue
+                if self.since is not None and ev.timestamp <= self.since:
+                    continue
+                events.append(ev)
+        if events:
+            self.since = max(ev.timestamp for ev in events)
+        return events

@@ -300,7 +300,7 @@ class AppSettings:
         "blueprint": "mission_title_tag/blueprint",
         "ace":       "mission_title_tag/ace",
         # RS ("resonance signature") tag for Recco Battaglia's Scan/Mining
-        # contracts (4.9+) — see MINEABLE_RS_VALUES in generate_enhancements_ini.py.
+        # contracts (4.9+) — see MINEABLE_RS_VALUES in src/utils/mining_signatures.py.
         "rs":        "mission_title_tag/rs",
         # Reputation TRACK suffix (e.g. "(Security)"/"(Contractor)") on the
         # title's Rep tag — see issue #161. Off by default (see

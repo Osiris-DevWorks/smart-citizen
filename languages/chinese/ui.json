@@ -223,6 +223,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "叠加层"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "启动或停止 Smart Citizen 叠加层 (SCO)：在游戏画面上解码采矿信号并显示蓝图抽屉。需要无边框窗口模式。"
     }
   },
   "filters": {
@@ -2913,6 +2921,60 @@
     "zip_filter": {
       "ht": "",
       "at": "设置备份 (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 矿物"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "手采矿物"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "打捞"
+    },
+    "drawer_handle_tooltip": {
+      "ht": "",
+      "at": "显示或隐藏蓝图"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "搜索蓝图..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "仅显示已拥有"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "已拥有 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "由 {count} 个任务奖励："
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "新增：{names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen 叠加层"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "尚未加载蓝图数据。请先加载字符串，然后再启动叠加层。"
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "……以及另外 {count} 个"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "未识别"
     }
   }
 }

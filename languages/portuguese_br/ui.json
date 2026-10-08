@@ -223,6 +223,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Overlay"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Iniciar ou parar o Smart Citizen Overlay (SCO): decodificação de assinaturas de mineração e uma gaveta de projetos sobre o jogo. Requer o modo janela sem bordas."
     }
   },
   "filters": {
@@ -2913,6 +2921,60 @@
     "zip_filter": {
       "ht": "",
       "at": "Backup de configurações (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "Minério ROC"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "Minério FPS"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Salvamento"
+    },
+    "drawer_handle_tooltip": {
+      "ht": "",
+      "at": "Mostrar ou ocultar projetos"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Buscar projetos..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Somente obtidos"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "Obtidos {owned} de {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Recompensa de {count} missões:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Novo: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Nenhum dado de projeto foi carregado ainda. Carregue as strings primeiro e depois inicie o overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...e mais {count}"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Não identificado"
     }
   }
 }
