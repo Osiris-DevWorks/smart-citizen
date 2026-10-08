@@ -175,3 +175,17 @@ def test_one_frame_misread_does_not_replace_the_label(qapp, monkeypatch):
     overlay._on_reading(10200, at)                  # a real change sticks
     assert overlay.label._label.text() == "3 × Lindinium"
     overlay.stop()
+
+
+def test_label_is_centred_under_the_readout_in_odw_colours(qapp):
+    from PyQt6.QtCore import QPoint
+
+    from src.gui.sco_overlay import ODW_OVERLAY_COLORS, ScanLabelWindow
+
+    label = ScanLabelWindow()
+    label.show_text("3 × Lindinium", QPoint(500, 300))
+    assert abs(label.x() + label.width() // 2 - 500) <= 1
+    assert label.y() == 300
+    assert label._label.alignment() & Qt.AlignmentFlag.AlignHCenter
+    assert ODW_OVERLAY_COLORS.accent in label._label.styleSheet()
+    label.hide()

@@ -128,6 +128,12 @@ DEFAULT_OVERLAY_COLORS = OverlayColors(
     background="#0d1826", text="#d8e8f0", accent="#4FD7E8", secondary="#6FB5D0",
 )
 
+# The signature label always uses the ODW theme (navy, cream, Osiris gold),
+# whatever theme the app runs in. Same values as theme.py's ODW palette.
+ODW_OVERLAY_COLORS = OverlayColors(
+    background="#1A1F2E", text="#F0E6CF", accent="#C9A961", secondary="#A08C5A",
+)
+
 
 def _rgba(hex_color: str, alpha: int = DRAWER_ALPHA) -> str:
     c = QColor(hex_color)
@@ -173,9 +179,12 @@ class ScanLabelWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self._label = QLabel(self)
+        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        c = ODW_OVERLAY_COLORS
         self._label.setStyleSheet(
-            "QLabel { color: #FFE9A8; background: rgba(0, 0, 0, 170);"
-            " border-radius: 4px; padding: 2px 6px; font-weight: bold; }"
+            f"QLabel {{ color: {c.text}; background: {_rgba(c.background)};"
+            f" border: 1px solid {c.accent}; border-radius: 4px;"
+            " padding: 2px 8px; font-weight: bold; }"
         )
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -185,10 +194,11 @@ class ScanLabelWindow(QWidget):
         self._hide_timer.timeout.connect(self.hide)
 
     def show_text(self, text: str, anchor: QPoint) -> None:
-        """Show *text* with its top-left at *anchor* (screen coordinates)."""
+        """Show *text* centred under *anchor*: the middle of its top edge
+        sits on that point (screen coordinates)."""
         self._label.setText(text)
         self.adjustSize()
-        self.move(anchor)
+        self.move(anchor.x() - self.width() // 2, anchor.y())
         self.show()
         self._hide_timer.start(LABEL_HOLD_MS)
 
@@ -461,8 +471,8 @@ class ScoOverlay(QObject):
         scale = region.width() / image.width() if image.width() else 1.0
         where = QRect(int(where.x() * scale), int(where.y() * scale),
                       int(where.width() * scale), int(where.height() * scale))
-        # Just under the readout, aligned to its left edge.
-        anchor = QPoint(region.x() + where.left(), region.y() + where.bottom() + 4)
+        # Just under the readout, centred on it.
+        anchor = QPoint(region.x() + where.center().x(), region.y() + where.bottom() + 4)
         self._on_reading(value, anchor)
 
     def _on_reading(self, value: int, anchor: QPoint) -> None:
