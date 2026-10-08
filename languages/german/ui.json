@@ -2967,6 +2967,10 @@
     "no_blueprints_body": {
       "ht": "",
       "at": "Es sind noch keine Blaupausendaten geladen. Lade zuerst die Strings und starte dann das Overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...und {count} weitere"
     }
   }
 }

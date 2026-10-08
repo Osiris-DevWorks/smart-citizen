@@ -2967,6 +2967,10 @@
     "no_blueprints_body": {
       "ht": "",
       "at": "Nenhum dado de projeto foi carregado ainda. Carregue as strings primeiro e depois inicie o overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...e mais {count}"
     }
   }
 }

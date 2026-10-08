@@ -67,6 +67,15 @@ def test_drawer_tooltip_shows_details_and_missions(qapp):
     assert "Quantum Drive" in tip and "S3" in tip and "Haul cargo" in tip
 
 
+def test_tooltip_caps_long_mission_lists(qapp):
+    from src.gui.sco_overlay import TOOLTIP_MAX_MISSIONS
+    missions = frozenset(f"Mission {i:02d}" for i in range(TOOLTIP_MAX_MISSIONS + 3))
+    tip = BlueprintDrawer._tooltip(BlueprintItem("Agni", missions)).splitlines()
+    assert tip[0] == f"Rewarded by {len(missions)} missions:"
+    assert tip[-1] == "...and 3 more"
+    assert len(tip) == TOOLTIP_MAX_MISSIONS + 2
+
+
 def test_format_matches(qapp):
     assert format_matches(decode_signature(10200)) == "3 × Lindinium"
     assert format_matches(decode_signature(12000)).splitlines() == [

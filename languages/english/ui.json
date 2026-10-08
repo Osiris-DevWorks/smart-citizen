@@ -2775,6 +2775,10 @@
     "no_blueprints_body": {
       "ht": "No blueprint data is loaded yet. Load strings first, then start the overlay.",
       "at": ""
+    },
+    "drawer_more_missions": {
+      "ht": "...and {count} more",
+      "at": ""
     }
   }
 }

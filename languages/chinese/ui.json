@@ -2967,6 +2967,10 @@
     "no_blueprints_body": {
       "ht": "",
       "at": "尚未加载蓝图数据。请先加载字符串，然后再启动叠加层。"
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "……以及另外 {count} 个"
     }
   }
 }

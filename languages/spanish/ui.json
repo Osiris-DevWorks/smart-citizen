@@ -2967,6 +2967,10 @@
     "no_blueprints_body": {
       "ht": "",
       "at": "Todavía no hay datos de planos cargados. Carga primero las cadenas y luego inicia el overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...y {count} más"
     }
   }
 }

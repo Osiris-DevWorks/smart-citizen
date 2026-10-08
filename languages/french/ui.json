@@ -2967,6 +2967,10 @@
     "no_blueprints_body": {
       "ht": "",
       "at": "Aucune donnée de plan n'est encore chargée. Chargez d'abord les chaînes, puis démarrez l'overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...et {count} de plus"
     }
   }
 }

@@ -57,6 +57,8 @@ NEW_BLUEPRINT_BANNER_MS = 8000
 DRAWER_HANDLE_WIDTH = 16
 DRAWER_HANDLE_HEIGHT = 44
 DRAWER_PANEL_WIDTH = 340
+# Missions listed in a blueprint's tooltip before "...and N more".
+TOOLTIP_MAX_MISSIONS = 12
 # How much of the game shows through the drawer: 0 = invisible, 255 = solid.
 DRAWER_ALPHA = 184
 
@@ -207,6 +209,9 @@ class BlueprintDrawer(QWidget):
     def __init__(self, colors: OverlayColors = DEFAULT_OVERLAY_COLORS):
         super().__init__(None, _OVERLAY_FLAGS)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # The game keeps focus while the player hovers, so tooltips must
+        # show on an inactive window too.
+        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips)
         self._meta: dict = {}
         self._owned: set = set()
         self._expanded = False
@@ -336,7 +341,10 @@ class BlueprintDrawer(QWidget):
         lines = [" · ".join(details)] if details else []
         if item_meta.missions:
             lines.append(tr("sco.drawer_missions", count=len(item_meta.missions)))
-            lines.extend(sorted(item_meta.missions)[:8])
+            missions = sorted(item_meta.missions)
+            lines.extend(missions[:TOOLTIP_MAX_MISSIONS])
+            if len(missions) > TOOLTIP_MAX_MISSIONS:
+                lines.append(tr("sco.drawer_more_missions", count=len(missions) - TOOLTIP_MAX_MISSIONS))
         return "\n".join(lines)
 
     def _on_item_changed(self, item: QListWidgetItem) -> None:
