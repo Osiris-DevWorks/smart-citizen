@@ -61,6 +61,9 @@ MAX_SAMPLES_PER_SESSION = 200
 SAMPLE_PADDING = 12
 # Hide a reading this long after the number was last seen.
 LABEL_HOLD_MS = 1500
+# A new reading must repeat on this many captures in a row before it replaces
+# the label, so a one-frame misread can't flash "Unidentified".
+READINGS_TO_CHANGE = 2
 NEW_BLUEPRINT_BANNER_MS = 8000
 
 DRAWER_HANDLE_WIDTH = 16
@@ -407,6 +410,9 @@ class ScoOverlay(QObject):
         self._timer.setInterval(CAPTURE_INTERVAL_MS)
         self._timer.timeout.connect(self._capture_once)
         self._last_value: Optional[int] = None
+        self._shown_value: Optional[int] = None
+        self._candidate: Optional[int] = None
+        self._candidate_count = 0
 
     def set_reader(self, reader: Optional[SignatureReader]) -> None:
         self._reader = reader
@@ -455,12 +461,23 @@ class ScoOverlay(QObject):
         scale = region.width() / image.width() if image.width() else 1.0
         where = QRect(int(where.x() * scale), int(where.y() * scale),
                       int(where.width() * scale), int(where.height() * scale))
+        # Just under the readout, aligned to its left edge.
+        anchor = QPoint(region.x() + where.left(), region.y() + where.bottom() + 4)
+        self._on_reading(value, anchor)
+
+    def _on_reading(self, value: int, anchor: QPoint) -> None:
+        """Show *value*'s decode, once it has held for READINGS_TO_CHANGE captures."""
+        if value != self._shown_value or not self.label.isVisible():
+            if value == self._candidate:
+                self._candidate_count += 1
+            else:
+                self._candidate, self._candidate_count = value, 1
+            if self._candidate_count < READINGS_TO_CHANGE:
+                return
         matches = decode_signature(value)
         if not matches and value != self._last_value:
             logger.debug("SCO: no deposit matches signature %s", value)
-        self._last_value = value
-        # Just under the readout, aligned to its left edge.
-        anchor = QPoint(region.x() + where.left(), region.y() + where.bottom() + 4)
+        self._last_value = self._shown_value = value
         self.label.show_text(format_matches(matches), anchor)
 
     def _save_sample(self, image: QImage, text: str, where: QRect) -> None:

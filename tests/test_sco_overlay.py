@@ -156,3 +156,22 @@ def test_sample_saved_once_per_reading(qapp, monkeypatch, tmp_path):
     overlay._save_sample(image, "7,200", QRect(50, 40, 30, 11))
     saved = list((tmp_path / "samples").iterdir())
     assert len(saved) == 1 and saved[0].name.endswith("_7200.png")
+
+
+def test_one_frame_misread_does_not_replace_the_label(qapp, monkeypatch):
+    from PyQt6.QtCore import QPoint
+
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay()
+    at = QPoint(10, 10)
+    overlay._on_reading(7200, at)
+    assert not overlay.label.isVisible()            # first sighting: wait
+    overlay._on_reading(7200, at)
+    assert overlay.label._label.text() == "2 × Bexalite"
+    overlay._on_reading(7208, at)                   # one misread frame
+    assert overlay.label._label.text() == "2 × Bexalite"
+    overlay._on_reading(7200, at)
+    overlay._on_reading(10200, at)
+    overlay._on_reading(10200, at)                  # a real change sticks
+    assert overlay.label._label.text() == "3 × Lindinium"
+    overlay.stop()
