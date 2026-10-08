@@ -74,7 +74,8 @@ Split by domain:
 - `test_favorite_toggle_stranded.py`: #330 follow-up. `MainWindow.toggle_favorite` driven on a stub `self` (same pattern as `test_ui_mode`): a stranded pre-#329 favorite prefix on a non-favoritable row (ship description, or any category) is removable and never re-addable; name-row add/remove unchanged; an empty prefix can't turn the stranded path into a value-clearing no-op.
 - `test_mining_signatures.py`: SCO signature decode. Shared RS table (the generator imports the same object), no ship-ore collisions within caps, multi-reading round numbers, cap rules out oversized clusters, HUD text parsing.
 - `test_game_log_tail.py`: SCO live `Game.log` tail. Incremental reads, half-written lines, rotation (missing / shrunk file), watermark + epoch filtering, no double-count after rotation.
-- `test_sco_overlay.py`: SCO windows headlessly (`QT_QPA_PLATFORM=offscreen`). Drawer list/search/owned-only/checkbox signal and tooltip, signature label text, scan region covers the sample readouts, capture timer stays off with no reader.
+- `test_sco_digit_reader.py`: SCO digit reader on real HUD crops (`tests/fixtures/sco/<shot>_<value>.png`, Golem + Prospector). Every fixture reads right, the samples cover 0-9, the box wraps the digits, the decode check breaks a 6/8 look-alike tie when a shot's own glyphs are left out, blank/noise reads nothing.
+- `test_sco_overlay.py`: SCO windows headlessly (`QT_QPA_PLATFORM=offscreen`). Drawer list/search/owned-only/checkbox signal and tooltip, signature label text, scan region covers the sample readouts, capture timer only runs with a reader set, the default reader reads a real `QImage`, one saved sample per distinct reading.
 
 QThread workers in `src/gui/workers.py` have no automated tests — they need `pytest-qt` (not a dev dep). Manual smoke testing is the only path.
 

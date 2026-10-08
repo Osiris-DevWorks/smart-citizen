@@ -9,9 +9,11 @@ Two windows, because they need opposite input behaviour:
   a searchable blueprint list with owned checkboxes. It has to take clicks,
   so using it takes focus from the game; the player needs a free cursor.
 
-``ScoOverlay`` owns both, plus the capture timer. The digit reader that turns
-a capture of the signature panel into text is pluggable (``SignatureReader``)
-and not built yet: until one is set, no screen capture runs at all.
+``ScoOverlay`` owns both, plus the capture timer. The reader that turns a
+capture of the signature panel into text is pluggable (``SignatureReader``);
+the default, ``hud_signature_reader``, matches the HUD's digits against
+reference glyphs (``src/utils/sco_digit_reader.py``). With no reader set, no
+screen capture runs at all.
 
 Overlays only draw over Star Citizen in borderless windowed mode, not
 exclusive fullscreen. SCO only captures the screen; it never reads game
@@ -25,6 +27,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Callable, Optional
 
 from PyQt6.QtCore import QObject, QPoint, QPointF, QRect, Qt, QTimer, pyqtSignal
@@ -40,6 +44,7 @@ from src.utils.i18n import tr
 from src.utils.mining_signatures import (
     OTHER_SIGNATURES, SignatureMatch, decode_signature, parse_signature_text,
 )
+from src.utils.sco_digit_reader import DIGIT_HEIGHT_AT_1600, read_signature
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +55,10 @@ logger = logging.getLogger(__name__)
 # padded for head movement (~115 px between the two samples).
 SCAN_REGION = (0.38, 0.28, 0.24, 0.12)
 CAPTURE_INTERVAL_MS = 250
+# Tester builds keep a crop of each distinct reading (and the text read) so
+# misreads can be fixed by adding reference glyphs. Capped per session.
+MAX_SAMPLES_PER_SESSION = 200
+SAMPLE_PADDING = 12
 # Hide a reading this long after the number was last seen.
 LABEL_HOLD_MS = 1500
 NEW_BLUEPRINT_BANNER_MS = 8000
@@ -65,6 +74,24 @@ DRAWER_ALPHA = 184
 # A reader takes a capture of SCAN_REGION and returns the HUD text it found
 # ("10,200") and where, in capture coordinates, or None when nothing is shown.
 SignatureReader = Callable[[QImage], Optional[tuple[str, QRect]]]
+
+
+def hud_signature_reader(image: QImage) -> Optional[tuple[str, QRect]]:
+    """The default ``SignatureReader``: digit matching on the red channel."""
+    if image.isNull():
+        return None
+    rgb = image.convertToFormat(QImage.Format.Format_RGB32)
+    width, height = rgb.width(), rgb.height()
+    data = rgb.constBits().asstring(rgb.sizeInBytes())
+    # Format_RGB32 is 0xffRRGGBB per pixel: B, G, R, A in memory on x86.
+    red = data[2::4]
+    # The capture spans SCAN_REGION's height, so this is the screen height.
+    screen_height = height / SCAN_REGION[3]
+    reading = read_signature(width, height, red, DIGIT_HEIGHT_AT_1600 * screen_height / 1600)
+    if reading is None:
+        return None
+    return reading.text, QRect(*reading.box)
+
 
 _OVERLAY_FLAGS = (
     Qt.WindowType.Tool
@@ -362,12 +389,14 @@ class ScoOverlay(QObject):
 
     owned_toggled = pyqtSignal(str, bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, sample_dir: Optional[Path] = None):
         super().__init__(parent)
         self.label = ScanLabelWindow()
         self.drawer = BlueprintDrawer(OverlayColors.from_theme())
         self.drawer.owned_toggled.connect(self.owned_toggled)
-        self._reader: Optional[SignatureReader] = None
+        self._reader: Optional[SignatureReader] = hud_signature_reader
+        self._sample_dir = sample_dir
+        self._sampled: set[str] = set()
         self._timer = QTimer(self)
         self._timer.setInterval(CAPTURE_INTERVAL_MS)
         self._timer.timeout.connect(self._capture_once)
@@ -412,9 +441,14 @@ class ScoOverlay(QObject):
         if not found:
             return
         text, where = found
+        self._save_sample(image, text, where)
         value = parse_signature_text(text)
         if value is None:
             return
+        # The reader works in capture pixels; the screen may be DPI-scaled.
+        scale = region.width() / image.width() if image.width() else 1.0
+        where = QRect(int(where.x() * scale), int(where.y() * scale),
+                      int(where.width() * scale), int(where.height() * scale))
         matches = decode_signature(value)
         if not matches:
             if value != self._last_value:
@@ -425,3 +459,18 @@ class ScoOverlay(QObject):
         # Just under the readout, aligned to its left edge.
         anchor = QPoint(region.x() + where.left(), region.y() + where.bottom() + 4)
         self.label.show_text(format_matches(matches), anchor)
+
+    def _save_sample(self, image: QImage, text: str, where: QRect) -> None:
+        """Keep one crop per distinct reading, named after the text read."""
+        if (self._sample_dir is None or text in self._sampled
+                or len(self._sampled) >= MAX_SAMPLES_PER_SESSION):
+            return
+        self._sampled.add(text)
+        crop = image.copy(where.adjusted(-SAMPLE_PADDING, -SAMPLE_PADDING,
+                                         SAMPLE_PADDING, SAMPLE_PADDING))
+        try:
+            self._sample_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            crop.save(str(self._sample_dir / f"{stamp}_{text.replace(',', '')}.png"))
+        except OSError:
+            logger.warning("SCO: could not save a digit sample to %s", self._sample_dir)

@@ -2,8 +2,8 @@
 
 ``QT_QPA_PLATFORM=offscreen``, same pattern as test_restore_backup.py — no
 pytest-qt. Covers the drawer's list/filter/owned-toggle behaviour, the
-signature label text, and that the capture loop stays off until a digit
-reader exists.
+signature label text, the capture loop only running with a reader set, and
+the default reader working on a real QImage.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 from src.gui.sco_overlay import (  # noqa: E402
     DEFAULT_OVERLAY_COLORS, SCAN_REGION, BlueprintDrawer, OverlayColors,
-    ScoOverlay, format_matches, scan_region_rect,
+    ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
 )
 from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
 from src.utils.mining_signatures import decode_signature  # noqa: E402
@@ -113,9 +113,45 @@ def test_no_reader_means_no_capture(qapp, monkeypatch):
     # Keep the test off the registry-backed theme setting.
     monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay()
+    overlay.set_reader(None)
     overlay.start()
     assert not overlay._timer.isActive()
     overlay.set_reader(lambda image: None)
     assert overlay._timer.isActive()
     overlay.stop()
     assert not overlay._timer.isActive()
+
+
+def test_default_reader_is_the_hud_reader(qapp, monkeypatch):
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    assert ScoOverlay()._reader is hud_signature_reader
+
+
+def test_hud_reader_reads_a_qimage(qapp):
+    # The fixtures are 1600 px-tall screen crops; pad to a full SCAN_REGION
+    # height so the reader's digit-size estimate matches the real capture.
+    from pathlib import Path
+
+    from PyQt6.QtGui import QColor, QImage, QPainter
+
+    crop = QImage(str(Path(__file__).parent / "fixtures" / "sco" / "p6_3400.png"))
+    capture = QImage(crop.width(), int(1600 * SCAN_REGION[3]), QImage.Format.Format_RGB32)
+    capture.fill(QColor(10, 30, 50))
+    painter = QPainter(capture)
+    painter.drawImage(0, 40, crop)
+    painter.end()
+    text, where = hud_signature_reader(capture)
+    assert text == "3,400"
+    assert 40 <= where.top() <= 40 + crop.height()
+
+
+def test_sample_saved_once_per_reading(qapp, monkeypatch, tmp_path):
+    from PyQt6.QtGui import QImage
+
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay(sample_dir=tmp_path / "samples")
+    image = QImage(200, 100, QImage.Format.Format_RGB32)
+    overlay._save_sample(image, "7,200", QRect(50, 40, 30, 11))
+    overlay._save_sample(image, "7,200", QRect(50, 40, 30, 11))
+    saved = list((tmp_path / "samples").iterdir())
+    assert len(saved) == 1 and saved[0].name.endswith("_7200.png")

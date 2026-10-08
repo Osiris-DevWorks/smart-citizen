@@ -6038,7 +6038,8 @@ class MainWindow(QMainWindow):
             return
         if self._sco_overlay is None:
             from src.gui.sco_overlay import ScoOverlay
-            self._sco_overlay = ScoOverlay(self)
+            self._sco_overlay = ScoOverlay(
+                self, sample_dir=AppSettings.get_logs_dir() / "sco_samples")
             self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
         self._sco_overlay.start()
