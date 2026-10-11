@@ -534,6 +534,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "文字サイズ："
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "アプリの文字を大きく、または小さくします。文字が切れないようにコントロールも合わせて拡大・縮小されます。再起動後に反映されます。"
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "文字サイズ変更のための再起動"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "新しい文字サイズは Smart Citizen の再起動後に反映されます。"
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "再起動に失敗しました"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen を自動で再起動できませんでした。新しい文字サイズを反映するには、手動で起動し直してください。"
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "Star Citizen"

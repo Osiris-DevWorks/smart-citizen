@@ -3517,12 +3517,7 @@ class MainWindow(QMainWindow):
 
         self._suppress_user_ini_autosave = True
 
-        if getattr(sys, "frozen", False):
-            program, args = sys.executable, []
-        else:
-            program, args = sys.executable, [os.path.abspath(sys.argv[0])]
-        workdir = str(Path(program).resolve().parent)
-
+        program, args, workdir = self._relaunch_command()
         if not QProcess.startDetached(program, args, workdir):
             logger.error(f"Relaunch failed for {program} {args}")
             QMessageBox.warning(
@@ -3533,6 +3528,37 @@ class MainWindow(QMainWindow):
             # Fall through to close anyway — the user relaunches by hand and
             # still gets the imported state + post-import prompt.
         self.close()
+
+    @staticmethod
+    def _relaunch_command() -> tuple[str, list[str], str]:
+        """Program, arguments and working folder that start this app again."""
+        if getattr(sys, "frozen", False):
+            program, args = sys.executable, []
+        else:
+            program, args = sys.executable, [os.path.abspath(sys.argv[0])]
+        return program, args, str(Path(program).resolve().parent)
+
+    def restart_app(self) -> None:
+        """Close normally, then start a fresh copy.
+
+        Unlike ``_relaunch_app`` this keeps the usual close: user.ini is
+        autosaved and the unapplied-changes prompt still shows. The new copy
+        starts only once the close goes through, so cancelling that prompt
+        leaves this window open with no second one beside it. Used for
+        settings Qt reads only at startup (the font size).
+        """
+        from PyQt6.QtCore import QProcess
+
+        if not self.close():
+            return
+        program, args, workdir = self._relaunch_command()
+        if not QProcess.startDetached(program, args, workdir):
+            logger.error(f"Restart failed for {program} {args}")
+            QMessageBox.warning(
+                None,
+                tr("config.font_size_restart_failed_title"),
+                tr("config.font_size_restart_failed_body"),
+            )
 
     def _maybe_prompt_post_import_apply(self) -> None:
         """Offer to regenerate + apply enhancements after importing settings.

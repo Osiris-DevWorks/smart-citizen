@@ -534,6 +534,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "字型大小："
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "放大或縮小應用程式中的文字。控制項會隨之縮放，避免文字被截斷。重新啟動後生效。"
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "重新啟動以變更字型大小"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "新的字型大小將在 Smart Citizen 重新啟動後生效。"
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "重新啟動失敗"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen 無法自動重新啟動。請手動重新啟動以查看新的字型大小。"
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "星際公民"

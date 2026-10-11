@@ -33,6 +33,7 @@ from src.gui.theme import apply_theme, load_application_fonts
 from src.utils.version import get_version
 from src.utils.settings import AppSettings
 from src.utils import i18n
+from src.utils.ui_scale import apply_font_size_env
 
 # TODO: LOG_LEVEL only honors the value 'DEBUG'; any other level name
 # (WARNING, ERROR, ...) is ignored and falls back to INFO. Consider mapping
@@ -183,6 +184,10 @@ def main():
     # Load UI strings for the selected language before any window is built.
     # Widgets read tr() at construction time, so this must run before MainWindow().
     i18n.set_language(AppSettings.get_selected_language())
+
+    # Font size is a Qt scale factor, which Qt reads only while building the
+    # QApplication — so this must run first, and a change needs a restart.
+    apply_font_size_env(AppSettings.get_font_size())
 
     app = QApplication(sys.argv)
     load_application_fonts()

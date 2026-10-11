@@ -558,6 +558,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "Yazı boyutu:"
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "Küçük"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "Orta"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "Büyük"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "Uygulamadaki yazıları büyütür veya küçültür. Hiçbir şey kesilmesin diye kontroller de onunla birlikte boyut değiştirir. Yeniden başlatmadan sonra etkili olur."
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "Yazı Boyutunu Değiştirmek için Yeniden Başlat"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "Yeni yazı boyutu Smart Citizen yeniden başladığında etkili olur."
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "Yeniden Başlatma Başarısız"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen kendini yeniden başlatamadı. Yeni yazı boyutunu görmek için lütfen elle yeniden başlatın."
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "Star Citizen"

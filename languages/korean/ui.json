@@ -558,6 +558,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "글꼴 크기:"
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "작게"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "보통"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "크게"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "앱의 글자를 크게 또는 작게 합니다. 잘리는 부분이 없도록 컨트롤도 함께 커지고 작아집니다. 다시 시작하면 적용됩니다."
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "글꼴 크기 변경을 위해 다시 시작"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "새 글꼴 크기는 Smart Citizen을 다시 시작하면 적용됩니다."
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "다시 시작 실패"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen을 자동으로 다시 시작하지 못했습니다. 새 글꼴 크기를 보려면 직접 다시 실행하세요."
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "Star Citizen"
