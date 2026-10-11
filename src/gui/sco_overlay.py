@@ -90,11 +90,11 @@ def hud_signature_reader(image: QImage) -> Optional[tuple[str, QRect]]:
     width, height = rgb.width(), rgb.height()
     data = rgb.constBits().asstring(rgb.sizeInBytes())
     # Format_RGB32 is 0xffRRGGBB per pixel: B, G, R, A in memory on x86.
-    red, green = data[2::4], data[1::4]
+    red, green, blue = data[2::4], data[1::4], data[0::4]
     # The capture spans SCAN_REGION's height, so this is the screen height.
     screen_height = height / SCAN_REGION[3]
     reading = read_signature(width, height, red, DIGIT_HEIGHT_AT_1600 * screen_height / 1600,
-                             green=green)
+                             green=green, blue=blue)
     if reading is None:
         return None
     return reading.text, QRect(*reading.box)

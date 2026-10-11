@@ -55,10 +55,14 @@ MIN_READING_SCORE = 0.80
 # matches at least this well, so other HUD text ("UNKNOWN") stays silent.
 MIN_UNDECODED_SCORE = 0.85
 
-# The readout digits are white (with colour fringes). Red-heavy HUD text
-# ("WARNING"), green/yellow markers ("UNKNOWN") fall below this green:red
-# ratio over the inked pixels; real readouts sit at 0.69+.
-MIN_GREEN_RATIO = 0.62
+# The readout digits are white, but chromatic fringing shifts green and
+# blue a pixel or two sideways, and on a planet the orange panel tints them.
+# An inked pixel counts as white when green and blue within FRINGE_PX of it
+# reach WHITE_LEVEL of its red. Real readouts have 0.7+ of their inked
+# pixels white; red "WARNING" and green/yellow "UNKNOWN" HUD text 0.2 or less.
+FRINGE_PX = 2
+WHITE_LEVEL = 0.7
+MIN_WHITE_FRACTION = 0.45
 
 
 @dataclass(frozen=True)
@@ -70,7 +74,11 @@ class SignatureReading:
 
 
 def _components(width: int, height: int, mask: bytearray) -> list[tuple[int, int, int, int]]:
-    """Bounding boxes ``(x, y, w, h)`` of 4-connected foreground blobs."""
+    """Bounding boxes ``(x, y, w, h)`` of 8-connected foreground blobs.
+
+    8-connected so a thin stroke that only touches diagonally (the planet
+    HUD's "3") stays one glyph.
+    """
     seen = bytearray(width * height)
     boxes = []
     for start in range(width * height):
@@ -84,11 +92,16 @@ def _components(width: int, height: int, mask: bytearray) -> list[tuple[int, int
             y, x = divmod(i, width)
             x0, x1 = min(x0, x), max(x1, x)
             y0, y1 = min(y0, y), max(y1, y)
-            for j, ok in ((i - 1, x > 0), (i + 1, x < width - 1),
-                          (i - width, y > 0), (i + width, y < height - 1)):
-                if ok and mask[j] and not seen[j]:
-                    seen[j] = 1
-                    stack.append(j)
+            for dy in (-1, 0, 1):
+                ny = y + dy
+                if not 0 <= ny < height:
+                    continue
+                for dx in (-1, 0, 1):
+                    nx = x + dx
+                    j = ny * width + nx
+                    if 0 <= nx < width and mask[j] and not seen[j]:
+                        seen[j] = 1
+                        stack.append(j)
         boxes.append((x0, y0, x1 - x0 + 1, y1 - y0 + 1))
     return boxes
 
@@ -247,38 +260,46 @@ def _read_row(width, red, row, threshold) -> Optional[SignatureReading]:
                             score)
 
 
-def _is_white(width, red, green, row, threshold) -> bool:
-    """True when the row's inked pixels carry enough green to be white text."""
+def _is_white(width, red, green, blue, row, threshold) -> bool:
+    """True when most of the row's inked pixels have green and blue nearby."""
     boxes, top, base = row
     x0 = boxes[0][0]
     x1 = max(b[0] + b[2] for b in boxes)
-    total_r = total_g = 0
+    inked = white = 0
     for y in range(top, base):
-        for i in range(y * width + x0, y * width + x1):
-            if red[i] >= threshold:
-                total_r += red[i]
-                total_g += green[i]
-    return total_r > 0 and total_g >= MIN_GREEN_RATIO * total_r
+        line = y * width
+        for x in range(x0, x1):
+            r = red[line + x]
+            if r < threshold:
+                continue
+            inked += 1
+            lo, hi = line + max(0, x - FRINGE_PX), line + min(width, x + FRINGE_PX + 1)
+            need = WHITE_LEVEL * r
+            if max(green[lo:hi]) >= need and max(blue[lo:hi]) >= need:
+                white += 1
+    return inked > 0 and white >= MIN_WHITE_FRACTION * inked
 
 
 def read_signature(width: int, height: int, red: bytes,
                    digit_px: float = DIGIT_HEIGHT_AT_1600,
-                   green: Optional[bytes] = None) -> Optional[SignatureReading]:
+                   green: Optional[bytes] = None,
+                   blue: Optional[bytes] = None) -> Optional[SignatureReading]:
     """Find and read the signature in a ``width`` x ``height`` red channel.
 
     *digit_px* is the expected digit height in capture pixels. With the
-    *green* channel too, coloured text (red warnings, green markers) is
-    skipped. Returns the best reading, preferring one that decodes, or None.
+    *green* and *blue* channels too, coloured text (red warnings, green
+    markers) is skipped. Returns the best reading, preferring one that decodes, or None.
     """
     if len(red) != width * height or width <= 0 or height <= 0:
         return None
-    if green is not None and len(green) != len(red):
+    colour = green is not None and blue is not None
+    if colour and not len(green) == len(blue) == len(red):
         return None
     max_run = int(1.2 * digit_px)
     for threshold in THRESHOLDS:
         mask = _mask(width, height, red, threshold, max_run)
         rows = [row for row in _candidate_rows(width, height, mask, digit_px)
-                if green is None or _is_white(width, red, green, row, threshold)]
+                if not colour or _is_white(width, red, green, blue, row, threshold)]
         readings = [r for row in rows if (r := _read_row(width, red, row, threshold))]
         if readings:
             decoded = [r for r in readings

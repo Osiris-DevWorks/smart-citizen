@@ -2,7 +2,8 @@
 
 Fixtures in ``tests/fixtures/sco/`` are named ``<source>_<value>.png``:
 crops of Amr's 2560x1600 screenshots (Drake Golem ``g*``, MISC Prospector
-``p*``), lossless crops SCO saved in-game (``live*``), and other HUD text
+``p*``, Prospector on a planet with the orange HUD panel ``q*``), lossless
+crops SCO saved in-game (``live*``), and other HUD text
 the reader must ignore (``hud*_none``: "UNKNOWN", red "WARNING"). Qt-free:
 the channels go straight to ``read_signature``.
 """
@@ -24,7 +25,7 @@ def _channels(path):
 
     img = QImage(str(path)).convertToFormat(QImage.Format.Format_RGB32)
     data = img.constBits().asstring(img.sizeInBytes())
-    return img.width(), img.height(), data[2::4], data[1::4]
+    return img.width(), img.height(), data[2::4], data[1::4], data[0::4]
 
 
 def _expected(path):
@@ -33,8 +34,8 @@ def _expected(path):
 
 
 def _read(path):
-    w, h, red, green = _channels(path)
-    return read_signature(w, h, red, 11, green=green)
+    w, h, red, green, blue = _channels(path)
+    return read_signature(w, h, red, 11, green=green, blue=blue)
 
 
 @pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
@@ -60,12 +61,15 @@ def test_box_wraps_the_digits():
     assert 0 < x < w - bw and 0 < y < h - bh
 
 
-@pytest.mark.parametrize("stem", ["live02_8540", "live06_7800", "live24_15600"])
+@pytest.mark.parametrize("stem", ["live02_8540", "live06_7800", "live24_15600",
+                                  "q1_14160", "q2_17080"])
 def test_reads_without_its_own_glyphs(monkeypatch, stem):
-    # Each of these was misread in-game (8 as 0/6/9, 8 as 0, 6 as 8). Read
+    # The live crops were misread in-game (8 as 0/6/9, 8 as 0, 6 as 8); the
+    # q crops were skipped as coloured text on the orange planet panel. Read
     # with that crop's own glyphs removed, so the rest of the set (and the
     # decode check) has to carry it.
-    source = "live_" + stem[4:6]
+    prefix = stem.split("_")[0]
+    source = "live_" + prefix[4:] if prefix.startswith("live") else prefix
     monkeypatch.setattr(sco_digit_reader, "DIGIT_SAMPLES",
                         tuple(s for s in DIGIT_SAMPLES if s[4] != source))
     sco_digit_reader._references.cache_clear()
