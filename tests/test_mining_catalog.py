@@ -88,3 +88,13 @@ def test_unreadable_index_is_empty(tmp_path, content):
         path.write_text(content, encoding="utf-8")
     assert load_crafting_index(path).materials == {}
     assert isinstance(load_crafting_index(path), CraftingIndex)
+
+
+@pytest.mark.parametrize("line", [
+    "Journal_General_Mining_Compendium_Content,P=Beryl - Yela\n",
+    "journal_general_mining_compendium_content = Beryl - Yela\r\n",
+])
+def test_compendium_key_read_like_the_ini_parser(tmp_path, line):
+    base = tmp_path / "base.ini"
+    base.write_bytes(b"\xef\xbb\xbfOther_Key=x\n" + line.encode("utf-8"))
+    assert read_compendium(base)["Beryl"].locations == ("Yela",)

@@ -6880,7 +6880,10 @@ class MainWindow(QMainWindow):
         if key == getattr(self, "_sco_catalog_key", None):
             return
         self._sco_catalog_key = key
-        self._sco_overlay.drawer.set_catalog(read_compendium(base_ini), load_crafting_index(index))
+        minerals, crafting = read_compendium(base_ini), load_crafting_index(index)
+        logger.info(f"SCO drawer: {len(minerals)} minerals from {base_ini}, "
+                    f"{len(crafting.materials)} crafting materials from {index}")
+        self._sco_overlay.drawer.set_catalog(minerals, crafting)
 
     def _stop_sco_overlay(self):
         self._stop_sco_log_watcher()

@@ -111,13 +111,18 @@ def parse_mining_compendium(content: str) -> dict[str, MineralInfo]:
 
 
 def read_compendium(base_ini: Path) -> dict[str, MineralInfo]:
-    """The compendium minerals from a ``base.ini``; empty when it is missing."""
-    prefix = COMPENDIUM_KEY.lower() + "="
+    """The compendium minerals from a ``base.ini``; empty when it is missing.
+
+    Keys are matched the way ``parse_ini_file`` reads them: any ``,P``-style
+    suffix CIG puts after a key is dropped, and case doesn't matter.
+    """
+    wanted = COMPENDIUM_KEY.lower()
     try:
         with open(base_ini, encoding="utf-8-sig", errors="replace") as fh:
             for line in fh:
-                if line.lower().startswith(prefix):
-                    return parse_mining_compendium(line[len(prefix):])
+                key, sep, value = line.partition("=")
+                if sep and key.split(",", 1)[0].strip().lower() == wanted:
+                    return parse_mining_compendium(value.rstrip("\r\n"))
     except OSError:
         pass
     return {}
