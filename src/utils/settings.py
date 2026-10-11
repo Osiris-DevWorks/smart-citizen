@@ -494,6 +494,13 @@ class AppSettings:
     UI_MODE = "ui_mode"
     UI_MODE_SIMPLE = "simple"
     UI_MODE_ADVANCED = "advanced"
+    # UI font size. Applied as a Qt scale factor at startup
+    # (src/utils/ui_scale.py), so a change takes effect after a restart.
+    FONT_SIZE = "font_size"
+    FONT_SIZE_SMALL = "small"
+    FONT_SIZE_MEDIUM = "medium"
+    FONT_SIZE_LARGE = "large"
+    FONT_SIZES = (FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE)
 
     # Settings keys - Enhancements
     ENHANCEMENTS_ENABLED = "enhancements_enabled"
@@ -872,6 +879,22 @@ class AppSettings:
         if mode not in (AppSettings.UI_MODE_SIMPLE, AppSettings.UI_MODE_ADVANCED):
             mode = AppSettings.UI_MODE_SIMPLE
         AppSettings.settings().setValue(AppSettings.UI_MODE, mode)
+
+    @staticmethod
+    def get_font_size() -> str:
+        """Return the UI font size: 'small', 'medium' (default) or 'large'.
+        Any unrecognized stored value coerces back to 'medium'."""
+        value = AppSettings.settings().value(
+            AppSettings.FONT_SIZE, AppSettings.FONT_SIZE_MEDIUM
+        )
+        return value if value in AppSettings.FONT_SIZES else AppSettings.FONT_SIZE_MEDIUM
+
+    @staticmethod
+    def set_font_size(size: str) -> None:
+        """Persist the UI font size. Unknown values fall back to 'medium'."""
+        if size not in AppSettings.FONT_SIZES:
+            size = AppSettings.FONT_SIZE_MEDIUM
+        AppSettings.settings().setValue(AppSettings.FONT_SIZE, size)
 
     @staticmethod
     def get_selected_language() -> str:
@@ -3481,6 +3504,7 @@ class AppSettings:
         defaults: dict = {
             AppSettings.THEME: DEFAULT_THEME,
             AppSettings.UI_MODE: AppSettings.UI_MODE_SIMPLE,
+            AppSettings.FONT_SIZE: AppSettings.FONT_SIZE_MEDIUM,
             AppSettings.ACTIVE_CHANNEL: AppSettings.DEFAULT_CHANNEL,
             AppSettings.SELECTED_LANGUAGE: AppSettings.DEFAULT_LANGUAGE,
             AppSettings.MERGE_HIERARCHY: list(AppSettings.AVAILABLE_SOURCES),

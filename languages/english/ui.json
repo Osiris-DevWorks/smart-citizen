@@ -554,6 +554,42 @@
       "ht": "ODW",
       "at": ""
     },
+    "font_size_label": {
+      "ht": "Font size:",
+      "at": ""
+    },
+    "font_size_small": {
+      "ht": "Small",
+      "at": ""
+    },
+    "font_size_medium": {
+      "ht": "Medium",
+      "at": ""
+    },
+    "font_size_large": {
+      "ht": "Large",
+      "at": ""
+    },
+    "font_size_tooltip": {
+      "ht": "Make the app's text larger or smaller. Controls grow and shrink with it so nothing gets cut off. Takes effect after a restart.",
+      "at": ""
+    },
+    "font_size_restart_title": {
+      "ht": "Restart to Change Font Size",
+      "at": ""
+    },
+    "font_size_restart_body": {
+      "ht": "The new font size takes effect when Smart Citizen restarts.",
+      "at": ""
+    },
+    "font_size_restart_failed_title": {
+      "ht": "Restart Failed",
+      "at": ""
+    },
+    "font_size_restart_failed_body": {
+      "ht": "Smart Citizen could not restart itself. Please start it again manually to see the new font size.",
+      "at": ""
+    },
     "star_citizen_group": {
       "ht": "Star Citizen",
       "at": ""
