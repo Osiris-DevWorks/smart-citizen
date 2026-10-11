@@ -6,8 +6,10 @@ Two windows, because they need opposite input behaviour:
   just under the scanner's signature readout. Clicks pass straight through
   it to the game.
 - ``BlueprintDrawer`` is a handle on the right screen edge that expands into
-  a searchable blueprint list with owned checkboxes. It has to take clicks,
-  so using it takes focus from the game; the player needs a free cursor.
+  three searchable sections: blueprints with owned checkboxes, minerals by
+  star system and location, and crafting (mineral to items and back). It
+  has to take clicks, so using it takes focus from the game; the player
+  needs a free cursor.
 
 ``ScoOverlay`` owns both, plus the capture timer. The reader that turns a
 capture of the signature panel into text is pluggable (``SignatureReader``);
@@ -20,7 +22,8 @@ exclusive fullscreen. SCO only captures the screen; it never reads game
 memory or sends input.
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
-owned set. Owned changes made in the drawer go back out through
+owned set, plus the Mining Compendium minerals and the crafting index
+(``src/utils/mining_catalog.py``). Owned changes made in the drawer go back out through
 ``owned_toggled`` so ``MainWindow`` stays the one writer of the owned set.
 """
 from __future__ import annotations
@@ -37,10 +40,15 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QVBoxLayout, QWidget,
+    QListWidgetItem, QTabWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+    QWidget,
 )
 
 from src.utils.i18n import tr
+from src.utils.mining_catalog import (
+    CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_signature,
+    star_system,
+)
 from src.utils.mining_signatures import (
     OTHER_SIGNATURES, SignatureMatch, decode_signature, parse_signature_text,
 )
@@ -251,8 +259,38 @@ class ArrowTab(QWidget):
         p.end()
 
 
+def mineral_tooltip(info: MineralInfo, crafting: CraftingIndex) -> str:
+    """Everything known about a mineral: tier, scan signature, locations by
+    star system, and how many crafted items use it."""
+    lines = [info.name]
+    if info.tier:
+        lines.append(tr("sco.tooltip_tier", tier=info.tier))
+    rs = ore_signature(info.name)
+    if rs:
+        lines.append(tr("sco.tooltip_signature", base=f"{rs[0]:,}", count=rs[1]))
+    for system, locations in locations_by_system(info.locations).items():
+        lines.append(f"{system or tr('sco.system_other')}: {', '.join(locations)}")
+    key = crafting.material_key_for(info.name)
+    if key:
+        lines.append(tr("sco.tooltip_used_in", count=len(crafting.items_using(key))))
+    return "\n".join(lines)
+
+
+def location_tooltip(location: str, minerals: dict[str, MineralInfo]) -> str:
+    """A location's star system and the minerals found there."""
+    lines = [location]
+    system = star_system(location)
+    if system:
+        lines.append(tr("sco.tooltip_system", system=system))
+    here = minerals_at(location, minerals)
+    if here:
+        lines.append(tr("sco.tooltip_minerals_here", minerals=", ".join(here)))
+    return "\n".join(lines)
+
+
 class BlueprintDrawer(QWidget):
-    """Right-edge arrow tab that expands into a see-through blueprint list."""
+    """Right-edge arrow tab that expands into a see-through panel with
+    blueprint, mineral and crafting searches."""
 
     owned_toggled = pyqtSignal(str, bool)
 
@@ -270,27 +308,50 @@ class BlueprintDrawer(QWidget):
         self._handle.setToolTip(tr("sco.drawer_handle_tooltip"))
         self._handle.clicked.connect(self.toggle)
 
+        self._minerals: dict[str, MineralInfo] = {}
+        self._crafting = CraftingIndex()
+
         self._panel = QFrame(self)
         self._panel.setObjectName("scoDrawerPanel")
         self._panel.setFixedWidth(DRAWER_PANEL_WIDTH)
-        self._summary = QLabel(self._panel)
         self._banner = QLabel(self._panel)
         self._banner.setWordWrap(True)
         self._banner.hide()
-        self._search = QLineEdit(self._panel)
+
+        # Blueprints: owned checkboxes, same set the Blueprint Tracker edits.
+        bp_page = QWidget()
+        self._summary = QLabel(bp_page)
+        self._search = QLineEdit(bp_page)
         self._search.setPlaceholderText(tr("sco.drawer_search_placeholder"))
         self._search.textChanged.connect(self._render)
-        self._owned_only = QCheckBox(tr("sco.drawer_owned_only"), self._panel)
+        self._owned_only = QCheckBox(tr("sco.drawer_owned_only"), bp_page)
         self._owned_only.toggled.connect(self._render)
-        self._list = QListWidget(self._panel)
+        self._list = QListWidget(bp_page)
         self._list.itemChanged.connect(self._on_item_changed)
+        bp_layout = QVBoxLayout(bp_page)
+        bp_layout.setContentsMargins(0, 4, 0, 0)
+        bp_layout.addWidget(self._summary)
+        bp_layout.addWidget(self._search)
+        bp_layout.addWidget(self._owned_only)
+        bp_layout.addWidget(self._list)
+
+        # Minerals: mineral -> star system -> location.
+        self._mineral_search, self._mineral_tree, mineral_page = self._search_page(
+            "sco.minerals_search_placeholder", self._render_minerals)
+        # Crafting: a mineral lists what it goes into, an item what it needs.
+        self._crafting_search, self._crafting_tree, crafting_page = self._search_page(
+            "sco.crafting_search_placeholder", self._render_crafting)
+
+        self._sections = QTabWidget(self._panel)
+        self._section_pages = {
+            "blueprints": self._sections.addTab(bp_page, tr("sco.section_blueprints")),
+            "minerals": self._sections.addTab(mineral_page, tr("sco.section_minerals")),
+            "crafting": self._sections.addTab(crafting_page, tr("sco.section_crafting")),
+        }
 
         panel_layout = QVBoxLayout(self._panel)
-        panel_layout.addWidget(self._summary)
         panel_layout.addWidget(self._banner)
-        panel_layout.addWidget(self._search)
-        panel_layout.addWidget(self._owned_only)
-        panel_layout.addWidget(self._list)
+        panel_layout.addWidget(self._sections)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -319,8 +380,16 @@ class BlueprintDrawer(QWidget):
                 color: {colors.text}; background: {_rgba(colors.background, 120)};
                 border: 1px solid {colors.secondary}; border-radius: 3px; padding: 2px 4px;
             }}
-            QListWidget {{ color: {colors.text}; background: transparent; border: none; }}
-            QListWidget::item:selected {{ background: {_rgba(colors.accent, 60)}; }}
+            QListWidget, QTreeWidget {{ color: {colors.text}; background: transparent; border: none; }}
+            QListWidget::item:selected, QTreeWidget::item:selected {{
+                background: {_rgba(colors.accent, 60)};
+            }}
+            QTabWidget::pane {{ border: none; }}
+            QTabBar::tab {{
+                color: {colors.secondary}; background: transparent; padding: 3px 8px;
+                border-bottom: 1px solid transparent;
+            }}
+            QTabBar::tab:selected {{ color: {colors.accent}; border-bottom-color: {colors.accent}; }}
             QCheckBox::indicator, QListWidget::indicator {{
                 width: 10px; height: 10px; border: 1px solid {colors.text};
                 background: transparent;
@@ -329,6 +398,32 @@ class BlueprintDrawer(QWidget):
                 background: {colors.accent}; border-color: {colors.accent};
             }}
         """)
+
+    def _search_page(self, placeholder_key: str, render) -> tuple[QLineEdit, QTreeWidget, QWidget]:
+        page = QWidget()
+        search = QLineEdit(page)
+        search.setPlaceholderText(tr(placeholder_key))
+        search.textChanged.connect(render)
+        tree = QTreeWidget(page)
+        tree.setHeaderHidden(True)
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 4, 0, 0)
+        layout.addWidget(search)
+        layout.addWidget(tree)
+        return search, tree, page
+
+    def set_sections(self, blueprints: bool, minerals: bool, crafting: bool) -> None:
+        """Show or hide the drawer's sections (Overlay tab switches)."""
+        for name, on in (("blueprints", blueprints), ("minerals", minerals),
+                         ("crafting", crafting)):
+            self._sections.setTabVisible(self._section_pages[name], on)
+
+    def set_catalog(self, minerals: dict[str, MineralInfo], crafting: CraftingIndex) -> None:
+        """Mining Compendium minerals and the crafting index for the searches."""
+        self._minerals = dict(minerals)
+        self._crafting = crafting
+        self._render_minerals()
+        self._render_crafting()
 
     def set_items(self, meta: dict, owned: set) -> None:
         """Replace the list contents: ``{name: BlueprintItem}`` + owned names."""
@@ -397,6 +492,87 @@ class BlueprintDrawer(QWidget):
                 lines.append(tr("sco.drawer_more_missions", count=len(missions) - TOOLTIP_MAX_MISSIONS))
         return "\n".join(lines)
 
+    def _render_minerals(self) -> None:
+        needle = self._mineral_search.text().strip().lower()
+        self._mineral_tree.clear()
+        if not self._minerals:
+            self._mineral_tree.addTopLevelItem(QTreeWidgetItem([tr("sco.minerals_none")]))
+            return
+        for name in sorted(self._minerals, key=str.lower):
+            info = self._minerals[name]
+            if needle and needle not in name.lower() and not any(
+                    needle in loc.lower() for loc in info.locations):
+                continue
+            node = QTreeWidgetItem([name])
+            node.setToolTip(0, mineral_tooltip(info, self._crafting))
+            for system, locations in locations_by_system(info.locations).items():
+                sys_node = QTreeWidgetItem([system or tr("sco.system_other")])
+                for loc in locations:
+                    loc_node = QTreeWidgetItem([loc])
+                    loc_node.setToolTip(0, location_tooltip(loc, self._minerals))
+                    sys_node.addChild(loc_node)
+                node.addChild(sys_node)
+            self._mineral_tree.addTopLevelItem(node)
+            if needle:
+                node.setExpanded(True)
+                for i in range(node.childCount()):
+                    node.child(i).setExpanded(True)
+
+    def _render_crafting(self) -> None:
+        needle = self._crafting_search.text().strip().lower()
+        tree = self._crafting_tree
+        tree.clear()
+        if not self._crafting.materials:
+            tree.addTopLevelItem(QTreeWidgetItem([tr("sco.crafting_none")]))
+            return
+        if not needle:
+            return
+        # A mineral (or other material) matched: what it goes into.
+        for key, names in sorted(self._crafting.material_names().items(),
+                                 key=lambda kv: kv[1][0].lower()):
+            if not any(needle in n.lower() for n in names + [key]):
+                continue
+            node = QTreeWidgetItem([tr("sco.crafting_used_in", material=names[0])])
+            info = self._mineral_for(names)
+            if info is not None:
+                node.setToolTip(0, mineral_tooltip(info, self._crafting))
+            for category, item in self._crafting.items_using(key):
+                child = QTreeWidgetItem([f"{item} ({category})"])
+                child.setToolTip(0, self._item_tooltip(item, category))
+                node.addChild(child)
+            tree.addTopLevelItem(node)
+            node.setExpanded(True)
+        # An item matched: what it needs.
+        for item, category in sorted(self._crafting.items().items(), key=lambda kv: kv[0].lower()):
+            if needle not in item.lower():
+                continue
+            node = QTreeWidgetItem([tr("sco.crafting_needs", item=item)])
+            node.setToolTip(0, self._item_tooltip(item, category))
+            for material in self._crafting.materials_for(item):
+                child = QTreeWidgetItem([material])
+                info = self._mineral_for([material])
+                if info is not None:
+                    child.setToolTip(0, mineral_tooltip(info, self._crafting))
+                node.addChild(child)
+            tree.addTopLevelItem(node)
+            node.setExpanded(True)
+
+    def _mineral_for(self, names) -> Optional[MineralInfo]:
+        """The compendium mineral behind a material's display names, if any."""
+        for n in names:
+            word = n.split(" ")[0].lower()
+            for mineral, info in self._minerals.items():
+                if mineral.lower() == word:
+                    return info
+        return None
+
+    def _item_tooltip(self, item: str, category: str) -> str:
+        lines = [item, category]
+        materials = self._crafting.materials_for(item)
+        if materials:
+            lines.append(tr("sco.tooltip_needs", materials=", ".join(materials)))
+        return "\n".join(lines)
+
     def _on_item_changed(self, item: QListWidgetItem) -> None:
         name = item.text()
         checked = item.checkState() == Qt.CheckState.Checked
@@ -432,12 +608,15 @@ class ScoOverlay(QObject):
         self._show_label = True
         self._show_drawer = True
 
-    def set_options(self, scan_decoder: bool, blueprint_drawer: bool,
-                    save_samples: bool) -> None:
-        """Apply the Overlay tab's switches; takes effect at once if running."""
-        self._show_label = scan_decoder
-        self._show_drawer = blueprint_drawer
-        self._save_samples = save_samples
+    def set_options(self, options: dict[str, bool]) -> None:
+        """Apply the Overlay tab's switches (``AppSettings.SCO_OPTION_SETTING``
+        names; missing ones count as on). Takes effect at once if running."""
+        on = lambda name: options.get(name, True)  # noqa: E731
+        self._show_label = on("scan_decoder")
+        self._show_drawer = on("drawer")
+        self._save_samples = on("save_samples")
+        self.drawer.set_sections(on("drawer_blueprints"), on("drawer_minerals"),
+                                 on("drawer_crafting"))
         if self._running:
             self._sync_windows()
 

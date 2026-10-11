@@ -3671,17 +3671,20 @@ try:
     if str(_gen_root) not in sys.path:
         sys.path.insert(0, str(_gen_root))
     from src.utils.mining_signatures import MINEABLE_RS_VALUES
+    from src.utils.mining_catalog import CRAFTING_INDEX_FILE, write_crafting_index
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
     MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
+    CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
 
 # The Mining Compendium journal's own prose spells a couple of ore names
 # differently from their DataForge loc-key spelling (a CIG typo, not a
 # transcription error here) — "Savrilium" (single L) vs the canonical
 # mineabletype_primary_savrillium. Maps the journal's lowercased spelling to
 # the MINEABLE_RS_VALUES key so the lookup still matches.
-_MINING_COMPENDIUM_ORE_ALIASES = {
-    "savrilium": "savrillium",
-}
+try:
+    from src.utils.mining_catalog import COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES
+except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
 
 # Curated RS value PROGRESSIONS as scanned stack size scales (the in-game
 # Mining Compendium "signature strength" chart), for the mission-DETAILS
@@ -4911,6 +4914,7 @@ def scan_crafting_blueprints(
     tag_config: "TagConfig | None" = None,
     blueprint_data_header: str = "BLUEPRINT DATA",
     header_em_tag: str = "EM3",
+    crafting_index: dict | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Scan crafting blueprints and produce commodity + journal entries.
 
@@ -4920,6 +4924,10 @@ def scan_crafting_blueprints(
     Compendium augmentation. Both halves are always returned so the dispatcher
     in :func:`main` can unpack the result unconditionally, including when no
     crafting blueprints directory exists in the user's DataForge cache.
+
+    When *crafting_index* is given it is filled with every material's display
+    names and the ``[category, item]`` pairs it goes into, for the SCO
+    drawer's crafting search (``src/utils/mining_catalog.py``).
     """
     import os
 
@@ -4975,6 +4983,19 @@ def scan_crafting_blueprints(
     # Hitting 0 here almost always means base.ini is stale (missing modern
     # commodity strings) — surfacing that in the log beats silently writing an
     # empty enhancements file.
+    if crafting_index is not None:
+        for commodity, pairs_ in commodity_items.items():
+            names = sorted({
+                loc[name_key].strip()
+                for name_key, _desc in _discover_commodity_loc_pairs(commodity, loc)
+                if loc.get(name_key, "").strip()
+            }, key=len)
+            crafting_index[commodity] = {
+                "names": names,
+                "items": sorted({(_humanize_craft_category(cat), item) for cat, item in pairs_
+                                 if "$templates" not in cat.lower()}),
+            }
+
     loc_commodity_key_count = sum(
         1 for k in loc if k.lower().startswith("items_commodities_")
     )
@@ -7368,7 +7389,8 @@ def _run_gen_commodity_journal(ctx: dict) -> tuple[dict[str, str], dict[str, str
                                     xml_path_index=xml_path_index, records_dir=records,
                                     tag_config=tag_configs.get("commodities"),
                                     blueprint_data_header=mh.get("blueprint_data", _DEFAULT_MISSION_HEADERS["blueprint_data"]),
-                                    header_em_tag=mh_em)
+                                    header_em_tag=mh_em,
+                                    crafting_index=ctx.get("crafting_index"))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -7727,6 +7749,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "mission_title_tags": mission_title_tags or {},
         "stats_prepend":     bool(stats_prepend),
         "rs_ore_name_annotations": bool(rs_ore_name_annotations),
+        # Filled by the commodity/journal generator for the SCO drawer.
+        "crafting_index":    {},
     }
 
     gen_jobs: dict[str, Callable] = {}
@@ -7833,6 +7857,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         write_ini(output_dir / "missile_enhancements.ini", out_missiles)
     if _want("medical_consumables"):
         write_ini(output_dir / "medical_consumables_enhancements.ini", out_medical_consumables)
+    if "commodity_journal" in gen_jobs and CRAFTING_INDEX_FILE and ctx["crafting_index"]:
+        write_crafting_index(output_dir / CRAFTING_INDEX_FILE, ctx["crafting_index"])
 
     total = (len(out_ships) + len(out_components) + len(out_ship_weapons) +
              len(out_fps_weapons) + len(out_missions) + len(out_commodities) +

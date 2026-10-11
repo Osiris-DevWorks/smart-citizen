@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "Tanımlanamadı"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Planlar"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Mineraller"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Üretim"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral veya konum..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral veya bileşen..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Eşleşen mineral yok. Liste boş kalırsa önce metinleri yükleyin."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Eşleşme yok. Bu listeyi doldurmak için DataForge'u çıkarın ve geliştirmeleri oluşturun."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Diğer"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Kullanıldığı yerler ({material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} için gerekenler:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Gerekenler: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Seviye: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Tarama imzası: kaya başına {base}, en fazla {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "{count} üretilmiş eşyada kullanılır"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Sistem: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Buradaki mineraller: {minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "Radarın altındaki tarama imzasını okur ve altında yatak türünü ve sayısını gösterir."
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "Plan çekmecesi"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "Ekranın sağ kenarında, sahiplik kutuları olan aranabilir bir plan listesi açan bir sekme."
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "Yeni planları sahip olunan olarak işaretle"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "Örnek Klasörünü Aç"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Katman çekmecesi"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Ekranın sağ kenarındaki yan çekmece. Kapatırsanız çekmece ve bölümleri gizlenir."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Planlar"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Plan arayın, hangi görevlerin ödül olarak verdiğini görün ve sahip olduklarınızı işaretleyin."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Mineraller"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Bir mineral yazın, yıldız sistemine göre nerede bulunduğunu görün; ya da bir konum yazıp oradaki mineralleri görün."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Üretim"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Bir mineral yazın, onu kullanan bileşenleri görün; ya da bir bileşen yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
     }
   }
 }

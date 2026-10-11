@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "Unbekannt"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Baupläne"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Mineralien"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Herstellung"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral oder Ort..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral oder Komponente..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Keine Mineralien gefunden. Lade zuerst die Texte, falls die Liste leer bleibt."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Keine Treffer. Extrahiere DataForge und erzeuge die Erweiterungen, um diese Liste zu füllen."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Sonstige"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Verwendet in (durch {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} benötigt:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Benötigt: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Stufe: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Scan-Signatur: {base} pro Gestein, bis zu {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "In {count} hergestellten Gegenständen verwendet"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "System: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Mineralien hier: {minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "Liest die Scan-Signatur unter dem Radar und zeigt darunter Vorkommenstyp und Anzahl."
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "Bauplan-Schublade"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "Ein Reiter am rechten Bildschirmrand, der eine durchsuchbare Bauplanliste mit Besitz-Häkchen öffnet."
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "Neue Baupläne als besessen markieren"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "Probenordner öffnen"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Overlay-Schublade"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Die Seitenschublade am rechten Bildschirmrand. Ausschalten blendet sie samt Bereichen aus."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Baupläne"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Baupläne suchen, sehen, welche Missionen sie belohnen, und eigene abhaken."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Mineralien"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Mineral eingeben, um Fundorte nach Sternensystem zu sehen, oder einen Ort, um seine Mineralien zu sehen."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Herstellung"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Mineral eingeben, um die Komponenten zu sehen, die es nutzen, oder eine Komponente, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
     }
   }
 }

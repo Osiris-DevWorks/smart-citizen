@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "無法識別"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "藍圖"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "礦物"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "製造"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "礦物或地點..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "礦物或組件..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "沒有符合的礦物。如果清單一直是空的，請先載入字串。"
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "沒有符合的結果。擷取 DataForge 並產生增強內容即可填入此清單。"
+    },
+    "system_other": {
+      "ht": "",
+      "at": "其他"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "用於（透過 {material}）："
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} 需要："
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "需要：{materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "等級：{tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "掃描訊號：每塊岩石 {base}，最多 {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "用於 {count} 個製造物品"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "星系：{system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "此處礦物：{minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "讀取雷達下方的掃描訊號，並在其下方顯示礦藏類型和數量。"
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "藍圖抽屜"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "螢幕右邊緣的標籤，可開啟帶有已擁有核取方塊的可搜尋藍圖清單。"
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "將新藍圖標記為已擁有"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "開啟樣本資料夾"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "疊加層抽屜"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "螢幕右側邊緣的側邊抽屜。關閉後將隱藏抽屜及其各個分區。"
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "藍圖"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "搜尋藍圖，查看哪些任務獎勵它們，並勾選已擁有的藍圖。"
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "礦物"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "輸入礦物名稱可依星系查看其產地，輸入地點可查看該處的礦物。"
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "製造"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "輸入礦物可查看使用它的組件，輸入組件可查看所需礦物。需要先擷取 DataForge。"
     }
   }
 }

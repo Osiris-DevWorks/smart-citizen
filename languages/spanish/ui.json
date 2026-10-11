@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "No identificado"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Planos"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Minerales"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Fabricación"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral o lugar..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral o componente..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Ningún mineral coincide. Carga primero los textos si la lista sigue vacía."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Sin resultados. Extrae DataForge y genera las mejoras para llenar esta lista."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Otro"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Se usa en (por {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} necesita:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Necesita: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Nivel: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Firma de escaneo: {base} por roca, hasta {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "Se usa en {count} objetos fabricados"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Sistema: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Minerales aquí: {minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "Lee la firma de escaneo bajo el radar y muestra debajo el tipo y la cantidad de depósitos."
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "Cajón de planos"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "Una pestaña en el borde derecho de la pantalla que abre una lista de planos con búsqueda y casillas de poseído."
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "Marcar planos nuevos como poseídos"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "Abrir carpeta de muestras"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Cajón del overlay"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "El cajón lateral en el borde derecho de la pantalla. Desactívalo para ocultarlo junto con sus secciones."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Planos"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Busca planos, mira qué misiones los dan y marca los que tienes."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Minerales"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Escribe un mineral para ver dónde se encuentra, por sistema estelar, o un lugar para ver sus minerales."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Fabricación"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Escribe un mineral para ver qué componentes lo usan, o un componente para ver los minerales que necesita. Requiere una extracción de DataForge."
     }
   }
 }

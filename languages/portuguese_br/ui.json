@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "Não identificado"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Projetos"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Minerais"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Fabricação"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral ou local..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral ou componente..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Nenhum mineral encontrado. Carregue os textos primeiro se a lista continuar vazia."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Nenhum resultado. Extraia o DataForge e gere os aprimoramentos para preencher esta lista."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Outro"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Usado em (por {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} precisa de:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Precisa de: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Nível: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Assinatura de varredura: {base} por rocha, até {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "Usado em {count} itens fabricados"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Sistema: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Minerais aqui: {minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "Lê a assinatura de escaneamento abaixo do radar e mostra embaixo o tipo e a quantidade de depósitos."
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "Gaveta de projetos"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "Uma aba na borda direita da tela que abre uma lista de projetos pesquisável com caixas de posse."
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "Marcar novos projetos como possuídos"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "Abrir pasta de amostras"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Gaveta da sobreposição"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "A gaveta lateral na borda direita da tela. Desative para ocultá-la junto com suas seções."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Projetos"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Pesquise projetos, veja quais missões os dão e marque os que você possui."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Minerais"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Digite um mineral para ver onde ele é encontrado, por sistema estelar, ou um local para ver seus minerais."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Fabricação"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Digite um mineral para ver quais componentes o usam, ou um componente para ver os minerais necessários. Requer uma extração do DataForge."
     }
   }
 }

@@ -20,6 +20,10 @@ from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 
 
+DRAWER_SECTION_PREFIX = "drawer_"
+DRAWER_SECTION_INDENT = 22
+
+
 class OverlayTab(QWidget):
     """Start/stop button plus one checkbox per SCO option."""
 
@@ -61,17 +65,22 @@ class OverlayTab(QWidget):
         layout.addLayout(start_row)
 
         for name in AppSettings.SCO_OPTION_SETTING:
+            # The drawer's sections sit indented under the drawer switch.
+            indent = DRAWER_SECTION_INDENT if name.startswith(DRAWER_SECTION_PREFIX) else 0
             check = QCheckBox()
             check.setChecked(AppSettings.get_sco_option(name))
             check.toggled.connect(lambda on, n=name: self._on_option_toggled(n, on))
+            check.setStyleSheet(f"margin-left: {indent}px;")
             hint = QLabel()
             hint.setProperty("role", "secondary")
-            hint.setStyleSheet("font-size: 11px; margin-left: 22px;")
+            hint.setStyleSheet(f"font-size: 11px; margin-left: {indent + 22}px;")
             hint.setWordWrap(True)
             layout.addWidget(check)
             layout.addWidget(hint)
             self._checks[name] = check
             self._hints[name] = hint
+        self._checks["drawer"].toggled.connect(self._sync_section_enabled)
+        self._sync_section_enabled(self._checks["drawer"].isChecked())
 
         self._open_samples_btn = QPushButton()
         self._open_samples_btn.clicked.connect(self._open_samples_folder)
@@ -123,6 +132,12 @@ class OverlayTab(QWidget):
     def _on_option_toggled(self, name: str, on: bool) -> None:
         AppSettings.set_sco_option(name, on)
         self.options_changed.emit()
+
+    def _sync_section_enabled(self, drawer_on: bool) -> None:
+        for name, check in self._checks.items():
+            if name.startswith(DRAWER_SECTION_PREFIX):
+                check.setEnabled(drawer_on)
+                self._hints[name].setEnabled(drawer_on)
 
     def _open_samples_folder(self) -> None:
         self._samples_dir.mkdir(parents=True, exist_ok=True)

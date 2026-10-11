@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "不明"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "設計図"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "鉱物"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "クラフト"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "鉱物または場所..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "鉱物またはコンポーネント..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "一致する鉱物がありません。空のままなら先に文字列を読み込んでください。"
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "一致するものがありません。DataForge を抽出して拡張を生成すると、この一覧が埋まります。"
+    },
+    "system_other": {
+      "ht": "",
+      "at": "その他"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "使用先（{material}）："
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} に必要なもの："
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "必要な素材：{materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "ティア：{tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "スキャン信号：岩1つあたり {base}、最大 {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "{count} 個のクラフトアイテムで使用"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "星系：{system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "ここの鉱物：{minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "レーダーの下にあるスキャン署名を読み取り、その下に鉱床の種類と数を表示します。"
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "設計図ドロワー"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "画面右端のタブから、所持チェック付きの検索できる設計図リストを開きます。"
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "新しい設計図を所持済みにする"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "サンプルフォルダーを開く"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "オーバーレイのドロワー"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "画面右端のサイドドロワーです。オフにするとドロワーと各セクションを隠します。"
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "設計図"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "設計図を検索し、報酬として得られるミッションを確認して、所有しているものにチェックを入れます。"
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "鉱物"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "鉱物名を入力すると産出場所を星系ごとに表示します。場所を入力するとその場所の鉱物を表示します。"
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "クラフト"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "鉱物名を入力するとそれを使うコンポーネントを、コンポーネント名を入力すると必要な鉱物を表示します。DataForge の抽出が必要です。"
     }
   }
 }

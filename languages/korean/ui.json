@@ -3215,6 +3215,70 @@
     "unidentified": {
       "ht": "",
       "at": "식별 불가"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "블루프린트"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "광물"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "제작"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "광물 또는 장소..."
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "광물 또는 부품..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "일치하는 광물이 없습니다. 목록이 계속 비어 있으면 먼저 문자열을 로드하세요."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "일치하는 항목이 없습니다. DataForge를 추출하고 향상 기능을 생성하면 이 목록이 채워집니다."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "기타"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "사용처({material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item}에 필요한 재료:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "필요 재료: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "등급: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "스캔 신호: 바위당 {base}, 최대 {count}개"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "제작 아이템 {count}개에 사용"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "성계: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "이곳의 광물: {minerals}"
     }
   },
   "overlay": {
@@ -3242,14 +3306,6 @@
       "ht": "",
       "at": "레이더 아래의 스캔 신호를 읽고 그 아래에 매장지 종류와 개수를 표시합니다."
     },
-    "blueprint_drawer": {
-      "ht": "",
-      "at": "블루프린트 서랍"
-    },
-    "blueprint_drawer_hint": {
-      "ht": "",
-      "at": "화면 오른쪽 가장자리의 탭으로, 보유 체크 상자가 있는 검색 가능한 블루프린트 목록을 엽니다."
-    },
     "live_blueprint_watch": {
       "ht": "",
       "at": "새 블루프린트를 보유로 표시"
@@ -3269,6 +3325,38 @@
     "open_samples_btn": {
       "ht": "",
       "at": "샘플 폴더 열기"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "오버레이 서랍"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "화면 오른쪽 가장자리의 사이드 서랍입니다. 끄면 서랍과 모든 섹션이 숨겨집니다."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "블루프린트"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "블루프린트를 검색하고, 보상으로 주는 임무를 확인하고, 보유한 항목에 체크합니다."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "광물"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "광물 이름을 입력하면 산지를 성계별로, 장소를 입력하면 그곳의 광물을 보여 줍니다."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "제작"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "광물을 입력하면 그 광물을 쓰는 부품을, 부품을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
     }
   }
 }

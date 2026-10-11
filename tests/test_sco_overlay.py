@@ -9,24 +9,18 @@ from __future__ import annotations
 
 import os
 
-import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QRect, Qt  # noqa: E402
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 from src.gui.sco_overlay import (  # noqa: E402
     DEFAULT_OVERLAY_COLORS, SCAN_REGION, BlueprintDrawer, OverlayColors,
     ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
 )
 from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
+from src.utils.mining_catalog import CraftingIndex, MineralInfo  # noqa: E402
 from src.utils.mining_signatures import decode_signature  # noqa: E402
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QApplication.instance() or QApplication([])
 
 
 def _meta():
@@ -214,10 +208,10 @@ def test_options_switch_parts_off_while_running(qapp, monkeypatch):
     overlay.set_reader(lambda image: None)
     overlay.start()
     assert overlay.is_running() and overlay.drawer.isVisible() and overlay._timer.isActive()
-    overlay.set_options(scan_decoder=False, blueprint_drawer=False, save_samples=True)
+    overlay.set_options({"scan_decoder": False, "drawer": False})
     assert overlay.is_running()   # still on, just with nothing showing
     assert not overlay.drawer.isVisible() and not overlay._timer.isActive()
-    overlay.set_options(scan_decoder=True, blueprint_drawer=True, save_samples=True)
+    overlay.set_options({})
     assert overlay.drawer.isVisible() and overlay._timer.isActive()
     overlay.stop()
     assert not overlay.is_running()
@@ -227,7 +221,82 @@ def test_save_samples_off_saves_nothing(qapp, tmp_path):
     from PyQt6.QtGui import QImage
 
     overlay = ScoOverlay(sample_dir=tmp_path / "samples")
-    overlay.set_options(scan_decoder=True, blueprint_drawer=True, save_samples=False)
+    overlay.set_options({"save_samples": False})
     image = QImage(80, 40, QImage.Format.Format_RGB32)
     overlay._save_sample(image, "7,200", QRect(10, 10, 30, 11))
     assert not (tmp_path / "samples").exists()
+
+
+def _catalog():
+    minerals = {
+        "Beryl": MineralInfo("Beryl", "Rare", ("Aaron Halo", "ARC-L3", "Monox")),
+        "Hadanite": MineralInfo("Hadanite", "Uncommon", ("Aberdeen", "All Moons/Planets/Caves")),
+    }
+    crafting = CraftingIndex({
+        "beryl": {"names": ["Beryl (Raw)", "Beryl"],
+                  "items": [["Armor", "Antium Helmet"], ["Weapons", "Arclight Pistol"]]},
+        "hadanite": {"names": ["Hadanite"], "items": [["Weapons", "Arclight Pistol"]]},
+    })
+    return minerals, crafting
+
+
+def _tree(tree):
+    def walk(item):
+        return [item.text(0), [walk(item.child(i)) for i in range(item.childCount())]]
+    return [walk(tree.topLevelItem(i)) for i in range(tree.topLevelItemCount())]
+
+
+def test_mineral_search_groups_locations_by_system(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_catalog(*_catalog())
+    drawer._mineral_search.setText("beryl")
+    assert _tree(drawer._mineral_tree) == [
+        ["Beryl", [["Stanton", [["Aaron Halo", []], ["ARC-L3", []]]], ["Pyro", [["Monox", []]]]]],
+    ]
+    # A location finds the minerals there.
+    drawer._mineral_search.setText("aberdeen")
+    assert [row[0] for row in _tree(drawer._mineral_tree)] == ["Hadanite"]
+
+
+def test_mineral_and_location_tooltips(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_catalog(*_catalog())
+    drawer._mineral_search.setText("beryl")
+    beryl = drawer._mineral_tree.topLevelItem(0)
+    tip = beryl.toolTip(0)
+    assert "Tier: Rare" in tip and "Pyro: Monox" in tip and "Used in 2 crafted items" in tip
+    assert "Scan signature: 3,540 per rock" in tip
+    monox = beryl.child(1).child(0)
+    assert monox.toolTip(0) == "Monox\nSystem: Pyro\nMinerals here: Beryl"
+
+
+def test_crafting_search_both_ways(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_catalog(*_catalog())
+    drawer._crafting_search.setText("beryl")
+    assert _tree(drawer._crafting_tree) == [
+        ["Used in (by Beryl (Raw)):",
+         [["Antium Helmet (Armor)", []], ["Arclight Pistol (Weapons)", []]]],
+    ]
+    drawer._crafting_search.setText("arclight")
+    rows = _tree(drawer._crafting_tree)
+    assert rows == [["Arclight Pistol needs:", [["Beryl (Raw)", []], ["Hadanite", []]]]]
+    item = drawer._crafting_tree.topLevelItem(0)
+    assert "Needs: Beryl (Raw), Hadanite" in item.toolTip(0)
+    assert "Tier: Rare" in item.child(0).toolTip(0)   # the mineral's own tooltip
+
+
+def test_empty_catalog_says_how_to_fill_it(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_catalog({}, CraftingIndex())
+    assert drawer._mineral_tree.topLevelItem(0).text(0).startswith("No minerals match")
+    assert drawer._crafting_tree.topLevelItem(0).text(0).startswith("No matches")
+
+
+def test_sections_follow_the_options(qapp):
+    overlay = ScoOverlay()
+    overlay.set_options({"drawer_minerals": False})
+    tabs = overlay.drawer._sections
+    pages = overlay.drawer._section_pages
+    assert tabs.isTabVisible(pages["blueprints"]) and tabs.isTabVisible(pages["crafting"])
+    assert not tabs.isTabVisible(pages["minerals"])

@@ -6798,6 +6798,7 @@ class MainWindow(QMainWindow):
         sco = getattr(self, "_sco_overlay", None)  # may run before __init__ sets it
         if sco is not None:
             sco.drawer.set_items(self._blueprint_meta, owned)
+            self._refresh_sco_catalog()
         # Called after every reload (category/tag/enhancements apply, channel
         # and language switches, import, restore) and every Owned-set change
         # — in every case Apply to Game's output could now differ.
@@ -6821,9 +6822,39 @@ class MainWindow(QMainWindow):
             self._sco_overlay = ScoOverlay(self, sample_dir=AppSettings.get_sco_samples_dir())
             self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
+        self._refresh_sco_catalog()
         self._sco_overlay.start()
         self._apply_sco_options()
         self.overlay_tab.set_running(True)
+
+    def _refresh_sco_catalog(self):
+        """Feed the drawer's Minerals and Crafting searches.
+
+        The compendium comes from the English base.ini: its location names
+        are what the star-system lookup knows, and the crafting index is
+        generated from English names too (the stat-block rule). The index is
+        the selected language's, falling back to English. Both files are
+        re-read only when one of them changed since the last feed.
+        """
+        from src.utils.mining_catalog import (
+            CRAFTING_INDEX_FILE, load_crafting_index, read_compendium,
+        )
+        base_ini = AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
+        index = AppSettings.get_enhancements_dir() / CRAFTING_INDEX_FILE
+        if not index.exists():
+            index = AppSettings.get_enhancements_dir(AppSettings.DEFAULT_LANGUAGE) / CRAFTING_INDEX_FILE
+
+        def stamp(path):
+            try:
+                return (str(path), path.stat().st_mtime_ns)
+            except OSError:
+                return (str(path), None)
+
+        key = (stamp(base_ini), stamp(index))
+        if key == getattr(self, "_sco_catalog_key", None):
+            return
+        self._sco_catalog_key = key
+        self._sco_overlay.drawer.set_catalog(read_compendium(base_ini), load_crafting_index(index))
 
     def _stop_sco_overlay(self):
         self._stop_sco_log_watcher()
@@ -6838,10 +6869,7 @@ class MainWindow(QMainWindow):
         if self._sco_overlay is None:
             return
         self._sco_overlay.set_options(
-            scan_decoder=AppSettings.get_sco_option("scan_decoder"),
-            blueprint_drawer=AppSettings.get_sco_option("blueprint_drawer"),
-            save_samples=AppSettings.get_sco_option("save_samples"),
-        )
+            {name: AppSettings.get_sco_option(name) for name in AppSettings.SCO_OPTION_SETTING})
         if not self._sco_overlay.is_running():
             return
         if AppSettings.get_sco_option("live_blueprint_watch"):

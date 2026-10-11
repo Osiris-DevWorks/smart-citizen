@@ -177,6 +177,38 @@ class TestCraftingCostItemPickup:
         assert "[CF]" in commodities.get("items_commodities_agricium", "")
         assert "[CF]" in commodities.get("items_commodities_hadanite", "")
 
+    def test_fills_the_sco_crafting_index(self, gen_module, tmp_path):
+        """Given a dict, the scan records each material's display names and
+        the (category, item) pairs it goes into, for the SCO drawer."""
+        hadanite_uuid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        item_uuid = "ffff0000-0000-0000-0000-000000000000"
+        carryables = tmp_path / "carryables"
+        carryables.mkdir()
+        (carryables / "harvestable_mineral_1h_hadanite.xml").write_text(
+            f'<Entity __ref="{hadanite_uuid}"/>', encoding="utf-8"
+        )
+        bp_dir = tmp_path / "bp"
+        (bp_dir / "armour").mkdir(parents=True)
+        (bp_dir / "armour" / "bp_craft_test_helmet.xml").write_text(
+            f'<CraftingBlueprintRecord>'
+            f'<CraftingProcess_Creation entityClass="{item_uuid}"/>'
+            f'<CraftingCost_Item entityClass="{hadanite_uuid}" quantity="7"/>'
+            f'</CraftingBlueprintRecord>',
+            encoding="utf-8",
+        )
+        index = {}
+        gen_module.scan_crafting_blueprints(
+            bp_dir=bp_dir,
+            carryables_dir=carryables,
+            entity_names={item_uuid: "Test Helmet"},
+            loc={"items_commodities_hadanite": "Hadanite",
+                 "items_commodities_hadanite_desc": "A crystal oscillator."},
+            tag_config=_enabled_commodities_config(),
+            crafting_index=index,
+        )
+        assert index["hadanite"]["names"] == ["Hadanite"]
+        assert [item for _cat, item in index["hadanite"]["items"]] == ["Test Helmet"]
+
 
 class TestScanCraftingBlueprintsReturnShape:
     def test_missing_directory_returns_two_empty_dicts(self, gen_module, tmp_path):

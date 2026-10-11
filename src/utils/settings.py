@@ -664,7 +664,11 @@ class AppSettings:
     # overlay behaved before the tab existed.
     SCO_OPTION_SETTING = {
         "scan_decoder":         ("sco/scan_decoder", True),
-        "blueprint_drawer":     ("sco/blueprint_drawer", True),
+        "drawer":               ("sco/drawer", True),
+        # The drawer's sections; "drawer_" marks them as parts of the drawer.
+        "drawer_blueprints":    ("sco/drawer_blueprints", True),
+        "drawer_minerals":      ("sco/drawer_minerals", True),
+        "drawer_crafting":      ("sco/drawer_crafting", True),
         "live_blueprint_watch": ("sco/live_blueprint_watch", True),
         "save_samples":         ("sco/save_samples", True),
     }

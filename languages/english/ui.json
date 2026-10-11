@@ -3023,6 +3023,70 @@
     "unidentified": {
       "ht": "Unidentified",
       "at": ""
+    },
+    "section_blueprints": {
+      "ht": "Blueprints",
+      "at": ""
+    },
+    "section_minerals": {
+      "ht": "Minerals",
+      "at": ""
+    },
+    "section_crafting": {
+      "ht": "Crafting",
+      "at": ""
+    },
+    "minerals_search_placeholder": {
+      "ht": "Mineral or location...",
+      "at": ""
+    },
+    "crafting_search_placeholder": {
+      "ht": "Mineral or component...",
+      "at": ""
+    },
+    "minerals_none": {
+      "ht": "No minerals match. Load strings first if this stays empty.",
+      "at": ""
+    },
+    "crafting_none": {
+      "ht": "No matches. Extract DataForge and generate enhancements to fill this list.",
+      "at": ""
+    },
+    "system_other": {
+      "ht": "Other",
+      "at": ""
+    },
+    "crafting_used_in": {
+      "ht": "Used in (by {material}):",
+      "at": ""
+    },
+    "crafting_needs": {
+      "ht": "{item} needs:",
+      "at": ""
+    },
+    "tooltip_needs": {
+      "ht": "Needs: {materials}",
+      "at": ""
+    },
+    "tooltip_tier": {
+      "ht": "Tier: {tier}",
+      "at": ""
+    },
+    "tooltip_signature": {
+      "ht": "Scan signature: {base} per rock, up to {count}",
+      "at": ""
+    },
+    "tooltip_used_in": {
+      "ht": "Used in {count} crafted items",
+      "at": ""
+    },
+    "tooltip_system": {
+      "ht": "System: {system}",
+      "at": ""
+    },
+    "tooltip_minerals_here": {
+      "ht": "Minerals here: {minerals}",
+      "at": ""
     }
   },
   "overlay": {
@@ -3050,14 +3114,6 @@
       "ht": "Reads the scan signature under the radar and shows the deposit type and count below it.",
       "at": ""
     },
-    "blueprint_drawer": {
-      "ht": "Blueprint drawer",
-      "at": ""
-    },
-    "blueprint_drawer_hint": {
-      "ht": "A tab on the right screen edge that opens a searchable blueprint list with owned checkboxes.",
-      "at": ""
-    },
     "live_blueprint_watch": {
       "ht": "Mark new blueprints as owned",
       "at": ""
@@ -3076,6 +3132,38 @@
     },
     "open_samples_btn": {
       "ht": "Open Samples Folder",
+      "at": ""
+    },
+    "drawer": {
+      "ht": "Overlay drawer",
+      "at": ""
+    },
+    "drawer_hint": {
+      "ht": "The side drawer on the right edge of the screen. Turn off to hide it and its sections.",
+      "at": ""
+    },
+    "drawer_blueprints": {
+      "ht": "Blueprints",
+      "at": ""
+    },
+    "drawer_blueprints_hint": {
+      "ht": "Search blueprints, see which missions reward them and tick the ones you own.",
+      "at": ""
+    },
+    "drawer_minerals": {
+      "ht": "Minerals",
+      "at": ""
+    },
+    "drawer_minerals_hint": {
+      "ht": "Type a mineral to see where it is found, grouped by star system, or a location to see its minerals.",
+      "at": ""
+    },
+    "drawer_crafting": {
+      "ht": "Crafting",
+      "at": ""
+    },
+    "drawer_crafting_hint": {
+      "ht": "Type a mineral to see which components use it, or a component to see the minerals it needs. Needs a DataForge extraction.",
       "at": ""
     }
   }
