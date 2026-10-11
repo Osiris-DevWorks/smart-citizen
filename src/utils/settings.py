@@ -672,6 +672,15 @@ class AppSettings:
         "live_blueprint_watch": ("sco/live_blueprint_watch", True),
         "save_samples":         ("sco/save_samples", True),
     }
+    # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
+    # every combination but the screen centre.
+    SCO_DRAWER_POSITION = "sco/drawer_position"
+    SCO_DRAWER_POSITIONS = (
+        "top_left", "top_center", "top_right",
+        "middle_left", "middle_right",
+        "bottom_left", "bottom_center", "bottom_right",
+    )
+    SCO_DRAWER_POSITION_DEFAULT = "middle_right"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1542,6 +1551,22 @@ class AppSettings:
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP, bool(enabled)
         )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_drawer_position() -> str:
+        """Where the SCO drawer sits (one of ``SCO_DRAWER_POSITIONS``)."""
+        value = str(AppSettings.settings().value(
+            AppSettings.SCO_DRAWER_POSITION, AppSettings.SCO_DRAWER_POSITION_DEFAULT))
+        if value not in AppSettings.SCO_DRAWER_POSITIONS:
+            return AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        return value
+
+    @staticmethod
+    def set_sco_drawer_position(position: str) -> None:
+        if position not in AppSettings.SCO_DRAWER_POSITIONS:
+            position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        AppSettings.settings().setValue(AppSettings.SCO_DRAWER_POSITION, position)
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3469,6 +3494,7 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
+            AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({

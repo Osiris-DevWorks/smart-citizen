@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "광물을 입력하면 그 광물을 쓰는 부품을, 부품을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "서랍 위치:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "왼쪽 위"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "위쪽 가운데"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "오른쪽 위"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "왼쪽 가운데"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "오른쪽 가운데"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "왼쪽 아래"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "아래쪽 가운데"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "오른쪽 아래"
     }
   }
 }

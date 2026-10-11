@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Bir mineral yazın, onu kullanan bileşenleri görün; ya da bir bileşen yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Çekmece konumu:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Sol üst"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Üst orta"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Sağ üst"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Sol orta"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Sağ orta"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Sol alt"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Alt orta"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Sağ alt"
     }
   }
 }

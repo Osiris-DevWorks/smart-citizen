@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Escribe un mineral para ver qué componentes lo usan, o un componente para ver los minerales que necesita. Requiere una extracción de DataForge."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Posición del cajón:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Arriba a la izquierda"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Arriba al centro"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Arriba a la derecha"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Centro a la izquierda"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Centro a la derecha"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Abajo a la izquierda"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Abajo al centro"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Abajo a la derecha"
     }
   }
 }

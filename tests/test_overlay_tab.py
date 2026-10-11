@@ -80,3 +80,24 @@ def test_catalog_refresh_reads_only_changed_files(json_backend, tmp_path, monkey
     os.utime(base, ns=(1, 1))
     MainWindow._refresh_sco_catalog(stub)
     assert fed == [["Beryl"], ["Gold"]]
+
+
+def test_drawer_position_picker(qapp, json_backend, tmp_path):
+    assert AppSettings.get_sco_drawer_position() == "middle_right"
+    tab = OverlayTab(tmp_path / "samples")
+    combo = tab._position_combo
+    assert combo.count() == len(AppSettings.SCO_DRAWER_POSITIONS) == 8
+    assert combo.currentData() == "middle_right"
+    assert combo.currentText() == "Middle right"
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    combo.setCurrentIndex(AppSettings.SCO_DRAWER_POSITIONS.index("bottom_center"))
+    assert AppSettings.get_sco_drawer_position() == "bottom_center" and changed == [True]
+    assert OverlayTab(tmp_path / "samples")._position_combo.currentData() == "bottom_center"
+    tab._checks["drawer"].setChecked(False)
+    assert not combo.isEnabled()
+
+
+def test_bad_stored_position_reads_as_default(json_backend):
+    json_backend.setValue(AppSettings.SCO_DRAWER_POSITION, "middle_center")
+    assert AppSettings.get_sco_drawer_position() == "middle_right"

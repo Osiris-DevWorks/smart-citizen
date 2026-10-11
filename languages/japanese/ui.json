@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "鉱物名を入力するとそれを使うコンポーネントを、コンポーネント名を入力すると必要な鉱物を表示します。DataForge の抽出が必要です。"
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "ドロワーの位置："
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "左上"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "上中央"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "右上"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "左中央"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "右中央"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "左下"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "下中央"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "右下"
     }
   }
 }

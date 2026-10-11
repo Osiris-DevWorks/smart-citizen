@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Tapez un minéral pour voir les composants qui l'utilisent, ou un composant pour voir les minéraux requis. Nécessite une extraction DataForge."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Position du tiroir :"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "En haut à gauche"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "En haut au centre"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "En haut à droite"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Au milieu à gauche"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Au milieu à droite"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "En bas à gauche"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "En bas au centre"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "En bas à droite"
     }
   }
 }

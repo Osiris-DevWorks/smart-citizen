@@ -3165,6 +3165,42 @@
     "drawer_crafting_hint": {
       "ht": "Type a mineral to see which components use it, or a component to see the minerals it needs. Needs a DataForge extraction.",
       "at": ""
+    },
+    "drawer_position": {
+      "ht": "Drawer position:",
+      "at": ""
+    },
+    "position_top_left": {
+      "ht": "Top left",
+      "at": ""
+    },
+    "position_top_center": {
+      "ht": "Top center",
+      "at": ""
+    },
+    "position_top_right": {
+      "ht": "Top right",
+      "at": ""
+    },
+    "position_middle_left": {
+      "ht": "Middle left",
+      "at": ""
+    },
+    "position_middle_right": {
+      "ht": "Middle right",
+      "at": ""
+    },
+    "position_bottom_left": {
+      "ht": "Bottom left",
+      "at": ""
+    },
+    "position_bottom_center": {
+      "ht": "Bottom center",
+      "at": ""
+    },
+    "position_bottom_right": {
+      "ht": "Bottom right",
+      "at": ""
     }
   }
 }

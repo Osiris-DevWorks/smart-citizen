@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Mineral eingeben, um die Komponenten zu sehen, die es nutzen, oder eine Komponente, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Position der Schublade:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Oben links"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Oben Mitte"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Oben rechts"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Mitte links"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Mitte rechts"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Unten links"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Unten Mitte"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Unten rechts"
     }
   }
 }

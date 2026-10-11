@@ -6870,6 +6870,7 @@ class MainWindow(QMainWindow):
             return
         self._sco_overlay.set_options(
             {name: AppSettings.get_sco_option(name) for name in AppSettings.SCO_OPTION_SETTING})
+        self._sco_overlay.drawer.set_position(AppSettings.get_sco_drawer_position())
         if not self._sco_overlay.is_running():
             return
         if AppSettings.get_sco_option("live_blueprint_watch"):

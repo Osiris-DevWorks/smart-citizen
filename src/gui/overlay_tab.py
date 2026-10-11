@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from src.gui.enhancements_tab import _NoScrollComboBox
 from src.gui.theme import get_button_color, get_button_text_color
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
@@ -79,6 +80,8 @@ class OverlayTab(QWidget):
             layout.addWidget(hint)
             self._checks[name] = check
             self._hints[name] = hint
+            if name == "drawer":
+                layout.addLayout(self._position_row())
         self._checks["drawer"].toggled.connect(self._sync_section_enabled)
         self._sync_section_enabled(self._checks["drawer"].isChecked())
 
@@ -113,6 +116,9 @@ class OverlayTab(QWidget):
             check.setText(tr(f"overlay.{name}"))
             self._hints[name].setText(tr(f"overlay.{name}_hint"))
         self._open_samples_btn.setText(tr("overlay.open_samples_btn"))
+        self._position_label.setText(tr("overlay.drawer_position"))
+        for i, position in enumerate(AppSettings.SCO_DRAWER_POSITIONS):
+            self._position_combo.setItemText(i, tr(f"overlay.position_{position}"))
 
     def set_running(self, running: bool) -> None:
         """Mirror the overlay's state without asking for a change."""
@@ -133,11 +139,33 @@ class OverlayTab(QWidget):
         AppSettings.set_sco_option(name, on)
         self.options_changed.emit()
 
+    def _position_row(self) -> QHBoxLayout:
+        """Drawer position picker, indented under the drawer switch."""
+        self._position_label = QLabel()
+        self._position_combo = _NoScrollComboBox()
+        for position in AppSettings.SCO_DRAWER_POSITIONS:
+            self._position_combo.addItem("", position)
+        self._position_combo.setCurrentIndex(
+            AppSettings.SCO_DRAWER_POSITIONS.index(AppSettings.get_sco_drawer_position()))
+        self._position_combo.currentIndexChanged.connect(self._on_position_changed)
+        row = QHBoxLayout()
+        row.setContentsMargins(DRAWER_SECTION_INDENT, 0, 0, 0)
+        row.addWidget(self._position_label)
+        row.addWidget(self._position_combo)
+        row.addStretch()
+        return row
+
+    def _on_position_changed(self, index: int) -> None:
+        AppSettings.set_sco_drawer_position(self._position_combo.itemData(index))
+        self.options_changed.emit()
+
     def _sync_section_enabled(self, drawer_on: bool) -> None:
         for name, check in self._checks.items():
             if name.startswith(DRAWER_SECTION_PREFIX):
                 check.setEnabled(drawer_on)
                 self._hints[name].setEnabled(drawer_on)
+        self._position_label.setEnabled(drawer_on)
+        self._position_combo.setEnabled(drawer_on)
 
     def _open_samples_folder(self) -> None:
         self._samples_dir.mkdir(parents=True, exist_ok=True)

@@ -3357,6 +3357,42 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "输入矿物可查看使用它的组件，输入组件可查看所需矿物。需要先提取 DataForge。"
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "抽屉位置："
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "左上"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "顶部居中"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "右上"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "左侧居中"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "右侧居中"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "左下"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "底部居中"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "右下"
     }
   }
 }

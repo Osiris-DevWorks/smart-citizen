@@ -37,9 +37,10 @@ from typing import Callable, Optional
 from PyQt6.QtCore import QObject, QPoint, QPointF, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QColor, QGuiApplication, QImage, QPainter, QPainterPath, QPalette, QPen,
+    QTransform,
 )
 from PyQt6.QtWidgets import (
-    QCheckBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QBoxLayout, QCheckBox, QFrame, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QTabWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
     QWidget,
 )
@@ -53,6 +54,7 @@ from src.utils.mining_signatures import (
     OTHER_SIGNATURES, SignatureMatch, decode_signature, parse_signature_text,
 )
 from src.utils.sco_digit_reader import DIGIT_HEIGHT_AT_1600, read_signature
+from src.utils.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +82,13 @@ NEW_BLUEPRINT_BANNER_MS = 8000
 DRAWER_HANDLE_WIDTH = 16
 DRAWER_HANDLE_HEIGHT = 44
 DRAWER_PANEL_WIDTH = 340
+# Share of the screen an open drawer takes along its edge: the full side
+# for a left/right drawer, less for a top/bottom one, which sits over the
+# middle of the view.
+DRAWER_SIDE_LENGTH = 0.7
+DRAWER_TOP_BOTTOM_LENGTH = 0.5
+# Screen edge each drawer position docks to (see AppSettings.SCO_DRAWER_POSITIONS).
+LEFT, RIGHT, TOP, BOTTOM = "left", "right", "top", "bottom"
 # Missions listed in a blueprint's tooltip before "...and N more".
 TOOLTIP_MAX_MISSIONS = 12
 # How much of the game shows through the drawer: 0 = invisible, 255 = solid.
@@ -215,27 +224,58 @@ class ScanLabelWindow(QWidget):
         self._hide_timer.start(LABEL_HOLD_MS)
 
 
+def drawer_edge(position: str) -> str:
+    """The screen edge a drawer position docks to: its side, or the top or
+    bottom edge for the two centre positions."""
+    vertical, _, horizontal = position.partition("_")
+    if horizontal == "center":
+        return BOTTOM if vertical == "bottom" else TOP
+    return LEFT if horizontal == "left" else RIGHT
+
+
 class ArrowTab(QWidget):
-    """The drawer's handle: a tapered tab with a chevron. Points left (open
-    me) while the drawer is closed and right (close me) while it's open."""
+    """The drawer's handle: a tapered tab with a chevron, its tall side
+    against the screen edge it docks to. Points inward (open me) while the
+    drawer is closed and toward the edge (close me) while it's open."""
 
     clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.colors = DEFAULT_OVERLAY_COLORS
-        self.points_left = True
+        self.points_inward = True
+        self.set_edge(RIGHT)
+
+    def set_edge(self, edge: str) -> None:
+        self.edge = edge
+        if edge in (LEFT, RIGHT):
+            self.setFixedSize(DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT)
+        else:
+            self.setFixedSize(DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_WIDTH)
+        self.update()
+
+    def _to_edge(self) -> QTransform:
+        """Maps the right-edge drawing below onto this tab's edge."""
+        w = DRAWER_HANDLE_WIDTH
+        if self.edge == LEFT:
+            return QTransform(-1, 0, 0, 1, w, 0)
+        if self.edge == TOP:
+            return QTransform(0, -1, 1, 0, 0, w)
+        if self.edge == BOTTOM:
+            return QTransform(0, 1, 1, 0, 0, 0)
+        return QTransform()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
 
     def paintEvent(self, _event):
-        w, h = self.width(), self.height()
+        # Drawn as a right-edge tab (tall side right), then turned to the edge.
+        w, h = DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setTransform(self._to_edge())
         # Tall side against the panel / screen edge, tapering outward.
         tab = QPainterPath()
         tab.moveTo(w - 0.5, 0.5)
@@ -254,7 +294,7 @@ class ArrowTab(QWidget):
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         p.setPen(pen)
         cx, cy, dx, dy = w * 0.55, h / 2, w * 0.18, h * 0.16
-        tip, back = (cx - dx, cx + dx) if self.points_left else (cx + dx, cx - dx)
+        tip, back = (cx - dx, cx + dx) if self.points_inward else (cx + dx, cx - dx)
         p.drawPolyline([QPointF(back, cy - dy), QPointF(tip, cy), QPointF(back, cy + dy)])
         p.end()
 
@@ -353,11 +393,13 @@ class BlueprintDrawer(QWidget):
         panel_layout.addWidget(self._banner)
         panel_layout.addWidget(self._sections)
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(self._handle, 0, Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(self._panel)
+        self._layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+        self._layout.addWidget(self._handle)
+        self._layout.addWidget(self._panel)
+        self._position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        self.set_position(self._position)
         self._panel.hide()
 
         self._banner_timer = QTimer(self)
@@ -442,20 +484,59 @@ class BlueprintDrawer(QWidget):
     def toggle(self) -> None:
         self._expanded = not self._expanded
         self._panel.setVisible(self._expanded)
-        self._handle.points_left = not self._expanded
+        self._handle.points_inward = not self._expanded
         self._handle.update()
-        self._dock_right()
+        self._dock()
 
     def show_docked(self) -> None:
-        self._dock_right()
+        self._dock()
         self.show()
 
-    def _dock_right(self) -> None:
+    def set_position(self, position: str) -> None:
+        """Dock to one of ``AppSettings.SCO_DRAWER_POSITIONS``."""
+        if position not in AppSettings.SCO_DRAWER_POSITIONS:
+            position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        self._position = position
+        edge = drawer_edge(position)
+        self._handle.set_edge(edge)
+        # Open, the panel lies against the screen edge with the handle on
+        # its inner side; closed, only the handle shows, on the edge.
+        direction = {
+            RIGHT: QBoxLayout.Direction.LeftToRight,
+            LEFT: QBoxLayout.Direction.RightToLeft,
+            TOP: QBoxLayout.Direction.BottomToTop,
+            BOTTOM: QBoxLayout.Direction.TopToBottom,
+        }[edge]
+        self._layout.setDirection(direction)
+        sideways = edge in (LEFT, RIGHT)
+        self._layout.setAlignment(
+            self._handle,
+            Qt.AlignmentFlag.AlignVCenter if sideways else Qt.AlignmentFlag.AlignHCenter)
+        self._dock()
+
+    def _dock(self) -> None:
         screen = QGuiApplication.primaryScreen().availableGeometry()
-        width = DRAWER_HANDLE_WIDTH + (DRAWER_PANEL_WIDTH if self._expanded else 0)
-        height = int(screen.height() * 0.7) if self._expanded else DRAWER_HANDLE_HEIGHT
+        edge = drawer_edge(self._position)
+        vertical, _, horizontal = self._position.partition("_")
+        handle = self._handle.size()
+        if edge in (LEFT, RIGHT):
+            width = handle.width() + (DRAWER_PANEL_WIDTH if self._expanded else 0)
+            height = (int(screen.height() * DRAWER_SIDE_LENGTH) if self._expanded
+                      else handle.height())
+        else:
+            width = DRAWER_PANEL_WIDTH if self._expanded else handle.width()
+            height = handle.height() + (
+                int(screen.height() * DRAWER_TOP_BOTTOM_LENGTH) if self._expanded else 0)
         self.setFixedSize(width, height)
-        self.move(screen.right() - width + 1, screen.y() + (screen.height() - height) // 2)
+        x = {LEFT: screen.x(), RIGHT: screen.right() - width + 1}.get(
+            edge, screen.x() + (screen.width() - width) // 2)
+        if vertical == "top":
+            y = screen.y()
+        elif vertical == "bottom":
+            y = screen.bottom() - height + 1
+        else:
+            y = screen.y() + (screen.height() - height) // 2
+        self.move(x, y)
 
     def _render(self) -> None:
         needle = self._search.text().strip().lower()

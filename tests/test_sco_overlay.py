@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QRect, Qt  # noqa: E402
 
 from src.gui.sco_overlay import (  # noqa: E402
-    DEFAULT_OVERLAY_COLORS, SCAN_REGION, BlueprintDrawer, OverlayColors,
+    DEFAULT_OVERLAY_COLORS, SCAN_REGION, BlueprintDrawer, OverlayColors, drawer_edge,
     ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
 )
 from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
@@ -87,11 +89,11 @@ def test_scan_region_scales_with_screen(qapp):
 
 def test_arrow_flips_with_the_drawer(qapp):
     drawer = BlueprintDrawer()
-    assert drawer._handle.points_left and not drawer._panel.isVisibleTo(drawer)
+    assert drawer._handle.points_inward and not drawer._panel.isVisibleTo(drawer)
     drawer.toggle()
-    assert not drawer._handle.points_left and drawer._panel.isVisibleTo(drawer)
+    assert not drawer._handle.points_inward and drawer._panel.isVisibleTo(drawer)
     drawer.toggle()
-    assert drawer._handle.points_left
+    assert drawer._handle.points_inward
 
 
 def test_drawer_takes_theme_colours(qapp):
@@ -300,3 +302,56 @@ def test_sections_follow_the_options(qapp):
     pages = overlay.drawer._section_pages
     assert tabs.isTabVisible(pages["blueprints"]) and tabs.isTabVisible(pages["crafting"])
     assert not tabs.isTabVisible(pages["minerals"])
+
+
+@pytest.mark.parametrize("position, edge, corner", [
+    ("top_left", "left", "top_left"),
+    ("top_center", "top", "top"),
+    ("top_right", "right", "top_right"),
+    ("middle_left", "left", "left"),
+    ("middle_right", "right", "right"),
+    ("bottom_left", "left", "bottom_left"),
+    ("bottom_center", "bottom", "bottom"),
+    ("bottom_right", "right", "bottom_right"),
+])
+def test_drawer_docks_at_each_position(qapp, position, edge, corner):
+    from PyQt6.QtGui import QGuiApplication
+
+    screen = QGuiApplication.primaryScreen().availableGeometry()
+    drawer = BlueprintDrawer()
+    drawer.set_position(position)
+    assert drawer_edge(position) == edge and drawer._handle.edge == edge
+    for expanded in (False, True):
+        if expanded:
+            drawer.toggle()
+        g = drawer.geometry()
+        assert screen.contains(g), (position, expanded, g)
+        if "left" in corner:
+            assert g.left() == screen.left()
+        if "right" in corner:
+            assert g.right() == screen.right()
+        if "top" in corner:
+            assert g.top() == screen.top()
+        if "bottom" in corner:
+            assert g.bottom() == screen.bottom()
+        if corner in ("left", "right"):
+            assert abs(g.center().y() - screen.center().y()) <= 1
+        if corner in ("top", "bottom"):
+            assert abs(g.center().x() - screen.center().x()) <= 1
+    # Open, the panel lies against the screen edge with the handle inside it.
+    drawer.layout().activate()
+    handle, panel = drawer._handle.geometry(), drawer._panel.geometry()
+    if edge == "right":
+        assert handle.right() < panel.left()
+    elif edge == "left":
+        assert handle.left() > panel.right()
+    elif edge == "top":
+        assert handle.top() > panel.bottom()
+    else:
+        assert handle.bottom() < panel.top()
+
+
+def test_unknown_position_falls_back_to_middle_right(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_position("nowhere")
+    assert drawer._handle.edge == "right"
