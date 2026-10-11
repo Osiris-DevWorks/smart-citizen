@@ -55,6 +55,16 @@ class TestDecode:
             SignatureMatch("salvage", 6),
         ]
 
+    @pytest.mark.parametrize("value, expected", [
+        (33000, [SignatureMatch("fps", 11)]),
+        (40000, [SignatureMatch("roc", 10), SignatureMatch("salvage", 20)]),
+        (48000, [SignatureMatch("roc", 12), SignatureMatch("fps", 16),
+                 SignatureMatch("salvage", 24)]),
+    ])
+    def test_planet_round_numbers(self, value, expected):
+        # Read off Amr's planet scans; past the chart's 7 / 10 / 15 caps.
+        assert decode_signature(value) == expected
+
     def test_cap_rules_out_oversized_clusters(self):
         # 19200 is 6 x Savrillium on paper, but Savrillium tops out at 2.
         assert decode_signature(19200) == [SignatureMatch("aslarite", 5)]
