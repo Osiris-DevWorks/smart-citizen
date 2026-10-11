@@ -109,7 +109,7 @@ The Config tab lets you set:
 - **Active channel** (LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW)
 - **Language** (English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, German, Turkish, Korean, Traditional Chinese; switches the app UI and the game strings)
 - **Smart Citizen data folder** (where `user.ini`, cache, DataForge extraction, enhancement INIs, and backups live)
-- **Theme**
+- **Theme** and **Font size** (Small / Medium / Large; applies after a restart)
 - **Data sources**: enable/disable, drag-drop merge priority
 - **Import INI**: fold an external `.ini` into your overrides
 - **Reset / Restore user.ini**: wipe your edits for the channel (with an auto-backup), or roll them back to an earlier rotating snapshot

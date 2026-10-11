@@ -180,6 +180,22 @@ class ConfigTab(QWidget):
         appearance_layout.addWidget(self.theme_combo)
 
         appearance_layout.addSpacing(20)
+        self._font_size_label = QLabel(tr("config.font_size_label"))
+        appearance_layout.addWidget(self._font_size_label)
+
+        self.font_size_combo = QComboBox()
+        self.font_size_combo.setToolTip(tr("config.font_size_tooltip"))
+        self.font_size_combo.addItem(tr("config.font_size_small"), AppSettings.FONT_SIZE_SMALL)
+        self.font_size_combo.addItem(tr("config.font_size_medium"), AppSettings.FONT_SIZE_MEDIUM)
+        self.font_size_combo.addItem(tr("config.font_size_large"), AppSettings.FONT_SIZE_LARGE)
+        idx = self.font_size_combo.findData(AppSettings.get_font_size())
+        if idx >= 0:
+            self.font_size_combo.setCurrentIndex(idx)
+        self.font_size_combo.currentIndexChanged.connect(self._on_font_size_changed)
+        self.font_size_combo.setMaximumWidth(150)
+        appearance_layout.addWidget(self.font_size_combo)
+
+        appearance_layout.addSpacing(20)
         self.disable_tutorial_cb = QCheckBox(tr("config.disable_tutorial_cb"))
         self.disable_tutorial_cb.setToolTip(tr("config.disable_tutorial_tooltip"))
         self.disable_tutorial_cb.setChecked(AppSettings.get_tutorial_disabled())
@@ -484,6 +500,15 @@ class ConfigTab(QWidget):
             self.theme_combo.setItemText(3, tr("config.theme_odw"))
         finally:
             self.theme_combo.blockSignals(False)
+        self._font_size_label.setText(tr("config.font_size_label"))
+        self.font_size_combo.setToolTip(tr("config.font_size_tooltip"))
+        self.font_size_combo.blockSignals(True)
+        try:
+            self.font_size_combo.setItemText(0, tr("config.font_size_small"))
+            self.font_size_combo.setItemText(1, tr("config.font_size_medium"))
+            self.font_size_combo.setItemText(2, tr("config.font_size_large"))
+        finally:
+            self.font_size_combo.blockSignals(False)
         self.disable_tutorial_cb.setText(tr("config.disable_tutorial_cb"))
         self.disable_tutorial_cb.setToolTip(tr("config.disable_tutorial_tooltip"))
         self._loc_group.setTitle(tr("config.star_citizen_group"))
@@ -544,6 +569,37 @@ class ConfigTab(QWidget):
         mw = self.window()
         if hasattr(mw, "refresh_action_buttons"):
             mw.refresh_action_buttons()
+
+    # ── Font size ────────────────────────────────────────────────────────────
+
+    def _on_font_size_changed(self, _index: int):
+        """Persist the size and offer a restart: it is a Qt scale factor,
+        which only takes effect when the app starts (src/utils/ui_scale.py).
+        Deferred like the theme swap so the prompt opens outside the
+        combo's own event handling."""
+        size = self.font_size_combo.currentData()
+        if size not in AppSettings.FONT_SIZES or size == AppSettings.get_font_size():
+            return
+        AppSettings.set_font_size(size)
+        QTimer.singleShot(0, self._prompt_font_size_restart)
+
+    def _prompt_font_size_restart(self):
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(tr("config.font_size_restart_title"))
+        box.setText(tr("config.font_size_restart_body"))
+        restart_btn = box.addButton(
+            tr("settings_backup.restart_now_btn"), QMessageBox.ButtonRole.AcceptRole
+        )
+        box.addButton(
+            tr("settings_backup.restart_later_btn"), QMessageBox.ButtonRole.RejectRole
+        )
+        box.setDefaultButton(restart_btn)
+        box.exec()
+        if box.clickedButton() is restart_btn:
+            mw = self.window()
+            if hasattr(mw, "restart_app"):
+                mw.restart_app()
 
     def _on_include_new_toggled(self, checked: bool):
         AppSettings.set_include_new_lines(checked)

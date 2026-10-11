@@ -162,7 +162,7 @@ Track which crafting blueprints you already own, and see it reflected in-game: o
 
 ## Config Tab
 
-- **Appearance** — pick the app theme (see below).
+- **Appearance** — pick the app theme (see below) and the **Font size** (Small, Medium or Large). Font size scales the text and the controls around it together, so nothing gets cut off; Smart Citizen offers to restart, because the new size takes effect when the app starts.
 - **Star Citizen Installation** — path to your LIVE directory; auto-detected at install time, editable here. The **Channel** dropdown picks which channel the app reads and writes, and the **Language** dropdown switches the app and game strings (see *Switch Languages* above).
 - **Verify Install Location** — checks that Smart Citizen is pointed at the copy of Star Citizen you actually play. If you have more than one install on your PC (a moved library folder, a second drive, leftovers from a reinstall) it's possible to have the app writing to the one the RSI Launcher never starts: apply reports success, but nothing changes in game. This button finds every install it can and tells you which one the launcher is really using, reading the launcher's own log rather than guessing from folder names. Each install found is listed with its evidence, and **Use this install** repoints Smart Citizen at it in one click. If your install sits somewhere unusual, **Scan all drives** does a slower, deeper search.
 - **Smart Citizen Data** — folder for `user.ini`, the cached base strings, generated enhancement INIs, and backups. Defaults to `Documents\Smart Citizen`; move it off OneDrive if cache cleanup is slow.

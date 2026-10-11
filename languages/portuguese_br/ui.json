@@ -522,6 +522,42 @@
       "ht": "ODW",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "Tamanho da fonte:"
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "Pequeno"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "Médio"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "Grande"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "Aumenta ou diminui o texto do aplicativo. Os controles acompanham para que nada fique cortado. Entra em vigor após reiniciar."
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "Reiniciar para Alterar o Tamanho da Fonte"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "O novo tamanho da fonte entra em vigor quando o Smart Citizen reiniciar."
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "Falha ao Reiniciar"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu se reiniciar. Abra-o novamente para ver o novo tamanho da fonte."
+    },
     "star_citizen_group": {
       "ht": "Star Citizen",
       "at": "Star Citizen"
