@@ -28,6 +28,7 @@ from src.gui.error_dialog import ErrorDialogHandler, _ErrorDialogEmitter
 from src.gui.enhancements_tab import EnhancementsTab
 from src.gui.filter_header import FilterHeaderView
 from src.gui.log_tab import LogTab
+from src.gui.overlay_tab import OverlayTab
 from src.gui.simple_mode_widget import SimpleModeWidget
 from src.gui.markdown_renderer import markdown_to_html as _md_to_html
 from src.gui.string_table_model import (
@@ -867,6 +868,13 @@ class MainWindow(QMainWindow):
         )
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
+        # Overlay tab (2.5.0): start/stop and options for the Smart Citizen
+        # Overlay. Its start button drives the toolbar's Overlay button, so
+        # both go through _toggle_sco_overlay.
+        self.overlay_tab = OverlayTab(AppSettings.get_sco_samples_dir())
+        self.overlay_tab.overlay_toggled.connect(lambda on: self.sco_btn.setChecked(on))
+        self.overlay_tab.options_changed.connect(self._apply_sco_options)
+        self._overlay_tab_index = self.tabs.addTab(self.overlay_tab, tr("tabs.overlay"))
         # Smart Citizen Overlay (SCO): windows built on first start; the live
         # Game.log watcher runs only while the overlay is on.
         self._sco_overlay = None
@@ -4742,6 +4750,7 @@ class MainWindow(QMainWindow):
         self.tabs.setTabText(self._config_tab_index, tr("tabs.config"))
         self.tabs.setTabText(self._enhancements_tab_index, tr("tabs.enhancements"))
         self.tabs.setTabText(self._blueprint_tracker_tab_index, tr("tabs.blueprint_tracker"))
+        self.tabs.setTabText(self._overlay_tab_index, tr("tabs.overlay"))
         self.tabs.setTabText(self._log_tab_index, tr("tabs.log"))
         self.tabs.setTabText(self._about_tab_index, tr("tabs.about"))
         self.tabs.setTabText(self._faq_tab_index, tr("tabs.faq"))
@@ -4877,6 +4886,7 @@ class MainWindow(QMainWindow):
         self.config_tab.retranslate_ui()
         self.enhancements_tab.retranslate_ui()
         self.blueprint_tracker_tab.retranslate_ui()
+        self.overlay_tab.retranslate_ui()
 
         # About / FAQ / Legal tab bodies — loaded from a per-language doc
         # file (get_localized_doc_path) but only rendered at tab-creation
@@ -6808,20 +6818,43 @@ class MainWindow(QMainWindow):
             return
         if self._sco_overlay is None:
             from src.gui.sco_overlay import ScoOverlay
-            self._sco_overlay = ScoOverlay(
-                self, sample_dir=AppSettings.get_logs_dir() / "sco_samples")
+            self._sco_overlay = ScoOverlay(self, sample_dir=AppSettings.get_sco_samples_dir())
             self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
         self._sco_overlay.start()
-        self._start_sco_log_watcher()
+        self._apply_sco_options()
+        self.overlay_tab.set_running(True)
 
     def _stop_sco_overlay(self):
+        self._stop_sco_log_watcher()
+        if self._sco_overlay is not None:
+            self._sco_overlay.stop()
+        overlay_tab = getattr(self, "overlay_tab", None)  # closeEvent may run first
+        if overlay_tab is not None:
+            overlay_tab.set_running(False)
+
+    def _apply_sco_options(self):
+        """Push the Overlay tab's switches to a running overlay."""
+        if self._sco_overlay is None:
+            return
+        self._sco_overlay.set_options(
+            scan_decoder=AppSettings.get_sco_option("scan_decoder"),
+            blueprint_drawer=AppSettings.get_sco_option("blueprint_drawer"),
+            save_samples=AppSettings.get_sco_option("save_samples"),
+        )
+        if not self._sco_overlay.is_running():
+            return
+        if AppSettings.get_sco_option("live_blueprint_watch"):
+            if self._sco_log_worker is None:
+                self._start_sco_log_watcher()
+        else:
+            self._stop_sco_log_watcher()
+
+    def _stop_sco_log_watcher(self):
         if self._sco_log_worker is not None:
             self._sco_log_worker.requestInterruption()
             self._reap_worker(self._sco_log_worker)
             self._sco_log_worker = None
-        if self._sco_overlay is not None:
-            self._sco_overlay.stop()
 
     def _start_sco_log_watcher(self):
         """Watch the active channel's Game.log for blueprints earned mid-session.

@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "無法載入法律資訊。"
+    },
+    "overlay": {
+      "ht": "",
+      "at": "疊加層"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "無法識別"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen 疊加層"
+    },
+    "desc": {
+      "ht": "",
+      "at": "顯示在 Star Citizen 之上的視窗：採礦掃描解碼器和藍圖抽屜。請以無邊框視窗模式執行遊戲。疊加層只讀取螢幕和 Game.log，從不接觸遊戲程序。"
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "啟動疊加層"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "停止疊加層"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "採礦掃描解碼器"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "讀取雷達下方的掃描訊號，並在其下方顯示礦藏類型和數量。"
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "藍圖抽屜"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "螢幕右邊緣的標籤，可開啟帶有已擁有核取方塊的可搜尋藍圖清單。"
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "將新藍圖標記為已擁有"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "疊加層執行時，從 Game.log 讀取你在遊戲中獲得的藍圖並標記為已擁有。"
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "儲存掃描樣本"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "為每個新讀取的訊號儲存一張小圖片，以便回報誤讀來改進解碼器。"
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "開啟樣本資料夾"
     }
   }
 }

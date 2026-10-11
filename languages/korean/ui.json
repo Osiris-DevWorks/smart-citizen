@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "법적 고지 정보를 불러올 수 없습니다."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "오버레이"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "식별 불가"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen 오버레이"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Star Citizen 위에 표시되는 창입니다. 채굴 스캔 해독기와 블루프린트 서랍이 있습니다. 게임은 테두리 없는 창 모드로 실행하세요. 오버레이는 화면과 Game.log만 읽고 게임 프로세스에는 절대 손대지 않습니다."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "오버레이 시작"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "오버레이 중지"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "채굴 스캔 해독기"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "레이더 아래의 스캔 신호를 읽고 그 아래에 매장지 종류와 개수를 표시합니다."
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "블루프린트 서랍"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "화면 오른쪽 가장자리의 탭으로, 보유 체크 상자가 있는 검색 가능한 블루프린트 목록을 엽니다."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "새 블루프린트를 보유로 표시"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "오버레이가 실행되는 동안 게임에서 받은 블루프린트를 Game.log에서 읽어 보유로 표시합니다."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "스캔 샘플 저장"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "새로 읽은 신호마다 작은 이미지를 저장해, 잘못 읽은 경우를 보내 해독기를 개선할 수 있게 합니다."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "샘플 폴더 열기"
     }
   }
 }

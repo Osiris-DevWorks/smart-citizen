@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Não foi possível carregar as informações legais."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Sobreposição"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "Não identificado"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Sobreposição do Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de projetos. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log; nunca toca no processo do jogo."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Iniciar sobreposição"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Parar sobreposição"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Decodificador de escaneamento de mineração"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Lê a assinatura de escaneamento abaixo do radar e mostra embaixo o tipo e a quantidade de depósitos."
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "Gaveta de projetos"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "Uma aba na borda direita da tela que abre uma lista de projetos pesquisável com caixas de posse."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Marcar novos projetos como possuídos"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Enquanto a sobreposição roda, os projetos recebidos no jogo são lidos do Game.log e marcados como possuídos."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Salvar amostras de escaneamento"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Salva uma pequena imagem de cada nova assinatura lida, para que leituras erradas possam ser enviadas e melhorar o decodificador."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Abrir pasta de amostras"
     }
   }
 }

@@ -419,6 +419,7 @@ class ScoOverlay(QObject):
         self.drawer.owned_toggled.connect(self.owned_toggled)
         self._reader: Optional[SignatureReader] = hud_signature_reader
         self._sample_dir = sample_dir
+        self._save_samples = True
         self._sampled: set[str] = set()
         self._timer = QTimer(self)
         self._timer.setInterval(CAPTURE_INTERVAL_MS)
@@ -427,6 +428,18 @@ class ScoOverlay(QObject):
         self._shown_value: Optional[int] = None
         self._candidate: Optional[int] = None
         self._candidate_count = 0
+        self._running = False
+        self._show_label = True
+        self._show_drawer = True
+
+    def set_options(self, scan_decoder: bool, blueprint_drawer: bool,
+                    save_samples: bool) -> None:
+        """Apply the Overlay tab's switches; takes effect at once if running."""
+        self._show_label = scan_decoder
+        self._show_drawer = blueprint_drawer
+        self._save_samples = save_samples
+        if self._running:
+            self._sync_windows()
 
     def set_reader(self, reader: Optional[SignatureReader]) -> None:
         self._reader = reader
@@ -434,22 +447,33 @@ class ScoOverlay(QObject):
             self._sync_timer()
 
     def is_running(self) -> bool:
-        return self.drawer.isVisible()
+        return self._running
 
     def start(self) -> None:
+        self._running = True
         # Pick up a theme change made since the overlay was last shown.
         self.drawer.apply_colors(OverlayColors.from_theme())
-        self.drawer.show_docked()
-        self._sync_timer()
+        self._sync_windows()
 
     def stop(self) -> None:
+        self._running = False
         self._timer.stop()
         self.label.hide()
         self.drawer.hide()
 
+    def _sync_windows(self) -> None:
+        if self._show_drawer:
+            if not self.drawer.isVisible():
+                self.drawer.show_docked()
+        else:
+            self.drawer.hide()
+        if not self._show_label:
+            self.label.hide()
+        self._sync_timer()
+
     def _sync_timer(self) -> None:
-        # No reader yet means nothing to do with a capture, so don't take one.
-        if self._reader is None:
+        # No reader, or no label to show, means nothing to do with a capture.
+        if self._reader is None or not self._show_label:
             self._timer.stop()
         else:
             self._timer.start()
@@ -513,7 +537,7 @@ class ScoOverlay(QObject):
 
     def _save_sample(self, image: QImage, text: str, where: QRect) -> None:
         """Keep one crop per distinct reading, named after the text read."""
-        if (self._sample_dir is None or text in self._sampled
+        if (self._sample_dir is None or not self._save_samples or text in self._sampled
                 or len(self._sampled) >= MAX_SAMPLES_PER_SESSION):
             return
         self._sampled.add(text)

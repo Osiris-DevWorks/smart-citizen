@@ -206,3 +206,28 @@ def test_own_label_is_blacked_out_of_the_capture(qapp, monkeypatch):
     assert image.pixelColor(inside) == QColor(0, 0, 0)
     assert image.pixelColor(5, 5) == QColor(255, 255, 255)
     overlay.stop()
+
+
+def test_options_switch_parts_off_while_running(qapp, monkeypatch):
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay()
+    overlay.set_reader(lambda image: None)
+    overlay.start()
+    assert overlay.is_running() and overlay.drawer.isVisible() and overlay._timer.isActive()
+    overlay.set_options(scan_decoder=False, blueprint_drawer=False, save_samples=True)
+    assert overlay.is_running()   # still on, just with nothing showing
+    assert not overlay.drawer.isVisible() and not overlay._timer.isActive()
+    overlay.set_options(scan_decoder=True, blueprint_drawer=True, save_samples=True)
+    assert overlay.drawer.isVisible() and overlay._timer.isActive()
+    overlay.stop()
+    assert not overlay.is_running()
+
+
+def test_save_samples_off_saves_nothing(qapp, tmp_path):
+    from PyQt6.QtGui import QImage
+
+    overlay = ScoOverlay(sample_dir=tmp_path / "samples")
+    overlay.set_options(scan_decoder=True, blueprint_drawer=True, save_samples=False)
+    image = QImage(80, 40, QImage.Format.Format_RGB32)
+    overlay._save_sample(image, "7,200", QRect(10, 10, 30, 11))
+    assert not (tmp_path / "samples").exists()

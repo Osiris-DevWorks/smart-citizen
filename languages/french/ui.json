@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Impossible de charger les informations légales."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Superposition"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "Non identifié"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Superposition Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Fenêtres affichées par-dessus Star Citizen : le décodeur de scan minier et le tiroir des plans. Lancez le jeu en mode fenêtré sans bordure. La superposition lit seulement votre écran et Game.log ; elle ne touche jamais au processus du jeu."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Démarrer la superposition"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Arrêter la superposition"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Décodeur de scan minier"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Lit la signature de scan sous le radar et affiche le type et le nombre de gisements en dessous."
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "Tiroir des plans"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "Un onglet sur le bord droit de l'écran qui ouvre une liste de plans consultable avec des cases « possédé »."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Marquer les nouveaux plans comme possédés"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Pendant que la superposition tourne, les plans reçus en jeu sont lus dans Game.log et marqués comme possédés."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Enregistrer des échantillons de scan"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Enregistre une petite image de chaque nouvelle signature lue, pour pouvoir envoyer les erreurs de lecture et améliorer le décodeur."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Ouvrir le dossier des échantillons"
     }
   }
 }

@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Yasal bilgiler yüklenemedi."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Katman"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "Tanımlanamadı"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen Katmanı"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur; oyun işlemine asla dokunmaz."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Katmanı Başlat"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Katmanı Durdur"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Maden tarama çözücüsü"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Radarın altındaki tarama imzasını okur ve altında yatak türünü ve sayısını gösterir."
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "Plan çekmecesi"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "Ekranın sağ kenarında, sahiplik kutuları olan aranabilir bir plan listesi açan bir sekme."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Yeni planları sahip olunan olarak işaretle"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Katman çalışırken oyunda aldığınız planlar Game.log dosyasından okunur ve sahip olunan olarak işaretlenir."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Tarama örneklerini kaydet"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Okunan her yeni imzanın küçük bir resmini kaydeder; böylece yanlış okumalar gönderilip çözücü geliştirilebilir."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Örnek Klasörünü Aç"
     }
   }
 }

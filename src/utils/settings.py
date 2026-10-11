@@ -659,6 +659,16 @@ class AppSettings:
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
 
+    # Smart Citizen Overlay (SCO) switches on the Overlay tab (2.5.0):
+    # option name -> (key, default). All on by default, matching how the
+    # overlay behaved before the tab existed.
+    SCO_OPTION_SETTING = {
+        "scan_decoder":         ("sco/scan_decoder", True),
+        "blueprint_drawer":     ("sco/blueprint_drawer", True),
+        "live_blueprint_watch": ("sco/live_blueprint_watch", True),
+        "save_samples":         ("sco/save_samples", True),
+    }
+
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
     # up (the import itself ends in a restart, so the freshly-imported
@@ -1528,6 +1538,18 @@ class AppSettings:
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP, bool(enabled)
         )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_option(name: str) -> bool:
+        """One of the Overlay tab's switches (``SCO_OPTION_SETTING``)."""
+        key, default = AppSettings.SCO_OPTION_SETTING[name]
+        return bool(AppSettings.settings().value(key, default, type=bool))
+
+    @staticmethod
+    def set_sco_option(name: str, enabled: bool) -> None:
+        key, _default = AppSettings.SCO_OPTION_SETTING[name]
+        AppSettings.settings().setValue(key, bool(enabled))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3018,6 +3040,12 @@ class AppSettings:
         return logs_dir
 
     @staticmethod
+    def get_sco_samples_dir() -> Path:
+        r"""Where the Smart Citizen Overlay keeps the readout crops it saves
+        for retraining its digit reader (``{logs_dir}\sco_samples\``)."""
+        return AppSettings.get_logs_dir() / "sco_samples"
+
+    @staticmethod
     def migrate_dataforge_cache_to_local() -> None:
         r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
@@ -3445,6 +3473,9 @@ class AppSettings:
         })
         defaults.update({
             key: True for key in AppSettings._MISSION_FIELD_SETTING.values()
+        })
+        defaults.update({
+            key: default for key, default in AppSettings.SCO_OPTION_SETTING.values()
         })
         defaults.update({
             key: AppSettings._MISSION_TITLE_TAG_DEFAULTS.get(name, True)

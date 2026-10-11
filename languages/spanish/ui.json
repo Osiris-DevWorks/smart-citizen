@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "No se pudo cargar la información legal."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Superposición"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "No identificado"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Superposición de Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de planos. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log; nunca toca el proceso del juego."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Iniciar superposición"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Detener superposición"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Decodificador de escaneo minero"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Lee la firma de escaneo bajo el radar y muestra debajo el tipo y la cantidad de depósitos."
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "Cajón de planos"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "Una pestaña en el borde derecho de la pantalla que abre una lista de planos con búsqueda y casillas de poseído."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Marcar planos nuevos como poseídos"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Mientras la superposición está activa, los planos que recibes en el juego se leen de Game.log y se marcan como poseídos."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Guardar muestras de escaneo"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Guarda una pequeña imagen de cada firma nueva leída, para poder enviar las lecturas erróneas y mejorar el decodificador."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Abrir carpeta de muestras"
     }
   }
 }

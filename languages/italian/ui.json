@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Impossibile caricare le informazioni legali."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Overlay"
     }
   },
   "toolbar": {
@@ -3211,6 +3215,60 @@
     "unidentified": {
       "ht": "",
       "at": "Non identificato"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Overlay di Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei progetti. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log; non tocca mai il processo del gioco."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Avvia overlay"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Ferma overlay"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Decodificatore scansioni minerarie"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Legge la firma di scansione sotto il radar e mostra sotto il tipo e il numero di giacimenti."
+    },
+    "blueprint_drawer": {
+      "ht": "",
+      "at": "Cassetto dei progetti"
+    },
+    "blueprint_drawer_hint": {
+      "ht": "",
+      "at": "Una linguetta sul bordo destro dello schermo che apre un elenco di progetti ricercabile con caselle di possesso."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Segna i nuovi progetti come posseduti"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Mentre l'overlay è attivo, i progetti ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Salva campioni di scansione"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Salva una piccola immagine di ogni nuova firma letta, così le letture errate possono essere inviate per migliorare il decodificatore."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Apri cartella campioni"
     }
   }
 }
