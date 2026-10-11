@@ -24,18 +24,14 @@ Deliberately excluded from the comparison:
 """
 from __future__ import annotations
 
-import logging
-import os
 import sys
 from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
 from PyQt6.QtCore import QPoint, Qt  # noqa: E402
 from PyQt6.QtWidgets import (  # noqa: E402
-    QAbstractScrollArea, QApplication, QScrollArea, QScrollBar,
+    QAbstractScrollArea, QScrollArea, QScrollBar,
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -50,11 +46,6 @@ NARROW = (900, 700)
 
 
 @pytest.fixture(scope="module")
-def qapp():
-    yield QApplication.instance() or QApplication([])
-
-
-@pytest.fixture(scope="module")
 def window(qapp, tmp_path_factory):
     """One real MainWindow in Advanced mode, narrow enough to need scrollbars.
 
@@ -63,6 +54,9 @@ def window(qapp, tmp_path_factory):
     constructions, and this file was the only unstable one). Every test here
     walks all eight tabs from wherever the last one left off, so they don't
     need a fresh window, and one construction is a quarter of the exposure.
+    The crash itself turned out to be stale PyQt wrappers left behind by a
+    destroyed QApplication (fixed by the run-wide ``qapp`` fixture in
+    tests/conftest.py), so the module scope is now only about speed.
 
     MonkeyPatch.context() rather than a bare pytest.MonkeyPatch(): the
     built-in fixture is function-scoped so it can't be used here, and calling

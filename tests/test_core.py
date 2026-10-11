@@ -13,14 +13,13 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 
 # Import app modules
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from models.string_model import StringEntry
-from parser.ini_parser import parse_ini_file, load_source_files, load_overrides
+from parser.ini_parser import parse_ini_file, load_overrides
 from merger.ini_merger import merge_sources_by_hierarchy
 from utils.user_ini_manager import save_user_ini_dict as save_overrides
 

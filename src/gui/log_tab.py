@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QPlainTextEdit, QFileDialog, QCheckBox, QLabel, QComboBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QObject
+from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtGui import QTextCharFormat, QColor, QFont, QTextCursor
 
 from src.utils.i18n import tr

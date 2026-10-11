@@ -25,7 +25,6 @@ from src.utils.tag_builder import (  # noqa: E402
     ElementSpec,
     TagConfig,
     default_config,
-    render_tag,
 )
 
 pytestmark = pytest.mark.unit

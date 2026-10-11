@@ -1,8 +1,8 @@
 """Per-column filter header for the strings table."""
 
-from PyQt6.QtCore import Qt, QTimer, QEvent, pyqtSignal, QSize, QRect, QPoint
+from PyQt6.QtCore import Qt, QTimer, QEvent, pyqtSignal, QSize, QRect
 from PyQt6.QtGui import QColor, QIcon, QPainter, QPalette, QPen, QPixmap
-from PyQt6.QtWidgets import QHeaderView, QLineEdit, QStyleOptionHeader, QStyle
+from PyQt6.QtWidgets import QHeaderView, QLineEdit
 
 from src.utils.i18n import tr
 

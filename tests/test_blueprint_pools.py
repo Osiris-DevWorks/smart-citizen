@@ -30,7 +30,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from lxml import etree as ET
 
 pytestmark = pytest.mark.unit
 

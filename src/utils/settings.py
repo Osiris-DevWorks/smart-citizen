@@ -1,14 +1,25 @@
 """Settings management using QSettings."""
 import base64
 import datetime
+import itertools
 import json
 import logging
 import os
-import string
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings
 import winreg
+
+from src.utils.install_scanner import (
+    GAME_DATA_FILE,
+    SC_CHANNELS,
+    has_game_data,
+    iter_common_sc_install_locations,
+    iter_shallow_sc_install_locations,
+    looks_like_sc_root,
+    read_launcher_installs,
+    same_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +59,18 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     "chinese":       "chinese_(simplified)",
     "italian":       "italian_(italy)",
     "german":        "german_(germany)",
+    # Turkish borrows the idle polish_(poland) slot (#404). turkish_(turkey) is
+    # not a g_language value the game accepts, so Turkish has to ride on some
+    # other official slot. Polish is the safest host: it is unclaimed by our own
+    # languages, and Polish needs the same Latin Extended-A block Turkish does
+    # (ł ą ę ż ź ć ń ś vs ğ ı İ ş), so the game font already draws our glyphs.
+    # Dymerz's guide maps Turkish onto german_(germany) instead, but that slot
+    # is taken by our own German and the two would overwrite each other's
+    # global.ini. russian_(russia) was tried first and rejected — the game does
+    # not recognise it.
+    "turkish":       "polish_(poland)",
+    "korean":        "korean_(south_korea)",
+    "chinese_traditional": "chinese_(traditional)",
 }
 
 
@@ -58,14 +81,15 @@ def _is_valid_sc_root(path: str) -> bool:
     (LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW).  This guards against stale
     registry values like ``SmartCitizen 1.4.1`` being returned as the
     install root.
+
+    Deliberately does NOT require ``Data.p4k``: loosening it here would change
+    which path an existing profile resolves to. The Config tab's *Check
+    Install Location* button applies the stricter bar instead, and reports a
+    channel folder with no game data as a leftover
+    (:attr:`install_scanner.ScInstall.is_leftover`) rather than a real install.
     """
     try:
-        p = Path(path)
-        if not p.is_dir():
-            return False
-        return any((p / ch).is_dir() for ch in (
-            "LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"
-        ))
+        return looks_like_sc_root(Path(path))
     except (OSError, ValueError):
         return False
 
@@ -84,25 +108,12 @@ def _path_ends_in_channel(path: str) -> bool:
     return name in {c.upper() for c in AppSettings.AVAILABLE_CHANNELS}
 
 
-# Relative install paths under a drive's root, in the order real installs are
-# most likely to use them. RSI Launcher's own default is the first two; the
-# rest cover users who point the launcher at a secondary drive and either
-# keep RSI's own folder shape or nest it under a personal "Games" folder --
-# both are common in the wild (a real tester install turned up at
-# ``E:\Games\Roberts Space Industries\StarCitizen``, which none of the
-# previous hardcoded C:\ candidates could ever have matched).
-_COMMON_SC_SUBPATHS = (
-    r"Program Files\Roberts Space Industries\StarCitizen",
-    r"Program Files (x86)\Roberts Space Industries\StarCitizen",
-    r"Roberts Space Industries\StarCitizen",
-    r"Games\Roberts Space Industries\StarCitizen",
-)
-
-
 # Sentinel distinct from a real scan outcome — the scan legitimately returns
-# None ("nothing found"), so that value can't double as "not run yet".
+# None ("nothing found"), so that value can't double as "not run yet". Once
+# set, the cache is ``(candidates, {active_channel: pick})``: the walk over the
+# drives happens once, and only the cheap ranking is redone per channel.
 _SC_SCAN_UNSET = object()
-_sc_scan_cache: "str | None | object" = _SC_SCAN_UNSET
+_sc_scan_cache: "tuple[list[str], dict[str, str | None]] | object" = _SC_SCAN_UNSET
 
 
 def _scan_common_sc_install_locations() -> "str | None":
@@ -113,58 +124,131 @@ def _scan_common_sc_install_locations() -> "str | None":
     installer already told us where the game is. This exists for the case
     none of those do: a portable build's first run, or a fresh profile,
     where the only way to find an install on a non-default drive is to look.
-    Cheap in practice -- most drive letters don't exist and short-circuit on
-    the very first ``exists()`` check, and a hit is validated the same way
-    every other candidate is (:func:`_is_valid_sc_root`), so an empty/stub
-    folder (e.g. a partial RSI Launcher download with no real ``Data.p4k``
-    channel folder yet) is never mistaken for a real install.
+
+    Candidates come from up to three sources:
+
+    - The RSI Launcher's own log, which names the install the launcher
+      maintains wherever the player put it, at any depth under any folder
+      name (an install under a folder called "Other Games" was the one that
+      surfaced this). A root it names must still pass
+      :func:`install_scanner.is_sc_install_root`, real Star Citizen files in
+      a channel folder.
+    - The common RSI install paths on every drive letter
+      (:func:`install_scanner.iter_common_sc_install_locations`). Cheap, since
+      most drive letters don't exist and short-circuit on the first
+      ``exists()`` check. These only need a channel folder
+      (:func:`install_scanner.looks_like_sc_root`).
+    - One folder below the top of each fixed drive
+      (:func:`install_scanner.iter_shallow_sc_install_locations`), which only
+      accepts a root with ``Data.p4k``. That covers a library folder the log
+      does not name, for example after the launcher's logs were cleared, even
+      when an old install or its empty shell is still at a common path. It is
+      one directory listing per fixed drive, so it always runs.
+
+    A root found more than once, by any of them or twice by one (a junction
+    to an install and the install itself), is kept once.
+    :func:`_pick_live_sc_install` ranks them all with the active channel: a
+    root whose own active-channel ``Data.p4k`` is current comes first, then
+    the rest by their newest ``Data.p4k``. Every candidate is logged. A
+    folder with no ``Data.p4k`` in any channel is never picked, so when no
+    candidate holds one the scan finds nothing and the user is asked for
+    the path.
 
     Cached in-memory for the process's lifetime, including a "found
     nothing" result -- without this, a no-install profile re-walks every
     drive letter on every call (e.g. after each channel switch clears
     GAME_INSTALL_PATH), and a disconnected network drive can make a single
     ``exists()`` check hang for seconds. The cache resets naturally on app
-    restart since it's a plain module global, not persisted to settings.
+    restart since it's a plain module global, not persisted to settings. The
+    candidates are cached once, and the pick per active channel, since the
+    ranking depends on the channel but the walk does not.
     """
     global _sc_scan_cache
+    active = AppSettings.get_active_channel()
     if _sc_scan_cache is not _SC_SCAN_UNSET:
-        return _sc_scan_cache
+        cached_candidates, picks = _sc_scan_cache
+        if active not in picks:
+            picks[active] = (
+                _pick_live_sc_install(cached_candidates, channel=active)
+                if cached_candidates else None
+            )
+        return picks[active]
 
-    candidates: list[str] = []
-    for letter in string.ascii_uppercase:
-        drive_root = Path(f"{letter}:\\")
-        if not drive_root.exists():
-            continue
-        for subpath in _COMMON_SC_SUBPATHS:
-            candidate = drive_root / subpath
-            if _is_valid_sc_root(str(candidate)):
-                candidates.append(str(candidate))
+    # The shared generator walks drive letters and common subpaths -- the
+    # "find them all" consumer is the Config tab's install check
+    # (``install_scanner.scan_installs``). #370 still applies here, so
+    # multiple hits are ranked by _pick_live_sc_install rather than just
+    # taking the first, the way this loop used to.
+    common = [str(p) for p in iter_common_sc_install_locations()]
 
-    if not candidates:
-        _sc_scan_cache = None
-        return None
+    # Newest launcher mention first, so a tie in the ranking below goes to the
+    # install the launcher last touched. The parser already dropped anything
+    # that no longer exists on disk.
+    logged = sorted(
+        read_launcher_installs()[0].values(), key=lambda hit: hit[1], reverse=True
+    )
 
-    _sc_scan_cache = _pick_live_sc_install(candidates)
-    return _sc_scan_cache
+    # The probe looks one folder below the top of each fixed drive, always.
+    # Neither of the other sources proves where the live install is: the log
+    # can be cleared or name only another channel's library, and a common path
+    # can hold a leftover shell or an abandoned install (#370). The ranker
+    # sorts it out. Every hit is checked against all that were kept before it,
+    # those of its own source included, so one install counts once. The probe
+    # overlaps the common paths (Program Files and RSI's own folder are both
+    # one level down), and a game moved off C: leaves a junction at its old
+    # path that the log or either walk can name beside the real folder.
+    candidates: "list[str]" = []
+    for path in itertools.chain(
+        (str(root) for root, _seen in logged),
+        common,
+        map(str, iter_shallow_sc_install_locations()),
+    ):
+        if not any(_same_install(path, known) for known in candidates):
+            candidates.append(path)
+
+    result = _pick_live_sc_install(candidates, channel=active) if candidates else None
+    _sc_scan_cache = (candidates, {active: result})
+    return result
 
 
-def _newest_p4k_mtime(root: str) -> float:
-    """Most recent Data.p4k mtime across *root*'s channel folders, or 0.0.
+def _same_install(a: str, b: str) -> bool:
+    r"""True if *a* and *b* are the same folder, by spelling or once any
+    junction or symlink is resolved. A game moved off C: the usual way sits at
+    ``D:\StarCitizen`` with a junction at its old Program Files path, and the
+    log and the one-folder probe would otherwise list it twice."""
+    if same_path(a, b):
+        return True
+    try:
+        return same_path(os.path.realpath(a), os.path.realpath(b))
+    except (OSError, ValueError):
+        return False
 
-    Every channel is checked rather than LIVE alone: a user who plays PTU
-    keeps that channel current while LIVE sits untouched, and picking the
-    install by its stalest channel would get the comparison backwards.
+
+def _p4k_mtimes(root: str) -> "dict[str, float]":
+    r"""Each channel's ``<root>\<channel>\Data.p4k`` mtime, 0.0 when missing.
+
+    One stat per channel, so the ranking and the support log report the same
+    value for the same file. A timestamp before 1970 (a copy tool that
+    dropped them) reads as missing: it cannot be compared or printed, and a
+    Data.p4k nobody has patched since then is not a live install anyway.
     """
-    newest = 0.0
+    mtimes = {}
     for channel in AppSettings.AVAILABLE_CHANNELS:
         try:
-            newest = max(newest, (Path(root) / channel / "Data.p4k").stat().st_mtime)
+            mtimes[channel] = max(0.0, (Path(root) / channel / GAME_DATA_FILE).stat().st_mtime)
         except (OSError, ValueError):
-            continue
-    return newest
+            mtimes[channel] = 0.0
+    return mtimes
 
 
-def _pick_live_sc_install(candidates: "list[str]") -> str:
+# How far a channel's Data.p4k may trail the newest Data.p4k found and still
+# count as maintained. LIVE is patched every few weeks, so a channel nothing
+# has touched for three months while another install kept being patched is a
+# leftover (#370), not the player's game.
+_CHANNEL_STALE_SECONDS = 90 * 24 * 3600
+
+
+def _pick_live_sc_install(candidates: "list[str]", channel: str) -> "str | None":
     r"""Choose the install the RSI Launcher is actually maintaining.
 
     The scan used to return its first hit and stop. That is drive-major over
@@ -183,35 +267,96 @@ def _pick_live_sc_install(candidates: "list[str]") -> str:
     whenever it stopped being patched, while the live one moves with every
     game update, so recency is the one signal that separates them without
     asking the launcher where it thinks the game is. Ties and unreadable
-    timestamps fall back to the original scan order, so a single-install
-    machine behaves exactly as before.
+    timestamps among candidates that hold a Data.p4k fall back to the
+    original scan order, so a machine with one real install behaves exactly
+    as before. A candidate with no Data.p4k is never chosen (see below).
+
+    *channel* is the active one, and a root whose own *channel* Data.p4k is
+    current comes first, newest first. Every channel path resolves against
+    the chosen root, and the launcher can keep a channel in its own library
+    folder, so a PTU-only library patched an hour ago must not win while LIVE
+    is active. "Current" means within :data:`_CHANNEL_STALE_SECONDS` of the
+    newest Data.p4k found, so an abandoned install whose *channel* stopped
+    being patched still loses to the live one, even when that one only holds
+    another channel. The rest follow, newest Data.p4k in any channel first.
 
     Every candidate is logged either way. The heuristic can still be wrong,
     and when it is, a support log that names the alternatives turns a long
     diagnostic thread into one line someone can read.
+
+    A candidate with no ``Data.p4k`` in any channel is never chosen, and
+    when no candidate holds one this returns None, so the user is asked for
+    the path. Such a folder is what the game left behind when it moved (a
+    channel folder with only ``Bin64`` or a build manifest). Once saved it
+    would stay, because a saved root only needs a channel folder (see
+    :meth:`AppSettings.get_sc_install_root`), and every extraction would
+    fail on it instead. A ``Data.p4k`` whose date reads as missing (dated
+    before 1970) still counts, since the file is there.
     """
-    # One filesystem walk per candidate, reused for both the ranking and the
-    # log line below. Calling _newest_p4k_mtime again while building the
-    # message would not just double the stat calls; it would read the disk a
-    # second time, so the install we ranked and the date we report could
-    # disagree about the same folder.
-    mtimes = {c: _newest_p4k_mtime(c) for c in candidates}
-    ranked = sorted(candidates, key=lambda c: -mtimes[c])
-    chosen = ranked[0]
-    if len(candidates) > 1:
-        listing = ", ".join(
-            f"{c} (Data.p4k "
-            + (
-                datetime.datetime.fromtimestamp(mtimes[c]).strftime("%Y-%m-%d")
-                if mtimes[c] else "none"
-            )
-            + ")"
-            for c in ranked
-        )
+    # One stat per channel per candidate, reused for both the ranking and the
+    # log line below. Reading the disk a second time while building the
+    # message would not just double the stat calls; the install we ranked and
+    # the date we report could disagree about the same file. A root's newest
+    # date takes every channel, not LIVE alone: a user who plays PTU keeps
+    # that channel current while LIVE sits untouched, and going by the stalest
+    # channel would get the comparison backwards.
+    per_channel = {c: _p4k_mtimes(c) for c in candidates}
+    mtimes = {c: max(per_channel[c].values(), default=0.0) for c in candidates}
+    own = {c: per_channel[c].get(channel, 0.0) for c in candidates}
+    newest = max(mtimes.values(), default=0.0)
+
+    def rank(c: str) -> tuple:
+        if own[c] and newest - own[c] <= _CHANNEL_STALE_SECONDS:
+            return (0, -own[c])
+        return (1, -mtimes[c])
+
+    def day(stamp: float) -> str:
+        if not stamp:
+            return "none"
+        try:
+            return datetime.datetime.fromtimestamp(stamp).strftime("%Y-%m-%d")
+        except (OSError, OverflowError, ValueError):  # a bogus stamp must not break detection
+            return "unknown"
+
+    ranked = sorted(candidates, key=rank)
+    # A dated Data.p4k proves the folder holds the game. Only a candidate whose
+    # dates all read as missing needs a look at the disk, and those rank last,
+    # so the disk is only read again when no dated Data.p4k was found. One
+    # found that way is listed as undated in the log, not as having none.
+    undated: "set[str]" = set()
+
+    def holds_game(c: str) -> bool:
+        if mtimes[c]:
+            return True
+        if has_game_data(Path(c)):
+            undated.add(c)
+            return True
+        return False
+
+    def shown(c: str, stamp: float, data_file: str) -> str:
+        if c in undated and not stamp and os.path.isfile(data_file):
+            return "undated"
+        return day(stamp)
+
+    chosen = next((c for c in ranked if holds_game(c)), None)
+    listing = ", ".join(
+        f"{c} (Data.p4k {'undated' if c in undated else day(mtimes[c])}, "
+        f"{channel} {shown(c, own[c], os.path.join(c, channel, GAME_DATA_FILE))})"
+        for c in ranked
+    )
+    if chosen is None:
         logger.warning(
-            f"Multiple Star Citizen installs found; using the one with the "
-            f"newest Data.p4k: {chosen}. All candidates: {listing}. If the "
-            f"wrong one was picked, set the install path in the Config tab."
+            f"No Star Citizen install picked: {len(candidates)} folder(s) look like "
+            f"one, but none holds a Data.p4k: {listing}. Set the install path in "
+            f"the Config tab."
+        )
+        return None
+    if len(candidates) > 1:
+        logger.warning(
+            f"Multiple Star Citizen installs found; using {chosen} "
+            f"(a current {channel} first, then the newest Data.p4k). All "
+            f"candidates: {listing}. If the wrong one was picked, set the "
+            f"install path in the Config tab."
         )
     else:
         logger.info(f"Auto-detected Star Citizen install: {chosen}")
@@ -230,6 +375,7 @@ class AppSettings:
 
     # Settings keys - Favorites
     FAVORITE_PREFIX = "favorite_prefix"
+    DEFAULT_FAVORITE_PREFIX = "*"
 
     # Settings keys - Test Plan panel (#144)
     TEST_PLAN_CHECKS = "test_plan/checks"        # JSON: {"hash": ..., "checked": [...]}
@@ -324,6 +470,15 @@ class AppSettings:
         "items": "ITEM REWARDS",
         "blueprint_data": "BLUEPRINT DATA",
     }
+    # Field name → settings key, the counterpart to MISSION_HEADER_DEFAULTS
+    # above. Extracted (#383) because three places needed the same mapping:
+    # get_mission_headers, set_mission_header, and profile_default_values.
+    _MISSION_HEADER_SETTING = {
+        "details":        MISSION_HEADER_DETAILS,
+        "blueprints":     MISSION_HEADER_BLUEPRINTS,
+        "items":          MISSION_HEADER_ITEMS,
+        "blueprint_data": MISSION_HEADER_BLUEPRINT_DATA,
+    }
 
     # Settings keys - Appearance
     THEME = "theme"
@@ -368,13 +523,13 @@ class AppSettings:
     CHANNEL_EPTU = "EPTU"
     CHANNEL_HOTFIX = "HOTFIX"
     CHANNEL_TECH_PREVIEW = "TECH-PREVIEW"
-    AVAILABLE_CHANNELS = (
-        CHANNEL_LIVE,
-        CHANNEL_PTU,
-        CHANNEL_EPTU,
-        CHANNEL_HOTFIX,
-        CHANNEL_TECH_PREVIEW,
-    )
+    # install_scanner.SC_CHANNELS is the source of truth: that module has to
+    # stay importable without PyQt6 (it is tested against a temp directory
+    # tree, no QSettings registry), so it cannot import this one and the
+    # dependency has to point this way. The CHANNEL_* constants above are kept
+    # as readable names for the same values; test_install_scanner.py locks
+    # them to this tuple so the two can never drift.
+    AVAILABLE_CHANNELS = SC_CHANNELS
     DEFAULT_CHANNEL = CHANNEL_LIVE
 
     # Settings key - Language selection
@@ -487,14 +642,22 @@ class AppSettings:
     # display; this only affects the app's own list, never the in-game
     # mission text, which always shows the tag regardless of this setting.
     BLUEPRINT_SHOW_TAGS = "blueprints/show_tags"
-    # #268: whether "Scan Logs for Owned Blueprints" also scans whichever of
-    # LIVE/HOTFIX isn't the active channel. Enabled by default -- most
-    # players with a HOTFIX-era account run both channels, and scanning the
-    # inactive one too is what makes the Owned set actually complete. Never
-    # covers PTU/EPTU/TECH-PREVIEW -- those are separate test builds with
-    # their own progression, not the same account/blueprint history as
-    # LIVE/HOTFIX.
-    BLUEPRINT_SCAN_OTHER_CHANNELS = "blueprints/scan_other_channels"
+    # #446: no setting for which channels "Scan Logs for Owned Blueprints"
+    # reads (always LIVE, plus HOTFIX when present, never PTU/EPTU/TECH-PREVIEW,
+    # see main_window._SCANNED_CHANNELS). A "blueprints/scan_other_channels"
+    # value stored by #268 is no longer read.
+    # #386: whether Smart Citizen runs "Scan Logs for Owned Blueprints"
+    # automatically on every launch, instead of only on a manual button
+    # click. Off by default -- opt-in, since it's an extra background log
+    # read on every startup.
+    BLUEPRINT_AUTO_SCAN_ON_STARTUP = "blueprints/auto_scan_on_startup"
+    # #386 follow-up: whether a startup auto-scan that finds new blueprints
+    # shows the manual scan's own summary popup, instead of just a status
+    # bar message. Off by default -- the whole point of auto-scan is not
+    # interrupting every launch; this is an opt-back-in for anyone who wants
+    # the popup anyway. Only affects the "found something new" case; a
+    # quiet run (nothing new) never pops anything either way.
+    BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -538,6 +701,31 @@ class AppSettings:
         POST_IMPORT_APPLY_PENDING,
     })
 
+    # Keys that have a default but are deliberately NOT materialised into a
+    # backup by profile_default_values() (#383). These are per-machine state
+    # or user *data*, not preferences, so writing their "unset" default into
+    # every export would make an import destructive rather than restorative:
+    #   - the install paths: an empty value clears a working path and forces
+    #     re-detection, which can silently land on a different install (#370).
+    #   - owned_items: the player's blueprint collection. Rebuilt by a log
+    #     scan, but wiping it from a settings restore is real data loss.
+    #   - the blueprint log watermark: scan position, per-channel, and
+    #     resetting it only forces a slow full re-scan.
+    #   - the test-plan keys: tester identity and per-run progress.
+    #   - tutorial_completed_version: per-install first-run state.
+    # Keys already in PROFILE_EXCLUDE_KEYS never reach this stage at all.
+    PROFILE_DEFAULT_EXCLUDE_KEYS = frozenset({
+        "sc_install_root",
+        "game_install_path",
+        "owned_items",
+        "tutorial_completed_version",
+        "test_plan/checks",
+        "test_plan/tester_name",
+        "test_plan/webhook_url",
+    })
+    # Prefixes of the same, for per-channel keys whose full name is dynamic.
+    PROFILE_DEFAULT_EXCLUDE_PREFIXES = ("blueprint_log_watermark",)
+
     # reconcile_imported_install_path() outcomes.
     INSTALL_PATH_RESTORED = "restored"     # backup's path is valid here
     INSTALL_PATH_REDETECTED = "redetected"  # backup's path was bad; found another
@@ -558,6 +746,10 @@ class AppSettings:
     SOURCE_GEAR = "gear"
     SOURCE_USER = "user"
     AVAILABLE_SOURCES = [SOURCE_GLOBAL, SOURCE_USER]
+    # Synthetic, runtime-only source that load_sources_from_settings() injects
+    # when any enhancement category is enabled. Never a registry entry, so
+    # deliberately not in AVAILABLE_SOURCES.
+    SOURCE_ENHANCEMENTS = "enhancements"
 
     # Backend override hook — kept None by default so production stays on
     # QSettings (registry mode). PR-B in the standalone-build series sets
@@ -796,7 +988,9 @@ class AppSettings:
     @staticmethod
     def get_favorite_prefix() -> str:
         """Get the character prepended to favorited ship names (default '*')."""
-        return AppSettings.settings().value(AppSettings.FAVORITE_PREFIX, "*")
+        return AppSettings.settings().value(
+            AppSettings.FAVORITE_PREFIX, AppSettings.DEFAULT_FAVORITE_PREFIX
+        )
 
     @staticmethod
     def set_favorite_prefix(prefix: str) -> None:
@@ -866,22 +1060,15 @@ class AppSettings:
         s = AppSettings.settings()
         d = AppSettings.MISSION_HEADER_DEFAULTS
         return {
-            "details":        s.value(AppSettings.MISSION_HEADER_DETAILS, d["details"]),
-            "blueprints":     s.value(AppSettings.MISSION_HEADER_BLUEPRINTS, d["blueprints"]),
-            "items":          s.value(AppSettings.MISSION_HEADER_ITEMS, d["items"]),
-            "blueprint_data": s.value(AppSettings.MISSION_HEADER_BLUEPRINT_DATA, d["blueprint_data"]),
+            name: s.value(key, d[name])
+            for name, key in AppSettings._MISSION_HEADER_SETTING.items()
         }
 
     @staticmethod
     def set_mission_header(key: str, value: str) -> None:
-        key_map = {
-            "details": AppSettings.MISSION_HEADER_DETAILS,
-            "blueprints": AppSettings.MISSION_HEADER_BLUEPRINTS,
-            "items": AppSettings.MISSION_HEADER_ITEMS,
-            "blueprint_data": AppSettings.MISSION_HEADER_BLUEPRINT_DATA,
-        }
-        if key in key_map:
-            AppSettings.settings().setValue(key_map[key], value)
+        setting = AppSettings._MISSION_HEADER_SETTING.get(key)
+        if setting:
+            AppSettings.settings().setValue(setting, value)
 
     @staticmethod
     def get_mission_header_em_tag() -> str:
@@ -1328,22 +1515,34 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
-    def get_scan_other_channels_enabled() -> bool:
-        """Whether "Scan Logs for Owned Blueprints" also scans whichever of
-        LIVE/HOTFIX isn't the active channel (#268). Default True — most
-        players with a HOTFIX-era account run both channels, and scanning
-        the inactive one too is what makes the Owned set actually complete;
-        opting in after the fact means missing blueprints already earned
-        there before the user thinks to enable it."""
+    def get_auto_scan_blueprints_enabled() -> bool:
+        """Whether Smart Citizen runs "Scan Logs for Owned Blueprints"
+        automatically on every launch (#386). Default False -- opt-in."""
         return bool(AppSettings.settings().value(
-            AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS, True, type=bool
+            AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP, False, type=bool
         ))
 
     @staticmethod
-    def set_scan_other_channels_enabled(enabled: bool) -> None:
-        """Persist the multi-channel BP Scan checkbox state (#268)."""
+    def set_auto_scan_blueprints_enabled(enabled: bool) -> None:
+        """Persist the startup auto-scan checkbox state (#386)."""
         AppSettings.settings().setValue(
-            AppSettings.BLUEPRINT_SCAN_OTHER_CHANNELS, bool(enabled)
+            AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP, bool(enabled)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_auto_scan_show_popup_enabled() -> bool:
+        """Whether a startup auto-scan that finds new blueprints shows the
+        manual scan's own summary popup (#386 follow-up). Default False."""
+        return bool(AppSettings.settings().value(
+            AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP, False, type=bool
+        ))
+
+    @staticmethod
+    def set_auto_scan_show_popup_enabled(enabled: bool) -> None:
+        """Persist the auto-scan popup checkbox state (#386 follow-up)."""
+        AppSettings.settings().setValue(
+            AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP, bool(enabled)
         )
         AppSettings.settings().sync()
 
@@ -1447,7 +1646,6 @@ class AppSettings:
         # Legacy path stored under the old key.
         saved = AppSettings.settings().value(AppSettings.GAME_INSTALL_PATH, "")
         if saved:
-            saved_path = Path(saved)
             if _path_ends_in_channel(saved):
                 # Ends with a channel name — trust it.
                 return saved
@@ -2482,13 +2680,19 @@ class AppSettings:
           2. Derived from legacy ``GAME_INSTALL_PATH`` (strip trailing
              ``\LIVE`` if present)
           3. The old installer's registry key (``sc_directory``)
-          4. Auto-detected by scanning every local drive letter for a
-             real install at a common RSI Launcher install path (see
-             :func:`_scan_common_sc_install_locations`) -- covers a
+          4. Auto-detected (see :func:`_scan_common_sc_install_locations`):
+             the RSI Launcher's own log, which names the install it
+             maintains wherever the player put it, plus every local
+             drive letter at a common RSI Launcher install path -- a
              default C:\\ install, a secondary drive kept in the same
-             shape, and one nested under a personal "Games" folder.
-             Persists the result once found, so this scan only runs
-             once per profile.
+             shape, or one nested under a personal "Games" folder, plus
+             library folders one level below the top of each fixed
+             drive. A root whose active channel is current wins, and a
+             folder with no ``Data.p4k`` is never picked or saved.
+             Persists the result once found. The scan runs again only when
+             the saved root has stopped being valid (its drive is offline,
+             or the game was moved), and what it finds then replaces the
+             saved value.
 
         Returns an empty string when nothing resolves — the Config tab shows
         a placeholder in that case.
@@ -2747,12 +2951,15 @@ class AppSettings:
 
     @staticmethod
     def get_language_base_url(language: str) -> str:
-        """Resolve the global.ini download URL for *language*.
+        """Resolve the global.ini source for *language*: a URL to download,
+        or a local file path to copy (#367 — a language whose community
+        source can't be redistributed, e.g. Korean, ships with no bundled
+        URL and relies entirely on a user-supplied local path here).
 
         User override (Map Language File dialog) wins over the bundled
         ``languages/sources.json`` map. Returns '' when nothing is mapped
         (e.g. English, which uses the local P4K extraction, or a language
-        with no URL yet).
+        with no source yet).
         """
         override = AppSettings.get_language_source_override(language)
         if override:
@@ -2812,30 +3019,60 @@ class AppSettings:
 
     @staticmethod
     def migrate_dataforge_cache_to_local() -> None:
-        r"""One-shot move of the DataForge XML cache from Documents → AppData\Local.
+        r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
         Pre-1.0 the DataForge cache lived inside get_cache_dir() (Documents\…),
         putting ~1.4 GB of extracted XMLs into the OneDrive sync tree. Moving it
-        to AppData\Local eliminates per-file OneDrive / Defender / Indexer hooks
-        during extraction and keeps large build-artefact files out of cloud sync.
+        out eliminates per-file OneDrive / Defender / Indexer hooks during
+        extraction and keeps large build-artefact files out of cloud sync.
 
-        Idempotent: no-ops when the old path is already absent. If the new
-        location already has a valid stamp the old directory is cleaned up and
-        the migration is considered complete.
+        The destination is resolved through :meth:`get_dataforge_cache_dir`, so
+        a ``CACHE_DIR`` override set from the Config tab is honoured. Targeting
+        ``AppData\Local`` unconditionally used to drag the cache back out of a
+        user-chosen folder on the next launch, silently undoing that setting.
+
+        With an override, queue the old tree for cleanup after a successful
+        re-extraction at the configured location instead of copying it before
+        a window exists. Only the no-override Documents-to-LocalAppData path
+        moves the cache, staging cross-volume copies before publishing them.
+
+        Idempotent: no-ops when the old path is absent or already the resolved
+        destination. Without an override, a stamped destination means the old
+        directory can be cleaned up and the migration is considered complete.
         """
         import shutil
 
         old_dir = AppSettings.get_cache_dir() / "dataforge"
-        local_appdata = Path(
-            os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-        )
-        new_dir = (
-            local_appdata / "Smart Citizen"
-            / AppSettings.get_active_channel()
-            / "cache" / "dataforge"
-        )
-
         if not old_dir.exists():
+            return
+
+        # Resolved after the early return: the getter creates the directory it
+        # returns, and a launch with nothing to migrate shouldn't leave an empty
+        # cache tree behind as a side effect. It can also raise when an override
+        # points at absent removable/network storage — that must not abort
+        # startup, since this runs before any window exists.
+        try:
+            new_dir = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            logger.warning(
+                f"DataForge cache destination unavailable ({e}); skipping migration"
+            )
+            return
+
+        try:
+            if old_dir.resolve() == new_dir.resolve():
+                return
+        except OSError:
+            # Can't prove the two differ; skipping costs one deferred migration,
+            # while continuing could rmtree what turns out to be the only copy.
+            return
+
+        if AppSettings.get_cache_dir_override():
+            AppSettings.set_pending_cache_cleanup(old_dir)
+            logger.info(
+                f"DataForge cache override active at {new_dir}; queued old cache "
+                f"for cleanup after successful re-extraction: {old_dir}"
+            )
             return
 
         from src.utils.pak_extractor import P4K_MTIME_STAMP
@@ -2849,16 +3086,46 @@ class AppSettings:
                 logger.warning(f"Could not remove old DataForge cache at {old_dir}: {e}")
             return
 
+        # get_dataforge_cache_dir() creates the destination; shutil.move would
+        # then nest the source inside it. Drop the empty placeholder so the move
+        # is a plain rename, and bail out if it holds unstamped data.
+        if new_dir.exists():
+            try:
+                new_dir.rmdir()
+            except OSError as e:
+                logger.warning(
+                    f"DataForge cache destination {new_dir} is unusable ({e}); "
+                    f"leaving old copy at {old_dir}"
+                )
+                return
+
+        # Documents can be on a different drive from LocalAppData; shutil
+        # implements that move as a non-atomic copytree + rmtree. Stage it under a
+        # name the freshness check never accepts so an interrupted copy cannot
+        # leave a stamped-but-partial cache at new_dir — the next launch would
+        # trust that stamp and delete the intact source for it.
+        staging = new_dir.parent / f"{new_dir.name}.migrating"
         logger.info(f"Migrating DataForge cache: {old_dir} → {new_dir}")
         try:
             new_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(old_dir), str(new_dir))
+            if staging.exists():
+                shutil.rmtree(staging, ignore_errors=True)
+            shutil.move(str(old_dir), str(staging))
+            staging.rename(new_dir)
             logger.info("DataForge cache migration complete")
         except Exception as e:
             logger.warning(
                 f"DataForge cache migration failed ({e}); "
                 "cache will be re-extracted on next use"
             )
+            # Only discard the staged copy while the source is still intact;
+            # past that point staging may hold the only copy of the cache.
+            if old_dir.exists():
+                shutil.rmtree(staging, ignore_errors=True)
+            elif staging.exists():
+                logger.warning(
+                    f"Partially migrated DataForge cache left at {staging}"
+                )
 
     @staticmethod
     def migrate_data_to_documents() -> None:
@@ -2883,7 +3150,7 @@ class AppSettings:
         if old_overrides.exists() and not new_overrides.exists():
             try:
                 shutil.copy2(old_overrides, new_overrides)
-                logger.info(f"Migrated overrides.ini to Documents")
+                logger.info("Migrated overrides.ini to Documents")
             except Exception as e:
                 logger.warning(f"Could not migrate overrides.ini: {e}")
 
@@ -2993,7 +3260,7 @@ class AppSettings:
         (see :meth:`get_enhancements_stamp`). Returns 'unknown' when no
         DataForge cache exists yet.
         """
-        from src.utils.pak_extractor import P4K_MTIME_STAMP
+        from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP
         forge_dir = AppSettings.get_dataforge_cache_dir()
         stamp = forge_dir / P4K_MTIME_STAMP
         try:
@@ -3004,7 +3271,7 @@ class AppSettings:
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — fall through to the records-dir heuristic.
             pass
-        records = forge_dir / "raw" / "libs" / "foundry" / "records"
+        records = forge_dir / DATAFORGE_RECORDS_SUBPATH
         try:
             if records.exists():
                 return f"mtime:{int(records.stat().st_mtime)}"
@@ -3033,18 +3300,20 @@ class AppSettings:
         return game_path / AppSettings.get_active_channel() / "Data.p4k"
 
     @staticmethod
-    def get_global_ini_path() -> Path:
+    def get_global_ini_path(language: str | None = None) -> Path:
         r"""Return the active channel's applied ``global.ini`` location.
 
         Equivalent to ``{sc_install_root}\{active_channel}\data\Localization\{language}\global.ini``
         — the file "Apply to Game" writes and "Clear Localization" deletes.
-        The language directory reflects :meth:`get_selected_language`.
+        The language directory defaults to :meth:`get_selected_language`, or
+        pass *language* to resolve another language's apply path (e.g. to
+        check a mapped source against it before switching to that language).
         Callers should use this instead of reconstructing the path from
         :meth:`get_game_install_path`, which the pre-0.9.3 code did with
         scattered ``if name == "LIVE"`` branches that don't cover the new
         channels.
         """
-        sc_lang = AppSettings.get_sc_language_id()
+        sc_lang = AppSettings.get_sc_language_id(language)
         channel_path = AppSettings.get_channel_install_path()
         if channel_path:
             return Path(channel_path) / "data" / "Localization" / sc_lang / "global.ini"
@@ -3056,6 +3325,21 @@ class AppSettings:
             game_path / AppSettings.get_active_channel()
             / "data" / "Localization" / sc_lang / "global.ini"
         )
+
+    @staticmethod
+    def is_local_source_same_as_apply_target(local_path: str, language: str) -> bool:
+        """True if *local_path* (a Map Language File local path, not a URL)
+        resolves to the exact file "Apply to Game" writes for *language*.
+
+        Guards the Map Language File dialog's save (#409 follow-up): a
+        language whose community translation can't be redistributed (e.g.
+        Korean) is typically installed by its own community patcher at
+        exactly this path, so it's an easy path for a user to pick. Accepting
+        it would feed Smart Citizen's own merged output back in as the
+        "source" on the next apply, double-stacking every enhancement.
+        """
+        target = AppSettings.get_global_ini_path(language)
+        return os.path.normcase(os.path.abspath(local_path)) == os.path.normcase(str(target))
 
     @staticmethod
     def ensure_user_ini_file() -> None:
@@ -3106,14 +3390,112 @@ class AppSettings:
         return False
 
     @staticmethod
+    def profile_default_values() -> dict:
+        """Every preference's default value, for materialising into a backup.
+
+        A setting is only written to the backend when the user changes it, so
+        anything still at its default has no key to enumerate. That made a
+        backup silently partial (#383): restoring it could not put a
+        preference *back* to its default, because the backup never said what
+        the default was. Importing one therefore left every
+        since-changed-from-default setting untouched — the Mission Labels
+        case the issue was reported against, but equally theme, UI mode, the
+        favourites prefix, and every checkbox.
+
+        Built as a function rather than a class constant for two reasons:
+        some keys (``merge_hierarchy``) are defined further down the class
+        body, and the theme default lives in ``src.gui.theme``, which must
+        stay a deferred import here. Not cached — it is built once per
+        export, and a cache would go stale under tests that patch defaults.
+
+        ``PROFILE_DEFAULT_EXCLUDE_KEYS`` documents what is deliberately left
+        out and why. ``tests/test_settings_profile_defaults.py`` locks this
+        map against the getters so a newly added setting can't quietly go
+        missing from backups the way these did.
+        """
+        from src.gui.theme import DEFAULT_THEME
+        from src.utils.tag_builder import DEFAULT_TAG_CONFIGS
+
+        defaults: dict = {
+            AppSettings.THEME: DEFAULT_THEME,
+            AppSettings.UI_MODE: AppSettings.UI_MODE_SIMPLE,
+            AppSettings.ACTIVE_CHANNEL: AppSettings.DEFAULT_CHANNEL,
+            AppSettings.SELECTED_LANGUAGE: AppSettings.DEFAULT_LANGUAGE,
+            AppSettings.MERGE_HIERARCHY: list(AppSettings.AVAILABLE_SOURCES),
+            AppSettings.FAVORITE_PREFIX: AppSettings.DEFAULT_FAVORITE_PREFIX,
+            AppSettings.REP_XP_LABEL: AppSettings.DEFAULT_REP_XP_LABEL,
+            AppSettings.MISSION_HEADER_EM_TAG: AppSettings.DEFAULT_MISSION_HEADER_EM_TAG,
+            AppSettings.ENHANCEMENTS_ENABLED: True,
+            AppSettings.INCLUDE_NEW_LINES: False,
+            AppSettings.STATS_PREPEND: False,
+            AppSettings.AUTO_WRITE_ENABLED: False,
+            AppSettings.STANDARDIZE_EARNABLE_SHIP_NAMES: False,
+            AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
+            AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
+            AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.BLUEPRINT_SHOW_TAGS: False,
+            AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
+            AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
+            AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
+        }
+        # Composed from the same maps the getters read, so these can't drift.
+        defaults.update({
+            key: AppSettings.MISSION_HEADER_DEFAULTS[name]
+            for name, key in AppSettings._MISSION_HEADER_SETTING.items()
+        })
+        defaults.update({
+            key: True for key in AppSettings._MISSION_FIELD_SETTING.values()
+        })
+        defaults.update({
+            key: AppSettings._MISSION_TITLE_TAG_DEFAULTS.get(name, True)
+            for name, key in AppSettings._MISSION_TITLE_TAG_SETTING.items()
+        })
+        defaults.update({
+            f"enhancements/categories/{cat}/enabled": True
+            for cat in AppSettings.ENHANCEMENT_LABELS
+        })
+        # "" is the stored form of "use DEFAULT_TAG_CONFIGS", so materialising
+        # it is what lets an import reset a customised Tag Builder back to
+        # stock rather than leaving the customisation in place.
+        defaults.update({
+            f"tag_builder/{cat}/config": "" for cat in DEFAULT_TAG_CONFIGS
+        })
+        return defaults
+
+    @staticmethod
+    def is_profile_default_materialised(key: str, value=None) -> bool:
+        """True when *key*'s default belongs in a backup (see #383).
+
+        *value* is threaded through to is_profile_excluded_key's own
+        data_sources/*/path URL check, the same way export_all_values does
+        for a real stored value — without it, that check sees no value and
+        can't tell a URL-mapped default from a local one, so it falls back
+        to treating any such key as non-URL (excluded). No default in
+        profile_default_values() has that shape today, so this is currently
+        a no-op in practice; passing it costs nothing and keeps the two
+        exclusion checks answering the same question the same way if one
+        ever does.
+        """
+        if key in AppSettings.PROFILE_DEFAULT_EXCLUDE_KEYS:
+            return False
+        if key.startswith(AppSettings.PROFILE_DEFAULT_EXCLUDE_PREFIXES):
+            return False
+        return not AppSettings.is_profile_excluded_key(key, value)
+
+    @staticmethod
     def export_all_values() -> dict:
-        """Snapshot every backend key/value for a settings backup.
+        """Snapshot every setting for a backup, defaults included.
 
         Works against either backend: ``QSettings.allKeys()`` (registry
         build) or ``JsonSettings.keys()`` (portable build / tests). Values
         that JSON can't serialise (e.g. a stray QByteArray) are skipped with
         a warning rather than poisoning the whole export — the known binary
         keys (window geometry/state) are already excluded by the filter.
+
+        Defaults are laid down first and stored values written over them
+        (#383), so the result describes the user's whole configuration
+        rather than only the parts that happen to differ from stock. That is
+        what makes an import able to restore a setting *to* its default.
         """
         backend = AppSettings.settings()
         if hasattr(backend, "allKeys"):
@@ -3121,7 +3503,11 @@ class AppSettings:
         else:
             keys = backend.keys()
 
-        out: dict = {}
+        out: dict = {
+            key: value
+            for key, value in AppSettings.profile_default_values().items()
+            if AppSettings.is_profile_default_materialised(key, value)
+        }
         for key in keys:
             value = backend.value(key)
             if AppSettings.is_profile_excluded_key(key, value):

@@ -10,10 +10,11 @@ Tests cover:
 
 import pytest
 import logging
+import re
 import tempfile
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -271,9 +272,7 @@ class TestStatsGeneration:
 
     def test_stats_generation_handles_missing_dataforge(self):
         """Test stats generation graceful failure when DataForge cache missing"""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            cache_dir = os.path.join(tmpdir, 'nonexistent_dataforge')
-
+        with tempfile.TemporaryDirectory():
             # Cache doesn't exist - stats generation should handle gracefully
             # (may create empty stats files or skip)
             stats_files = [
@@ -675,3 +674,58 @@ class TestUnp4kFailureMessage:
         with pytest.raises(RuntimeError) as exc:
             _raise_unp4k_failure(-1, None)
         assert "exited with code -1" in str(exc.value)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The cache layout is named once (#471 review)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestCacheLayoutNamedOnce:
+    """pak_extractor names the DataForge cache layout (raw/libs and
+    foundry/records) once, and every reader joins DATAFORGE_LIBS_SUBPATH /
+    DATAFORGE_RECORDS_SUBPATH (root CLAUDE.md, "Magic literals"). The only
+    other spellings allowed are the generator's fallback for a missing src/,
+    the same deferred-import pattern as its other src imports, and the
+    legacy build cleaner, which still targets the pre-1.x Documents cache."""
+
+    # Any quoted "raw" or "foundry" path segment: joined with / one at a
+    # time ("raw" / "libs", or a variable / "raw" with "libs" added later),
+    # a Path("raw") or joinpath("raw", ...) argument, or the start of a
+    # "raw/libs" string. Neither word is used for anything else here.
+    _SPELLED = re.compile(r"""["'](?:raw|foundry)(?:["']|[/\\])""")
+    _REPO = Path(__file__).resolve().parent.parent
+    _ALLOWED = {
+        "src/utils/pak_extractor.py": 2,             # the definitions
+        "scripts/generate_enhancements_ini.py": 2,   # the src/-missing fallback (one line)
+        "scripts/build/clean_cache_for_distribution.py": 2,   # legacy, pre-1.x cache
+    }
+
+    def _spellings(self):
+        found = {}
+        for pattern in ("src/**/*.py", "scripts/**/*.py"):
+            for path in self._REPO.glob(pattern):
+                count = len(self._SPELLED.findall(path.read_text(encoding="utf-8")))
+                if count:
+                    found[path.relative_to(self._REPO).as_posix()] = count
+        return found
+
+    def test_nothing_else_spells_the_layout_out(self):
+        assert self._spellings() == self._ALLOWED
+
+    def test_the_names_describe_the_layout_the_extraction_writes(self):
+        from utils.pak_extractor import (
+            DATAFORGE_LIBS_SUBPATH, DATAFORGE_RECORDS_SUBPATH, DATAFORGE_RECORDS_UNDER_LIBS,
+        )
+        assert DATAFORGE_LIBS_SUBPATH.as_posix() == "raw/libs"
+        assert DATAFORGE_RECORDS_UNDER_LIBS.as_posix() == "foundry/records"
+        assert DATAFORGE_RECORDS_SUBPATH.as_posix() == "raw/libs/foundry/records"
+
+    def test_the_guard_sees_a_hand_spelled_path(self):
+        """Prove the pattern bites, so the guard can't pass by reading nothing."""
+        assert self._SPELLED.search('records = forge_dir / "raw" / "libs" / "foundry"')
+        assert self._SPELLED.search("x = Path('foundry') / 'records'")
+        assert self._SPELLED.search('raw_dir = cache / "raw"')      # the split form
+        assert self._SPELLED.search('cache.joinpath("raw", "libs")')
+        assert self._SPELLED.search('libs = cache / "raw/libs"')
+        assert not self._SPELLED.search("records = forge_dir / DATAFORGE_RECORDS_SUBPATH")
+        assert not self._SPELLED.search('rawness = "rawhide"')

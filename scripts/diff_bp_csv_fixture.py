@@ -114,7 +114,6 @@ def main() -> int:
 
         # Check the mission_rewards_enhancements.ini for any of those keys
         tagged = False
-        tag_seen = None
         for k in keys:
             mv = mission.get(k)
             if mv is None:
@@ -122,7 +121,6 @@ def main() -> int:
             t = our_bp_tag(mv)
             if t:
                 tagged = True
-                tag_seen = t
                 break
 
         if not tagged:

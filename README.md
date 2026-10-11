@@ -10,7 +10,8 @@ A Windows desktop app for customizing Star Citizen's localization strings. Layer
 ## Features
 
 - **Multi-Channel Star Citizen Support**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW each get their own isolated workspace — independent `user.ini`, cache, backups, DataForge extraction, and enhancement INIs. Switch channels from the Config tab without restarting.
-- **Multi-Language Support**: Switch the app and game strings between English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, and German from the Config tab. Non-English languages layer a community-translated `global.ini` (from [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization), [42Kit](https://ini.42kit.com/), [stdblue/StarCitizenJapaneseResources](https://github.com/stdblue/StarCitizenJapaneseResources), [Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES), and [rjcncpt/StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)) over the English base, with English fallback for anything untranslated.
+- **Verify Install Location**: If you have more than one Star Citizen install, the Config tab's **Verify Install Location** finds them and reads the RSI Launcher's own log to tell you which one the game really starts, so Apply doesn't write to a copy you never launch. **Use this install** repoints Smart Citizen in one click, and **Scan all drives** searches custom folders.
+- **Multi-Language Support**: Switch the app and game strings between English, French, Spanish, Brazilian Portuguese, Japanese, Chinese (Simplified), Italian, German, Turkish, Korean, and Traditional Chinese from the Config tab. Non-English languages layer a community-translated `global.ini` (from [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization), [42Kit](https://ini.42kit.com/), [stdblue/StarCitizenJapaneseResources](https://github.com/stdblue/StarCitizenJapaneseResources), [Thord82/Star_citizen_ES](https://github.com/Thord82/Star_citizen_ES), [rjcncpt/StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), and [Orbit-Startech/StarCitizen-TCTP](https://github.com/Orbit-Startech/StarCitizen-TCTP)) over the English base, with English fallback for anything untranslated. Korean is bring-your-own-file: its community translation can't be redistributed, so *Map Language File* points Smart Citizen at a copy you already have instead of a bundled URL.
 - **Simple & Advanced Mode**: A two-button Simple screen (one applies enhancements with your saved settings, the other switches to Advanced), or the full Advanced UI (table, filters, Enhancements, Config) for hand-editing. Pick your default at install; switch anytime in-app.
 - **Multi-Source Merge System**: Sources (stock base, language overlay, enhancements, user) merge in a drag-and-drop priority order, with user overrides always applied last so your edits never get overwritten.
 - **Sourced from Data.p4k**: All stock localization and DataForge entity data is extracted directly from your installed game — no community mirrors, no version drift, no network required after install.
@@ -18,7 +19,7 @@ A Windows desktop app for customizing Star Citizen's localization strings. Layer
 - **Persistent Edits**: Your customizations are saved to `user.ini` per channel and automatically re-applied across game updates.
 - **Auto-Generated Enhancements**: Stat overlays for ships, ship components, ship weapons, FPS weapons, missions (with `[BP]`/`[BP?]` blueprint reward tags + structured detail blocks), journal entries, commodity crafting cross-references, and medical consumable effects — all togglable per category in the Enhancements tab. Stat blocks can sit above or below the description. Mission XP names the reputation track it feeds, Battaglia scan/mine titles carry `[RS ####]` resource-signature tags, and the Mining Compendium journal lists each ore's base RS.
 - **Tag Builder & Mission Titles**: Customize the bracketed name tags on components, missiles, ship weapons, and commodities, and lead hauling mission titles with their route (e.g. `Area18 > Lorville`) — configurable placement, arrow, separator, and location detail, plus optional stock-title shortening, with a live preview.
-- **Blueprint Tracker**: A dedicated tab for marking the crafting blueprints you already own. Shuttle items between Available and Owned, narrow the list with search and Mission / Type / Class / Size / Grade filters, and owned items get a blue `[Owned]` tag in mission blueprint lists. **Scan Logs for Owned Blueprints** reads your Star Citizen log files to populate ownership automatically, importing only what's new since the last scan; an **Also scan LIVE/HOTFIX** toggle picks up blueprints earned on the sibling channel, and a **Rescan all logs** checkbox forces a full re-read when something looks off. **Export / Import Owned Blueprints** moves your owned list between PCs (JSON or CSV; imports only ever add, and scmdb.net exports work too).
+- **Blueprint Tracker**: A dedicated tab for marking the crafting blueprints you already own. Shuttle items between Available and Owned, narrow the list with search and Mission / Type / Class / Size / Grade filters, and owned items get a blue `[Owned]` tag in mission blueprint lists. **Scan Logs for Owned Blueprints** reads your Star Citizen log files to populate ownership automatically, importing only what's new since the last scan. It always reads LIVE, plus HOTFIX when installed (they share one account progression), and never the PTU, EPTU or TECH-PREVIEW test servers; a **Rescan all logs** checkbox forces a full re-read when something looks off. **Auto-scan logs on startup** (off by default) runs the same scan every time the app starts. **Export / Import Owned Blueprints** moves your owned list between PCs (JSON or CSV; imports only ever add, and scmdb.net exports work too).
 - **Declarative CIG Data-Bug Patches**: A patch system applies fixes to known DataForge bugs at extraction time so the in-game text reads correctly without waiting on CIG.
 - **Search & Filter**: Free-text search, category filter (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other), modified/unmodified status, per-column filter rows under every header, and a **Ship/Vehicle Names Only** toggle that narrows the table to the ship name rows favoriting applies to.
 - **Ship Favorites**: Star a ship to prepend a configurable prefix (default `*`) so your favorites sort to the top of the in-game ASOP terminal.
@@ -106,7 +107,7 @@ All settings are stored in Windows Registry under:
 The Config tab lets you set:
 - **Star Citizen install path** (the SC root folder containing `LIVE/`, `PTU/`, etc. — auto-detected at install time)
 - **Active channel** (LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW)
-- **Language** (English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, German; switches the app UI and the game strings)
+- **Language** (English, French, Spanish, Brazilian Portuguese, Japanese, Chinese, Italian, German, Turkish, Korean, Traditional Chinese; switches the app UI and the game strings)
 - **Smart Citizen data folder** (where `user.ini`, cache, DataForge extraction, enhancement INIs, and backups live)
 - **Theme**
 - **Data sources**: enable/disable, drag-drop merge priority
@@ -139,7 +140,7 @@ python scripts/build/build_exe.py
 This creates a PyInstaller onedir at `dist/SmartCitizen-v{VERSION}\` containing `SmartCitizen-v{VERSION}.exe`. VERSION comes from `VERSION.TXT`.
 
 ### Create Installer (Windows)
-Requires [Inno Setup 6](https://jrsoftware.org/isdl.php):
+Requires [Inno Setup 6.6 or newer](https://jrsoftware.org/isdl.php) (`installer.iss` stops with an error on older versions):
 ```bash
 powershell -NoProfile -Command "& 'C:\Users\<you>\AppData\Local\Programs\Inno Setup 6\ISCC.exe' installer.iss"
 ```
@@ -148,7 +149,9 @@ Outputs:
 - `dist/SmartCitizen-v{VERSION}\` — Standalone executable (onedir, distributed via the installer)
 - `dist/SmartCitizen-{VERSION}-Setup.exe` — Installer (this is what users download)
 
-The installer preserves user data — `user.ini` and `backups/` survive both upgrades and uninstalls; only the regeneratable cache is removed on uninstall.
+The installer preserves user data — `user.ini` and `backups/` survive both upgrades and uninstalls; only the regeneratable cache is removed on uninstall. The one exception is the uninstall dialog's **Also delete all saved settings** box (off by default). It also removes the Smart Citizen registry settings (including the old `SC Localization Editor` ones), the old `Documents\SC Localization Editor` folder, and what Smart Citizen created in its data and cache folders, the default ones too if you moved them: the channel folders, its own crash and exported logs, the old root-level `cache` folder (only when it holds Smart Citizen's own cache: a `base.ini`, a `dataforge` folder or a channel's `cache` folder, so another program's `cache` folder in the same place stays) and `user.ini` / `overrides.ini` / `base.ini`. It never touches anything else in those folders. It does not clean a folder that is or contains the Star Citizen install, a whole drive, Documents or your user profile folder, though folders named for Smart Citizen inside one, such as `Documents\Smart Citizen`, may still be cleaned. The cache cleaning that runs on every install, upgrade and normal uninstall refuses the same folders (it logs why and does nothing there) and clears the old root-level `cache` folder only when it holds Smart Citizen's own cache. The uninstaller lists any folder it skipped or could not clear. An old cache in a folder other than the default (kept when you moved the cache in the Config tab, or left behind when you changed the cache folder in the installer) is not tracked, so delete that one yourself.
+
+Setup removes only Smart Citizen's own files from the install folder. Before an install or upgrade it empties the folder only when nothing but Smart Citizen is in it. Anywhere else it deletes only Smart Citizen's program file (the names its releases used) and its `_internal` folder, which it cannot tell apart from another program's `_internal` in the same folder. If you choose a folder that already holds other files, Smart Citizen is installed in a `Smart Citizen` folder inside it, unless that is where your previous Smart Citizen install is. If that longer path would pass the 240 characters Setup allows, Setup tells you so and asks you to choose a shorter folder or an empty one. A silent install (`/SILENT` or `/VERYSILENT`) cannot ask, so it stops without installing, and its log says why.
 
 ## Project Structure
 
@@ -215,14 +218,17 @@ Thanks to those who've contributed code to Smart Citizen:
 
 ## Acknowledgments
 
-- **Boogie Man, Perseuscz, Flat Earth, Lord Valium, Zero, Apolleon Phoibos, Epiq, Narull, XaileiShiv, Mindbulletz** — testers who helped shape Smart Citizen with their feedback
+- **Boogie Man, Perseuscz, Flat Earth, Lord Valium, Zero, Apolleon Phoibos, Epiq, XaileiShiv, Mindbulletz** — testers who helped shape Smart Citizen with their feedback
 - **Akwa** — French interface translation
 - **Nxzzin** — Brazilian Portuguese interface translation
 - [**Thord82**](https://github.com/Thord82) — Spanish interface translation, plus the [Spanish `global.ini` source](https://github.com/Thord82/Star_citizen_ES) that powers the Spanish game strings
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources) — the Japanese `global.ini` source that powers the Japanese game strings; the Japanese interface translation is AI-generated pending a human reviewer
 - [**42Kit**](https://ini.42kit.com/) — the [Chinese `global.ini` source](https://ini.42kit.com/full/global.ini) that powers the Chinese game strings; the Chinese interface translation is AI-generated pending a human reviewer
 - The Italian interface translation is AI-generated pending a human reviewer; the Italian `global.ini` source is the same [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) repo credited below
+- The Turkish interface translation is AI-generated pending a human reviewer; the Turkish `global.ini` source is the same [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) repo credited below
 - [**rjcncpt**](https://github.com/rjcncpt) — the [German `global.ini` source](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) that powers the German game strings; the German interface translation is AI-generated pending a human reviewer
+- **스타 시티즌 유저 한국어 프로젝트** (the Shatagon, MGM Star Fleet, and Falco Rescue guilds at [sc.galaxyhub.kr](https://sc.galaxyhub.kr)) — the community team behind the Korean localization; their file isn't bundled (their license doesn't allow redistribution), so Korean is bring-your-own-file via *Map Language File*. The Korean interface translation is AI-generated pending a human reviewer
+- [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — the Traditional Chinese `global.ini` source that powers the Traditional Chinese game strings; the Traditional Chinese interface translation is machine-converted from Smart Citizen's own Simplified Chinese AI translation, pending a human reviewer
 - [**Osiris-DevWorks/odw-fast-unp4k**](https://github.com/Osiris-DevWorks/odw-fast-unp4k) — Bundled `unp4k.exe` / `unforge.exe` used to unpack `Data.p4k` and convert DataForge to XML; our parallelized fork of the original [dolkensp/unp4k](https://github.com/dolkensp/unp4k)
 - [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — Community-maintained `global.ini` translations that power the non-English language options
 - [**ExoAE**](https://github.com/ExoAE/ScCompLangPack) — Original ScCompLangPack concept and merge logic that inspired Smart Citizen's foundation
@@ -255,7 +261,7 @@ All bug reports, feature requests, and prioritization happen in the dedicated `#
 
 Smart Citizen is a free, open-source project. If you find it useful and want to support development:
 
-- [PayPal Donation](https://paypal.me/RighteousKill)
+- [PayPal Donation](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - [Venmo Donation](https://venmo.com/u/Amr-Abouelleil)
 
 ---

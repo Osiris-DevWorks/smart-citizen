@@ -240,7 +240,7 @@ def main(argv: list[str]) -> int:
     print(f"Keys missing from our output:            {len(missing_keys)}")
     print(f"Keys with matching blueprint sets:       {len(matching_keys)}")
     print(f"Keys with differing blueprint sets:      {len(differing)}")
-    print(f"Keys where fixture has regional variants")
+    print("Keys where fixture has regional variants")
     print(f"  but our output is a single flat list:  {len(regional_vs_flat)}")
     print()
 
@@ -270,7 +270,7 @@ def main(argv: list[str]) -> int:
             print(f"  fixture has regional variants: {d['fixture_has_regional']}")
             print(f"  ours has regional variants:    {d['ours_has_regional']}")
             if d['fixture_has_regional']:
-                print(f"  fixture region labels:")
+                print("  fixture region labels:")
                 for lbl, items in d['fixture_regions']:
                     print(f"    * {lbl}  ({len(items)} items)")
             if d['only_fixture']:
