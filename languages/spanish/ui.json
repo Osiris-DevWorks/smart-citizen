@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Genera las mejoras más recientes con tu configuración actual y las aplica a tu juego. Antes se crea una copia de seguridad del global.ini actual."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Ya aplicado: el juego coincide con tu configuración actual. Haz clic para regenerar y volver a aplicar de todos modos, por ejemplo tras un parche del juego."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Usa tu configuración actual (la misma que muestra la vista avanzada).\nLa primera ejecución puede tardar unos minutos mientras se extrae DataForge."
@@ -210,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Ya aplicado — no ha cambiado nada desde la última aplicación al juego."
+      "at": "Ya aplicado: el juego coincide con tu configuración actual."
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -554,6 +558,10 @@
       "ht": "Define una URL al global.ini de cada idioma. Al cambiar a ese idioma, Smart Citizen lo descarga y lo usa como textos base en lugar de la extracción inglesa de Data.p4k. La descarga queda en caché por idioma y solo se vuelve a obtener si cambia. Deja un campo vacío para usar el valor predeterminado incluido, si existe.",
       "at": ""
     },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "No se puede asignar {languages} aquí: esa ruta es donde Smart Citizen escribe su propia salida combinada para este idioma. Volver a aplicar traería esa salida de vuelta como origen, duplicando cada mejora. Copia primero el archivo de la comunidad a otra carpeta y luego asigna esa copia."
+    },
     "base_localization_label": {
       "ht": "Localización base",
       "at": ""
@@ -748,7 +756,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Establecer una URL para el global.ini de cada idioma. Al cambiar a ese idioma, Smart Citizen lo descarga y lo usa como cadenas base en lugar de la extracción en inglés de Data.p4k."
+      "at": "Establecer una URL o una ruta de archivo local para el global.ini de cada idioma. Al cambiar a ese idioma, Smart Citizen lo usa como cadenas base en lugar de la extracción en inglés de Data.p4k."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -841,6 +849,182 @@
     "import_settings_tooltip": {
       "ht": "",
       "at": "Restaura un zip de copia de seguridad de ajustes creado por cualquier versión de Smart Citizen. Tus archivos user.ini actuales se respaldan primero, tu carpeta de Star Citizen se restaura (o se detecta automáticamente si la ruta de la copia no está en este PC), y Smart Citizen se reinicia con los ajustes importados."
+    },
+    "dupe_check_btn": {
+      "ht": "",
+      "at": "Verificar la ubicación"
+    },
+    "dupe_check_tooltip": {
+      "ht": "",
+      "at": "Buscar en este PC otras instalaciones de Star Citizen y comprobar que Smart Citizen apunta a la que el RSI Launcher inicia realmente."
+    },
+    "dupe_scanning": {
+      "ht": "",
+      "at": "Buscando instalaciones de Star Citizen..."
+    },
+    "dupe_scan_progress": {
+      "ht": "",
+      "at": "{count} carpetas analizadas - {path}"
+    },
+    "dupe_scan_failed_title": {
+      "ht": "",
+      "at": "Error en la comprobación"
+    },
+    "dupe_scan_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen no pudo terminar la búsqueda de instalaciones.\n\n{error}"
+    },
+    "dupe_title": {
+      "ht": "",
+      "at": "Instalaciones de Star Citizen"
+    },
+    "dupe_close_btn": {
+      "ht": "",
+      "at": "Cerrar"
+    },
+    "dupe_deep_btn": {
+      "ht": "",
+      "at": "Analizar todas las unidades"
+    },
+    "dupe_deep_tooltip": {
+      "ht": "",
+      "at": "Buscar en todas las unidades fijas instalaciones guardadas en una carpeta personalizada. Más lento que la comprobación rápida y se puede cancelar."
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "",
+      "at": "Cancelar"
+    },
+    "dupe_open_btn": {
+      "ht": "",
+      "at": "Abrir carpeta"
+    },
+    "dupe_use_btn": {
+      "ht": "",
+      "at": "Usar esta instalación"
+    },
+    "dupe_use_tooltip": {
+      "ht": "",
+      "at": "Apuntar Smart Citizen a esta instalación. A partir de ahora los cambios se escribirán aquí."
+    },
+    "dupe_use_already": {
+      "ht": "",
+      "at": "Smart Citizen ya usa esta instalación."
+    },
+    "dupe_use_leftover": {
+      "ht": "",
+      "at": "Esta carpeta no contiene ningún Data.p4k, así que el juego no puede ejecutarse desde ella. Apuntar Smart Citizen aquí haría que cada aplicación no tuviera ningún efecto."
+    },
+    "dupe_use_failed_title": {
+      "ht": "",
+      "at": "No se pudo cambiar de instalación"
+    },
+    "dupe_use_failed_body": {
+      "ht": "",
+      "at": "No se pudo encontrar {path}. Puede que estuviera en una unidad que se desconectó. No se cambió nada."
+    },
+    "dupe_no_path_set": {
+      "ht": "",
+      "at": "sin carpeta definida"
+    },
+    "dupe_unknown_version": {
+      "ht": "",
+      "at": "versión desconocida"
+    },
+    "dupe_verdict_none": {
+      "ht": "",
+      "at": "No se ha encontrado ninguna instalación de Star Citizen en este PC. Define la carpeta manualmente con Examinar, o prueba Analizar todas las unidades."
+    },
+    "dupe_verdict_single": {
+      "ht": "",
+      "at": "Se ha encontrado una instalación y Smart Citizen la está usando. No hay nada que corregir."
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "",
+      "at": "Smart Citizen no apunta a tu instalación. Escribe en {configured}, pero la instalación de este PC está en {found}. Aplicar no llegará a tu juego hasta que cambies la ruta."
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "",
+      "at": "La única carpeta de instalación encontrada no tiene datos del juego (falta Data.p4k), así que aquí no se puede aplicar nada. Establece la carpeta de instalación real a mano con Examinar, o prueba Analizar todas las unidades."
+    },
+    "dupe_verdict_match": {
+      "ht": "",
+      "at": "{count} instalaciones encontradas, y Smart Citizen apunta a la que inicia el RSI Launcher: {path}. No hay nada que corregir."
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "",
+      "at": "Smart Citizen apunta a la instalación que inicia el lanzador RSI: {path}. Pero no tiene datos del juego (falta Data.p4k), así que ahí no se puede aplicar nada."
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "",
+      "at": "Smart Citizen está escribiendo en la instalación equivocada. El RSI Launcher inicia {launcher}, pero Smart Citizen escribe en {configured}, así que tus cambios no aparecerán en el juego. Pulsa Usar esta instalación en la entrada del launcher que aparece abajo."
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "",
+      "at": "Smart Citizen todavía no apunta a ninguna instalación. El lanzador RSI inicia {launcher}. Pulsa Usar esta instalación en su entrada de abajo."
+    },
+    "dupe_verdict_unknown": {
+      "ht": "",
+      "at": "{count} instalaciones encontradas, y Smart Citizen no ha podido determinar cuál juegas. Se muestran de compilación más reciente a más antigua: elige la que inicias."
+    },
+    "dupe_summary_count": {
+      "ht": "",
+      "at": "{count} carpeta(s) de instalación encontrada(s)."
+    },
+    "dupe_summary_leftovers": {
+      "ht": "",
+      "at": "{count} de ellas no contienen datos del juego y no se puede jugar desde ahí."
+    },
+    "dupe_summary_unused": {
+      "ht": "",
+      "at": "{count} instalación(es) no las usa ni el RSI Launcher ni Smart Citizen: {paths}. Eliminarlas liberaría unos {size}."
+    },
+    "dupe_summary_quick": {
+      "ht": "",
+      "at": "Esta ha sido la comprobación rápida de las carpetas de instalación habituales; usa Analizar todas las unidades para las personalizadas."
+    },
+    "dupe_summary_cancelled": {
+      "ht": "",
+      "at": "El análisis de unidades se canceló, por lo que esta lista puede estar incompleta."
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "",
+      "at": "No se pudo leer el registro del RSI Launcher, así que la instalación que inicia es una estimación basada en las fechas de compilación."
+    },
+    "dupe_badge_configured": {
+      "ht": "",
+      "at": "En uso por Smart Citizen"
+    },
+    "dupe_badge_launcher": {
+      "ht": "",
+      "at": "Iniciada por el RSI Launcher"
+    },
+    "dupe_badge_leftover": {
+      "ht": "",
+      "at": "Sin datos del juego"
+    },
+    "dupe_badge_unused": {
+      "ht": "",
+      "at": "Sin usar"
+    },
+    "dupe_channel_line": {
+      "ht": "",
+      "at": "{channel}: {version} - {size} - actualizado el {date}"
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "",
+      "at": "{channel}: vacío, no hay Data.p4k en esta carpeta"
+    },
+    "dupe_applied_by_us": {
+      "ht": "",
+      "at": "Smart Citizen v{version} aplicado aquí ({languages})"
+    },
+    "dupe_applied_other": {
+      "ht": "",
+      "at": "Aquí hay un global.ini aplicado ({languages}), pero no lo escribió Smart Citizen"
+    },
+    "dupe_not_applied": {
+      "ht": "",
+      "at": "No hay ninguna localización aplicada aquí"
     }
   },
   "enhancements": {
@@ -1023,6 +1207,10 @@
     "bp_scan_no_path": {
       "ht": "",
       "at": "No hay ninguna ruta de instalación de Star Citizen configurada, así que no hay registros que escanear. Configura primero la carpeta del juego en la pestaña Config."
+    },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "No se encontró ninguna carpeta LIVE ni HOTFIX en tu instalación de Star Citizen, así que no hay registros que escanear. Los servidores de prueba (PTU, EPTU, TECH-PREVIEW) nunca se escanean."
     },
     "bp_scan_none": {
       "ht": "",
@@ -1364,15 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Escanea los archivos de registro de Star Citizen (Game.log y logbackups) en busca de notificaciones de recompensa \"Received Blueprint\" y marca esos blueprints automáticamente como adquiridos."
+      "at": "Escanea los archivos de registro de Star Citizen (Game.log y logbackups) en busca de notificaciones de recompensa \"Received Blueprint\" y marca esos blueprints automáticamente como adquiridos.\nSiempre escanea LIVE, y también HOTFIX cuando está instalado, porque ambos se ejecutan en el mismo servidor y comparten una única progresión de cuenta."
     },
-    "scan_other_channels_checkbox": {
+    "scan_logs_already_running_tooltip": {
       "ht": "",
-      "at": "Analizar también LIVE/HOTFIX (el que no esté activo)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE y HOTFIX comparten el mismo progreso de cuenta, así que un plano obtenido en uno aparece también en los registros del otro. También analiza el que no sea tu canal activo de los dos, si está instalado. PTU, EPTU y TECH-PREVIEW son compilaciones de prueba independientes con su propio progreso y nunca se analizan."
+      "at": "Ya hay un análisis en curso (puede ser el análisis automático al iniciar)."
     },
     "force_rescan_checkbox": {
       "ht": "",
@@ -1381,6 +1565,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalmente un análisis solo lee eventos desde tu último análisis, para seguir siendo rápido. Marca esto si tu lista de poseídos parece incorrecta y quieres releer cada registro desde cero. Se desmarca sola después del siguiente análisis."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Escanear registros automáticamente al iniciar"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Ejecuta \"Escanear registros en busca de blueprints adquiridos\" automáticamente cada vez que se inicia Smart Citizen, para que tu lista de adquiridos se mantenga actualizada sin un clic manual. Usa la misma cobertura de canales y el mismo análisis incremental que el botón de arriba."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Análisis automático: {count} blueprints añadidos a tu lista de adquiridos"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Mostrar ventana emergente para nuevos blueprints encontrados por el análisis automático"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Cuando el análisis automático al iniciar encuentra nuevos blueprints, muestra la misma ventana emergente de resumen que el botón Escanear registros, en lugar de solo un mensaje en la barra de estado. Solo se aplica cuando un análisis realmente encuentra algo nuevo."
     },
     "apply_owned_tag_btn": {
       "ht": "",
@@ -1911,6 +2115,10 @@
     "language_downloading": {
       "ht": "Descargando localización {language}...",
       "at": ""
+    },
+    "language_copying": {
+      "ht": "",
+      "at": "Copiando localización {language}..."
     },
     "language_no_url": {
       "ht": "No hay URL de descarga configurada para {language}; se muestra la base inglesa. Usa Asignar archivo de idioma para configurar una.",
@@ -2512,6 +2720,26 @@
       "ht": "",
       "at": "Falló la extracción de DataForge — consulta la pestaña Registro para más detalles"
     },
+    "dataforge_running_title": {
+      "ht": "",
+      "at": "Extracción de DataForge en curso"
+    },
+    "dataforge_running_body": {
+      "ht": "",
+      "at": "La extracción de DataForge sigue en curso.\n\n¿Detenerla ahora? Puedes volver a ejecutarla más tarde."
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "Detener"
+    },
+    "dataforge_stopping": {
+      "ht": "",
+      "at": "Deteniendo la extracción de DataForge…"
+    },
+    "dataforge_stopped": {
+      "ht": "",
+      "at": "Extracción de DataForge detenida"
+    },
     "p4k_extracting_label": {
       "ht": "",
       "at": "Extrayendo global.ini desde Data.p4k..."
@@ -2519,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "Extracción P4K"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "Deteniendo la extracción de global.ini…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "Extracción de global.ini detenida"
     },
     "extraction_error_title": {
       "ht": "",

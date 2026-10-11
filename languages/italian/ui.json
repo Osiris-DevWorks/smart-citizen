@@ -32,6 +32,10 @@
       "ht": "",
       "at": "Genera gli ultimi miglioramenti con le tue impostazioni attuali e applicali al gioco. Viene prima creato un backup del global.ini attuale."
     },
+    "generate_apply_tip_disabled": {
+      "ht": "",
+      "at": "Già applicato: il gioco corrisponde alle tue impostazioni attuali. Clicca comunque per rigenerare e riapplicare, ad esempio dopo una patch del gioco."
+    },
     "defaults_hint": {
       "ht": "",
       "at": "Usa le tue impostazioni attuali (le stesse mostrate nella vista Avanzata).\nLa prima esecuzione può richiedere alcuni minuti mentre DataForge viene estratto."
@@ -210,7 +214,7 @@
     },
     "apply_disabled_tooltip": {
       "ht": "",
-      "at": "Già applicato: nulla è cambiato dall'ultima applicazione al gioco."
+      "at": "Già applicato: il gioco corrisponde alle tue impostazioni attuali."
     },
     "feedback_fallback_text": {
       "ht": "",
@@ -552,7 +556,11 @@
     },
     "map_language_desc": {
       "ht": "",
-      "at": "Imposta un URL per il file global.ini di ogni lingua. Quando passi a quella lingua, Smart Citizen lo scarica e lo usa come stringhe di base, invece dell'estrazione inglese da Data.p4k. Il download viene memorizzato nella cache per ogni lingua e viene riscaricato solo quando cambia. Lascia un campo vuoto per usare il valore predefinito incluso (se presente)."
+      "at": "Imposta un URL o un percorso di file locale per il file global.ini di ogni lingua (usa Sfoglia per un file che hai già). Quando passi a quella lingua, Smart Citizen lo usa come testo di base al posto dell'estrazione inglese da Data.p4k — un URL viene scaricato e messo in cache, e riscaricato solo se cambia; un file locale viene copiato. Lascia un campo vuoto per usare il valore predefinito incluso (se presente)."
+    },
+    "map_language_overwrite_warning": {
+      "ht": "",
+      "at": "Impossibile mappare {languages} qui: questo percorso è quello in cui Smart Citizen scrive il proprio output unito per questa lingua. Applicare di nuovo reintegrerebbe quell'output come fonte, raddoppiando ogni miglioramento. Copia prima il file della community in un'altra cartella, poi mappa quella copia."
     },
     "base_localization_label": {
       "ht": "",
@@ -748,7 +756,7 @@
     },
     "map_language_tooltip": {
       "ht": "",
-      "at": "Imposta un URL per il file global.ini di ogni lingua. Quando passi a quella lingua, Smart Citizen lo scarica e lo usa come stringhe di base al posto dell'estrazione inglese da Data.p4k."
+      "at": "Imposta un URL o un percorso di file locale per il file global.ini di ogni lingua. Quando passi a quella lingua, Smart Citizen lo usa come testo di base al posto dell'estrazione inglese da Data.p4k."
     },
     "data_dir_tooltip": {
       "ht": "",
@@ -841,6 +849,182 @@
     "import_settings_tooltip": {
       "ht": "",
       "at": "Ripristina un file zip di backup delle impostazioni creato con qualsiasi versione di Smart Citizen. I tuoi file user.ini attuali vengono prima salvati come snapshot, la tua cartella di Star Citizen viene ripristinata (o rilevata automaticamente se il percorso del backup non esiste su questo PC), e Smart Citizen si riavvia con le impostazioni importate."
+    },
+    "dupe_check_btn": {
+      "ht": "",
+      "at": "Verifica posizione installazione"
+    },
+    "dupe_check_tooltip": {
+      "ht": "",
+      "at": "Cerca altre installazioni di Star Citizen su questo PC e verifica che Smart Citizen punti a quella che il RSI Launcher avvia davvero."
+    },
+    "dupe_scanning": {
+      "ht": "",
+      "at": "Ricerca delle installazioni di Star Citizen..."
+    },
+    "dupe_scan_progress": {
+      "ht": "",
+      "at": "{count} cartelle esaminate - {path}"
+    },
+    "dupe_scan_failed_title": {
+      "ht": "",
+      "at": "Controllo non riuscito"
+    },
+    "dupe_scan_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen non ha potuto completare la ricerca delle installazioni.\n\n{error}"
+    },
+    "dupe_title": {
+      "ht": "",
+      "at": "Installazioni di Star Citizen"
+    },
+    "dupe_close_btn": {
+      "ht": "",
+      "at": "Chiudi"
+    },
+    "dupe_deep_btn": {
+      "ht": "",
+      "at": "Analizza tutti i dischi"
+    },
+    "dupe_deep_tooltip": {
+      "ht": "",
+      "at": "Cerca su tutti i dischi fissi le installazioni salvate in una cartella personalizzata. Più lento del controllo rapido e annullabile."
+    },
+    "dupe_deep_scan_cancel_btn": {
+      "ht": "",
+      "at": "Annulla"
+    },
+    "dupe_open_btn": {
+      "ht": "",
+      "at": "Apri cartella"
+    },
+    "dupe_use_btn": {
+      "ht": "",
+      "at": "Usa questa installazione"
+    },
+    "dupe_use_tooltip": {
+      "ht": "",
+      "at": "Punta Smart Citizen a questa installazione. Da ora in poi le modifiche verranno scritte qui."
+    },
+    "dupe_use_already": {
+      "ht": "",
+      "at": "Smart Citizen usa già questa installazione."
+    },
+    "dupe_use_leftover": {
+      "ht": "",
+      "at": "Questa cartella non contiene alcun Data.p4k, quindi il gioco non può partire da qui. Puntare Smart Citizen qui renderebbe ogni applicazione priva di effetto."
+    },
+    "dupe_use_failed_title": {
+      "ht": "",
+      "at": "Impossibile cambiare installazione"
+    },
+    "dupe_use_failed_body": {
+      "ht": "",
+      "at": "Impossibile trovare {path}. Potrebbe trovarsi su un'unità che si è scollegata. Nessuna modifica è stata apportata."
+    },
+    "dupe_no_path_set": {
+      "ht": "",
+      "at": "nessuna cartella impostata"
+    },
+    "dupe_unknown_version": {
+      "ht": "",
+      "at": "versione sconosciuta"
+    },
+    "dupe_verdict_none": {
+      "ht": "",
+      "at": "Nessuna installazione di Star Citizen trovata su questo PC. Imposta la cartella manualmente con Sfoglia, oppure prova Analizza tutti i dischi."
+    },
+    "dupe_verdict_single": {
+      "ht": "",
+      "at": "Trovata una sola installazione, ed è quella che Smart Citizen sta usando. Non c'è nulla da correggere."
+    },
+    "dupe_verdict_single_elsewhere": {
+      "ht": "",
+      "at": "Smart Citizen non punta alla tua installazione. Scrive in {configured}, ma l'installazione presente su questo PC si trova in {found}. L'applicazione non raggiungerà il gioco finché non cambi percorso."
+    },
+    "dupe_verdict_single_leftover": {
+      "ht": "",
+      "at": "L'unica cartella di installazione trovata non contiene dati di gioco (Data.p4k mancante), quindi qui non è possibile applicare nulla. Imposta manualmente la vera cartella di installazione con Sfoglia, oppure prova Analizza tutti i dischi."
+    },
+    "dupe_verdict_match": {
+      "ht": "",
+      "at": "{count} installazioni trovate, e Smart Citizen punta a quella avviata dal RSI Launcher: {path}. Non c'è nulla da correggere."
+    },
+    "dupe_verdict_match_leftover": {
+      "ht": "",
+      "at": "Smart Citizen è puntato sull'installazione avviata dal launcher RSI: {path}. Ma non contiene dati di gioco (Data.p4k mancante), quindi lì non si può applicare nulla."
+    },
+    "dupe_verdict_mismatch": {
+      "ht": "",
+      "at": "Smart Citizen sta scrivendo nell'installazione sbagliata. Il RSI Launcher avvia {launcher}, ma Smart Citizen scrive in {configured}, quindi le tue modifiche non compariranno nel gioco. Premi Usa questa installazione sulla voce del launcher qui sotto."
+    },
+    "dupe_verdict_unconfigured": {
+      "ht": "",
+      "at": "Smart Citizen non è ancora puntato su un'installazione. Il launcher RSI avvia {launcher}. Premi Usa questa installazione sulla relativa voce qui sotto."
+    },
+    "dupe_verdict_unknown": {
+      "ht": "",
+      "at": "{count} installazioni trovate, e Smart Citizen non è riuscito a capire quale usi per giocare. Sono elencate dalla build più recente alla più vecchia: scegli quella che avvii."
+    },
+    "dupe_summary_count": {
+      "ht": "",
+      "at": "{count} cartella/e di installazione trovate."
+    },
+    "dupe_summary_leftovers": {
+      "ht": "",
+      "at": "{count} di queste non contengono dati di gioco e non sono giocabili."
+    },
+    "dupe_summary_unused": {
+      "ht": "",
+      "at": "{count} installazione/i non sono usate né dal RSI Launcher né da Smart Citizen: {paths}. Eliminarle libererebbe circa {size}."
+    },
+    "dupe_summary_quick": {
+      "ht": "",
+      "at": "Questo era il controllo rapido delle cartelle di installazione abituali; usa Analizza tutti i dischi per quelle personalizzate."
+    },
+    "dupe_summary_cancelled": {
+      "ht": "",
+      "at": "L'analisi dei dischi è stata annullata, quindi questo elenco potrebbe essere incompleto."
+    },
+    "dupe_summary_no_launcher_log": {
+      "ht": "",
+      "at": "Non è stato possibile leggere il registro del RSI Launcher, quindi l'installazione che avvia è una stima basata sulle date di build."
+    },
+    "dupe_badge_configured": {
+      "ht": "",
+      "at": "In uso da Smart Citizen"
+    },
+    "dupe_badge_launcher": {
+      "ht": "",
+      "at": "Avviata dal RSI Launcher"
+    },
+    "dupe_badge_leftover": {
+      "ht": "",
+      "at": "Nessun dato di gioco"
+    },
+    "dupe_badge_unused": {
+      "ht": "",
+      "at": "Non in uso"
+    },
+    "dupe_channel_line": {
+      "ht": "",
+      "at": "{channel}: {version} - {size} - aggiornato il {date}"
+    },
+    "dupe_channel_line_no_data": {
+      "ht": "",
+      "at": "{channel}: vuota, nessun Data.p4k in questa cartella"
+    },
+    "dupe_applied_by_us": {
+      "ht": "",
+      "at": "Smart Citizen v{version} applicato qui ({languages})"
+    },
+    "dupe_applied_other": {
+      "ht": "",
+      "at": "Qui è applicato un global.ini ({languages}), ma non è stato scritto da Smart Citizen"
+    },
+    "dupe_not_applied": {
+      "ht": "",
+      "at": "Nessuna localizzazione applicata qui"
     }
   },
   "enhancements": {
@@ -1023,6 +1207,10 @@
     "bp_scan_no_path": {
       "ht": "",
       "at": "Non è configurato alcun percorso di installazione di Star Citizen, quindi non ci sono log da scansionare. Imposta prima la cartella di gioco nella scheda Configurazione."
+    },
+    "bp_scan_no_live_hotfix": {
+      "ht": "",
+      "at": "Nella tua installazione di Star Citizen non è stata trovata alcuna cartella LIVE o HOTFIX, quindi non ci sono log da scansionare. I server di test (PTU, EPTU, TECH-PREVIEW) non vengono mai scansionati."
     },
     "bp_scan_none": {
       "ht": "",
@@ -1364,15 +1552,11 @@
     },
     "scan_logs_tooltip": {
       "ht": "",
-      "at": "Analizza i file di log di Star Citizen (Game.log e logbackups) alla ricerca delle notifiche di ricompensa \"Received Blueprint\" e li contrassegna automaticamente come posseduti."
+      "at": "Analizza i file di log di Star Citizen (Game.log e logbackups) alla ricerca delle notifiche di ricompensa \"Received Blueprint\" e li contrassegna automaticamente come posseduti.\nAnalizza sempre LIVE, e anche HOTFIX quando è installato, perché i due girano sullo stesso server e condividono un'unica progressione dell'account."
     },
-    "scan_other_channels_checkbox": {
+    "scan_logs_already_running_tooltip": {
       "ht": "",
-      "at": "Analizza anche LIVE/HOTFIX (quello non attivo)"
-    },
-    "scan_other_channels_tooltip": {
-      "ht": "",
-      "at": "LIVE e HOTFIX condividono la stessa progressione dell'account, quindi un blueprint ottenuto in uno appare anche nei log dell'altro. Analizza anche quello dei due che non è il tuo canale attivo, se installato. PTU, EPTU e TECH-PREVIEW sono build di test separate con una propria progressione e non vengono mai analizzate."
+      "at": "È già in corso una scansione (potrebbe essere la scansione automatica all'avvio)."
     },
     "force_rescan_checkbox": {
       "ht": "",
@@ -1381,6 +1565,26 @@
     "force_rescan_tooltip": {
       "ht": "",
       "at": "Normalmente una scansione legge solo gli eventi dall'ultima scansione, per rimanere veloce. Seleziona questa opzione se la tua lista dei posseduti sembra errata e vuoi rileggere ogni log da zero. Si deseleziona automaticamente dopo la scansione successiva."
+    },
+    "auto_scan_startup_checkbox": {
+      "ht": "",
+      "at": "Analizza automaticamente i log all'avvio"
+    },
+    "auto_scan_startup_tooltip": {
+      "ht": "",
+      "at": "Esegue automaticamente \"Analizza i log per i blueprint posseduti\" a ogni avvio di Smart Citizen, così la tua lista Posseduti resta aggiornata senza un clic manuale. Usa la stessa copertura dei canali e la stessa scansione incrementale del pulsante sopra."
+    },
+    "auto_scan_status_added": {
+      "ht": "",
+      "at": "Scansione automatica: {count} blueprint aggiunti alla tua lista Posseduti"
+    },
+    "auto_scan_popup_checkbox": {
+      "ht": "",
+      "at": "Mostra popup per i nuovi blueprint trovati dalla scansione automatica"
+    },
+    "auto_scan_popup_tooltip": {
+      "ht": "",
+      "at": "Quando la scansione automatica all'avvio trova nuovi blueprint, mostra lo stesso popup di riepilogo del pulsante Analizza i log, invece di un semplice messaggio nella barra di stato. Si applica solo quando una scansione trova effettivamente qualcosa di nuovo."
     },
     "apply_owned_tag_btn": {
       "ht": "",
@@ -1912,13 +2116,17 @@
       "ht": "",
       "at": "Scaricamento localizzazione {language} in corso…"
     },
+    "language_copying": {
+      "ht": "",
+      "at": "Copia della localizzazione {language} in corso…"
+    },
     "language_no_url": {
       "ht": "",
-      "at": "Nessun URL di download impostato per {language}; viene mostrata la base inglese. Usa Mappa File Lingua per impostarne uno."
+      "at": "Nessuna fonte impostata per {language}; viene mostrata la base inglese. Usa Associa file lingua per impostarne una."
     },
     "language_download_failed": {
       "ht": "",
-      "at": "Non è stato possibile scaricare la localizzazione {language} e non è stata trovata alcuna copia in cache. Viene mostrata la base inglese. Controlla l'URL in Mappa File Lingua e la tua connessione, poi riprova."
+      "at": "Impossibile caricare la localizzazione {language} dalla fonte configurata, e non è stata trovata alcuna copia in cache. Viene mostrata la base inglese. Controlla l'URL o il file in Associa file lingua, poi riprova."
     },
     "language_generating_enhancements": {
       "ht": "",
@@ -2512,6 +2720,26 @@
       "ht": "",
       "at": "Estrazione di DataForge fallita — controlla la scheda Log per i dettagli"
     },
+    "dataforge_running_title": {
+      "ht": "",
+      "at": "Estrazione DataForge in Corso"
+    },
+    "dataforge_running_body": {
+      "ht": "",
+      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora? Puoi eseguirla di nuovo più tardi."
+    },
+    "dataforge_stop_btn": {
+      "ht": "",
+      "at": "Interrompi"
+    },
+    "dataforge_stopping": {
+      "ht": "",
+      "at": "Interruzione dell'estrazione di DataForge…"
+    },
+    "dataforge_stopped": {
+      "ht": "",
+      "at": "Estrazione di DataForge interrotta"
+    },
     "p4k_extracting_label": {
       "ht": "",
       "at": "Estrazione di global.ini da Data.p4k..."
@@ -2519,6 +2747,14 @@
     "p4k_extraction_title": {
       "ht": "",
       "at": "Estrazione P4K"
+    },
+    "p4k_stopping": {
+      "ht": "",
+      "at": "Interruzione dell'estrazione di global.ini…"
+    },
+    "p4k_stopped": {
+      "ht": "",
+      "at": "Estrazione di global.ini interrotta"
     },
     "extraction_error_title": {
       "ht": "",

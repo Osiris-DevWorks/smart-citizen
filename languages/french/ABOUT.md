@@ -51,7 +51,6 @@ Merci aux testeurs qui ont façonné Smart Citizen par leurs retours :
 - **Zero**
 - **Apolleon Phoibos**
 - **Epiq**
-- **Narull**
 - **XaileiShiv**
 - **Mindbulletz**
 
@@ -67,18 +66,21 @@ Smart Citizen embarque aussi des outils en amont :
 
 Les textes du jeu en langues autres que l'anglais sont des traductions communautaires :
 
-- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) : les traductions communautaires de `global.ini` qui alimentent les options de langue française, portugaise du Brésil et italienne. Leurs traducteurs font le vrai travail ici ; nous ne faisons que le livrer.
+- [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) : les traductions communautaires de `global.ini` qui alimentent les options de langue française, portugaise du Brésil, italienne et turque. Leurs traducteurs font le vrai travail ici ; nous ne faisons que le livrer.
 - [**Thord82/Star_citizen_ES**](https://github.com/Thord82/Star_citizen_ES) : la traduction communautaire de `global.ini` qui alimente l'option de langue espagnole.
 - [**stdblue/StarCitizenJapaneseResources**](https://github.com/stdblue/StarCitizenJapaneseResources) : la traduction communautaire de `global.ini` qui alimente l'option de langue japonaise.
-- [**42Kit**](https://ini.42kit.com/) : la traduction communautaire de `global.ini` qui alimente l'option de langue chinoise.
+- [**42Kit**](https://ini.42kit.com/) : la traduction communautaire de `global.ini` qui alimente l'option de langue chinoise (simplifié).
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) : la traduction communautaire de `global.ini` qui alimente l'option de langue allemande.
+- **[스타 시티즌 유저 한국어 프로젝트](https://sc.galaxyhub.kr)** (les guildes Shatagon, MGM Star Fleet et Falco Rescue) : l'équipe communautaire derrière la localisation coréenne. Leur fichier n'est pas fourni avec Smart Citizen (leur licence n'autorise pas la redistribution) ; le coréen est une langue « apportez votre propre fichier », associée via *Mapper le fichier de langue* à une copie locale que vous obtenez directement auprès d'eux.
+- [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) : la traduction communautaire de `global.ini` qui alimente l'option de langue chinois traditionnel. Mise à jour pour la dernière fois en mai 2024, elle couvre environ deux tiers des textes actuels du jeu ; le reste repose sur l'anglais.
 
 ## Fonctionnalités clés
 
 ### 🎯 Fonctionnalités principales
 - **Charger et modifier** : chargez le `global.ini` de votre installation Star Citizen et personnalisez les textes dans une vue en tableau intuitive
 - **Multi-canaux** : LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW ont chacun leur `user.ini`, cache, sauvegardes et extraction DataForge isolés ; changez de canal depuis l'onglet Paramètres sans redémarrer
-- **Multilingue** : basculez l'application et les textes du jeu entre anglais, français, espagnol, portugais du Brésil, japonais, chinois, italien et allemand depuis l'onglet Paramètres. Les langues autres que l'anglais superposent un `global.ini` traduit par la communauté à la base anglaise, avec repli sur l'anglais pour tout texte non traduit. D'autres langues seront proposées à mesure que les traductions communautaires arrivent (voir `languages/TRANSLATIONS.md`)
+- **Vérifier le dossier d'installation** : trouve toutes les installations de Star Citizen sur votre PC et lit le journal du lanceur RSI pour vous indiquer celle que le jeu démarre vraiment, afin que l'application des modifications n'écrive jamais dans une copie que vous ne lancez pas
+- **Multilingue** : basculez l'application et les textes du jeu entre anglais, français, espagnol, portugais du Brésil, japonais, chinois (simplifié), italien, allemand, turc, coréen (fichier personnel) et chinois traditionnel depuis l'onglet Paramètres. Les langues autres que l'anglais superposent un `global.ini` traduit par la communauté à la base anglaise, avec repli sur l'anglais pour tout texte non traduit. D'autres langues seront proposées à mesure que les traductions communautaires arrivent (voir `languages/TRANSLATIONS.md`)
 - **Contrats de mission** : modifiez les textes de contrats et de briefings depuis la catégorie Missions dédiée
 - **Filtrage intelligent** : recherchez des textes, filtrez par catégorie (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) ou par statut de modification
 - **Filtres par colonne** : tapez directement dans les champs de filtre sous chaque en-tête de colonne pour une recherche fine
@@ -110,7 +112,7 @@ Les textes du jeu en langues autres que l'anglais sont des traductions communaut
 - **Générateur d'étiquettes** : personnalisez les balises entre crochets des composants, missiles, armes de vaisseau et marchandises ; réordonnez les éléments, changez la longueur des abréviations (M / MIL / Military), choisissez séparateurs et crochets, ou placez la balise après le nom. Les composants disposent d'un élément Type optionnel (Bouclier, Refroidisseur, etc.) ; les marchandises ont un élément Usage qui montre à quoi servent leurs matériaux de fabrication
 - **Titres de mission** : faites précéder les titres de transport par leur itinéraire (par ex. `Area18 > Lorville`) — placement, flèche, séparateur et niveau de détail du lieu configurables, plus un raccourcissement optionnel des titres d'origine, avec aperçu en direct
 - **Stats en haut ou en bas** : choisissez si le bloc de stats se place en tête ou en pied de description
-- **Suivi des plans** : un onglet dédié pour marquer les plans de fabrication que vous possédez déjà. Déplacez les éléments entre Disponibles et Possédés, filtrez par Mission / Type / Classe / Taille / Grade, et les objets possédés reçoivent une balise bleue `[Owned]` dans les listes de plans des missions. **Rechercher les plans possédés dans les journaux** remplit la collection automatiquement depuis vos fichiers journaux Star Citizen, en n'important que les nouveautés depuis la dernière recherche, et **Exporter / Importer les plans possédés** déplace la collection d'un PC à l'autre (JSON ou CSV ; les imports ne font qu'ajouter, et les exports de scmdb.net fonctionnent aussi)
+- **Suivi des plans** : un onglet dédié pour marquer les plans de fabrication que vous possédez déjà. Déplacez les éléments entre Disponibles et Possédés, filtrez par Mission / Type / Classe / Taille / Grade, et les objets possédés reçoivent une balise bleue `[Owned]` dans les listes de plans des missions. **Rechercher les plans possédés dans les journaux** remplit la collection automatiquement depuis vos fichiers journaux Star Citizen, en n'important que les nouveautés depuis la dernière recherche (ou automatiquement au démarrage, quand **Rechercher automatiquement dans les journaux au démarrage** est activé), et **Exporter / Importer les plans possédés** déplace la collection d'un PC à l'autre (JSON ou CSV ; les imports ne font qu'ajouter, et les exports de scmdb.net fonctionnent aussi)
 - **Étiquettes de mission** : renommez les en-têtes de section (MISSION DETAILS, POTENTIAL BLUEPRINTS, etc.), le libellé d'XP et la balise d'emphase des en-têtes
 - **Correctifs déclaratifs des bugs de données CIG** : un système de correctifs applique à l'extraction des corrections aux bugs DataForge connus, pour que le texte en jeu soit correct sans attendre CIG
 - **Catégories sélectives** : activez ou désactivez chaque catégorie d'enrichissements indépendamment depuis l'onglet Enrichissements
@@ -148,7 +150,7 @@ Les textes du jeu en langues autres que l'anglais sont des traductions communaut
 
 ### Soutenir ce projet
 Smart Citizen est entièrement gratuit. Si vous le trouvez utile :
-- 💳 [Don via PayPal](https://paypal.me/RighteousKill)
+- 💳 [Don via PayPal](https://www.paypal.com/ncp/payment/YAWXHMGZH8T76)
 - 💰 [Don via Venmo](https://venmo.com/u/Amr-Abouelleil)
 
 ## Autres outils d'Osiris DevWorks

@@ -1,6 +1,5 @@
 """Tests for the tester Test Plan (#144): pure logic + AppSettings persistence."""
 
-import os
 import sys
 from pathlib import Path
 

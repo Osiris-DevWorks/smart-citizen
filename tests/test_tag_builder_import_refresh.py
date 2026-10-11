@@ -17,15 +17,11 @@ platform like tests/test_ui_mode.py rather than pytest-qt (not a dev dep).
 """
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PyQt6.QtWidgets import QApplication  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -37,12 +33,6 @@ from src.utils.tag_builder import CATEGORIES, default_config  # noqa: E402
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
 CUSTOM_SEPARATOR = "underscore"
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
 
 
 @pytest.fixture

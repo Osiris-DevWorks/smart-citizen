@@ -131,7 +131,6 @@ def tr(i18n_key: str, **kwargs) -> str:
     ``TypeError: tr() got multiple values for argument 'key'`` — see
     import_dialog.py's custom_value_prompt call).
     """
-    global _strings
     if not _strings:
         # Lazy default: callers outside the app's startup path (helpers used
         # by tests, CLI-adjacent utils) get English instead of bare keys.

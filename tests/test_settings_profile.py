@@ -276,7 +276,12 @@ class TestExportAllValues:
         json_backend.setValue(AppSettings.CACHE_DIR, r"D:\dataforge-cache")
         json_backend.setValue("_channel_layout_migrated", True)
         out = AppSettings.export_all_values()
-        assert out == {"theme": "dark"}
+        assert out["theme"] == "dark"
+        # Defaults now travel too (#383), so assert on what must be absent
+        # rather than on the whole dict.
+        assert AppSettings.USER_DATA_DIR not in out
+        assert AppSettings.CACHE_DIR not in out
+        assert "_channel_layout_migrated" not in out
 
     def test_sc_install_path_travels(self, json_backend):
         """The game folder IS carried — reconcile validates it on import."""
@@ -308,7 +313,8 @@ class TestExportAllValues:
             out = AppSettings.export_all_values()
         finally:
             AppSettings._backend = saved
-        assert out == {"theme": "light"}
+        assert out["theme"] == "light"
+        assert "user_data_dir" not in out
 
 
 class TestImportValues:
@@ -475,7 +481,10 @@ class TestFullRoundTrip:
         profile = read_profile_zip(out)
         applied = AppSettings.import_values(profile.settings)
 
-        assert applied == 3
+        # Every key the backup carried is applied. Not a fixed count: the
+        # backup now also carries defaults (#383), so it grows whenever a
+        # setting is added.
+        assert applied == len(profile.settings)
         assert AppSettings.settings().value("theme") == "dark"
         assert AppSettings.settings().value("tag_builder/components/config") == '{"separator": "dash"}'
         # The game folder DID follow the backup, and still exists here.

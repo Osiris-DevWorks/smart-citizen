@@ -53,8 +53,7 @@ def parse_scmdb(path: Path) -> list[dict]:
 def _parse_record(lines: list[str], start: int) -> dict | None:
     """Parse one mission record starting at a faction code line."""
     i = start
-    faction_code = lines[i].strip()
-    i += 1
+    i += 1  # past the faction code line
     if i >= len(lines):
         return None
 
@@ -68,10 +67,8 @@ def _parse_record(lines: list[str], start: int) -> dict | None:
     faction = lines[i].strip()
     i += 1
 
-    # Optional "NEW" tag
-    is_new = False
+    # Optional "NEW" tag, skipped
     if i < len(lines) and lines[i].strip() == "NEW":
-        is_new = True
         i += 1
 
     # System
@@ -97,38 +94,37 @@ def _parse_record(lines: list[str], start: int) -> dict | None:
     num_waves = ""
     num_enemies = ""
     materials = ""
-    items = ""
 
     material_parts = []
 
     while i < len(lines):
-        l = lines[i].strip()
+        line = lines[i].strip()
 
-        if l == "Reward":
+        if line == "Reward":
             i += 1
             break
-        elif l == "ILLEGAL":
+        elif line == "ILLEGAL":
             is_illegal = True
-        elif l == "CHAIN":
+        elif line == "CHAIN":
             is_chain = True
-        elif l == "STARTER":
+        elif line == "STARTER":
             is_starter = True
-        elif l == "UNIQUE":
+        elif line == "UNIQUE":
             is_unique = True
-        elif l.startswith("\U0001f527"):  # 🔧 Blueprint
+        elif line.startswith("\U0001f527"):  # 🔧 Blueprint
             awards_blueprint = True
-        elif l.startswith("〰"):  # 〰 waves
-            m = re.search(r"(\d+(?:–\d+)?)", l)
+        elif line.startswith("〰"):  # 〰 waves
+            m = re.search(r"(\d+(?:–\d+)?)", line)
             if m:
                 num_waves = m.group(1)
-        elif l.startswith("\U0001f680"):  # 🚀 enemies
-            m = re.search(r"(\d+(?:–\d+)?)", l)
+        elif line.startswith("\U0001f680"):  # 🚀 enemies
+            m = re.search(r"(\d+(?:–\d+)?)", line)
             if m:
                 num_enemies = m.group(1)
-        elif l == "\U0001f4e6":  # 📦 (items present marker)
+        elif line == "\U0001f4e6":  # 📦 (items present marker)
             pass
-        elif re.match(r"\d+×[A-Z]", l):  # 2×AGRI material lines
-            material_parts.append(l)
+        elif re.match(r"\d+×[A-Z]", line):  # 2×AGRI material lines
+            material_parts.append(line)
         i += 1
 
     materials = ", ".join(material_parts) if material_parts else ""

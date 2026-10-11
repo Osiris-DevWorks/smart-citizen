@@ -6,9 +6,11 @@ isolation, and so the file size of main_window.py stays manageable.
 Contents:
 - AnimatedProgressDialog — reusable indeterminate↔determinate progress dialog
 - FileLoaderWorker        — loads sources, builds StringEntry list, sort keys
+- AppliedStateWorker      — checks off the GUI thread whether the loaded state is already applied
 - StartupSyncWorker       — refreshes URL-backed sources on startup
 - EnhancementsGeneratorWorker — runs scripts/generate_enhancements_ini.py
 - BlueprintLogScanWorker  — scans SC logs for received-blueprint events (#222)
+- InstallScanWorker       — finds every Star Citizen install on the machine (2.4)
 - P4kExtractWorker        — unp4k extraction of global.ini
 - DataForgeExtractWorker  — unp4k + unforge + patch pipeline
 - SelectAllDelegate       — Custom Value cell delegate (auto-select, EM3/EM4 wrap)
@@ -33,6 +35,25 @@ from src.utils.tag_builder import tag_config_fingerprint
 logger = logging.getLogger(__name__)
 
 
+def elide_middle(text: str, limit: int = 56) -> str:
+    r"""Shorten *text* to *limit* chars, dropping the middle.
+
+    For paths fed to a progress label. ``QProgressDialog`` resizes itself to
+    fit its label and never shrinks back, so a single long path permanently
+    stretches the dialog -- a drive scan across a media drive blew it out to
+    most of the screen width. Eliding the middle keeps both the drive letter
+    and the current folder name, which is the part that reads as progress:
+    ``E:\Anime\01. Love`` stays intact, while a deep path becomes
+    ``E:\Games\Some...\deep\folder``.
+    """
+    if len(text) <= limit:
+        return text
+    keep = max(0, limit - 3)
+    head = keep // 2
+    tail = keep - head
+    return f"{text[:head]}...{text[-tail:] if tail else ''}"
+
+
 class AnimatedProgressDialog(QProgressDialog):
     """Reusable progress dialog that toggles between indeterminate and determinate.
 
@@ -44,8 +65,20 @@ class AnimatedProgressDialog(QProgressDialog):
     the bar text since there's no meaningful percentage to show.
     """
 
-    def __init__(self, message: str, parent=None, title: str = "Processing"):
-        super().__init__(message, None, 0, 0, parent)
+    def __init__(
+        self, message: str, parent=None, title: str = "Processing",
+        cancel_text: str | None = None,
+    ):
+        # cancel_text=None (every existing caller) makes QProgressDialog omit
+        # the button entirely -- most of what this dialog drives (DataForge
+        # extraction, generation) isn't safely interruptible mid-phase. Only
+        # a caller that actually wires up .canceled and honours it should
+        # pass real button text (#385 review: the deep install scan wired
+        # the signal but never got a button to emit it from). Text is a
+        # caller-supplied string, not a bool + an internal tr() lookup, so
+        # this generic/reusable dialog carries no feature-specific string key.
+        super().__init__(message, cancel_text, 0, 0, parent)
+        self._close_guard = None
         self.setWindowTitle(title)
         self.setModal(True)
         self.setMinimumWidth(400)
@@ -64,6 +97,47 @@ class AnimatedProgressDialog(QProgressDialog):
             # to determinate and a real percentage exists to display.
             self._bar.setTextVisible(False)
         self.show()
+
+    def set_close_guard(self, guard) -> None:
+        """Ask *guard* before Esc or the title-bar X dismisses the dialog (#471).
+
+        ``guard()`` returns True to let the dialog go the way it always has,
+        False to keep it open. None (the default) removes the guard. Only the
+        user's own dismissal is asked about: a programmatic ``close()`` or
+        ``hide()`` never is, so callers keep closing the dialog exactly as
+        before. The DataForge extraction uses this to ask whether to stop,
+        the global.ini one to stop without asking.
+
+        Only for a dialog built without a cancel button (``cancel_text=None``,
+        like those two). With a button, QProgressDialog adds its own Escape
+        shortcut and the button, both of which cancel straight away without
+        passing through ``reject()`` or a spontaneous close. Only the
+        title-bar X would still ask, so the guard would cover one of the
+        three ways to dismiss the dialog.
+        """
+        self._close_guard = guard
+
+    def _user_may_dismiss(self) -> bool:
+        guard = self._close_guard
+        return guard is None or bool(guard())
+
+    def closeEvent(self, event):
+        # The title-bar X (and Alt+F4) arrive as a spontaneous close event; a
+        # programmatic close() does not, and is never asked about.
+        if event.spontaneous() and not self._user_may_dismiss():
+            event.ignore()
+            return
+        super().closeEvent(event)
+
+    def reject(self):
+        # Esc lands here (on a dialog without a cancel button, see
+        # set_close_guard). A close (the X or a programmatic close()) never
+        # does: QProgressDialog.closeEvent emits canceled, whose built-in
+        # cancel() hides the dialog before QDialog.closeEvent would reach
+        # reject(). tests/test_extraction_stop.py fails if that ever changes.
+        if not self._user_may_dismiss():
+            return
+        super().reject()
 
     def set_progress(self, completed: int, total: int, message: str = "") -> None:
         """Drive the bar from a ProgressSink. total=0 ⇒ indeterminate.
@@ -162,6 +236,45 @@ class FileLoaderWorker(QThread):
             self.error.emit(str(e))
 
 
+class AppliedStateWorker(QThread):
+    """Work out off the GUI thread whether the loaded state already matches
+    the game's global.ini (#398 review).
+
+    The check re-reads every source, re-merges, and parses the applied file,
+    which is seconds of work on a real profile, so it can't run in the slot
+    that follows a reload.
+
+    ``compute(snapshot, should_stop)`` does the work and is injected by
+    MainWindow rather than imported: it shares its merge with Apply to Game,
+    which lives in main_window.py, and importing that here would be a
+    gui <-> gui cycle. *snapshot* is plain data captured on the main thread so
+    nothing in here reads widget or entry state the user may be editing
+    mid-run. *token* is echoed back untouched so MainWindow can tell a stale
+    result from a current one.
+
+    Emits ``finished`` exactly once and stores the same value in ``result``.
+    False means "not verified as applied": a mismatch, an error, or an
+    interruption. It is always the safe (red) direction.
+    """
+
+    finished = pyqtSignal(bool)
+
+    def __init__(self, compute, snapshot, token: int):
+        super().__init__()
+        self._compute = compute
+        self._snapshot = snapshot
+        self.token = token
+        self.result = False
+
+    def run(self):
+        try:
+            self.result = bool(self._compute(self._snapshot, self.isInterruptionRequested))
+        except Exception as e:
+            logger.debug(f"Could not verify already-applied state: {e}")
+            self.result = False
+        self.finished.emit(self.result)
+
+
 class StartupSyncWorker(QThread):
     """Worker thread that syncs all enabled remote sources on startup.
 
@@ -208,34 +321,43 @@ class StartupSyncWorker(QThread):
 
 
 class LanguageBaseDownloadWorker(QThread):
-    """Download a language's global.ini to its per-language base.ini path.
+    """Fetch a language's global.ini to its per-language base.ini path.
 
-    Uses ``download_file_if_changed`` so an unchanged remote (matched via
-    ETag / Last-Modified) is a fast no-op: switching back to a language whose
-    base.ini we already cached doesn't re-download the ~10 MB file.
+    ``source`` is either an ``http(s)://`` URL (the normal case) or a local
+    file path (#367: a language whose community source can't be redistributed,
+    e.g. Korean, is mapped via *Map Language File* to a file the user already
+    has on disk). URLs use ``download_file_if_changed`` so an unchanged remote
+    (matched via ETag / Last-Modified) is a fast no-op: switching back to a
+    language whose base.ini we already cached doesn't re-download the ~10 MB
+    file. A local path is just copied — there's no network round trip to
+    save a conditional request on.
     """
 
     finished = pyqtSignal(bool)  # True = a base.ini is present and usable
     error = pyqtSignal(str)
 
-    def __init__(self, url: str, dest_path):
+    def __init__(self, source: str, dest_path):
         super().__init__()
-        self._url = url
+        self._source = source
         self._dest = dest_path
 
     def run(self):
-        from src.utils.updater import download_file_if_changed
+        from src.utils.updater import fetch_language_base
+        is_url = self._source.startswith(("http://", "https://"))
         try:
-            changed = download_file_if_changed(self._url, self._dest)
-            logger.info(
-                f"Language base.ini ready: {self._dest} "
-                f"({'downloaded' if changed else 'unchanged, used cache'})"
-            )
+            changed = fetch_language_base(self._source, self._dest)
+            if is_url:
+                logger.info(
+                    f"Language base.ini ready: {self._dest} "
+                    f"({'downloaded' if changed else 'unchanged, used cache'})"
+                )
+            else:
+                logger.info(f"Language base.ini ready: {self._dest} (copied from local file)")
             self.finished.emit(True)
         except Exception as e:
-            logger.exception(f"Language base.ini download failed: {e}")
+            logger.exception(f"Language base.ini fetch failed: {e}")
             self.error.emit(str(e))
-            # finished(False): a download failure isn't fatal — the caller
+            # finished(False): a fetch failure isn't fatal — the caller
             # falls back to any cached copy, or to English.
             self.finished.emit(False)
 
@@ -278,6 +400,92 @@ class BlueprintLogScanWorker(QThread):
             self.finished.emit(result)
         except Exception as e:
             logger.exception(f"Blueprint log scan failed: {e}")
+            self.error.emit(str(e))
+            self.finished.emit(None)
+
+
+class InstallScanWorker(QThread):
+    """Find every Star Citizen install on this machine (2.4).
+
+    Thin wrapper over ``install_scanner.scan_installs``. Both scan modes run
+    here, not just the deep one: even the quick scan reads each install's
+    applied ``global.ini`` looking for the apply watermark, and on a cold file
+    cache that measured 26 s against a real 11 MB file — long enough to freeze
+    the window if it ran on the main thread.
+
+    Unlike the tag-config hand-off ``src/utils/CLAUDE.md`` documents (settings
+    read on the main thread, frozen before the worker starts, specifically so
+    a mid-run edit elsewhere can't half-rewrite the input), the settings this
+    worker needs have no such "must be frozen at launch" concern -- nothing
+    else can change them mid-scan -- and root ``CLAUDE.md``'s own threading
+    section states ``AppSettings`` is thread-safe from either thread. So they
+    are read in :meth:`run`, on the worker thread, not ``__init__``: an
+    unconfigured profile makes ``get_sc_install_root()`` fall through to
+    ``_scan_common_sc_install_locations()``, whose own docstring warns a
+    disconnected network drive can hang that call for seconds -- exactly the
+    kind of I/O this class exists to keep off the main thread (#385 review).
+    """
+
+    progress_pct = pyqtSignal(int, int, str)
+    finished = pyqtSignal(object)  # ScanReport, or None on error
+    error = pyqtSignal(str)
+
+    def __init__(self, deep: bool = False, parent=None):
+        super().__init__(parent)
+        self._deep = deep
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        """Ask a deep scan to stop at the next directory boundary."""
+        self._cancelled = True
+
+    def run(self):
+        from src.utils.install_scanner import scan_installs
+        from src.utils.settings import _path_ends_in_channel
+
+        configured_root = AppSettings.get_sc_install_root()
+        registry_root = AppSettings._read_legacy_installer_sc_directory()
+        if registry_root and _path_ends_in_channel(registry_root):
+            # Reuses settings.py's own stripping helper rather than a second
+            # implementation (#385 review: an earlier version of this fix
+            # introduced install_scanner.is_channel_name for the same check
+            # AppSettings already had). The legacy installer can write a
+            # channel-suffixed path (e.g. ...\StarCitizen\LIVE) into this
+            # key. Passed through unstripped, read_install() would look for
+            # a nested LIVE\LIVE and silently drop this registry evidence
+            # for anyone on that older flow.
+            registry_root = str(Path(registry_root).parent)
+
+        try:
+            def _progress(visited: int, current: str) -> None:
+                # total=0: there is no knowable upper bound for either scan
+                # mode (a directory walk doesn't know its own size in
+                # advance), so this legitimately stays indeterminate rather
+                # than faking a percentage. Routing through progress_pct (the
+                # signal src/gui/CLAUDE.md documents every worker emitting)
+                # rather than a bespoke str signal is still the point: it
+                # keeps this worker on the one path AnimatedProgressDialog's
+                # callers already use (#385 review).
+                self.progress_pct.emit(0, 0, tr(
+                    "config.dupe_scan_progress",
+                    count=visited,
+                    path=elide_middle(current),
+                ))
+
+            report = scan_installs(
+                configured_root=configured_root or None,
+                registry_root=registry_root,
+                deep=self._deep,
+                progress=_progress if self._deep else None,
+                should_cancel=(lambda: self._cancelled) if self._deep else None,
+            )
+            logger.info(
+                "Install scan: %d install(s), verdict=%s, launcher=%s, deep=%s",
+                report.count, report.verdict, report.launcher_root, self._deep,
+            )
+            self.finished.emit(report)
+        except Exception as e:
+            logger.exception(f"Install scan failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(None)
 
@@ -341,7 +549,8 @@ class EnhancementsGeneratorWorker(QThread):
             # None  → no manifest yet, run everything.
             # set() → nothing changed, skip entirely.
             # {...} → only re-run the categories whose source XMLs changed.
-            libs_dir = forge_dir / "raw" / "libs"
+            from src.utils.pak_extractor import DATAFORGE_LIBS_SUBPATH
+            libs_dir = forge_dir / DATAFORGE_LIBS_SUBPATH
             diff = dirty_categories(libs_dir)
             # If enhancement files are missing, force regeneration even if the
             # manifest says nothing changed — the manifest may have been written
@@ -443,28 +652,52 @@ class EnhancementsGeneratorWorker(QThread):
 
 
 class P4kExtractWorker(QThread):
-    """Worker thread for extracting global.ini from Data.p4k via unp4k.exe."""
+    """Worker thread for extracting global.ini from Data.p4k via unp4k.exe.
+
+    requestInterruption() stops it (#471): MainWindow.closeEvent does this so
+    closing never leaves unp4k running on its own, and so does Esc or the
+    title-bar X on its progress dialog. extract_global_ini polls
+    isInterruptionRequested, kills unp4k, deletes its working folder and
+    raises ExtractionCancelled. A stop is not a failure, so it ends with
+    finished(False), no error signal and nothing logged at ERROR.
+    """
 
     progress = pyqtSignal(str)   # status message
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
     finished = pyqtSignal(bool)  # True = success
     error = pyqtSignal(str)      # error message (emitted before finished(False))
 
-    def __init__(self, p4k_path, output_path, unp4k_exe):
+    def __init__(self, p4k_path, output_path, unp4k_exe, scratch_near=None):
         super().__init__()
         self._p4k = p4k_path
         self._out = output_path
         self._exe = unp4k_exe
+        # The DataForge cache folder, captured on the main thread: unp4k
+        # works beside it rather than in %TEMP% (#471).
+        self._scratch_near = scratch_near
+        # True once a run ended because a stop was requested (#471), read
+        # after the thread is done, as DataForgeExtractWorker.stopped is.
+        self.stopped = False
 
     def run(self):
-        from src.utils.pak_extractor import P4kLockedError, extract_global_ini
+        from src.utils.pak_extractor import (
+            ExtractionCancelled, P4kLockedError, extract_global_ini,
+        )
         try:
             extract_global_ini(
                 self._p4k, self._out, self._exe,
                 progress_callback=self.progress.emit,
                 progress_pct_callback=lambda c, t, m: self.progress_pct.emit(c, t, m),
+                should_cancel=self.isInterruptionRequested,
+                scratch_near=self._scratch_near,
             )
             self.finished.emit(True)
+        except ExtractionCancelled as e:
+            # Closing or its dialog stopped it (#471). Not a failure: see the
+            # class docstring.
+            logger.info(f"global.ini extraction stopped ({e})")
+            self.stopped = True
+            self.finished.emit(False)
         except P4kLockedError as e:
             # Anticipated, already logged at WARNING by _raise_unp4k_failure
             # with full diagnostic detail — logger.exception() here would
@@ -475,13 +708,30 @@ class P4kExtractWorker(QThread):
             self.error.emit(str(e))
             self.finished.emit(False)
         except Exception as e:
+            if self.isInterruptionRequested():
+                # A failure on the way out of a stop (#471) belongs to the
+                # stop: report it the same quiet way.
+                logger.warning(f"P4K extraction ended with an error after a stop: {e}")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             logger.exception(f"P4K extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
 
 
 class DataForgeExtractWorker(QThread):
-    """Worker thread for extracting DataForge entity XMLs from Data.p4k."""
+    """Worker thread for extracting DataForge entity XMLs from Data.p4k.
+
+    requestInterruption() stops it (#471). MainWindow does this when the
+    window closes (_stop_extractions_for_close) and when the user picks Stop
+    in the progress dialog's question. extract_dataforge polls
+    isInterruptionRequested, kills unp4k or unforge, deletes its working
+    folder and raises ExtractionCancelled. A stop is not a failure, so it
+    ends with finished(False), no error signal and nothing logged at ERROR,
+    which would fire the global ErrorDialogHandler for something the user
+    asked for.
+    """
 
     progress = pyqtSignal(str)
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
@@ -494,10 +744,15 @@ class DataForgeExtractWorker(QThread):
         self._unp4k_exe = unp4k_exe
         self._unforge_exe = unforge_exe
         self._cache_dir = cache_dir
+        # True once a run ended because a stop was requested (#471). Read it
+        # rather than isInterruptionRequested() after the thread is done:
+        # QThread reports no interruption once the thread has finished, so a
+        # finished slot that waits for the thread first would always see False.
+        self.stopped = False
 
     def run(self):
         from src.utils.pak_extractor import (
-            DataForgeTimeoutError, P4kLockedError, extract_dataforge,
+            DataForgeTimeoutError, ExtractionCancelled, P4kLockedError, extract_dataforge,
         )
         from src.utils.dataforge_patcher import apply_patches
         try:
@@ -508,7 +763,16 @@ class DataForgeExtractWorker(QThread):
                 self._cache_dir,
                 progress_callback=self.progress.emit,
                 progress_pct_callback=lambda c, t, m: self.progress_pct.emit(c, t, m),
+                should_cancel=self.isInterruptionRequested,
             )
+            if self.isInterruptionRequested():
+                # Stopped after the cache was written and stamped (#471). The
+                # generator re-applies the patches before every run, so
+                # skipping them here loses nothing.
+                logger.info("DataForge extraction stopped before its patches")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             # Apply declarative patches over known CIG data bugs so downstream
             # consumers (enhancement generator, future tooling) see corrected
             # data. Patch failures are recorded in the report but don't block
@@ -529,7 +793,20 @@ class DataForgeExtractWorker(QThread):
             if report.errors:
                 for err in report.errors:
                     logger.warning(f"  patch error: {err}")
+            if self.isInterruptionRequested():
+                # Stop was picked in the dialog's question while the patches ran
+                # (#471). The cache is complete, but the user asked to stop,
+                # so nothing may chain into generation or a Simple-mode apply.
+                logger.info("DataForge extraction stopped after its patches")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             self.finished.emit(True)
+        except ExtractionCancelled as e:
+            # A stop (#471). Not a failure: see the class docstring.
+            logger.info(f"DataForge extraction stopped ({e})")
+            self.stopped = True
+            self.finished.emit(False)
         except P4kLockedError as e:
             # See the matching comment in P4kExtractWorker.run(): already
             # logged at WARNING by _raise_unp4k_failure; logger.exception()
@@ -548,6 +825,14 @@ class DataForgeExtractWorker(QThread):
             self.error.emit(str(e))
             self.finished.emit(False)
         except Exception as e:
+            if self.isInterruptionRequested():
+                # A failure on the way out of a stop (a file the killed tool
+                # still held, a full disk during the last copy) belongs to the
+                # stop (#471). Report it the same quiet way.
+                logger.warning(f"DataForge extraction ended with an error after a stop: {e}")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             logger.exception(f"DataForge extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)

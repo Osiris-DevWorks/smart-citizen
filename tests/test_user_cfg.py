@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.utils.user_cfg import ensure_user_cfg_language
+from src.utils.user_cfg import ensure_user_cfg_language, get_user_cfg_language
 
 
 @pytest.fixture
@@ -91,3 +91,43 @@ class TestEnsureUserCfgLanguage:
         # Should not introduce a spurious second blank line.
         content = _user_cfg(channel_dir)
         assert "\n\n\n" not in content
+
+
+class TestGetUserCfgLanguage:
+    """#398 review: a pure read, added alongside ensure_user_cfg_language
+    (which also writes) so MainWindow._entries_already_applied can check
+    the current value without side effects."""
+
+    def test_reads_existing_value(self, tmp_path):
+        (tmp_path / "user.cfg").write_text("g_language = french_(france)\n", encoding="utf-8")
+        assert get_user_cfg_language(tmp_path) == "french_(france)"
+
+    def test_case_and_spacing_tolerant_same_as_ensure(self, tmp_path):
+        (tmp_path / "user.cfg").write_text("G_Language=  German_(Germany)  \n", encoding="utf-8")
+        assert get_user_cfg_language(tmp_path) == "German_(Germany)"
+
+    def test_returns_none_when_key_absent(self, tmp_path):
+        (tmp_path / "user.cfg").write_text("r_VSync = 1\n", encoding="utf-8")
+        assert get_user_cfg_language(tmp_path) is None
+
+    def test_returns_none_when_file_missing(self, tmp_path):
+        assert get_user_cfg_language(tmp_path) is None
+
+    def test_returns_none_when_channel_path_empty(self):
+        with patch("src.utils.user_cfg.AppSettings") as mock_settings:
+            mock_settings.get_game_install_path.return_value = ""
+            assert get_user_cfg_language() is None
+
+    def test_does_not_modify_the_file(self, tmp_path):
+        """Pure read -- unlike ensure_user_cfg_language, must never write."""
+        original = "r_VSync = 1\ng_language = english\nr_Width = 1920\n"
+        cfg_path = tmp_path / "user.cfg"
+        cfg_path.write_text(original, encoding="utf-8")
+        get_user_cfg_language(tmp_path)
+        assert cfg_path.read_text(encoding="utf-8") == original
+
+    def test_defaults_to_appsettings_game_install_path_when_unspecified(self, tmp_path):
+        (tmp_path / "user.cfg").write_text("g_language = japanese_(japan)\n", encoding="utf-8")
+        with patch("src.utils.user_cfg.AppSettings") as mock_settings:
+            mock_settings.get_game_install_path.return_value = str(tmp_path)
+            assert get_user_cfg_language() == "japanese_(japan)"

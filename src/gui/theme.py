@@ -7,7 +7,6 @@ WindowText/Text roles (the default); dim labels mark themselves with
 `apply_theme`) recolors them when the theme changes.
 """
 import logging
-import os
 import sys
 from pathlib import Path
 

@@ -268,6 +268,59 @@ class TestIssue306FaqBackfill:
         )
 
 
+class TestGlobalIniPath:
+    """get_global_ini_path(language=...) (#409 follow-up): the apply target
+    for a specific language, independent of get_selected_language(). Needed
+    so Map Language File can check a mapped path against the language being
+    mapped, not whichever language happens to be active right now."""
+
+    def test_language_argument_overrides_selected_language(self, env, tmp_path, monkeypatch):
+        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_selected_language", staticmethod(lambda: "english"))
+        path = AppSettings.get_global_ini_path("korean")
+        assert path == tmp_path / "data" / "Localization" / "korean_(south_korea)" / "global.ini"
+
+    def test_default_argument_uses_selected_language(self, env, tmp_path, monkeypatch):
+        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: str(tmp_path)))
+        monkeypatch.setattr(AppSettings, "get_selected_language", staticmethod(lambda: "french"))
+        path = AppSettings.get_global_ini_path()
+        assert path == tmp_path / "data" / "Localization" / "french_(france)" / "global.ini"
+
+
+class TestIsLocalSourceSameAsApplyTarget:
+    """Guards Map Language File against mapping a language's own apply
+    target as its source (#409 follow-up) — see is_local_source_same_as_apply_target."""
+
+    @pytest.fixture(autouse=True)
+    def _channel(self, env, tmp_path, monkeypatch):
+        monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: str(tmp_path)))
+        self.channel_root = tmp_path
+
+    def test_exact_match_is_blocked(self):
+        target = self.channel_root / "data" / "Localization" / "korean_(south_korea)" / "global.ini"
+        assert AppSettings.is_local_source_same_as_apply_target(str(target), "korean") is True
+
+    def test_case_insensitive_match_is_blocked(self):
+        target = self.channel_root / "data" / "Localization" / "korean_(south_korea)" / "global.ini"
+        assert AppSettings.is_local_source_same_as_apply_target(str(target).upper(), "korean") is True
+
+    def test_relative_path_resolving_to_target_is_blocked(self, monkeypatch):
+        korean_dir = self.channel_root / "data" / "Localization" / "korean_(south_korea)"
+        korean_dir.mkdir(parents=True)
+        monkeypatch.chdir(korean_dir)
+        assert AppSettings.is_local_source_same_as_apply_target("global.ini", "korean") is True
+
+    def test_different_language_in_same_tree_is_not_blocked(self):
+        # The user's own copy under a sibling language folder is a different
+        # file on disk and must not trip the guard.
+        other = self.channel_root / "data" / "Localization" / "french_(france)" / "global.ini"
+        assert AppSettings.is_local_source_same_as_apply_target(str(other), "korean") is False
+
+    def test_unrelated_path_is_not_blocked(self):
+        unrelated = self.channel_root / "Downloads" / "global.ini"
+        assert AppSettings.is_local_source_same_as_apply_target(str(unrelated), "korean") is False
+
+
 class TestScLanguageId:
     def test_known_mapping(self):
         assert AppSettings.get_sc_language_id("portuguese_br") == "portuguese_(brazil)"

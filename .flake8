@@ -1,0 +1,18 @@
+[flake8]
+# The code is written to about 100 columns: 99% of lines in src/, tests/ and
+# scripts/ are 97 characters or less, and 0.6% go past 100. A limit of 88
+# (black's default) would flag about 1,700 existing lines, so 100 matches.
+max-line-length = 100
+# E203 (space before ':' in a slice) and W503 (line break before an operator)
+# are how black formats code, so they are not style problems here.
+extend-ignore = E203, W503
+# ./build and ./dist are the build output at the repo root. Written without the
+# ./ they would match every folder of that name and skip scripts/build/ too.
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    ./build,
+    ./dist,
+    portable_data

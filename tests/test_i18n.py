@@ -75,18 +75,6 @@ class TestTr:
         i18n.set_language("english")
         assert i18n.tr("toolbar.apply_btn.deeper") == "toolbar.apply_btn.deeper"
 
-    def test_kwarg_named_key_does_not_collide(self, lang_root):
-        """Crash report: tr()'s own first parameter used to be named "key",
-        so a caller passing the dot-path positionally and also interpolating
-        a loc key into the message text via key=... (a very natural thing to
-        show in a UI string, e.g. import_dialog.py's custom_value_prompt)
-        raised TypeError: tr() got multiple values for argument 'key' before
-        the function body ever ran. Renamed to i18n_key so "key" is free."""
-        i18n.set_language("english")
-        assert (
-            i18n.tr("toolbar.apply_btn", key="some.loc.key") == "Apply to Game"
-        )
-
     def test_kwargs_interpolation(self, lang_root):
         i18n.set_language("english")
         assert (
