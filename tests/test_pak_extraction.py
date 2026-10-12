@@ -30,7 +30,9 @@ from utils.pak_extractor import (
     _raise_unp4k_failure,
     dataforge_cache_is_fresh,
 )
-from utils.i18n import set_language, tr
+# The extractor translates through src.utils.i18n (its own import, in both
+# module copies), so the language has to be set on that copy.
+from src.utils.i18n import set_language, tr
 
 
 class TestDataForgeCache:
@@ -590,6 +592,23 @@ class TestUnp4kFailureMessage:
 
     def setup_method(self):
         set_language("english")
+
+    def test_setup_reaches_the_language_the_extractor_reads(self):
+        """setup_method must switch the i18n copy the extractor reads. The
+        legacy utils.i18n copy keeps a language of its own, so setting that
+        one left these tests on whatever language an earlier test had set."""
+        import src.utils.i18n as extractor_i18n
+        try:
+            extractor_i18n.set_language("german")
+            german = extractor_i18n.tr("extract.p4k_locked")
+            self.setup_method()
+            english = tr("extract.p4k_locked")
+            assert german != english     # control: the two languages differ here
+            with pytest.raises(P4kLockedError) as exc:
+                _raise_unp4k_failure(3762504530, self._REAL_LOCK_STDERR)
+            assert str(exc.value) == english
+        finally:
+            extractor_i18n.set_language("english")
 
     def test_locked_file_raises_friendly_message(self):
         with pytest.raises(P4kLockedError) as exc:
