@@ -2922,12 +2922,20 @@ class AppSettings:
         that run never wrote."""
         if folder is None:
             folder = AppSettings.get_enhancements_dir(language)
-        stamp = Path(folder) / AppSettings.ENHANCEMENTS_STAMP_NAME
+        AppSettings._write_stamp(folder, AppSettings.ENHANCEMENTS_STAMP_NAME, key)
+
+    @staticmethod
+    def _write_stamp(folder: Path, name: str, value: str) -> None:
+        """Write one stamp file in *folder* in a single step. Shared by both
+        stamp setters and :meth:`invalidate_enhancements_stamp`. An OSError
+        is only logged: a stamp that could not be written reads as missing,
+        which is the safe answer (the set reads as out of date)."""
+        stamp = Path(folder) / name
         try:
             stamp.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_text(stamp, key)
+            atomic_write_text(stamp, value)
         except OSError as e:
-            logger.warning(f"Could not write enhancements stamp for {language!r}: {e}")
+            logger.warning(f"Could not write {name} in {folder}: {e}")
 
     @staticmethod
     def enhancements_built_from_current_dataforge(language: "str | None" = None) -> bool:
@@ -2953,12 +2961,7 @@ class AppSettings:
         start offers to generate it again. The tag-config stamp is left alone:
         the Save Tag Changes button already lights when the live config
         differs from it. Like the setters, an OSError is only logged."""
-        stamp = Path(folder) / AppSettings.ENHANCEMENTS_STAMP_NAME
-        try:
-            stamp.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_text(stamp, "")
-        except OSError as e:
-            logger.warning(f"Could not clear the enhancements stamp in {folder}: {e}")
+        AppSettings._write_stamp(folder, AppSettings.ENHANCEMENTS_STAMP_NAME, "")
 
     # Marker file stamped into a language's enhancement dir recording which
     # Tag Builder config its enhancements were generated against. Sibling of
@@ -2989,12 +2992,7 @@ class AppSettings:
         :meth:`set_enhancements_stamp`."""
         if folder is None:
             folder = AppSettings.get_enhancements_dir(language)
-        stamp = Path(folder) / AppSettings.TAG_CONFIG_STAMP_NAME
-        try:
-            stamp.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_text(stamp, key)
-        except OSError as e:
-            logger.warning(f"Could not write tag-config stamp for {language!r}: {e}")
+        AppSettings._write_stamp(folder, AppSettings.TAG_CONFIG_STAMP_NAME, key)
 
     @staticmethod
     def get_current_tag_config_fingerprint() -> str:

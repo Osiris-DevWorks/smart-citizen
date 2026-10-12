@@ -809,6 +809,9 @@ def _generation_self(simple: bool, apply_cleans: bool, starts_dirty: bool = True
     # A MagicMock attribute reads truthy, and the finished slot returns early
     # while the window is closing, which would make these pass vacuously.
     me._close_committed = False
+    # No language switch is waiting on the run, as in a real Simple-mode or
+    # Generate run (a MagicMock here would take the switch's reload instead).
+    me._after_unfinished_generation = None
     me._simple_run_active = simple
     me._apply_dirty = starts_dirty
     me._reload_follows_clean_apply = False

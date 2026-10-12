@@ -7439,9 +7439,9 @@ class GenerationStopped(Exception):
     swallow or misreport it. EnhancementsGeneratorWorker catches it (by name,
     because it loads this module afresh for every run), logs at INFO and
     emits no error, because an ERROR record would fire the global
-    ErrorDialogHandler on a window that is closing. Nothing has been written
-    when it is raised: main() never checks for a stop once its write phase
-    has begun."""
+    ErrorDialogHandler on a window that is closing. No INI has been written
+    when it is raised (lookup pickles may have been, each one whole): main()
+    never checks for a stop once its write phase has begun."""
 
 
 def main(base_ini_path: Path, forge_dir: Path | None = None,

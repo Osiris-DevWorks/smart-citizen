@@ -36,6 +36,7 @@ interpreter.
 """
 from __future__ import annotations
 
+import codecs
 import errno
 import os
 import secrets
@@ -113,6 +114,9 @@ def atomic_writer(path, mode: str = "w", *, encoding: str = "utf-8"):
     """
     if mode not in ("w", "wb"):
         raise ValueError(f"atomic_writer mode must be 'w' or 'wb', not {mode!r}")
+    if mode == "w":
+        # An unknown encoding raises LookupError here, before any temp exists.
+        codecs.lookup(encoding)
     path = Path(path)
     fd, tmp = _create_temp_beside(path)
     try:
@@ -122,7 +126,12 @@ def atomic_writer(path, mode: str = "w", *, encoding: str = "utf-8"):
             else:
                 f = os.fdopen(fd, "w", encoding=encoding)
         except BaseException:
-            os.close(fd)
+            # fdopen may already have closed the descriptor on its way out,
+            # and a second close (EBADF) must not hide the real error.
+            try:
+                os.close(fd)
+            except OSError:
+                pass
             raise
         with f:
             yield f

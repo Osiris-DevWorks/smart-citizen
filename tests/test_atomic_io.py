@@ -358,6 +358,40 @@ def test_a_failure_while_writing_keeps_the_old_file(target, monkeypatch):
     assert _temps(target.parent) == []
 
 
+def test_an_unknown_encoding_fails_before_any_temp_is_made(target, monkeypatch):
+    """The encoding is looked up first, so a bad one raises LookupError
+    without a temp ever being made."""
+    made = []
+    real = atomic_io._create_temp_beside
+    monkeypatch.setattr(atomic_io, "_create_temp_beside",
+                        lambda path: made.append(path) or real(path))
+    with pytest.raises(LookupError):
+        atomic_io.atomic_write_text(target, NEW_TEXT, encoding="no-such-codec")
+
+    assert made == []
+    assert target.read_bytes() == OLD_BYTES
+    assert _temps(target.parent) == []
+
+
+def test_a_failed_fdopen_raises_its_own_error(target, monkeypatch):
+    """os.fdopen can close the descriptor itself before it raises (io.open
+    does when the text layer fails). The writer's own close then fails with
+    EBADF, which must not replace the real error."""
+    class FdopenFailed(Exception):
+        pass
+
+    def failing_fdopen(fd, *args, **kwargs):
+        os.close(fd)
+        raise FdopenFailed("text layer failed")
+
+    monkeypatch.setattr(atomic_io.os, "fdopen", failing_fdopen)
+    with pytest.raises(FdopenFailed):
+        atomic_io.atomic_write_text(target, NEW_TEXT)
+
+    assert target.read_bytes() == OLD_BYTES
+    assert _temps(target.parent) == []
+
+
 def test_an_interrupt_before_the_swap_keeps_the_old_file_and_removes_the_temp(target):
     with pytest.raises(KeyboardInterrupt):
         with atomic_io.atomic_writer(target) as f:
