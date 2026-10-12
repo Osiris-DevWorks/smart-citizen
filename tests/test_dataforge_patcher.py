@@ -1,9 +1,14 @@
 """Tests for src.utils.dataforge_patcher."""
 from __future__ import annotations
 
+import errno
 import json
 from pathlib import Path
 
+import pytest
+from lxml import etree as ET
+
+from src.utils import atomic_io
 from utils.dataforge_patcher import (
     LocstringWorkaround,
     apply_locstring_workarounds,
@@ -184,6 +189,65 @@ def test_malformed_patch_recorded_as_error(tmp_path: Path):
 
     assert report.patches_seen == 1
     assert report.errors  # at least one error recorded
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# The rewrite is atomic: a patched XML is swapped in whole, so a run cut off
+# mid-write never leaves a truncated XML that .p4k_mtime still calls fresh.
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.regression
+def test_a_patched_file_has_the_same_bytes_as_before(tmp_path: Path):
+    """The rewrite goes through atomic_writer now, and must keep the bytes
+    tree.write(path) wrote, the XML declaration included. ET.tostring would
+    not: it declares encoding='utf-8' where tree.write declares 'UTF-8'."""
+    records = _records_root(tmp_path)
+    xml = _CONTRACT_XML.replace(
+        "<root>", '<root>\n  <Note text="Sebastián — Aspirum™" />'
+    )
+    target = _write_target(records, "contracts/hockrowagency.xml", xml)
+    tree = ET.parse(str(target))
+    for element in tree.getroot().findall(_P2M4_EDIT["xpath"]):
+        element.set(_P2M4_EDIT["attribute"], _P2M4_EDIT["set"])
+    expected = tmp_path / "expected.xml"
+    tree.write(str(expected), encoding="utf-8", xml_declaration=True)
+    patches = tmp_path / "patches"
+    _write_patch(patches, "hockrow.patch.json", {
+        "target": "contracts/hockrowagency.xml",
+        "edits": [_P2M4_EDIT],
+    })
+
+    report = apply_patches(patches, tmp_path / "dataforge")
+
+    assert report.files_rewritten == 1
+    assert target.read_bytes() == expected.read_bytes()
+    assert target.read_bytes().startswith(b"<?xml version='1.0' encoding='UTF-8'?>")
+    assert not list(target.parent.glob(".sc-*.tmp"))
+
+
+@pytest.mark.regression
+def test_a_failed_swap_keeps_the_target_xml_whole(tmp_path: Path, monkeypatch):
+    records = _records_root(tmp_path)
+    target = _write_target(records, "contracts/hockrowagency.xml", _CONTRACT_XML)
+    old_bytes = target.read_bytes()
+    patches = tmp_path / "patches"
+    _write_patch(patches, "hockrow.patch.json", {
+        "target": "contracts/hockrowagency.xml",
+        "edits": [_P2M4_EDIT],
+    })
+
+    def disk_full(source, destination):
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(atomic_io.os, "replace", disk_full)
+    report = apply_patches(patches, tmp_path / "dataforge")
+
+    assert report.files_rewritten == 0
+    assert len(report.errors) == 1
+    assert "hockrow.patch.json" in report.errors[0]
+    assert target.read_bytes() == old_bytes
+    assert not list(target.parent.glob(".sc-*.tmp"))
 
 
 # ──────────────────────────────────────────────────────────────────────────────

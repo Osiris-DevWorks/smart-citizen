@@ -17,7 +17,9 @@ regenerates enhancements, so the layout is locked here:
 """
 from __future__ import annotations
 
+import errno
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -25,6 +27,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from src.utils import atomic_io  # noqa: E402
 from src.utils import settings as settings_module  # noqa: E402
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
@@ -140,6 +143,151 @@ class TestTagConfigStamp:
         stamp.parent.mkdir(parents=True, exist_ok=True)
         stamp.write_bytes(b"stamp\xa0value")
         assert AppSettings.get_tag_config_stamp("french") == ""
+
+
+_STAMPS = [
+    pytest.param(
+        AppSettings.ENHANCEMENTS_STAMP_NAME,
+        AppSettings.set_enhancements_stamp, AppSettings.get_enhancements_stamp,
+        id="dataforge",
+    ),
+    pytest.param(
+        AppSettings.TAG_CONFIG_STAMP_NAME,
+        AppSettings.set_tag_config_stamp, AppSettings.get_tag_config_stamp,
+        id="tag_config",
+    ),
+]
+
+
+def _hold_exclusively(path: Path):
+    """Open *path* with no sharing at all, as a swap briefly does, and return
+    an idempotent release."""
+    import ctypes
+    from ctypes import wintypes
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = wintypes.HANDLE
+    k32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p,
+        wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
+    ]
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    generic_read, open_existing, attribute_normal = 0x80000000, 3, 0x80
+    handle = k32.CreateFileW(str(path), generic_read, 0, None, open_existing,
+                             attribute_normal, None)
+    assert handle not in (None, wintypes.HANDLE(-1).value), ctypes.get_last_error()
+    released = threading.Lock()
+
+    def release():
+        if released.acquire(blocking=False):
+            k32.CloseHandle(handle)
+
+    return release
+
+
+@pytest.mark.regression
+class TestStampsAreWrittenWhole:
+    """Both stamps are written in one step and read with a short retry
+    (src/utils/atomic_io.py), like the INIs beside them: a cut-off write
+    never leaves half a key, and a reader that opens a stamp while it is
+    swapped in does not take it as missing."""
+
+    @pytest.mark.parametrize("name, setter, getter", _STAMPS)
+    def test_a_failed_stamp_write_keeps_the_old_stamp(
+        self, env, monkeypatch, caplog, name, setter, getter
+    ):
+        setter("old-key", "french")
+        stamp = AppSettings.get_enhancements_dir("french") / name
+        old_bytes = stamp.read_bytes()
+
+        def disk_full(source, destination):
+            raise OSError(errno.ENOSPC, "No space left on device")
+
+        monkeypatch.setattr(atomic_io.os, "replace", disk_full)
+        setter("new-key", "french")   # logged, not raised
+
+        assert stamp.read_bytes() == old_bytes
+        assert getter("french") == "old-key"
+        assert not list(stamp.parent.glob(".sc-*.tmp"))
+        assert any(r.levelname == "WARNING" for r in caplog.records)
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows sharing rules")
+    @pytest.mark.parametrize("name, setter, getter", _STAMPS)
+    def test_a_stamp_held_for_a_moment_is_not_read_as_missing(
+        self, env, monkeypatch, name, setter, getter
+    ):
+        setter("p4k-key", "french")
+        stamp = AppSettings.get_enhancements_dir("french") / name
+        monkeypatch.setattr(atomic_io, "READ_DELAY_S", 0.2)
+        release = _hold_exclusively(stamp)
+        timer = threading.Timer(0.1, release)
+        try:
+            # Control: a plain read while the stamp is held fails.
+            with pytest.raises(PermissionError):
+                stamp.read_text(encoding="utf-8")
+            timer.start()
+            assert getter("french") == "p4k-key"
+        finally:
+            timer.cancel()
+            if timer.ident is not None:
+                timer.join()
+            release()
+
+
+@pytest.mark.regression
+class TestStampsGoWhereTheRunStarted:
+    """A generation captures its folder and DataForge build key when it
+    starts, so a channel, data-folder or cache-folder change during a hidden
+    run cannot stamp a set that run never wrote. The setters take that folder
+    and the build key takes that cache folder."""
+
+    @pytest.mark.parametrize("name, setter, getter", _STAMPS)
+    def test_a_stamp_folder_overrides_the_language_dir(
+        self, env, tmp_path, name, setter, getter
+    ):
+        elsewhere = tmp_path / "where-the-run-started"
+        setter("run-key", "french", folder=elsewhere)
+        assert (elsewhere / name).read_text(encoding="utf-8") == "run-key"
+        assert getter("french") == ""
+        assert not (AppSettings.get_enhancements_dir("french") / name).exists()
+
+    def test_invalidate_empties_the_dataforge_stamp_only(self, env):
+        AppSettings.set_enhancements_stamp("p4k-key", "french")
+        AppSettings.set_tag_config_stamp("tag-fp", "french")
+        folder = AppSettings.get_enhancements_dir("french")
+
+        AppSettings.invalidate_enhancements_stamp(folder)
+
+        assert (folder / AppSettings.ENHANCEMENTS_STAMP_NAME).read_bytes() == b""
+        assert AppSettings.get_enhancements_stamp("french") == ""
+        # The tag stamp has its own button, which already lights when the
+        # live config differs from it.
+        assert AppSettings.get_tag_config_stamp("french") == "tag-fp"
+        # Session-only Skip: nothing but the stamp is written.
+        assert sorted(p.name for p in folder.iterdir()) == sorted(
+            [AppSettings.ENHANCEMENTS_STAMP_NAME, AppSettings.TAG_CONFIG_STAMP_NAME]
+        )
+
+    def test_a_failed_invalidation_is_only_logged(self, env, monkeypatch, caplog):
+        AppSettings.set_enhancements_stamp("p4k-key", "french")
+
+        def disk_full(source, destination):
+            raise OSError(errno.ENOSPC, "No space left on device")
+
+        monkeypatch.setattr(atomic_io.os, "replace", disk_full)
+        AppSettings.invalidate_enhancements_stamp(AppSettings.get_enhancements_dir("french"))
+        assert any(r.levelname == "WARNING" for r in caplog.records)
+
+    def test_the_build_key_reads_the_given_cache_folder(self, env, tmp_path, monkeypatch):
+        from src.utils.pak_extractor import P4K_MTIME_STAMP
+
+        current, given = tmp_path / "current-cache", tmp_path / "run-cache"
+        for folder, key in ((current, "current-build"), (given, "run-build")):
+            folder.mkdir()
+            (folder / P4K_MTIME_STAMP).write_text(key, encoding="utf-8")
+        monkeypatch.setattr(AppSettings, "get_dataforge_cache_dir", staticmethod(lambda: current))
+        assert AppSettings.get_dataforge_build_key() == "current-build"
+        assert AppSettings.get_dataforge_build_key(given) == "run-build"
 
 
 class TestLanguageBaseUrl:

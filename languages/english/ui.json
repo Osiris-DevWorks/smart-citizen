@@ -2716,6 +2716,10 @@
       "ht": "{label}  (missing)",
       "at": ""
     },
+    "outdated_categories_body": {
+      "ht": "Your enhancements are out of date. The last generation did not finish, or they were made from older game data.\nSelect which to generate.\nYou can change this later in the Enhancements tab.",
+      "at": ""
+    },
     "dataforge_auto_extract_note": {
       "ht": "DataForge data will be extracted automatically if not already cached.\nFirst run takes a few minutes.",
       "at": ""

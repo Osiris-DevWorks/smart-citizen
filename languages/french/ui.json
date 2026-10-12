@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  (manquante)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "Vos enrichissements ne sont pas à jour. La dernière génération ne s'est pas terminée, ou ils ont été générés à partir de données de jeu plus anciennes.\nSélectionnez ceux à générer.\nVous pourrez changer cela plus tard dans l'onglet Enrichissements."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "Les données DataForge seront extraites automatiquement si elles ne sont pas déjà en cache.\nLe premier lancement prend quelques minutes."
