@@ -10,6 +10,7 @@ Tests cover:
 """
 
 import pytest
+import logging
 import tempfile
 import os
 from pathlib import Path
@@ -110,6 +111,15 @@ class TestIniParsing:
             assert result['vehicle_Name1'] == 'Ship One Updated'
         finally:
             os.unlink(f.name_temp)
+
+    def test_parse_skips_a_line_with_no_equals(self, tmp_path):
+        """A line with no '=' is skipped and the lines after it still load.
+        Splitting it would raise, and the parser's catch-all would then end
+        the parse at that line."""
+        path = tmp_path / "damaged.ini"
+        path.write_text("valid_key=valid_value\ninvalid_line_no_equals\nanother_valid=value\n",
+                        encoding="utf-8")
+        assert parse_ini_file(path) == {"valid_key": "valid_value", "another_valid": "value"}
 
 
 class TestMerging:
@@ -405,11 +415,14 @@ class TestOverridesManagement:
 class TestErrorHandling:
     """Test error handling and edge cases"""
 
-    def test_parse_nonexistent_file(self):
-        """Test parsing non-existent file raises error or returns empty"""
-        result = parse_ini_file('/nonexistent/path/file.ini')
-        # Should either raise or return empty - depending on implementation
-        assert result == {} or isinstance(result, dict)
+    def test_a_missing_file_is_an_empty_dict_without_a_warning(self, tmp_path, caplog):
+        """A missing file is an empty dict, returned before any read, so it is
+        not logged as a parse error. Reading it anyway would end in the
+        parser's catch-all, which also returns {} but logs a warning."""
+        with caplog.at_level(logging.WARNING):
+            result = parse_ini_file(tmp_path / "nonexistent.ini")
+        assert result == {}
+        assert caplog.records == []
 
     def test_merge_with_none_values(self):
         """Test merge handles None values gracefully"""
@@ -447,21 +460,7 @@ class TestErrorHandling:
 
 
 class TestStatsIntegration:
-    """Test stats INI file generation and integration"""
-
-    def test_stats_file_exists_after_generation(self):
-        """Test that stats files are created in cache directory"""
-        # This would require actual DataForge extraction
-        # For now, test structure
-        expected_stats_files = [
-            'ships_desc_stats.ini',
-            'components_desc_stats.ini',
-            'ship_weapons_desc_stats.ini',
-            'fps_weapons_desc_stats.ini'
-        ]
-
-        for filename in expected_stats_files:
-            assert filename.endswith('.ini')
+    """Test stats INI integration into the merge"""
 
     def test_stats_entries_merge_correctly(self):
         """Test that stats entries merge with base sources"""
