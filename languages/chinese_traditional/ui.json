@@ -227,6 +227,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Switch game channel"
+    },
+    "channel_not_installed": {
+      "ht": "",
+      "at": "Not installed"
     }
   },
   "filters": {

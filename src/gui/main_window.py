@@ -1102,6 +1102,34 @@ class MainWindow(QMainWindow):
         # Button row
         button_layout = QHBoxLayout()
 
+        # Channel switcher — launcher-style badge showing the active channel
+        # name and game build version.  Click opens a channel picker menu.
+        self._channel_switcher = QFrame()
+        self._channel_switcher.setObjectName("channelSwitcher")
+        self._channel_switcher.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._channel_switcher.setToolTip(tr("toolbar.channel_switcher_tooltip"))
+        _ch_layout = QVBoxLayout(self._channel_switcher)
+        _ch_layout.setContentsMargins(10, 4, 10, 4)
+        _ch_layout.setSpacing(0)
+        self._ch_name_label = QLabel(AppSettings.get_active_channel())
+        self._ch_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._ch_name_label.setStyleSheet(
+            f"font-size: 16px; font-weight: bold; color: {get_title_color()};"
+        )
+        _ch_layout.addWidget(self._ch_name_label)
+        self._ch_version_label = QLabel()
+        self._ch_version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._ch_version_label.setProperty("role", "secondary")
+        self._ch_version_label.setStyleSheet("font-size: 10px;")
+        _ch_layout.addWidget(self._ch_version_label)
+        self._channel_switcher.setStyleSheet(
+            "#channelSwitcher { border: 1px solid palette(mid); "
+            "border-radius: 6px; }"
+        )
+        self._channel_switcher.mousePressEvent = self._on_channel_switcher_clicked
+        self._refresh_channel_switcher()
+        button_layout.addWidget(self._channel_switcher)
+
         # Green when up to date, red when a change needs applying — color
         # itself is set by _set_apply_btn_dirty below.
         self.apply_btn = QPushButton(tr("toolbar.apply_btn"))
@@ -4148,7 +4176,7 @@ class MainWindow(QMainWindow):
         # QTextCursor.selectedText() returns U+2029 for paragraph breaks;
         # normalize back to newlines so wrapping multi-line selections
         # preserves their structure.
-        sel = cursor.selectedText().replace(" ", "\n")
+        sel = cursor.selectedText().replace("", "\n")
         cursor.insertText(f"<{tag}>{sel}</{tag}>")
 
     # ── Guided tour (coach-marks) ─────────────────────────────────────────────
@@ -4599,6 +4627,41 @@ class MainWindow(QMainWindow):
             return
         self._channel_indicator.setText(tr("status_bar.channel_indicator", channel=AppSettings.get_active_channel()))
 
+    def _refresh_channel_switcher(self) -> None:
+        """Update the toolbar channel-switcher badge from AppSettings."""
+        if not getattr(self, "_ch_name_label", None):
+            return
+        channel = AppSettings.get_active_channel()
+        self._ch_name_label.setText(channel)
+        branch_ver, build_num = AppSettings.get_channel_build_info(channel)
+        if branch_ver and build_num:
+            self._ch_version_label.setText(f"{branch_ver}.{build_num}")
+        elif branch_ver:
+            self._ch_version_label.setText(branch_ver)
+        else:
+            self._ch_version_label.setText("")
+
+    def _on_channel_switcher_clicked(self, _event=None) -> None:
+        """Show a channel-picker popup when the switcher badge is clicked."""
+        root = AppSettings.get_sc_install_root()
+        available = set(AppSettings.get_available_channels()) if root else set()
+        active = AppSettings.get_active_channel()
+        menu = QMenu(self)
+        for ch in AppSettings.AVAILABLE_CHANNELS:
+            action = menu.addAction(ch)
+            action.setCheckable(True)
+            action.setChecked(ch == active)
+            if root and ch not in available:
+                action.setEnabled(False)
+                action.setToolTip(tr("toolbar.channel_not_installed"))
+        chosen = menu.exec(QCursor.pos())
+        if chosen and chosen.text() != active and chosen.text() in available:
+            # Update the setting and route through the Config tab's signal
+            # so the full change cascade fires (paths, P4K status, reload).
+            self.config_tab.channel_combo.setCurrentIndex(
+                self.config_tab.channel_combo.findText(chosen.text())
+            )
+
     def _sync_canonical_source_paths(self, context: str) -> None:
         """Mirror canonical file-backed source paths into QSettings."""
         for source_name, canonical in (
@@ -4639,6 +4702,7 @@ class MainWindow(QMainWindow):
         self._sync_canonical_source_paths(f"for channel {channel}")
 
         self._refresh_channel_indicator()
+        self._refresh_channel_switcher()
         self.config_tab._refresh_p4k_status()
         if hasattr(self, "enhancements_tab"):
             # Use the full refresh — it updates the per-category status
@@ -4744,6 +4808,8 @@ class MainWindow(QMainWindow):
         self.tutorial_btn.setToolTip(tr("toolbar.tutorial_tooltip"))
         self.more_btn.setText(tr("toolbar.more_btn"))
         self.more_btn.setToolTip(tr("toolbar.more_tooltip"))
+        if getattr(self, "_channel_switcher", None):
+            self._channel_switcher.setToolTip(tr("toolbar.channel_switcher_tooltip"))
 
         # More-menu actions
         self._action_restore_backup.setText(tr("toolbar.restore_backup_btn"))

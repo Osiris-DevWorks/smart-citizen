@@ -1707,6 +1707,42 @@ class AppSettings:
             return ""
 
     @staticmethod
+    def get_channel_build_info(channel: str | None = None) -> tuple[str, str]:
+        """Return ``(branch_version, build_number)`` for a channel's build manifest.
+
+        *branch_version* is parsed from the ``Branch`` field (e.g.
+        ``"sc-alpha-4.10.2"`` → ``"4.10.2"``).  *build_number* is the
+        ``RequestedP4ChangeNum`` field (e.g. ``"12881860"``).  Returns
+        ``("", "")`` when the manifest is missing, malformed, or lacks the
+        fields.
+        """
+        import json
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        root = AppSettings.get_sc_install_root()
+        if not root:
+            return "", ""
+        manifest_path = Path(root) / channel / "build_manifest.id"
+        if not manifest_path.exists():
+            return "", ""
+        try:
+            with open(manifest_path, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return "", ""
+        block = data.get("Data") if isinstance(data, dict) else None
+        if not isinstance(block, dict):
+            return "", ""
+        branch = str(block.get("Branch", "") or "")
+        # Strip well-known prefixes: "sc-alpha-4.10.2" → "4.10.2"
+        for prefix in ("sc-alpha-", "sc-beta-", "sc-"):
+            if branch.startswith(prefix):
+                branch = branch[len(prefix):]
+                break
+        build_num = str(block.get("RequestedP4ChangeNum", "") or "")
+        return branch, build_num
+
+    @staticmethod
     def set_game_install_path(path: str) -> None:
         """Set Star Citizen install path."""
         AppSettings.settings().setValue(AppSettings.GAME_INSTALL_PATH, path)
