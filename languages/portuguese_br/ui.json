@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "Salvamento"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "Mostrar ou ocultar projetos"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Buscar projetos..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "Mineral ou local..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Desmarcar tudo"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Faz a etiqueta do escaneamento brilhar quando este mineral for decodificado"
     },
     "crafting_search_placeholder": {
       "ht": "",

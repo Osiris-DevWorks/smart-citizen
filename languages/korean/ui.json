@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "인양"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "블루프린트 표시 또는 숨기기"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "블루프린트 검색..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "광물 또는 장소..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "모두 해제"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "이 광물이 해독되면 스캔 라벨이 빛납니다"
     },
     "crafting_search_placeholder": {
       "ht": "",

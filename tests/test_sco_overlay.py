@@ -17,7 +17,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtCore import QRect, Qt  # noqa: E402
 
 from src.gui.sco_overlay import (  # noqa: E402
-    DEFAULT_OVERLAY_COLORS, SCAN_REGION, BlueprintDrawer, OverlayColors, drawer_edge,
+    DEFAULT_OVERLAY_COLORS, DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_OVERLAP, DRAWER_HANDLE_WIDTH,
+    LABEL_GAP,
+    SCAN_REGION, SECTION_ICONS, BlueprintDrawer, OverlayColors, SectionTabBar, drawer_edge,
     ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
 )
 from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
@@ -87,13 +89,85 @@ def test_scan_region_scales_with_screen(qapp):
     assert r.contains(1150, 550) and r.contains(1290, 572)
 
 
-def test_arrow_flips_with_the_drawer(qapp):
+def test_a_tab_opens_its_own_section(qapp):
     drawer = BlueprintDrawer()
-    assert drawer._handle.points_inward and not drawer._panel.isVisibleTo(drawer)
-    drawer.toggle()
-    assert not drawer._handle.points_inward and drawer._panel.isVisibleTo(drawer)
-    drawer.toggle()
-    assert drawer._handle.points_inward
+    assert drawer._handle.current is None and not drawer._panel.isVisibleTo(drawer)
+    drawer.open_section("minerals")
+    assert drawer._panel.isVisibleTo(drawer)
+    assert drawer._sections.currentWidget() is drawer._section_pages["minerals"]
+    assert drawer._handle.current == "minerals"
+    # Another tab switches the section and keeps the drawer open.
+    drawer.open_section("crafting")
+    assert drawer._panel.isVisibleTo(drawer)
+    assert drawer._sections.currentWidget() is drawer._section_pages["crafting"]
+    # The open section's own tab closes it.
+    drawer.open_section("crafting")
+    assert not drawer._panel.isVisibleTo(drawer) and drawer._handle.current is None
+
+
+def _tab_centre(bar, index):
+    from PyQt6.QtCore import QPointF
+
+    step = DRAWER_HANDLE_HEIGHT - DRAWER_HANDLE_OVERLAP
+    return QPointF(DRAWER_HANDLE_WIDTH * 0.75, index * step + DRAWER_HANDLE_HEIGHT / 2)
+
+
+def test_tabs_overlap_and_the_open_one_is_in_front(qapp):
+    from PyQt6.QtCore import QPointF
+
+    bar = SectionTabBar()
+    assert bar.height() == 3 * DRAWER_HANDLE_HEIGHT - 2 * DRAWER_HANDLE_OVERLAP
+    for i, name in enumerate(SECTION_ICONS):
+        assert bar.tab_at(_tab_centre(bar, i)) == name
+    # Along the edge, where Blueprints' and Minerals' tall sides overlap, the
+    # later tab is in front until Blueprints opens.
+    overlap = QPointF(DRAWER_HANDLE_WIDTH - 1, DRAWER_HANDLE_HEIGHT - DRAWER_HANDLE_OVERLAP / 2)
+    assert bar.tab_at(overlap) == "minerals"
+    bar.set_current("blueprints")
+    assert bar.tab_at(overlap) == "blueprints"
+    # The slanted gap beside the overlap belongs to no tab.
+    assert bar.tab_at(QPointF(1, DRAWER_HANDLE_HEIGHT - DRAWER_HANDLE_OVERLAP / 2)) is None
+
+
+def test_a_click_on_a_tab_opens_its_section(qapp):
+    from PyQt6.QtCore import QEvent, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    drawer = BlueprintDrawer()
+    bar = drawer._handle
+    centre = _tab_centre(bar, 2)
+    press = QMouseEvent(QEvent.Type.MouseButtonPress, centre, centre, Qt.MouseButton.LeftButton,
+                        Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+    bar.mousePressEvent(press)
+    assert drawer._handle.current == "crafting" and drawer._panel.isVisibleTo(drawer)
+
+
+@pytest.mark.parametrize("edge", ["left", "right", "top", "bottom"])
+def test_tabs_run_along_each_edge(qapp, edge):
+    bar = SectionTabBar()
+    bar.set_edge(edge)
+    length = 3 * DRAWER_HANDLE_HEIGHT - 2 * DRAWER_HANDLE_OVERLAP
+    sideways = edge in ("left", "right")
+    assert (bar.width(), bar.height()) == (
+        (DRAWER_HANDLE_WIDTH, length) if sideways else (length, DRAWER_HANDLE_WIDTH))
+    # The first tab sits at the start of the bar, the last at its end.
+    from PyQt6.QtCore import QPointF
+
+    mid, near, far = DRAWER_HANDLE_WIDTH / 2, DRAWER_HANDLE_HEIGHT / 2, length - DRAWER_HANDLE_HEIGHT / 2
+    at = (lambda along: QPointF(mid, along)) if sideways else (lambda along: QPointF(along, mid))
+    assert bar.tab_at(at(near)) == "blueprints" and bar.tab_at(at(far)) == "crafting"
+
+
+def test_tab_bar_paints(qapp):
+    from PyQt6.QtGui import QImage
+
+    bar = SectionTabBar()
+    bar.set_current("minerals")
+    image = QImage(bar.size(), QImage.Format.Format_ARGB32)
+    image.fill(0)
+    bar.render(image)
+    assert any(image.pixelColor(x, y).alpha() for x in range(image.width())
+               for y in range(image.height()))
 
 
 def test_drawer_takes_theme_colours(qapp):
@@ -181,10 +255,83 @@ def test_label_is_centred_under_the_readout_in_odw_colours(qapp):
     label = ScanLabelWindow()
     label.show_text("3 × Lindinium", QPoint(500, 300))
     assert abs(label.x() + label.width() // 2 - 500) <= 1
-    assert label.y() == 300
+    # The box sits on the anchor; the window around it leaves room for a glow,
+    # less above, so it never reaches back over the readout.
+    label.layout().activate()
+    assert label.y() + label._label.y() == 300
+    assert 0 < 300 - label.y() < LABEL_GAP
     assert label._label.alignment() & Qt.AlignmentFlag.AlignHCenter
     assert ODW_OVERLAY_COLORS.accent in label._label.styleSheet()
     label.hide()
+
+
+def test_a_watched_mineral_makes_the_label_glow(qapp, monkeypatch):
+    from PyQt6.QtCore import QPoint
+
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay()
+    overlay.set_reader(None)
+    overlay.start()
+    at = QPoint(500, 300)
+    try:
+        overlay.set_watched_minerals({"lindinium"})
+        for _ in range(2):
+            overlay._on_reading(10200, at)                  # 3 × Lindinium
+        assert overlay.label.glowing and overlay.label._glow.isEnabled()
+        assert DEFAULT_OVERLAY_COLORS.accent in overlay.label._label.styleSheet()
+        for _ in range(2):
+            overlay._on_reading(7200, at)                   # 2 × Bexalite
+        assert not overlay.label.glowing
+        # Ticking the mineral while its reading shows lights it up at once.
+        overlay.drawer.set_catalog(*_catalog())
+        overlay.set_watched_minerals({"bexalite"})
+        assert overlay.label.glowing
+    finally:
+        overlay.stop()
+
+
+def test_drawer_mineral_checkboxes_and_clear_all(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_catalog(*_catalog())
+    seen = []
+    drawer.watched_changed.connect(seen.append)
+    tree = drawer._mineral_tree
+    rows = {tree.topLevelItem(i).text(0): tree.topLevelItem(i) for i in range(tree.topLevelItemCount())}
+    beryl = rows["Beryl"]
+    assert beryl.checkState(1) == Qt.CheckState.Unchecked
+    assert not drawer._clear_watched_btn.isEnabled()
+    beryl.setCheckState(1, Qt.CheckState.Checked)
+    assert seen[-1] == {"beryl"} and drawer._clear_watched_btn.isEnabled()
+    # The tick survives a new search.
+    drawer._mineral_search.setText("ber")
+    assert tree.topLevelItem(0).checkState(1) == Qt.CheckState.Checked
+    drawer._clear_watched_btn.click()
+    assert seen[-1] == set() and tree.topLevelItem(0).checkState(1) == Qt.CheckState.Unchecked
+    assert not drawer._clear_watched_btn.isEnabled()
+    # set_watched mirrors the saved list without echoing it back.
+    count = len(seen)
+    drawer.set_watched({"beryl"})
+    assert tree.topLevelItem(0).checkState(1) == Qt.CheckState.Checked and len(seen) == count
+
+
+def test_only_ores_with_a_signature_get_a_checkbox(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_catalog({"Hadanite": MineralInfo("Hadanite", "Gems", ("Aberdeen",))}, CraftingIndex())
+    assert drawer._mineral_tree.topLevelItem(0).data(1, Qt.ItemDataRole.CheckStateRole) is None
+
+
+def test_drawer_scan_decoder_switch(qapp, monkeypatch):
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay()
+    seen = []
+    overlay.scan_decoder_toggled.connect(seen.append)
+    check = overlay.drawer._decoder_check
+    assert check.isChecked()
+    check.setChecked(False)
+    assert seen == [False]
+    # The Overlay tab's switch reaches the drawer without an echo.
+    overlay.set_options({"scan_decoder": True})
+    assert check.isChecked() and seen == [False]
 
 
 def test_own_label_is_blacked_out_of_the_capture(qapp, monkeypatch):
@@ -297,11 +444,24 @@ def test_empty_catalog_says_how_to_fill_it(qapp):
 
 def test_sections_follow_the_options(qapp):
     overlay = ScoOverlay()
+    overlay.drawer.open_section("minerals")
     overlay.set_options({"drawer_minerals": False})
-    tabs = overlay.drawer._sections
-    pages = overlay.drawer._section_pages
-    assert tabs.isTabVisible(pages["blueprints"]) and tabs.isTabVisible(pages["crafting"])
-    assert not tabs.isTabVisible(pages["minerals"])
+    assert overlay.drawer._handle.sections == ["blueprints", "crafting"]
+    # Switching off the open section closes the drawer.
+    assert not overlay.drawer._panel.isVisibleTo(overlay.drawer)
+    assert overlay.drawer.has_sections()
+
+
+def test_no_sections_hides_the_drawer(qapp, monkeypatch):
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    overlay = ScoOverlay()
+    overlay.start()
+    try:
+        overlay.set_options({"drawer_blueprints": False, "drawer_minerals": False,
+                             "drawer_crafting": False})
+        assert not overlay.drawer.has_sections() and not overlay.drawer.isVisible()
+    finally:
+        overlay.stop()
 
 
 @pytest.mark.parametrize("position, edge, corner", [
@@ -323,7 +483,7 @@ def test_drawer_docks_at_each_position(qapp, position, edge, corner):
     assert drawer_edge(position) == edge and drawer._handle.edge == edge
     for expanded in (False, True):
         if expanded:
-            drawer.toggle()
+            drawer.open_section("blueprints")
         g = drawer.geometry()
         assert screen.contains(g), (position, expanded, g)
         if "left" in corner:

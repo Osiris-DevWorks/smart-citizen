@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "打撈"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "顯示或隱藏藍圖"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "搜尋藍圖..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "礦物或地點..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "全部取消"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "解碼出此礦物時，掃描標籤會發光"
     },
     "crafting_search_placeholder": {
       "ht": "",

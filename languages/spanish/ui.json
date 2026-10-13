@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "Recuperación"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "Mostrar u ocultar planos"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Buscar planos..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "Mineral o lugar..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Desmarcar todo"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Ilumina la etiqueta del escaneo cuando se decodifica este mineral"
     },
     "crafting_search_placeholder": {
       "ht": "",

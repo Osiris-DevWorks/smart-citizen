@@ -688,6 +688,9 @@ class AppSettings:
         "bottom_left", "bottom_center", "bottom_right",
     )
     SCO_DRAWER_POSITION_DEFAULT = "middle_right"
+    # Ores ticked in the SCO drawer's Minerals section: a decoded scan of one
+    # makes the signature label glow. JSON list of ORE_SIGNATURES keys.
+    SCO_WATCHED_MINERALS = "sco/watched_minerals"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1590,6 +1593,23 @@ class AppSettings:
         if position not in AppSettings.SCO_DRAWER_POSITIONS:
             position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
         AppSettings.settings().setValue(AppSettings.SCO_DRAWER_POSITION, position)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_watched_minerals() -> set:
+        """Ores whose decoded scan makes the SCO label glow (lowercase
+        ``ORE_SIGNATURES`` keys). JSON, like ``get_owned_items``."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_WATCHED_MINERALS, "", type=str)
+        try:
+            return {str(name) for name in json.loads(raw)} if raw else set()
+        except (ValueError, TypeError):
+            return set()
+
+    @staticmethod
+    def set_sco_watched_minerals(names) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3519,6 +3539,7 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
             AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
+            AppSettings.SCO_WATCHED_MINERALS: "[]",
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({

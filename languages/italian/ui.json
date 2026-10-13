@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "Recupero"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "Mostra o nascondi i progetti"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Cerca progetti..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "Minerale o luogo..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Deseleziona tutto"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Fa brillare l'etichetta della scansione quando questo minerale viene decodificato"
     },
     "crafting_search_placeholder": {
       "ht": "",

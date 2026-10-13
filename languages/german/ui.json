@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "Bergung"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "Blaupausen ein- oder ausblenden"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Blaupausen suchen..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "Mineral oder Ort..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Alle abwählen"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Die Scan-Anzeige leuchtet, wenn dieses Mineral erkannt wird"
     },
     "crafting_search_placeholder": {
       "ht": "",

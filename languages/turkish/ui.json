@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "Hurda"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "Planları göster veya gizle"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Plan ara..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "Mineral veya konum..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Tümünü kaldır"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Bu mineral çözüldüğünde tarama etiketi parlar"
     },
     "crafting_search_placeholder": {
       "ht": "",

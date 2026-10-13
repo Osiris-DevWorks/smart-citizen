@@ -6847,7 +6847,10 @@ class MainWindow(QMainWindow):
             from src.gui.sco_overlay import ScoOverlay
             self._sco_overlay = ScoOverlay(self, sample_dir=AppSettings.get_sco_samples_dir())
             self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
+            self._sco_overlay.scan_decoder_toggled.connect(self._on_sco_scan_decoder_toggled)
+            self._sco_overlay.watched_changed.connect(AppSettings.set_sco_watched_minerals)
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
+        self._sco_overlay.set_watched_minerals(AppSettings.get_sco_watched_minerals())
         self._refresh_sco_catalog()
         self._sco_overlay.start()
         self._apply_sco_options()
@@ -6946,6 +6949,12 @@ class MainWindow(QMainWindow):
         self._recompute_owned()
         if self._sco_overlay is not None:
             self._sco_overlay.drawer.notify_new(new_names)
+
+    def _on_sco_scan_decoder_toggled(self, on: bool):
+        """The drawer's scan decoder switch: same setting as the Overlay tab's."""
+        AppSettings.set_sco_option("scan_decoder", on)
+        self.overlay_tab.set_option("scan_decoder", on)
+        self._apply_sco_options()
 
     def _on_sco_owned_toggled(self, name: str, owned_now: bool):
         """The drawer's checkbox: same owned set the Blueprint Tracker edits."""

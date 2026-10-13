@@ -128,10 +128,18 @@ def read_compendium(base_ini: Path) -> dict[str, MineralInfo]:
     return {}
 
 
+def ore_key(mineral: str) -> str | None:
+    """The ``ORE_SIGNATURES`` key for a compendium mineral, or None when the
+    scanner has no signature for it (so a scan can never decode to it)."""
+    low = mineral.lower()
+    key = COMPENDIUM_ORE_ALIASES.get(low, low)
+    return key if key in ORE_SIGNATURES else None
+
+
 def ore_signature(mineral: str) -> tuple[int, int] | None:
     """``(base RS, largest cluster)`` for a compendium mineral, if known."""
-    low = mineral.lower()
-    return ORE_SIGNATURES.get(COMPENDIUM_ORE_ALIASES.get(low, low))
+    key = ore_key(mineral)
+    return ORE_SIGNATURES[key] if key else None
 
 
 def minerals_at(location: str, minerals: dict[str, MineralInfo]) -> list[str]:

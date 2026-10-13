@@ -3020,10 +3020,6 @@
       "ht": "Salvage",
       "at": ""
     },
-    "drawer_handle_tooltip": {
-      "ht": "Show or hide blueprints",
-      "at": ""
-    },
     "drawer_search_placeholder": {
       "ht": "Search blueprints...",
       "at": ""
@@ -3076,8 +3072,16 @@
       "ht": "Mineral or location...",
       "at": ""
     },
+    "clear_watched": {
+      "ht": "Clear all",
+      "at": ""
+    },
+    "watch_mineral_tooltip": {
+      "ht": "Glow the scan label when this mineral is decoded",
+      "at": ""
+    },
     "crafting_search_placeholder": {
-      "ht": "Mineral or component...",
+      "ht": "Type a mineral or component name...",
       "at": ""
     },
     "minerals_none": {

@@ -101,3 +101,34 @@ def test_drawer_position_picker(qapp, json_backend, tmp_path):
 def test_bad_stored_position_reads_as_default(json_backend):
     json_backend.setValue(AppSettings.SCO_DRAWER_POSITION, "middle_center")
     assert AppSettings.get_sco_drawer_position() == "middle_right"
+
+
+def test_set_option_mirrors_without_saving_or_emitting(qapp, json_backend, tmp_path):
+    tab = OverlayTab(tmp_path / "samples")
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    tab.set_option("scan_decoder", False)   # the drawer's switch already saved it
+    assert not tab._checks["scan_decoder"].isChecked()
+    assert changed == [] and AppSettings.get_sco_option("scan_decoder") is True
+
+
+def test_watched_minerals_round_trip(json_backend):
+    assert AppSettings.get_sco_watched_minerals() == set()
+    AppSettings.set_sco_watched_minerals({"iron", "beryl"})
+    assert AppSettings.get_sco_watched_minerals() == {"iron", "beryl"}
+    json_backend.setValue(AppSettings.SCO_WATCHED_MINERALS, "not json")
+    assert AppSettings.get_sco_watched_minerals() == set()
+    assert AppSettings.profile_default_values()[AppSettings.SCO_WATCHED_MINERALS] == "[]"
+
+
+def test_drawer_scan_decoder_switch_saves_and_mirrors(qapp, json_backend, tmp_path):
+    from types import SimpleNamespace
+
+    from src.gui.main_window import MainWindow
+
+    tab = OverlayTab(tmp_path / "samples")
+    applied = []
+    stub = SimpleNamespace(overlay_tab=tab, _apply_sco_options=lambda: applied.append(True))
+    MainWindow._on_sco_scan_decoder_toggled(stub, False)
+    assert AppSettings.get_sco_option("scan_decoder") is False
+    assert not tab._checks["scan_decoder"].isChecked() and applied == [True]

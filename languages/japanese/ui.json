@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "サルベージ"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "設計図を表示/非表示"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "設計図を検索..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "鉱物または場所..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "すべて解除"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "この鉱物が解読されるとスキャンラベルが光ります"
     },
     "crafting_search_placeholder": {
       "ht": "",

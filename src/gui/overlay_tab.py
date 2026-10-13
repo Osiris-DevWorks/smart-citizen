@@ -127,6 +127,14 @@ class OverlayTab(QWidget):
         self._start_btn.blockSignals(False)
         self._sync_start_text()
 
+    def set_option(self, name: str, on: bool) -> None:
+        """Mirror a switch changed elsewhere (the SCO drawer) without
+        re-saving it or emitting ``options_changed``."""
+        check = self._checks[name]
+        check.blockSignals(True)
+        check.setChecked(on)
+        check.blockSignals(False)
+
     def _sync_start_text(self) -> None:
         key = "overlay.stop_btn" if self._start_btn.isChecked() else "overlay.start_btn"
         self._start_btn.setText(tr(key))

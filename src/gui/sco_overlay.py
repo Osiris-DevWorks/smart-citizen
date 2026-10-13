@@ -5,9 +5,10 @@ Two windows, because they need opposite input behaviour:
 - ``ScanLabelWindow`` shows the decoded mining signature ("2 x Bexalite")
   just under the scanner's signature readout. Clicks pass straight through
   it to the game.
-- ``BlueprintDrawer`` is a handle on the right screen edge that expands into
-  three searchable sections: blueprints with owned checkboxes, minerals by
-  star system and location, and crafting (mineral to items and back). It
+- ``BlueprintDrawer`` is a stack of three icon tabs on a screen edge, one per
+  searchable section: blueprints with owned checkboxes, minerals by star
+  system and location, and crafting (mineral to items and back). A tab opens
+  the drawer straight to its section. It
   has to take clicks, so using it takes focus from the game; the player
   needs a free cursor.
 
@@ -29,26 +30,29 @@ owned set, plus the Mining Compendium minerals and the crafting index
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
-from PyQt6.QtCore import QObject, QPoint, QPointF, QRect, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import (
+    QObject, QPoint, QPointF, QRect, Qt, QTimer, QVariantAnimation, pyqtSignal,
+)
 from PyQt6.QtGui import (
     QColor, QGuiApplication, QImage, QPainter, QPainterPath, QPalette, QPen,
     QTransform,
 )
 from PyQt6.QtWidgets import (
-    QBoxLayout, QCheckBox, QFrame, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QTabWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
-    QWidget,
+    QBoxLayout, QCheckBox, QFrame, QGraphicsDropShadowEffect, QHBoxLayout,
+    QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
-    CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_signature,
-    star_system,
+    CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
+    ore_signature, star_system,
 )
 from src.utils.mining_signatures import (
     OTHER_SIGNATURES, SignatureMatch, decode_signature, parse_signature_text,
@@ -74,13 +78,27 @@ LABEL_HOLD_MS = 1500
 # Gap between the readout's baseline and the label, in screen px. Keeps the
 # label clear of the digits while the readout bobs with head movement.
 LABEL_GAP = 10
+# Room around the label for its glow when it decodes a watched mineral. The
+# top stays under LABEL_GAP so the label window (masked out of each capture)
+# never covers the readout's own digits.
+GLOW_MARGIN = 12
+GLOW_TOP_MARGIN = LABEL_GAP - 2
+# One glow pulse (bright and back), in ms, and its blur radius range in px.
+GLOW_PULSE_MS = 1400
+GLOW_BLUR = (6, 22)
 # A new reading must repeat on this many captures in a row before it replaces
 # the label, so a one-frame misread can't flash "Unidentified".
 READINGS_TO_CHANGE = 2
 NEW_BLUEPRINT_BANNER_MS = 8000
 
-DRAWER_HANDLE_WIDTH = 16
-DRAWER_HANDLE_HEIGHT = 44
+# One section tab: thickness off the edge, length along it, and the share
+# of its length each tapered end takes. Neighbouring tabs overlap by the
+# taper, so their slanted ends meet.
+DRAWER_HANDLE_WIDTH = 22
+DRAWER_HANDLE_HEIGHT = 48
+DRAWER_HANDLE_TAPER = 0.15
+DRAWER_HANDLE_OVERLAP = round(DRAWER_HANDLE_HEIGHT * DRAWER_HANDLE_TAPER)
+DRAWER_ICON_SIZE = 14
 DRAWER_PANEL_WIDTH = 340
 # Share of the screen an open drawer takes along its edge: the full side
 # for a left/right drawer, less for a top/bottom one, which sits over the
@@ -93,6 +111,8 @@ LEFT, RIGHT, TOP, BOTTOM = "left", "right", "top", "bottom"
 TOOLTIP_MAX_MISSIONS = 12
 # How much of the game shows through the drawer: 0 = invisible, 255 = solid.
 DRAWER_ALPHA = 184
+# The open section's tab is nearly solid, so it reads as in front.
+DRAWER_HANDLE_SELECTED_ALPHA = 240
 
 # A reader takes a capture of SCAN_REGION and returns the HUD text it found
 # ("10,200") and where, in capture coordinates, or None when nothing is shown.
@@ -201,27 +221,78 @@ class ScanLabelWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        c = ODW_OVERLAY_COLORS
-        self._label.setStyleSheet(
-            f"QLabel {{ color: {c.text}; background: {_rgba(c.background)};"
-            f" border: 1px solid {c.accent}; border-radius: 4px;"
-            " padding: 2px 8px; font-weight: bold; }"
-        )
+        self._glow_color = DEFAULT_OVERLAY_COLORS.accent
+        self.glowing = False
+        self._glow = QGraphicsDropShadowEffect(self._label)
+        self._glow.setOffset(0, 0)
+        self._glow.setEnabled(False)
+        self._label.setGraphicsEffect(self._glow)
+        self._pulse = QVariantAnimation(self)
+        self._pulse.setDuration(GLOW_PULSE_MS)
+        self._pulse.setStartValue(0.0)
+        self._pulse.setKeyValueAt(0.5, 1.0)
+        self._pulse.setEndValue(0.0)
+        self._pulse.setLoopCount(-1)
+        self._pulse.valueChanged.connect(self._on_pulse)
+        self._restyle()
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(GLOW_MARGIN, GLOW_TOP_MARGIN, GLOW_MARGIN, GLOW_MARGIN)
         layout.addWidget(self._label)
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self.hide)
 
-    def show_text(self, text: str, anchor: QPoint) -> None:
-        """Show *text* centred under *anchor*: the middle of its top edge
-        sits on that point (screen coordinates)."""
+    def show_text(self, text: str, anchor: QPoint, glowing: bool = False) -> None:
+        """Show *text* centred under *anchor*: the middle of the box's top
+        edge sits on that point (screen coordinates). *glowing* pulses the
+        border in the theme colour (a watched mineral)."""
         self._label.setText(text)
+        self.set_glowing(glowing)
         self.adjustSize()
-        self.move(anchor.x() - self.width() // 2, anchor.y())
+        self.move(anchor.x() - self.width() // 2, anchor.y() - GLOW_TOP_MARGIN)
         self.show()
         self._hide_timer.start(LABEL_HOLD_MS)
+
+    def set_glow_color(self, color: str) -> None:
+        """The theme colour the glow pulses in (the label keeps ODW colours)."""
+        self._glow_color = color
+        self._restyle()
+
+    def set_glowing(self, glowing: bool) -> None:
+        if glowing == self.glowing:
+            return
+        self.glowing = glowing
+        self._glow.setEnabled(glowing)
+        if glowing:
+            self._pulse.start()
+        else:
+            self._pulse.stop()
+        self._restyle()
+
+    def _restyle(self) -> None:
+        c = ODW_OVERLAY_COLORS
+        border = self._glow_color if self.glowing else c.accent
+        self._label.setStyleSheet(
+            f"QLabel {{ color: {c.text}; background: {_rgba(c.background)};"
+            f" border: {2 if self.glowing else 1}px solid {border}; border-radius: 4px;"
+            " padding: 2px 8px; font-weight: bold; }"
+        )
+
+    def _on_pulse(self, value: float) -> None:
+        low, high = GLOW_BLUR
+        self._glow.setBlurRadius(low + (high - low) * value)
+        color = QColor(self._glow_color)
+        color.setAlpha(int(90 + 165 * value))
+        self._glow.setColor(color)
+
+    def hideEvent(self, event):
+        self._pulse.stop()
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        if self.glowing:
+            self._pulse.start()
+        super().showEvent(event)
 
 
 def drawer_edge(position: str) -> str:
@@ -233,30 +304,105 @@ def drawer_edge(position: str) -> str:
     return LEFT if horizontal == "left" else RIGHT
 
 
-class ArrowTab(QWidget):
-    """The drawer's handle: a tapered tab with a chevron, its tall side
-    against the screen edge it docks to. Points inward (open me) while the
-    drawer is closed and toward the edge (close me) while it's open."""
+def _arc(path: QPainterPath, center: tuple[float, float], radius: float,
+         end: tuple[float, float]) -> None:
+    """Counter-clockwise arc from the path's current point to ``end``."""
+    cx, cy = center
+    start = path.currentPosition()
+    a0 = math.degrees(math.atan2(cy - start.y(), start.x() - cx))
+    a1 = math.degrees(math.atan2(cy - end[1], end[0] - cx))
+    path.arcTo(cx - radius, cy - radius, 2 * radius, 2 * radius, a0, (a1 - a0) % 360)
 
-    clicked = pyqtSignal()
+
+def _polyline(path: QPainterPath, *points: tuple[float, float], close: bool = False) -> None:
+    path.moveTo(*points[0])
+    for point in points[1:]:
+        path.lineTo(*point)
+    if close:
+        path.closeSubpath()
+
+
+def _blueprints_icon() -> QPainterPath:
+    """A page with a folded corner and two lines of text."""
+    path = QPainterPath()
+    _polyline(path, (6, 3), (14, 3), (18, 7), (18, 21), (6, 21), close=True)
+    _polyline(path, (14, 3), (14, 7), (18, 7))
+    _polyline(path, (9, 12), (15, 12))
+    _polyline(path, (9, 16), (15, 16))
+    return path
+
+
+def _minerals_icon() -> QPainterPath:
+    """A cut gem seen from the side."""
+    path = QPainterPath()
+    _polyline(path, (7, 4), (17, 4), (21, 9), (12, 20), (3, 9), close=True)
+    _polyline(path, (3, 9), (21, 9))
+    _polyline(path, (12, 20), (9, 9), (12, 4), (15, 9), close=True)
+    return path
+
+
+def _crafting_icon() -> QPainterPath:
+    """An open-ended wrench, head top right."""
+    path = QPainterPath()
+    path.moveTo(14.7, 6.3)
+    _arc(path, (12.84, 9.84), 4, (9.3, 11.7))
+    _polyline(path, (9.3, 11.7), (4, 17), (7, 20), (12.3, 14.7))
+    _arc(path, (14.16, 11.16), 4, (17.7, 9.3))
+    for point in ((15.2, 11.8), (12.8, 11.2), (12.2, 8.8), (14.7, 6.3)):
+        path.lineTo(*point)
+    return path
+
+
+# Drawer sections in handle order, each with its icon on a 24-unit grid.
+SECTION_ICONS = {
+    "blueprints": _blueprints_icon,
+    "minerals": _minerals_icon,
+    "crafting": _crafting_icon,
+}
+
+
+class SectionTabBar(QWidget):
+    """The drawer's handles: one tapered tab per section, stacked along the
+    screen edge with the tall side against it. Neighbouring tabs overlap at
+    their tapered ends, and the open section's tab is drawn last so it sits
+    in front. A click on a tab emits ``clicked`` with its section name."""
+
+    clicked = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMouseTracking(True)
         self.colors = DEFAULT_OVERLAY_COLORS
-        self.points_inward = True
-        self.set_edge(RIGHT)
+        self.sections: list[str] = list(SECTION_ICONS)
+        self.current: Optional[str] = None
+        self.edge = RIGHT
+        self._icons = {name: make() for name, make in SECTION_ICONS.items()}
+        self._resize()
 
     def set_edge(self, edge: str) -> None:
         self.edge = edge
-        if edge in (LEFT, RIGHT):
-            self.setFixedSize(DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT)
+        self._resize()
+
+    def set_sections(self, sections: list[str]) -> None:
+        self.sections = [name for name in SECTION_ICONS if name in sections]
+        self._resize()
+
+    def set_current(self, name: Optional[str]) -> None:
+        self.current = name
+        self.update()
+
+    def _resize(self) -> None:
+        n = len(self.sections)
+        length = n * DRAWER_HANDLE_HEIGHT - max(n - 1, 0) * DRAWER_HANDLE_OVERLAP
+        if self.edge in (LEFT, RIGHT):
+            self.setFixedSize(DRAWER_HANDLE_WIDTH, length)
         else:
-            self.setFixedSize(DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_WIDTH)
+            self.setFixedSize(length, DRAWER_HANDLE_WIDTH)
         self.update()
 
     def _to_edge(self) -> QTransform:
-        """Maps the right-edge drawing below onto this tab's edge."""
+        """Maps the right-edge drawing below onto this bar's edge."""
         w = DRAWER_HANDLE_WIDTH
         if self.edge == LEFT:
             return QTransform(-1, 0, 0, 1, w, 0)
@@ -266,37 +412,83 @@ class ArrowTab(QWidget):
             return QTransform(0, 1, 1, 0, 0, 0)
         return QTransform()
 
+    @staticmethod
+    def _tab_top(index: int) -> float:
+        return index * (DRAWER_HANDLE_HEIGHT - DRAWER_HANDLE_OVERLAP)
+
+    def _tab_shape(self, index: int) -> QPainterPath:
+        """Tab ``index`` as drawn on the right edge: tall side right."""
+        w, h, top = DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT, self._tab_top(index)
+        tab = QPainterPath()
+        _polyline(tab, (w - 0.5, top + 0.5), (0.5, top + h * DRAWER_HANDLE_TAPER),
+                  (0.5, top + h * (1 - DRAWER_HANDLE_TAPER)), (w - 0.5, top + h - 0.5),
+                  close=True)
+        return tab
+
+    def _paint_order(self) -> list[int]:
+        """Back to front: the open section's tab last."""
+        indices = range(len(self.sections))
+        return sorted(indices, key=lambda i: self.sections[i] == self.current)
+
+    def tab_at(self, pos: QPointF) -> Optional[str]:
+        """The section whose tab is in front at ``pos`` (widget coordinates)."""
+        to_local, _ = self._to_edge().inverted()
+        point = to_local.map(QPointF(pos))
+        for i in reversed(self._paint_order()):
+            if self._tab_shape(i).contains(point):
+                return self.sections[i]
+        return None
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
+            name = self.tab_at(event.position())
+            if name:
+                self.clicked.emit(name)
+
+    def mouseMoveEvent(self, event):
+        name = self.tab_at(event.position())
+        self.setToolTip(tr(f"sco.section_{name}") if name else "")
 
     def paintEvent(self, _event):
-        # Drawn as a right-edge tab (tall side right), then turned to the edge.
-        w, h = DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setTransform(self._to_edge())
-        # Tall side against the panel / screen edge, tapering outward.
-        tab = QPainterPath()
-        tab.moveTo(w - 0.5, 0.5)
-        tab.lineTo(0.5, h * 0.15)
-        tab.lineTo(0.5, h * 0.85)
-        tab.lineTo(w - 0.5, h - 0.5)
-        tab.closeSubpath()
-        bg = QColor(self.colors.background)
-        bg.setAlpha(DRAWER_ALPHA)
-        p.fillPath(tab, bg)
-        p.setPen(QPen(QColor(self.colors.accent), 1.2))
-        p.drawPath(tab)
+        to_edge = self._to_edge()
+        p.setTransform(to_edge)
+        for i in self._paint_order():
+            name = self.sections[i]
+            selected = name == self.current
+            tab = self._tab_shape(i)
+            bg = QColor(self.colors.background)
+            bg.setAlpha(DRAWER_HANDLE_SELECTED_ALPHA if selected else DRAWER_ALPHA)
+            # Source mode replaces the tab underneath, so an overlap shows
+            # only the tab in front instead of both outlines.
+            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+            p.fillPath(tab, bg)
+            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+            # Closed, every tab is lit; open, only the open section's.
+            lit = selected or self.current is None
+            colour = QColor(self.colors.accent if lit else self.colors.secondary)
+            p.setPen(QPen(colour, 1.8 if selected else 1.2))
+            p.drawPath(tab)
+            self._paint_icon(p, to_edge, name, i, colour)
+        p.end()
 
-        pen = QPen(QColor(self.colors.accent), 2.4)
+    def _paint_icon(self, p: QPainter, to_edge: QTransform, name: str, index: int,
+                    colour: QColor) -> None:
+        # The icon's centre follows the tab, but the icon itself stays upright
+        # whatever edge the bar is turned to.
+        w, h, size = DRAWER_HANDLE_WIDTH, DRAWER_HANDLE_HEIGHT, DRAWER_ICON_SIZE
+        centre = to_edge.map(QPointF(w * 0.56, self._tab_top(index) + h / 2))
+        scale = size / 24
+        p.save()
+        p.setTransform(QTransform(scale, 0, 0, scale,
+                                  centre.x() - size / 2, centre.y() - size / 2))
+        pen = QPen(colour, 2.2)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         p.setPen(pen)
-        cx, cy, dx, dy = w * 0.55, h / 2, w * 0.18, h * 0.16
-        tip, back = (cx - dx, cx + dx) if self.points_inward else (cx + dx, cx - dx)
-        p.drawPolyline([QPointF(back, cy - dy), QPointF(tip, cy), QPointF(back, cy + dy)])
-        p.end()
+        p.drawPath(self._icons[name])
+        p.restore()
 
 
 def mineral_tooltip(info: MineralInfo, crafting: CraftingIndex) -> str:
@@ -329,10 +521,15 @@ def location_tooltip(location: str, minerals: dict[str, MineralInfo]) -> str:
 
 
 class BlueprintDrawer(QWidget):
-    """Right-edge arrow tab that expands into a see-through panel with
-    blueprint, mineral and crafting searches."""
+    """A stack of section tabs on a screen edge (blueprints, minerals,
+    crafting). A tab opens the see-through panel straight to its section;
+    the open section's tab closes it again."""
 
     owned_toggled = pyqtSignal(str, bool)
+    # The Minerals section's scan decoder switch (the Overlay tab's too).
+    scan_decoder_toggled = pyqtSignal(bool)
+    # The ores ticked in the Minerals section, after every change.
+    watched_changed = pyqtSignal(object)
 
     def __init__(self, colors: OverlayColors = DEFAULT_OVERLAY_COLORS):
         super().__init__(None, _OVERLAY_FLAGS)
@@ -344,9 +541,8 @@ class BlueprintDrawer(QWidget):
         self._owned: set = set()
         self._expanded = False
 
-        self._handle = ArrowTab(self)
-        self._handle.setToolTip(tr("sco.drawer_handle_tooltip"))
-        self._handle.clicked.connect(self.toggle)
+        self._handle = SectionTabBar(self)
+        self._handle.clicked.connect(self.open_section)
 
         self._minerals: dict[str, MineralInfo] = {}
         self._crafting = CraftingIndex()
@@ -378,16 +574,37 @@ class BlueprintDrawer(QWidget):
         # Minerals: mineral -> star system -> location.
         self._mineral_search, self._mineral_tree, mineral_page = self._search_page(
             "sco.minerals_search_placeholder", self._render_minerals)
+        self._watched: set[str] = set()
+        self._decoder_check = QCheckBox(tr("overlay.scan_decoder"), mineral_page)
+        self._decoder_check.setToolTip(tr("overlay.scan_decoder_hint"))
+        self._decoder_check.setChecked(True)
+        self._decoder_check.toggled.connect(self.scan_decoder_toggled)
+        self._clear_watched_btn = QPushButton(tr("sco.clear_watched"), mineral_page)
+        self._clear_watched_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._clear_watched_btn.clicked.connect(self._clear_watched)
+        top_row = QHBoxLayout()
+        top_row.addWidget(self._decoder_check)
+        top_row.addStretch()
+        top_row.addWidget(self._clear_watched_btn)
+        mineral_page.layout().insertLayout(0, top_row)
+        # Column 1 holds each ore's watch checkbox, against the right edge.
+        self._mineral_tree.setColumnCount(2)
+        header = self._mineral_tree.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self._mineral_tree.itemChanged.connect(self._on_mineral_watch_changed)
         # Crafting: a mineral lists what it goes into, an item what it needs.
         self._crafting_search, self._crafting_tree, crafting_page = self._search_page(
             "sco.crafting_search_placeholder", self._render_crafting)
 
-        self._sections = QTabWidget(self._panel)
-        self._section_pages = {
-            "blueprints": self._sections.addTab(bp_page, tr("sco.section_blueprints")),
-            "minerals": self._sections.addTab(mineral_page, tr("sco.section_minerals")),
-            "crafting": self._sections.addTab(crafting_page, tr("sco.section_crafting")),
-        }
+        # The tabs pick the page, so the panel only needs a stack of them.
+        self._sections = QStackedWidget(self._panel)
+        self._section_pages = {"blueprints": bp_page, "minerals": mineral_page,
+                               "crafting": crafting_page}
+        for page in self._section_pages.values():
+            self._sections.addWidget(page)
+        self._current: Optional[str] = None
 
         panel_layout = QVBoxLayout(self._panel)
         panel_layout.addWidget(self._banner)
@@ -426,17 +643,18 @@ class BlueprintDrawer(QWidget):
             QListWidget::item:selected, QTreeWidget::item:selected {{
                 background: {_rgba(colors.accent, 60)};
             }}
-            QTabWidget::pane {{ border: none; }}
-            QTabBar::tab {{
-                color: {colors.secondary}; background: transparent; padding: 3px 8px;
-                border-bottom: 1px solid transparent;
+            QPushButton {{
+                color: {colors.text}; background: transparent;
+                border: 1px solid {colors.secondary}; border-radius: 3px; padding: 1px 8px;
             }}
-            QTabBar::tab:selected {{ color: {colors.accent}; border-bottom-color: {colors.accent}; }}
-            QCheckBox::indicator, QListWidget::indicator {{
+            QPushButton:hover {{ border-color: {colors.accent}; color: {colors.accent}; }}
+            QPushButton:disabled {{ color: {colors.secondary}; }}
+            QCheckBox::indicator, QListWidget::indicator, QTreeWidget::indicator {{
                 width: 10px; height: 10px; border: 1px solid {colors.text};
                 background: transparent;
             }}
-            QCheckBox::indicator:checked, QListWidget::indicator:checked {{
+            QCheckBox::indicator:checked, QListWidget::indicator:checked,
+            QTreeWidget::indicator:checked {{
                 background: {colors.accent}; border-color: {colors.accent};
             }}
         """)
@@ -456,9 +674,45 @@ class BlueprintDrawer(QWidget):
 
     def set_sections(self, blueprints: bool, minerals: bool, crafting: bool) -> None:
         """Show or hide the drawer's sections (Overlay tab switches)."""
-        for name, on in (("blueprints", blueprints), ("minerals", minerals),
-                         ("crafting", crafting)):
-            self._sections.setTabVisible(self._section_pages[name], on)
+        shown = [name for name, on in (("blueprints", blueprints), ("minerals", minerals),
+                                       ("crafting", crafting)) if on]
+        self._handle.set_sections(shown)
+        if self._current not in shown:
+            self.close_drawer()
+        self._dock()
+
+    def has_sections(self) -> bool:
+        """False when every section is switched off, leaving no tab to show."""
+        return bool(self._handle.sections)
+
+    def set_scan_decoder(self, on: bool) -> None:
+        """Mirror the scan decoder switch without asking for a change."""
+        self._decoder_check.blockSignals(True)
+        self._decoder_check.setChecked(on)
+        self._decoder_check.blockSignals(False)
+
+    def set_watched(self, ores) -> None:
+        """Tick these ores (``ORE_SIGNATURES`` keys) without asking for a change."""
+        self._watched = set(ores)
+        self._render_minerals()
+
+    def _clear_watched(self) -> None:
+        if not self._watched:
+            return
+        self._watched.clear()
+        self._render_minerals()
+        self.watched_changed.emit(set())
+
+    def _on_mineral_watch_changed(self, item: QTreeWidgetItem, column: int) -> None:
+        ore = item.data(1, Qt.ItemDataRole.UserRole)
+        if column != 1 or not ore:
+            return
+        if item.checkState(1) == Qt.CheckState.Checked:
+            self._watched.add(ore)
+        else:
+            self._watched.discard(ore)
+        self._clear_watched_btn.setEnabled(bool(self._watched))
+        self.watched_changed.emit(set(self._watched))
 
     def set_catalog(self, minerals: dict[str, MineralInfo], crafting: CraftingIndex) -> None:
         """Mining Compendium minerals and the crafting index for the searches."""
@@ -481,11 +735,24 @@ class BlueprintDrawer(QWidget):
         self._banner.show()
         self._banner_timer.start(NEW_BLUEPRINT_BANNER_MS)
 
-    def toggle(self) -> None:
-        self._expanded = not self._expanded
-        self._panel.setVisible(self._expanded)
-        self._handle.points_inward = not self._expanded
-        self._handle.update()
+    def open_section(self, name: str) -> None:
+        """A tab click: open the drawer on ``name``, or close it when ``name``
+        is already the open section."""
+        if self._expanded and self._current == name:
+            self.close_drawer()
+            return
+        self._current = name
+        self._sections.setCurrentWidget(self._section_pages[name])
+        self._set_expanded(True)
+
+    def close_drawer(self) -> None:
+        self._current = None
+        self._set_expanded(False)
+
+    def _set_expanded(self, expanded: bool) -> None:
+        self._expanded = expanded
+        self._panel.setVisible(expanded)
+        self._handle.set_current(self._current)
         self._dock()
 
     def show_docked(self) -> None:
@@ -574,6 +841,14 @@ class BlueprintDrawer(QWidget):
         return "\n".join(lines)
 
     def _render_minerals(self) -> None:
+        self._clear_watched_btn.setEnabled(bool(self._watched))
+        self._mineral_tree.blockSignals(True)
+        try:
+            self._fill_mineral_tree()
+        finally:
+            self._mineral_tree.blockSignals(False)
+
+    def _fill_mineral_tree(self) -> None:
         needle = self._mineral_search.text().strip().lower()
         self._mineral_tree.clear()
         if not self._minerals:
@@ -586,6 +861,13 @@ class BlueprintDrawer(QWidget):
                 continue
             node = QTreeWidgetItem([name])
             node.setToolTip(0, mineral_tooltip(info, self._crafting))
+            # Only an ore the scanner has a signature for can glow.
+            ore = ore_key(name)
+            if ore:
+                node.setData(1, Qt.ItemDataRole.UserRole, ore)
+                node.setCheckState(1, Qt.CheckState.Checked if ore in self._watched
+                                   else Qt.CheckState.Unchecked)
+                node.setToolTip(1, tr("sco.watch_mineral_tooltip"))
             for system, locations in locations_by_system(info.locations).items():
                 sys_node = QTreeWidgetItem([system or tr("sco.system_other")])
                 for loc in locations:
@@ -668,12 +950,18 @@ class ScoOverlay(QObject):
     """Owns the overlay windows and the signature capture loop."""
 
     owned_toggled = pyqtSignal(str, bool)
+    scan_decoder_toggled = pyqtSignal(bool)
+    watched_changed = pyqtSignal(object)
 
     def __init__(self, parent=None, sample_dir: Optional[Path] = None):
         super().__init__(parent)
         self.label = ScanLabelWindow()
         self.drawer = BlueprintDrawer(OverlayColors.from_theme())
         self.drawer.owned_toggled.connect(self.owned_toggled)
+        self.drawer.scan_decoder_toggled.connect(self.scan_decoder_toggled)
+        self.drawer.watched_changed.connect(self._on_watched_changed)
+        self._watched: set[str] = set()
+        self._shown_matches: list[SignatureMatch] = []
         self._reader: Optional[SignatureReader] = hud_signature_reader
         self._sample_dir = sample_dir
         self._save_samples = True
@@ -694,12 +982,27 @@ class ScoOverlay(QObject):
         names; missing ones count as on). Takes effect at once if running."""
         on = lambda name: options.get(name, True)  # noqa: E731
         self._show_label = on("scan_decoder")
+        self.drawer.set_scan_decoder(self._show_label)
         self._show_drawer = on("drawer")
         self._save_samples = on("save_samples")
         self.drawer.set_sections(on("drawer_blueprints"), on("drawer_minerals"),
                                  on("drawer_crafting"))
         if self._running:
             self._sync_windows()
+
+    def set_watched_minerals(self, ores) -> None:
+        """Ores (``ORE_SIGNATURES`` keys) whose decode makes the label glow."""
+        self._watched = set(ores)
+        self.drawer.set_watched(self._watched)
+        self.label.set_glowing(self._glows(self._shown_matches))
+
+    def _on_watched_changed(self, ores: set) -> None:
+        self._watched = set(ores)
+        self.label.set_glowing(self._glows(self._shown_matches))
+        self.watched_changed.emit(set(ores))
+
+    def _glows(self, matches: list[SignatureMatch]) -> bool:
+        return any(m.kind in self._watched for m in matches)
 
     def set_reader(self, reader: Optional[SignatureReader]) -> None:
         self._reader = reader
@@ -712,7 +1015,9 @@ class ScoOverlay(QObject):
     def start(self) -> None:
         self._running = True
         # Pick up a theme change made since the overlay was last shown.
-        self.drawer.apply_colors(OverlayColors.from_theme())
+        colors = OverlayColors.from_theme()
+        self.drawer.apply_colors(colors)
+        self.label.set_glow_color(colors.accent)
         self._sync_windows()
 
     def stop(self) -> None:
@@ -722,7 +1027,7 @@ class ScoOverlay(QObject):
         self.drawer.hide()
 
     def _sync_windows(self) -> None:
-        if self._show_drawer:
+        if self._show_drawer and self.drawer.has_sections():
             if not self.drawer.isVisible():
                 self.drawer.show_docked()
         else:
@@ -777,7 +1082,8 @@ class ScoOverlay(QObject):
         if not matches and value != self._last_value:
             logger.debug("SCO: no deposit matches signature %s", value)
         self._last_value = self._shown_value = value
-        self.label.show_text(format_matches(matches), anchor)
+        self._shown_matches = matches
+        self.label.show_text(format_matches(matches), anchor, self._glows(matches))
 
     def _mask_own_label(self, image: QImage, region: QRect) -> None:
         """Black out our own label in the capture so its text is never read

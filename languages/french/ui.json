@@ -3212,10 +3212,6 @@
       "ht": "",
       "at": "Récupération"
     },
-    "drawer_handle_tooltip": {
-      "ht": "",
-      "at": "Afficher ou masquer les plans"
-    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Rechercher des plans..."
@@ -3267,6 +3263,14 @@
     "minerals_search_placeholder": {
       "ht": "",
       "at": "Minéral ou lieu..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Tout décocher"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Fait briller l'étiquette du scan quand ce minéral est décodé"
     },
     "crafting_search_placeholder": {
       "ht": "",
