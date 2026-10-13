@@ -154,7 +154,7 @@ def _get_default_forge_dir() -> Path:
     """Resolve the DataForge cache directory for standalone CLI defaults.
 
     Mirrors AppSettings.get_dataforge_cache_dir() — AppData\\Local, not
-    Documents, so the ~1.4 GB XML cache stays out of OneDrive.
+    Documents, so the ~1.2 GB XML cache stays out of OneDrive.
     """
     try:
         if str(PROJECT_ROOT) not in sys.path:

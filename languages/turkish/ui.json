@@ -640,7 +640,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "user.ini, kaynak önbelleği, geliştirme INI dosyaları ve yedekler için klasör. Önbellek temizliği başarısız oluyorsa bunu OneDrive ile eşitlenen Belgeler klasöründen dışarı taşıyın. DataForge XML önbelleğinin aşağıda kendi yolu vardır — yaklaşık 1,4 GB olduğundan varsayılan ayar onu otomatik olarak OneDrive dışında tutar."
+      "at": "user.ini, kaynak önbelleği, geliştirme INI dosyaları ve yedekler için klasör. Önbellek temizliği başarısız oluyorsa bunu OneDrive ile eşitlenen Belgeler klasöründen dışarı taşıyın. DataForge XML önbelleğinin aşağıda kendi yolu vardır — yaklaşık 1,2 GB olduğundan varsayılan ayar onu otomatik olarak OneDrive dışında tutar."
     },
     "app_data_label": {
       "ht": "",
@@ -832,7 +832,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Çıkarılan DataForge XML ağacı (~1,4 GB) için temel klasör. Her kanal bunun altında {base}\\{channel}\\cache\\dataforge\\ olarak yer alır. OneDrive dışında kalması için varsayılan olarak %LOCALAPPDATA%\\Smart Citizen kullanılır. Yolu değiştirmek yeniden çıkarma başlatır."
+      "at": "Çıkarılan DataForge XML ağacı (yaklaşık 1,2 GB) için temel klasör. Her kanal bunun altında {base}\\{channel}\\cache\\dataforge\\ olarak yer alır. Bir çıkarma işlemi çalışırken bu sürücüde yaklaşık 4,5 GB'a kadar boş alan gerektirir, önbellek zaten varsa daha az. Bu klasör OneDrive'da, bir ağ veya çıkarılabilir sürücüde ya da çok derinde iç içe bir konumdaysa çalışma dosyaları bunun yerine %TEMP% klasörüne gider. OneDrive dışında kalması için varsayılan olarak %LOCALAPPDATA%\\Smart Citizen kullanılır. Yolu değiştirmek yeniden çıkarma başlatır."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2361,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "user.ini geri yüklemesinin ardından {channel} yeniden yükleniyor..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Çıkarılan base.ini ile yeniden yükleniyor..."
     }
   },
   "status_bar": {
@@ -2803,6 +2807,42 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "Oyun veritabanının dönüştürülmesi 30 dakikadan uzun sürdü ve durduruldu.\n\nBulunan veritabanı {dcb} ({size} MB), konumu:\n{path}\n\nSağlıklı bir kurulum bir dakikadan çok daha kısa sürede dönüştürülür; bu nedenle bu durum genellikle Smart Citizen'ın yanlış Star Citizen klasörünü okuduğu anlamına gelir. Sürücünüzde kalan eski veya artık bir kurulum geçerli görünse de güncel olmayan oyun dosyaları içerir.\n\nRSI Launcher'ı açın ve Star Citizen için gösterdiği kurulum konumunu kontrol edin. Yukarıdaki yol değilse, Smart Citizen'ın Yapılandırma sekmesinden düzeltin. AYNI yol ise, kurulumu onarmak için bunun yerine başlatıcıda Dosyaları Doğrula'yı çalıştırın."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Yeterli boş alan yok. Hiçbir şey kaydedilmedi ve mevcut DataForge önbelleğiniz değiştirilmedi."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "global.ini dosyasını Data.p4k içinden çıkarmak için yeterli boş alan yok. Hiçbir şey değiştirilmedi."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "{drive} sürücüsünde {free} boş alan var ve çıkarma işlemi çalışırken orada yaklaşık {needed} alana ihtiyaç duyuyor."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "{drive} sürücüsünde yer açın veya Yapılandırma sekmesinden başka bir sürücüde bir DataForge önbellek klasörü seçin, ardından yeniden deneyin."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "DataForge önbellek klasörü OneDrive'da, bir ağ veya çıkarılabilir sürücüde ya da çok derinde iç içe bir konumda olduğundan çıkarma işlemi Windows geçici klasörünüzde ({folder}) çalışıyor. {drive} sürücüsünde yer açın, ardından yeniden deneyin."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "{drive} sürücüsünde yer açın, ardından yeniden deneyin."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "Yeni DataForge önbelleği şu konuma kaydedilirken {drive} sürücüsünde yer kalmadı:\n{folder}\n\nBu önbellek eksik. {drive} sürücüsünde yer açın, ardından önbelleği yeniden oluşturmak için çıkarma işlemini tekrar çalıştırın."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
     }
   },
   "apply": {
