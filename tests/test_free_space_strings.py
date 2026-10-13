@@ -82,7 +82,7 @@ def _part_needing(folder: Path, need: int) -> "pe._SpaceNeed":
     """A part whose need at 4096-byte clusters is exactly *need* bytes."""
     logical = -(-need * 100 // pe._SPACE_GROWTH_PERCENT)
     credit = pe._space_for(logical, 0, 4096) - need
-    return pe._SpaceNeed(folder, logical, 0, credit=credit, fix="cache")
+    return pe._SpaceNeed(folder, logical, 0, credit=credit, fix=pe._FIX_CACHE)
 
 
 @pytest.mark.parametrize("free, need, free_text, need_text", [
