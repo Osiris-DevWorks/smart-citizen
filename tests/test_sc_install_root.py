@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
+from tests.junction import make_junction  # noqa: E402
 
 pytestmark = pytest.mark.unit
 
@@ -970,21 +971,10 @@ class TestScanUsesLauncherLog:
         r"""The game moved off C: the usual way: the data sits at D:\StarCitizen
         and a junction at its old Program Files path points to it. Returns
         ``(real, link)``, or skips where a junction cannot be made."""
-        import subprocess
-
         real = _fake_install(tmp_path, "D", "StarCitizen")
         link = tmp_path / "C" / "Program Files" / "Roberts Space Industries" / "StarCitizen"
         link.parent.mkdir(parents=True)
-        made = subprocess.run(
-            ["cmd", "/c", "mklink", "/J", str(link), str(real)], capture_output=True, text=True
-        )
-        if made.returncode != 0 or not link.exists():
-            reason = f"cannot create a junction here: {(made.stdout + made.stderr).strip()}"
-            # Any account can make a junction, so on CI this is a broken runner,
-            # not a reason to drop the check without a word.
-            if os.environ.get("CI"):
-                pytest.fail(reason, pytrace=False)
-            pytest.skip(reason)
+        make_junction(link, real)
         return real, link
 
     def test_a_junction_to_an_install_is_not_a_second_install(self, tmp_path, scan, ranked):

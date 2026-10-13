@@ -48,6 +48,7 @@ from src.utils.json_settings import JsonSettings
 from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP
 from src.utils.settings import AppSettings
 from src.utils.win_paths import win_long_path
+from tests.junction import make_junction
 
 pytestmark = pytest.mark.unit
 
@@ -208,25 +209,6 @@ class TestTheCacheInUseIsKept:
 
 # ── The same folder spelled two ways on disk ────────────────────────────────
 
-def _junction(link: Path, target: Path) -> None:
-    """Make *link* a junction to *target*, the usual way to move a big folder
-    off C:. Any account can make one, so where that fails the test skips, but
-    under CI it fails: a broken runner, not a reason to drop the check unseen."""
-    import _winapi  # Windows only, like the tests that call this
-
-    target.mkdir(parents=True, exist_ok=True)
-    try:
-        _winapi.CreateJunction(str(target), str(link))
-        why = "" if link.is_dir() else f"{link} does not lead to a folder"
-    except OSError as exc:
-        why = str(exc)
-    if why:
-        reason = f"cannot make a junction here: {why}"
-        if os.environ.get("CI"):
-            pytest.fail(reason, pytrace=False)
-        pytest.skip(reason)
-
-
 def _short_name(path: Path) -> str:
     """*path*, which must exist, in its 8.3 short spelling from
     GetShortPathNameW. Skips where the volume makes no short names."""
@@ -276,7 +258,7 @@ class TestALinkToTheCacheIsKept:
         target. The queue holds one spelling, the cache in use is the other
         (Browse back to A, or Reset back to the default)."""
         link = tmp_path / "link_local"
-        _junction(link, tmp_path / "real_local")
+        make_junction(link, tmp_path / "real_local")
         monkeypatch.setenv("LOCALAPPDATA", str(link))
         by_link = AppSettings.get_dataforge_cache_leaf()
         AppSettings.set_cache_dir(str(link / "Smart Citizen"))
@@ -509,8 +491,7 @@ def _successful_extraction() -> MagicMock:
 def _queue_a_then_switch_to_b_and_back(monkeypatch, folder_a: Path, folder_b: Path) -> Path:
     """Steps 1 to 3 of the issue through the real
     ConfigTab._maybe_apply_cache_change, on a stub self with a fake prompt.
-    Returns A's
-    cache folder, which is left queued for deletion."""
+    Returns A's cache folder, which is left queued for deletion."""
     AppSettings.set_cache_dir(str(folder_a))
     cache_a = AppSettings.get_dataforge_cache_leaf()
     prompts = _prompt_answering(monkeypatch, "delete")
