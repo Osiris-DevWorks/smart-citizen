@@ -37,6 +37,11 @@ DATAFORGE_LIBS_SUBPATH = Path("raw") / "libs"
 DATAFORGE_RECORDS_UNDER_LIBS = Path("foundry") / "records"
 DATAFORGE_RECORDS_SUBPATH = DATAFORGE_LIBS_SUBPATH / DATAFORGE_RECORDS_UNDER_LIBS
 
+# The folder unforge writes beside Game2.dcb in the working folder. The cache
+# keeps its contents under DATAFORGE_LIBS_SUBPATH; the two are separate names
+# that happen to end alike.
+_UNFORGE_LIBS_DIR = "libs"
+
 # ``shutil.rmtree`` replaced ``onerror`` with ``onexc`` in Python 3.12. The
 # frozen build runs on 3.11, so passing ``onexc=`` raises TypeError there.
 # Detect once at import.
@@ -584,16 +589,38 @@ def _allocated(size: int, cluster: int) -> int:
     return -(-size // cluster) * cluster
 
 
+# The advice a shortage gets: choose another cache folder, free %TEMP%'s
+# drive, or free the drive.
+_FIX_CACHE, _FIX_TEMP, _FIX_PLAIN = "cache", "temp", "plain"
+
+# Strongest advice first: a drive shared by parts takes the strongest one.
+_FIX_ORDER = (_FIX_CACHE, _FIX_TEMP, _FIX_PLAIN)
+
+
 class _SpaceNeed(NamedTuple):
     folder: object        # where the bytes go; it may not exist yet
     logical: int
     files: int
-    credit: int = 0       # bytes the run frees on that drive before it needs them
-    fix: str = "plain"    # the advice: "cache", "temp" or "plain"
+    # What the run frees on that drive before it needs the room: an old
+    # cache of credit bytes in credit_files files (see _credit).
+    credit: int = 0
+    credit_files: int = 0
+    fix: str = _FIX_PLAIN
 
 
-# Strongest advice first: a drive shared by parts takes the strongest one.
-_FIX_ORDER = ("cache", "temp", "plain")
+def _credit(part: _SpaceNeed, cluster: int) -> int:
+    """Bytes the wipe frees for *part* on a drive with *cluster*-byte
+    clusters. Each file takes at least one cluster, so the old cache takes at
+    least its bytes and at least a cluster per file, whichever is more. The
+    new cache is charged a cluster per file on top, so on a large-cluster
+    drive a byte-only credit asked for far more than a re-extract needs."""
+    return max(part.credit, part.credit_files * cluster)
+
+
+def _part_need(part: _SpaceNeed, cluster: int) -> int:
+    """Bytes *part* needs on a drive with *cluster*-byte clusters, less what
+    the run frees there first."""
+    return max(0, _space_for(part.logical, part.files, cluster) - _credit(part, cluster))
 
 
 class _Shortage(NamedTuple):
@@ -618,12 +645,14 @@ def _holds_complete_cache(leaf) -> bool:
 def _dataforge_needs(parent, leaf, in_temp: bool):
     """A DataForge run's parts: its working folder in *parent*, and the new
     cache at *leaf*, less the old one it wipes first when that is complete."""
+    complete = _holds_complete_cache(leaf)
     return (
         _SpaceNeed(parent, _DATAFORGE_WORK_BYTES, _DATAFORGE_WORK_FILES,
-                   fix="temp" if in_temp else "cache"),
+                   fix=_FIX_TEMP if in_temp else _FIX_CACHE),
         _SpaceNeed(leaf, _DATAFORGE_CACHE_BYTES, _DATAFORGE_CACHE_FILES,
-                   credit=_DATAFORGE_CACHE_BYTES if _holds_complete_cache(leaf) else 0,
-                   fix="cache"),
+                   credit=_DATAFORGE_CACHE_BYTES if complete else 0,
+                   credit_files=_DATAFORGE_CACHE_FILES if complete else 0,
+                   fix=_FIX_CACHE),
     )
 
 
@@ -634,7 +663,7 @@ def _global_ini_needs(parent, output_path, in_temp: bool):
     folder, or a refused or short folder beside the cache)."""
     return (
         _SpaceNeed(parent, _GLOBAL_INI_WORK_BYTES, _GLOBAL_INI_WORK_FILES,
-                   fix="plain" if in_temp else "cache"),
+                   fix=_FIX_PLAIN if in_temp else _FIX_CACHE),
         _SpaceNeed(Path(output_path).parent, _BASE_INI_BYTES, 1),
     )
 
@@ -673,7 +702,7 @@ def _require_free_space(needs, intro: str, *, movable=None) -> None:
             continue
         if movable is not None and part.folder == movable:
             movable_key = volume.key
-        need = max(0, _space_for(part.logical, part.files, volume.cluster) - part.credit)
+        need = _part_need(part, volume.cluster)
         group = volumes.setdefault(volume.key, {
             "volume": volume, "free": free, "need": 0,
             "fix": part.fix, "folder": win_plain_path(part.folder),
@@ -715,9 +744,9 @@ def _size_text(n: int, *, round_up: bool) -> str:
 
 
 def _fix_text(shortage: _Shortage) -> str:
-    if shortage.fix == "cache":
+    if shortage.fix == _FIX_CACHE:
         return tr("extract.no_space_fix_cache", drive=shortage.label)
-    if shortage.fix == "temp":
+    if shortage.fix == _FIX_TEMP:
         return tr("extract.no_space_fix_temp", drive=shortage.label, folder=shortage.folder)
     return tr("extract.no_space_fix", drive=shortage.label)
 
@@ -805,7 +834,7 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
     logged and the run goes on."""
     keep_prefixes = frozenset(
         tuple(part.casefold() for part in
-              ("libs", *DATAFORGE_RECORDS_UNDER_LIBS.parts, *rel.split("/")))
+              (_UNFORGE_LIBS_DIR, *DATAFORGE_RECORDS_UNDER_LIBS.parts, *rel.split("/")))
         for rel in DATAFORGE_KEEP_SUBPATHS
     )
     try:
@@ -857,15 +886,15 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
     except OSError as e:
         logger.warning(f"Could not measure the drive of the working folder "
                        f"{win_plain_path(libs_dir)} ({e})")
-    box_need = need - credit + work
-    if work:
-        # A retry starts with the up-front check, which asks this drive for
-        # the constants rather than what this run measured. The box must not
-        # name less than that, or a retry with the room it says is refused.
-        box_need = max(box_need, sum(
-            max(0, _space_for(part.logical, part.files, cluster) - part.credit)
-            for part in _dataforge_needs(libs_dir, leaf, in_temp=False)))
-    shortage = _Shortage(volume.label, win_plain_path(leaf), free + work, box_need, "cache")
+    # A retry starts with the up-front check, which asks this drive for the
+    # constants rather than what this run measured: the new cache, and the
+    # working folder too when it was here. The box must not name less than
+    # that, or a retry with the room it says is refused.
+    work_part, cache_part = _dataforge_needs(libs_dir, leaf, in_temp=False)
+    retry_need = sum(_part_need(part, cluster)
+                     for part in ((work_part, cache_part) if work else (cache_part,)))
+    box_need = max(need - credit + work, retry_need)
+    shortage = _Shortage(volume.label, win_plain_path(leaf), free + work, box_need, _FIX_CACHE)
     logger.warning(
         f"Not enough free space for the new DataForge cache: {volume.label} has {free:,} "
         f"bytes free and {credit:,} more once the old cache goes, and needs about {need:,}. "
@@ -905,8 +934,8 @@ _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 # — the working folder is deleted when extract_dataforge finishes.
 #
 # Keeping this list tight:
-#   * halves the final cache's file count (~62k → ~31k) and disk footprint
-#     (~1.8 GB → ~1.2 GB);
+#   * halves the final cache's file count (~62k → ~31k) and cuts its disk
+#     footprint by about a third (~1.8 GB → ~1.2 GB);
 #   * cuts the working folder → cache copy step to ~50% of its old wall-clock (OneDrive
 #     / Defender / Indexer fire hooks per-file-close, which dominates copy
 #     time on typical Windows installs);
@@ -1329,7 +1358,7 @@ def extract_dataforge(
         # _copy_filtered_records would skip that subtree without a word. The
         # tools themselves only ever see plain paths.
         libs_dir = Path(_win_long_path(dcb_path.parent))
-        if not (libs_dir / "libs").exists():
+        if not (libs_dir / _UNFORGE_LIBS_DIR).exists():
             diagnostic = ""
             if _stdout or _stderr:
                 diagnostic = (
@@ -1387,12 +1416,12 @@ def extract_dataforge(
 
             # Cache only the subtrees the enhancement generator actually reads.
             # See DATAFORGE_KEEP_SUBPATHS for the list and rationale — dropping
-            # the unused ~30k/~1 GB worth of entries halves cache file count and
+            # the unused ~31k/~0.6 GB worth of entries halves cache file count and
             # makes every re-extract + clear-cache noticeably faster on the
             # OneDrive/Defender/Indexer-burdened Windows paths our users live in.
             cache_libs = dataforge_cache_dir / DATAFORGE_LIBS_SUBPATH
             logger.info(f"Saving DataForge extraction to {cache_libs}…")
-            copied, skipped = _copy_filtered_records(libs_dir / "libs", cache_libs)
+            copied, skipped = _copy_filtered_records(libs_dir / _UNFORGE_LIBS_DIR, cache_libs)
             logger.info(
                 f"DataForge cache written: {copied}/{len(DATAFORGE_KEEP_SUBPATHS)} "
                 f"keep-subpaths copied ({skipped} not present in this build)"
@@ -1410,6 +1439,14 @@ def extract_dataforge(
         except (_DiskFullDuringCopy, OSError) as e:
             if not _is_disk_full(e):
                 raise
+            # A full drive on the size stamp leaves the mtime stamp, which
+            # alone reads as fresh, so neither may stay.
+            for stamp in (P4K_MTIME_STAMP, P4K_SIZE_STAMP):
+                try:
+                    (dataforge_cache_dir / stamp).unlink(missing_ok=True)
+                except OSError as unlink_error:
+                    logger.warning(f"Could not remove {stamp} from the incomplete "
+                                   f"DataForge cache: {unlink_error}")
             raise _cache_incomplete_error(dataforge_cache_dir, e) from e
         logger.info(f"DataForge cache written to {dataforge_cache_dir}")
     finally:

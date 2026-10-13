@@ -804,7 +804,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.2 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。提取執行期間，此驅動器最多需要約 4.5 GB 可用空間，如果已有快取則需要更少。當此資料夾位於 OneDrive、網路驅動器或可移動驅動器上，或巢狀層級很深時，其工作檔案會改為放在 %TEMP% 中。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
+      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.2 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。提取執行期間，此驅動器最多需要約 4.5 GB 可用空間，如果已有快取則需要更少。當此資料夾位於 OneDrive、網路驅動器或卸除式驅動器上，或巢狀層級很深時，其工作檔案會改為放在 %TEMP% 中。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2826,7 +2826,7 @@
     },
     "no_space_fix_temp": {
       "ht": "",
-      "at": "由於 DataForge 快取資料夾位於 OneDrive、網路驅動器或可移動驅動器上，或巢狀層級很深，提取會在你的 Windows 臨時資料夾（{folder}）中進行。請釋放驅動器 {drive} 上的空間，然後重試。"
+      "at": "由於 DataForge 快取資料夾位於 OneDrive、網路驅動器或卸除式驅動器上，或巢狀層級很深，提取會在你的 Windows 暫存資料夾（{folder}）中進行。請釋放驅動器 {drive} 上的空間，然後重試。"
     },
     "no_space_fix": {
       "ht": "",

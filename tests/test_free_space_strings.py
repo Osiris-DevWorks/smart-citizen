@@ -198,24 +198,32 @@ def _first_run_need_4k() -> int:
             + pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES, 4096))
 
 
+def _tooltip_figures() -> tuple[str, str]:
+    """The cache folder tooltip's two figures, as "4.5" and "1.2": the 4 KiB
+    first-run need rounded up to the next half GB, and the cache constant."""
+    return (f"{math.ceil(_first_run_need_4k() / (_GIB / 2)) / 2:.1f}",
+            f"{pe._DATAFORGE_CACHE_BYTES / _GIB:.1f}")
+
+
 def test_the_cache_tooltip_states_what_the_check_asks_for():
-    """The tooltip's figure is the 4 KiB first-run need rounded up to the next
-    half GB, and its cache size is the constant's, so changing the constants
-    without the text fails here."""
-    up_to = f"{math.ceil(_first_run_need_4k() / (_GIB / 2)) / 2:.1f} GB"
-    cache = f"{pe._DATAFORGE_CACHE_BYTES / _GIB:.1f} GB"
+    """English gives both figures in GB, so changing the constants without
+    the text fails here."""
+    up_to, cache = _tooltip_figures()
     tooltip = pe.tr("config.cache_dir_tooltip")
-    assert up_to in tooltip and cache in tooltip
+    assert f"{up_to} GB" in tooltip and f"{cache} GB" in tooltip
 
 
 @pytest.mark.parametrize("ui_json", _UI_FILES, ids=lambda p: p.parent.name)
-def test_no_cache_tooltip_keeps_the_old_figure(ui_json):
-    """Every language: the old ~1.4 GB is gone, and the only placeholders are
-    {base} and {channel}. config_tab calls tr() on it without arguments, so
-    any other placeholder would show raw."""
+def test_every_cache_tooltip_gives_the_figures_and_not_the_old_one(ui_json):
+    """Every language gives both figures, with its own decimal mark and unit,
+    the old ~1.4 GB is gone, and the only placeholders are {base} and
+    {channel}. config_tab calls tr() on it without arguments, so any other
+    placeholder would show raw."""
     tooltip = _leaf(_load(ui_json), "config.cache_dir_tooltip")
     assert tooltip
-    assert "1.4" not in tooltip and "1,4" not in tooltip
+    for figure in _tooltip_figures():
+        assert _gives_figure(tooltip, figure), (ui_json.parent.name, figure)
+    assert not _gives_figure(tooltip, "1.4")
     assert _placeholders(tooltip) == {"base", "channel"}
 
 

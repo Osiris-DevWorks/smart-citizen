@@ -36,7 +36,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -52,6 +51,10 @@ pytestmark = [
 PY = getattr(sys, "_base_executable", None) or sys.executable
 # Captured before the autouse fixture swaps it out for every test.
 _REAL_DRIVE_PROBE = pe._drive_is_removable_or_network
+# Free bytes on a drive the free-space tests never make short (1 TiB).
+_PLENTY = 1 << 40
+# The cluster size of a 128 KiB-cluster exFAT stick, the large-cluster drive.
+_EXFAT_CLUSTER = 128 << 10
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -855,7 +858,7 @@ class TestGlobalIniWorkingFolder:
         out.parent.mkdir(parents=True)
         drive = _drive_letters(systemp, data=out.parents[2])
         _volumes(monkeypatch, drive)
-        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "D:" else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "D:" else _PLENTY)
         with caplog.at_level(logging.INFO, logger=pe.logger.name):
             assert run() is True
         run_dir = Path(fake.cwds[0])
@@ -883,7 +886,7 @@ class TestGlobalIniWorkingFolder:
         out.write_text("old=1\n", encoding="utf-8")
         drive = _drive_letters(systemp)
         _volumes(monkeypatch, drive)
-        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else _PLENTY)
         with pytest.raises(pe.NotEnoughSpaceError) as raised:
             run(near=None)
         assert fake.cwds == []
@@ -904,7 +907,7 @@ class TestGlobalIniWorkingFolder:
         out.parent.mkdir(parents=True)
         drive = _drive_letters(systemp, data=out.parents[2])
         _volumes(monkeypatch, drive)
-        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "E:" else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "E:" else _PLENTY)
         with pytest.raises(pe.NotEnoughSpaceError) as raised:
             run()
         assert [s[0] for s in raised.value.shortages] == ["E:"]
@@ -931,7 +934,7 @@ class TestGlobalIniWorkingFolder:
         monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
         drive = _drive_letters(systemp)
         _volumes(monkeypatch, drive)
-        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else _PLENTY)
         with pytest.raises(pe.NotEnoughSpaceError) as raised:
             run()
         assert fake.cwds == []
@@ -940,7 +943,7 @@ class TestGlobalIniWorkingFolder:
         assert _intro_and_advice(raised) == (
             pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="C:")])
 
-    @pytest.mark.parametrize("temp_free", [10 << 20, 1 << 40], ids=["temp short too", "temp fine"])
+    @pytest.mark.parametrize("temp_free", [10 << 20, _PLENTY], ids=["temp short too", "temp fine"])
     def test_a_short_data_drive_alone_does_not_move_it_to_temp(
         self, env, systemp, monkeypatch, caplog, english_ui, temp_free
     ):
@@ -953,7 +956,7 @@ class TestGlobalIniWorkingFolder:
         out.parent.mkdir(parents=True)
         drive = _drive_letters(systemp, data=out.parents[2])
         _volumes(monkeypatch, drive)
-        free = {"C:": temp_free, "D:": 1 << 40, "E:": 5 << 20}
+        free = {"C:": temp_free, "D:": _PLENTY, "E:": 5 << 20}
         _disk_space(monkeypatch, lambda folder: free[drive(folder)])
         with caplog.at_level(logging.INFO, logger=pe.logger.name):
             with pytest.raises(pe.NotEnoughSpaceError) as raised:
@@ -985,7 +988,7 @@ class TestGlobalIniWorkingFolder:
             return "C:" if any(folder == c or folder.startswith(c + os.sep) for c in on_c) else "D:"
 
         _volumes(monkeypatch, drive)
-        _disk_space(monkeypatch, lambda folder: (10 << 20) if drive(folder) == "C:" else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: (10 << 20) if drive(folder) == "C:" else _PLENTY)
         with pytest.raises(pe.NotEnoughSpaceError) as raised:
             run()
         base_ini = pe._space_for(pe._BASE_INI_BYTES, 1, 4096)
@@ -1006,7 +1009,7 @@ class TestGlobalIniWorkingFolder:
         drive = _drive_letters(systemp, data=out.parents[2])
         _volumes(monkeypatch, drive)
         _disk_space(monkeypatch,
-                    lambda folder: pe._MIB if drive(folder) in ("C:", "D:") else 1 << 40)
+                    lambda folder: pe._MIB if drive(folder) in ("C:", "D:") else _PLENTY)
         with caplog.at_level(logging.INFO, logger=pe.logger.name):
             with pytest.raises(pe.NotEnoughSpaceError) as raised:
                 run()
@@ -1084,7 +1087,7 @@ class TestExtractGlobalIni:
 
 # ── the free-space check (#482) ─────────────────────────────────────────────
 
-def _disk_space(monkeypatch, free=None, default=1 << 40, raises=None):
+def _disk_space(monkeypatch, free=None, default=_PLENTY, raises=None):
     """Patch shutil.disk_usage, over conftest's session stub. *free* gives the
     free bytes for the folder asked (a dict keyed by folder, or a callable
     taking the plain folder path), *default* for any other folder, and
@@ -1182,9 +1185,21 @@ class _ListedWithAttributes:
         return getattr(self._entry, name)
 
     def stat(self, *, follow_symlinks=True):
-        real = self._entry.stat(follow_symlinks=follow_symlinks)
-        return SimpleNamespace(st_size=real.st_size,
-                               st_file_attributes=real.st_file_attributes | self._attributes)
+        return _StatWithAttributes(self._entry.stat(follow_symlinks=follow_symlinks),
+                                   self._attributes)
+
+
+class _StatWithAttributes:
+    """A stat result with *attributes* added to st_file_attributes and every
+    other field the real one, so code that reads st_mode still works (Python
+    3.11's shutil.rmtree does, when the run deletes the old cache)."""
+
+    def __init__(self, real, attributes: int):
+        self._real = real
+        self.st_file_attributes = real.st_file_attributes | attributes
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
 
 
 def _listed_with(monkeypatch, file: Path, attributes: int) -> None:
@@ -1276,7 +1291,7 @@ class TestFreeSpaceCheck:
         drive = _drive_letters(systemp)
         _volumes(monkeypatch, drive)
         assert _CACHE_4K < 2 * pe._GIB < _WORK_4K + _CACHE_4K
-        _disk_space(monkeypatch, lambda folder: 2 * pe._GIB if drive(folder) == "D:" else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: 2 * pe._GIB if drive(folder) == "D:" else _PLENTY)
         fake = _FakeTools()
         with pytest.raises(pe.NotEnoughSpaceError) as raised:
             run(fake)
@@ -1313,6 +1328,28 @@ class TestFreeSpaceCheck:
         _disk_space(monkeypatch, default=need - 1)
         with pytest.raises(pe.NotEnoughSpaceError):
             run(_FakeTools())
+        _disk_space(monkeypatch, default=need)
+        assert run(_FakeTools()) is True
+
+    def test_a_stamped_old_cache_frees_a_cluster_per_file(self, setup, monkeypatch):
+        """On a 128 KiB-cluster exFAT stick each of the old cache's ~31k
+        files takes a whole cluster, so the wipe frees that, not just its
+        1.2 GB of bytes. The new cache is charged a cluster per file, and a
+        credit of bytes alone asked a re-extract there for about 2.5 GB more
+        than it needs. Exactly enough passes."""
+        leaf, run = setup
+        (leaf / pe.P4K_MTIME_STAMP).write_text("1")
+        cluster = _EXFAT_CLUSTER
+        _volumes(monkeypatch, lambda folder: "D:", cluster=cluster)
+        frees = pe._DATAFORGE_CACHE_FILES * cluster
+        assert frees > pe._DATAFORGE_CACHE_BYTES
+        need = (pe._space_for(pe._DATAFORGE_WORK_BYTES, pe._DATAFORGE_WORK_FILES, cluster)
+                + pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES, cluster)
+                - frees)
+        _disk_space(monkeypatch, default=need - 1)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert raised.value.shortages[0][2:] == (need - 1, need)
         _disk_space(monkeypatch, default=need)
         assert run(_FakeTools()) is True
 
@@ -1499,7 +1536,7 @@ class TestFreeSpaceCheck:
         than their size."""
         _leaf, run = setup
         _disk_space(monkeypatch, default=_WORK_4K + _CACHE_4K)
-        _volumes(monkeypatch, lambda folder: "D:", cluster=131072)
+        _volumes(monkeypatch, lambda folder: "D:", cluster=_EXFAT_CLUSTER)
         with pytest.raises(pe.NotEnoughSpaceError):
             run(_FakeTools())
         _volumes(monkeypatch, lambda folder: "D:", cluster=4096)
@@ -1535,7 +1572,7 @@ class TestFreeSpaceCheck:
         figures: what the drive has then, and what a retry needs there."""
         leaf, run = setup
         filled = []
-        _disk_space(monkeypatch, lambda folder: pe._MIB if filled else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if filled else _PLENTY)
         fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
         with caplog.at_level(logging.WARNING, logger=pe.logger.name):
             with pytest.raises(pe.NotEnoughSpaceError) as raised:
@@ -1562,6 +1599,31 @@ class TestFreeSpaceCheck:
         assert f"{label} has {pe._MIB:,} bytes free" in caplog.text
         assert f"{label}::" not in caplog.text
 
+    @pytest.mark.parametrize("cluster", [4096, _EXFAT_CLUSTER], ids=["4 KiB", "128 KiB"])
+    def test_a_stamped_old_cache_counts_in_what_the_box_asks_for(self, setup, monkeypatch, cluster):
+        """A re-extract over a complete cache, with the drive filling while
+        unforge runs. The box asks for what a retry's up-front check will:
+        the working folder and the new cache, less what the stamped old cache
+        frees, which is at least a cluster per file. On a 128 KiB-cluster
+        stick a credit of bytes alone named about 2.5 GB too much."""
+        leaf, run = setup
+        (leaf / pe.P4K_MTIME_STAMP).write_text("1")
+        _volumes(monkeypatch, lambda folder: "D:", cluster=cluster)
+        filled = []
+        _disk_space(monkeypatch, lambda folder: pe._MIB if filled else _PLENTY)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(fake)
+        assert (leaf / pe.P4K_MTIME_STAMP).exists() and (leaf / "old-cache-sentinel").exists()
+        _label, _folder, free, need = raised.value.shortages[0]
+        # The working folder is on the cache's drive, so it counts in both.
+        assert free == pe._MIB + (len(pe.DATAFORGE_KEEP_SUBPATHS) + 2) * cluster
+        frees = max(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES * cluster)
+        assert need == (pe._space_for(pe._DATAFORGE_WORK_BYTES, pe._DATAFORGE_WORK_FILES, cluster)
+                        + pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES,
+                                        cluster)
+                        - frees)
+
     @pytest.mark.parametrize("where", ["another drive", "a drive that cannot be measured"])
     def test_the_gate_leaves_out_a_working_folder_it_cannot_place_on_the_cache_drive(
         self, setup, systemp, monkeypatch, caplog, where
@@ -1569,7 +1631,9 @@ class TestFreeSpaceCheck:
         """A OneDrive cache works in %TEMP% on C:, so deleting the working
         folder gives the cache's drive (D:) nothing back, and a working
         folder whose drive cannot be measured is left out too (best effort).
-        The figures are then the cache drive's own."""
+        The figures are then the cache drive's own, and the need is what a
+        retry's up-front check asks that drive for: the new cache, not the
+        64 MiB this run measured."""
         leaf, run = setup
         filled = []
         if where == "another drive":
@@ -1577,9 +1641,9 @@ class TestFreeSpaceCheck:
             drive = _drive_letters(systemp)
             _volumes(monkeypatch, drive)
             _disk_space(monkeypatch,
-                        lambda folder: pe._MIB if filled and drive(folder) == "D:" else 1 << 40)
+                        lambda folder: pe._MIB if filled and drive(folder) == "D:" else _PLENTY)
         else:
-            _disk_space(monkeypatch, lambda folder: pe._MIB if filled else 1 << 40)
+            _disk_space(monkeypatch, lambda folder: pe._MIB if filled else _PLENTY)
             stub = pe._measure_volume
 
             def measure(folder):
@@ -1592,7 +1656,9 @@ class TestFreeSpaceCheck:
         with caplog.at_level(logging.WARNING, logger=pe.logger.name):
             with pytest.raises(pe.NotEnoughSpaceError) as raised:
                 run(fake)
-        assert raised.value.shortages[0][1:] == (pe.win_plain_path(leaf), pe._MIB, _GATE_4K - 4096)
+        # The old cache here has no stamp, so a retry is asked for the whole cache.
+        assert _CACHE_4K > _GATE_4K - 4096
+        assert raised.value.shortages[0][1:] == (pe.win_plain_path(leaf), pe._MIB, _CACHE_4K)
         assert (leaf / "old-cache-sentinel").exists()
         if where == "another drive":
             assert Path(fake.calls[0][2]).parent == systemp
@@ -1619,7 +1685,7 @@ class TestFreeSpaceCheck:
         big = leaf / "raw" / "libs" / "big.bin"
         big.write_bytes(b"\0" * (1 << 20))
         filled = []
-        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
 
         def fill_and_list(run_dir):
             filled.append(True)
@@ -1646,7 +1712,7 @@ class TestFreeSpaceCheck:
         if old_cache_bytes:
             (leaf / "raw" / "libs" / "big.bin").write_bytes(b"\0" * old_cache_bytes)
         filled = []
-        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else 1 << 40)
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
         fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
         if passes:
             assert run(fake) is True
@@ -1751,7 +1817,37 @@ class TestFreeSpaceCheck:
         monkeypatch.setattr(Path, "write_text", write_text)
         with pytest.raises(pe.NotEnoughSpaceError):
             run(_FakeTools())
+        # The mtime stamp alone reads as fresh, so it goes too, and startup
+        # offers the re-extract the message promises.
         assert not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists()
+        assert not pe._holds_complete_cache(leaf)
+
+    def test_a_stamp_that_cannot_be_removed_still_says_incomplete(
+        self, setup, monkeypatch, caplog
+    ):
+        """Removing the stamps is best effort: one that cannot go is logged,
+        and the user still gets the "cache incomplete" message."""
+        _leaf, run = setup
+        real_write, real_unlink = Path.write_text, Path.unlink
+
+        def write_text(self, *args, **kwargs):
+            if self.name == pe.P4K_SIZE_STAMP:
+                raise OSError(errno.ENOSPC, "No space left on device", str(self))
+            return real_write(self, *args, **kwargs)
+
+        def unlink(self, *args, **kwargs):
+            if self.name == pe.P4K_MTIME_STAMP:
+                raise PermissionError(errno.EACCES, "Access is denied", str(self))
+            return real_unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", write_text)
+        monkeypatch.setattr(Path, "unlink", unlink)
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError):
+                run(_FakeTools())
+        assert f"Could not remove {pe.P4K_MTIME_STAMP}" in caplog.text
+        assert "that cache is incomplete" in caplog.text
 
     def test_another_copy_failure_is_not_called_a_full_drive(self, setup, monkeypatch):
         _leaf, run = setup
