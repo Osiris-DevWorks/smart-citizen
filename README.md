@@ -211,7 +211,7 @@ Thanks to those who've contributed code to Smart Citizen:
 - [**Ishikudeska**](https://github.com/Ishikudeska)
 - **jonigirl**
 - [**Coerwyn**](https://github.com/Coerwyn)
-- [**denis-coach**](https://github.com/denis-coach) (also [h0use](https://github.com/h0useRus))
+- [**Den McConan**] aka [h0use](https://github.com/h0useRus)
 - [**scubamount**](https://github.com/scubamount)
 - **hkstrongside**
 - [**odw-okano**](https://github.com/odw-okano)
@@ -231,6 +231,7 @@ Thanks to those who've contributed code to Smart Citizen:
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — the Traditional Chinese `global.ini` source that powers the Traditional Chinese game strings; the Traditional Chinese interface translation is machine-converted from Smart Citizen's own Simplified Chinese AI translation, pending a human reviewer
 - [**Osiris-DevWorks/odw-fast-unp4k**](https://github.com/Osiris-DevWorks/odw-fast-unp4k) — Bundled `unp4k.exe` / `unforge.exe` used to unpack `Data.p4k` and convert DataForge to XML; our parallelized fork of the original [dolkensp/unp4k](https://github.com/dolkensp/unp4k)
 - [**Dymerz/StarCitizen-Localization**](https://github.com/Dymerz/StarCitizen-Localization) — Community-maintained `global.ini` translations that power the non-English language options
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) - Community-maintained `global.ini` Russian translation
 - [**ExoAE**](https://github.com/ExoAE/ScCompLangPack) — Original ScCompLangPack concept and merge logic that inspired Smart Citizen's foundation
 - [**MrKraken**](https://github.com/MrKraken/StarStrings) — ASOP terminal enhancements, workflow improvements, and mission contract localization work
 - The **Star Citizen community** — for endless feedback, testing, and ideas
