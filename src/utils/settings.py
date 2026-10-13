@@ -70,6 +70,12 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     # not recognise it.
     "turkish":       "polish_(poland)",
     "korean":        "korean_(south_korea)",
+    # Russian borrows the korean_(south_korea) slot, same as Korean. The
+    # n1ghter/StarCitizenRu community project ships its global.ini under that
+    # folder and remaps languages.ini to show "Русский". Only one of Russian
+    # or Korean can be applied to the game at a time — switching overwrites
+    # the other's global.ini in that folder.
+    "russian":       "korean_(south_korea)",
     "chinese_traditional": "chinese_(traditional)",
 }
 
