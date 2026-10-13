@@ -6001,7 +6001,12 @@ class MainWindow(QMainWindow):
             # window that is going away.
             logger.warning(f"DataForge extraction error while closing: {message}")
             return
-        logger.error(f"DataForge extraction error: {message}")
+        # WARNING, not ERROR (#482). The worker already logged an unexpected
+        # failure at ERROR, which opens the global error dialog, and an
+        # anticipated one (a locked Data.p4k, an unforge timeout, a full
+        # drive) carries its own message, shown in the box below. ERROR here
+        # opened a second box, or a stray "(+1 suppressed)".
+        logger.warning(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
         self._end_simple_run()
         if getattr(self, "_forge_progress_dialog", None) is not None:
@@ -6185,7 +6190,7 @@ class MainWindow(QMainWindow):
             self._check_enhancements_after_loading = True
 
             # Show progress dialog while reloading with extracted data
-            self._show_loading_progress("Reloading with extracted base.ini...")
+            self._show_loading_progress(tr("progress.reloading_with_extracted_base"))
         else:
             if getattr(worker, "stopped", False):
                 # Stopped from its dialog (#471): base.ini is as it was.
