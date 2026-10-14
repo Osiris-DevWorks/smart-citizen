@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 # Where the scanner's signature readout sits, as fractions of the primary
 # screen (x, y, w, h). Measured from 2560x1600 Drake Golem screenshots: the
 # pin + number sit in a small panel under the cockpit radar screen, top
-# centre. Amr confirmed the area is the same across cockpits; the box is
+# centre. In-game checks found the area is the same across cockpits; the box is
 # padded for head movement (~115 px between the two samples).
 SCAN_REGION = (0.38, 0.28, 0.24, 0.12)
 CAPTURE_INTERVAL_MS = 250

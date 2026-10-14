@@ -110,13 +110,14 @@ try:
     from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
     # The curated per-ore RS table and the SCO drawer's crafting index,
     # shared with the Smart Citizen Overlay (see the RS consumers below).
-    from src.utils.mining_signatures import MINEABLE_RS_VALUES
+    from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
     from src.utils.mining_catalog import (
         COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES,
         CRAFTING_INDEX_FILE, write_crafting_index,
     )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
     MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
+    ORE_SIGNATURES = {}  # type: ignore[assignment]
     _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
     CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
     def strip_raw_blueprint_filename_prefix(stem):  # type: ignore[misc]
@@ -3684,35 +3685,22 @@ def _build_template_lookup(
 # lowercased spelling to the MINEABLE_RS_VALUES key so the lookup still
 # matches.
 
-# Curated RS value PROGRESSIONS as scanned stack size scales (the in-game
-# Mining Compendium "signature strength" chart), for the mission-DETAILS
-# "Resource Signatures:" breakdown (#331) -- distinct from MINEABLE_RS_VALUES'
-# single flat number, which only feeds the mission-TITLE [RS ####] tag and the
-# ore-name annotation. Not every ore MINEABLE_RS_VALUES covers has a confirmed
-# progression yet; an ore missing here falls back to a single-value tuple (see
-# _rs_value_steps), so nothing regresses to no-value while more progressions
-# get curated.
+# RS value PROGRESSIONS as scanned stack size scales (the in-game Mining
+# Compendium "signature strength" chart), for the mission-DETAILS "Resource
+# Signatures:" breakdown (#331) -- distinct from MINEABLE_RS_VALUES' single
+# flat number, which only feeds the mission-TITLE [RS ####] tag and the
+# ore-name annotation. Built from ORE_SIGNATURES' base and largest cluster
+# size, the same caps the SCO scan decoder uses, so the two can't disagree.
 MINEABLE_RS_VALUE_STEPS: dict[str, tuple[int, ...]] = {
-    "savrillium": (3200, 6400),
-    "lindinium": (3400, 6800, 10200),
-    "bexalite": (3600, 7200, 10800, 14400),
-    "torite": (3900, 7800, 11700, 15600, 19500),
-    "iron": (4270, 8540, 12810, 17080, 21350, 25620),
-    "aluminium": (4285, 8570, 12855, 17140, 21425, 25710),
-    "ice": (4300, 8600, 12900, 17200, 21500, 25800),
+    ore: tuple(base * n for n in range(1, max_count + 1))
+    for ore, (base, max_count) in ORE_SIGNATURES.items()
 }
 
 
 def _rs_value_steps(ore: str) -> tuple[int, ...]:
     """Full RS value progression for ``ore`` (see MINEABLE_RS_VALUE_STEPS),
-    falling back to a single-value tuple from MINEABLE_RS_VALUES when this
-    ore's stack progression isn't curated yet, or ``()`` when neither table
-    knows this ore at all."""
-    if ore in MINEABLE_RS_VALUE_STEPS:
-        return MINEABLE_RS_VALUE_STEPS[ore]
-    if ore in MINEABLE_RS_VALUES:
-        return (MINEABLE_RS_VALUES[ore],)
-    return ()
+    or ``()`` when the table doesn't know this ore."""
+    return MINEABLE_RS_VALUE_STEPS.get(ore, ())
 
 
 def _format_rs_details_lines(ores: list[str], loc: dict) -> list[str]:

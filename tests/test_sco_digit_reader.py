@@ -1,7 +1,7 @@
 """SCO digit reader: the mining signature read off real HUD captures.
 
 Fixtures in ``tests/fixtures/sco/`` are named ``<source>_<value>.png``:
-crops of Amr's 2560x1600 screenshots (Drake Golem ``g*``, MISC Prospector
+crops of 2560x1600 in-game screenshots (Drake Golem ``g*``, MISC Prospector
 ``p*``, Prospector on a planet with the orange HUD panel ``q*``), lossless
 crops SCO saved in-game (``live*``), and other HUD text
 the reader must ignore (``hud*_none``: "UNKNOWN", red "WARNING"). Qt-free:

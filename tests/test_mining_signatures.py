@@ -40,8 +40,8 @@ class TestTable:
 
 class TestDecode:
     @pytest.mark.parametrize("value, expected", [
-        (7200, [SignatureMatch("bexalite", 2)]),     # Amr's first screenshot
-        (10200, [SignatureMatch("lindinium", 3)]),   # Amr's second screenshot
+        (7200, [SignatureMatch("bexalite", 2)]),     # Golem screenshot (g1)
+        (10200, [SignatureMatch("lindinium", 3)]),   # Golem screenshot (g2)
         (3170, [SignatureMatch("quantainium", 1)]),
         (25800, [SignatureMatch("ice", 6)]),
     ])
@@ -62,7 +62,7 @@ class TestDecode:
                  SignatureMatch("salvage", 24)]),
     ])
     def test_planet_round_numbers(self, value, expected):
-        # Read off Amr's planet scans; past the chart's 7 / 10 / 15 caps.
+        # Read off in-game planet scans; past the chart's 7 / 10 / 15 caps.
         assert decode_signature(value) == expected
 
     def test_cap_rules_out_oversized_clusters(self):

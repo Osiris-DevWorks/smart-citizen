@@ -2,7 +2,7 @@
 
 Each entry is one digit cut from a real mining-scan readout: ``(digit,
 width, height, red-channel pixels as hex (row-major), source)``. Sources:
-Amr's 2560x1600 screenshots of a Drake Golem (``g*``) and a MISC
+2560x1600 in-game screenshots of a Drake Golem (``g*``) and a MISC
 Prospector (``p*``) cockpit, a Prospector on a planet surface (``q*``,
 orange HUD panel), and lossless crops SCO itself saved in-game
 (``live_*``, from ``logs/sco_samples``), 2026-10-07 to 2026-10-11. The reader compares

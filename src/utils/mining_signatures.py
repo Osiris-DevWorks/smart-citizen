@@ -57,7 +57,7 @@ ORE_SIGNATURES: dict[str, tuple[int, int]] = {
 # Their round bases overlap each other (12000 = 3 ROC / 4 FPS / 6 Salvage),
 # so a decode can return several of these at once. Counts are well above
 # the chart's (7 / 10 / 15): planet scans show 33,000, 40,000 and 48,000,
-# which Amr confirmed are ROC/FPS/Salvage (2026-10-11).
+# confirmed in-game as ROC/FPS/Salvage deposits (4.9 LIVE, 2026-10-11).
 OTHER_SIGNATURES: dict[str, tuple[int, int]] = {
     "roc":     (4000, 20),
     "fps":     (3000, 20),
