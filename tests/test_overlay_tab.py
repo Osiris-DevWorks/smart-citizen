@@ -132,3 +132,83 @@ def test_drawer_scan_decoder_switch_saves_and_mirrors(qapp, json_backend, tmp_pa
     MainWindow._on_sco_scan_decoder_toggled(stub, False)
     assert AppSettings.get_sco_option("scan_decoder") is False
     assert not tab._checks["scan_decoder"].isChecked() and applied == [True]
+
+
+class _RecordedWorker:
+    started = []
+
+    def __init__(self, log_path, since):
+        self.log_path, self.since = log_path, since
+        self.blueprints_found = self
+
+    def connect(self, _slot):
+        pass
+
+    def start(self):
+        _RecordedWorker.started.append(self)
+
+
+@pytest.mark.parametrize("channel, watched", [
+    ("LIVE", True), ("HOTFIX", True), ("PTU", False), ("EPTU", False), ("TECH-PREVIEW", False),
+])
+def test_live_watch_only_on_scanned_channels(json_backend, tmp_path, monkeypatch, channel, watched):
+    """#446: the owned set is shared, so test-server blueprints never reach it."""
+    from types import SimpleNamespace
+
+    from src.gui import main_window
+    (tmp_path / channel).mkdir()
+    monkeypatch.setattr(AppSettings, "get_active_channel", staticmethod(lambda: channel))
+    monkeypatch.setattr(AppSettings, "get_channel_install_path",
+                        staticmethod(lambda: str(tmp_path / channel)))
+    monkeypatch.setattr(main_window, "LiveBlueprintLogWorker", _RecordedWorker)
+    _RecordedWorker.started = []
+    me = SimpleNamespace(_sco_log_worker=None, _on_sco_blueprints_found=lambda *a: None)
+    main_window.MainWindow._start_sco_log_watcher(me)
+    assert bool(_RecordedWorker.started) is watched
+    assert (me._sco_log_worker is not None) is watched
+
+
+def test_live_watch_survives_an_unreadable_install_path(json_backend, monkeypatch):
+    """Python 3.11's Path.is_dir re-raises access denied; that must not crash."""
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from src.gui import main_window
+
+    def denied(self):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(AppSettings, "get_active_channel", staticmethod(lambda: "LIVE"))
+    monkeypatch.setattr(AppSettings, "get_channel_install_path", staticmethod(lambda: "X:/LIVE"))
+    monkeypatch.setattr(Path, "is_dir", denied)
+    me = SimpleNamespace(_sco_log_worker=None)
+    main_window.MainWindow._start_sco_log_watcher(me)
+    assert me._sco_log_worker is None
+
+
+def test_live_watch_leaves_the_scan_watermark_alone(json_backend, monkeypatch):
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    from src.gui import main_window
+    me = SimpleNamespace(
+        _owned_names_from_log=lambda raw: set(raw), _recompute_owned=lambda: None,
+        _sco_overlay=None,
+    )
+    newest = datetime(2026, 10, 7, 20, 0, tzinfo=timezone.utc)
+    main_window.MainWindow._on_sco_blueprints_found(me, ["Agni"], newest)
+    assert "Agni" in AppSettings.get_owned_items()
+    for channel in ("LIVE", "HOTFIX", "PTU"):
+        assert AppSettings.get_blueprint_log_watermark(channel=channel) is None
+
+
+def test_channel_switch_restarts_the_live_watch(monkeypatch):
+    from unittest.mock import MagicMock
+
+    from src.gui import main_window
+    monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+    me = MagicMock()
+    me._check_p4k_freshness.return_value = False
+    main_window.MainWindow._on_channel_changed(me, "PTU")
+    me._stop_sco_log_watcher.assert_called_once_with()
+    me._apply_sco_options.assert_called_once_with()

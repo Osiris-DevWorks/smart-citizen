@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "Aucun résultat. Extrayez DataForge et générez les améliorations pour remplir cette liste."
+      "at": "Aucun résultat. Extrayez DataForge, puis générez les améliorations avec Commodities ou Journal coché pour remplir cette liste."
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "Le tiroir latéral sur le bord droit de l'écran. Désactivez-le pour le masquer avec ses sections."
+      "at": "Un tiroir ancré au bord de l'écran, à la position choisie ci-dessous. Désactivez-le pour le masquer avec ses sections."
     },
     "drawer_blueprints": {
       "ht": "",

@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "Sin resultados. Extrae DataForge y genera las mejoras para llenar esta lista."
+      "at": "Sin resultados. Extrae DataForge y genera las mejoras con Commodities o Journal marcado para llenar esta lista."
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "El cajón lateral en el borde derecho de la pantalla. Desactívalo para ocultarlo junto con sus secciones."
+      "at": "Un cajón anclado al borde de la pantalla, en la posición elegida abajo. Desactívalo para ocultarlo junto con sus secciones."
     },
     "drawer_blueprints": {
       "ht": "",

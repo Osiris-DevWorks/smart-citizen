@@ -378,6 +378,15 @@ class TestTheWorkerStartRefusesTestChannels:
         assert _call_sites("find_log_files") == ["utils/blueprint_log_scanner.py"]
         assert _call_sites("scan_files") == ["utils/blueprint_log_scanner.py"]
 
+    def test_the_live_watch_is_gated_too(self):
+        """The overlay's live Game.log watch reads logs another way
+        (GameLogTail), so it carries the same LIVE/HOTFIX gate where its one
+        worker is started."""
+        assert _call_sites("GameLogTail") == ["gui/workers.py"]
+        assert _call_sites("LiveBlueprintLogWorker") == ["gui/main_window.py"]
+        source = inspect.getsource(MainWindow._start_sco_log_watcher)
+        assert "LiveBlueprintLogWorker(" in source and "_SCANNED_CHANNELS" in source
+
 
 class _RunStub(_NextStub):
     """_NextStub plus what MainWindow._on_blueprint_log_scan_finished touches,

@@ -3089,7 +3089,7 @@
       "at": ""
     },
     "crafting_none": {
-      "ht": "No matches. Extract DataForge and generate enhancements to fill this list.",
+      "ht": "No matches. Extract DataForge, then generate enhancements with Commodities or Journal ticked, to fill this list.",
       "at": ""
     },
     "system_other": {
@@ -3179,7 +3179,7 @@
       "at": ""
     },
     "drawer_hint": {
-      "ht": "The side drawer on the right edge of the screen. Turn off to hide it and its sections.",
+      "ht": "A drawer docked at the screen edge, at the position chosen below. Turn off to hide it and its sections.",
       "at": ""
     },
     "drawer_blueprints": {

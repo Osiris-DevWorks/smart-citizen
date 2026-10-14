@@ -669,15 +669,21 @@ class AppSettings:
     # Smart Citizen Overlay (SCO) switches on the Overlay tab (2.5.0):
     # option name -> (key, default). All on by default, matching how the
     # overlay behaved before the tab existed.
+    # Overlay tab switch names, named once. A drawer section's switch is
+    # SCO_DRAWER_SECTION_PREFIX + its sco_overlay.SECTION_ICONS name.
+    SCO_SCAN_DECODER = "scan_decoder"
+    SCO_DRAWER = "drawer"
+    SCO_DRAWER_SECTION_PREFIX = "drawer_"
+    SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
+    SCO_SAVE_SAMPLES = "save_samples"
     SCO_OPTION_SETTING = {
-        "scan_decoder":         ("sco/scan_decoder", True),
-        "drawer":               ("sco/drawer", True),
-        # The drawer's sections; "drawer_" marks them as parts of the drawer.
-        "drawer_blueprints":    ("sco/drawer_blueprints", True),
-        "drawer_minerals":      ("sco/drawer_minerals", True),
-        "drawer_crafting":      ("sco/drawer_crafting", True),
-        "live_blueprint_watch": ("sco/live_blueprint_watch", True),
-        "save_samples":         ("sco/save_samples", True),
+        SCO_SCAN_DECODER:         ("sco/scan_decoder", True),
+        SCO_DRAWER:               ("sco/drawer", True),
+        SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
+        SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
+        SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
+        SCO_SAVE_SAMPLES:         ("sco/save_samples", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
     # every combination but the screen centre.

@@ -6,7 +6,9 @@ keeps the toolbar's Overlay button and this tab's start button in step.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+from typing import Optional
 
 from PyQt6.QtCore import QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
@@ -20,8 +22,10 @@ from src.gui.theme import get_button_color, get_button_text_color
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 
+logger = logging.getLogger(__name__)
 
-DRAWER_SECTION_PREFIX = "drawer_"
+
+DRAWER_SECTION_PREFIX = AppSettings.SCO_DRAWER_SECTION_PREFIX
 DRAWER_SECTION_INDENT = 22
 
 
@@ -31,8 +35,10 @@ class OverlayTab(QWidget):
     overlay_toggled = pyqtSignal(bool)
     options_changed = pyqtSignal()
 
-    def __init__(self, samples_dir: Path, parent=None):
+    def __init__(self, samples_dir: Optional[Path] = None, parent=None):
         super().__init__(parent)
+        # None: AppSettings.get_sco_samples_dir() when opened, so a data-folder
+        # move is followed.
         self._samples_dir = samples_dir
         self._checks: dict[str, QCheckBox] = {}
         self._hints: dict[str, QLabel] = {}
@@ -80,10 +86,11 @@ class OverlayTab(QWidget):
             layout.addWidget(hint)
             self._checks[name] = check
             self._hints[name] = hint
-            if name == "drawer":
+            if name == AppSettings.SCO_DRAWER:
                 layout.addLayout(self._position_row())
-        self._checks["drawer"].toggled.connect(self._sync_section_enabled)
-        self._sync_section_enabled(self._checks["drawer"].isChecked())
+        drawer = self._checks[AppSettings.SCO_DRAWER]
+        drawer.toggled.connect(self._sync_section_enabled)
+        self._sync_section_enabled(drawer.isChecked())
 
         self._open_samples_btn = QPushButton()
         self._open_samples_btn.clicked.connect(self._open_samples_folder)
@@ -176,5 +183,10 @@ class OverlayTab(QWidget):
         self._position_combo.setEnabled(drawer_on)
 
     def _open_samples_folder(self) -> None:
-        self._samples_dir.mkdir(parents=True, exist_ok=True)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._samples_dir)))
+        samples_dir = self._samples_dir or AppSettings.get_sco_samples_dir()
+        try:
+            samples_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            logger.warning("SCO: could not create the samples folder %s", samples_dir)
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(samples_dir)))

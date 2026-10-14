@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "Nenhum resultado. Extraia o DataForge e gere os aprimoramentos para preencher esta lista."
+      "at": "Nenhum resultado. Extraia o DataForge e gere os aprimoramentos com Commodities ou Journal marcado para preencher esta lista."
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "A gaveta lateral na borda direita da tela. Desative para ocultá-la junto com suas seções."
+      "at": "Uma gaveta presa à borda da tela, na posição escolhida abaixo. Desative para ocultá-la junto com suas seções."
     },
     "drawer_blueprints": {
       "ht": "",

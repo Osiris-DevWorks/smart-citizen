@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from src.utils import sco_digit_reader
-from src.utils.sco_digit_reader import read_signature
+from src.utils.sco_digit_reader import DIGIT_HEIGHT_AT_1600, read_signature
 from src.utils.sco_digit_samples import DIGIT_SAMPLES
 
 FIXTURES = sorted((Path(__file__).parent / "fixtures" / "sco").glob("*.png"))
@@ -35,7 +35,7 @@ def _expected(path):
 
 def _read(path):
     w, h, red, green, blue = _channels(path)
-    return read_signature(w, h, red, 11, green=green, blue=blue)
+    return read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue)
 
 
 @pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
@@ -82,10 +82,37 @@ def test_reads_without_its_own_glyphs(monkeypatch, stem):
 
 def test_blank_and_noise_read_nothing():
     w, h = 200, 60
-    assert read_signature(w, h, bytes(w * h), 11) is None
+    assert read_signature(w, h, bytes(w * h), DIGIT_HEIGHT_AT_1600) is None
     # A lone bright bar is not a signature.
     red = bytearray(w * h)
     for y in range(20, 31):
         red[y * w + 50:y * w + 53] = b"\xff\xff\xff"
-    assert read_signature(w, h, bytes(red), 11) is None
-    assert read_signature(w, h, b"short", 11) is None
+    assert read_signature(w, h, bytes(red), DIGIT_HEIGHT_AT_1600) is None
+    assert read_signature(w, h, b"short", DIGIT_HEIGHT_AT_1600) is None
+
+
+def test_colour_channels_of_another_length_read_nothing():
+    w, h, red, green, blue = _channels(READOUTS[0])
+    assert read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green[:-1], blue=blue) is None
+
+
+@pytest.mark.parametrize("screen_height", [1080, 1440, 2160])
+def test_reads_at_other_screen_heights(screen_height):
+    """The digit size follows the screen height. Fixtures are 1600 px crops,
+    scaled here to what other screens would capture (until testers send real
+    ones, which the glob picks up)."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QImage
+
+    path = next(p for p in READOUTS if p.stem.startswith("live"))
+    factor = screen_height / 1600
+    img = QImage(str(path))
+    img = img.scaled(round(img.width() * factor), round(img.height() * factor),
+                     Qt.AspectRatioMode.IgnoreAspectRatio,
+                     Qt.TransformationMode.SmoothTransformation)
+    img = img.convertToFormat(QImage.Format.Format_RGB32)
+    data = img.constBits().asstring(img.sizeInBytes())
+    reading = read_signature(img.width(), img.height(), data[2::4],
+                             DIGIT_HEIGHT_AT_1600 * factor, green=data[1::4], blue=data[0::4])
+    assert reading is not None
+    assert reading.text.replace(",", "") == path.stem.split("_")[-1]

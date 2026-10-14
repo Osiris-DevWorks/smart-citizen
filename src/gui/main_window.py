@@ -871,7 +871,7 @@ class MainWindow(QMainWindow):
         # Overlay tab (2.5.0): start/stop and options for the Smart Citizen
         # Overlay. Its start button drives the toolbar's Overlay button, so
         # both go through _toggle_sco_overlay.
-        self.overlay_tab = OverlayTab(AppSettings.get_sco_samples_dir())
+        self.overlay_tab = OverlayTab()
         self.overlay_tab.overlay_toggled.connect(lambda on: self.sco_btn.setChecked(on))
         self.overlay_tab.options_changed.connect(self._apply_sco_options)
         self._overlay_tab_index = self.tabs.addTab(self.overlay_tab, tr("tabs.overlay"))
@@ -4686,6 +4686,11 @@ class MainWindow(QMainWindow):
         # configs.
         self._sync_canonical_source_paths(f"for channel {channel}")
 
+        # A running overlay's live Game.log watch follows the new channel
+        # (or stops, off LIVE and HOTFIX) without closing its windows.
+        self._stop_sco_log_watcher()
+        self._apply_sco_options()
+
         self._refresh_channel_indicator()
         self.config_tab._refresh_p4k_status()
         if hasattr(self, "enhancements_tab"):
@@ -6366,8 +6371,12 @@ class MainWindow(QMainWindow):
         # Detach log handler before widgets are destroyed
         self.log_tab.remove_handler()
 
-        # Smart Citizen Overlay: close its windows and the live log watcher.
+        # Smart Citizen Overlay: close its windows and the live log watcher,
+        # and let a capture still with the reader finish (a read takes well
+        # under a second) so its pool thread is gone before the overlay is.
         self._stop_sco_overlay()
+        if self._sco_overlay is not None:
+            self._sco_overlay.wait_for_reader(2000)
 
         # Clean up workers. The close is committed from here: every prompt
         # that could call it off has been answered, so nothing new may start
@@ -6845,7 +6854,7 @@ class MainWindow(QMainWindow):
             return
         if self._sco_overlay is None:
             from src.gui.sco_overlay import ScoOverlay
-            self._sco_overlay = ScoOverlay(self, sample_dir=AppSettings.get_sco_samples_dir())
+            self._sco_overlay = ScoOverlay(self)
             self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
             self._sco_overlay.scan_decoder_toggled.connect(self._on_sco_scan_decoder_toggled)
             self._sco_overlay.watched_changed.connect(AppSettings.set_sco_watched_minerals)
@@ -6905,7 +6914,7 @@ class MainWindow(QMainWindow):
         self._sco_overlay.drawer.set_position(AppSettings.get_sco_drawer_position())
         if not self._sco_overlay.is_running():
             return
-        if AppSettings.get_sco_option("live_blueprint_watch"):
+        if AppSettings.get_sco_option(AppSettings.SCO_LIVE_BLUEPRINT_WATCH):
             if self._sco_log_worker is None:
                 self._start_sco_log_watcher()
         else:
@@ -6920,26 +6929,34 @@ class MainWindow(QMainWindow):
     def _start_sco_log_watcher(self):
         """Watch the active channel's Game.log for blueprints earned mid-session.
 
-        Skipped quietly without a valid install path: the drawer still works,
-        it just won't pick up new blueprints on its own.
+        Only LIVE and HOTFIX, like the Scan (#446): the owned set is shared,
+        so a blueprint earned on a test server must not be marked owned.
+        Skipped quietly for other channels and without a valid install path:
+        the drawer still works, it just won't pick up new blueprints on its
+        own. ``_on_channel_changed`` restarts it for the new channel.
         """
         from src.utils.blueprint_log_scanner import LIVE_LOG_NAME
+        channel = AppSettings.get_active_channel()
+        if channel not in _SCANNED_CHANNELS:
+            logger.info(f"SCO: live blueprint watch off on {channel} (LIVE and HOTFIX only)")
+            return
         channel_path = AppSettings.get_channel_install_path()
-        if not channel_path or not Path(channel_path).is_dir():
+        if not channel_path or not _is_dir_safe(channel_path):
             logger.warning("SCO: no valid channel install path; live blueprint watch off")
             return
-        since = AppSettings.get_blueprint_log_watermark(channel=AppSettings.get_active_channel())
+        since = AppSettings.get_blueprint_log_watermark(channel=channel)
         self._sco_log_worker = LiveBlueprintLogWorker(Path(channel_path) / LIVE_LOG_NAME, since)
         self._sco_log_worker.blueprints_found.connect(self._on_sco_blueprints_found)
         self._sco_log_worker.start()
 
     def _on_sco_blueprints_found(self, raw_names, newest):
-        """Fold blueprints the live watcher saw into the owned set."""
-        channel = AppSettings.get_active_channel()
-        prev = AppSettings.get_blueprint_log_watermark(channel=channel)
-        AppSettings.set_blueprint_log_watermark(
-            newest if prev is None else max(prev, newest), channel=channel
-        )
+        """Fold blueprints the live watcher saw into the owned set.
+
+        The persisted watermark is left to the Scan: the watcher reads only
+        the current Game.log, so advancing the mark here would make the next
+        Scan skip sessions rotated into logbackups since it last ran. The
+        watcher's own ``since`` already stops it counting an event twice.
+        """
         owned = AppSettings.get_owned_items()
         new_names = sorted(self._owned_names_from_log(raw_names) - owned)
         if not new_names:
@@ -6952,8 +6969,8 @@ class MainWindow(QMainWindow):
 
     def _on_sco_scan_decoder_toggled(self, on: bool):
         """The drawer's scan decoder switch: same setting as the Overlay tab's."""
-        AppSettings.set_sco_option("scan_decoder", on)
-        self.overlay_tab.set_option("scan_decoder", on)
+        AppSettings.set_sco_option(AppSettings.SCO_SCAN_DECODER, on)
+        self.overlay_tab.set_option(AppSettings.SCO_SCAN_DECODER, on)
         self._apply_sco_options()
 
     def _on_sco_owned_toggled(self, name: str, owned_now: bool):

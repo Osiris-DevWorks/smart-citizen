@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "Keine Treffer. Extrahiere DataForge und erzeuge die Erweiterungen, um diese Liste zu füllen."
+      "at": "Keine Treffer. Extrahiere DataForge und erzeuge dann die Erweiterungen mit aktiviertem Commodities oder Journal, um diese Liste zu füllen."
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "Die Seitenschublade am rechten Bildschirmrand. Ausschalten blendet sie samt Bereichen aus."
+      "at": "Eine Schublade am Bildschirmrand, an der unten gewählten Position. Ausschalten blendet sie samt Bereichen aus."
     },
     "drawer_blueprints": {
       "ht": "",

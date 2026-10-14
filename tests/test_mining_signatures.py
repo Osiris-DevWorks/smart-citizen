@@ -82,7 +82,7 @@ class TestDecode:
 class TestParseText:
     @pytest.mark.parametrize("text, expected", [
         ("7,200", 7200), ("10,200", 10200), (" 3170 ", 3170), ("10.200", 10200),
-        ("", None), ("7,2O0", None), ("UNKNOWN", None),
+        ("", None), ("7,2O0", None), ("UNKNOWN", None), ("²", None), ("7,2①0", None),
     ])
     def test_parse(self, text, expected):
         assert parse_signature_text(text) == expected

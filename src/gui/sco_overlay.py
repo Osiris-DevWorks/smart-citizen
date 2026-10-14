@@ -37,7 +37,8 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from PyQt6.QtCore import (
-    QObject, QPoint, QPointF, QRect, Qt, QTimer, QVariantAnimation, pyqtSignal,
+    QObject, QPoint, QPointF, QRect, QRunnable, Qt, QThreadPool, QTimer,
+    QVariantAnimation, pyqtSignal,
 )
 from PyQt6.QtGui import (
     QColor, QGuiApplication, QImage, QPainter, QPainterPath, QPalette, QPen,
@@ -600,8 +601,7 @@ class BlueprintDrawer(QWidget):
 
         # The tabs pick the page, so the panel only needs a stack of them.
         self._sections = QStackedWidget(self._panel)
-        self._section_pages = {"blueprints": bp_page, "minerals": mineral_page,
-                               "crafting": crafting_page}
+        self._section_pages = dict(zip(SECTION_ICONS, (bp_page, mineral_page, crafting_page)))
         for page in self._section_pages.values():
             self._sections.addWidget(page)
         self._current: Optional[str] = None
@@ -672,10 +672,9 @@ class BlueprintDrawer(QWidget):
         layout.addWidget(tree)
         return search, tree, page
 
-    def set_sections(self, blueprints: bool, minerals: bool, crafting: bool) -> None:
-        """Show or hide the drawer's sections (Overlay tab switches)."""
-        shown = [name for name, on in (("blueprints", blueprints), ("minerals", minerals),
-                                       ("crafting", crafting)) if on]
+    def set_sections(self, shown) -> None:
+        """Show only the sections (``SECTION_ICONS`` names) in *shown*."""
+        shown = [name for name in SECTION_ICONS if name in shown]
         self._handle.set_sections(shown)
         if self._current not in shown:
             self.close_drawer()
@@ -946,8 +945,35 @@ class BlueprintDrawer(QWidget):
         self.owned_toggled.emit(name, checked)
 
 
+class _ReadTask(QRunnable):
+    """Runs a ``SignatureReader`` on one capture off the GUI thread.
+
+    The reader is pure Python and can take 100+ ms on a busy capture (text
+    or noise under the scan region), which would stall the windows if it ran
+    in the capture timer's slot. ``QImage`` is safe to use from any thread.
+    """
+
+    def __init__(self, reader: SignatureReader, image: QImage, region: QRect,
+                 done: pyqtSignal, token: int):
+        super().__init__()
+        self._reader, self._image, self._region = reader, image, region
+        self._done, self._token = done, token
+
+    def run(self) -> None:
+        try:
+            found, failed = self._reader(self._image), False
+        except Exception:
+            logger.exception("SCO signature reader failed; stopping capture")
+            found, failed = None, True
+        self._done.emit(self._token, found, failed, self._image, self._region)
+
+
 class ScoOverlay(QObject):
     """Owns the overlay windows and the signature capture loop."""
+
+    # (token, reader result, reader raised, capture, capture region); emitted
+    # from the reader's pool thread, delivered on the GUI thread.
+    _read_done = pyqtSignal(int, object, bool, object, object)
 
     owned_toggled = pyqtSignal(str, bool)
     scan_decoder_toggled = pyqtSignal(bool)
@@ -969,6 +995,11 @@ class ScoOverlay(QObject):
         self._timer = QTimer(self)
         self._timer.setInterval(CAPTURE_INTERVAL_MS)
         self._timer.timeout.connect(self._capture_once)
+        self._pool = QThreadPool(self)
+        self._pool.setMaxThreadCount(1)
+        self._reading = False       # a capture is with the reader
+        self._read_token = 0        # bumped on stop, so a late result is dropped
+        self._read_done.connect(self._on_read_done)
         self._last_value: Optional[int] = None
         self._shown_value: Optional[int] = None
         self._candidate: Optional[int] = None
@@ -981,12 +1012,12 @@ class ScoOverlay(QObject):
         """Apply the Overlay tab's switches (``AppSettings.SCO_OPTION_SETTING``
         names; missing ones count as on). Takes effect at once if running."""
         on = lambda name: options.get(name, True)  # noqa: E731
-        self._show_label = on("scan_decoder")
+        self._show_label = on(AppSettings.SCO_SCAN_DECODER)
         self.drawer.set_scan_decoder(self._show_label)
-        self._show_drawer = on("drawer")
-        self._save_samples = on("save_samples")
-        self.drawer.set_sections(on("drawer_blueprints"), on("drawer_minerals"),
-                                 on("drawer_crafting"))
+        self._show_drawer = on(AppSettings.SCO_DRAWER)
+        self._save_samples = on(AppSettings.SCO_SAVE_SAMPLES)
+        self.drawer.set_sections(
+            [name for name in SECTION_ICONS if on(AppSettings.SCO_DRAWER_SECTION_PREFIX + name)])
         if self._running:
             self._sync_windows()
 
@@ -1023,6 +1054,7 @@ class ScoOverlay(QObject):
     def stop(self) -> None:
         self._running = False
         self._timer.stop()
+        self._read_token += 1
         self.label.hide()
         self.drawer.hide()
 
@@ -1044,16 +1076,31 @@ class ScoOverlay(QObject):
             self._timer.start()
 
     def _capture_once(self) -> None:
+        # One read at a time: a tick that lands while the last capture is
+        # still being read is skipped, so a slow read can't queue up work.
+        if self._reading or self._reader is None:
+            return
         screen = QGuiApplication.primaryScreen()
         region = scan_region_rect(screen.geometry())
         image = screen.grabWindow(0, region.x(), region.y(), region.width(), region.height()).toImage()
         self._mask_own_label(image, region)
-        try:
-            found = self._reader(image) if self._reader else None
-        except Exception:
-            logger.exception("SCO signature reader failed; stopping capture")
+        self._reading = True
+        self._pool.start(_ReadTask(self._reader, image, region, self._read_done, self._read_token))
+
+    def wait_for_reader(self, msecs: int = -1) -> bool:
+        """Block until no capture is being read (used on close and in tests)."""
+        return self._pool.waitForDone(msecs)
+
+    def _on_read_done(self, token: int, found, failed: bool, image: QImage, region: QRect) -> None:
+        self._reading = False
+        if token != self._read_token or not self._running:
+            return
+        if failed:
             self._timer.stop()
             return
+        self._handle_found(found, image, region)
+
+    def _handle_found(self, found, image: QImage, region: QRect) -> None:
         if not found:
             return
         text, where = found
@@ -1078,6 +1125,9 @@ class ScoOverlay(QObject):
                 self._candidate, self._candidate_count = value, 1
             if self._candidate_count < READINGS_TO_CHANGE:
                 return
+        # Accepted (or still the shown value): a pending candidate is void,
+        # so a misread has to repeat back to back, not just come back later.
+        self._candidate, self._candidate_count = None, 0
         matches = decode_signature(value)
         if not matches and value != self._last_value:
             logger.debug("SCO: no deposit matches signature %s", value)
@@ -1103,15 +1153,23 @@ class ScoOverlay(QObject):
 
     def _save_sample(self, image: QImage, text: str, where: QRect) -> None:
         """Keep one crop per distinct reading, named after the text read."""
-        if (self._sample_dir is None or not self._save_samples or text in self._sampled
+        if (not self._save_samples or text in self._sampled
                 or len(self._sampled) >= MAX_SAMPLES_PER_SESSION):
             return
+        # Marked tried either way, so a held reading that can't be saved
+        # doesn't warn four times a second.
         self._sampled.add(text)
+        # Resolved now, not at start, so a data-folder move is followed.
+        sample_dir = self._sample_dir or AppSettings.get_sco_samples_dir()
         crop = image.copy(where.adjusted(-SAMPLE_PADDING, -SAMPLE_PADDING,
                                          SAMPLE_PADDING, SAMPLE_PADDING))
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        target = sample_dir / f"{stamp}_{text.replace(',', '')}.png"
         try:
-            self._sample_dir.mkdir(parents=True, exist_ok=True)
-            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            crop.save(str(self._sample_dir / f"{stamp}_{text.replace(',', '')}.png"))
+            sample_dir.mkdir(parents=True, exist_ok=True)
         except OSError:
-            logger.warning("SCO: could not save a digit sample to %s", self._sample_dir)
+            logger.warning("SCO: could not create the samples folder %s", sample_dir)
+            return
+        # QImage.save reports failure by returning False, not by raising.
+        if not crop.save(str(target)):
+            logger.warning("SCO: could not save a digit sample to %s", target)

@@ -27,6 +27,15 @@ from src.utils.mining_catalog import CraftingIndex, MineralInfo  # noqa: E402
 from src.utils.mining_signatures import decode_signature  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_overlay(monkeypatch, tmp_path):
+    """No real theme or samples-folder reads: the overlay takes its colours
+    from settings on every start and resolves the samples folder per save."""
+    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    monkeypatch.setattr("src.gui.sco_overlay.AppSettings.get_sco_samples_dir",
+                        staticmethod(lambda: tmp_path / "default_samples"))
+
+
 def _meta():
     return {
         "Agni": BlueprintItem("Agni", frozenset({"Haul cargo"}), "Quantum Drive", "Industrial", "S3", "B"),
@@ -130,7 +139,7 @@ def test_tabs_overlap_and_the_open_one_is_in_front(qapp):
 
 
 def test_a_click_on_a_tab_opens_its_section(qapp):
-    from PyQt6.QtCore import QEvent, QPointF
+    from PyQt6.QtCore import QEvent
     from PyQt6.QtGui import QMouseEvent
 
     drawer = BlueprintDrawer()
@@ -180,9 +189,8 @@ def test_drawer_takes_theme_colours(qapp):
     assert drawer._handle.colors == DEFAULT_OVERLAY_COLORS
 
 
-def test_no_reader_means_no_capture(qapp, monkeypatch):
+def test_no_reader_means_no_capture(qapp):
     # Keep the test off the registry-backed theme setting.
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay()
     overlay.set_reader(None)
     overlay.start()
@@ -193,8 +201,7 @@ def test_no_reader_means_no_capture(qapp, monkeypatch):
     assert not overlay._timer.isActive()
 
 
-def test_default_reader_is_the_hud_reader(qapp, monkeypatch):
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+def test_default_reader_is_the_hud_reader(qapp):
     assert ScoOverlay()._reader is hud_signature_reader
 
 
@@ -216,10 +223,9 @@ def test_hud_reader_reads_a_qimage(qapp):
     assert 40 <= where.top() <= 40 + crop.height()
 
 
-def test_sample_saved_once_per_reading(qapp, monkeypatch, tmp_path):
+def test_sample_saved_once_per_reading(qapp, tmp_path):
     from PyQt6.QtGui import QImage
 
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay(sample_dir=tmp_path / "samples")
     image = QImage(200, 100, QImage.Format.Format_RGB32)
     overlay._save_sample(image, "7,200", QRect(50, 40, 30, 11))
@@ -228,10 +234,9 @@ def test_sample_saved_once_per_reading(qapp, monkeypatch, tmp_path):
     assert len(saved) == 1 and saved[0].name.endswith("_7200.png")
 
 
-def test_one_frame_misread_does_not_replace_the_label(qapp, monkeypatch):
+def test_one_frame_misread_does_not_replace_the_label(qapp):
     from PyQt6.QtCore import QPoint
 
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay()
     at = QPoint(10, 10)
     overlay._on_reading(7200, at)
@@ -241,6 +246,8 @@ def test_one_frame_misread_does_not_replace_the_label(qapp, monkeypatch):
     overlay._on_reading(7208, at)                   # one misread frame
     assert overlay.label._label.text() == "2 × Bexalite"
     overlay._on_reading(7200, at)
+    overlay._on_reading(7208, at)                   # the misread again, but not back to back
+    assert overlay.label._label.text() == "2 × Bexalite"
     overlay._on_reading(10200, at)
     overlay._on_reading(10200, at)                  # a real change sticks
     assert overlay.label._label.text() == "3 × Lindinium"
@@ -265,10 +272,9 @@ def test_label_is_centred_under_the_readout_in_odw_colours(qapp):
     label.hide()
 
 
-def test_a_watched_mineral_makes_the_label_glow(qapp, monkeypatch):
+def test_a_watched_mineral_makes_the_label_glow(qapp):
     from PyQt6.QtCore import QPoint
 
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay()
     overlay.set_reader(None)
     overlay.start()
@@ -320,8 +326,7 @@ def test_only_ores_with_a_signature_get_a_checkbox(qapp):
     assert drawer._mineral_tree.topLevelItem(0).data(1, Qt.ItemDataRole.CheckStateRole) is None
 
 
-def test_drawer_scan_decoder_switch(qapp, monkeypatch):
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+def test_drawer_scan_decoder_switch(qapp):
     overlay = ScoOverlay()
     seen = []
     overlay.scan_decoder_toggled.connect(seen.append)
@@ -334,11 +339,10 @@ def test_drawer_scan_decoder_switch(qapp, monkeypatch):
     assert check.isChecked() and seen == [False]
 
 
-def test_own_label_is_blacked_out_of_the_capture(qapp, monkeypatch):
+def test_own_label_is_blacked_out_of_the_capture(qapp):
     from PyQt6.QtCore import QPoint
     from PyQt6.QtGui import QColor, QImage
 
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     overlay = ScoOverlay()
     region = QRect(1000, 500, 400, 200)
     overlay.label.show_text("2 × Bexalite", QPoint(1200, 550))
@@ -351,8 +355,7 @@ def test_own_label_is_blacked_out_of_the_capture(qapp, monkeypatch):
     overlay.stop()
 
 
-def test_options_switch_parts_off_while_running(qapp, monkeypatch):
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+def test_options_switch_parts_off_while_running(qapp):
     overlay = ScoOverlay()
     overlay.set_reader(lambda image: None)
     overlay.start()
@@ -452,8 +455,7 @@ def test_sections_follow_the_options(qapp):
     assert overlay.drawer.has_sections()
 
 
-def test_no_sections_hides_the_drawer(qapp, monkeypatch):
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+def test_no_sections_hides_the_drawer(qapp):
     overlay = ScoOverlay()
     overlay.start()
     try:
@@ -515,3 +517,111 @@ def test_unknown_position_falls_back_to_middle_right(qapp):
     drawer = BlueprintDrawer()
     drawer.set_position("nowhere")
     assert drawer._handle.edge == "right"
+
+
+def _deliver(overlay):
+    """Wait for the reader's pool thread, then deliver its queued result."""
+    from PyQt6.QtCore import QCoreApplication
+
+    assert overlay.wait_for_reader(5000)
+    QCoreApplication.processEvents()
+
+
+def _read(overlay, reader, region=QRect(0, 0, 200, 100)):
+    from PyQt6.QtGui import QImage
+
+    from src.gui.sco_overlay import _ReadTask
+    image = QImage(region.width(), region.height(), QImage.Format.Format_RGB32)
+    overlay._reading = True
+    overlay._pool.start(_ReadTask(reader, image, region, overlay._read_done, overlay._read_token))
+    _deliver(overlay)
+
+
+def test_the_reader_runs_off_the_gui_thread(qapp):
+    import threading
+
+    overlay = ScoOverlay()
+    overlay.start()
+    threads = []
+
+    def reader(image):
+        threads.append(threading.current_thread())
+        return "7,200", QRect(50, 40, 30, 11)
+
+    for _ in range(2):   # two matching reads in a row change the label
+        _read(overlay, reader)
+    assert threads and all(t is not threading.main_thread() for t in threads)
+    assert overlay.label._label.text() == "2 × Bexalite"
+    assert not overlay._reading
+    overlay.stop()
+
+
+def test_a_tick_during_a_read_is_skipped(qapp, monkeypatch):
+    overlay = ScoOverlay()
+    overlay._reading = True
+
+    def no_grab():
+        raise AssertionError("captured while a read was in flight")
+
+    monkeypatch.setattr("src.gui.sco_overlay.QGuiApplication.primaryScreen", staticmethod(no_grab))
+    overlay._capture_once()
+
+
+def test_a_failing_reader_stops_the_capture(qapp):
+    overlay = ScoOverlay()
+    overlay.start()
+    assert overlay._timer.isActive()
+
+    def broken(image):
+        raise ValueError("bad capture")
+
+    _read(overlay, broken)
+    assert not overlay._timer.isActive() and not overlay._reading
+
+
+def test_a_read_finishing_after_stop_is_dropped(qapp):
+    overlay = ScoOverlay()
+    overlay.start()
+    overlay._on_reading(7200, overlay.label.pos())   # one sighting pending
+    from PyQt6.QtGui import QImage
+
+    from src.gui.sco_overlay import _ReadTask
+    overlay._reading = True
+    task = _ReadTask(lambda image: ("7,200", QRect(50, 40, 30, 11)),
+                     QImage(200, 100, QImage.Format.Format_RGB32), QRect(0, 0, 200, 100),
+                     overlay._read_done, overlay._read_token)
+    overlay.stop()
+    overlay._pool.start(task)
+    _deliver(overlay)
+    assert not overlay.label.isVisible() and not overlay._reading
+
+
+def test_a_failed_sample_save_is_logged(qapp, tmp_path, caplog, monkeypatch):
+    from PyQt6.QtGui import QImage
+
+    overlay = ScoOverlay(sample_dir=tmp_path / "samples")
+    monkeypatch.setattr(QImage, "save", lambda self, *a, **k: False)
+    with caplog.at_level("WARNING", logger="src.gui.sco_overlay"):
+        overlay._save_sample(QImage(80, 40, QImage.Format.Format_RGB32), "7,200",
+                             QRect(10, 10, 30, 11))
+        overlay._save_sample(QImage(80, 40, QImage.Format.Format_RGB32), "7,200",
+                             QRect(10, 10, 30, 11))
+    assert len([r for r in caplog.records if "could not save" in r.getMessage()]) == 1
+
+
+def test_samples_folder_is_resolved_at_save_time(qapp, tmp_path, monkeypatch):
+    from PyQt6.QtGui import QImage
+
+    overlay = ScoOverlay()
+    monkeypatch.setattr("src.gui.sco_overlay.AppSettings.get_sco_samples_dir",
+                        staticmethod(lambda: tmp_path / "moved"))
+    overlay._save_sample(QImage(80, 40, QImage.Format.Format_RGB32), "7,200", QRect(10, 10, 30, 11))
+    assert len(list((tmp_path / "moved").iterdir())) == 1
+
+
+def test_every_drawer_section_has_its_own_switch():
+    from src.utils.settings import AppSettings
+
+    prefix = AppSettings.SCO_DRAWER_SECTION_PREFIX
+    switches = {n[len(prefix):] for n in AppSettings.SCO_OPTION_SETTING if n.startswith(prefix)}
+    assert switches == set(SECTION_ICONS)

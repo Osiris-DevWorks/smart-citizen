@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "沒有符合的結果。擷取 DataForge 並產生增強內容即可填入此清單。"
+      "at": "沒有符合的結果。擷取 DataForge，然後勾選 Commodities 或 Journal 產生增強內容，即可填入此清單。"
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "螢幕右側邊緣的側邊抽屜。關閉後將隱藏抽屜及其各個分區。"
+      "at": "停靠在螢幕邊緣的抽屜，位置由下方選擇。關閉後將隱藏抽屜及其各個分區。"
     },
     "drawer_blueprints": {
       "ht": "",

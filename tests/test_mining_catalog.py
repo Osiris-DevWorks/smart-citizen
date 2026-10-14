@@ -98,3 +98,16 @@ def test_compendium_key_read_like_the_ini_parser(tmp_path, line):
     base = tmp_path / "base.ini"
     base.write_bytes(b"\xef\xbb\xbfOther_Key=x\n" + line.encode("utf-8"))
     assert read_compendium(base)["Beryl"].locations == ("Yela",)
+
+
+def test_stock_shaped_compendium_without_tier_headings():
+    """The stock text has no tier headings, only paragraphs between blank
+    lines; minerals still parse, each with an empty tier."""
+    content = ("Mining is a profession...\\n\\n"
+               "Beryl - Found in Aaron Halo, ARC-L3, Wala\\n\\n"
+               "Hadanite - Aberdeen, All Moons/Planets/Caves\\n\\n"
+               "Prices change with demand.")
+    minerals = parse_mining_compendium(content)
+    assert set(minerals) == {"Beryl", "Hadanite"}
+    assert minerals["Beryl"].locations == ("Aaron Halo", "ARC-L3", "Wala")
+    assert all(m.tier == "" for m in minerals.values())

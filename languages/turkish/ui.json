@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "Eşleşme yok. Bu listeyi doldurmak için DataForge'u çıkarın ve geliştirmeleri oluşturun."
+      "at": "Eşleşme yok. Bu listeyi doldurmak için DataForge'u çıkarın, ardından Commodities veya Journal işaretliyken geliştirmeleri oluşturun."
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "Ekranın sağ kenarındaki yan çekmece. Kapatırsanız çekmece ve bölümleri gizlenir."
+      "at": "Ekran kenarına yerleşen, konumu aşağıda seçilen bir çekmece. Kapatırsanız çekmece ve bölümleri gizlenir."
     },
     "drawer_blueprints": {
       "ht": "",

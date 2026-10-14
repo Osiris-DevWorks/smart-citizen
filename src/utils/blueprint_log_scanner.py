@@ -247,11 +247,18 @@ class GameLogTail:
     double-counts. Same epoch floor as :func:`scan_files`.
     """
 
+    #: Bytes read per step, so a first poll of a large log never holds it
+    #: all in memory at once (the scan streams line by line for the same
+    #: reason).
+    READ_CHUNK = 1 << 20
+
     def __init__(self, path, *, since: Optional[datetime] = None):
         self.path = Path(path)
         self.since = since
         self._offset = 0
-        self._partial = ""
+        # Kept as bytes, not text: a poll can end inside a multi-byte UTF-8
+        # character, and decoding the two halves apart would garble the name.
+        self._partial = b""
 
     def poll(self) -> List[BlueprintEvent]:
         """Return new events since the last poll; [] when there are none."""
@@ -259,28 +266,36 @@ class GameLogTail:
             size = self.path.stat().st_size
         except OSError:
             # Between rotation and the new file appearing; try again later.
-            self._offset, self._partial = 0, ""
+            self._offset, self._partial = 0, b""
             return []
         if size < self._offset:
-            self._offset, self._partial = 0, ""
+            self._offset, self._partial = 0, b""
         if size == self._offset:
             return []
+        events: List[BlueprintEvent] = []
         try:
             with open(self.path, "rb") as fh:
                 fh.seek(self._offset)
-                chunk = fh.read(size - self._offset)
+                while self._offset < size:
+                    chunk = fh.read(min(self.READ_CHUNK, size - self._offset))
+                    if not chunk:
+                        break
+                    self._offset += len(chunk)
+                    complete, sep, rest = (self._partial + chunk).rpartition(b"\n")
+                    if not sep:
+                        self._partial = rest
+                        continue
+                    self._partial = rest
+                    events.extend(self._events_in(complete))
         except OSError as exc:
             logger.debug("Live blueprint log read skipped %s: %s", self.path, exc)
-            return []
-        self._offset += len(chunk)
+        if events:
+            self.since = max(ev.timestamp for ev in events)
+        return events
 
-        text = self._partial + chunk.decode("utf-8", errors="replace")
-        complete, sep, self._partial = text.rpartition("\n")
-        if not sep:
-            self._partial, complete = text, ""
-
-        events: List[BlueprintEvent] = []
-        for line in complete.splitlines():
+    def _events_in(self, complete: bytes) -> List[BlueprintEvent]:
+        found: List[BlueprintEvent] = []
+        for line in complete.decode("utf-8", errors="replace").splitlines():
             if "Received Blueprint:" not in line:
                 continue
             for ev in parse_events(line):
@@ -288,7 +303,5 @@ class GameLogTail:
                     continue
                 if self.since is not None and ev.timestamp <= self.since:
                     continue
-                events.append(ev)
-        if events:
-            self.since = max(ev.timestamp for ev in events)
-        return events
+                found.append(ev)
+        return found

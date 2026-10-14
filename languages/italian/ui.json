@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "Nessun risultato. Estrai DataForge e genera i miglioramenti per riempire questa lista."
+      "at": "Nessun risultato. Estrai DataForge, poi genera i miglioramenti con Commodities o Journal spuntato per riempire questa lista."
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "Il cassetto laterale sul bordo destro dello schermo. Disattivalo per nasconderlo con le sue sezioni."
+      "at": "Un cassetto agganciato al bordo dello schermo, nella posizione scelta qui sotto. Disattivalo per nasconderlo con le sue sezioni."
     },
     "drawer_blueprints": {
       "ht": "",

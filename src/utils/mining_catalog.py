@@ -3,9 +3,11 @@
 Qt-free and settings-free. Two sources:
 
 - The game's Mining Compendium journal (``Journal_General_Mining_Compendium_
-  Content`` in the loaded strings): ``** Tier **`` headings over lines like
-  ``Beryl - Aaron Halo, ARC-L3, Wala``. :func:`parse_mining_compendium`
-  reads it into :class:`MineralInfo` records.
+  Content`` in the loaded strings): lines like
+  ``Beryl - Aaron Halo, ARC-L3, Wala``, under ``** Tier **`` headings when
+  present (community string packs add them; the stock text has none, so
+  the tier is then empty). :func:`parse_mining_compendium` reads it into
+  :class:`MineralInfo` records.
 - ``crafting_index.json``, written next to the enhancement INIs by
   ``scripts/generate_enhancements_ini.py`` from the DataForge crafting
   blueprints (:data:`CRAFTING_INDEX_FILE`). :func:`load_crafting_index`

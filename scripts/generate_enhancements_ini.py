@@ -108,7 +108,17 @@ try:
     # The DataForge cache layout, which pak_extractor (the module that
     # writes it) names once for every reader.
     from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+    # The curated per-ore RS table and the SCO drawer's crafting index,
+    # shared with the Smart Citizen Overlay (see the RS consumers below).
+    from src.utils.mining_signatures import MINEABLE_RS_VALUES
+    from src.utils.mining_catalog import (
+        COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES,
+        CRAFTING_INDEX_FILE, write_crafting_index,
+    )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
+    _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
+    CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
     def strip_raw_blueprint_filename_prefix(stem):  # type: ignore[misc]
         for prefix in ("bp_craft_", "bp_rewards_", "bp_"):
             if stem.lower().startswith(prefix):
@@ -3665,26 +3675,14 @@ def _build_template_lookup(
 #     ore's base RS next to its mining locations.
 # Not every ore in either consumer has a known value; unmatched ores are
 # simply left without an RS line/tag (see each consumer for its own
-# unmatched-key handling). Same deferred-import pattern as tag_builder.
-try:
-    _gen_root = Path(__file__).parent.parent
-    if str(_gen_root) not in sys.path:
-        sys.path.insert(0, str(_gen_root))
-    from src.utils.mining_signatures import MINEABLE_RS_VALUES
-    from src.utils.mining_catalog import CRAFTING_INDEX_FILE, write_crafting_index
-except ImportError:  # pragma: no cover — only triggers if src/ is removed
-    MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
-    CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
-
-# The Mining Compendium journal's own prose spells a couple of ore names
+# unmatched-key handling). MINEABLE_RS_VALUES is imported with the other
+# src/ names near the top of this file, as is _MINING_COMPENDIUM_ORE_ALIASES:
+# the Mining Compendium journal's own prose spells a couple of ore names
 # differently from their DataForge loc-key spelling (a CIG typo, not a
-# transcription error here) — "Savrilium" (single L) vs the canonical
-# mineabletype_primary_savrillium. Maps the journal's lowercased spelling to
-# the MINEABLE_RS_VALUES key so the lookup still matches.
-try:
-    from src.utils.mining_catalog import COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES
-except ImportError:  # pragma: no cover — only triggers if src/ is removed
-    _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
+# transcription error here), "Savrilium" (single L) vs the canonical
+# mineabletype_primary_savrillium, and that map takes the journal's
+# lowercased spelling to the MINEABLE_RS_VALUES key so the lookup still
+# matches.
 
 # Curated RS value PROGRESSIONS as scanned stack size scales (the in-game
 # Mining Compendium "signature strength" chart), for the mission-DETAILS
@@ -4989,7 +4987,7 @@ def scan_crafting_blueprints(
                 loc[name_key].strip()
                 for name_key, _desc in _discover_commodity_loc_pairs(commodity, loc)
                 if loc.get(name_key, "").strip()
-            }, key=len)
+            }, key=lambda n: (len(n), n))   # shortest first; ties by name, not hash order
             crafting_index[commodity] = {
                 "names": names,
                 "items": sorted({(_humanize_craft_category(cat), item) for cat, item in pairs_
@@ -7857,7 +7855,9 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         write_ini(output_dir / "missile_enhancements.ini", out_missiles)
     if _want("medical_consumables"):
         write_ini(output_dir / "medical_consumables_enhancements.ini", out_medical_consumables)
-    if "commodity_journal" in gen_jobs and CRAFTING_INDEX_FILE and ctx["crafting_index"]:
+    # Written whenever the job ran, empty or not, so a stale index never
+    # outlives the INIs it was built with.
+    if "commodity_journal" in gen_jobs and CRAFTING_INDEX_FILE:
         write_crafting_index(output_dir / CRAFTING_INDEX_FILE, ctx["crafting_index"])
 
     total = (len(out_ships) + len(out_components) + len(out_ship_weapons) +

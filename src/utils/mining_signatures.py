@@ -98,4 +98,5 @@ def decode_signature(value: int) -> list[SignatureMatch]:
 def parse_signature_text(text: str) -> int | None:
     """Turn HUD text like ``"10,200"`` into ``10200``; None if not a number."""
     digits = text.replace(",", "").replace(".", "").strip()
-    return int(digits) if digits.isdigit() else None
+    # isdecimal, not isdigit: "²" is a digit to isdigit but int() rejects it.
+    return int(digits) if digits.isdecimal() else None

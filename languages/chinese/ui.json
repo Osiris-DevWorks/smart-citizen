@@ -3282,7 +3282,7 @@
     },
     "crafting_none": {
       "ht": "",
-      "at": "没有匹配结果。提取 DataForge 并生成增强内容即可填充此列表。"
+      "at": "没有匹配结果。提取 DataForge，然后勾选 Commodities 或 Journal 生成增强内容，即可填充此列表。"
     },
     "system_other": {
       "ht": "",
@@ -3372,7 +3372,7 @@
     },
     "drawer_hint": {
       "ht": "",
-      "at": "屏幕右侧边缘的侧边抽屉。关闭后将隐藏抽屉及其各个分区。"
+      "at": "停靠在屏幕边缘的抽屉，位置由下方选择。关闭后将隐藏抽屉及其各个分区。"
     },
     "drawer_blueprints": {
       "ht": "",

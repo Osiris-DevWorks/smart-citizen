@@ -411,8 +411,9 @@ class LiveBlueprintLogWorker(QThread):
     Polls ``blueprint_log_scanner.GameLogTail`` every few seconds. The first
     poll can read a whole (tens of MB) ``Game.log``, so this runs off the main
     thread. Like ``BlueprintLogScanWorker`` it stays read-only: it emits raw
-    names plus the newest timestamp, and the main-thread slot normalizes them,
-    updates the owned set, and advances the watermark. Stop with
+    names plus the newest timestamp, and the main-thread slot normalizes them
+    and updates the owned set (the persisted watermark stays the Scan's).
+    Only started for LIVE or HOTFIX (#446). Stop with
     ``requestInterruption()`` + ``wait()``.
     """
 

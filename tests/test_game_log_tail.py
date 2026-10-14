@@ -94,3 +94,48 @@ def test_watermark_advances_so_a_reread_never_double_counts(tmp_path):
 
 def test_missing_file_is_quiet(tmp_path):
     assert GameLogTail(tmp_path / "Game.log").poll() == []
+
+
+def test_multibyte_name_split_across_polls_stays_intact(tmp_path):
+    log = tmp_path / "Game.log"
+    name = "SW16BR1 “Buzzsaw” Repeater"
+    data = _event("2026-10-07T20:01:00.000Z", name).encode("utf-8")
+    cut = data.index("“".encode("utf-8")) + 1   # one byte into the 3-byte quote
+    log.write_bytes(data[:cut])
+    tail = GameLogTail(log)
+    assert tail.poll() == []
+    with open(log, "ab") as fh:
+        fh.write(data[cut:])
+    assert _names(tail.poll()) == [name]
+
+
+def test_large_first_poll_is_read_in_chunks(tmp_path, monkeypatch):
+    monkeypatch.setattr(GameLogTail, "READ_CHUNK", 64)
+    log = tmp_path / "Game.log"
+    log.write_text("".join(_event(f"2026-10-07T20:{m:02d}:00.000Z", f"Item{m}") for m in range(10)))
+    assert _names(GameLogTail(log).poll()) == [f"Item{m}" for m in range(10)]
+
+
+def test_unreadable_file_retries_the_same_bytes(tmp_path, monkeypatch):
+    import builtins
+    log = tmp_path / "Game.log"
+    log.write_text(_event("2026-10-07T20:01:00.000Z", "Agni"))
+    tail = GameLogTail(log)
+    real_open = builtins.open
+
+    def denied(*args, **kwargs):
+        raise PermissionError("locked")
+
+    monkeypatch.setattr(builtins, "open", denied)
+    assert tail.poll() == []
+    monkeypatch.setattr(builtins, "open", real_open)
+    assert _names(tail.poll()) == ["Agni"]
+
+
+def test_since_follows_the_newest_event(tmp_path):
+    log = tmp_path / "Game.log"
+    log.write_text(_event("2026-10-07T20:01:00.000Z", "Agni")
+                   + _event("2026-10-07T20:09:00.000Z", "Norfield"))
+    tail = GameLogTail(log)
+    tail.poll()
+    assert tail.since == datetime(2026, 10, 7, 20, 9, tzinfo=timezone.utc)
