@@ -3248,6 +3248,10 @@
       "ht": "",
       "at": "Unbekannt"
     },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Der Bergbau-Scan-Decoder wurde nach einem Fehler angehalten. Starte das Overlay neu, um es erneut zu versuchen; Details stehen im Tab „Protokoll“."
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Baupläne"

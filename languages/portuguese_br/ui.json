@@ -3248,6 +3248,10 @@
       "ht": "",
       "at": "Não identificado"
     },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "O decodificador de escaneamento de mineração parou após um erro. Reinicie o overlay para tentar de novo; a aba Log tem os detalhes."
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Projetos"

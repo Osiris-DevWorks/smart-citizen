@@ -3248,6 +3248,10 @@
       "ht": "",
       "at": "Non identifié"
     },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Le décodeur de scan minier s'est arrêté après une erreur. Redémarrez l'overlay pour réessayer ; l'onglet Journal donne les détails."
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Plans"

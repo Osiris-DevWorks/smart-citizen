@@ -6858,6 +6858,8 @@ class MainWindow(QMainWindow):
             self._sco_overlay.owned_toggled.connect(self._on_sco_owned_toggled)
             self._sco_overlay.scan_decoder_toggled.connect(self._on_sco_scan_decoder_toggled)
             self._sco_overlay.watched_changed.connect(AppSettings.set_sco_watched_minerals)
+            self._sco_overlay.decoder_failed.connect(
+                lambda: self.statusBar().showMessage(tr("sco.decoder_stopped")))
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
         self._sco_overlay.set_watched_minerals(AppSettings.get_sco_watched_minerals())
         self._refresh_sco_catalog()

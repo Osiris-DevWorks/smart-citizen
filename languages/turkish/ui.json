@@ -3248,6 +3248,10 @@
       "ht": "",
       "at": "Tanımlanamadı"
     },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Maden tarama çözücüsü bir hatadan sonra durdu. Yeniden denemek için katmanı yeniden başlatın; ayrıntılar Günlük sekmesinde."
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Planlar"

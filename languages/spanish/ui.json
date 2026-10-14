@@ -3248,6 +3248,10 @@
       "ht": "",
       "at": "No identificado"
     },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "El decodificador de escaneo minero se detuvo tras un error. Reinicia el overlay para volver a intentarlo; la pestaña Registro tiene los detalles."
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Planos"

@@ -70,9 +70,12 @@ logger = logging.getLogger(__name__)
 # padded for head movement (~115 px between the two samples).
 SCAN_REGION = (0.38, 0.28, 0.24, 0.12)
 CAPTURE_INTERVAL_MS = 250
-# Tester builds keep a crop of each distinct reading (and the text read) so
-# misreads can be fixed by adding reference glyphs. Capped per session.
+# A crop of each distinct reading (named after the text read) is kept so
+# misreads can be fixed by adding reference glyphs (scripts/add_sco_sample.py).
+# On by default in every build ("Save scan samples" on the Overlay tab).
+# Capped per session, and the folder keeps only the newest MAX_SAMPLES_KEPT.
 MAX_SAMPLES_PER_SESSION = 200
+MAX_SAMPLES_KEPT = 1000
 SAMPLE_PADDING = 12
 # Hide a reading this long after the number was last seen.
 LABEL_HOLD_MS = 1500
@@ -547,6 +550,7 @@ class BlueprintDrawer(QWidget):
 
         self._minerals: dict[str, MineralInfo] = {}
         self._crafting = CraftingIndex()
+        self._mineral_by_material: dict[str, MineralInfo] = {}
 
         self._panel = QFrame(self)
         self._panel.setObjectName("scoDrawerPanel")
@@ -717,6 +721,13 @@ class BlueprintDrawer(QWidget):
         """Mining Compendium minerals and the crafting index for the searches."""
         self._minerals = dict(minerals)
         self._crafting = crafting
+        # Material key -> compendium mineral, linked the same way the mineral
+        # tooltips link the other way (CIG spells some differently).
+        self._mineral_by_material = {}
+        for name, info in self._minerals.items():
+            key = crafting.material_key_for(name)
+            if key:
+                self._mineral_by_material.setdefault(key, info)
         self._render_minerals()
         self._render_crafting()
 
@@ -895,7 +906,7 @@ class BlueprintDrawer(QWidget):
             if not any(needle in n.lower() for n in names + [key]):
                 continue
             node = QTreeWidgetItem([tr("sco.crafting_used_in", material=names[0])])
-            info = self._mineral_for(names)
+            info = self._mineral_by_material.get(key)
             if info is not None:
                 node.setToolTip(0, mineral_tooltip(info, self._crafting))
             for category, item in self._crafting.items_using(key):
@@ -904,7 +915,9 @@ class BlueprintDrawer(QWidget):
                 node.addChild(child)
             tree.addTopLevelItem(node)
             node.setExpanded(True)
-        # An item matched: what it needs.
+        # An item matched: what it needs. materials_for gives each material's
+        # first display name, which leads back to its key.
+        key_by_name = {names[0]: key for key, names in self._crafting.material_names().items()}
         for item, category in sorted(self._crafting.items().items(), key=lambda kv: kv[0].lower()):
             if needle not in item.lower():
                 continue
@@ -912,21 +925,12 @@ class BlueprintDrawer(QWidget):
             node.setToolTip(0, self._item_tooltip(item, category))
             for material in self._crafting.materials_for(item):
                 child = QTreeWidgetItem([material])
-                info = self._mineral_for([material])
+                info = self._mineral_by_material.get(key_by_name.get(material))
                 if info is not None:
                     child.setToolTip(0, mineral_tooltip(info, self._crafting))
                 node.addChild(child)
             tree.addTopLevelItem(node)
             node.setExpanded(True)
-
-    def _mineral_for(self, names) -> Optional[MineralInfo]:
-        """The compendium mineral behind a material's display names, if any."""
-        for n in names:
-            word = n.split(" ")[0].lower()
-            for mineral, info in self._minerals.items():
-                if mineral.lower() == word:
-                    return info
-        return None
 
     def _item_tooltip(self, item: str, category: str) -> str:
         lines = [item, category]
@@ -943,6 +947,48 @@ class BlueprintDrawer(QWidget):
         else:
             self._owned.discard(name)
         self.owned_toggled.emit(name, checked)
+
+
+def prune_samples(folder: Path, keep: int = MAX_SAMPLES_KEPT) -> int:
+    """Delete all but the newest *keep* crops (``*.png``) in *folder*.
+
+    Returns how many were deleted. A missing folder or a file that can't be
+    removed is skipped.
+    """
+    try:
+        crops = sorted(folder.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        return 0
+    removed = 0
+    for old in crops[keep:]:
+        try:
+            old.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
+
+class _SaveSampleTask(QRunnable):
+    """Writes one sample crop off the GUI thread, pruning the folder first
+    when asked (once per overlay session)."""
+
+    def __init__(self, crop: QImage, target: Path, prune: bool):
+        super().__init__()
+        self._crop, self._target, self._prune = crop, target, prune
+
+    def run(self) -> None:
+        folder = self._target.parent
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            logger.warning("SCO: could not create the samples folder %s", folder)
+            return
+        if self._prune:
+            prune_samples(folder, MAX_SAMPLES_KEPT - 1)
+        # QImage.save reports failure by returning False, not by raising.
+        if not self._crop.save(str(self._target)):
+            logger.warning("SCO: could not save a digit sample to %s", self._target)
 
 
 class _ReadTask(QRunnable):
@@ -978,6 +1024,9 @@ class ScoOverlay(QObject):
     owned_toggled = pyqtSignal(str, bool)
     scan_decoder_toggled = pyqtSignal(bool)
     watched_changed = pyqtSignal(object)
+    # The reader raised and the capture stopped; a restart (stop + start)
+    # tries again. MainWindow tells the player, who would see nothing else.
+    decoder_failed = pyqtSignal()
 
     def __init__(self, parent=None, sample_dir: Optional[Path] = None):
         super().__init__(parent)
@@ -1078,7 +1127,8 @@ class ScoOverlay(QObject):
     def _capture_once(self) -> None:
         # One read at a time: a tick that lands while the last capture is
         # still being read is skipped, so a slow read can't queue up work.
-        if self._reading or self._reader is None:
+        # A confirming capture queued just before a stop must not run either.
+        if self._reading or self._reader is None or not self._timer.isActive():
             return
         screen = QGuiApplication.primaryScreen()
         region = scan_region_rect(screen.geometry())
@@ -1088,7 +1138,8 @@ class ScoOverlay(QObject):
         self._pool.start(_ReadTask(self._reader, image, region, self._read_done, self._read_token))
 
     def wait_for_reader(self, msecs: int = -1) -> bool:
-        """Block until no capture is being read (used on close and in tests)."""
+        """Block until no capture is being read and no sample is being saved
+        (used on close and in tests)."""
         return self._pool.waitForDone(msecs)
 
     def _on_read_done(self, token: int, found, failed: bool, image: QImage, region: QRect) -> None:
@@ -1097,6 +1148,8 @@ class ScoOverlay(QObject):
             return
         if failed:
             self._timer.stop()
+            self.label.hide()
+            self.decoder_failed.emit()
             return
         self._handle_found(found, image, region)
 
@@ -1124,6 +1177,11 @@ class ScoOverlay(QObject):
             else:
                 self._candidate, self._candidate_count = value, 1
             if self._candidate_count < READINGS_TO_CHANGE:
+                # Confirm with the next frame now, not on the next tick, so a
+                # new signal shows up to a tick sooner while the player sweeps
+                # from one rock to the next.
+                if self._timer.isActive():
+                    QTimer.singleShot(0, self._capture_once)
                 return
         # Accepted (or still the shown value): a pending candidate is void,
         # so a misread has to repeat back to back, not just come back later.
@@ -1165,11 +1223,6 @@ class ScoOverlay(QObject):
                                          SAMPLE_PADDING, SAMPLE_PADDING))
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         target = sample_dir / f"{stamp}_{text.replace(',', '')}.png"
-        try:
-            sample_dir.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            logger.warning("SCO: could not create the samples folder %s", sample_dir)
-            return
-        # QImage.save reports failure by returning False, not by raising.
-        if not crop.save(str(target)):
-            logger.warning("SCO: could not save a digit sample to %s", target)
+        # Written on the reader's pool thread: the GUI thread never touches
+        # the disk. The first save of a session prunes the folder.
+        self._pool.start(_SaveSampleTask(crop, target, prune=len(self._sampled) == 1))

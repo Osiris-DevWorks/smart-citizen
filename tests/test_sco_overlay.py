@@ -60,6 +60,46 @@ def test_drawer_lists_and_filters(qapp):
     assert _names(drawer) == ["Norfield"]
 
 
+def _long_list_drawer(qapp):
+    drawer = BlueprintDrawer()
+    drawer.open_section("blueprints")
+    drawer.show_docked()
+    meta = {f"Item {i:03}": BlueprintItem(f"Item {i:03}") for i in range(300)}
+    owned = {name for i, name in enumerate(meta) if i % 2 == 0}
+    drawer.set_items(meta, owned)
+    qapp.processEvents()
+    bar = drawer._list.verticalScrollBar()
+    bar.setValue(bar.maximum() // 2)
+    return drawer, meta, owned, bar
+
+
+def test_a_tick_keeps_the_list_where_it_was(qapp):
+    # Every tick comes back through set_items (MainWindow recomputes the
+    # owned set); the list must not jump to the top each time.
+    drawer, meta, owned, bar = _long_list_drawer(qapp)
+    position = bar.value()
+    assert position > 0
+    drawer.set_items(meta, owned | {"Item 151"})
+    qapp.processEvents()
+    assert bar.value() == position
+    item = drawer._list.findItems("Item 151", Qt.MatchFlag.MatchExactly)[0]
+    assert item.checkState() == Qt.CheckState.Checked
+    assert drawer._summary.text() == "Owned 151 of 300"
+    drawer.hide()
+
+
+def test_an_untick_under_owned_only_keeps_the_list_where_it_was(qapp):
+    drawer, meta, owned, bar = _long_list_drawer(qapp)
+    drawer._owned_only.setChecked(True)
+    qapp.processEvents()
+    bar.setValue(bar.maximum() // 2)
+    position = bar.value()
+    drawer.set_items(meta, owned - {"Item 100"})
+    qapp.processEvents()
+    assert "Item 100" not in _names(drawer) and bar.value() == position
+    drawer.hide()
+
+
 def test_drawer_checkbox_emits_owned_toggle(qapp):
     drawer = BlueprintDrawer()
     drawer.set_items(_meta(), set())
@@ -230,6 +270,7 @@ def test_sample_saved_once_per_reading(qapp, tmp_path):
     image = QImage(200, 100, QImage.Format.Format_RGB32)
     overlay._save_sample(image, "7,200", QRect(50, 40, 30, 11))
     overlay._save_sample(image, "7,200", QRect(50, 40, 30, 11))
+    assert overlay.wait_for_reader(5000)
     saved = list((tmp_path / "samples").iterdir())
     assert len(saved) == 1 and saved[0].name.endswith("_7200.png")
 
@@ -376,6 +417,7 @@ def test_save_samples_off_saves_nothing(qapp, tmp_path):
     overlay.set_options({"save_samples": False})
     image = QImage(80, 40, QImage.Format.Format_RGB32)
     overlay._save_sample(image, "7,200", QRect(10, 10, 30, 11))
+    assert overlay.wait_for_reader(5000)
     assert not (tmp_path / "samples").exists()
 
 
@@ -436,6 +478,23 @@ def test_crafting_search_both_ways(qapp):
     item = drawer._crafting_tree.topLevelItem(0)
     assert "Needs: Beryl (Raw), Hadanite" in item.toolTip(0)
     assert "Tier: Rare" in item.child(0).toolTip(0)   # the mineral's own tooltip
+
+
+def test_crafting_links_materials_to_minerals_cig_spells_differently(qapp):
+    # "Pressurized Ice" is the compendium's "Ice"; matching on the first
+    # word missed it, so its rows had no mineral tooltip.
+    minerals = {"Ice": MineralInfo("Ice", "", ("Yela",))}
+    crafting = CraftingIndex({
+        "pressurized_ice": {"names": ["Pressurized Ice"], "items": [["Armor", "Frost Suit"]]},
+    })
+    drawer = BlueprintDrawer()
+    drawer.set_catalog(minerals, crafting)
+    drawer._crafting_search.setText("pressurized")
+    used_in = drawer._crafting_tree.topLevelItem(0)
+    assert used_in.text(0) == "Used in (by Pressurized Ice):"
+    assert used_in.toolTip(0).startswith("Ice\n")
+    drawer._crafting_search.setText("frost")
+    assert drawer._crafting_tree.topLevelItem(0).child(0).toolTip(0).startswith("Ice\n")
 
 
 def test_empty_catalog_says_how_to_fill_it(qapp):
@@ -567,16 +626,42 @@ def test_a_tick_during_a_read_is_skipped(qapp, monkeypatch):
     overlay._capture_once()
 
 
-def test_a_failing_reader_stops_the_capture(qapp):
+def test_a_failing_reader_stops_the_capture_and_says_so(qapp):
     overlay = ScoOverlay()
     overlay.start()
     assert overlay._timer.isActive()
+    failed = []
+    overlay.decoder_failed.connect(lambda: failed.append(True))
 
     def broken(image):
         raise ValueError("bad capture")
 
     _read(overlay, broken)
     assert not overlay._timer.isActive() and not overlay._reading
+    assert failed == [True] and not overlay.label.isVisible()
+    overlay.stop()
+    overlay.start()                      # a restart tries again
+    assert overlay._timer.isActive()
+    overlay.stop()
+
+
+def test_a_new_reading_is_confirmed_without_waiting_for_a_tick(qapp, monkeypatch):
+    from PyQt6.QtCore import QCoreApplication, QPoint
+
+    overlay = ScoOverlay()
+    captures = []
+    monkeypatch.setattr(overlay, "_capture_once", lambda: captures.append(True))
+    overlay._on_reading(7200, QPoint(10, 10))      # stopped: nothing to confirm
+    QCoreApplication.processEvents()
+    assert captures == []
+    overlay.start()
+    overlay._on_reading(10200, QPoint(10, 10))     # first sighting of a new value
+    QCoreApplication.processEvents()
+    assert captures == [True]                      # the confirming capture ran at once
+    overlay._on_reading(10200, QPoint(10, 10))     # confirmed: no extra capture
+    QCoreApplication.processEvents()
+    assert captures == [True] and overlay.label._label.text() == "3 × Lindinium"
+    overlay.stop()
 
 
 def test_a_read_finishing_after_stop_is_dropped(qapp):
@@ -606,6 +691,7 @@ def test_a_failed_sample_save_is_logged(qapp, tmp_path, caplog, monkeypatch):
                              QRect(10, 10, 30, 11))
         overlay._save_sample(QImage(80, 40, QImage.Format.Format_RGB32), "7,200",
                              QRect(10, 10, 30, 11))
+        assert overlay.wait_for_reader(5000)
     assert len([r for r in caplog.records if "could not save" in r.getMessage()]) == 1
 
 
@@ -616,7 +702,37 @@ def test_samples_folder_is_resolved_at_save_time(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr("src.gui.sco_overlay.AppSettings.get_sco_samples_dir",
                         staticmethod(lambda: tmp_path / "moved"))
     overlay._save_sample(QImage(80, 40, QImage.Format.Format_RGB32), "7,200", QRect(10, 10, 30, 11))
+    assert overlay.wait_for_reader(5000)
     assert len(list((tmp_path / "moved").iterdir())) == 1
+
+
+def test_prune_samples_keeps_the_newest(tmp_path):
+    import os
+
+    from src.gui.sco_overlay import prune_samples
+    for i in range(5):
+        crop = tmp_path / f"crop{i}.png"
+        crop.write_bytes(b"x")
+        os.utime(crop, (1000 + i, 1000 + i))
+    (tmp_path / "notes.txt").write_text("kept")
+    assert prune_samples(tmp_path, keep=2) == 3
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["crop3.png", "crop4.png", "notes.txt"]
+    assert prune_samples(tmp_path / "missing") == 0
+
+
+def test_the_first_save_of_a_session_prunes_the_folder(qapp, tmp_path, monkeypatch):
+    from PyQt6.QtGui import QImage
+
+    monkeypatch.setattr("src.gui.sco_overlay.MAX_SAMPLES_KEPT", 3)
+    samples = tmp_path / "samples"
+    samples.mkdir()
+    for i in range(5):
+        (samples / f"old{i}.png").write_bytes(b"x")
+    overlay = ScoOverlay(sample_dir=samples)
+    overlay._save_sample(QImage(80, 40, QImage.Format.Format_RGB32), "7,200", QRect(10, 10, 30, 11))
+    assert overlay.wait_for_reader(5000)
+    names = [p.name for p in samples.iterdir()]
+    assert len(names) == 3 and any(n.endswith("_7200.png") for n in names)
 
 
 def test_every_drawer_section_has_its_own_switch():

@@ -3248,6 +3248,10 @@
       "ht": "",
       "at": "Non identificato"
     },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Il decodificatore di scansioni minerarie si è fermato dopo un errore. Riavvia l'overlay per riprovare; i dettagli sono nella scheda Log."
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Progetti"

@@ -3056,6 +3056,10 @@
       "ht": "Unidentified",
       "at": ""
     },
+    "decoder_stopped": {
+      "ht": "Mining scan decoder stopped after an error. Restart the overlay to try again; the Log tab has the details.",
+      "at": ""
+    },
     "section_blueprints": {
       "ht": "Blueprints",
       "at": ""
