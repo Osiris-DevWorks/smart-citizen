@@ -69,6 +69,18 @@ def test_shrunk_file_counts_as_rotation(tmp_path):
     assert _names(tail.poll()) == ["Norfield"]
 
 
+def test_replaced_file_counts_as_rotation_even_when_larger(tmp_path):
+    # The last session's log was short; the new one passed its size before
+    # the next poll. Without the file-id check its start would be skipped.
+    log = tmp_path / "Game.log"
+    log.write_text("x" * 50 + "\n")
+    tail = GameLogTail(log)
+    tail.poll()
+    log.rename(tmp_path / "Game-old.log")
+    log.write_text(_event("2026-10-07T21:00:00.000Z", "Norfield") + "y" * 500 + "\n")
+    assert _names(tail.poll()) == ["Norfield"]
+
+
 def test_watermark_and_epoch_filter(tmp_path):
     log = tmp_path / "Game.log"
     log.write_text(

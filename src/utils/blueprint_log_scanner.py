@@ -241,8 +241,10 @@ class GameLogTail:
     writing is never half-parsed.
 
     Star Citizen rotates ``Game.log`` into ``logbackups/`` at launch and starts
-    a fresh file. A file smaller than the saved offset (or gone, then back)
-    means rotation: reading restarts from the top. Events at or before
+    a fresh file. A different file (its ``st_ino`` changed), one smaller than
+    the saved offset, or one gone and then back means rotation: reading
+    restarts from the top. The identity check matters when the old log was
+    short: a new one could pass its size between two polls. Events at or before
     *since* (the watermark) are dropped, so re-reading a rotated file never
     double-counts. Same epoch floor as :func:`scan_files`.
     """
@@ -256,6 +258,7 @@ class GameLogTail:
         self.path = Path(path)
         self.since = since
         self._offset = 0
+        self._file_id: Optional[int] = None
         # Kept as bytes, not text: a poll can end inside a multi-byte UTF-8
         # character, and decoding the two halves apart would garble the name.
         self._partial = b""
@@ -263,13 +266,18 @@ class GameLogTail:
     def poll(self) -> List[BlueprintEvent]:
         """Return new events since the last poll; [] when there are none."""
         try:
-            size = self.path.stat().st_size
+            st = self.path.stat()
         except OSError:
             # Between rotation and the new file appearing; try again later.
             self._offset, self._partial = 0, b""
             return []
-        if size < self._offset:
+        size = st.st_size
+        # Where the platform has no file id st_ino is always 0, so this falls
+        # back to the size check alone.
+        replaced = self._file_id is not None and st.st_ino != self._file_id
+        if replaced or size < self._offset:
             self._offset, self._partial = 0, b""
+        self._file_id = st.st_ino
         if size == self._offset:
             return []
         events: List[BlueprintEvent] = []
