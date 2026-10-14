@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from src.gui.enhancements_tab import _NoScrollComboBox
+from src.gui.combo_box import NoScrollComboBox
 from src.gui.theme import get_button_color, get_button_text_color
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
@@ -26,7 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 DRAWER_SECTION_PREFIX = AppSettings.SCO_DRAWER_SECTION_PREFIX
+# How far the drawer's section switches and position picker sit in under
+# the drawer switch.
 DRAWER_SECTION_INDENT = 22
+# A checkbox's indicator plus its gap: hints and the samples button line up
+# with the checkbox text above them, not its box.
+CHECK_TEXT_INDENT = 22
 
 
 class OverlayTab(QWidget):
@@ -62,9 +67,7 @@ class OverlayTab(QWidget):
 
         self._start_btn = QPushButton()
         self._start_btn.setCheckable(True)
-        self._start_btn.setStyleSheet(
-            f"background-color: {get_button_color('open')}; "
-            f"color: {get_button_text_color()}; font-weight: bold; padding: 6px;")
+        self.refresh_styles()
         self._start_btn.toggled.connect(self._on_start_toggled)
         start_row = QHBoxLayout()
         start_row.addWidget(self._start_btn)
@@ -80,7 +83,7 @@ class OverlayTab(QWidget):
             check.setStyleSheet(f"margin-left: {indent}px;")
             hint = QLabel()
             hint.setProperty("role", "secondary")
-            hint.setStyleSheet(f"font-size: 11px; margin-left: {indent + 22}px;")
+            hint.setStyleSheet(f"font-size: 11px; margin-left: {indent + CHECK_TEXT_INDENT}px;")
             hint.setWordWrap(True)
             layout.addWidget(check)
             layout.addWidget(hint)
@@ -95,7 +98,7 @@ class OverlayTab(QWidget):
         self._open_samples_btn = QPushButton()
         self._open_samples_btn.clicked.connect(self._open_samples_folder)
         samples_row = QHBoxLayout()
-        samples_row.setContentsMargins(22, 0, 0, 0)
+        samples_row.setContentsMargins(CHECK_TEXT_INDENT, 0, 0, 0)
         samples_row.addWidget(self._open_samples_btn)
         samples_row.addStretch()
         layout.addLayout(samples_row)
@@ -127,6 +130,13 @@ class OverlayTab(QWidget):
         for i, position in enumerate(AppSettings.SCO_DRAWER_POSITIONS):
             self._position_combo.setItemText(i, tr(f"overlay.position_{position}"))
 
+    def refresh_styles(self) -> None:
+        """Re-apply the theme's button colours (MainWindow calls this after a
+        live theme swap, with its toolbar buttons)."""
+        self._start_btn.setStyleSheet(
+            f"background-color: {get_button_color('open')}; "
+            f"color: {get_button_text_color()}; font-weight: bold; padding: 6px;")
+
     def set_running(self, running: bool) -> None:
         """Mirror the overlay's state without asking for a change."""
         self._start_btn.blockSignals(True)
@@ -157,7 +167,7 @@ class OverlayTab(QWidget):
     def _position_row(self) -> QHBoxLayout:
         """Drawer position picker, indented under the drawer switch."""
         self._position_label = QLabel()
-        self._position_combo = _NoScrollComboBox()
+        self._position_combo = NoScrollComboBox()
         for position in AppSettings.SCO_DRAWER_POSITIONS:
             self._position_combo.addItem("", position)
         self._position_combo.setCurrentIndex(

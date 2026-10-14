@@ -3146,6 +3146,10 @@ class MainWindow(QMainWindow):
         self.more_btn.setStyleSheet(f"background-color: {get_button_color('clear')}; color: {text}; {base}")
         self.editor_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
         self.help_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
+        self.tutorial_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
+        self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
+        if hasattr(self, "overlay_tab"):
+            self.overlay_tab.refresh_styles()
         if hasattr(self, "about_browser"):
             self._render_about_html()
         if hasattr(self, "help_browser"):

@@ -43,6 +43,19 @@ def test_start_button_asks_and_set_running_only_mirrors(qapp, json_backend, tmp_
     assert asked == [True] and not tab._start_btn.isChecked()
 
 
+def test_refresh_styles_follows_a_theme_swap(qapp, json_backend, tmp_path, monkeypatch):
+    tab = OverlayTab(tmp_path / "samples")
+    monkeypatch.setattr("src.gui.overlay_tab.get_button_color", lambda role: "#123456")
+    assert "#123456" not in tab._start_btn.styleSheet()
+    tab.refresh_styles()
+    assert "background-color: #123456" in tab._start_btn.styleSheet()
+
+
+def test_position_picker_is_a_no_scroll_combo(qapp, json_backend, tmp_path):
+    from src.gui.combo_box import NoScrollComboBox
+    assert isinstance(OverlayTab(tmp_path / "samples")._position_combo, NoScrollComboBox)
+
+
 def test_option_defaults_reach_settings_backups(json_backend):
     defaults = AppSettings.profile_default_values()
     for key, default in AppSettings.SCO_OPTION_SETTING.values():
