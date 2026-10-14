@@ -429,11 +429,20 @@ class LiveBlueprintLogWorker(QThread):
     def run(self):
         from src.utils.blueprint_log_scanner import GameLogTail
         tail = GameLogTail(self._log_path, since=self._since)
+        failing = False
         while not self.isInterruptionRequested():
             try:
                 events = tail.poll()
+                failing = False
             except Exception:
-                logger.exception("Live blueprint log poll failed")
+                # The first failure in a row with its traceback; repeats at
+                # debug, so a lasting fault doesn't flood the Log tab every
+                # poll.
+                if failing:
+                    logger.debug("Live blueprint log poll failed again", exc_info=True)
+                else:
+                    logger.exception("Live blueprint log poll failed")
+                failing = True
                 events = []
             if events:
                 self.blueprints_found.emit(
