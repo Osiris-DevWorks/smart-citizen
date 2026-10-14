@@ -3078,6 +3078,16 @@
         "at": "Bileşenlere, füzelere, gemi silahlarına ve emtialara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Katmanı"
+      },
+      "description": {
+        "ht": "",
+        "at": "Katmanı buradan veya araç çubuğundaki Katman düğmesiyle başlatın. Oyunun üzerinde maden tarama imzalarını çözer, planlarınızı, minerallerinizi ve üretimi aramak için bir çekmece açar ve kazandığınız planları sahip olunan olarak işaretler. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın."
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3091,7 +3101,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Metinleri düzenleyin"
+        "at": "9. Metinleri düzenleyin"
       },
       "description": {
         "ht": "",
@@ -3101,7 +3111,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Sütuna göre filtreleyin"
+        "at": "10. Sütuna göre filtreleyin"
       },
       "description": {
         "ht": "",
@@ -3111,7 +3121,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Düzenleyici bölmesi"
+        "at": "11. Düzenleyici bölmesi"
       },
       "description": {
         "ht": "",
@@ -3121,7 +3131,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Önizleme bölmesi"
+        "at": "12. Önizleme bölmesi"
       },
       "description": {
         "ht": "",
@@ -3131,7 +3141,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Geliştirmeleri Uygula"
+        "at": "13. Geliştirmeleri Uygula"
       },
       "description": {
         "ht": "",
@@ -3141,7 +3151,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Yapılandırma: Görünüm"
+        "at": "14. Yapılandırma: Görünüm"
       },
       "description": {
         "ht": "",
@@ -3151,7 +3161,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Yapılandırma: Star Citizen Kurulumu"
+        "at": "15. Yapılandırma: Star Citizen Kurulumu"
       },
       "description": {
         "ht": "",
@@ -3161,7 +3171,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Yapılandırma: Smart Citizen Verileri"
+        "at": "16. Yapılandırma: Smart Citizen Verileri"
       },
       "description": {
         "ht": "",
@@ -3171,7 +3181,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Yapılandırma: Temel Yerelleştirme"
+        "at": "17. Yapılandırma: Temel Yerelleştirme"
       },
       "description": {
         "ht": "",
@@ -3181,7 +3191,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Yapılandırma: Araçlar"
+        "at": "18. Yapılandırma: Araçlar"
       },
       "description": {
         "ht": "",
@@ -3191,7 +3201,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Yardım ve geri bildirim"
+        "at": "19. Yardım ve geri bildirim"
       },
       "description": {
         "ht": "",

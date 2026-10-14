@@ -2964,6 +2964,16 @@
         "at": "コンポーネント、ミサイル、艦船武器、商品に追加される角括弧付きの名称タグを組み立てます。▲/▼ で要素を並べ替え、チェックを外して除外し、省略の長さを変更し、区切り文字と括弧を選び、あるいはタグを名前の前ではなく後ろに配置できます。"
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen オーバーレイ"
+      },
+      "description": {
+        "ht": "",
+        "at": "ここかツールバーのオーバーレイボタンでオーバーレイを開始します。ゲームの上で採掘スキャンのシグネチャーを解読し、ブループリント・鉱物・クラフトを検索するドロワーを開き、入手したブループリントを所有済みにします。ゲームはメイン画面のボーダーレスウィンドウモードで実行してください。"
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -2977,7 +2987,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. 文字列を編集"
+        "at": "9. 文字列を編集"
       },
       "description": {
         "ht": "",
@@ -2987,7 +2997,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. 列でフィルター"
+        "at": "10. 列でフィルター"
       },
       "description": {
         "ht": "",
@@ -2997,7 +3007,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. エディターペイン"
+        "at": "11. エディターペイン"
       },
       "description": {
         "ht": "",
@@ -3007,7 +3017,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. プレビューペイン"
+        "at": "12. プレビューペイン"
       },
       "description": {
         "ht": "",
@@ -3017,7 +3027,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. 拡張を適用"
+        "at": "13. 拡張を適用"
       },
       "description": {
         "ht": "",
@@ -3027,7 +3037,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Config：外観"
+        "at": "14. Config：外観"
       },
       "description": {
         "ht": "",
@@ -3037,7 +3047,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Config：Star Citizen のインストール"
+        "at": "15. Config：Star Citizen のインストール"
       },
       "description": {
         "ht": "",
@@ -3047,7 +3057,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Config：Smart Citizen データ"
+        "at": "16. Config：Smart Citizen データ"
       },
       "description": {
         "ht": "",
@@ -3057,7 +3067,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Config：ベースローカライズ"
+        "at": "17. Config：ベースローカライズ"
       },
       "description": {
         "ht": "",
@@ -3067,7 +3077,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Config：ツール"
+        "at": "18. Config：ツール"
       },
       "description": {
         "ht": "",
@@ -3077,7 +3087,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. ヘルプとフィードバック"
+        "at": "19. ヘルプとフィードバック"
       },
       "description": {
         "ht": "",

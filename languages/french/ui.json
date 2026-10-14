@@ -2967,7 +2967,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "7. Modifier les textes"
+        "at": "9. Modifier les textes"
       },
       "description": {
         "ht": "",
@@ -2977,7 +2977,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "8. Filtrer par colonne"
+        "at": "10. Filtrer par colonne"
       },
       "description": {
         "ht": "",
@@ -2987,7 +2987,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "9. Panneau d'édition"
+        "at": "11. Panneau d'édition"
       },
       "description": {
         "ht": "",
@@ -2997,7 +2997,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "10. Panneau d'aperçu"
+        "at": "12. Panneau d'aperçu"
       },
       "description": {
         "ht": "",
@@ -3007,7 +3007,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "11. Appliquer au jeu"
+        "at": "13. Appliquer au jeu"
       },
       "description": {
         "ht": "",
@@ -3017,7 +3017,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "12. Paramètres : Apparence"
+        "at": "14. Paramètres : Apparence"
       },
       "description": {
         "ht": "",
@@ -3027,7 +3027,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "13. Paramètres : Installation de Star Citizen"
+        "at": "15. Paramètres : Installation de Star Citizen"
       },
       "description": {
         "ht": "",
@@ -3037,7 +3037,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "14. Paramètres : Données Smart Citizen"
+        "at": "16. Paramètres : Données Smart Citizen"
       },
       "description": {
         "ht": "",
@@ -3047,7 +3047,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "15. Paramètres : Localisation de base"
+        "at": "17. Paramètres : Localisation de base"
       },
       "description": {
         "ht": "",
@@ -3057,7 +3057,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "16. Paramètres : Outils"
+        "at": "18. Paramètres : Outils"
       },
       "description": {
         "ht": "",
@@ -3067,11 +3067,21 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "17. Aide et retours"
+        "at": "19. Aide et retours"
       },
       "description": {
         "ht": "",
         "at": "Le bouton Aide ouvre un panneau latéral avec le guide complet, la liste des problèmes connus et un lien vers le canal Discord de Smart Citizen pour vos retours. Vous avez tout ce qu'il faut pour démarrer : bonne chance, citoyen."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Overlay Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Démarrez l'overlay ici ou avec le bouton Overlay de la barre d'outils. Par-dessus le jeu, il décode les signatures de scan minier, ouvre un tiroir pour chercher vos plans, minéraux et fabrications, et marque comme possédés les plans que vous obtenez. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal."
       }
     },
     "blueprint_tracker": {

@@ -83,7 +83,7 @@ def test_catalog_refresh_reads_only_changed_files(json_backend, tmp_path, monkey
     monkeypatch.setattr(AppSettings, "get_base_ini_path", staticmethod(lambda language=None: base))
     monkeypatch.setattr(AppSettings, "get_enhancements_dir", staticmethod(lambda language=None: tmp_path))
     fed = []
-    stub = SimpleNamespace(_sco_overlay=SimpleNamespace(
+    stub = SimpleNamespace(_sco_catalog_key=None, _sco_overlay=SimpleNamespace(
         drawer=SimpleNamespace(set_catalog=lambda m, c: fed.append(sorted(m)))))
     MainWindow._refresh_sco_catalog(stub)
     MainWindow._refresh_sco_catalog(stub)
@@ -93,6 +93,29 @@ def test_catalog_refresh_reads_only_changed_files(json_backend, tmp_path, monkey
     os.utime(base, ns=(1, 1))
     MainWindow._refresh_sco_catalog(stub)
     assert fed == [["Beryl"], ["Gold"]]
+
+
+def test_tour_has_an_overlay_step_on_the_start_button():
+    """The guided tour covers the Overlay: tutorial.json lists the step,
+    numbered in order, and MainWindow wires it to the tab's start button."""
+    import json
+    import re
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from src.gui.main_window import MainWindow
+
+    steps = json.loads((Path(__file__).parent.parent / "assets" / "tutorial.json")
+                       .read_text(encoding="utf-8"))["steps"]
+    ids = [s["id"] for s in steps]
+    assert ids.index("overlay") == ids.index("blueprint_tracker") + 1
+    numbers = [int(re.match(r"(\d+)\.", s["title"])[1]) for s in steps[1:]]
+    assert numbers == list(range(1, len(steps)))
+    start_btn = object()
+    stub = SimpleNamespace(overlay_tab=SimpleNamespace(_start_btn=start_btn))
+    wiring = MainWindow._tutorial_step_wiring(stub)
+    assert set(ids) <= set(wiring)
+    assert wiring["overlay"]["target"]() is start_btn
 
 
 def test_drawer_position_picker(qapp, json_backend, tmp_path):

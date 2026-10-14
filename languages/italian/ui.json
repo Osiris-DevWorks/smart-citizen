@@ -2964,6 +2964,16 @@
         "at": "Crea i tag tra parentesi aggiunti ai nomi di componenti, missili, armi delle navi e merci. Riordina gli elementi con ▲/▼, deseleziona per escludere, cambia la lunghezza dell'abbreviazione, scegli il separatore e le parentesi, oppure posiziona il tag dopo il nome invece che prima."
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Overlay di Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Avvia l'overlay qui o con il pulsante Overlay della barra degli strumenti. Sopra il gioco decodifica le firme delle scansioni minerarie, apre un cassetto per cercare blueprint, minerali e crafting, e segna come posseduti i blueprint che ottieni. Avvia il gioco in modalità finestra senza bordi sullo schermo principale."
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -2977,7 +2987,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Modifica le stringhe"
+        "at": "9. Modifica le stringhe"
       },
       "description": {
         "ht": "",
@@ -2987,7 +2997,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Filtra per colonna"
+        "at": "10. Filtra per colonna"
       },
       "description": {
         "ht": "",
@@ -2997,7 +3007,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Pannello Editor"
+        "at": "11. Pannello Editor"
       },
       "description": {
         "ht": "",
@@ -3007,7 +3017,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Pannello Anteprima"
+        "at": "12. Pannello Anteprima"
       },
       "description": {
         "ht": "",
@@ -3017,7 +3027,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Applica Miglioramenti"
+        "at": "13. Applica Miglioramenti"
       },
       "description": {
         "ht": "",
@@ -3027,7 +3037,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Configurazione: Aspetto"
+        "at": "14. Configurazione: Aspetto"
       },
       "description": {
         "ht": "",
@@ -3037,7 +3047,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Configurazione: Installazione di Star Citizen"
+        "at": "15. Configurazione: Installazione di Star Citizen"
       },
       "description": {
         "ht": "",
@@ -3047,7 +3057,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Configurazione: Dati di Smart Citizen"
+        "at": "16. Configurazione: Dati di Smart Citizen"
       },
       "description": {
         "ht": "",
@@ -3057,7 +3067,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Configurazione: Localizzazione di Base"
+        "at": "17. Configurazione: Localizzazione di Base"
       },
       "description": {
         "ht": "",
@@ -3067,7 +3077,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Configurazione: Strumenti"
+        "at": "18. Configurazione: Strumenti"
       },
       "description": {
         "ht": "",
@@ -3077,7 +3087,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Guida e feedback"
+        "at": "19. Guida e feedback"
       },
       "description": {
         "ht": "",

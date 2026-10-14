@@ -2964,6 +2964,16 @@
         "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen und Rohstoffe. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Overlay"
+      },
+      "description": {
+        "ht": "",
+        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -2977,7 +2987,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Strings bearbeiten"
+        "at": "9. Strings bearbeiten"
       },
       "description": {
         "ht": "",
@@ -2987,7 +2997,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Nach Spalte filtern"
+        "at": "10. Nach Spalte filtern"
       },
       "description": {
         "ht": "",
@@ -2997,7 +3007,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Editor-Bereich"
+        "at": "11. Editor-Bereich"
       },
       "description": {
         "ht": "",
@@ -3007,7 +3017,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Vorschaubereich"
+        "at": "12. Vorschaubereich"
       },
       "description": {
         "ht": "",
@@ -3017,7 +3027,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Erweiterungen anwenden"
+        "at": "13. Erweiterungen anwenden"
       },
       "description": {
         "ht": "",
@@ -3027,7 +3037,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Konfiguration: Erscheinungsbild"
+        "at": "14. Konfiguration: Erscheinungsbild"
       },
       "description": {
         "ht": "",
@@ -3037,7 +3047,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Konfiguration: Star-Citizen-Installation"
+        "at": "15. Konfiguration: Star-Citizen-Installation"
       },
       "description": {
         "ht": "",
@@ -3047,7 +3057,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Konfiguration: Smart-Citizen-Daten"
+        "at": "16. Konfiguration: Smart-Citizen-Daten"
       },
       "description": {
         "ht": "",
@@ -3057,7 +3067,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Konfiguration: Basis-Lokalisierung"
+        "at": "17. Konfiguration: Basis-Lokalisierung"
       },
       "description": {
         "ht": "",
@@ -3067,7 +3077,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Konfiguration: Werkzeuge"
+        "at": "18. Konfiguration: Werkzeuge"
       },
       "description": {
         "ht": "",
@@ -3077,7 +3087,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Hilfe & Feedback"
+        "at": "19. Hilfe & Feedback"
       },
       "description": {
         "ht": "",

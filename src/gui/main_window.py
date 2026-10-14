@@ -879,6 +879,8 @@ class MainWindow(QMainWindow):
         # Game.log watcher runs only while the overlay is on.
         self._sco_overlay = None
         self._sco_log_worker = None
+        # (base.ini, crafting index) paths and mtimes last fed to the drawer.
+        self._sco_catalog_key = None
         # #268/#308: multi-channel scan state. _bp_scan_queue holds channels
         # not yet started (the current one is popped off before its worker
         # starts); _bp_scan_channel is whichever channel the in-flight
@@ -4227,6 +4229,7 @@ class MainWindow(QMainWindow):
         config_tab = getattr(self, "_config_tab_index", 1)
         enh_tab = getattr(self, "_enhancements_tab_index", 2)
         bp_tab = getattr(self, "_blueprint_tracker_tab_index", 3)
+        overlay_tab = getattr(self, "_overlay_tab_index", 4)
 
         return {
             "welcome":               {"target": lambda: None,                                                  "pre_action": None},
@@ -4243,6 +4246,7 @@ class MainWindow(QMainWindow):
             "enh_mission_labels":    {"target": lambda: self.enhancements_tab.mission_labels_group,            "pre_action": _switch_to(enh_tab)},
             "enh_tag_builder":       {"target": lambda: self.enhancements_tab._tag_builder_group,              "pre_action": _switch_to(enh_tab)},
             "blueprint_tracker":     {"target": lambda: self.blueprint_tracker_tab._blueprints_available_list, "pre_action": _switch_to(bp_tab)},
+            "overlay":               {"target": lambda: self.overlay_tab._start_btn,                           "pre_action": _switch_to(overlay_tab)},
             # Config tab section deep-dive
             "cfg_appearance":        {"target": lambda: self.config_tab._appearance_group,                     "pre_action": _switch_to(config_tab)},
             "cfg_sc_install":        {"target": lambda: self.config_tab._loc_group,                            "pre_action": _switch_to(config_tab)},
@@ -4922,6 +4926,8 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.retranslate_ui()
         self.blueprint_tracker_tab.retranslate_ui()
         self.overlay_tab.retranslate_ui()
+        if self._sco_overlay is not None:
+            self._sco_overlay.drawer.retranslate_ui()
 
         # About / FAQ / Legal tab bodies — loaded from a per-language doc
         # file (get_localized_doc_path) but only rendered at tab-creation
@@ -6895,7 +6901,7 @@ class MainWindow(QMainWindow):
                 return (str(path), None)
 
         key = (stamp(base_ini), stamp(index))
-        if key == getattr(self, "_sco_catalog_key", None):
+        if key == self._sco_catalog_key:
             return
         self._sco_catalog_key = key
         minerals, crafting = read_compendium(base_ini), load_crafting_index(index)

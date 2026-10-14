@@ -497,6 +497,24 @@ def test_crafting_links_materials_to_minerals_cig_spells_differently(qapp):
     assert drawer._crafting_tree.topLevelItem(0).child(0).toolTip(0).startswith("Ice\n")
 
 
+def test_drawer_follows_a_language_switch(qapp):
+    from src.utils import i18n
+
+    drawer = BlueprintDrawer()
+    drawer.set_items(_meta(), {"Agni"})
+    english = drawer._search.placeholderText(), drawer._summary.text()
+    try:
+        i18n.set_language("german")
+        drawer.retranslate_ui()
+        assert drawer._search.placeholderText() not in ("", english[0])
+        assert drawer._summary.text() != english[1]
+        assert drawer._clear_watched_btn.text() == i18n.tr("sco.clear_watched")
+    finally:
+        i18n.set_language("english")
+    drawer.retranslate_ui()
+    assert (drawer._search.placeholderText(), drawer._summary.text()) == english
+
+
 def test_empty_catalog_says_how_to_fill_it(qapp):
     drawer = BlueprintDrawer()
     drawer.set_catalog({}, CraftingIndex())

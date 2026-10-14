@@ -563,9 +563,8 @@ class BlueprintDrawer(QWidget):
         bp_page = QWidget()
         self._summary = QLabel(bp_page)
         self._search = QLineEdit(bp_page)
-        self._search.setPlaceholderText(tr("sco.drawer_search_placeholder"))
         self._search.textChanged.connect(self._render)
-        self._owned_only = QCheckBox(tr("sco.drawer_owned_only"), bp_page)
+        self._owned_only = QCheckBox(bp_page)
         self._owned_only.toggled.connect(self._render)
         self._list = QListWidget(bp_page)
         self._list.itemChanged.connect(self._on_item_changed)
@@ -578,13 +577,12 @@ class BlueprintDrawer(QWidget):
 
         # Minerals: mineral -> star system -> location.
         self._mineral_search, self._mineral_tree, mineral_page = self._search_page(
-            "sco.minerals_search_placeholder", self._render_minerals)
+            self._render_minerals)
         self._watched: set[str] = set()
-        self._decoder_check = QCheckBox(tr("overlay.scan_decoder"), mineral_page)
-        self._decoder_check.setToolTip(tr("overlay.scan_decoder_hint"))
+        self._decoder_check = QCheckBox(mineral_page)
         self._decoder_check.setChecked(True)
         self._decoder_check.toggled.connect(self.scan_decoder_toggled)
-        self._clear_watched_btn = QPushButton(tr("sco.clear_watched"), mineral_page)
+        self._clear_watched_btn = QPushButton(mineral_page)
         self._clear_watched_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._clear_watched_btn.clicked.connect(self._clear_watched)
         top_row = QHBoxLayout()
@@ -601,7 +599,7 @@ class BlueprintDrawer(QWidget):
         self._mineral_tree.itemChanged.connect(self._on_mineral_watch_changed)
         # Crafting: a mineral lists what it goes into, an item what it needs.
         self._crafting_search, self._crafting_tree, crafting_page = self._search_page(
-            "sco.crafting_search_placeholder", self._render_crafting)
+            self._render_crafting)
 
         # The tabs pick the page, so the panel only needs a stack of them.
         self._sections = QStackedWidget(self._panel)
@@ -627,6 +625,22 @@ class BlueprintDrawer(QWidget):
         self._banner_timer.setSingleShot(True)
         self._banner_timer.timeout.connect(self._banner.hide)
         self.apply_colors(colors)
+        self.retranslate_ui()
+
+    def retranslate_ui(self) -> None:
+        """Apply tr() to the fixed texts, then redraw the list and trees,
+        whose rows and tooltips are translated too. Called at construction
+        and by MainWindow after a language switch."""
+        self._search.setPlaceholderText(tr("sco.drawer_search_placeholder"))
+        self._owned_only.setText(tr("sco.drawer_owned_only"))
+        self._mineral_search.setPlaceholderText(tr("sco.minerals_search_placeholder"))
+        self._crafting_search.setPlaceholderText(tr("sco.crafting_search_placeholder"))
+        self._decoder_check.setText(tr("overlay.scan_decoder"))
+        self._decoder_check.setToolTip(tr("overlay.scan_decoder_hint"))
+        self._clear_watched_btn.setText(tr("sco.clear_watched"))
+        self._render()
+        self._render_minerals()
+        self._render_crafting()
 
     def apply_colors(self, colors: OverlayColors) -> None:
         """Restyle the tab and panel, e.g. after the app theme changes."""
@@ -663,10 +677,9 @@ class BlueprintDrawer(QWidget):
             }}
         """)
 
-    def _search_page(self, placeholder_key: str, render) -> tuple[QLineEdit, QTreeWidget, QWidget]:
+    def _search_page(self, render) -> tuple[QLineEdit, QTreeWidget, QWidget]:
         page = QWidget()
         search = QLineEdit(page)
-        search.setPlaceholderText(tr(placeholder_key))
         search.textChanged.connect(render)
         tree = QTreeWidget(page)
         tree.setHeaderHidden(True)
