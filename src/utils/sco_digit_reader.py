@@ -23,6 +23,7 @@ height) with a comma before the last three. Steps:
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import product
@@ -73,56 +74,75 @@ class SignatureReading:
     score: float
 
 
+# A horizontal run of foreground pixels. The reader runs several times a
+# second while the game plays, so both helpers below let the regex engine
+# (C) walk the pixels and keep Python to one step per run, not per pixel.
+_RUN = re.compile(rb"\x01+")
+
+
 def _components(width: int, height: int, mask: bytearray) -> list[tuple[int, int, int, int]]:
     """Bounding boxes ``(x, y, w, h)`` of 8-connected foreground blobs.
 
     8-connected so a thin stroke that only touches diagonally (the planet
-    HUD's "3") stays one glyph.
+    HUD's "3") stays one glyph. Works on runs: a run joins every run in the
+    row above that overlaps it or touches it at a corner.
     """
-    seen = bytearray(width * height)
-    boxes = []
-    for start in range(width * height):
-        if not mask[start] or seen[start]:
-            continue
-        seen[start] = 1
-        stack = [start]
-        x0, y0, x1, y1 = width, height, -1, -1
-        while stack:
-            i = stack.pop()
-            y, x = divmod(i, width)
-            x0, x1 = min(x0, x), max(x1, x)
-            y0, y1 = min(y0, y), max(y1, y)
-            for dy in (-1, 0, 1):
-                ny = y + dy
-                if not 0 <= ny < height:
-                    continue
-                for dx in (-1, 0, 1):
-                    nx = x + dx
-                    j = ny * width + nx
-                    if 0 <= nx < width and mask[j] and not seen[j]:
-                        seen[j] = 1
-                        stack.append(j)
-        boxes.append((x0, y0, x1 - x0 + 1, y1 - y0 + 1))
-    return boxes
+    parent: list[int] = []
+    bbox: list[list[int]] = []    # per run, [x0, y0, x1, y1], merged into roots
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    above: list[tuple[int, int, int]] = []    # (x0, x1, run id), x1 inclusive
+    for y in range(height):
+        row = y * width
+        current = []
+        k, n_above = 0, len(above)
+        for m in _RUN.finditer(mask, row, row + width):
+            x0, x1 = m.start() - row, m.end() - row - 1
+            rid = len(parent)
+            parent.append(rid)
+            box = [x0, y, x1, y]
+            bbox.append(box)
+            # Skip runs above that end left of this one's reach; they can't
+            # touch this run or any later one in the row.
+            while k < n_above and above[k][1] < x0 - 1:
+                k += 1
+            j, root = k, rid
+            while j < n_above and above[j][0] <= x1 + 1:
+                a = find(above[j][2])
+                if a != root:
+                    # The run's set joins the run above's set.
+                    parent[root] = a
+                    ba = bbox[a]
+                    if box[0] < ba[0]:
+                        ba[0] = box[0]
+                    if box[1] < ba[1]:
+                        ba[1] = box[1]
+                    if box[2] > ba[2]:
+                        ba[2] = box[2]
+                    if box[3] > ba[3]:
+                        ba[3] = box[3]
+                    root, box = a, ba
+                j += 1
+            current.append((x0, x1, rid))
+        above = current
+    return [(b[0], b[1], b[2] - b[0] + 1, b[3] - b[1] + 1)
+            for i, b in enumerate(bbox) if parent[i] == i]
 
 
 def _mask(width: int, height: int, red: bytes, threshold: int, max_run: int) -> bytearray:
     table = bytes(1 if v >= threshold else 0 for v in range(256))
     mask = bytearray(red.translate(table))
     # Drop wide horizontal runs (panel edges, bright horizons).
-    for y in range(height):
-        row = y * width
-        x = 0
-        while x < width:
-            if not mask[row + x]:
-                x += 1
-                continue
-            end = x
-            while end < width and mask[row + end]:
-                end += 1
-            if end - x > max_run:
-                mask[row + x:row + end] = bytes(end - x)
-            x = end
+    wide = re.compile(rb"\x01{%d,}" % (max_run + 1))
+    spans = [m.span() for row in range(0, width * height, width)
+             for m in wide.finditer(mask, row, row + width)]
+    for start, end in spans:
+        mask[start:end] = bytes(end - start)
     return mask
 
 

@@ -116,3 +116,30 @@ def test_reads_at_other_screen_heights(screen_height):
                              DIGIT_HEIGHT_AT_1600 * factor, green=data[1::4], blue=data[0::4])
     assert reading is not None
     assert reading.text.replace(",", "") == path.stem.split("_")[-1]
+
+
+def _grid(rows):
+    """A mask from strings: ``#`` is foreground."""
+    return len(rows[0]), len(rows), bytearray(1 if c == "#" else 0 for r in rows for c in r)
+
+
+def test_blobs_join_across_corners_and_later_rows():
+    # A "U" only joins at its base, two rows after both arms start; the
+    # diagonal pair touches at a corner only; the dot stands alone.
+    w, h, mask = _grid([
+        "#..#..#....",
+        "#..#...#...",
+        "####.......",
+        ".........#.",
+    ])
+    assert sorted(sco_digit_reader._components(w, h, mask)) == [
+        (0, 0, 4, 3), (6, 0, 2, 2), (9, 3, 1, 1),
+    ]
+
+
+def test_mask_drops_runs_wider_than_a_glyph():
+    w, h = 10, 2
+    red = bytes([255] * 4 + [0] + [255] * 3 + [0, 0] + [255] * 10)
+    mask = sco_digit_reader._mask(w, h, red, 180, max_run=3)
+    # Row 0: the 4-wide run goes, the 3-wide one stays. Row 1: all 10 go.
+    assert bytes(mask) == bytes([0] * 5 + [1] * 3 + [0] * 12)
