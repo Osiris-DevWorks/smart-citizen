@@ -666,16 +666,16 @@ class AppSettings:
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
 
-    # Smart Citizen Overlay (SCO) switches on the Overlay tab (2.5.0):
-    # option name -> (key, default). All on by default, matching how the
-    # overlay behaved before the tab existed.
-    # Overlay tab switch names, named once. A drawer section's switch is
-    # SCO_DRAWER_SECTION_PREFIX + its sco_overlay.SECTION_ICONS name.
+    # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
+    # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
+    # its sco_overlay.SECTION_ICONS name.
     SCO_SCAN_DECODER = "scan_decoder"
     SCO_DRAWER = "drawer"
     SCO_DRAWER_SECTION_PREFIX = "drawer_"
     SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
     SCO_SAVE_SAMPLES = "save_samples"
+    # Option name -> (key, default). All on by default, matching how the
+    # overlay behaved before the tab existed.
     SCO_OPTION_SETTING = {
         SCO_SCAN_DECODER:         ("sco/scan_decoder", True),
         SCO_DRAWER:               ("sco/drawer", True),
