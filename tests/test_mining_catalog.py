@@ -81,6 +81,38 @@ def test_crafting_index_round_trip(tmp_path):
     assert index.material_key_for("Tin") is None
 
 
+@pytest.mark.parametrize("mineral, key", [
+    # CIG spells these differently in the compendium and the crafting data.
+    ("Aluminium", "aluminum"),
+    ("Beradon", "beradom"),
+    ("Caranite", "carinite"),
+    ("Ice", "pressurized_ice"),
+    ("Beryl", "beryl"),
+    ("Quantainium", None),
+])
+def test_material_key_for_bridges_cig_spellings(mineral, key):
+    # Names as the LIVE 4.9 crafting_index.json holds them.
+    index = CraftingIndex({
+        "aluminum": {"names": ["Aluminum", "Aluminum (Ore)"], "items": []},
+        "beradom": {"names": ["Beradom"], "items": []},
+        "carinite": {"names": ["Carinite", "Carinite (Pure)"], "items": []},
+        "pressurized_ice": {"names": ["Pressurized Ice"], "items": []},
+        "beryl": {"names": ["Beryl", "Beryl (Raw)"], "items": []},
+    })
+    assert index.material_key_for(mineral) == key
+
+
+def test_material_key_for_prefers_an_exact_name():
+    # "Copper Ore" comes first, but a material named exactly "Copper" wins.
+    index = CraftingIndex({
+        "copper_ore": {"names": ["Copper Ore"], "items": []},
+        "copper": {"names": ["Copper"], "items": []},
+    })
+    assert index.material_key_for("Copper") == "copper"
+    assert CraftingIndex({"copper_ore": {"names": ["Copper Ore"]}}).material_key_for(
+        "Copper") == "copper_ore"
+
+
 @pytest.mark.parametrize("content", [None, "not json", "[1, 2]", '{"materials": 3}'])
 def test_unreadable_index_is_empty(tmp_path, content):
     path = tmp_path / CRAFTING_INDEX_FILE

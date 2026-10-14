@@ -47,6 +47,14 @@ SYSTEM_ORDER = (STANTON, PYRO, NYX)
 # The compendium's own prose spells some ores differently from their
 # DataForge loc keys (a CIG typo): lower-cased compendium name -> table key.
 COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
+# Compendium minerals whose crafting material CIG names differently:
+# lower-cased compendium name -> crafting index key (LIVE 4.9 data).
+CRAFTING_MATERIAL_ALIASES = {
+    "aluminium": "aluminum",
+    "beradon": "beradom",
+    "caranite": "carinite",
+    "ice": "pressurized_ice",
+}
 # Stanton's lagrange points: HUR-L1, ARC-L5, ...
 _STANTON_LAGRANGE = re.compile(r"^(?:ARC|CRU|HUR|MIC)-L\d$", re.IGNORECASE)
 _TIER_LINE = re.compile(r"^\*+\s*(.+?)\s*\*+$")
@@ -181,11 +189,24 @@ class CraftingIndex:
                 for cat, name in entry.get("items", [])}
 
     def material_key_for(self, mineral: str) -> str | None:
-        """The material whose display names include *mineral*'s word."""
+        """The crafting material for a compendium *mineral*, or None.
+
+        A known spelling difference (:data:`CRAFTING_MATERIAL_ALIASES`) wins,
+        then a material named exactly *mineral*, then one whose name starts
+        with it ("Beryl (Raw)"), so "Copper" never lands on "Copper Ore"
+        while a material called "Copper" exists.
+        """
         low = mineral.lower()
-        for key, entry in self.materials.items():
-            names = [n.lower() for n in entry.get("names") or []] + [key.lower()]
-            if any(n == low or n.split(" ")[0] == low for n in names):
+        alias = CRAFTING_MATERIAL_ALIASES.get(low)
+        if alias in self.materials:
+            return alias
+        names = {key: [n.lower() for n in entry.get("names") or []] + [key.lower()]
+                 for key, entry in self.materials.items()}
+        for key, lowered in names.items():
+            if low in lowered:
+                return key
+        for key, lowered in names.items():
+            if any(n.split(" ")[0] == low for n in lowered):
                 return key
         return None
 
