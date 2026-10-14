@@ -7,7 +7,7 @@ Prospector (``p*``) cockpit, a Prospector on a planet surface (``q*``,
 orange HUD panel), and lossless crops SCO itself saved in-game
 (``live_*``, from ``logs/sco_samples``), 2026-10-07 to 2026-10-11. The reader compares
 a captured glyph to every entry here, so adding a sample is how to teach it
-a new look.
+a new look. ``scripts/add_sco_sample.py`` cuts entries from a saved crop.
 """
 
 DIGIT_SAMPLES: tuple[tuple[str, int, int, str, str], ...] = (
@@ -182,10 +182,6 @@ DIGIT_SAMPLES: tuple[tuple[str, int, int, str, str], ...] = (
     ("0", 6, 12, "6676bece7c6983fff6ffffa9b2e27d79f0ffd0ef7083b2ffe5f3819ab4ffeafc869ab5ffe7f78296b2ffe3f7829ab6ffe4f5859ebeffdbff8aa4d1ffaaffd1d3f6dd8edcffe7e78c", "live_52"),
     ("0", 6, 12, "6d80d0e6947c89faf9ffffbbaff29189e5ffcbff76899fffd9fc808b97ffdbff7b8998ffdbfb788798ffd8fa7a889affdcfe7f8ca0ffcfff848facffa3ffccc4f6d985c2ffd5d77f", "live_52"),
     ("0", 6, 12, "7170c1d5978280f7feffffc69de18b86e3ffafff6f8ba7ffb8fc788ca5ffbfff7f8ea7ffbfff848fa8ffbfff8891a8ffc8ff888fa3ffbfff8786a3ff98ffceb3f8de7cb6ffccdf7d", "live_52"),
-    ("6", 6, 11, "9cfdffffe64df9f1bbfcff82edef548ef8aaf8f9605c7857fafbfefdf353f2f6b4fafd92eaf8547ff8d2f8f95f75f6e8f9fa6088f7dae7fcfce0f99964f1f9e8da4d", "live_53"),
-    ("8", 6, 11, "5ff9fffcff83c0f2cfbcffffbcf46154fbfcb3f56b57eafa7bf6ffc5fcd165e0fce0fc91b8ef875dfdfcbdf35555f5f9b7f67e58edfa8bf7ffcdfef35798fbede258", "live_53"),
-    ("0", 6, 11, "84fffdfffc63eff4b5e2fdf2e8fa5864f5fff7fc5861f4fff9fe5b63f2fff9fe5c62f0fff9fe5c62f0fff7fc5b63f0fff8fd616af1ffdcfffccef8e360ebf6f0e257", "live_53"),
-    ("0", 6, 11, "91fffcfffb47f1fdb6fdfec5ecfe5474f5fff2ff586ef4fff3ff5a70f6fff4ff5c71f6fff4ff5c71f6fff2ff5a6ff4fef3ff5f7bf5ffe8fff9d8f8bb68fef4f0db45", "live_53"),
     ("6", 6, 12, "609edddab766bbffebfbf9b9b1f89776f5faadf39759c2f7a4ffd1c39a52a8eeeaedeab0b5e29c75f2f2a8f6a768edffb4f08861e5f2b7ffd7a6ebff89feeaebf4ef568ababfbf80", "p1"),
     ("8", 6, 12, "5095b18d703be0e9f9e8f774edd9a2d4ffade9f95688f8d6f4f58386feb9cdf8edd8f379c4efe0f0ff73e0d167b5ef92f6f16d8dfebcf6f09ca3f7a9f1ddf0dae96c9ac8e0cbb04d", "p1"),
     ("0", 7, 12, "495e7b905a54475bc5eff6fbc74ab5e5cda9f7ee8394f3ce56adfaf198f8ce608af3ed9fe7d76d9de9e6a8e7e16998f5dfa6ecbe6c8beadfadf4b7649ef4d3acefc479bbe4e286faf5d1eef57767c5f6f4e0de5a", "p1"),

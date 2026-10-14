@@ -53,6 +53,38 @@ def test_samples_cover_every_digit():
     assert {d for d, *_ in DIGIT_SAMPLES} == set("0123456789")
 
 
+def test_samples_are_well_formed():
+    # A hand-added sample whose hex doesn't fill width x height would give
+    # ragged rows, and the read task would fail and stop the capture timer.
+    for digit, w, h, hexdata, source in DIGIT_SAMPLES:
+        assert digit in "0123456789" and w > 0 and h > 0, source
+        assert len(hexdata) == 2 * w * h, (digit, source)
+        bytes.fromhex(hexdata)
+
+
+def test_samples_hold_no_duplicate_glyphs():
+    glyphs = [s[:4] for s in DIGIT_SAMPLES]
+    assert len(glyphs) == len(set(glyphs))
+
+
+def test_cut_glyphs_gives_back_the_stored_samples():
+    # The stored live_00 glyphs were cut from this crop; cutting it again
+    # gives the same entries, which is what scripts/add_sco_sample.py relies on.
+    path = next(p for p in READOUTS if p.stem == "live00_15600")
+    w, h, red, green, blue = _channels(path)
+    glyphs = sco_digit_reader.cut_glyphs(w, h, red, 5, green=green, blue=blue)
+    stored = [(gw, gh, bytes.fromhex(hx)) for d, gw, gh, hx, s in DIGIT_SAMPLES
+              if s == "live_00"]
+    assert glyphs == stored
+
+
+def test_cut_glyphs_needs_a_row_of_that_many_digits():
+    path = next(p for p in READOUTS if p.stem == "live00_15600")
+    w, h, red, green, blue = _channels(path)
+    assert sco_digit_reader.cut_glyphs(w, h, red, 4, green=green, blue=blue) is None
+    assert sco_digit_reader.cut_glyphs(w, h, b"short", 5) is None
+
+
 def test_box_wraps_the_digits():
     path = next(p for p in READOUTS if p.stem == "p2_2000")
     w, h, *_ = _channels(path)

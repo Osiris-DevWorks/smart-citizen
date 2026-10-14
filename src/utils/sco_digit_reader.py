@@ -300,6 +300,37 @@ def _is_white(width, red, green, blue, row, threshold) -> bool:
     return inked > 0 and white >= MIN_WHITE_FRACTION * inked
 
 
+def cut_glyphs(width: int, height: int, red: bytes, digit_count: int,
+               digit_px: float = DIGIT_HEIGHT_AT_1600,
+               green: Optional[bytes] = None,
+               blue: Optional[bytes] = None) -> Optional[list[tuple[int, int, bytes]]]:
+    """Cut a readout's digits out as reference glyphs for ``DIGIT_SAMPLES``.
+
+    Finds the first row with *digit_count* digits, the way
+    :func:`read_signature` would, and returns each digit's ``(width,
+    height, red pixels)`` without matching it, so a crop the reader got
+    wrong can still teach it. None when no such row is found.
+    """
+    if len(red) != width * height or width <= 0 or height <= 0:
+        return None
+    colour = green is not None and blue is not None
+    if colour and not len(green) == len(blue) == len(red):
+        return None
+    for threshold in THRESHOLDS:
+        mask = _mask(width, height, red, threshold, int(1.2 * digit_px))
+        for row in _candidate_rows(width, height, mask, digit_px):
+            boxes, top, base = row
+            if len(boxes) != digit_count:
+                continue
+            if colour and not _is_white(width, red, green, blue, row, threshold):
+                continue
+            glyphs = [_glyph_pixels(width, red, box, top, base, threshold) for box in boxes]
+            if all(glyphs):
+                return [(len(px[0]), len(px), bytes(v for line in px for v in line))
+                        for px in glyphs]
+    return None
+
+
 def read_signature(width: int, height: int, red: bytes,
                    digit_px: float = DIGIT_HEIGHT_AT_1600,
                    green: Optional[bytes] = None,
