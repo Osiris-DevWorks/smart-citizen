@@ -193,15 +193,17 @@ class TestChannelSwitcherWidget:
 
     @pytest.fixture
     def stub(self, qapp):
-        from PyQt6.QtWidgets import QToolButton
+        from PyQt6.QtWidgets import QLabel
 
-        from src.gui.main_window import MainWindow
+        from src.gui.main_window import MainWindow, _ChannelBadge
 
         class _Stub:
             _refresh_channel_switcher = MainWindow._refresh_channel_switcher
 
             def __init__(self):
-                self._channel_switcher = QToolButton()
+                self._channel_switcher = _ChannelBadge()
+                self._ch_name_label = QLabel()
+                self._ch_version_label = QLabel()
                 self.config_tab = None  # not needed for refresh tests
 
         return _Stub()
@@ -213,7 +215,58 @@ class TestChannelSwitcherWidget:
         )
         _write_manifest(self.root / "LIVE")
         stub._refresh_channel_switcher()
-        assert stub._channel_switcher.text() == "LIVE"
+        assert stub._ch_name_label.text() == "LIVE"
+
+    def test_refresh_sets_version(self, stub, monkeypatch):
+        monkeypatch.setattr(
+            AppSettings, "get_active_channel",
+            staticmethod(lambda: "LIVE"),
+        )
+        _write_manifest(self.root / "LIVE")
+        stub._refresh_channel_switcher()
+        assert stub._ch_version_label.text() == "4.10.2.12881860"
+
+    def test_refresh_hides_version_when_no_manifest(self, stub, monkeypatch):
+        monkeypatch.setattr(
+            AppSettings, "get_active_channel",
+            staticmethod(lambda: "LIVE"),
+        )
+        (self.root / "LIVE").mkdir()
+        stub._refresh_channel_switcher()
+        assert stub._ch_version_label.text() == ""
+
+    def test_refresh_shows_branch_only_when_no_changelist(self, stub, monkeypatch):
+        monkeypatch.setattr(
+            AppSettings, "get_active_channel",
+            staticmethod(lambda: "LIVE"),
+        )
+        _write_manifest(self.root / "LIVE", p4_changelist=_SENTINEL)
+        stub._refresh_channel_switcher()
+        assert stub._ch_version_label.text() == "4.10.2"
+
+    def test_badge_emits_clicked_on_left_click_and_enter_only(self, qapp):
+        from PyQt6.QtCore import QEvent, QPointF, Qt
+        from PyQt6.QtGui import QKeyEvent, QMouseEvent
+
+        from src.gui.main_window import _ChannelBadge
+
+        badge = _ChannelBadge()
+        hits = []
+        badge.clicked.connect(lambda: hits.append(1))
+
+        def press(button):
+            return QMouseEvent(
+                QEvent.Type.MouseButtonPress, QPointF(1, 1), QPointF(1, 1),
+                button, button, Qt.KeyboardModifier.NoModifier,
+            )
+
+        badge.mousePressEvent(press(Qt.MouseButton.RightButton))
+        assert hits == []
+        badge.mousePressEvent(press(Qt.MouseButton.LeftButton))
+        badge.keyPressEvent(QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier,
+        ))
+        assert hits == [1, 1]
 
     def test_refresh_no_crash_without_labels(self, qapp):
         from src.gui.main_window import MainWindow

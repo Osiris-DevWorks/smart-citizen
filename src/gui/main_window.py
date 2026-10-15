@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QCheckBox,
     QFileDialog, QMessageBox, QTabWidget,
-    QHeaderView, QFrame, QToolButton,
+    QHeaderView, QFrame,
     QAbstractItemView, QMenu, QProgressDialog, QTextBrowser,
     QTableView, QStackedLayout, QGraphicsOpacityEffect,
     QDockWidget, QPlainTextEdit, QInputDialog, QScrollArea, QStyle,
@@ -71,6 +71,35 @@ from src.utils.i18n import tr
 from src.utils.version import get_version
 
 logger = logging.getLogger(__name__)
+
+
+class _ChannelBadge(QFrame):
+    """Toolbar badge (channel name over game build) that acts as a button.
+
+    A QToolButton can't hold two differently styled lines, so this is a
+    QFrame that emits ``clicked`` on a left click or Enter/Return/Space.
+    """
+
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self.clicked.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 # Preview-pane token translation — turns the raw loc-string format the game
@@ -1104,19 +1133,31 @@ class MainWindow(QMainWindow):
         button_layout = QHBoxLayout()
 
         # Channel switcher — launcher-style badge showing the active channel
-        # name.  Click opens a channel picker menu.
-        self._channel_switcher = QToolButton()
+        # name and game build version.  Click opens a channel picker menu.
+        self._channel_switcher = _ChannelBadge()
         self._channel_switcher.setObjectName("channelSwitcher")
-        self._channel_switcher.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self._channel_switcher.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self._channel_switcher.setToolTip(tr("toolbar.channel_switcher_tooltip"))
         self._channel_switcher.setAccessibleName(tr("toolbar.channel_switcher_tooltip"))
+        _ch_layout = QVBoxLayout(self._channel_switcher)
+        _ch_layout.setContentsMargins(10, 4, 10, 4)
+        _ch_layout.setSpacing(0)
+        self._ch_name_label = QLabel()
+        self._ch_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        _ch_layout.addWidget(self._ch_name_label)
+        self._ch_version_label = QLabel()
+        self._ch_version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._ch_version_label.setProperty("role", "secondary")
+        self._ch_version_label.setStyleSheet("font-size: 10px;")
+        _ch_layout.addWidget(self._ch_version_label)
+        self._channel_switcher.setStyleSheet(
+            "#channelSwitcher { border: 1px solid palette(mid); border-radius: 6px; }"
+        )
         self._apply_channel_switcher_style()
         # Build the channel picker menu from the same source of truth as
         # the Config tab's channel combo.
         self._channel_switcher_menu = QMenu(self)
         self._channel_switcher_menu.setToolTipsVisible(True)
-        self._channel_switcher.setMenu(self._channel_switcher_menu)
+        self._channel_switcher.clicked.connect(self._show_channel_switcher_menu)
         self._channel_switcher_menu.aboutToShow.connect(self._populate_channel_switcher_menu)
         self._channel_switcher_menu.triggered.connect(self._on_channel_switcher_menu_picked)
         self._refresh_channel_switcher()
@@ -3132,7 +3173,7 @@ class MainWindow(QMainWindow):
         self.tagline_label.setStyleSheet(
             f"font-size: 11px; letter-spacing: 2px; color: {get_tagline_color()};"
         )
-        if getattr(self, "_channel_switcher", None):
+        if getattr(self, "_ch_name_label", None):
             self._apply_channel_switcher_style()
 
     def refresh_action_buttons(self):
@@ -4624,17 +4665,26 @@ class MainWindow(QMainWindow):
 
     def _refresh_channel_switcher(self) -> None:
         """Update the toolbar channel-switcher badge from AppSettings."""
-        if not getattr(self, "_channel_switcher", None):
+        if not getattr(self, "_ch_name_label", None):
             return
-        self._channel_switcher.setText(AppSettings.get_active_channel())
+        channel = AppSettings.get_active_channel()
+        self._ch_name_label.setText(channel)
+        branch_ver, build_num = AppSettings.get_channel_build_info(channel)
+        if branch_ver and build_num:
+            self._ch_version_label.setText(f"{branch_ver}.{build_num}")
+        else:
+            self._ch_version_label.setText(branch_ver)
 
     def _apply_channel_switcher_style(self) -> None:
-        """Theme-dependent badge style; re-run on a live theme swap."""
-        self._channel_switcher.setStyleSheet(
-            "#channelSwitcher { border: 1px solid palette(mid); border-radius: 6px; "
-            f"padding: 4px 18px 4px 8px; font-size: 13px; font-weight: bold; "
-            f"color: {get_title_color()}; }}"
+        """Theme-dependent channel-name colour; re-run on a live theme swap."""
+        self._ch_name_label.setStyleSheet(
+            f"font-size: 16px; font-weight: bold; color: {get_title_color()};"
         )
+
+    def _show_channel_switcher_menu(self) -> None:
+        """Open the channel picker under the badge."""
+        badge = self._channel_switcher
+        self._channel_switcher_menu.popup(badge.mapToGlobal(badge.rect().bottomLeft()))
 
     def _populate_channel_switcher_menu(self) -> None:
         """Rebuild the channel picker menu from the Config tab's combo items.
