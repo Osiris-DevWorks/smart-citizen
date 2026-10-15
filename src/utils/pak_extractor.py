@@ -367,10 +367,13 @@ _DRIVE_REMOVABLE, _DRIVE_REMOTE = 2, 4   # GetDriveTypeW
 # unforge's tree 61,950 files and 1.84 GB, the kept cache about 30,700 files
 # and 1.2 GB, with GB read as GiB (the larger reading). _space_for adds 15%
 # for growth between builds and one cluster per file for slack and file
-# records. The working folder lives until the copy ends and the old cache is
-# wiped only just before the copy, so a run needs both at once unless a
-# stamped cache at the leaf makes room. _require_room_for_new_cache logs what
-# each run really wrote, so these can be checked against real runs.
+# records. The working folder lives until the kept files are in the cache,
+# and the old cache is wiped only just before that. Beside the cache the kept
+# files are moved, which needs no new room, but a subtree whose move is
+# refused is copied after the wipe (#484). So a run is still sized for a
+# copy: both at once unless a stamped cache at the leaf makes room.
+# _require_room_for_new_cache logs what each run really wrote, so these can
+# be checked against real runs.
 _MIB, _GIB = 1 << 20, 1 << 30
 _SPACE_GROWTH_PERCENT = 115
 _DATAFORGE_WORK_BYTES = 317 * _MIB + math.ceil(1.84 * _GIB)
@@ -773,7 +776,9 @@ def _holds_complete_cache(leaf) -> bool:
 
 def _dataforge_needs(parent, leaf, in_temp: bool):
     """A DataForge run's parts: its working folder in *parent*, and the new
-    cache at *leaf*, less the old one it wipes first when that is complete."""
+    cache at *leaf*, less the old one it wipes first when that is complete.
+    Sized for a copy of the new cache, the most a run needs when every move
+    is refused (#484)."""
     complete = _holds_complete_cache(leaf)
     return (
         _SpaceNeed(parent, _DATAFORGE_WORK_BYTES, _DATAFORGE_WORK_FILES,
@@ -903,7 +908,8 @@ def _is_disk_full(e) -> bool:
 
 
 class _DiskFullDuringCopy(RuntimeError):
-    """A full drive while the new cache is copied. Not an OSError, so
+    """A full drive while the new cache is moved or copied (#484: a rename
+    that finds the drive full raises it too). Not an OSError, so
     shutil.copytree stops at once instead of folding it into shutil.Error
     (errno None) and copying on through every remaining file."""
 
@@ -953,10 +959,11 @@ def _walk_files(folder: Path, should_cancel, keep_prefixes=frozenset(), *, local
 def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> None:
     """The check just before the old cache is wiped (#482): the drive may
     have filled while unforge ran (another program, a second Smart Citizen).
-    Counts what this run will really copy, and logs it, which is how the
-    constants above can be checked against real runs. When the drive is
-    short, the old cache's own allocation counts as room, since the wipe
-    frees it, except for files whose data is not on this PC (OneDrive
+    Counts what copying this run's kept files would take, the most filling
+    the cache can need when every move is refused (#484), and logs it, which
+    is how the constants above can be checked against real runs. When the
+    drive is short, the old cache's own allocation counts as room, since the
+    wipe frees it, except for files whose data is not on this PC (OneDrive
     online-only files), which free nothing. Raises NotEnoughSpaceError with
     nothing wiped, its figures counting this run's working folder when it is
     on the cache's drive. Best effort: a walk or a probe that fails is
@@ -1035,9 +1042,9 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
 
 
 def _cache_incomplete_error(leaf, error) -> NotEnoughSpaceError:
-    """A drive filled while the new cache was copied or stamped (#482). The
-    old cache is gone by then; the new one has no stamp, so the startup check
-    offers a re-extract."""
+    """A drive filled while the new cache was moved, copied or stamped
+    (#482). The old cache is gone by then; the new one has no stamp, so the
+    startup check offers a re-extract."""
     plain = win_plain_path(leaf)
     label = _drive_label(plain)
     try:
@@ -1054,12 +1061,25 @@ def _cache_incomplete_error(leaf, error) -> NotEnoughSpaceError:
         tr("extract.no_space_cache_incomplete", drive=label, folder=plain))
 
 
+def _remove_stamps(leaf: Path) -> None:
+    """Remove both freshness stamps, .p4k_mtime first: every reader needs it
+    before it takes a cache for complete (dataforge_cache_is_fresh, the
+    Config tab, _holds_complete_cache). Best effort: a stamp that will not go
+    is logged."""
+    for stamp in (P4K_MTIME_STAMP, P4K_SIZE_STAMP):
+        try:
+            (leaf / stamp).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning(f"Could not remove {stamp} from the DataForge cache in "
+                           f"{win_plain_path(leaf)}: {e}")
+
+
 # Path of global.ini inside the p4k archive (unp4k preserves directory structure)
 _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 
 
 # Subtrees of unforge's ``libs/foundry/records/`` that the enhancement
-# generator actually reads. Everything else unforge produces is copied nowhere
+# generator actually reads. Everything else unforge produces is kept nowhere
 # — the working folder is deleted when extract_dataforge finishes.
 #
 # Keeping this list tight:
@@ -1067,7 +1087,8 @@ _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 #     footprint by about a third (~1.8 GB → ~1.2 GB);
 #   * cuts the working folder → cache copy step to ~50% of its old wall-clock (OneDrive
 #     / Defender / Indexer fire hooks per-file-close, which dominates copy
-#     time on typical Windows installs);
+#     time on typical Windows installs; since #484 the kept subtrees are
+#     moved rather than copied when the work is beside the cache);
 #   * makes ``robust_rmtree`` on the old cache roughly 2x faster and less
 #     prone to transient WinError 5 retries, since there are half as many
 #     files for the AV/indexer stack to hold open briefly.
@@ -1100,55 +1121,111 @@ DATAFORGE_KEEP_SUBPATHS: tuple[str, ...] = (
     "reputation/standings",
 )
 
+# A folder rename is refused while another program holds any file or folder
+# under it, even with delete sharing (#484): antivirus, the search indexer,
+# a ghost handle of the just-exited unforge (see robust_rmtree). The waits
+# before a refused move is tried again, then copied instead. Named so tests
+# can shorten them.
+_MOVE_RETRY_DELAYS = (0.1, 0.2, 0.4)
+_FILE_IN_USE_WINERRORS = (5, 32)   # ERROR_ACCESS_DENIED, ERROR_SHARING_VIOLATION
 
-def _copy_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
-    """Copy only the generator's required subtrees from *src_libs* → *dst_libs*.
 
-    Both paths point at the ``libs/`` directory unforge writes (which in turn
-    contains ``foundry/records/<subtree>/...``). Only subpaths listed in
-    :data:`DATAFORGE_KEEP_SUBPATHS` are copied; anything else in the source
-    is left in the working folder, which extract_dataforge deletes when the
-    run ends.
+def _rename_tree(src: Path, dst: Path) -> None:
+    """Rename the folder *src* to *dst* (#484). The one call tests replace.
+    os.rename, not os.replace: *dst* never exists here, and os.rename refuses
+    one that does (WinError 183) where os.replace would put the folder in
+    place of a stray file. Long-path prefixed on both sides (#221): a plain
+    path past 260 characters fails the rename with WinError 3."""
+    os.rename(_win_long_path(src), _win_long_path(dst))
 
-    Returns ``(copied, skipped)`` — the number of keep-subpaths actually
-    present and copied, and the number that weren't in this game build
-    (common for ``entities/missions`` etc. which appear and disappear between
-    patches — the generator already guards each read with ``if dir.exists()``).
-    """
-    records_src = src_libs / DATAFORGE_RECORDS_UNDER_LIBS
-    records_dst = dst_libs / DATAFORGE_RECORDS_UNDER_LIBS
 
-    if not records_src.exists():
+def _move_tree(src: Path, dst: Path) -> Optional[OSError]:
+    """Move *src* to *dst* with one rename. Returns None once it has moved,
+    or the error that kept it where it was: a rename moves the whole folder
+    or nothing. A refusal because another program holds something under it
+    (WinError 5 or 32) is tried again after each of _MOVE_RETRY_DELAYS. A
+    full drive raises _DiskFullDuringCopy, since a copy could not fit
+    either."""
+    for delay in (*_MOVE_RETRY_DELAYS, None):
+        try:
+            _rename_tree(src, dst)
+            return None
+        except OSError as e:
+            if _is_disk_full(e):
+                raise _DiskFullDuringCopy(e) from e
+            if delay is None or getattr(e, "winerror", None) not in _FILE_IN_USE_WINERRORS:
+                return e
+            time.sleep(delay)
+
+
+def _unforge_records(src_libs: Path) -> Path:
+    """unforge's records folder under *src_libs* (its ``libs/``), or
+    FileNotFoundError when its output does not have the layout the cache
+    keeps: no records folder, or none of the DATAFORGE_KEEP_SUBPATHS
+    subtrees in it. A build can lack some of them, never all."""
+    records = src_libs / DATAFORGE_RECORDS_UNDER_LIBS
+    if not records.is_dir():
         raise FileNotFoundError(
             f"unforge output missing expected '{DATAFORGE_RECORDS_UNDER_LIBS.as_posix()}/' "
-            f"layout at {records_src}"
+            f"layout at {win_plain_path(records)}"
         )
+    if not any((records / rel).exists() for rel in DATAFORGE_KEEP_SUBPATHS):
+        raise FileNotFoundError(
+            f"unforge output has none of the {len(DATAFORGE_KEEP_SUBPATHS)} subtrees "
+            f"the DataForge cache keeps under {win_plain_path(records)}"
+        )
+    return records
 
+
+def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool) -> tuple[int, int, int]:
+    """Put the generator's subtrees from *src_libs* into *dst_libs* (#484).
+
+    Both point at a ``libs/`` folder (unforge's in the working folder, and
+    the cache's) holding ``foundry/records/<subtree>``. Only the
+    DATAFORGE_KEEP_SUBPATHS subtrees go. Everything else stays in the working
+    folder, which extract_dataforge deletes when the run ends.
+
+    With *move*, each subtree is renamed into place: one rename instead of a
+    copy of its files one by one, and the working folder then has half as
+    much left to delete. A subtree whose rename is refused is still whole
+    where unforge wrote it, and is copied instead: another program held a
+    file under it past the retries, or the cache folder leads to another
+    drive. Without *move* (the working folder is in %TEMP%) every subtree is
+    copied, as before #484. The free-space checks are sized for a full copy,
+    the most this can need (#482).
+
+    Returns ``(moved, copied, skipped)``. *skipped* counts the subtrees this
+    game build does not have (entities/missions and others come and go
+    between patches, and the generator checks that each one exists).
+    """
+    records_src = _unforge_records(src_libs)
+    records_dst = dst_libs / DATAFORGE_RECORDS_UNDER_LIBS
     Path(_win_long_path(records_dst)).mkdir(parents=True, exist_ok=True)
 
-    copied = 0
-    skipped = 0
+    moved = copied = skipped = 0
     for rel in DATAFORGE_KEEP_SUBPATHS:
         src = records_src / rel
         dst = records_dst / rel
         if not src.exists():
-            # Not every build ships every subtree — e.g. entities/missions,
-            # entities/contracts, entities/jobterminal came and went across
-            # 4.x patches. Log at debug so the cold-path message in the Log
-            # Tab stays uncluttered.
             logger.debug(f"DataForge keep-path not in this build, skipping: {rel}")
             skipped += 1
             continue
         Path(_win_long_path(dst.parent)).mkdir(parents=True, exist_ok=True)
-        # Long-path-prefixed on both sides: the deepest entries under
-        # entities/scitem/mission_entities/ routinely push the destination
-        # past 260 chars once nested under a user's install dir (#221).
-        # _copy_file_checked stops the copy at a full drive (#482).
+        if move:
+            refused = _move_tree(src, dst)
+            if refused is None:
+                moved += 1
+                continue
+            logger.info(f"Could not move {rel} into the DataForge cache ({refused}), "
+                        "so it is copied instead")
+        # Long-path prefixed on both sides: the deepest entries under
+        # entities/scitem/mission_entities/ pass 260 characters once nested
+        # under a user's install folder (#221). _copy_file_checked stops the
+        # copy at a full drive (#482).
         shutil.copytree(_win_long_path(src), _win_long_path(dst),
                         copy_function=_copy_file_checked)
         copied += 1
-
-    return copied, skipped
+    return moved, copied, skipped
 
 
 def _get_subprocess_kwargs() -> dict:
@@ -1357,8 +1434,9 @@ def extract_dataforge(
          folder, beside the cache or in %TEMP% (see _scratch_location, #471).
       2. unforge.exe converts Game2.dcb → individual XML entity files, next to
          the dcb.
-      3. The generator's subtrees are copied to dataforge_cache_dir and
-         stamped, then the working folder is deleted.
+      3. The generator's subtrees are moved into dataforge_cache_dir (copied
+         when the work is in %TEMP% or a move is refused) and stamped, then
+         the working folder is deleted.
       4. The diff manifest snapshots the new cache.
 
     This is slow the first time (~several minutes) but results are cached and
@@ -1380,7 +1458,10 @@ def extract_dataforge(
         True on success.
 
     Raises:
-        FileNotFoundError: If required executables or Data.p4k are missing.
+        FileNotFoundError: If required executables or Data.p4k are missing,
+            or unforge's output lacks `libs/`, the records folder the cache
+            keeps, or every one of the subtrees it keeps there, all found
+            before the old cache is wiped (#484).
         RuntimeError: If either subprocess fails.
         NotEnoughSpaceError: A drive the run writes to is short of free
             space, found before any tool runs or just before the old cache
@@ -1397,7 +1478,7 @@ def extract_dataforge(
         raise FileNotFoundError(f"Data.p4k not found at: {p4k_path}")
 
     # Wrap once here so every use below (mkdir, exists checks, and whatever
-    # this function hands to _copy_filtered_records/update_manifest) inherits
+    # this function hands to _cache_filtered_records/update_manifest) inherits
     # long-path safety — see win_paths.win_long_path (#221).
     dataforge_cache_dir = Path(_win_long_path(dataforge_cache_dir))
 
@@ -1489,7 +1570,7 @@ def extract_dataforge(
         # Python-side reads under unforge's output get the long-path prefix
         # (#471). With the working folder near its depth cap the deepest keep
         # path is ~261 characters, where a plain exists() returns False and
-        # _copy_filtered_records would skip that subtree without a word. The
+        # _cache_filtered_records would skip that subtree without a word. The
         # tools themselves only ever see plain paths.
         libs_dir = Path(_win_long_path(dcb_path.parent))
         if not (libs_dir / _UNFORGE_LIBS_DIR).exists():
@@ -1517,6 +1598,11 @@ def extract_dataforge(
                 "unforge ran but libs/ directory was not created — unexpected output structure."
                 + diagnostic
             )
+        # The records folder the cache keeps, and at least one of its kept
+        # subtrees, checked while the old cache is still there (#484). Found
+        # missing only after the wipe, it cost the old cache and left an
+        # empty one that reads as never extracted.
+        _unforge_records(libs_dir / _UNFORGE_LIBS_DIR)
 
         # ── Step 3: Cache the full extraction ─────────────────────────────────
         if progress_callback:
@@ -1524,7 +1610,8 @@ def extract_dataforge(
         if progress_pct_callback:
             progress_pct_callback(2, TOTAL_PHASES, tr("progress.caching_entities"))
 
-        # Ensure all file handles from extraction are released before copying
+        # Ensure all file handles from extraction are released before the
+        # kept files are moved or copied
         gc.collect()
         time.sleep(0.1)
 
@@ -1534,15 +1621,28 @@ def extract_dataforge(
 
         # The last point a stop leaves the previous cache untouched (#471).
         # Past here the run always finishes and stamps the new cache, so a
-        # stop never leaves it half-copied.
+        # stop never leaves it half filled.
         _raise_if_cancelled(should_cancel, "stopped before the previous cache was replaced")
 
         # Blow away any prior cache. Uses a retry loop because on Windows
         # (particularly under OneDrive) a transient handle from the
         # just-exited unforge.exe or from the OneDrive/Defender/indexer
         # stack can reject the first few rmdir attempts with WinError 5.
+        # Its stamps go first (#484): from Python 3.12.4 rmtree deletes the
+        # leaf's own files last, so a wipe that gave up part-way, or a hard
+        # kill during it, would leave a stamped partial cache. That reads as
+        # fresh when the stamps match this Data.p4k, and the next free-space
+        # check counts it as a complete old cache.
         if dataforge_cache_dir.exists():
+            _remove_stamps(dataforge_cache_dir)
             robust_rmtree(dataforge_cache_dir)
+        # Beside the cache the working folder is on the cache's drive, and
+        # the kept subtrees are moved in (#484). In %TEMP% they are copied
+        # as before: moved files would keep %TEMP%'s permissions, and a move
+        # into a OneDrive folder is untested. Beside the cache they end up
+        # with the cache's permissions: the working folder is a plain
+        # os.mkdir (#490), so both inherit from the same parent.
+        move = run_dir.parent == Path(win_plain_path(dataforge_cache_dir)).parent
         # A full drive from here to the stamps leaves a cache with no stamp,
         # which the startup check offers to re-extract (#482).
         try:
@@ -1555,10 +1655,13 @@ def extract_dataforge(
             # OneDrive/Defender/Indexer-burdened Windows paths our users live in.
             cache_libs = dataforge_cache_dir / DATAFORGE_LIBS_SUBPATH
             logger.info(f"Saving DataForge extraction to {cache_libs}…")
-            copied, skipped = _copy_filtered_records(libs_dir / _UNFORGE_LIBS_DIR, cache_libs)
+            filling = time.monotonic()
+            moved, copied, skipped = _cache_filtered_records(
+                libs_dir / _UNFORGE_LIBS_DIR, cache_libs, move=move)
             logger.info(
-                f"DataForge cache written: {copied}/{len(DATAFORGE_KEEP_SUBPATHS)} "
-                f"keep-subpaths copied ({skipped} not present in this build)"
+                f"DataForge cache written: {moved + copied}/{len(DATAFORGE_KEEP_SUBPATHS)} "
+                f"keep-subpaths in {time.monotonic() - filling:.1f} s, {moved} moved and "
+                f"{copied} copied ({skipped} not present in this build)"
             )
 
             # Stamp the source Data.p4k's mtime AND size so a later launch can tell
@@ -1571,25 +1674,24 @@ def extract_dataforge(
             (dataforge_cache_dir / P4K_MTIME_STAMP).write_text(str(p4k_stat.st_mtime))
             (dataforge_cache_dir / P4K_SIZE_STAMP).write_text(str(p4k_stat.st_size))
         except (_DiskFullDuringCopy, OSError) as e:
+            # A stamp left after a failure here can make the unfinished
+            # cache read as fresh (the mtime stamp alone does), so neither
+            # stays, whatever the failure (#484, #482).
+            _remove_stamps(dataforge_cache_dir)
             if not _is_disk_full(e):
                 raise
-            # A full drive on the size stamp leaves the mtime stamp, which
-            # alone reads as fresh, so neither may stay.
-            for stamp in (P4K_MTIME_STAMP, P4K_SIZE_STAMP):
-                try:
-                    (dataforge_cache_dir / stamp).unlink(missing_ok=True)
-                except OSError as unlink_error:
-                    logger.warning(f"Could not remove {stamp} from the incomplete "
-                                   f"DataForge cache: {unlink_error}")
             raise _cache_incomplete_error(dataforge_cache_dir, e) from e
         logger.info(f"DataForge cache written to {dataforge_cache_dir}")
     finally:
         # Success, failure or stop, the working folder goes now (#471), so
-        # its ~2 GB never outlives the copy and a stopped run cleans up after
+        # its ~2 GB never outlives the run and a stopped run cleans up after
         # itself. _close_scratch never raises over the real outcome.
+        cleanup = time.monotonic()
         _close_scratch(run_dir, marker)
+        logger.info(f"Deleting the DataForge working folder took "
+                    f"{time.monotonic() - cleanup:.1f} s")
 
-    # A stop that arrived during the copy ends here. The cache is complete and
+    # A stop that arrived while the cache was filled ends here. The cache is complete and
     # stamped; the next generation treats a missing manifest as "regenerate
     # everything", which is what it does anyway.
     _raise_if_cancelled(should_cancel, "stopped once the new cache was written")

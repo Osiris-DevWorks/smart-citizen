@@ -159,7 +159,7 @@ class TestDataforgeDiffLongPath:
 class TestPakExtractorLongPath:
     """extract_dataforge / dataforge_cache_is_fresh must wrap
     dataforge_cache_dir at their own entry point (not rely solely on
-    _copy_filtered_records' internal wrapping further down the call)."""
+    _cache_filtered_records' internal wrapping further down the call)."""
 
     def test_dataforge_cache_is_fresh_wraps_cache_dir(self, tmp_path):
         p4k_path = tmp_path / "Data.p4k"
