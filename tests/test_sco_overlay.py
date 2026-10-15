@@ -7,38 +7,34 @@ the default reader working on a real QImage.
 """
 from __future__ import annotations
 
-import os
-
 import pytest
+from PyQt6.QtCore import QRect, Qt
 
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PyQt6.QtCore import QRect, Qt  # noqa: E402
-
-from src.gui.sco_overlay import (  # noqa: E402
+from src.gui.sco_overlay import (
     DEFAULT_OVERLAY_COLORS, DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_OVERLAP, DRAWER_HANDLE_WIDTH,
     LABEL_GAP,
     SCAN_REGION, SECTION_ICONS, BlueprintDrawer, OverlayColors, SectionTabBar, drawer_edge,
     ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
 )
-from src.utils.blueprint_meta import BlueprintItem  # noqa: E402
-from src.utils.mining_catalog import CraftingIndex, MineralInfo  # noqa: E402
-from src.utils.mining_signatures import decode_signature  # noqa: E402
+from src.utils.blueprint_meta import BlueprintItem
+from src.utils.mining_catalog import CraftingIndex, MineralInfo
+from src.utils.mining_signatures import decode_signature
 
 
 @pytest.fixture(autouse=True)
 def _hermetic_overlay(monkeypatch, tmp_path):
     """No real theme or samples-folder reads: the overlay takes its colours
     from settings on every start and resolves the samples folder per save."""
-    monkeypatch.setattr(OverlayColors, "from_theme", classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
+    monkeypatch.setattr(OverlayColors, "from_theme",
+                        classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     monkeypatch.setattr("src.gui.sco_overlay.AppSettings.get_sco_samples_dir",
                         staticmethod(lambda: tmp_path / "default_samples"))
 
 
 def _meta():
     return {
-        "Agni": BlueprintItem("Agni", frozenset({"Haul cargo"}), "Quantum Drive", "Industrial", "S3", "B"),
+        "Agni": BlueprintItem("Agni", frozenset({"Haul cargo"}), "Quantum Drive", "Industrial",
+                              "S3", "B"),
         "Norfield": BlueprintItem("Norfield", frozenset(), "Cooler", "Military", "S1", "A"),
         "Bracer": BlueprintItem("Bracer"),
     }
@@ -202,7 +198,8 @@ def test_tabs_run_along_each_edge(qapp, edge):
     # The first tab sits at the start of the bar, the last at its end.
     from PyQt6.QtCore import QPointF
 
-    mid, near, far = DRAWER_HANDLE_WIDTH / 2, DRAWER_HANDLE_HEIGHT / 2, length - DRAWER_HANDLE_HEIGHT / 2
+    mid, near = DRAWER_HANDLE_WIDTH / 2, DRAWER_HANDLE_HEIGHT / 2
+    far = length - DRAWER_HANDLE_HEIGHT / 2
     at = (lambda along: QPointF(mid, along)) if sideways else (lambda along: QPointF(along, mid))
     assert bar.tab_at(at(near)) == "blueprints" and bar.tab_at(at(far)) == "crafting"
 
@@ -220,7 +217,8 @@ def test_tab_bar_paints(qapp):
 
 
 def test_drawer_takes_theme_colours(qapp):
-    gold = OverlayColors(background="#12100c", text="#e8e0cc", accent="#C9A961", secondary="#A08C5A")
+    gold = OverlayColors(background="#12100c", text="#e8e0cc", accent="#C9A961",
+                         secondary="#A08C5A")
     drawer = BlueprintDrawer(gold)
     assert drawer._handle.colors == gold
     assert "#C9A961" in drawer._panel.styleSheet()
@@ -343,7 +341,8 @@ def test_drawer_mineral_checkboxes_and_clear_all(qapp):
     seen = []
     drawer.watched_changed.connect(seen.append)
     tree = drawer._mineral_tree
-    rows = {tree.topLevelItem(i).text(0): tree.topLevelItem(i) for i in range(tree.topLevelItemCount())}
+    rows = {tree.topLevelItem(i).text(0): tree.topLevelItem(i)
+            for i in range(tree.topLevelItemCount())}
     beryl = rows["Beryl"]
     assert beryl.checkState(1) == Qt.CheckState.Unchecked
     assert not drawer._clear_watched_btn.isEnabled()
@@ -363,7 +362,8 @@ def test_drawer_mineral_checkboxes_and_clear_all(qapp):
 
 def test_only_ores_with_a_signature_get_a_checkbox(qapp):
     drawer = BlueprintDrawer()
-    drawer.set_catalog({"Hadanite": MineralInfo("Hadanite", "Gems", ("Aberdeen",))}, CraftingIndex())
+    drawer.set_catalog({"Hadanite": MineralInfo("Hadanite", "Gems", ("Aberdeen",))},
+                       CraftingIndex())
     assert drawer._mineral_tree.topLevelItem(0).data(1, Qt.ItemDataRole.CheckStateRole) is None
 
 

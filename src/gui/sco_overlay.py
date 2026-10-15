@@ -657,7 +657,9 @@ class BlueprintDrawer(QWidget):
                 color: {colors.text}; background: {_rgba(colors.background, 120)};
                 border: 1px solid {colors.secondary}; border-radius: 3px; padding: 2px 4px;
             }}
-            QListWidget, QTreeWidget {{ color: {colors.text}; background: transparent; border: none; }}
+            QListWidget, QTreeWidget {{
+                color: {colors.text}; background: transparent; border: none;
+            }}
             QListWidget::item:selected, QTreeWidget::item:selected {{
                 background: {_rgba(colors.accent, 60)};
             }}
@@ -860,7 +862,8 @@ class BlueprintDrawer(QWidget):
             missions = sorted(item_meta.missions)
             lines.extend(missions[:TOOLTIP_MAX_MISSIONS])
             if len(missions) > TOOLTIP_MAX_MISSIONS:
-                lines.append(tr("sco.drawer_more_missions", count=len(missions) - TOOLTIP_MAX_MISSIONS))
+                lines.append(tr("sco.drawer_more_missions",
+                                count=len(missions) - TOOLTIP_MAX_MISSIONS))
         return "\n".join(lines)
 
     def _render_minerals(self) -> None:
@@ -1145,7 +1148,8 @@ class ScoOverlay(QObject):
             return
         screen = QGuiApplication.primaryScreen()
         region = scan_region_rect(screen.geometry())
-        image = screen.grabWindow(0, region.x(), region.y(), region.width(), region.height()).toImage()
+        image = screen.grabWindow(
+            0, region.x(), region.y(), region.width(), region.height()).toImage()
         self._mask_own_label(image, region)
         self._reading = True
         self._pool.start(_ReadTask(self._reader, image, region, self._read_done, self._read_token))

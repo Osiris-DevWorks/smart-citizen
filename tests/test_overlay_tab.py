@@ -81,7 +81,8 @@ def test_catalog_refresh_reads_only_changed_files(json_backend, tmp_path, monkey
     base = tmp_path / "base.ini"
     base.write_text("Journal_General_Mining_Compendium_Content=Beryl - Yela\n", encoding="utf-8")
     monkeypatch.setattr(AppSettings, "get_base_ini_path", staticmethod(lambda language=None: base))
-    monkeypatch.setattr(AppSettings, "get_enhancements_dir", staticmethod(lambda language=None: tmp_path))
+    monkeypatch.setattr(AppSettings, "get_enhancements_dir",
+                        staticmethod(lambda language=None: tmp_path))
     fed = []
     stub = SimpleNamespace(_sco_catalog_key=None, _sco_overlay=SimpleNamespace(
         drawer=SimpleNamespace(set_catalog=lambda m, c: fed.append(sorted(m)))))
