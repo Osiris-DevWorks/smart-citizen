@@ -211,12 +211,19 @@ class _FinishStub:
         self.recompute_called = False
         self.entries = []
         self.default_values = {}
+        self._close_committed = False
+        self._loader_worker = None
 
     def statusBar(self):
         return self._status_bar
 
     def _recompute_owned(self):
         self.recompute_called = True
+
+    def _refresh_apply_dirty_after_reload(self):
+        # #416: a scan that adds blueprints hands Apply's verdict to the
+        # background check; tests/test_default_owned_blueprints.py covers it.
+        pass
 
     def finish(self):
         MainWindow._finish_blueprint_scan_queue(self)

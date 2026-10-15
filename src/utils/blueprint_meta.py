@@ -194,16 +194,17 @@ MANUAL_BLUEPRINT_ITEMS: tuple[tuple[str, str], ...] = (
 # The game grants them with no "Received Blueprint" notification and no
 # mission offers them, so neither the log scan nor the POTENTIAL BLUEPRINTS
 # catalogue could ever see them: they showed in neither list. Unlike
-# MANUAL_BLUEPRINT_ITEMS, everyone owns these, so MainWindow also adds them to
-# the Owned set once, after the first log scan
-# (MainWindow._seed_default_owned_blueprints).
+# MANUAL_BLUEPRINT_ITEMS, everyone owns these, so MainWindow also adds each to
+# the Owned set once, on the first log scan after it is declared here
+# (MainWindow._seed_default_owned_blueprints records them by loc key).
 #
 # Keyed by loc key rather than display name, so the name follows the loaded
 # strings: the game's own current wording (the magazines are "P4-AR Magazine
 # (40 cap)" and "S-38 Magazine (20 cap)", and CIG renames things) and the
 # selected language. The English name is only the fallback for a key the
 # loaded strings lack. The type comes from the key (blueprint_type_from_key),
-# so it isn't declared here. Extend this tuple for any other starter item.
+# so it isn't declared here. Extend this tuple for any other starter item:
+# players who already scanned get it on their next scan.
 DEFAULT_OWNED_MISSION_LABEL = "Default blueprint (every player has it)"
 DEFAULT_OWNED_BLUEPRINTS: tuple[tuple[str, str], ...] = (
     ("item_Namebehr_rifle_ballistic_01", "P4-AR Rifle"),

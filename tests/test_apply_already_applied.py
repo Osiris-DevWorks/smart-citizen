@@ -890,7 +890,10 @@ class TestCloseEventSettlesTheCheck:
 
         MainWindow.closeEvent(self._closing_self(order, unapplied=True), MagicMock())
 
-        assert order == ["settle", "warn"]
+        # The fake box's click matches neither Cancel nor Apply Now, so this is
+        # the Exit path, which settles again after the prompt's event loop
+        # (#416 review: a scan finishing there can start a check).
+        assert order == ["settle", "warn", "settle"]
 
     def test_the_check_is_settled_even_when_there_is_nothing_to_warn_about(self, monkeypatch):
         order = []
@@ -992,9 +995,15 @@ class _RecordingMessageBox:
     def _record(cls, kind):
         cls.calls.append(f"dialog-{kind}")
 
+    # Something to run while the success box is open, standing in for what its
+    # event loop can deliver (a blueprint scan finishing, #416).
+    during_information = None
+
     @classmethod
     def information(cls, *args, **kwargs):
         cls._record("information")
+        if cls.during_information is not None:
+            cls.during_information()
 
     @classmethod
     def warning(cls, *args, **kwargs):
@@ -1020,6 +1029,7 @@ class TestApplyToGameKeepsTheCheckHonest:
 
         calls: list = []
         _RecordingMessageBox.calls = calls
+        _RecordingMessageBox.during_information = None
         base = tmp_path / "base.ini"
         base.write_text("a=stock a\n", encoding="utf-8")
         state = type("State", (), {"merge_raises": False, "sources": None})
@@ -1057,7 +1067,25 @@ class TestApplyToGameKeepsTheCheckHonest:
 
     def test_a_successful_apply_invalidates_before_writing_and_reports_true(self, env):
         assert MainWindow.apply_to_game(env.me) is True
-        assert env.calls == ["invalidate", "write", "dialog-information", "applied"]
+        # Marked applied before the success box (#416 review), like Clear
+        # Localization: the box's event loop can deliver a later change.
+        assert env.calls == ["invalidate", "write", "applied", "dialog-information"]
+
+    def test_a_change_made_while_the_success_box_is_open_keeps_apply_red(self, env):
+        """#416 review: a blueprint scan that finishes while the success box is
+        open adds blueprints and marks Apply red. Marking applied after the box
+        painted that green over a change the written file does not have."""
+        state = {"dirty": None}
+        env.me._mark_applied.side_effect = lambda: (
+            env.calls.append("applied"), state.update(dirty=False))
+        env.me._mark_apply_dirty.side_effect = lambda: (
+            env.calls.append("dirty"), state.update(dirty=True))
+        _RecordingMessageBox.during_information = env.me._mark_apply_dirty
+
+        assert MainWindow.apply_to_game(env.me) is True
+
+        assert env.calls == ["invalidate", "write", "applied", "dialog-information", "dirty"]
+        assert state["dirty"] is True
 
     def test_a_failed_write_is_marked_dirty_before_its_error_dialog(self, env):
         env.state.merge_raises = True

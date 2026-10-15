@@ -3,8 +3,8 @@
 The game grants them with no "Received Blueprint" notification and no mission
 offers them, so before this they showed in neither Blueprint Tracker list:
 not Available (only mission rewards were listed) and not Owned (the log scan
-never sees them). Now they are in the catalogue under their own label, and
-the first log scan adds them to the Owned set once.
+never sees them). Now they are in the catalogue under their own label, and a
+log scan adds each one to the Owned set once.
 
 Two halves:
 
@@ -13,8 +13,9 @@ Two halves:
   language, any Tag Builder tag stripped) with the English name as fallback,
   and ``default_owned_blueprints`` names them exactly as the catalogue does.
 - ``MainWindow`` seeding, driven on stub selves (same pattern as
-  test_blueprint_auto_scan.py): one-shot, deferred until strings have loaded,
-  reported in the scan summary, never raising.
+  test_blueprint_auto_scan.py): one-shot per item, deferred until strings have
+  loaded, reported in the scan summary, never raising, and followed by the
+  background already-applied check.
 """
 from __future__ import annotations
 
@@ -22,14 +23,17 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+import src.gui.main_window as main_window  # noqa: E402
 from src.gui.blueprint_tracker_tab import BlueprintTrackerTab  # noqa: E402
 from src.gui.main_window import MainWindow  # noqa: E402
+from src.utils import blueprint_meta  # noqa: E402
 from src.utils.blueprint_meta import (  # noqa: E402
     DEFAULT_OWNED_BLUEPRINTS,
     DEFAULT_OWNED_MISSION_LABEL,
@@ -42,8 +46,9 @@ from src.utils.settings import AppSettings  # noqa: E402
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
 ENGLISH_NAMES = [english for _key, english in DEFAULT_OWNED_BLUEPRINTS]
-PENDING = AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING
-DONE = AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE
+ALL_KEYS = frozenset(key for key, _ in DEFAULT_OWNED_BLUEPRINTS)
+NEVER = (frozenset(), False)
+ALL_SEEDED = (ALL_KEYS, False)
 
 
 @dataclass
@@ -63,6 +68,18 @@ def _starter_entries(overrides=None):
     ]
 
 
+def _seed():
+    return AppSettings.get_default_blueprints_seed()
+
+
+def _mark_pending(seeded=frozenset()):
+    AppSettings.set_default_blueprints_seed(seeded, pending=True)
+
+
+def _mark_all_seeded():
+    AppSettings.set_default_blueprints_seed(ALL_KEYS, pending=False)
+
+
 @pytest.fixture
 def json_backend(tmp_path):
     """Swap AppSettings._backend for a tmp JsonSettings so each test is hermetic."""
@@ -70,6 +87,22 @@ def json_backend(tmp_path):
     AppSettings._backend = JsonSettings(tmp_path / "config.json")
     yield AppSettings._backend
     AppSettings._backend = saved
+
+
+NINTH_KEY = "item_Name_test_starter_99"
+NINTH_NAME = "Test Starter"
+
+
+@pytest.fixture
+def ninth_starter(monkeypatch):
+    """A starter declared in a later release: appended to the list (and its
+    lookup) the way a maintainer would extend it."""
+    extended = DEFAULT_OWNED_BLUEPRINTS + ((NINTH_KEY, NINTH_NAME),)
+    monkeypatch.setattr(blueprint_meta, "DEFAULT_OWNED_BLUEPRINTS", extended)
+    monkeypatch.setattr(
+        blueprint_meta, "_DEFAULT_OWNED_KEYS", {k.lower(): k for k, _ in extended},
+    )
+    yield
 
 
 # ── The list itself ─────────────────────────────────────────────────────────
@@ -219,22 +252,46 @@ class TestNamesMatchTheCatalogue:
 # ── The seed marker ─────────────────────────────────────────────────────────
 
 
-class TestSeedStateSetting:
-    def test_default_is_never_seeded(self, json_backend):
-        assert AppSettings.get_default_blueprints_seed_state() == ""
+class TestSeedMarkerSetting:
+    def test_default_is_none_seeded_and_nothing_waiting(self, json_backend):
+        assert _seed() == NEVER
 
-    @pytest.mark.parametrize("state", [PENDING, DONE, ""])
-    def test_round_trips(self, json_backend, state):
-        AppSettings.set_default_blueprints_seed_state(state)
-        assert AppSettings.get_default_blueprints_seed_state() == state
+    @pytest.mark.parametrize("seeded, pending", [
+        (ALL_KEYS, False),
+        (frozenset(), True),
+        (frozenset({"item_Namebehr_pistol_ballistic_01"}), True),
+        (frozenset(), False),
+    ])
+    def test_round_trips(self, json_backend, seeded, pending):
+        AppSettings.set_default_blueprints_seed(seeded, pending=pending)
+        assert _seed() == (seeded, pending)
 
-    def test_an_unknown_value_reads_as_never_seeded(self, json_backend):
+    def test_stored_as_sorted_json(self, json_backend):
+        """Ten keys, so a set that happens to iterate in sorted order (string
+        hashing is randomised per run) can't make an unsorted write pass."""
+        keys = [f"key_{c}" for c in "jihgfedcba"]
+        AppSettings.set_default_blueprints_seed(set(keys), pending=True)
+        expected = '{"seeded": [%s], "pending": true}' % ", ".join(
+            f'"{k}"' for k in sorted(keys))
+        assert json_backend.value(AppSettings.DEFAULT_BLUEPRINTS_SEED) == expected
+
+    @pytest.mark.parametrize("raw", [
+        "banana", "done", "pending", "[]", "42", '{"seeded": "item_X"}',
+    ])
+    def test_an_unreadable_value_reads_as_none_seeded(self, json_backend, raw):
         """A damaged value only means the starters are offered once more."""
-        json_backend.setValue(AppSettings.DEFAULT_BLUEPRINTS_SEED, "banana")
-        assert AppSettings.get_default_blueprints_seed_state() == ""
+        json_backend.setValue(AppSettings.DEFAULT_BLUEPRINTS_SEED, raw)
+        assert _seed() == NEVER
+
+    def test_stray_entries_inside_a_readable_value_are_dropped(self, json_backend):
+        json_backend.setValue(
+            AppSettings.DEFAULT_BLUEPRINTS_SEED,
+            '{"seeded": [1, "item_X", null], "pending": "yes"}',
+        )
+        assert _seed() == (frozenset({"item_X"}), False)
 
 
-class TestSeedStateInABackup:
+class TestSeedMarkerInABackup:
     """The marker describes the owned set, so a backup carries it under the
     same rule as owned_items (only once stored) and an import takes it only
     together with owned_items."""
@@ -245,28 +302,28 @@ class TestSeedStateInABackup:
         assert self.SEED not in AppSettings.export_all_values()
         assert AppSettings.OWNED_ITEMS not in AppSettings.export_all_values()
         AppSettings.set_owned_items({"Agni"} | set(ENGLISH_NAMES))
-        AppSettings.set_default_blueprints_seed_state(DONE)
+        _mark_all_seeded()
         exported = AppSettings.export_all_values()
-        assert exported[self.SEED] == DONE
+        assert AppSettings._parse_default_blueprints_seed(exported[self.SEED]) == ALL_SEEDED
         assert AppSettings.OWNED_ITEMS in exported
 
     def test_a_round_trip_keeps_the_marker_with_its_owned_set(self, json_backend):
         AppSettings.set_owned_items({"Agni"})
-        AppSettings.set_default_blueprints_seed_state(DONE)
+        _mark_all_seeded()
         backup = AppSettings.export_all_values()
-        AppSettings.set_default_blueprints_seed_state("")
+        AppSettings.set_default_blueprints_seed(frozenset(), pending=False)
         AppSettings.import_values(backup)
-        assert AppSettings.get_default_blueprints_seed_state() == DONE
+        assert _seed() == ALL_SEEDED
 
     def test_an_owned_set_from_before_2_5_resets_the_marker(self, json_backend, fake_boxes):
         """The review finding: a 2.4 backup replaced Owned without the
-        starters and left the marker "done", so no scan added them back."""
+        starters and left the marker set, so no scan added them back."""
         AppSettings.set_owned_items({"Agni"} | set(ENGLISH_NAMES))
-        AppSettings.set_default_blueprints_seed_state(DONE)
+        _mark_all_seeded()
 
         AppSettings.import_values({AppSettings.OWNED_ITEMS: '["Agni", "Colossus"]'})
 
-        assert AppSettings.get_default_blueprints_seed_state() == ""
+        assert _seed() == NEVER
         _Stub(entries=_starter_entries()).finish_scan()
         assert AppSettings.get_owned_items() == {"Agni", "Colossus"} | set(ENGLISH_NAMES)
 
@@ -274,23 +331,46 @@ class TestSeedStateInABackup:
         """The other half: a stray marker must not undo the one-shot and bring
         back a starter the user moved out of Owned."""
         AppSettings.set_owned_items(set(ENGLISH_NAMES) - {"S-38 Pistol"})
-        AppSettings.set_default_blueprints_seed_state(DONE)
+        _mark_all_seeded()
 
-        AppSettings.import_values({self.SEED: "", AppSettings.THEME: "dark"})
+        AppSettings.import_values({
+            self.SEED: AppSettings._encode_default_blueprints_seed(frozenset(), False),
+            AppSettings.THEME: "dark",
+        })
 
-        assert AppSettings.get_default_blueprints_seed_state() == DONE
+        assert _seed() == ALL_SEEDED
         _Stub(entries=_starter_entries()).finish_scan()
         assert "S-38 Pistol" not in AppSettings.get_owned_items()
 
-    @pytest.mark.parametrize("stored", [PENDING, DONE])
-    def test_a_backup_marker_is_taken_with_its_owned_set(self, json_backend, stored):
-        AppSettings.import_values({AppSettings.OWNED_ITEMS: "[]", self.SEED: stored})
-        assert AppSettings.get_default_blueprints_seed_state() == stored
+    @pytest.mark.parametrize("seeded, pending", [
+        (ALL_KEYS, False),
+        (frozenset({"item_Namebehr_pistol_ballistic_01"}), True),
+    ])
+    def test_a_backup_marker_is_taken_with_its_owned_set(self, json_backend, seeded, pending):
+        AppSettings.import_values({
+            AppSettings.OWNED_ITEMS: "[]",
+            self.SEED: AppSettings._encode_default_blueprints_seed(seeded, pending),
+        })
+        assert _seed() == (seeded, pending)
 
-    def test_a_damaged_backup_marker_reads_as_never_seeded(self, json_backend):
-        AppSettings.set_default_blueprints_seed_state(DONE)
-        AppSettings.import_values({AppSettings.OWNED_ITEMS: "[]", self.SEED: 42})
-        assert AppSettings.get_default_blueprints_seed_state() == ""
+    @pytest.mark.parametrize("stored", [42, "done", "banana"])
+    def test_a_damaged_backup_marker_reads_as_none_seeded(self, json_backend, stored):
+        _mark_all_seeded()
+        AppSettings.import_values({AppSettings.OWNED_ITEMS: "[]", self.SEED: stored})
+        assert _seed() == NEVER
+
+    @pytest.mark.parametrize("stored", [
+        None, 42, "done", '{"seeded": ["b", 7, "a"], "pending": true}',
+    ])
+    def test_an_imported_marker_is_stored_cleaned(self, json_backend, stored):
+        """What the import writes is the cleaned form, so a damaged marker
+        does not travel on into the next backup."""
+        values = {AppSettings.OWNED_ITEMS: "[]"}
+        if stored is not None:
+            values[self.SEED] = stored
+        AppSettings.import_values(values)
+        expected = AppSettings._encode_default_blueprints_seed(*_seed())
+        assert json_backend.value(self.SEED) == expected
 
 
 # ── MainWindow seeding ──────────────────────────────────────────────────────
@@ -363,6 +443,8 @@ class _Stub:
     _rebuild_blueprint_metadata = MainWindow._rebuild_blueprint_metadata
     _repair_foreign_owned_names = MainWindow._repair_foreign_owned_names
     _report_blueprints_added = MainWindow._report_blueprints_added
+    _queue_deferred_starter_report = MainWindow._queue_deferred_starter_report
+    _flush_deferred_starter_report = MainWindow._flush_deferred_starter_report
 
     def __init__(self, entries=(), log_names=(), silent=False):
         self.entries = list(entries)
@@ -372,12 +454,24 @@ class _Stub:
         self._status_bar = _FakeStatusBar()
         self.blueprint_tracker_tab = _FakeTrackerTab()
         self.recompute_calls = 0
+        self.events = []
+        self._deferred_starter_report = []
+        self._close_committed = False
+        self._loader_worker = None
+        self._enhancements_worker = None
+        self._forge_worker = None
+        self._p4k_worker = None
+        self._simple_run_active = False
 
     def statusBar(self):
         return self._status_bar
 
     def _recompute_owned(self):
         self.recompute_calls += 1
+        self.events.append("recompute")
+
+    def _refresh_apply_dirty_after_reload(self):
+        self.events.append("applied-check")
 
     def _bp_header(self):
         return None
@@ -385,11 +479,16 @@ class _Stub:
     def finish_scan(self):
         MainWindow._finish_blueprint_scan_queue(self)
 
-    def load(self):
+    def load(self, modal_step=None):
         """What a load does here: rebuild the metadata (which finishes a
-        pending seed) and then re-weave the Owned tags."""
+        pending seed), re-weave the Owned tags, run whatever modal step the
+        load opens (*modal_step*, e.g. the enhancement categories prompt,
+        whose event loop runs queued calls), and queue the report last."""
         self._rebuild_blueprint_metadata()
         self._recompute_owned()
+        if modal_step is not None:
+            modal_step()
+        self._queue_deferred_starter_report()
 
 
 @pytest.fixture
@@ -430,12 +529,11 @@ class TestFirstScanSeeds:
         stub.finish_scan()
 
         assert AppSettings.get_owned_items() == set(ENGLISH_NAMES) | {"R97 Shotgun"}
-        assert AppSettings.get_default_blueprints_seed_state() == DONE
+        assert _seed() == ALL_SEEDED
         assert stub.recompute_calls == 1
         assert stub.blueprint_tracker_tab.marked_clean is True
         (box,) = fake_boxes
-        for name in ENGLISH_NAMES + ["R97 Shotgun"]:
-            assert name in box.detailed_text
+        assert set(box.detailed_text.split("\n")) == set(ENGLISH_NAMES) | {"R97 Shotgun"}
 
     def test_a_scan_that_finds_nothing_still_adds_the_starters(self, json_backend, fake_boxes):
         """Without this the summary would say "no new blueprints" while
@@ -464,6 +562,7 @@ class TestFirstScanSeeds:
         stub.finish_scan()
 
         assert AppSettings.get_owned_items() == set(ENGLISH_NAMES)
+        assert _seed() == ALL_SEEDED
         (box,) = fake_boxes
         listed = set(box.detailed_text.split("\n"))
         assert listed == set(ENGLISH_NAMES) - {"S-38 Pistol", "P4-AR Rifle"}
@@ -494,7 +593,7 @@ class TestFirstScanSeeds:
         assert "Field Recon Suit Helmet" not in owned
 
 
-class TestOneShot:
+class TestOneShotPerItem:
     def test_a_starter_moved_back_to_available_stays_there(self, json_backend, fake_boxes):
         _Stub(entries=_starter_entries()).finish_scan()
         owned = AppSettings.get_owned_items()
@@ -519,7 +618,65 @@ class TestOneShot:
         AppSettings.set_owned_items(set())
         _Stub(entries=_starter_entries()).load()
         assert AppSettings.get_owned_items() == set()
-        assert AppSettings.get_default_blueprints_seed_state() == ""
+        assert _seed() == NEVER
+
+    def test_a_starter_declared_later_reaches_owned_on_the_next_scan(
+            self, json_backend, fake_boxes, ninth_starter):
+        """The review finding: one "done" marker for the whole list meant a
+        starter added in a later release never reached Owned for anyone who
+        had already scanned."""
+        AppSettings.set_owned_items(set(ENGLISH_NAMES))
+        _mark_all_seeded()
+        entries = _starter_entries() + [_Entry(NINTH_KEY, NINTH_NAME, "Gear")]
+
+        _Stub(entries=entries).finish_scan()
+
+        assert AppSettings.get_owned_items() == set(ENGLISH_NAMES) | {NINTH_NAME}
+        assert _seed() == (ALL_KEYS | {NINTH_KEY}, False)
+        (box,) = fake_boxes
+        assert box.detailed_text == NINTH_NAME
+
+    def test_a_moved_back_starter_stays_while_a_new_one_arrives(
+            self, json_backend, fake_boxes, ninth_starter):
+        AppSettings.set_owned_items(set(ENGLISH_NAMES) - {"S-38 Pistol"})
+        _mark_all_seeded()
+        entries = _starter_entries() + [_Entry(NINTH_KEY, NINTH_NAME, "Gear")]
+
+        _Stub(entries=entries).finish_scan()
+
+        owned = AppSettings.get_owned_items()
+        assert NINTH_NAME in owned
+        assert "S-38 Pistol" not in owned
+
+    def test_a_later_starter_found_before_the_strings_load_waits_for_them(
+            self, json_backend, fake_boxes, queued_calls, ninth_starter):
+        AppSettings.set_owned_items(set(ENGLISH_NAMES))
+        AppSettings.set_auto_scan_show_popup_enabled(True)
+        _mark_all_seeded()
+
+        _Stub(entries=[]).finish_scan()
+        assert _seed() == (ALL_KEYS, True)
+
+        fake_boxes.clear()
+        _Stub(entries=_starter_entries() + [_Entry(NINTH_KEY, NINTH_NAME)]).load()
+        assert NINTH_NAME in AppSettings.get_owned_items()
+        assert _seed() == (ALL_KEYS | {NINTH_KEY}, False)
+        _run_queued(queued_calls)
+        (box,) = fake_boxes
+        assert box.detailed_text == NINTH_NAME, "only the new starter is reported"
+
+    def test_two_keys_with_one_name_are_both_recorded(self, json_backend, fake_boxes, caplog):
+        """Every new key is recorded, even one whose name came out the same as
+        another starter's, so later scans don't redo the work every time."""
+        entries = _starter_entries({"item_Namebehr_pistol_ballistic_01_mag": "S-38 Pistol"})
+        stub = _Stub(entries=entries)
+        stub.finish_scan()
+        assert _seed() == ALL_SEEDED
+
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="src.gui.main_window"):
+            assert stub._seed_default_owned_blueprints() == set()
+        assert "Starter blueprints" not in caplog.text
 
 
 class TestScanBeforeStringsLoad:
@@ -532,7 +689,7 @@ class TestScanBeforeStringsLoad:
         stub.finish_scan()
 
         assert AppSettings.get_owned_items() == set()
-        assert AppSettings.get_default_blueprints_seed_state() == PENDING
+        assert _seed() == (frozenset(), True)
         (box,) = fake_boxes  # the plain "nothing new" message
         assert box.detailed_text is None
 
@@ -547,12 +704,12 @@ class TestScanBeforeStringsLoad:
         assert "Casco Field Recon" in owned, "named from the loaded strings"
         assert "Field Recon Suit Helmet" not in owned, "not the English fallback"
         assert len(owned) == len(ENGLISH_NAMES)
-        assert AppSettings.get_default_blueprints_seed_state() == DONE
+        assert _seed() == ALL_SEEDED
 
     def test_the_load_seeds_before_the_owned_tags_are_woven(self, json_backend):
         """The rebuild seeds, then the caller's _recompute_owned weaves the
         tags and refreshes the tracker with the starters already owned."""
-        AppSettings.set_default_blueprints_seed_state(PENDING)
+        _mark_pending()
         seen = []
         stub = _Stub(entries=_starter_entries())
         stub._recompute_owned = lambda: seen.append(set(AppSettings.get_owned_items()))
@@ -562,7 +719,7 @@ class TestScanBeforeStringsLoad:
     def test_a_second_scan_before_the_load_keeps_it_pending(self, json_backend, fake_boxes):
         _Stub(entries=[]).finish_scan()
         _Stub(entries=[]).finish_scan()
-        assert AppSettings.get_default_blueprints_seed_state() == PENDING
+        assert _seed() == (frozenset(), True)
         assert AppSettings.get_owned_items() == set()
 
 
@@ -573,7 +730,7 @@ class TestDeferredSeedIsReported:
 
     def test_status_bar_message_after_the_load(self, json_backend, fake_boxes, queued_calls):
         AppSettings.set_auto_scan_show_popup_enabled(False)
-        AppSettings.set_default_blueprints_seed_state(PENDING)
+        _mark_pending()
         stub = _Stub(entries=_starter_entries())
         stub.load()
 
@@ -586,7 +743,7 @@ class TestDeferredSeedIsReported:
 
     def test_the_popup_when_that_option_is_on(self, json_backend, fake_boxes, queued_calls):
         AppSettings.set_auto_scan_show_popup_enabled(True)
-        AppSettings.set_default_blueprints_seed_state(PENDING)
+        _mark_pending()
         stub = _Stub(entries=_starter_entries())
         stub.load()
         _run_queued(queued_calls)
@@ -598,7 +755,7 @@ class TestDeferredSeedIsReported:
     def test_reports_only_what_it_added(self, json_backend, fake_boxes, queued_calls):
         AppSettings.set_auto_scan_show_popup_enabled(True)
         AppSettings.set_owned_items({"S-38 Pistol"})
-        AppSettings.set_default_blueprints_seed_state(PENDING)
+        _mark_pending()
         _Stub(entries=_starter_entries()).load()
         _run_queued(queued_calls)
 
@@ -607,18 +764,191 @@ class TestDeferredSeedIsReported:
 
     def test_nothing_reported_when_nothing_was_added(self, json_backend, fake_boxes, queued_calls):
         AppSettings.set_owned_items(set(ENGLISH_NAMES))
-        AppSettings.set_default_blueprints_seed_state(PENDING)
+        _mark_pending()
         stub = _Stub(entries=_starter_entries())
         stub.load()
 
         assert queued_calls == []
-        assert AppSettings.get_default_blueprints_seed_state() == DONE
+        assert _seed() == ALL_SEEDED
 
     def test_an_ordinary_load_reports_nothing(self, json_backend, fake_boxes, queued_calls):
         _Stub(entries=_starter_entries()).load()
-        AppSettings.set_default_blueprints_seed_state(DONE)
+        _mark_all_seeded()
         _Stub(entries=_starter_entries()).load()
         assert queued_calls == []
+
+
+class TestDeferredReportWaitsForTheLoad:
+    """The re-review finding: the report for a seed a load finished was queued
+    from inside the metadata rebuild, so a modal step later in the same load
+    (the enhancement categories prompt) ran it inside its own event loop. The
+    load now queues it as its very last step, and it waits out long jobs."""
+
+    def test_a_modal_step_in_the_load_does_not_run_the_report(
+            self, json_backend, fake_boxes, queued_calls):
+        AppSettings.set_auto_scan_show_popup_enabled(True)
+        _mark_pending()
+        stub = _Stub(entries=_starter_entries())
+
+        stub.load(modal_step=lambda: _run_queued(queued_calls))
+
+        assert fake_boxes == [], "nothing reported inside the load"
+        _run_queued(queued_calls)
+        (box,) = fake_boxes
+        assert set(box.detailed_text.split("\n")) == set(ENGLISH_NAMES)
+
+    @pytest.mark.parametrize("busy", [
+        "_loader_worker", "_enhancements_worker", "_forge_worker", "_p4k_worker",
+        "_simple_run_active",
+    ])
+    def test_it_waits_out_a_long_job_and_goes_out_after_the_next_load(
+            self, json_backend, fake_boxes, queued_calls, busy):
+        AppSettings.set_auto_scan_show_popup_enabled(True)
+        _mark_pending()
+        stub = _Stub(entries=_starter_entries())
+        stub.load()
+        setattr(stub, busy, True if busy == "_simple_run_active" else object())
+
+        _run_queued(queued_calls)
+        assert fake_boxes == []
+        assert stub._deferred_starter_report == sorted(ENGLISH_NAMES), "kept for later"
+
+        setattr(stub, busy, False if busy == "_simple_run_active" else None)
+        stub.load()  # the reload that ends the job
+        _run_queued(queued_calls)
+        (box,) = fake_boxes
+        assert set(box.detailed_text.split("\n")) == set(ENGLISH_NAMES)
+        assert stub._deferred_starter_report == []
+
+    def test_never_while_closing(self, json_backend, fake_boxes, queued_calls):
+        AppSettings.set_auto_scan_show_popup_enabled(True)
+        _mark_pending()
+        stub = _Stub(entries=_starter_entries())
+        stub.load()
+        stub._close_committed = True
+        _run_queued(queued_calls)
+        assert fake_boxes == []
+        assert stub._status_bar.messages == []
+
+
+class TestLoadPathsQueueTheReportLast:
+    """Both real load paths, on a MagicMock self: the report is queued as the
+    very last step, after anything that can open a modal dialog."""
+
+    def test_the_async_load(self, json_backend):
+        me = MagicMock()
+        me._loader_worker = None
+        me._reload_follows_clean_apply = False
+        me._check_enhancements_after_loading = True
+        MainWindow._on_loading_finished(me, [], {}, [])
+
+        names = [call[0] for call in me.mock_calls]
+        assert names.count("_queue_deferred_starter_report") == 1, "queued once, last"
+        assert names[-1] == "_queue_deferred_starter_report"
+        assert names.index("_check_enhancements_freshness") < len(names) - 1
+        assert names.index("_refresh_apply_dirty_after_reload") < len(names) - 1
+
+    def test_the_synchronous_reload(self, json_backend, monkeypatch):
+        monkeypatch.setattr(
+            main_window, "load_sources_from_settings",
+            lambda: ({AppSettings.SOURCE_GLOBAL: {}}, [AppSettings.SOURCE_GLOBAL], {}),
+        )
+        monkeypatch.setattr(main_window, "load_source_files", lambda *a, **k: [])
+        me = MagicMock()
+        me._snapshot_pending_user_edits.return_value = {}
+        me._restore_pending_user_edits.return_value = 0
+        MainWindow.perform_merge_and_reload(me)
+
+        names = [call[0] for call in me.mock_calls]
+        assert names.count("_queue_deferred_starter_report") == 1, "queued once, last"
+        assert names[-1] == "_queue_deferred_starter_report"
+        assert names.index("_update_status_bar") < len(names) - 1
+
+
+class TestApplyIsRechecked:
+    """The review finding: a scan that added blueprints left Apply red and the
+    close prompt armed, though starters are in no mission list and so change
+    nothing in the game file. The scan now hands the verdict to the same
+    background check a reload runs, after the re-weave."""
+
+    def test_a_scan_that_adds_only_starters_rechecks_after_the_reweave(
+            self, json_backend, fake_boxes):
+        stub = _Stub(entries=_starter_entries())
+        stub.finish_scan()
+        assert stub.events == ["recompute", "applied-check"]
+
+    def test_a_scan_with_a_real_find_rechecks_too(self, json_backend, fake_boxes):
+        _mark_all_seeded()
+        stub = _Stub(entries=_starter_entries(), log_names=["R97 Shotgun"])
+        stub.finish_scan()
+        assert stub.events == ["recompute", "applied-check"]
+
+    def test_a_quiet_scan_changes_nothing_and_checks_nothing(self, json_backend, fake_boxes):
+        _mark_all_seeded()
+        stub = _Stub(entries=_starter_entries())
+        stub.finish_scan()
+        assert stub.events == []
+
+    def test_no_check_once_closing_is_committed(self, json_backend, fake_boxes):
+        """Re-review: the check is a thread closeEvent would not wait for."""
+        _mark_all_seeded()
+        stub = _Stub(entries=_starter_entries(), log_names=["R97 Shotgun"])
+        stub._close_committed = True
+        stub.finish_scan()
+        assert stub.events == ["recompute"]
+
+    def test_no_check_while_a_load_is_running(self, json_backend, fake_boxes):
+        """Re-review: that load runs its own check after its re-weave."""
+        _mark_all_seeded()
+        stub = _Stub(entries=_starter_entries(), log_names=["R97 Shotgun"])
+        stub._loader_worker = object()
+        stub.finish_scan()
+        assert stub.events == ["recompute"]
+
+    def test_no_check_before_anything_is_loaded(self, json_backend, fake_boxes):
+        stub = _Stub(entries=[], log_names=["R97 Shotgun"])
+        stub.finish_scan()
+        assert stub.events == ["recompute"]
+
+
+class TestCloseSettlesAfterThePrompt:
+    """Re-review: the unapplied-changes prompt runs its own event loop, where
+    a scan can finish and start a check. Exiting from it settles again, so no
+    check thread outlives the window. Cancel and Apply Now stay open."""
+
+    @staticmethod
+    def _closing(monkeypatch, choice):
+        order = []
+        box = MagicMock()
+        apply_btn, exit_btn, cancel_btn = object(), object(), object()
+        box.addButton.side_effect = [apply_btn, exit_btn, cancel_btn]
+        box.exec.side_effect = lambda: order.append("prompt")
+        box.clickedButton.return_value = {"apply": apply_btn, "exit": exit_btn,
+                                          "cancel": cancel_btn}[choice]
+        monkeypatch.setattr(main_window, "QMessageBox", MagicMock(return_value=box))
+        for setter in ("set_window_state", "set_window_geometry", "set_string_column_widths"):
+            monkeypatch.setattr(AppSettings, setter, staticmethod(lambda *a, **k: None))
+        me = MagicMock()
+        me._session_has_unapplied_edit = True
+        me._suppress_user_ini_autosave = False
+        me._loader_worker = None
+        me._user_resized_columns = False
+        me.entries = []
+        me.apply_to_game.return_value = True
+        me._settle_applied_state_check.side_effect = lambda: order.append("settle")
+        me._request_extraction_stops.side_effect = lambda: order.append("commit")
+        return me, order
+
+    def test_exit_settles_again_before_committing(self, monkeypatch):
+        me, order = self._closing(monkeypatch, "exit")
+        MainWindow.closeEvent(me, MagicMock())
+        assert order == ["settle", "prompt", "settle", "commit"]
+
+    @pytest.mark.parametrize("choice", ["cancel", "apply"])
+    def test_staying_open_does_not_settle_again(self, monkeypatch, choice):
+        me, order = self._closing(monkeypatch, choice)
+        MainWindow.closeEvent(me, MagicMock())
+        assert order == ["settle", "prompt"]
 
 
 class TestSeedNamesMatchTheTracker:
@@ -684,4 +1014,4 @@ class TestNeverRaises:
         with caplog.at_level(logging.ERROR, logger="src.gui.main_window"):
             assert stub._seed_default_owned_blueprints() == set()
         assert "#416" in caplog.text
-        assert AppSettings.get_default_blueprints_seed_state() == ""
+        assert _seed() == NEVER

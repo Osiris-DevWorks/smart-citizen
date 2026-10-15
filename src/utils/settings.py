@@ -665,18 +665,18 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
-    # #416: whether the starter blueprints every player owns
+    # #416: which of the starter blueprints every player owns
     # (blueprint_meta.DEFAULT_OWNED_BLUEPRINTS) have been added to the Owned
-    # set. "" until the first log scan finishes, "pending" when that scan
-    # finished before the strings had loaded (the names come from the loaded
-    # strings), "done" once they were added. One-shot, so a starter item the
-    # user moves back to Available stays there. It describes the owned set, so
-    # in a settings backup it travels with owned_items (see import_values):
-    # restoring an owned set from before 2.5 resets it, so the next scan adds
-    # the starters to that set.
+    # set, by loc key, and whether a log scan finished before the strings had
+    # loaded and is waiting to add them (the names come from the loaded
+    # strings). JSON: {"seeded": [loc keys], "pending": bool}. Unset or
+    # unreadable means none added and nothing waiting. One-shot per item: a
+    # starter the user moves back to Available stays there, and one declared
+    # in a later release still reaches Owned on that user's next scan. It
+    # describes the owned set, so in a settings backup it travels with
+    # owned_items (see import_values): restoring an owned set from before 2.5
+    # resets it, so the next scan adds the starters to that set.
     DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
-    DEFAULT_BLUEPRINTS_SEED_PENDING = "pending"
-    DEFAULT_BLUEPRINTS_SEED_DONE = "done"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1587,23 +1587,45 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
-    def get_default_blueprints_seed_state() -> str:
-        """Where the one-shot starter-blueprint seed stands (#416): ``""``
-        (never run), ``DEFAULT_BLUEPRINTS_SEED_PENDING`` or
-        ``DEFAULT_BLUEPRINTS_SEED_DONE``. Anything else reads as ``""``, so a
-        damaged value only means the starters are offered once more."""
-        value = AppSettings.settings().value(
-            AppSettings.DEFAULT_BLUEPRINTS_SEED, "", type=str
-        )
-        if value in (AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING,
-                     AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE):
-            return value
-        return ""
+    def _parse_default_blueprints_seed(raw) -> "tuple[frozenset, bool]":
+        """``(seeded loc keys, pending)`` from a stored seed marker (#416).
+
+        The one reader of the format, used by the getter and by
+        import_values. Anything unreadable is ``(frozenset(), False)``, so a
+        damaged value only means the starters are offered once more.
+        """
+        try:
+            data = json.loads(raw) if isinstance(raw, str) and raw else None
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return frozenset(), False
+        seeded = data.get("seeded")
+        keys = (frozenset(k for k in seeded if isinstance(k, str))
+                if isinstance(seeded, list) else frozenset())
+        return keys, data.get("pending") is True
 
     @staticmethod
-    def set_default_blueprints_seed_state(state: str) -> None:
-        """Persist the starter-blueprint seed state (#416)."""
-        AppSettings.settings().setValue(AppSettings.DEFAULT_BLUEPRINTS_SEED, state)
+    def _encode_default_blueprints_seed(seeded, pending: bool) -> str:
+        """The stored form of a seed marker (#416), stable for diffs."""
+        return json.dumps({"seeded": sorted(seeded), "pending": bool(pending)})
+
+    @staticmethod
+    def get_default_blueprints_seed() -> "tuple[frozenset, bool]":
+        """``(seeded, pending)`` for the starter blueprints (#416): the loc
+        keys already added to the Owned set, and whether a log scan is
+        waiting for the strings to load to add the rest."""
+        return AppSettings._parse_default_blueprints_seed(
+            AppSettings.settings().value(AppSettings.DEFAULT_BLUEPRINTS_SEED, "", type=str)
+        )
+
+    @staticmethod
+    def set_default_blueprints_seed(seeded, pending: bool) -> None:
+        """Persist the starter-blueprint seed marker (#416)."""
+        AppSettings.settings().setValue(
+            AppSettings.DEFAULT_BLUEPRINTS_SEED,
+            AppSettings._encode_default_blueprints_seed(seeded, pending),
+        )
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3615,11 +3637,13 @@ class AppSettings:
             backend.setValue(key, value)
             applied += 1
         if AppSettings.OWNED_ITEMS in values:
-            seed = values.get(AppSettings.DEFAULT_BLUEPRINTS_SEED, "")
-            if seed not in (AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING,
-                            AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE):
-                seed = ""
-            backend.setValue(AppSettings.DEFAULT_BLUEPRINTS_SEED, seed)
+            seeded, pending = AppSettings._parse_default_blueprints_seed(
+                values.get(AppSettings.DEFAULT_BLUEPRINTS_SEED, "")
+            )
+            backend.setValue(
+                AppSettings.DEFAULT_BLUEPRINTS_SEED,
+                AppSettings._encode_default_blueprints_seed(seeded, pending),
+            )
             applied += 1
         backend.sync()
         logger.info("Import Settings: applied %d settings keys", applied)
