@@ -238,7 +238,7 @@
     },
     "sco_tooltip": {
       "ht": "",
-      "at": "Avvia o ferma lo Smart Citizen Overlay (SCO): decodifica delle firme minerarie e un cassetto dei progetti sopra il gioco. Richiede la modalità finestra senza bordi."
+      "at": "Avvia o ferma l'Overlay di Smart Citizen (SCO): decodifica delle firme minerarie e un cassetto dei blueprint sopra il gioco. Richiede la modalità finestra senza bordi."
     }
   },
   "filters": {
@@ -3224,7 +3224,7 @@
     },
     "drawer_search_placeholder": {
       "ht": "",
-      "at": "Cerca progetti..."
+      "at": "Cerca blueprint..."
     },
     "drawer_owned_only": {
       "ht": "",
@@ -3244,11 +3244,11 @@
     },
     "no_blueprints_title": {
       "ht": "",
-      "at": "Smart Citizen Overlay"
+      "at": "Overlay di Smart Citizen"
     },
     "no_blueprints_body": {
       "ht": "",
-      "at": "Nessun dato sui progetti ancora caricato. Carica prima le stringhe, poi avvia l'overlay."
+      "at": "Nessun dato sui blueprint ancora caricato. Carica prima le stringhe, poi avvia l'overlay."
     },
     "drawer_more_missions": {
       "ht": "",
@@ -3264,7 +3264,7 @@
     },
     "section_blueprints": {
       "ht": "",
-      "at": "Progetti"
+      "at": "Blueprint"
     },
     "section_minerals": {
       "ht": "",
@@ -3342,7 +3342,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei progetti. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log; non tocca mai il processo del gioco."
+      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei blueprint. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log; non tocca mai il processo del gioco."
     },
     "start_btn": {
       "ht": "",
@@ -3362,11 +3362,11 @@
     },
     "live_blueprint_watch": {
       "ht": "",
-      "at": "Segna i nuovi progetti come posseduti"
+      "at": "Segna i nuovi blueprint come posseduti"
     },
     "live_blueprint_watch_hint": {
       "ht": "",
-      "at": "Mentre l'overlay è attivo, i progetti ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
+      "at": "Mentre l'overlay è attivo, i blueprint ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
     },
     "save_samples": {
       "ht": "",
@@ -3390,11 +3390,11 @@
     },
     "drawer_blueprints": {
       "ht": "",
-      "at": "Progetti"
+      "at": "Blueprint"
     },
     "drawer_blueprints_hint": {
       "ht": "",
-      "at": "Cerca progetti, vedi quali missioni li premiano e spunta quelli che possiedi."
+      "at": "Cerca blueprint, vedi quali missioni li premiano e spunta quelli che possiedi."
     },
     "drawer_minerals": {
       "ht": "",

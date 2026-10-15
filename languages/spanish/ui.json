@@ -234,11 +234,11 @@
     },
     "sco_btn": {
       "ht": "",
-      "at": "Overlay"
+      "at": "Superposición"
     },
     "sco_tooltip": {
       "ht": "",
-      "at": "Iniciar o detener el Smart Citizen Overlay (SCO): decodificación de firmas de minería y un cajón de planos sobre el juego. Requiere el modo ventana sin bordes."
+      "at": "Iniciar o detener la Superposición de Smart Citizen (SCO): decodificación de firmas de minería y un cajón de blueprints sobre el juego. Requiere el modo ventana sin bordes."
     }
   },
   "filters": {
@@ -2967,11 +2967,11 @@
     "overlay": {
       "title": {
         "ht": "",
-        "at": "8. Overlay de Smart Citizen"
+        "at": "8. Superposición de Smart Citizen"
       },
       "description": {
         "ht": "",
-        "at": "Inicia el overlay aquí o con el botón Overlay de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
+        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
       }
     },
     "blueprint_tracker": {
@@ -3224,7 +3224,7 @@
     },
     "drawer_search_placeholder": {
       "ht": "",
-      "at": "Buscar planos..."
+      "at": "Buscar blueprints..."
     },
     "drawer_owned_only": {
       "ht": "",
@@ -3244,11 +3244,11 @@
     },
     "no_blueprints_title": {
       "ht": "",
-      "at": "Smart Citizen Overlay"
+      "at": "Superposición de Smart Citizen"
     },
     "no_blueprints_body": {
       "ht": "",
-      "at": "Todavía no hay datos de planos cargados. Carga primero las cadenas y luego inicia el overlay."
+      "at": "Todavía no hay datos de blueprints cargados. Carga primero las cadenas y luego inicia la superposición."
     },
     "drawer_more_missions": {
       "ht": "",
@@ -3260,11 +3260,11 @@
     },
     "decoder_stopped": {
       "ht": "",
-      "at": "El decodificador de escaneo minero se detuvo tras un error. Reinicia el overlay para volver a intentarlo; la pestaña Registro tiene los detalles."
+      "at": "El decodificador de escaneo minero se detuvo tras un error. Reinicia la superposición para volver a intentarlo; la pestaña Registro tiene los detalles."
     },
     "section_blueprints": {
       "ht": "",
-      "at": "Planos"
+      "at": "Blueprints"
     },
     "section_minerals": {
       "ht": "",
@@ -3342,7 +3342,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de planos. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log; nunca toca el proceso del juego."
+      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log; nunca toca el proceso del juego."
     },
     "start_btn": {
       "ht": "",
@@ -3362,11 +3362,11 @@
     },
     "live_blueprint_watch": {
       "ht": "",
-      "at": "Marcar planos nuevos como poseídos"
+      "at": "Marcar blueprints nuevos como poseídos"
     },
     "live_blueprint_watch_hint": {
       "ht": "",
-      "at": "Mientras la superposición está activa, los planos que recibes en el juego se leen de Game.log y se marcan como poseídos."
+      "at": "Mientras la superposición está activa, los blueprints que recibes en el juego se leen de Game.log y se marcan como poseídos."
     },
     "save_samples": {
       "ht": "",
@@ -3382,7 +3382,7 @@
     },
     "drawer": {
       "ht": "",
-      "at": "Cajón del overlay"
+      "at": "Cajón de la superposición"
     },
     "drawer_hint": {
       "ht": "",
@@ -3390,11 +3390,11 @@
     },
     "drawer_blueprints": {
       "ht": "",
-      "at": "Planos"
+      "at": "Blueprints"
     },
     "drawer_blueprints_hint": {
       "ht": "",
-      "at": "Busca planos, mira qué misiones los dan y marca los que tienes."
+      "at": "Busca blueprints, mira qué misiones los dan y marca los que tienes."
     },
     "drawer_minerals": {
       "ht": "",

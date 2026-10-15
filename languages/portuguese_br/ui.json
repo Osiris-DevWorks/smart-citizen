@@ -234,11 +234,11 @@
     },
     "sco_btn": {
       "ht": "",
-      "at": "Overlay"
+      "at": "Sobreposição"
     },
     "sco_tooltip": {
       "ht": "",
-      "at": "Iniciar ou parar o Smart Citizen Overlay (SCO): decodificação de assinaturas de mineração e uma gaveta de projetos sobre o jogo. Requer o modo janela sem bordas."
+      "at": "Iniciar ou parar a Sobreposição do Smart Citizen (SCO): decodificação de assinaturas de mineração e uma gaveta de blueprints sobre o jogo. Requer o modo janela sem bordas."
     }
   },
   "filters": {
@@ -3077,11 +3077,11 @@
     "overlay": {
       "title": {
         "ht": "",
-        "at": "8. Overlay do Smart Citizen"
+        "at": "8. Sobreposição do Smart Citizen"
       },
       "description": {
         "ht": "",
-        "at": "Inicie o overlay aqui ou com o botão Overlay da barra de ferramentas. Sobre o jogo, ele decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
+        "at": "Inicie a sobreposição aqui ou com o botão Sobreposição da barra de ferramentas. Sobre o jogo, ela decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
       }
     },
     "blueprint_tracker": {
@@ -3224,7 +3224,7 @@
     },
     "drawer_search_placeholder": {
       "ht": "",
-      "at": "Buscar projetos..."
+      "at": "Buscar blueprints..."
     },
     "drawer_owned_only": {
       "ht": "",
@@ -3244,11 +3244,11 @@
     },
     "no_blueprints_title": {
       "ht": "",
-      "at": "Smart Citizen Overlay"
+      "at": "Sobreposição do Smart Citizen"
     },
     "no_blueprints_body": {
       "ht": "",
-      "at": "Nenhum dado de projeto foi carregado ainda. Carregue as strings primeiro e depois inicie o overlay."
+      "at": "Nenhum dado de blueprint foi carregado ainda. Carregue as strings primeiro e depois inicie a sobreposição."
     },
     "drawer_more_missions": {
       "ht": "",
@@ -3260,11 +3260,11 @@
     },
     "decoder_stopped": {
       "ht": "",
-      "at": "O decodificador de escaneamento de mineração parou após um erro. Reinicie o overlay para tentar de novo; a aba Log tem os detalhes."
+      "at": "O decodificador de escaneamento de mineração parou após um erro. Reinicie a sobreposição para tentar de novo; a aba Log tem os detalhes."
     },
     "section_blueprints": {
       "ht": "",
-      "at": "Projetos"
+      "at": "Blueprints"
     },
     "section_minerals": {
       "ht": "",
@@ -3342,7 +3342,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de projetos. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log; nunca toca no processo do jogo."
+      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log; nunca toca no processo do jogo."
     },
     "start_btn": {
       "ht": "",
@@ -3362,11 +3362,11 @@
     },
     "live_blueprint_watch": {
       "ht": "",
-      "at": "Marcar novos projetos como possuídos"
+      "at": "Marcar novos blueprints como possuídos"
     },
     "live_blueprint_watch_hint": {
       "ht": "",
-      "at": "Enquanto a sobreposição roda, os projetos recebidos no jogo são lidos do Game.log e marcados como possuídos."
+      "at": "Enquanto a sobreposição roda, os blueprints recebidos no jogo são lidos do Game.log e marcados como possuídos."
     },
     "save_samples": {
       "ht": "",
@@ -3390,11 +3390,11 @@
     },
     "drawer_blueprints": {
       "ht": "",
-      "at": "Projetos"
+      "at": "Blueprints"
     },
     "drawer_blueprints_hint": {
       "ht": "",
-      "at": "Pesquise projetos, veja quais missões os dão e marque os que você possui."
+      "at": "Pesquise blueprints, veja quais missões os dão e marque os que você possui."
     },
     "drawer_minerals": {
       "ht": "",

@@ -234,11 +234,11 @@
     },
     "sco_btn": {
       "ht": "",
-      "at": "Overlay"
+      "at": "Superposition"
     },
     "sco_tooltip": {
       "ht": "",
-      "at": "Démarrer ou arrêter le Smart Citizen Overlay (SCO) : décodage des signatures de minage et tiroir de plans par-dessus le jeu. Nécessite le mode fenêtré sans bordure."
+      "at": "Démarrer ou arrêter la Superposition Smart Citizen (SCO) : décodage des signatures de minage et tiroir de plans par-dessus le jeu. Nécessite le mode fenêtré sans bordure."
     }
   },
   "filters": {
@@ -3077,11 +3077,11 @@
     "overlay": {
       "title": {
         "ht": "",
-        "at": "8. Overlay Smart Citizen"
+        "at": "8. Superposition Smart Citizen"
       },
       "description": {
         "ht": "",
-        "at": "Démarrez l'overlay ici ou avec le bouton Overlay de la barre d'outils. Par-dessus le jeu, il décode les signatures de scan minier, ouvre un tiroir pour chercher vos plans, minéraux et fabrications, et marque comme possédés les plans que vous obtenez. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal."
+        "at": "Démarrez la superposition ici ou avec le bouton Superposition de la barre d'outils. Par-dessus le jeu, elle décode les signatures de scan minier, ouvre un tiroir pour chercher vos plans, minéraux et fabrications, et marque comme possédés les plans que vous obtenez. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal."
       }
     },
     "blueprint_tracker": {
@@ -3244,11 +3244,11 @@
     },
     "no_blueprints_title": {
       "ht": "",
-      "at": "Smart Citizen Overlay"
+      "at": "Superposition Smart Citizen"
     },
     "no_blueprints_body": {
       "ht": "",
-      "at": "Aucune donnée de plan n'est encore chargée. Chargez d'abord les chaînes, puis démarrez l'overlay."
+      "at": "Aucune donnée de plan n'est encore chargée. Chargez d'abord les chaînes, puis démarrez la superposition."
     },
     "drawer_more_missions": {
       "ht": "",
@@ -3260,7 +3260,7 @@
     },
     "decoder_stopped": {
       "ht": "",
-      "at": "Le décodeur de scan minier s'est arrêté après une erreur. Redémarrez l'overlay pour réessayer ; l'onglet Journal donne les détails."
+      "at": "Le décodeur de scan minier s'est arrêté après une erreur. Redémarrez la superposition pour réessayer ; l'onglet Journal donne les détails."
     },
     "section_blueprints": {
       "ht": "",
@@ -3382,7 +3382,7 @@
     },
     "drawer": {
       "ht": "",
-      "at": "Tiroir de la surcouche"
+      "at": "Tiroir de la superposition"
     },
     "drawer_hint": {
       "ht": "",
