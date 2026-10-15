@@ -665,6 +665,18 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+    # #416: whether the starter blueprints every player owns
+    # (blueprint_meta.DEFAULT_OWNED_BLUEPRINTS) have been added to the Owned
+    # set. "" until the first log scan finishes, "pending" when that scan
+    # finished before the strings had loaded (the names come from the loaded
+    # strings), "done" once they were added. One-shot, so a starter item the
+    # user moves back to Available stays there. It describes the owned set, so
+    # in a settings backup it travels with owned_items (see import_values):
+    # restoring an owned set from before 2.5 resets it, so the next scan adds
+    # the starters to that set.
+    DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
+    DEFAULT_BLUEPRINTS_SEED_PENDING = "pending"
+    DEFAULT_BLUEPRINTS_SEED_DONE = "done"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -720,11 +732,16 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - the starter-blueprint seed marker (#416): it describes the owned
+    #     set, so it is exported only when stored, the same way owned_items
+    #     is, and import_values takes it from a backup only together with
+    #     owned_items.
     # Keys already in PROFILE_EXCLUDE_KEYS never reach this stage at all.
     PROFILE_DEFAULT_EXCLUDE_KEYS = frozenset({
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
         "test_plan/checks",
         "test_plan/tester_name",
@@ -1567,6 +1584,26 @@ class AppSettings:
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP, bool(enabled)
         )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_default_blueprints_seed_state() -> str:
+        """Where the one-shot starter-blueprint seed stands (#416): ``""``
+        (never run), ``DEFAULT_BLUEPRINTS_SEED_PENDING`` or
+        ``DEFAULT_BLUEPRINTS_SEED_DONE``. Anything else reads as ``""``, so a
+        damaged value only means the starters are offered once more."""
+        value = AppSettings.settings().value(
+            AppSettings.DEFAULT_BLUEPRINTS_SEED, "", type=str
+        )
+        if value in (AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING,
+                     AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE):
+            return value
+        return ""
+
+    @staticmethod
+    def set_default_blueprints_seed_state(state: str) -> None:
+        """Persist the starter-blueprint seed state (#416)."""
+        AppSettings.settings().setValue(AppSettings.DEFAULT_BLUEPRINTS_SEED, state)
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3557,15 +3594,32 @@ class AppSettings:
         not present in *values* are left untouched — an import layers the
         backup over the current profile rather than wiping it, so local
         state like the SC install path survives a same-machine restore.
+
+        One exception to "only the keys the backup holds" (#416): the
+        starter-blueprint seed marker describes the owned set, so it follows
+        ``owned_items``. A backup that carries an owned set brings its marker
+        too, and one from before 2.5 (no marker) resets it, so the next scan
+        adds the starters to the restored set instead of leaving them out for
+        good. A backup with no owned set leaves both alone, so it can't undo
+        the one-shot and bring back a starter the user moved out of Owned.
         """
         backend = AppSettings.settings()
         applied = 0
         for key, value in values.items():
             if not isinstance(key, str) or not key:
                 continue
+            if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
+                continue  # follows owned_items, below
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)
+            applied += 1
+        if AppSettings.OWNED_ITEMS in values:
+            seed = values.get(AppSettings.DEFAULT_BLUEPRINTS_SEED, "")
+            if seed not in (AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING,
+                            AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE):
+                seed = ""
+            backend.setValue(AppSettings.DEFAULT_BLUEPRINTS_SEED, seed)
             applied += 1
         backend.sync()
         logger.info("Import Settings: applied %d settings keys", applied)

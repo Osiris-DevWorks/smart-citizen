@@ -58,6 +58,17 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #416 added a *Starter
+  blueprints* bullet to the Blueprint Tracker section of each `HELP.md`, just
+  before the "which servers the scan reads" bullet: every player owns the
+  P4-AR Rifle, the S-38 Pistol, their magazines and the four Field Recon Suit
+  pieces, the tracker lists them under the mission label *Default blueprint
+  (every player has it)*, and the first scan after updating adds them to the
+  owned list once. In all 10 languages, AI translation, using each file's own
+  words for the two lists and the scan. The label stays in English because
+  the app shows it untranslated (like *Limited time event reward*), and the
+  item names stay as the game data writes them. No `ui.json` key changed. Not
+  back-translated by a separate checker.
 - **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
   current with English after the pre-release docs sync. In all 10 languages:
   `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge

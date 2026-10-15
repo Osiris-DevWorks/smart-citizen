@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.blueprint_meta import (  # noqa: E402
+    DEFAULT_OWNED_BLUEPRINTS,
     MANUAL_BLUEPRINT_ITEMS,
     blueprint_type_from_key,
     build_blueprint_metadata,
@@ -413,11 +414,15 @@ def test_desc_without_title_yields_no_mission_but_keeps_item():
 
 
 def test_no_blueprint_entries_is_empty():
-    """No mission-derived items -- only the manually-curated ones (#267),
-    which ride along regardless of what's loaded."""
+    """No mission-derived items -- only the manually-curated ones (#267) and
+    the starter blueprints (#416), which ride along regardless of what's
+    loaded."""
     meta = build_blueprint_metadata([_Entry("vehicle_NameRSI_Polaris", "Polaris", "Ships")])
     assert "Polaris" not in meta
-    assert set(meta) == {normalize_item_name(n) for n, _ in MANUAL_BLUEPRINT_ITEMS}
+    assert set(meta) == (
+        {normalize_item_name(n) for n, _ in MANUAL_BLUEPRINT_ITEMS}
+        | {normalize_item_name(n) for _, n in DEFAULT_OWNED_BLUEPRINTS}
+    )
 
 
 def test_non_mission_entry_with_colliding_header_is_not_scanned():

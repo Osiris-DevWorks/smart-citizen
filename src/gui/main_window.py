@@ -6719,6 +6719,84 @@ class MainWindow(QMainWindow):
         if hasattr(self, "blueprint_tracker_tab"):
             self.blueprint_tracker_tab.set_known_item_names(self._known_item_names)
         self._repair_foreign_owned_names()
+        # #416: a first scan that finished before any strings had loaded left
+        # the starter blueprints pending. Strings are loaded now, so name them.
+        if (AppSettings.get_default_blueprints_seed_state()
+                == AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING):
+            added = self._seed_default_owned_blueprints()
+            if added:
+                # That scan's own report went out before these existed, so
+                # report them now, the way a silent auto-scan does (that is
+                # almost always the scan that deferred them). Queued, so the
+                # box never opens inside the load and the load's own status
+                # text can't replace the message.
+                names = sorted(added)
+                QTimer.singleShot(
+                    0, lambda: self._report_blueprints_added(names, silent=True)
+                )
+
+    def _seed_default_owned_blueprints(self) -> set:
+        """Add the starter blueprints to the Owned set, once (#416).
+
+        Every player owns ``blueprint_meta.DEFAULT_OWNED_BLUEPRINTS`` from
+        their first fabricator, but the game never logs receiving them and no
+        mission offers them, so no scan can find them. Called when a log scan
+        finishes (``_finish_blueprint_scan_queue``), so they arrive with the
+        player's first scan, and from ``_rebuild_blueprint_metadata`` while a
+        seed is pending.
+
+        One-shot per profile: once done, a starter item the user moves back
+        to Available stays there. The names come from the loaded strings (the
+        selected language and the game's own wording), so a scan that finishes
+        before any strings have loaded (the startup auto-scan can) only marks
+        the seed pending, and the next metadata rebuild finishes it.
+
+        Returns the names it added to the Owned set: empty when the seed was
+        already done, is still pending, or every starter was already owned.
+        Never raises, since it runs at the end of a scan and inside a load,
+        and a failure here must break neither. A failed seed is not marked
+        done, so the next scan tries again.
+        """
+        try:
+            state = AppSettings.get_default_blueprints_seed_state()
+            if state == AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE:
+                return set()
+            if not self.entries:
+                if state != AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING:
+                    AppSettings.set_default_blueprints_seed_state(
+                        AppSettings.DEFAULT_BLUEPRINTS_SEED_PENDING
+                    )
+                    logger.info(
+                        "Starter blueprints: no strings loaded yet, adding them "
+                        "once they load (#416)"
+                    )
+                return set()
+
+            from src.utils.blueprint_meta import default_owned_blueprints
+            from src.utils.owned_items import enclosings_from_tag_configs
+
+            enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+            names = {
+                nm for _key, nm in default_owned_blueprints(
+                    self.entries, enclosings=enclosings,
+                    default_values=self.default_values,
+                )
+            }
+            owned = AppSettings.get_owned_items()
+            added = names - owned
+            if added:
+                AppSettings.set_owned_items(owned | added)
+            AppSettings.set_default_blueprints_seed_state(
+                AppSettings.DEFAULT_BLUEPRINTS_SEED_DONE
+            )
+            logger.info(
+                f"Starter blueprints: added {len(added)} of {len(names)} to the "
+                f"Owned list (#416)"
+            )
+            return added
+        except Exception:
+            logger.exception("Starter blueprints: could not add them to the Owned list (#416)")
+            return set()
 
     def _repair_foreign_owned_names(self) -> None:
         """One-shot cleanup of owned entries left by another editor (#372).
@@ -7026,7 +7104,10 @@ class MainWindow(QMainWindow):
         self.blueprint_tracker_tab.set_scan_logs_enabled(True)
         silent = self._bp_scan_silent
         self._bp_scan_silent = False
-        new_names = sorted(self._bp_scan_new_names)
+        # #416: the first scan also brings the starter blueprints every player
+        # owns, which no log records. Listed with the scan's own finds so the
+        # summary shows what arrived. Empty on every later scan.
+        new_names = sorted(self._bp_scan_new_names | self._seed_default_owned_blueprints())
         self._bp_scan_new_names = set()
         # #308: one-shot -- the checkbox is consumed by the whole queued run
         # (every channel), whether it found anything new or errored, so it
@@ -7050,11 +7131,18 @@ class MainWindow(QMainWindow):
         # otherwise it stayed red immediately after the summary below told
         # the user its tags were applied.
         self.blueprint_tracker_tab.mark_owned_clean()
+        self._report_blueprints_added(new_names, silent)
 
+    def _report_blueprints_added(self, new_names, silent: bool) -> None:
+        """Tell the user which blueprints were just added to the Owned set:
+        the summary box, or for a *silent* run (the startup auto-scan) a
+        status bar message. Shared by the scan finish and a load that
+        finishes a deferred starter-blueprint seed (#416)."""
         # #386 follow-up: an opt-in escape hatch back to the normal popup,
         # for anyone who wants the interruption on a launch that finds
-        # something new. A quiet run (the not-new_names branch above)
-        # ignores this setting entirely -- it only ever applies here.
+        # something new. A quiet run (the not-new_names branch of
+        # _finish_blueprint_scan_queue) never gets here, so it ignores this
+        # setting entirely.
         if silent and not AppSettings.get_auto_scan_show_popup_enabled():
             self.statusBar().showMessage(
                 tr("blueprint_tracker.auto_scan_status_added", count=len(new_names))

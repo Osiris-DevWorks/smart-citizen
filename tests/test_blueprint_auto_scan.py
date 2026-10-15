@@ -197,12 +197,20 @@ class _FakeStatusBar:
 class _FinishStub:
     """Carries just what _finish_blueprint_scan_queue touches."""
 
+    # #416: the real starter-blueprint seed. With no strings loaded it only
+    # marks the seed pending and adds nothing, so these tests see exactly the
+    # scan's own names. tests/test_default_owned_blueprints.py covers seeding.
+    _seed_default_owned_blueprints = MainWindow._seed_default_owned_blueprints
+    _report_blueprints_added = MainWindow._report_blueprints_added
+
     def __init__(self, silent, new_names):
         self._bp_scan_silent = silent
         self._bp_scan_new_names = set(new_names)
         self._status_bar = _FakeStatusBar()
         self.blueprint_tracker_tab = _FakeTrackerTab()
         self.recompute_called = False
+        self.entries = []
+        self.default_values = {}
 
     def statusBar(self):
         return self._status_bar
