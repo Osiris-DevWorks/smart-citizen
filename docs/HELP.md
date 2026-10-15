@@ -160,6 +160,21 @@ Track which crafting blueprints you already own, and see it reflected in-game: o
 - **Apply Owned Tags** re-weaves the `[Owned]` tags into your loaded strings after you change the owned set. Like the other action buttons, it turns **red** when your owned list has changes the table hasn't picked up yet and **green** once everything matches.
 - The strings table's **Owned** column still shows a star and sorts owned-first, but it's read-only now; ownership is managed from this tab.
 
+## Overlay Tab
+
+The **Smart Citizen Overlay** draws two small windows over Star Citizen: a mining scan decoder and a drawer of searches. Start and stop it with **Start Overlay** on this tab or the toolbar's **Overlay** button. Run the game in borderless windowed mode on your main screen, or the overlay can't show on top of it. The overlay only reads your screen and `Game.log`; it never touches the game itself.
+
+- **Mining scan decoder** reads the scan signature under your radar and shows the deposit type and count just below it (for example `3 × Lindinium`). The label only changes after the same number is read twice in a row, so a one-frame misread doesn't flash.
+- **Overlay drawer** puts tabbed sections at the edge of the screen. Click a tab to open its section, click it again to close. **Drawer position** picks one of eight spots (middle right by default).
+  - **Blueprints**: search blueprints, see which missions reward them, and tick the ones you own (same owned list as the Blueprint Tracker tab).
+  - **Minerals**: type a mineral to see where it is found, grouped by star system, or a location to see its minerals. Tick a mineral to watch for it: the scan label glows when a scan finds it. The decoder can be switched on and off here too.
+  - **Crafting**: type a mineral to see which components use it, or a component to see the minerals it needs. Filled when you generate enhancements with **Commodities** or **Journal** ticked.
+  - Each section has its own switch; turning the drawer off hides all of them.
+- **Mark new blueprints as owned** watches `Game.log` while the overlay runs and marks blueprints you receive owned. Like Scan Logs, it only reads LIVE and HOTFIX: with PTU, EPTU or TECH-PREVIEW selected on the Config tab, it stays off.
+- **Save scan samples** keeps a small picture of each new signature read in `logs\sco_samples` so misreads can be sent in. **Open Samples Folder** opens it. On by default; nothing is uploaded. At most 200 pictures are kept per session, and the folder keeps only the newest 1000.
+
+If the scan decoder hits an error it stops, and the status bar says so. Stop and start the overlay to try again; the Log tab has the details. The guided tour (**Tutorial** button) has a step for this tab.
+
 ## Config Tab
 
 - **Appearance** — pick the app theme (see below) and the **Font size** (Small, Medium or Large). Font size scales the text and the controls around it together, so nothing gets cut off; Smart Citizen offers to restart, because the new size takes effect when the app starts.
