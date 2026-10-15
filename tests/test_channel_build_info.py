@@ -194,29 +194,23 @@ class TestChannelSwitcherWidget:
     @pytest.fixture
     def stub(self, qapp):
         from PyQt6.QtCore import Qt
-        from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout
+        from PyQt6.QtWidgets import QLabel, QVBoxLayout, QToolButton
 
         from src.gui.main_window import MainWindow
         from src.gui.theme import get_title_color
 
         class _Stub:
             _refresh_channel_switcher = MainWindow._refresh_channel_switcher
-            _on_channel_switcher_clicked = MainWindow._on_channel_switcher_clicked
 
             def __init__(self):
-                self._channel_switcher = QFrame()
-                layout = QVBoxLayout(self._channel_switcher)
-                layout.setContentsMargins(0, 0, 0, 0)
+                self._channel_switcher = QToolButton()
                 self._ch_name_label = QLabel()
                 self._ch_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._ch_name_label.setStyleSheet(
-                    f"font-size: 16px; font-weight: bold; color: {get_title_color()};"
+                    f"font-size: 13px; font-weight: bold; color: {get_title_color()};"
                 )
-                layout.addWidget(self._ch_name_label)
-                self._ch_version_label = QLabel()
-                self._ch_version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self._ch_version_label.setProperty("role", "secondary")
-                layout.addWidget(self._ch_version_label)
+                self._channel_switcher.setLayout(QVBoxLayout())
+                self._channel_switcher.layout().addWidget(self._ch_name_label)
                 self.config_tab = None  # not needed for refresh tests
 
         return _Stub()
@@ -229,33 +223,6 @@ class TestChannelSwitcherWidget:
         _write_manifest(self.root / "LIVE")
         stub._refresh_channel_switcher()
         assert stub._ch_name_label.text() == "LIVE"
-
-    def test_refresh_sets_version(self, stub, monkeypatch):
-        monkeypatch.setattr(
-            AppSettings, "get_active_channel",
-            staticmethod(lambda: "LIVE"),
-        )
-        _write_manifest(self.root / "LIVE")
-        stub._refresh_channel_switcher()
-        assert stub._ch_version_label.text() == "4.10.2.12881860"
-
-    def test_refresh_hides_version_when_no_manifest(self, stub, monkeypatch):
-        monkeypatch.setattr(
-            AppSettings, "get_active_channel",
-            staticmethod(lambda: "LIVE"),
-        )
-        (self.root / "LIVE").mkdir()
-        stub._refresh_channel_switcher()
-        assert stub._ch_version_label.text() == ""
-
-    def test_refresh_shows_branch_only_when_no_changelist(self, stub, monkeypatch):
-        monkeypatch.setattr(
-            AppSettings, "get_active_channel",
-            staticmethod(lambda: "LIVE"),
-        )
-        _write_manifest(self.root / "LIVE", p4_changelist=_SENTINEL)
-        stub._refresh_channel_switcher()
-        assert stub._ch_version_label.text() == "4.10.2"
 
     def test_refresh_no_crash_without_labels(self, qapp):
         from src.gui.main_window import MainWindow
@@ -281,27 +248,41 @@ class TestChannelSwitcherWidget:
             staticmethod(lambda: "LIVE"),
         )
 
-        # Track what menu.exec returns — None means user cancelled.
-        menu_actions: list = []
+        class _ComboStub:
+            def count(self):
+                return len(AppSettings.AVAILABLE_CHANNELS)
+            def itemData(self, i):
+                return AppSettings.AVAILABLE_CHANNELS[i]
+            def model(self):
+                return self
+            def item(self, i):
+                from PyQt6.QtGui import QStandardItem
+                it = QStandardItem(AppSettings.AVAILABLE_CHANNELS[i])
+                if AppSettings.AVAILABLE_CHANNELS[i] != "LIVE":
+                    from PyQt6.QtCore import Qt
+                    it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+                return it
+            def findText(self, text):
+                try:
+                    return AppSettings.AVAILABLE_CHANNELS.index(text)
+                except ValueError:
+                    return -1
+            def setCurrentIndex(self, idx):
+                pass
+
+        class _ConfigStub:
+            channel_combo = _ComboStub()
 
         class _Stub(QWidget):
-            config_tab = None
-
-            def _on_channel_switcher_clicked(self_, _event=None):
-                MainWindow._on_channel_switcher_clicked(self_, _event)
+            config_tab = _ConfigStub()
+            _populate_channel_switcher_menu = MainWindow._populate_channel_switcher_menu
 
         stub = _Stub()
+        menu = QMenu(stub)
+        menu.toolTipsVisible = True
+        stub._channel_switcher_menu = menu
+        stub._populate_channel_switcher_menu()
 
-        # Patch QMenu.exec to capture the menu and return None (cancel).
-        def _capture_exec(self_menu, *args, **kwargs):
-            menu_actions.append(self_menu)
-            return None
-
-        monkeypatch.setattr(QMenu, "exec", _capture_exec)
-        stub._on_channel_switcher_clicked()
-
-        assert len(menu_actions) == 1
-        menu = menu_actions[0]
         actions = menu.actions()
         # LIVE should be enabled and checked; others should be disabled.
         live_action = next(a for a in actions if a.text() == "LIVE")

@@ -550,6 +550,14 @@
       "ht": "",
       "at": "频道："
     },
+    "show_channel_switcher": {
+      "ht": "",
+      "at": "在工具栏上显示频道切换器"
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "",
+      "at": "在高级工具栏上显示或隐藏频道徽章"
+    },
     "language_label": {
       "ht": "",
       "at": "语言："

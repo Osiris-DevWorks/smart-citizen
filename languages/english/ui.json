@@ -574,6 +574,14 @@
       "ht": "Channel:",
       "at": ""
     },
+    "show_channel_switcher": {
+      "ht": "Show channel switcher on toolbar",
+      "at": ""
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "Show or hide the channel badge on the Advanced toolbar",
+      "at": ""
+    },
     "language_label": {
       "ht": "Language:",
       "at": ""

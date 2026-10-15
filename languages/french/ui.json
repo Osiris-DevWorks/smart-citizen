@@ -550,6 +550,14 @@
       "ht": "Canal :",
       "at": "Canal :"
     },
+    "show_channel_switcher": {
+      "ht": "",
+      "at": "Afficher le sélecteur de canal dans la barre d'outils"
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Afficher ou masquer le badge de canal dans la barre d'outils avancée"
+    },
     "language_label": {
       "ht": "Langue :",
       "at": "Langue :"

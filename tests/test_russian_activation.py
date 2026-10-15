@@ -117,11 +117,11 @@ def test_russian_is_available_in_selector():
 def test_russian_borrows_the_korean_slot():
     """Russian maps to ``korean_(south_korea)``, NOT ``russian_(russia)``.
 
-    ``russian_(russia)`` is not a ``g_language`` value the game accepts, so
-    Russian rides on the same slot as Korean.  The n1ghter/StarCitizenRu
-    community project ships its global.ini under that folder and remaps the
-    game's languages.ini to show "Русский".  Only one of Russian or Korean
-    can be applied at a time — switching overwrites the other's global.ini.
+    ``russian_(russia)`` is not a ``g_language`` value the game accepts, and
+    the Korean font is the only in-game font that covers Cyrillic — so all
+    Slavic-language community translations ride the Korean slot deliberately.
+    Only one of Russian or Korean can be applied at a time — switching
+    overwrites the other's global.ini.
     """
     assert SC_LANGUAGE_IDS["russian"] == "korean_(south_korea)"
     assert AppSettings.get_sc_language_id("russian") == "korean_(south_korea)"
@@ -146,9 +146,10 @@ def test_russian_user_cfg_gets_the_korean_g_language(tmp_path):
         mock_settings.get_selected_language.return_value = "russian"
         mock_settings.get_sc_language_id.side_effect = AppSettings.get_sc_language_id
         (tmp_path / "user.cfg").write_text("g_language = english\n", encoding="utf-8")
-        ensure_user_cfg_language()
+        result = ensure_user_cfg_language()
+        assert result is True
         cfg = (tmp_path / "user.cfg").read_text(encoding="utf-8")
-        assert "korean_(south_korea)" in cfg
+        assert "g_language = korean_(south_korea)" in cfg
 
 
 def test_russian_sources_json_has_url():
@@ -158,6 +159,7 @@ def test_russian_sources_json_has_url():
     url = sources.get("russian", "")
     assert url, "Russian has no source URL in sources.json"
     assert url.startswith("https://"), f"Russian source URL looks wrong: {url}"
+    assert "korean_(south_korea)" in url, "the n1ghter Russian pack lives under korean_(south_korea)"
 
 
 def test_russian_docs_exist():

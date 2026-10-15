@@ -58,13 +58,16 @@ them against the new source.
 
 ## Backfill log
 
-- **2.5.0 cycle (2026-10-13, Claude):** New language **russian** added. Full AI
-  translation of all UI keys plus the 19-step guided tour (`tutorial.*`), all
-  `at`-only (`ht` empty). Translated `HELP.md`, `ABOUT.md`, `LEGAL.md`, and
+- **2.5.0 cycle (2026-10-13, Claude):** New language **russian** added. AI
+  translation of all UI keys (`at`-only, `ht` empty) plus an abbreviated
+  rendering of the 19-step guided tour (`tutorial.*`) — the tour strings are
+  short summaries rather than full translations of `assets/tutorial.json`.
+  Translated `HELP.md`, `ABOUT.md`, `LEGAL.md`, and
   `FAQ.md`. Base `global.ini` mapped to **n1ghter/StarCitizenRu**
   (`data/Localization/korean_(south_korea)/global.ini`), the main Russian
   community project. Russian borrows the `korean_(south_korea)` slot (same as
-  Korean — `russian_(russia)` is not a `g_language` value the game accepts);
+  Korean — the Korean font is the only in-game font that covers Cyrillic, so
+  all Slavic-language community translations ride this slot deliberately);
   only one can be applied at a time.
 - **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
   current with English after the pre-release docs sync. In all 10 languages:
@@ -562,10 +565,10 @@ them against the new source.
   the main Russian community translation project. Russian writes to the
   game's `korean_(south_korea)` Localization folder with
   `g_language = korean_(south_korea)` (`SC_LANGUAGE_IDS`) — a borrowed
-  slot, shared with Korean: `russian_(russia)` is not a `g_language` value
-  the game accepts. The n1ghter project remaps the game's `languages.ini`
-  to show "Русский" for that slot. Only one of Russian or Korean can be
-  applied to the game at a time — switching overwrites the other's
-  `global.ini` in that folder. A Russian-speaking reviewer replacing the
+  slot, shared with Korean: the Korean font is the only in-game font that
+  covers Cyrillic, so all Slavic-language community translations ride this
+  slot deliberately. Only one of Russian or Korean can be applied to the
+  game at a time — switching overwrites the other's `global.ini` in that
+  folder. A Russian-speaking reviewer replacing the
   `at` strings with `ht` is the next step to promote it from AI-only to
   human-reviewed.

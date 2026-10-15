@@ -71,10 +71,10 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     "turkish":       "polish_(poland)",
     "korean":        "korean_(south_korea)",
     # Russian borrows the korean_(south_korea) slot, same as Korean. The
-    # n1ghter/StarCitizenRu community project ships its global.ini under that
-    # folder and remaps languages.ini to show "Русский". Only one of Russian
-    # or Korean can be applied to the game at a time — switching overwrites
-    # the other's global.ini in that folder.
+    # Korean font is the only in-game font that covers Cyrillic, so all
+    # Slavic-language community translations ride this slot deliberately.
+    # Only one of Russian or Korean can be applied to the game at a time —
+    # switching overwrites the other's global.ini in that folder.
     "russian":       "korean_(south_korea)",
     "chinese_traditional": "chinese_(traditional)",
 }
@@ -664,6 +664,10 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+
+    # Whether the channel switcher badge is shown on the Advanced toolbar.
+    # On by default; users can hide it via the Config tab checkbox.
+    CHANNEL_SWITCHER_VISIBLE = "ui/channel_switcher_visible"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1549,6 +1553,22 @@ class AppSettings:
         """Persist the auto-scan popup checkbox state (#386 follow-up)."""
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP, bool(enabled)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_channel_switcher_visible() -> bool:
+        """Whether the channel switcher badge is shown on the Advanced toolbar.
+        Default True."""
+        return bool(AppSettings.settings().value(
+            AppSettings.CHANNEL_SWITCHER_VISIBLE, True, type=bool
+        ))
+
+    @staticmethod
+    def set_channel_switcher_visible(visible: bool) -> None:
+        """Persist the channel switcher visibility checkbox state."""
+        AppSettings.settings().setValue(
+            AppSettings.CHANNEL_SWITCHER_VISIBLE, bool(visible)
         )
         AppSettings.settings().sync()
 
@@ -3478,6 +3498,7 @@ class AppSettings:
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
+            AppSettings.CHANNEL_SWITCHER_VISIBLE: True,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
         }
         # Composed from the same maps the getters read, so these can't drift.

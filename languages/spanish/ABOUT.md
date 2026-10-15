@@ -73,6 +73,7 @@ Los textos del juego en idiomas distintos del inglés son traducciones comunitar
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): la traducción comunitaria de `global.ini` que alimenta la opción de idioma alemán.
 - **[Proyecto de Localización Coreana de Star Citizen](https://sc.galaxyhub.kr)** (los clanes Shatagon, MGM Star Fleet y Falco Rescue): el equipo comunitario detrás de la localización coreana. Su archivo no se incluye con Smart Citizen (su licencia no permite la redistribución); el coreano es un idioma "trae tu propio archivo", asignado mediante *Asignar archivo de idioma* a una copia local que obtienes directamente de ellos.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP): la traducción comunitaria de `global.ini` que alimenta la opción de idioma chino tradicional. Actualizada por última vez en mayo de 2024, cubre aproximadamente dos tercios de las cadenas actuales del juego; el resto recurre al inglés.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — la traducción `global.ini` mantenida por la comunidad que alimenta la opción de idioma ruso.
 
 ## Funciones principales
 
@@ -80,7 +81,7 @@ Los textos del juego en idiomas distintos del inglés son traducciones comunitar
 - **Cargar y editar**: carga el `global.ini` de tu instalación de Star Citizen y personaliza los textos en una vista de tabla intuitiva
 - **Multi-canal**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW tienen cada uno su propio `user.ini`, caché, copias de seguridad y extracción de DataForge aislados; cambia de canal desde la pestaña Configuración sin reiniciar
 - **Verificar la ubicación**: busca todas las instalaciones de Star Citizen en tu PC y lee el registro del lanzador RSI para decirte cuál inicia realmente el juego, de modo que Aplicar nunca escriba en una copia que no lanzas
-- **Multi-idioma**: alterna la aplicación y los textos del juego entre inglés, francés, español, portugués de Brasil, japonés, chino (simplificado), italiano, alemán, turco, coreano (archivo propio) y chino tradicional desde la pestaña Configuración. Los idiomas distintos del inglés superponen un `global.ini` traducido por la comunidad a la base en inglés, con retorno al inglés para lo no traducido. Se irán exponiendo más idiomas a medida que lleguen traducciones comunitarias (ver `languages/TRANSLATIONS.md`)
+- **Multi-idioma**: alterna la aplicación y los textos del juego entre inglés, francés, español, portugués de Brasil, japonés, chino (simplificado), italiano, alemán, turco, coreano (archivo propio) y chino tradicional, ruso desde la pestaña Configuración. Los idiomas distintos del inglés superponen un `global.ini` traducido por la comunidad a la base en inglés, con retorno al inglés para lo no traducido. Se irán exponiendo más idiomas a medida que lleguen traducciones comunitarias (ver `languages/TRANSLATIONS.md`)
 - **Contratos de misión**: edita los textos de contratos y briefings desde la categoría Missions dedicada
 - **Filtrado inteligente**: busca textos, filtra por categoría (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) o por estado de modificación
 - **Filtros por columna**: escribe directamente en los cuadros de filtro bajo cada encabezado de columna para búsquedas precisas
