@@ -5,7 +5,7 @@ Two layers:
 * ``AppSettings.get_channel_build_info()``: reads ``build_manifest.id`` for a
   channel and returns ``(branch_version, build_number)``.  Pure file I/O
   against a temp directory tree — no Qt settings backend needed.
-* ``MainWindow._refresh_channel_switcher`` / ``_on_channel_switcher_clicked``:
+* ``MainWindow._refresh_channel_switcher`` / ``_populate_channel_switcher_menu``:
   driven on a lightweight stub ``self`` (same pattern as ``test_ui_mode.py``)
   so we don't construct the whole window.
 """
@@ -193,24 +193,15 @@ class TestChannelSwitcherWidget:
 
     @pytest.fixture
     def stub(self, qapp):
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtWidgets import QLabel, QVBoxLayout, QToolButton
+        from PyQt6.QtWidgets import QToolButton
 
         from src.gui.main_window import MainWindow
-        from src.gui.theme import get_title_color
 
         class _Stub:
             _refresh_channel_switcher = MainWindow._refresh_channel_switcher
 
             def __init__(self):
                 self._channel_switcher = QToolButton()
-                self._ch_name_label = QLabel()
-                self._ch_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self._ch_name_label.setStyleSheet(
-                    f"font-size: 13px; font-weight: bold; color: {get_title_color()};"
-                )
-                self._channel_switcher.setLayout(QVBoxLayout())
-                self._channel_switcher.layout().addWidget(self._ch_name_label)
                 self.config_tab = None  # not needed for refresh tests
 
         return _Stub()
@@ -222,7 +213,7 @@ class TestChannelSwitcherWidget:
         )
         _write_manifest(self.root / "LIVE")
         stub._refresh_channel_switcher()
-        assert stub._ch_name_label.text() == "LIVE"
+        assert stub._channel_switcher.text() == "LIVE"
 
     def test_refresh_no_crash_without_labels(self, qapp):
         from src.gui.main_window import MainWindow
@@ -279,7 +270,7 @@ class TestChannelSwitcherWidget:
 
         stub = _Stub()
         menu = QMenu(stub)
-        menu.toolTipsVisible = True
+        menu.setToolTipsVisible(True)
         stub._channel_switcher_menu = menu
         stub._populate_channel_switcher_menu()
 

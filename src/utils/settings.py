@@ -666,7 +666,7 @@ class AppSettings:
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
 
     # Whether the channel switcher badge is shown on the Advanced toolbar.
-    # On by default; users can hide it via the Config tab checkbox.
+    # Off by default; users can turn it on via the Config tab checkbox.
     CHANNEL_SWITCHER_VISIBLE = "ui/channel_switcher_visible"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
@@ -1559,9 +1559,9 @@ class AppSettings:
     @staticmethod
     def get_channel_switcher_visible() -> bool:
         """Whether the channel switcher badge is shown on the Advanced toolbar.
-        Default True."""
+        Default False."""
         return bool(AppSettings.settings().value(
-            AppSettings.CHANNEL_SWITCHER_VISIBLE, True, type=bool
+            AppSettings.CHANNEL_SWITCHER_VISIBLE, False, type=bool
         ))
 
     @staticmethod
@@ -3498,7 +3498,7 @@ class AppSettings:
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
-            AppSettings.CHANNEL_SWITCHER_VISIBLE: True,
+            AppSettings.CHANNEL_SWITCHER_VISIBLE: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
         }
         # Composed from the same maps the getters read, so these can't drift.

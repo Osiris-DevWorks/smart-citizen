@@ -1111,23 +1111,11 @@ class MainWindow(QMainWindow):
         self._channel_switcher.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self._channel_switcher.setToolTip(tr("toolbar.channel_switcher_tooltip"))
         self._channel_switcher.setAccessibleName(tr("toolbar.channel_switcher_tooltip"))
-        self._ch_name_label = QLabel(AppSettings.get_active_channel())
-        self._ch_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._ch_name_label.setStyleSheet(
-            f"font-size: 13px; font-weight: bold; color: {get_title_color()};"
-        )
-        self._channel_switcher.setLayout(QVBoxLayout())
-        self._channel_switcher.layout().setContentsMargins(8, 2, 8, 2)
-        self._channel_switcher.layout().setSpacing(0)
-        self._channel_switcher.layout().addWidget(self._ch_name_label)
-        self._channel_switcher.setStyleSheet(
-            "#channelSwitcher { border: 1px solid palette(mid); "
-            "border-radius: 6px; }"
-        )
+        self._apply_channel_switcher_style()
         # Build the channel picker menu from the same source of truth as
         # the Config tab's channel combo.
         self._channel_switcher_menu = QMenu(self)
-        self._channel_switcher_menu.toolTipsVisible = True
+        self._channel_switcher_menu.setToolTipsVisible(True)
         self._channel_switcher.setMenu(self._channel_switcher_menu)
         self._channel_switcher_menu.aboutToShow.connect(self._populate_channel_switcher_menu)
         self._channel_switcher_menu.triggered.connect(self._on_channel_switcher_menu_picked)
@@ -3144,10 +3132,8 @@ class MainWindow(QMainWindow):
         self.tagline_label.setStyleSheet(
             f"font-size: 11px; letter-spacing: 2px; color: {get_tagline_color()};"
         )
-        if getattr(self, "_ch_name_label", None):
-            self._ch_name_label.setStyleSheet(
-                f"font-size: 13px; font-weight: bold; color: {get_title_color()};"
-            )
+        if getattr(self, "_channel_switcher", None):
+            self._apply_channel_switcher_style()
 
     def refresh_action_buttons(self):
         """Re-apply theme-dependent stylesheets on the toolbar action buttons
@@ -4638,9 +4624,17 @@ class MainWindow(QMainWindow):
 
     def _refresh_channel_switcher(self) -> None:
         """Update the toolbar channel-switcher badge from AppSettings."""
-        if not getattr(self, "_ch_name_label", None):
+        if not getattr(self, "_channel_switcher", None):
             return
-        self._ch_name_label.setText(AppSettings.get_active_channel())
+        self._channel_switcher.setText(AppSettings.get_active_channel())
+
+    def _apply_channel_switcher_style(self) -> None:
+        """Theme-dependent badge style; re-run on a live theme swap."""
+        self._channel_switcher.setStyleSheet(
+            "#channelSwitcher { border: 1px solid palette(mid); border-radius: 6px; "
+            f"padding: 4px 18px 4px 8px; font-size: 13px; font-weight: bold; "
+            f"color: {get_title_color()}; }}"
+        )
 
     def _populate_channel_switcher_menu(self) -> None:
         """Rebuild the channel picker menu from the Config tab's combo items.
