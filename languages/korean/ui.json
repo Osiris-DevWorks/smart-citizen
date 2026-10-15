@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb}MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 작업 폴더를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용한 후 다시 시도하세요."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에서 작업 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
     }
   },
   "apply": {

@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建工作文件夹的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，或通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，然后重试。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法在以下位置使用工作文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
     }
   },
   "apply": {

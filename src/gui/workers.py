@@ -707,11 +707,12 @@ class P4kExtractWorker(QThread):
                 self.finished.emit(False)
                 return
             if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
-                # A locked Data.p4k or a full drive (#482): it carries its own
-                # message and was logged at WARNING, with the detail, where it
-                # was raised. logger.exception would open the global error
-                # dialog (any ERROR-level record, app-wide) on top of the box
-                # the error signal shows.
+                # A locked Data.p4k, a full drive (#482) or a working folder
+                # Windows refused (#490): it carries its own message and was
+                # logged at WARNING, with the detail, where it was raised.
+                # logger.exception would open the global error dialog (any
+                # ERROR-level record, app-wide) on top of the box the error
+                # signal shows.
                 logger.warning(f"P4K extraction: {type(e).__name__}: {e}")
             else:
                 logger.exception(f"P4K extraction failed: {e}")
@@ -816,12 +817,13 @@ class DataForgeExtractWorker(QThread):
                 self.finished.emit(False)
                 return
             if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
-                # A locked Data.p4k, an unforge timeout or a full drive
-                # (#482): it carries its own message and was logged at
-                # WARNING, with the detail (unforge's partial output, the
-                # byte counts), where it was raised. logger.exception would
-                # open the global error dialog on top of the box the error
-                # signal shows.
+                # A locked Data.p4k, an unforge timeout, a full drive (#482)
+                # or a working folder Windows refused (#490): it carries its
+                # own message and was logged at WARNING, with the detail
+                # (unforge's partial output, the byte counts, the Windows
+                # error), where it was raised. logger.exception would open
+                # the global error dialog on top of the box the error signal
+                # shows.
                 logger.warning(f"DataForge extraction: {type(e).__name__}: {e}")
             else:
                 logger.exception(f"DataForge extraction failed: {e}")

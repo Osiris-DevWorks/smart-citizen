@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, in diesem Ordner einen Arbeitsordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Prüfe die Berechtigungen dieses Ordners, lass Smart Citizen in der Windows-Sicherheit durch den überwachten Ordnerzugriff zu oder wähle im Konfiguration-Tab einen anderen DataForge-Cache-Ordner, und versuche es dann erneut."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Prüfe die Berechtigungen dieses Ordners oder lass Smart Citizen in der Windows-Sicherheit durch den überwachten Ordnerzugriff zu, und versuche es dann erneut."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte in diesem Ordner keinen Arbeitsordner verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
     }
   },
   "apply": {

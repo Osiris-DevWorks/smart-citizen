@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear una carpeta de trabajo en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Revisa los permisos de esa carpeta, permite Smart Citizen a través del acceso controlado a carpetas en Seguridad de Windows o elige otra carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Revisa los permisos de esa carpeta o permite Smart Citizen a través del acceso controlado a carpetas en Seguridad de Windows, y vuelve a intentarlo."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
     }
   },
   "apply": {

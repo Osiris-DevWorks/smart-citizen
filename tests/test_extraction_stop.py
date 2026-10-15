@@ -9,7 +9,9 @@ extraction carried on unseen. This pins the Qt side of the fix:
 * DataForgeExtractWorker / P4kExtractWorker on real threads: a stop ends with
   finished(False), no error signal and nothing at ERROR (an ERROR record would
   pop the global error dialog), while a real failure still reports, and one
-  that carries its own message (#482) reports it with nothing at ERROR.
+  that carries its own message (#482) reports it with nothing at ERROR. A
+  working folder Windows refuses (#490) reaches the user as one box, end to
+  end from the real extraction to the error slot.
 * MainWindow on stub selves (no full window): the DataForge stop prompt,
   the global.ini dialog's stop, the identity-bound slots, the guards that
   keep anything new from starting once the close is committed, and
@@ -22,6 +24,7 @@ Qt-free in test_extraction_working_folder.py. Offscreen Qt via the session
 """
 from __future__ import annotations
 
+import errno
 import logging
 import threading
 import time
@@ -122,10 +125,11 @@ def _error_records(caplog):
     return [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
-# The failures that carry their own user-ready message (#482). Listed here
-# rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so dropping one
-# from that tuple fails the tests that use this.
-_ANTICIPATED = (pe.P4kLockedError, pe.DataForgeTimeoutError, pe.NotEnoughSpaceError)
+# The failures that carry their own user-ready message (#482, #490). Listed
+# here rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so dropping
+# one from that tuple fails the tests that use this.
+_ANTICIPATED = (pe.P4kLockedError, pe.DataForgeTimeoutError, pe.NotEnoughSpaceError,
+                pe.WorkingFolderRefusedError)
 
 
 class _Patches:
@@ -882,6 +886,114 @@ class TestP4kSlots:
         MainWindow._on_p4k_extract_finished(me, False, stale)
         carry_on.assert_not_called()
         assert me._after_unfinished_p4k_extraction is carry_on
+
+
+@pytest.fixture
+def refused_folders(tmp_path, monkeypatch):
+    """Real extractions where Windows refuses every working folder, beside
+    the DataForge cache and in %TEMP% alike (#490). Returns the tools folder
+    (whose tools never run), the cache leaf, the private %TEMP% and the
+    base.ini path."""
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+        (tools / name).write_bytes(b"x")
+    leaf = tmp_path / "SC" / "LIVE" / "cache" / "dataforge"
+    leaf.mkdir(parents=True)
+    systemp = tmp_path / "systemp"
+    systemp.mkdir()
+    monkeypatch.setattr(pe.tempfile, "tempdir", str(systemp))
+    monkeypatch.setattr(pe, "_drive_is_removable_or_network", lambda path: False)
+    monkeypatch.setattr(pe, "is_onedrive_path", lambda path: False)
+    # These tests mean "beside the cache", however long tmp_path is on the
+    # machine that runs them (past the cap the work goes to %TEMP%).
+    monkeypatch.setattr(pe, "_MAX_SCRATCH_CHARS", 10_000)
+
+    def no_tool(*args, **kwargs):
+        raise AssertionError("a tool ran without a working folder")
+
+    def refuse(parent, prefix):
+        raise PermissionError(errno.EACCES, "Access is denied", str(parent))
+
+    monkeypatch.setattr(pe, "_run_tool", no_tool)
+    monkeypatch.setattr(pe, "_open_scratch", refuse)
+    return tools, leaf, systemp, tmp_path / "data" / "base.ini"
+
+
+def _warnings(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+
+
+class TestRefusedWorkingFolderReachesTheUser:
+    """#490 end to end: a working folder Windows refuses, from the real
+    extraction through the worker on a real thread to the error slot, opens
+    one box that names the folder. Each step logs at WARNING and nothing at
+    ERROR, which would open the global error dialog as a second box."""
+
+    def test_dataforge_shows_one_box_naming_the_folder(
+        self, qapp, monkeypatch, patches, caplog, english_ui, refused_folders
+    ):
+        tools, leaf, _systemp, _base_ini = refused_folders
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = DataForgeExtractWorker(tools / "Data.p4k", tools / "unp4k.exe",
+                                        tools / "unforge.exe", leaf)
+        finished, errors = _collect(worker)
+        with caplog.at_level(logging.INFO):
+            worker.start()
+            assert worker.wait(10000)
+            me = _window(_forge_worker=worker)
+            for message in errors:
+                MainWindow._on_dataforge_extract_error(me, message, worker)
+
+        assert finished == [False] and worker.stopped is False
+        [message] = errors
+        assert message.startswith(tr("extract.folder_refused", folder=str(leaf.parent)))
+        assert message.endswith(tr("extract.folder_refused_fix_cache"))
+        box.warning.assert_called_once()
+        assert box.warning.call_args.args[1:] == (
+            tr("extract.dataforge_extraction_error_title"),
+            tr("extract.dataforge_extraction_error_body", message=message))
+        assert _error_records(caplog) == []
+        warnings = _warnings(caplog)
+        assert (f"Windows refused an extraction working folder in {leaf.parent}: "
+                f"[Errno 13] Access is denied: {str(leaf.parent)!r}") in warnings
+        assert f"DataForge extraction: WorkingFolderRefusedError: {message}" in warnings
+        assert f"DataForge extraction error: {message}" in warnings
+        assert patches.calls == []
+
+    def test_global_ini_shows_one_box_once_temp_refuses_too(
+        self, qapp, monkeypatch, caplog, english_ui, refused_folders
+    ):
+        """The folder beside the cache refusing only moves the work to
+        %TEMP%, at INFO. The box comes when %TEMP% refuses too, and names
+        %TEMP%."""
+        tools, leaf, systemp, base_ini = refused_folders
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = P4kExtractWorker(tools / "Data.p4k", base_ini, tools / "unp4k.exe",
+                                  scratch_near=leaf)
+        finished, errors = _collect(worker)
+        with caplog.at_level(logging.INFO):
+            worker.start()
+            assert worker.wait(10000)
+            me = _window(_p4k_worker=worker)
+            for message in errors:
+                MainWindow._on_p4k_extract_error(me, message, worker)
+
+        assert finished == [False] and worker.stopped is False
+        [message] = errors
+        assert message.startswith(tr("extract.folder_refused", folder=str(systemp)))
+        assert message.endswith(tr("extract.folder_refused_fix"))
+        box.warning.assert_called_once_with(me, tr("extract.extraction_error_title"), message)
+        assert _error_records(caplog) == []
+        assert any(r.levelno == logging.INFO
+                   and r.getMessage().startswith(f"Could not work in {leaf.parent} (")
+                   for r in caplog.records)
+        warnings = _warnings(caplog)
+        assert not any(str(leaf.parent) in w for w in warnings)
+        assert f"P4K extraction: WorkingFolderRefusedError: {message}" in warnings
+        assert not base_ini.exists()
 
 
 class TestCallersCarryOnAfterAnUnfinishedExtraction:

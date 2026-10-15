@@ -216,6 +216,7 @@ The **FAQ** tab answers the questions we get most often, right inside the app �
 - **Apply says it worked but the game looks unchanged** — You may have more than one Star Citizen install, with Smart Citizen pointed at the one you don't launch. Click **Verify Install Location** on the **Config Tab**: it names the install the RSI Launcher actually uses and repoints the app in one click.
 - **Extraction says Data.p4k is locked** — The RSI Launcher is downloading or verifying an update. Wait for it to finish (or close the launcher), then click **Extract from Data.p4k** again.
 - **Extraction says there is not enough free space** — The message names each drive that is short, how much is free there and how much the extraction needs. Free up space on that drive, or pick a **DataForge cache folder** on a drive with more room in the **Config Tab**. Your current DataForge cache is left as it was.
+- **Extraction says Windows denied permission to create a working folder** — The message names the folder. Check that folder's permissions, allow Smart Citizen through Controlled folder access in Windows Security, or pick another **DataForge cache folder** in the **Config Tab**. The extraction did not start, so your current DataForge cache is left as it was.
 - **Stale data after game update** — Re-run **Extract from Data.p4k**, then regenerate enhancements.
 
 ## Known Issues

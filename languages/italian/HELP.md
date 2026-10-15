@@ -216,6 +216,7 @@ La scheda **FAQ** risponde alle domande che riceviamo più spesso, direttamente 
 - **L'applicazione riesce ma il gioco sembra invariato** — Potresti avere più installazioni di Star Citizen, con Smart Citizen puntato su quella che non avvii. Fai clic su **Verifica posizione installazione** nella **scheda Configurazione**: indica l'installazione che il launcher RSI usa davvero e reindirizza l'app con un clic.
 - **L'estrazione dice che Data.p4k è bloccato**: il launcher RSI sta scaricando o verificando un aggiornamento. Attendi che finisca (oppure chiudi il launcher), poi clicca di nuovo su **Estrai da Data.p4k**.
 - **L'estrazione dice che non c'è abbastanza spazio libero** — Il messaggio indica ogni unità con spazio insufficiente, quanto spazio è libero lì e quanto ne serve all'estrazione. Libera spazio su quell'unità, oppure scegli nella **scheda Configurazione** una **Cartella cache DataForge** su un'unità con più spazio. La tua cache DataForge attuale resta com'era.
+- **L'estrazione dice che Windows ha negato la creazione di una cartella di lavoro** — Il messaggio indica la cartella. Controlla le autorizzazioni di quella cartella, consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows oppure scegli nella **scheda Configurazione** un'altra **Cartella cache DataForge**. L'estrazione non è partita, quindi la tua cache DataForge attuale resta com'era.
 - **Dati obsoleti dopo un aggiornamento del gioco** — Riesegui **Estrai da Data.p4k**, poi rigenera i miglioramenti.
 
 ## Problemi noti

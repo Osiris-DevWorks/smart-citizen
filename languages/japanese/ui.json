@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所に作業フォルダーを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "このフォルダーのアクセス許可を確認するか、Windows セキュリティのコントロールされたフォルダーアクセスで Smart Citizen を許可するか、設定タブで別の DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "このフォルダーのアクセス許可を確認するか、Windows セキュリティのコントロールされたフォルダーアクセスで Smart Citizen を許可してから、もう一度お試しください。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所で作業フォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
     }
   },
   "apply": {

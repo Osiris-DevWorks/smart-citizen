@@ -218,6 +218,7 @@ A aba **FAQ** responde às perguntas que mais recebemos, direto no app: quais ar
 - **Aplicar diz que deu certo, mas o jogo não muda**: você pode ter mais de uma instalação do Star Citizen, com o Smart Citizen apontando para a que você não inicia. Clique em **Verificar local da instalação** na aba **Config**: ele indica a instalação que o launcher da RSI realmente usa e reaponta o app com um clique.
 - **A extração diz que o Data.p4k está bloqueado**: o RSI Launcher está baixando ou verificando uma atualização. Espere ele terminar (ou feche o launcher) e clique de novo em **Extrair do Data.p4k**.
 - **A extração diz que não há espaço livre suficiente**: a mensagem indica cada unidade sem espaço suficiente, quanto há livre nela e de quanto a extração precisa. Libere espaço nessa unidade ou escolha na aba **Config** uma **Pasta cache do DataForge** em uma unidade com mais espaço. Seu cache atual do DataForge fica como estava.
+- **A extração diz que o Windows negou a criação de uma pasta de trabalho**: a mensagem indica a pasta. Verifique as permissões dessa pasta, permita o Smart Citizen pelo Acesso controlado a pastas na Segurança do Windows ou escolha na aba **Config** outra **Pasta cache do DataForge**. A extração não começou, então seu cache atual do DataForge fica como estava.
 - **Dados desatualizados após um patch do jogo**: execute novamente **Extrair do Data.p4k** e depois regenere os aprimoramentos.
 
 ## Problemas Conhecidos

@@ -4,6 +4,7 @@ import gc
 import logging
 import math
 import os
+import secrets
 import shutil
 import stat
 import subprocess
@@ -118,6 +119,27 @@ class _WorkDriveShort(NotEnoughSpaceError):
     it; a NotEnoughSpaceError still, should one ever get past."""
 
 
+class WorkingFolderRefusedError(RuntimeError):
+    """Windows would not make an extraction's working folder (#490): the
+    folder's permissions deny Smart Citizen or Controlled Folder Access
+    blocks it, or the drive cannot be written (write-protected, failing, or
+    a file in the way held by another program), which the message gives in
+    Windows' own words (see windows_refused).
+
+    Raised before any tool runs, for DataForge at once and for the global.ini
+    extraction only when %TEMP% refuses too, since it moves its work there
+    first (#471). The message is user-ready (tr() at raise time, as for
+    P4kLockedError) and names the folder, and the Windows error was logged
+    in English at WARNING first. ``folder`` keeps the folder for tests. A
+    RuntimeError for the same reason as NotEnoughSpaceError: never an
+    OSError, so no ``except OSError`` reads it as a folder to try somewhere
+    else."""
+
+    def __init__(self, message: str, folder: str = ""):
+        super().__init__(message)
+        self.folder = folder
+
+
 class ExtractionCancelled(Exception):
     """A stop request ended the extraction (#471): Smart Citizen is closing,
     or the user stopped it from the progress dialog.
@@ -135,7 +157,9 @@ class ExtractionCancelled(Exception):
 # where they were raised. The extraction workers report them without
 # logger.exception, which would open the global error dialog on top of the
 # box their error signal opens.
-ANTICIPATED_EXTRACTION_ERRORS = (P4kLockedError, DataForgeTimeoutError, NotEnoughSpaceError)
+ANTICIPATED_EXTRACTION_ERRORS = (
+    P4kLockedError, DataForgeTimeoutError, NotEnoughSpaceError, WorkingFolderRefusedError,
+)
 
 
 def _raise_if_cancelled(should_cancel, where: str) -> None:
@@ -305,6 +329,15 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # nothing Smart Citizen extracts lands in %TEMP% unless one of the fallbacks
 # above applies.
 #
+# Making the folder (#490): one os.mkdir per random name, not
+# tempfile.mkdtemp. On Windows mkdtemp takes a PermissionError for a name
+# that may be taken and tries the next one. On the Python 3.11 the release
+# builds use that is up to os.TMP_MAX (2**31 - 1) times, so a folder Windows
+# refuses (its permissions, Controlled Folder Access) kept an extraction
+# looking stuck for about 39 hours, at 66 microseconds a try. (Python 3.14.6
+# stops after 20.) Here only a name that is taken is tried again, a few
+# times, and a refusal fails at once.
+#
 # Liveness: a run holds an empty .in_use file open until its folder is
 # deleted. Python's open() never grants delete sharing on Windows, so no other
 # process can delete that file while the run is alive, and Windows closes the
@@ -316,10 +349,17 @@ GLOBAL_INI_SCRATCH_PREFIX = "globalini.extracting-"
 _DATAFORGE_TEMP_PREFIX = "SmartCitizen-DataForge-"    # like %TEMP%\SmartCitizen-Update
 _GLOBAL_INI_TEMP_PREFIX = "SmartCitizen-GlobalIni-"
 _SCRATCH_MARKER = ".in_use"
-_MKDTEMP_RANDOM_CHARS = 8            # length of tempfile.mkdtemp's random suffix
+# The random part of a working folder's name, as long as tempfile.mkdtemp's
+# was: hex, two characters per random byte.
+_MKDTEMP_RANDOM_CHARS = 8
+# How many random names making a working folder tries. Only a name that is
+# already taken is tried again, which with 8 hex characters almost never
+# happens; a refusal never is (see the comment above).
+_SCRATCH_NAME_ATTEMPTS = 10
 _MAX_SCRATCH_CHARS = 190
-# A folder with no marker is either the instant between mkdtemp and opening
-# the marker, or a removal that got part-way. Only an old one is a leftover.
+# A folder with no marker is either the instant between making the folder
+# and opening the marker, or a removal that got part-way. Only an old one is
+# a leftover.
 _UNMARKED_SCRATCH_GRACE_SECONDS = 10 * 60
 _DRIVE_REMOVABLE, _DRIVE_REMOTE = 2, 4   # GetDriveTypeW
 
@@ -415,11 +455,40 @@ def _sweep_stale_scratch(parent: Path, prefix: str) -> None:
             logger.warning(f"Could not remove leftover extraction working folder {folder}: {e}")
 
 
+def _make_run_folder(parent: Path, prefix: str) -> Path:
+    """Make a new ``<prefix>XXXXXXXX`` folder in the existing *parent* (#490).
+
+    One os.mkdir per random name. A name that is taken (FileExistsError, or
+    a PermissionError for a name that is there, which a folder Windows is
+    still deleting can give) is tried again with a new one, up to
+    ``_SCRATCH_NAME_ATTEMPTS`` names in all. Any other OSError raises at
+    once, so a PermissionError from a folder that refuses new folders fails
+    on the first try. Plain os.mkdir, so the folder takes its parent's
+    permissions, as mkdtemp's did on the Python 3.11 the release builds use.
+    """
+    for _ in range(_SCRATCH_NAME_ATTEMPTS):
+        run_dir = parent / (prefix + secrets.token_hex(_MKDTEMP_RANDOM_CHARS // 2))
+        try:
+            os.mkdir(run_dir)
+        except FileExistsError:
+            continue
+        except PermissionError:
+            if os.path.lexists(run_dir):
+                continue
+            raise
+        return run_dir
+    raise FileExistsError(
+        errno.EEXIST,
+        f"No free working folder name in {_SCRATCH_NAME_ATTEMPTS} tries",
+        str(parent),
+    )
+
+
 def _open_scratch(parent: Path, prefix: str):
     """Make a run's working folder under *parent* and open its marker.
     Returns ``(folder, marker)``; end the run with :func:`_close_scratch`."""
     parent.mkdir(parents=True, exist_ok=True)
-    run_dir = Path(tempfile.mkdtemp(prefix=prefix, dir=str(parent)))
+    run_dir = _make_run_folder(parent, prefix)
     try:
         marker = open(run_dir / _SCRATCH_MARKER, "w", encoding="utf-8")
     except OSError:
@@ -445,6 +514,53 @@ def _close_scratch(run_dir: Path, marker) -> None:
         )
 
 
+# Python raises a whole range of Windows errors as PermissionError, but only
+# these two mean Smart Citizen was denied permission: ERROR_ACCESS_DENIED (a
+# folder's permissions, Controlled Folder Access) and
+# ERROR_NETWORK_ACCESS_DENIED (a share). The rest of that range (19 to 36: a
+# write-protected or failing drive, a file another program holds) is not a
+# question of permissions, and its own reason says what is wrong.
+_WINDOWS_DENIED_WINERRORS = (5, 65)
+
+
+def windows_refused(error: OSError) -> bool:
+    """True when *error* means Windows denied Smart Citizen permission (#490):
+    a PermissionError that is ERROR_ACCESS_DENIED or
+    ERROR_NETWORK_ACCESS_DENIED, or has no Windows error code at all."""
+    return (isinstance(error, PermissionError)
+            and getattr(error, "winerror", None) in (None, *_WINDOWS_DENIED_WINERRORS))
+
+
+def windows_reason(error: OSError) -> str:
+    """Windows' own reason for *error* (its ``strerror``). It is already in
+    the user's Windows language, so it is shown as it is, not translated.
+    The whole error when it has no reason of its own."""
+    return error.strerror or str(error)
+
+
+def _folder_refused_error(parent: Path, in_temp: bool,
+                          error: OSError) -> WorkingFolderRefusedError:
+    """What the user is told when Windows will not make a working folder in
+    *parent* (#490): the folder, that Windows denied permission there, and
+    what to do. Choosing another DataForge cache folder is advised only for
+    a folder beside the cache. In %TEMP% it may not help: a DataForge run is
+    there because of where its cache folder is (OneDrive, a network or
+    removable drive, a deep path), and a global.ini run after the folder
+    beside the cache refused, or with no cache folder at all. A
+    PermissionError that is not a refusal (see windows_refused) gets
+    Windows' own reason instead, with no advice about permissions. Logs the
+    Windows error at WARNING."""
+    folder = win_plain_path(parent)
+    logger.warning(f"Windows refused an extraction working folder in {folder}: {error}")
+    if not windows_refused(error):
+        return WorkingFolderRefusedError(
+            tr("extract.folder_unusable", folder=folder, reason=windows_reason(error)),
+            folder=folder)
+    fix = tr("extract.folder_refused_fix") if in_temp else tr("extract.folder_refused_fix_cache")
+    return WorkingFolderRefusedError(
+        tr("extract.folder_refused", folder=folder) + "\n\n" + fix, folder=folder)
+
+
 def _begin_scratch(near, prefix: str, temp_prefix: str, *,
                    temp_if_refused: bool = False, check_space=None):
     """Sweep earlier leftovers and open this run's working folder (#471):
@@ -460,6 +576,13 @@ def _begin_scratch(near, prefix: str, temp_prefix: str, *,
     does not, because its cache writes go to that same drive and would fail
     anyway, after a minute of unforge.
 
+    A PermissionError making the folder or its marker raises
+    WorkingFolderRefusedError (#490), which names the folder, unless
+    *temp_if_refused* moves the work to %TEMP% first: the global.ini
+    extraction reports a refusal only when %TEMP% refuses too. Any other
+    OSError (a drive that is gone, a path too long) is raised as it is, or
+    moves the work the same way.
+
     *check_space(parent, in_temp, movable)*, when given, raises
     NotEnoughSpaceError when the run would not fit with its working folder in
     *parent* (#482). *movable* is *parent* when a shortage on that drive
@@ -474,9 +597,15 @@ def _begin_scratch(near, prefix: str, temp_prefix: str, *,
     temp_root = Path(tempfile.gettempdir())
 
     def attempt(parent, run_prefix, may_move=False):
+        in_temp = parent == temp_root
         if check_space is not None:
-            check_space(parent, parent == temp_root, parent if may_move else None)
-        return _open_scratch(parent, run_prefix)
+            check_space(parent, in_temp, parent if may_move else None)
+        try:
+            return _open_scratch(parent, run_prefix)
+        except PermissionError as e:
+            if may_move:
+                raise   # the work moves to %TEMP% below
+            raise _folder_refused_error(parent, in_temp, e) from e
 
     _sweep_stale_scratch(temp_root, temp_prefix)
     if near is None:
@@ -1147,6 +1276,9 @@ def extract_global_ini(
         NotEnoughSpaceError: %TEMP%'s drive or the data folder's drive is
             short of free space (#482). A short drive beside the cache only
             moves the work to %TEMP%. Nothing was written.
+        WorkingFolderRefusedError: Windows refused the working folder in
+            %TEMP% (#490). A refusal beside the cache only moves the work
+            to %TEMP%. Nothing was written.
         ExtractionCancelled: A stop was requested. Not a failure.
     """
     if not unp4k_exe.exists():
@@ -1254,6 +1386,8 @@ def extract_dataforge(
             space, found before any tool runs or just before the old cache
             is wiped (which then stays), or a drive filled while the new
             cache was saved (#482).
+        WorkingFolderRefusedError: Windows refused the working folder,
+            found before any tool runs (#490). The old cache stays.
         ExtractionCancelled: A stop was requested. Not a failure.
     """
     for exe, name in [(unp4k_exe, "unp4k.exe"), (unforge_exe, "unforge.exe")]:

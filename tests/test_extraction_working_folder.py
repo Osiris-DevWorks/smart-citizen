@@ -19,6 +19,15 @@ already failing to delete. These tests pin the replacement:
   runs and again just before the old cache is wiped, and a drive that fills
   during the copy. conftest's ``no_real_free_space`` keeps every other test
   here off the real drive's free space.
+* Making the working folder (#490): one ``os.mkdir`` per random name. A
+  folder Windows refuses fails on the first try with
+  ``WorkingFolderRefusedError`` (for global.ini only once %TEMP% refuses
+  too), a name that is taken gets a new name a few times, and any other
+  OSError behaves as before. ``tempfile.mkdtemp``, used before, retried a
+  refusal up to 2**31 - 1 times on Windows on Python 3.11 (the release
+  builds and CI), so every test that refuses a folder counts the calls
+  through ``_counting_mkdir``, whose spin guard fails a retry loop instead
+  of hanging the run.
 
 Qt-free. Child processes run on the base interpreter (``sys._base_executable``)
 because a venv's ``python.exe`` is a launcher that starts a second process,
@@ -27,6 +36,7 @@ under test. Every child exits on its own within 30 s even if a kill fails.
 """
 from __future__ import annotations
 
+import contextlib
 import errno
 import logging
 import os
@@ -55,6 +65,17 @@ _REAL_DRIVE_PROBE = pe._drive_is_removable_or_network
 _PLENTY = 1 << 40
 # The cluster size of a 128 KiB-cluster exFAT stick, the large-cluster drive.
 _EXFAT_CLUSTER = 128 << 10
+# The four prefixes a run's working folder name starts with.
+_RUN_PREFIXES = (pe.DATAFORGE_SCRATCH_PREFIX, pe.GLOBAL_INI_SCRATCH_PREFIX,
+                 pe._DATAFORGE_TEMP_PREFIX, pe._GLOBAL_INI_TEMP_PREFIX)
+# More os.mkdir calls than making one working folder may take. A loop that
+# retries a refusal (tempfile.mkdtemp on Python 3.11 retries one up to
+# 2**31 - 1 times on Windows, #490) is stopped here with an error the test
+# reports, instead of hanging the run for a day and a half.
+_SPIN_GUARD_CALLS = 100
+# The well-known SID of Everyone. The account name is translated on
+# non-English Windows, the SID never is.
+_EVERYONE_SID = "*S-1-1-0"
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -104,6 +125,68 @@ def _write_pid_code(pid_file: Path, indent: str = "") -> str:
 
 def _scratch_folders(parent: Path, prefix: str) -> list[Path]:
     return sorted(p for p in Path(parent).glob(prefix + "*") if p.is_dir())
+
+
+class _StillRetrying(Exception):
+    """A fake os.mkdir called more than _SPIN_GUARD_CALLS times. Not an
+    OSError, so no folder creation loop can catch it and carry on."""
+
+
+def _counting_mkdir(monkeypatch, refuse=None) -> list[Path]:
+    """Patch os.mkdir with one that records each run folder it is asked for
+    (a name with one of _RUN_PREFIXES), in order. *refuse(folder)* returns
+    the OSError to raise for that folder, or None to make it for real.
+
+    ``pe.os`` is the os module itself, so this also sees the calls
+    tempfile.mkdtemp makes, should the folder ever be made with it again.
+    Other folders (Path.mkdir making the parent) are made, not recorded."""
+    calls = []
+    real_mkdir = os.mkdir
+
+    def mkdir(path, *args, **kwargs):
+        folder = Path(path)
+        if folder.name.startswith(_RUN_PREFIXES):
+            calls.append(folder)
+            if len(calls) > _SPIN_GUARD_CALLS:
+                raise _StillRetrying(f"os.mkdir asked {len(calls)} times")
+            error = refuse(folder) if refuse is not None else None
+            if error is not None:
+                raise error
+        return real_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(pe.os, "mkdir", mkdir)
+    return calls
+
+
+def _refused_in(*parents):
+    """A *refuse* for _counting_mkdir: Access denied (WinError 5, which
+    Python raises as PermissionError) for a folder in any of *parents*."""
+    refused = {pe.win_plain_path(p) for p in parents}
+
+    def refuse(folder):
+        if pe.win_plain_path(folder.parent) in refused:
+            return PermissionError(errno.EACCES, "Access is denied", str(folder))
+        return None
+
+    return refuse
+
+
+# Windows' own reason for a write-protected drive, WinError 19.
+_WRITE_PROTECTED = "The media is write protected"
+
+
+def _write_protected_in(*parents):
+    """A *refuse* for _counting_mkdir: a write-protected drive (WinError 19,
+    which Python also raises as PermissionError, although nothing was
+    refused) for a folder in any of *parents*."""
+    plain = {pe.win_plain_path(p) for p in parents}
+
+    def refuse(folder):
+        if pe.win_plain_path(folder.parent) in plain:
+            return OSError(None, _WRITE_PROTECTED, str(folder), 19)
+        return None
+
+    return refuse
 
 
 def _pad_to(base: Path, length: int) -> Path:
@@ -548,16 +631,20 @@ class TestExtractDataforgeWorkingFolder:
         assert not (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
         assert not Path(fake.calls[0][2]).exists()
 
-    def test_no_working_folder_means_no_tool_runs_and_the_cache_stays(self, setup, monkeypatch):
+    @pytest.mark.parametrize("error, raised_as", [
+        (PermissionError(errno.EACCES, "Access is denied"), pe.WorkingFolderRefusedError),
+        (FileNotFoundError(errno.ENOENT, "The system cannot find the path specified"),
+         FileNotFoundError),
+    ], ids=["refused", "drive gone"])
+    def test_no_working_folder_means_no_tool_runs_and_the_cache_stays(
+        self, setup, monkeypatch, error, raised_as
+    ):
         leaf, run = setup
-
-        def refuse(**kwargs):
-            raise PermissionError("access denied")
-
-        monkeypatch.setattr(pe.tempfile, "mkdtemp", refuse)
+        calls = _counting_mkdir(monkeypatch, lambda folder: error)
         fake = _FakeTools()
-        with pytest.raises(PermissionError):
+        with pytest.raises(raised_as):
             run(fake)
+        assert len(calls) == 1
         assert fake.calls == []
         assert (leaf / "old-cache-sentinel").exists()
 
@@ -591,21 +678,18 @@ class TestExtractDataforgeWorkingFolder:
     ):
         """Unlike the global.ini extraction, DataForge does not fall back to
         %TEMP%: its cache writes go to that same drive and would fail anyway,
-        after a minute of unforge."""
+        after a minute of unforge. A refusal there is the user's box (#490),
+        naming the folder."""
         leaf, run = setup
-        real_open = pe._open_scratch
-
-        def refuse_beside(parent, prefix):
-            if Path(parent) != systemp:
-                raise PermissionError("Controlled Folder Access")
-            return real_open(parent, prefix)
-
-        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
         fake = _FakeTools()
-        with pytest.raises(PermissionError):
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
             run(fake)
+        assert len(calls) == 1
+        assert raised.value.folder == str(leaf.parent)
         assert fake.calls == []
         assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
 
     def test_a_leftover_is_swept_and_a_live_run_is_not(self, setup):
         leaf, run = setup
@@ -760,27 +844,30 @@ class _FakeGlobalIniTool:
         return subprocess.CompletedProcess(args, 0, "", "")
 
 
+@pytest.fixture
+def env(root, monkeypatch):
+    """A global.ini extraction with a fake unp4k: the DataForge cache leaf it
+    works beside (not made), the base.ini it writes, the fake, and run()."""
+    tools = root / "tools"
+    tools.mkdir()
+    for name in ("unp4k.exe", "Data.p4k"):
+        (tools / name).write_bytes(b"x")
+    leaf = root / "SC" / "LIVE" / "cache" / "dataforge"
+    out = root / "data" / "LIVE" / "cache" / "base.ini"
+    fake = _FakeGlobalIniTool()
+    monkeypatch.setattr(pe, "_run_tool", fake)
+
+    def run(near=leaf):
+        return pe.extract_global_ini(tools / "Data.p4k", out, tools / "unp4k.exe",
+                                     scratch_near=near)
+
+    return leaf, out, fake, run
+
+
 class TestGlobalIniWorkingFolder:
     """The global.ini extraction works beside the DataForge cache too (#471),
     by the same rules, so nothing it extracts lands in %TEMP% unless a
     fallback applies."""
-
-    @pytest.fixture
-    def env(self, root, monkeypatch):
-        tools = root / "tools"
-        tools.mkdir()
-        for name in ("unp4k.exe", "Data.p4k"):
-            (tools / name).write_bytes(b"x")
-        leaf = root / "SC" / "LIVE" / "cache" / "dataforge"
-        out = root / "data" / "LIVE" / "cache" / "base.ini"
-        fake = _FakeGlobalIniTool()
-        monkeypatch.setattr(pe, "_run_tool", fake)
-
-        def run(near=leaf):
-            return pe.extract_global_ini(tools / "Data.p4k", out, tools / "unp4k.exe",
-                                         scratch_near=near)
-
-        return leaf, out, fake, run
 
     def test_it_works_beside_the_dataforge_cache_and_cleans_up(self, env, systemp):
         leaf, out, fake, run = env
@@ -807,16 +894,11 @@ class TestGlobalIniWorkingFolder:
         """It only ever needed %TEMP% before #471, so a folder beside the
         cache that cannot be made (permissions, Controlled Folder Access, a
         read-only drive) must not stop the base.ini refresh."""
-        _leaf, out, fake, run = env
-        real_open = pe._open_scratch
-
-        def refuse_beside(parent, prefix):
-            if Path(parent) != systemp:
-                raise PermissionError("Controlled Folder Access")
-            return real_open(parent, prefix)
-
-        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        leaf, out, fake, run = env
+        leaf.parent.mkdir(parents=True, exist_ok=True)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
         assert run() is True
+        assert [call.parent for call in calls] == [leaf.parent, systemp]
         run_dir = Path(fake.cwds[0])
         assert run_dir.parent == systemp
         assert run_dir.name.startswith(pe._GLOBAL_INI_TEMP_PREFIX)
@@ -924,14 +1006,8 @@ class TestGlobalIniWorkingFolder:
         the plain advice when it is short."""
         leaf, out, fake, run = env
         out.parent.mkdir(parents=True)
-        real_open = pe._open_scratch
-
-        def refuse_beside(parent, prefix):
-            if Path(parent) != systemp:
-                raise PermissionError("Controlled Folder Access")
-            return real_open(parent, prefix)
-
-        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        leaf.parent.mkdir(parents=True, exist_ok=True)
+        _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
         drive = _drive_letters(systemp)
         _volumes(monkeypatch, drive)
         _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else _PLENTY)
@@ -1859,3 +1935,445 @@ class TestFreeSpaceCheck:
         with pytest.raises(OSError) as raised:
             run(_FakeTools())
         assert raised.value.errno is None or raised.value.errno == errno.EACCES
+
+
+# ── a working folder Windows refuses (#490) ─────────────────────────────────
+
+def _refusal_text(folder, fix_key: str) -> str:
+    """The message a refusal in *folder* gives: the intro naming it, then
+    the advice *fix_key*."""
+    return pe.tr("extract.folder_refused", folder=str(folder)) + "\n\n" + pe.tr(fix_key)
+
+
+def _scripted_names(monkeypatch, *tokens: str) -> list[int]:
+    """Make secrets.token_hex return *tokens* in turn, the last one for
+    every call after them. Returns the byte counts it was asked for."""
+    sizes = []
+    queue = list(tokens)
+
+    def token_hex(nbytes):
+        sizes.append(nbytes)
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    monkeypatch.setattr(pe.secrets, "token_hex", token_hex)
+    return sizes
+
+
+# Other OSErrors making the folder, which keep the handling they had before
+# #490: a drive that is gone, and a path Windows cannot use (WinError 123,
+# which Python raises as a plain OSError with EINVAL). Each test makes its
+# own instance.
+_OTHER_FOLDER_ERRORS = [
+    pytest.param(lambda: FileNotFoundError(errno.ENOENT,
+                                           "The system cannot find the path specified"),
+                 id="drive gone"),
+    pytest.param(lambda: OSError(errno.EINVAL, "The filename, directory name, or volume label "
+                                               "syntax is incorrect"),
+                 id="bad path"),
+]
+
+
+def _failing_in(parent, error):
+    """A *refuse* for _counting_mkdir: *error* for a folder in *parent*."""
+    plain = pe.win_plain_path(parent)
+    return lambda folder: error if pe.win_plain_path(folder.parent) == plain else None
+
+
+class TestMakeRunFolder:
+    """One os.mkdir per random name: only a name that is taken is tried
+    again, and only a few times."""
+
+    def test_the_name_is_the_prefix_and_eight_random_hex_characters(self, root, monkeypatch):
+        sizes = _scripted_names(monkeypatch, "0123abcd")
+        folder = pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert folder == root / (pe.DATAFORGE_SCRATCH_PREFIX + "0123abcd")
+        assert folder.is_dir()
+        assert sizes == [pe._MKDTEMP_RANDOM_CHARS // 2]
+        assert len(folder.name) == len(pe.DATAFORGE_SCRATCH_PREFIX) + pe._MKDTEMP_RANDOM_CHARS
+
+    def test_a_refused_folder_fails_on_the_first_try(self, root, monkeypatch):
+        calls = _counting_mkdir(monkeypatch, _refused_in(root))
+        started = time.monotonic()
+        with pytest.raises(PermissionError) as raised:
+            pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert time.monotonic() - started < 1.0
+        assert len(calls) == 1 and calls[0].parent == root
+        assert raised.value.errno == errno.EACCES
+        assert _scratch_folders(root, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_a_name_that_is_taken_gets_a_new_name(self, root, monkeypatch):
+        """A clash with another run's folder moves on to a fresh name and
+        leaves that folder alone."""
+        taken = root / (pe.DATAFORGE_SCRATCH_PREFIX + "aaaaaaaa")
+        taken.mkdir()
+        (taken / "other-run").write_text("x")
+        _scripted_names(monkeypatch, "aaaaaaaa", "aaaaaaaa", "bbbbbbbb")
+        calls = _counting_mkdir(monkeypatch)
+        folder = pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert [c.name for c in calls] == [taken.name, taken.name,
+                                           pe.DATAFORGE_SCRATCH_PREFIX + "bbbbbbbb"]
+        assert folder == root / (pe.DATAFORGE_SCRATCH_PREFIX + "bbbbbbbb")
+        assert (taken / "other-run").read_text() == "x"
+
+    def test_a_refused_name_that_is_there_gets_a_new_name(self, root, monkeypatch):
+        """Windows can answer Access denied for a name that is there, such as
+        a folder it is still deleting. A refusal for a name that exists is a
+        clash, not a folder that refuses."""
+        pending = root / (pe.DATAFORGE_SCRATCH_PREFIX + "aaaaaaaa")
+        pending.mkdir()
+        _scripted_names(monkeypatch, "aaaaaaaa", "bbbbbbbb")
+        calls = _counting_mkdir(monkeypatch, lambda folder: (
+            PermissionError(errno.EACCES, "Access is denied", str(folder))
+            if folder == pending else None))
+        folder = pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert calls == [pending, folder]
+        assert folder.name == pe.DATAFORGE_SCRATCH_PREFIX + "bbbbbbbb"
+
+    def test_a_name_that_stays_taken_gives_up_after_a_few_tries(self, root, monkeypatch):
+        """The limit is a few names, never Python 3.11 tempfile's 2**31 - 1. Giving up
+        is a FileExistsError, an OSError, so callers handle it as they
+        handle any other folder that cannot be made."""
+        (root / (pe.DATAFORGE_SCRATCH_PREFIX + "aaaaaaaa")).mkdir()
+        _scripted_names(monkeypatch, "aaaaaaaa")
+        calls = _counting_mkdir(monkeypatch)
+        with pytest.raises(FileExistsError) as raised:
+            pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert len(calls) == pe._SCRATCH_NAME_ATTEMPTS
+        assert 1 < pe._SCRATCH_NAME_ATTEMPTS <= 20
+        assert raised.value.filename == str(root)
+
+
+class TestRefusedWorkingFolder:
+    """A refusal becomes one translated message that names the folder (#490):
+    for DataForge at once, for global.ini only when %TEMP% refuses too. Any
+    other OSError is handled as before."""
+
+    def test_a_refused_parent_of_the_cache_folder_is_the_same_box(
+        self, root, monkeypatch, systemp
+    ):
+        """_open_scratch makes the cache folder's own folder first when it is
+        missing. The app normally makes the cache folder before an
+        extraction, so this is rare, but Windows refusing it is the same box
+        as a refused working folder, not a raw error."""
+        tools = root / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        new = root / "new"
+        leaf = new / "cache" / "dataforge"
+        real_mkdir = os.mkdir
+
+        def mkdir(path, *args, **kwargs):
+            if pe.win_plain_path(str(path)) == pe.win_plain_path(str(new)):
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_mkdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(pe.os, "mkdir", mkdir)
+        calls = _counting_mkdir(monkeypatch)   # counts run folders, then calls the fake above
+        fake = _FakeTools()
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe",
+                                 leaf)
+        assert raised.value.folder == str(leaf.parent)
+        assert isinstance(raised.value.__cause__, PermissionError)
+        assert calls == []   # refused before any run folder was asked for
+        assert fake.calls == []
+        assert not new.exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_fails_on_the_first_try_and_names_the_folder(
+        self, setup, monkeypatch, systemp, caplog, english_ui
+    ):
+        """Before #490, tempfile.mkdtemp took each refusal for a name that
+        might be taken and tried the next, so on Python 3.11 this run
+        looked stuck for about 39 hours (the spin guard stops it here)."""
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        fake = _FakeTools()
+        started = time.monotonic()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run(fake)
+        assert time.monotonic() - started < 5
+        assert len(calls) == 1 and calls[0].parent == leaf.parent
+        message = str(raised.value)
+        assert message == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert message.startswith("Windows denied Smart Citizen permission to create a working "
+                                  f"folder in:\n{leaf.parent}\n\n")
+        assert "Controlled folder access" in message
+        assert "choose another DataForge cache folder in the Config tab" in message
+        assert raised.value.folder == str(leaf.parent)
+        assert isinstance(raised.value.__cause__, PermissionError)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{raised.value.__cause__}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_working_in_temp_gets_the_advice_for_temp(
+        self, setup, monkeypatch, systemp, english_ui
+    ):
+        """A OneDrive cache sends the work to %TEMP%. Choosing another cache
+        folder is not the advice there, since it would not always help."""
+        _leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch, _refused_in(systemp))
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run(_FakeTools())
+        assert len(calls) == 1
+        assert raised.value.folder == str(systemp)
+        assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
+        assert "Config tab" not in str(raised.value)
+
+    def test_a_marker_refused_in_the_new_folder_is_a_refusal_too(self, setup, monkeypatch):
+        """A folder can allow new folders and refuse new files. The marker is
+        the run's first file, and its folder is removed again."""
+        leaf, run = setup
+
+        def refuse(*args, **kwargs):
+            raise PermissionError(errno.EACCES, "Access is denied")
+
+        # A module-level open shadows the builtin inside pak_extractor only.
+        monkeypatch.setattr(pe, "open", refuse, raising=False)
+        fake = _FakeTools()
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run(fake)
+        assert raised.value.folder == str(leaf.parent)
+        assert fake.calls == []
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_global_ini_moves_to_temp_when_the_folder_beside_the_cache_refuses(
+        self, env, systemp, monkeypatch, caplog
+    ):
+        """#471's fallback still comes first, now on the first refusal: one
+        try beside the cache, an INFO line, and the run in %TEMP%."""
+        leaf, out, fake, run = env
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run() is True
+        assert [c.parent for c in calls] == [leaf.parent, systemp]
+        assert Path(fake.cwds[0]).parent == systemp
+        assert out.read_text(encoding="utf-8") == "lang=english\n"
+        moves = [r.getMessage() for r in caplog.records if "; working in " in r.getMessage()]
+        assert len(moves) == 1
+        assert moves[0].startswith(f"Could not work in {leaf.parent} (")
+        assert "Access is denied" in moves[0] and moves[0].endswith(f"working in {systemp}")
+        assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
+
+    def test_global_ini_shows_the_message_only_when_temp_refuses_too(
+        self, env, systemp, monkeypatch, caplog, english_ui
+    ):
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        out.write_text("old=1\n", encoding="utf-8")
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent, systemp))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run()
+        assert [c.parent for c in calls] == [leaf.parent, systemp]
+        assert raised.value.folder == str(systemp)
+        assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
+        assert any(f"Could not work in {leaf.parent}" in r.getMessage()
+                   and r.levelno == logging.INFO for r in caplog.records)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1 and warnings[0].startswith(
+            f"Windows refused an extraction working folder in {systemp}: ")
+        assert fake.cwds == []
+        assert out.read_text(encoding="utf-8") == "old=1\n"
+
+    def test_global_ini_without_a_cache_folder_shows_the_message_when_temp_refuses(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        _leaf, _out, fake, run = env
+        calls = _counting_mkdir(monkeypatch, _refused_in(systemp))
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run(near=None)
+        assert len(calls) == 1
+        assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
+        assert fake.cwds == []
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_fails_dataforge_as_before(self, setup, monkeypatch, make_error):
+        leaf, run = setup
+        error = make_error()
+        calls = _counting_mkdir(monkeypatch, _failing_in(leaf.parent, error))
+        fake = _FakeTools()
+        with pytest.raises(OSError) as raised:
+            run(fake)
+        assert raised.value is error
+        assert len(calls) == 1
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_beside_the_cache_moves_global_ini_as_before(
+        self, env, systemp, monkeypatch, make_error
+    ):
+        leaf, _out, fake, run = env
+        _counting_mkdir(monkeypatch, _failing_in(leaf.parent, make_error()))
+        assert run() is True
+        assert Path(fake.cwds[0]).parent == systemp
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_in_temp_fails_global_ini_as_before(
+        self, env, systemp, monkeypatch, make_error
+    ):
+        _leaf, _out, fake, run = env
+        error = make_error()
+        _counting_mkdir(monkeypatch, _failing_in(systemp, error))
+        with pytest.raises(OSError) as raised:
+            run(near=None)
+        assert raised.value is error
+        assert fake.cwds == []
+
+    def test_a_refusal_is_an_anticipated_runtimeerror(self):
+        assert issubclass(pe.WorkingFolderRefusedError, RuntimeError)
+        assert not issubclass(pe.WorkingFolderRefusedError, (OSError, pe.ExtractionCancelled))
+        assert pe.WorkingFolderRefusedError in pe.ANTICIPATED_EXTRACTION_ERRORS
+
+    def test_a_write_protected_drive_gives_windows_own_reason(
+        self, setup, monkeypatch, systemp, caplog, english_ui
+    ):
+        """Python raises a write-protected drive (WinError 19) as a
+        PermissionError too, but nothing was refused, so the message gives
+        Windows' own reason and no advice about permissions, still on the
+        first try and with the old cache kept."""
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch, _write_protected_in(leaf.parent))
+        fake = _FakeTools()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run(fake)
+        assert len(calls) == 1 and calls[0].parent == leaf.parent
+        cause = raised.value.__cause__
+        assert isinstance(cause, PermissionError) and cause.winerror == 19
+        assert str(raised.value) == ("Smart Citizen could not use a working folder in:\n"
+                                     f"{leaf.parent}\n\n{_WRITE_PROTECTED}\n\n"
+                                     "The extraction did not start, so nothing was changed.")
+        assert raised.value.folder == str(leaf.parent)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{cause}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_global_ini_moves_off_a_write_protected_drive_and_names_temp_if_it_fails_too(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        """global.ini moves to %TEMP% first, as for a refusal, and gives
+        Windows' reason naming %TEMP% only when %TEMP% fails too."""
+        leaf, _out, fake, run = env
+        calls = _counting_mkdir(monkeypatch, _write_protected_in(leaf.parent, systemp))
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run()
+        assert [c.parent for c in calls] == [leaf.parent, systemp]
+        assert raised.value.folder == str(systemp)
+        assert str(raised.value) == pe.tr("extract.folder_unusable", folder=str(systemp),
+                                          reason=_WRITE_PROTECTED)
+        assert fake.cwds == []
+
+    @pytest.mark.parametrize("winerror, refused", [
+        (5, True),     # ERROR_ACCESS_DENIED: a folder's permissions, Controlled Folder Access
+        (65, True),    # ERROR_NETWORK_ACCESS_DENIED: a share
+        (19, False),   # ERROR_WRITE_PROTECT
+        (21, False),   # ERROR_NOT_READY: a drive with no media in it
+        (23, False),   # ERROR_CRC: a failing drive
+        (29, False),   # ERROR_WRITE_FAULT
+        (32, False),   # ERROR_SHARING_VIOLATION: a file another program holds
+        (33, False),   # ERROR_LOCK_VIOLATION
+    ])
+    def test_only_a_denied_permission_is_a_refusal(self, winerror, refused):
+        error = OSError(None, "x", None, winerror)
+        assert isinstance(error, PermissionError)   # how Python raises all of these
+        assert pe.windows_refused(error) is refused
+
+    def test_a_permission_error_with_no_windows_code_is_a_refusal_and_no_other_error_is(self):
+        assert pe.windows_refused(PermissionError(errno.EACCES, "Access is denied"))
+        assert not pe.windows_refused(FileNotFoundError(errno.ENOENT, "gone"))
+        assert not pe.windows_refused(OSError(None, "There is not enough space on the disk.",
+                                              None, 112))
+
+    def test_windows_reason_is_the_errors_own_text(self):
+        assert pe.windows_reason(OSError(None, _WRITE_PROTECTED, "Z:\\x", 19)) == _WRITE_PROTECTED
+        bare = PermissionError("no strerror")
+        assert bare.strerror is None and pe.windows_reason(bare) == "no strerror"
+
+
+def _icacls(*args: str) -> subprocess.CompletedProcess:
+    """Run Windows' own icacls (from System32, never from PATH). It writes to
+    a pipe in the OEM code page, not the ANSI one ``text=True`` would read,
+    so a folder name or a translated message with a letter only the OEM page
+    has would fail to decode."""
+    system_root = os.environ.get("SystemRoot", r"C:\Windows")
+    icacls = Path(system_root) / "System32" / "icacls.exe"
+    return subprocess.run([str(icacls), *args], capture_output=True, encoding="oem",
+                          errors="replace", timeout=30)
+
+
+@contextlib.contextmanager
+def _new_folders_denied(*folders: Path):
+    """Deny Everyone the right to add a subfolder (AD) in each of *folders*
+    for the block: what Windows answers when a folder's permissions refuse
+    Smart Citizen. The deny is removed in a finally, so pytest can clean up,
+    and skips the test when icacls cannot set it."""
+    denied = []
+    try:
+        for folder in folders:
+            result = _icacls(str(folder), "/deny", f"{_EVERYONE_SID}:(AD)")
+            if result.returncode != 0:
+                pytest.skip(f"icacls could not deny new folders here: "
+                            f"{result.stdout}{result.stderr}")
+            denied.append(folder)
+        yield
+    finally:
+        failed = [(folder, result.stdout + result.stderr) for folder, result in
+                  ((folder, _icacls(str(folder), "/remove:d", _EVERYONE_SID)) for folder in denied)
+                  if result.returncode != 0]
+    assert failed == [], failed
+
+
+class TestRealRefusal:
+    """The same against folders that really refuse new folders, through an
+    access control list, as a folder whose permissions deny Smart Citizen
+    does. Controlled Folder Access itself cannot be turned on from a test."""
+
+    def test_dataforge_fails_at_once_and_runs_once_the_folder_allows_it(
+        self, setup, monkeypatch, systemp
+    ):
+        leaf, run = setup
+        with monkeypatch.context() as patched:
+            calls = _counting_mkdir(patched)
+            with _new_folders_denied(leaf.parent):
+                with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                    run(_FakeTools())
+        assert len(calls) == 1 and calls[0].parent == leaf.parent
+        assert raised.value.folder == str(leaf.parent)
+        assert getattr(raised.value.__cause__, "winerror", None) == 5   # ERROR_ACCESS_DENIED
+        assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
+
+        assert run(_FakeTools()) is True
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_global_ini_moves_to_temp_and_stops_when_temp_refuses_too(
+        self, env, systemp, monkeypatch
+    ):
+        leaf, out, fake, run = env
+        leaf.parent.mkdir(parents=True)
+        with monkeypatch.context() as patched:
+            calls = _counting_mkdir(patched)
+            with _new_folders_denied(leaf.parent):
+                assert run() is True
+                assert Path(fake.cwds[-1]).parent == systemp
+                with _new_folders_denied(systemp):
+                    with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                        run()
+        assert [c.parent for c in calls] == [leaf.parent, systemp] * 2
+        assert raised.value.folder == str(systemp)
+        assert len(fake.cwds) == 1
+        assert out.read_text(encoding="utf-8") == "lang=english\n"

@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şu konumda bir çalışma klasörü oluşturma iznini reddetti:\n{folder}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Bu klasörün izinlerini kontrol edin, Windows Güvenliği'nde Denetimli klasör erişimi aracılığıyla Smart Citizen'a izin verin veya Yapılandırma sekmesinden başka bir DataForge önbellek klasörü seçin, ardından yeniden deneyin."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Bu klasörün izinlerini kontrol edin veya Windows Güvenliği'nde Denetimli klasör erişimi aracılığıyla Smart Citizen'a izin verin, ardından yeniden deneyin."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen şu konumda bir çalışma klasörü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
     }
   },
   "apply": {

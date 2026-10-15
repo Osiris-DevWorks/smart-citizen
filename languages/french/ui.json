@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} Mo"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows a refusé à Smart Citizen l'autorisation de créer un dossier de travail dans :\n{folder}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Vérifiez les autorisations de ce dossier, autorisez Smart Citizen via l'Accès contrôlé aux dossiers dans Sécurité Windows, ou choisissez un autre dossier du cache DataForge dans l'onglet Paramètres, puis réessayez."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Vérifiez les autorisations de ce dossier, ou autorisez Smart Citizen via l'Accès contrôlé aux dossiers dans Sécurité Windows, puis réessayez."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu utiliser un dossier de travail dans :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
     }
   },
   "apply": {

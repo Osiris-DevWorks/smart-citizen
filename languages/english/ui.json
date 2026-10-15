@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "{mb} MB",
       "at": ""
+    },
+    "folder_refused": {
+      "ht": "Windows denied Smart Citizen permission to create a working folder in:\n{folder}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "folder_refused_fix_cache": {
+      "ht": "Check the permissions on that folder, allow Smart Citizen through Controlled folder access in Windows Security, or choose another DataForge cache folder in the Config tab, then try again.",
+      "at": ""
+    },
+    "folder_refused_fix": {
+      "ht": "Check the permissions on that folder, or allow Smart Citizen through Controlled folder access in Windows Security, then try again.",
+      "at": ""
+    },
+    "folder_unusable": {
+      "ht": "Smart Citizen could not use a working folder in:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
     }
   },
   "apply": {

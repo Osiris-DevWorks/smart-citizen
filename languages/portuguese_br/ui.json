@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "O Windows negou ao Smart Citizen a permissão para criar uma pasta de trabalho em:\n{folder}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Verifique as permissões dessa pasta, permita o Smart Citizen pelo Acesso controlado a pastas na Segurança do Windows ou escolha outra pasta cache do DataForge na aba Config e tente novamente."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Verifique as permissões dessa pasta ou permita o Smart Citizen pelo Acesso controlado a pastas na Segurança do Windows e tente novamente."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu usar uma pasta de trabalho em:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
     }
   },
   "apply": {

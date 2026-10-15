@@ -6004,8 +6004,9 @@ class MainWindow(QMainWindow):
         # WARNING, not ERROR (#482). The worker already logged an unexpected
         # failure at ERROR, which opens the global error dialog, and an
         # anticipated one (a locked Data.p4k, an unforge timeout, a full
-        # drive) carries its own message, shown in the box below. ERROR here
-        # opened a second box, or a stray "(+1 suppressed)".
+        # drive, a refused working folder) carries its own message, shown in
+        # the box below. ERROR here opened a second box, or a stray
+        # "(+1 suppressed)".
         logger.warning(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
         self._end_simple_run()

@@ -64,6 +64,61 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
+  whose working folder Windows refuses, with a message, instead of retrying
+  for hours. Three new keys after `extract.size_mb`:
+  `extract.folder_refused` (Windows denied Smart Citizen permission to
+  create a working folder in `{folder}`, which stands on a line of its own,
+  and nothing was changed), `extract.folder_refused_fix_cache` (check that
+  folder's permissions, allow Smart Citizen through Controlled folder
+  access in Windows Security, or choose another DataForge cache folder in
+  the Config tab, then try again) and `extract.folder_refused_fix` (the
+  same without the cache folder, for `%TEMP%`). In all 10 languages,
+  `at`-only (`ht` empty), in each file's own register (as its #482 strings:
+  du in german, tu in italian and spanish, vous in french, the polite forms
+  elsewhere) and its own names for the Config tab (`tabs.config`), the
+  DataForge cache folder and the extraction. Windows Security, Controlled
+  folder access and a folder's permissions use Microsoft's names in each
+  language, so the user can find them in Windows: french Sécurité Windows,
+  Accès contrôlé aux dossiers, autorisations; german Windows-Sicherheit,
+  überwachter Ordnerzugriff, Berechtigungen (the older AI text in
+  `apply.cannot_save_edits_body` says Ordnerzugriffssteuerung and was left
+  as it is); italian Sicurezza di Windows, accesso controllato alle
+  cartelle, autorizzazioni; spanish Seguridad de Windows, acceso controlado
+  a carpetas, permisos; portuguese_br Segurança do Windows, Acesso
+  controlado a pastas, permissões; turkish Windows Güvenliği, Denetimli
+  klasör erişimi, izinler; japanese Windows セキュリティ, アクセス許可;
+  korean Windows 보안, 제어된 폴더 액세스, 권한; chinese Windows 安全中心,
+  权限. japanese コントロールされたフォルダーアクセス and chinese
+  受控文件夹访问 are spelt as in each file's `apply.cannot_save_edits_body`.
+  chinese_traditional was converted from the chinese strings with OpenCC
+  `s2twp`, as in #403 and #482, then given Taiwan's terms by hand:
+  Windows 安全性, 受控資料夾存取 and 權限 (OpenCC gives 安全中心, 受控資料夾訪問
+  and 許可權). The italian and chinese_traditional names for Controlled
+  folder access follow Microsoft's documentation and were not checked
+  against a Windows in that language. Each string was back-translated and
+  compared with the English in the same pass, not by a separate checker: no
+  meaning errors, and the Korean sentence-spacing rule holds. No human
+  string changed. `tests/test_folder_refused_strings.py` checks every
+  language's placeholders and this `ht`/`at` split.
+  The same change adds an "Extraction says Windows denied permission to
+  create a working folder" bullet to the Troubleshooting section of
+  `docs/HELP.md` and the 10 translated `HELP.md` files, after the
+  not-enough-free-space one, worded from each language's own
+  `extract.folder_refused*` strings and its `HELP.md`'s own names for the
+  Config tab and the DataForge cache folder, and back-translated in the
+  same pass.
+  A fourth key followed on 2026-10-16, after `extract.folder_refused_fix`:
+  `extract.folder_unusable` (Smart Citizen could not use a working folder in
+  `{folder}`, then Windows' own reason as `{reason}`, each on a line of its
+  own, and nothing was changed), for a drive Windows will not write to
+  (write-protected, failing, or a file in the way held by another program),
+  which is not a matter of permissions. `{reason}` is Windows' own text,
+  already in the user's Windows language, and is never translated. In all
+  10 languages, `at`-only (`ht` empty), with each file's own words for a
+  working folder from its `extract.folder_refused` and its closing sentence
+  from the same string, back-translated in the same pass. No human string
+  changed, and no `HELP.md` change: the message carries its own reason.
 - **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #482 checks free space
   before a P4K extraction. Ten new keys: the not-enough-space messages
   `extract.no_space_dataforge`, `no_space_global_ini`, `no_space_drive`,

@@ -2843,6 +2843,22 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare una cartella di lavoro in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Controlla le autorizzazioni di quella cartella, consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows oppure scegli un'altra cartella cache DataForge nella scheda Config, poi riprova."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Controlla le autorizzazioni di quella cartella oppure consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows, poi riprova."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare una cartella di lavoro in:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
     }
   },
   "apply": {
