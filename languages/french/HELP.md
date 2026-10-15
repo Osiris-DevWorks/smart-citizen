@@ -162,6 +162,21 @@ Suivez les plans de fabrication que vous possédez déjà, et retrouvez cette in
 - **Appliquer les étiquettes [Owned]** retisse les balises `[Owned]` dans vos textes chargés après un changement de collection. Comme les autres boutons d'action, il passe au **rouge** quand votre collection contient des changements que le tableau n'a pas encore intégrés, et au **vert** une fois tout synchronisé.
 - La colonne **Possédé** du tableau de textes affiche toujours une étoile et trie les possédés en premier, mais elle est désormais en lecture seule ; la collection se gère depuis cet onglet.
 
+## Onglet Superposition
+
+La **Superposition Smart Citizen** affiche deux petites fenêtres par-dessus Star Citizen : un décodeur de scan minier et un tiroir de recherches. Démarrez-la et arrêtez-la avec **Démarrer la superposition** dans cet onglet ou avec le bouton **Overlay** de la barre d'outils. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal, sinon la superposition ne peut pas s'afficher par-dessus. La superposition se contente de lire votre écran et `Game.log` ; elle ne touche jamais au jeu lui-même.
+
+- **Décodeur de scan minier** : lit la signature de scan sous votre radar et affiche juste en dessous le type et le nombre de gisements (par exemple `3 × Lindinium`). L'étiquette ne change qu'une fois le même nombre lu deux fois de suite, pour qu'une erreur de lecture sur une seule image ne la fasse pas clignoter.
+- **Tiroir de la surcouche** : place des sections à onglets au bord de l'écran. Cliquez sur un onglet pour ouvrir sa section, cliquez de nouveau pour la fermer. **Position du tiroir** propose huit emplacements (au milieu à droite par défaut).
+  - **Plans** : cherchez des plans, voyez quelles missions les donnent, et cochez ceux que vous possédez (la même collection que dans l'onglet Suivi des plans).
+  - **Minéraux** : tapez un minéral pour voir où le trouver, regroupé par système stellaire, ou un lieu pour voir ses minéraux. Cochez un minéral pour le surveiller : l'étiquette du scan brille quand un scan le détecte. Le décodeur peut aussi être activé ou désactivé ici.
+  - **Fabrication** : tapez un minéral pour voir les composants qui l'utilisent, ou un composant pour voir les minéraux qu'il demande. Se remplit quand vous générez les enrichissements avec **Commodities** ou **Journal** coché.
+  - Chaque section a son propre interrupteur ; désactiver le tiroir les masque toutes.
+- **Marquer les nouveaux plans comme possédés** : surveille `Game.log` pendant que la superposition tourne et marque comme possédés les plans que vous recevez. Comme la recherche dans les journaux, elle ne lit que LIVE et HOTFIX : avec PTU, EPTU ou TECH-PREVIEW sélectionné dans l'onglet Paramètres, elle reste désactivée.
+- **Enregistrer des échantillons de scan** : conserve dans `logs\sco_samples` une petite image de chaque nouvelle signature lue, pour que les erreurs de lecture puissent nous être envoyées. **Ouvrir le dossier des échantillons** ouvre ce dossier. Activé par défaut ; rien n'est mis en ligne. 200 images au maximum sont conservées par session, et le dossier ne garde que les 1000 plus récentes.
+
+Si le décodeur de scan rencontre une erreur, il s'arrête et la barre d'état l'indique. Arrêtez puis redémarrez la superposition pour réessayer ; l'onglet Journal donne les détails. La visite guidée (bouton **Tutoriel**) comporte une étape consacrée à cet onglet.
+
 ## Onglet Paramètres
 
 - **Apparence** : choisissez le thème de l'application (voir plus bas).

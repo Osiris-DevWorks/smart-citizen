@@ -40,6 +40,7 @@ Her şey. Yerelleştirme düzenlemeleriniz, yedekleriniz, uygulama ayarlarınız
 - **Kullanıcı düzenlemeleri + yedekler** — Varsayılan olarak `Documents\Smart Citizen\{channel}\` (Yapılandırma sekmesinden yapılandırılabilir; taşınabilir sürüm bunun yerine `<exe-dir>\data\` kullanır).
 - **DataForge XML önbelleği** — `%LOCALAPPDATA%\Smart Citizen\{channel}\cache\dataforge\`.
 - **Çökme dökümleri + elle yapılan günlük dışa aktarımları** — `Documents\Smart Citizen\logs\` (veya taşınabilir sürümdeki karşılığı); yalnızca uygulama çöktüğünde veya Günlük sekmesinde *Dosyaya aktar…* düğmesine tıkladığınızda yazılır.
+- **Katman tarama örnekleri** — `Documents\Smart Citizen\logs\sco_samples\` (veya taşınabilir sürümdeki karşılığı). Smart Citizen Katmanı, maden tarama çözücüsü açık olarak çalışırken okuduğu her yeni imzanın küçük bir resmini kaydeder (sayı ve çevresindeki birkaç piksel; oturum başına en fazla 200; klasör yalnızca en yeni 1000 resmi tutar); böylece yanlış okumalar bildirilip düzeltilebilir. Varsayılan olarak açıktır; durdurmak için Katman sekmesindeki **Tarama örneklerini kaydet** seçeneğini kapatın. Hiçbir şey yüklenmez: isterseniz bir resmi kendiniz gönderirsiniz.
 
 ### Ağ üzerinden gidenler
 

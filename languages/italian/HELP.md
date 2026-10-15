@@ -160,6 +160,21 @@ Tieni traccia dei blueprint di crafting che possiedi già, e vedi il riscontro i
 - **Applica Tag Posseduti** reintegra i tag `[Owned]` nei tuoi testi caricati dopo che hai modificato la collezione posseduta. Come gli altri pulsanti di azione, diventa **rosso** quando la tua lista posseduti ha modifiche che la tabella non ha ancora recepito, e **verde** quando tutto corrisponde.
 - La colonna **Owned** della tabella dei testi mostra ancora una stella e ordina prima i posseduti, ma ora è di sola lettura; il possesso si gestisce da questa scheda.
 
+## Scheda Overlay
+
+Lo **Smart Citizen Overlay** disegna due piccole finestre sopra Star Citizen: un decodificatore delle scansioni minerarie e un cassetto di ricerche. Avvialo e fermalo con **Avvia overlay** in questa scheda o con il pulsante **Overlay** della barra degli strumenti. Esegui il gioco in modalità finestra senza bordi sullo schermo principale, altrimenti l'overlay non può comparire sopra di esso. L'overlay legge solo il tuo schermo e `Game.log`; non tocca mai il gioco in sé.
+
+- **Decodificatore scansioni minerarie** legge la firma di scansione sotto il tuo radar e mostra subito sotto il tipo di giacimento e la quantità (per esempio `3 × Lindinium`). L'etichetta cambia solo dopo che lo stesso numero è stato letto due volte di fila, così una lettura errata di un singolo fotogramma non la fa lampeggiare.
+- **Cassetto dell'overlay** colloca delle sezioni a schede sul bordo dello schermo. Clicca su una scheda per aprirne la sezione, cliccaci di nuovo per chiuderla. **Posizione del cassetto** sceglie uno di otto punti (al centro a destra per impostazione predefinita).
+  - **Progetti**: cerca i blueprint, vedi quali missioni li danno come ricompensa e spunta quelli che possiedi (la stessa lista dei posseduti della scheda Tracker Blueprint).
+  - **Minerali**: digita un minerale per vedere dove si trova, raggruppato per sistema stellare, oppure una località per vederne i minerali. Spunta un minerale per tenerlo d'occhio: l'etichetta della scansione si illumina quando una scansione lo trova. Da qui puoi anche attivare e disattivare il decodificatore.
+  - **Fabbricazione**: digita un minerale per vedere quali componenti lo usano, oppure un componente per vedere i minerali di cui ha bisogno. Si riempie quando generi i miglioramenti con **Commodities** o **Journal** spuntato.
+  - Ogni sezione ha il proprio interruttore; disattivando il cassetto le nascondi tutte.
+- **Segna i nuovi progetti come posseduti** osserva `Game.log` mentre l'overlay è in esecuzione e contrassegna come posseduti i blueprint che ricevi. Come la scansione dei log, legge solo LIVE e HOTFIX: con PTU, EPTU o TECH-PREVIEW selezionato nella scheda Config, resta disattivato.
+- **Salva campioni di scansione** conserva in `logs\sco_samples` una piccola immagine di ogni nuova firma letta, così le letture errate possono essere segnalate. **Apri cartella campioni** apre quella cartella. Attivo per impostazione predefinita; non viene caricato nulla. Vengono conservate al massimo 200 immagini per sessione, e la cartella tiene solo le 1000 più recenti.
+
+Se il decodificatore delle scansioni incontra un errore si ferma, e la barra di stato lo segnala. Ferma e riavvia l'overlay per riprovare; la scheda Log riporta i dettagli. Il tour guidato (pulsante **Tutorial**) include un passaggio dedicato a questa scheda.
+
 ## Scheda Configurazione
 
 - **Aspetto** — scegli il tema dell'app (vedi sotto).
