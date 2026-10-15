@@ -209,6 +209,40 @@ class TestCraftingCostItemPickup:
         assert index["hadanite"]["names"] == ["Hadanite"]
         assert [item for _cat, item in index["hadanite"]["items"]] == ["Test Helmet"]
 
+    def test_crafting_index_names_follow_the_selected_language(self, gen_module, tmp_path):
+        """The SCO index keeps the selected language's material names (ctx
+        "loc"), not the English annotation loc ("tag_loc"): a German player
+        sees German names in the drawer's Crafting search, and a mineral
+        still finds them through the English key."""
+        hadanite_uuid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        item_uuid = "ffff0000-0000-0000-0000-000000000000"
+        records = tmp_path / "records"
+        scitem_dir = records / "entities" / "scitem"
+        (scitem_dir / "carryables").mkdir(parents=True)
+        (scitem_dir / "carryables" / "harvestable_mineral_1h_hadanite.xml").write_text(
+            f'<Entity __ref="{hadanite_uuid}"/>', encoding="utf-8")
+        bp_dir = records / "crafting" / "blueprints" / "crafting" / "armour"
+        bp_dir.mkdir(parents=True)
+        (bp_dir / "bp_craft_test_helmet.xml").write_text(
+            f'<CraftingBlueprintRecord>'
+            f'<CraftingProcess_Creation entityClass="{item_uuid}"/>'
+            f'<CraftingCost_Item entityClass="{hadanite_uuid}" quantity="7"/>'
+            f'</CraftingBlueprintRecord>',
+            encoding="utf-8")
+        ctx = {
+            "records": records,
+            "scitem_dir": scitem_dir,
+            "entity_names": {item_uuid: "Test Helmet"},
+            "loc": {"items_commodities_hadanite": "Hadanit",
+                    "items_commodities_hadanite_desc": "Ein Kristalloszillator."},
+            "tag_loc": {"items_commodities_hadanite": "Hadanite",
+                        "items_commodities_hadanite_desc": "A crystal oscillator."},
+            "tag_configs": {"commodities": _enabled_commodities_config()},
+            "crafting_index": {},
+        }
+        gen_module._run_gen_commodity_journal(ctx)
+        assert ctx["crafting_index"]["hadanite"]["names"] == ["Hadanit"]
+
 
 class TestScanCraftingBlueprintsReturnShape:
     def test_missing_directory_returns_two_empty_dicts(self, gen_module, tmp_path):

@@ -6881,10 +6881,12 @@ class MainWindow(QMainWindow):
         """Feed the drawer's Minerals and Crafting searches.
 
         The compendium comes from the English base.ini: its location names
-        are what the star-system lookup knows, and the crafting index is
-        generated from English names too (the stat-block rule). The index is
-        the selected language's, falling back to English. Both files are
-        re-read only when one of them changed since the last feed.
+        are what the star-system lookup knows. The crafting index is the
+        selected language's, falling back to English: its material names are
+        that language's (the generator fills them from the selected loc), and
+        a compendium mineral still finds its material through the English
+        internal key (CraftingIndex.material_key_for). Both files are re-read
+        only when one of them changed since the last feed.
         """
         from src.utils.mining_catalog import (
             CRAFTING_INDEX_FILE, load_crafting_index, read_compendium,
