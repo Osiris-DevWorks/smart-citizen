@@ -171,7 +171,9 @@ The **Smart Citizen Overlay** draws two small windows over Star Citizen: a minin
   - **Crafting**: type a mineral to see which components use it, or a component to see the minerals it needs. Filled when you generate enhancements with **Commodities** or **Journal** ticked.
   - Each section has its own switch; turning the drawer off hides all of them.
 - **Mark new blueprints as owned** watches `Game.log` while the overlay runs and marks blueprints you receive owned. Like Scan Logs, it only reads LIVE and HOTFIX: with PTU, EPTU or TECH-PREVIEW selected on the Config tab, it stays off.
-- **Save scan samples** keeps a small picture of each new signature read in `logs\sco_samples` so misreads can be sent in. **Open Samples Folder** opens it. On by default; nothing is uploaded.
+- **Save scan samples** keeps a small picture of each new signature read in `logs\sco_samples` so misreads can be sent in. **Open Samples Folder** opens it. On by default; nothing is uploaded. At most 200 pictures are kept per session, and the folder keeps only the newest 1000.
+
+If the scan decoder hits an error it stops, and the status bar says so. Stop and start the overlay to try again; the Log tab has the details. The guided tour (**Tutorial** button) has a step for this tab.
 
 ## Config Tab
 
