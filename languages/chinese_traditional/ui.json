@@ -612,7 +612,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "存放 user.ini、源快取、增強內容 INI 及備份的資料夾。如果清理快取失敗，請將其移出 OneDrive 同步的“文件”資料夾。DataForge XML 快取有獨立的路徑設定見下方——它約 1.4 GB，預設路徑會自動讓它避開 OneDrive。"
+      "at": "存放 user.ini、源快取、增強內容 INI 及備份的資料夾。如果清理快取失敗，請將其移出 OneDrive 同步的“文件”資料夾。DataForge XML 快取有獨立的路徑設定見下方——它約 1.2 GB，預設路徑會自動讓它避開 OneDrive。"
     },
     "app_data_label": {
       "ht": "",
@@ -804,7 +804,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.4 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
+      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.2 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。提取執行期間，此驅動器最多需要約 4.5 GB 可用空間，如果已有快取則需要更少。當此資料夾位於 OneDrive、網路驅動器或卸除式驅動器上，或巢狀層級很深時，其工作檔案會改為放在 %TEMP% 中。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2361,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "正在恢復 user.ini 後重新載入 {channel}..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "正在使用提取的 base.ini 重新載入..."
     }
   },
   "status_bar": {
@@ -2803,6 +2807,58 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "遊戲資料庫轉換超過 30 分鐘已被中止。\n\n找到的資料庫：{dcb}（{size} MB），位於：\n{path}\n\n正常安裝的轉換用時遠少於一分鐘。這通常表示 Smart Citizen 讀取了錯誤的星際公民資料夾。驅動器上殘留的舊安裝看起來有效，但包含過時的遊戲檔案。\n\n請開啟 RSI Launcher 檢視其顯示的安裝位置。如果與上面的路徑不同，請在 Smart Citizen 的 Config 標籤頁中更正。如果路徑相同，請改為在啟動器中執行 Verify Files。"
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "可用空間不足。未儲存任何內容，你當前的 DataForge 快取也未被更改。"
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "可用空間不足，無法從 Data.p4k 提取 global.ini。未做任何更改。"
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "驅動器 {drive} 的可用空間為 {free}，而提取執行期間需要在該驅動器上使用約 {needed}。"
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "請釋放驅動器 {drive} 上的空間，或在配置標籤頁中選擇其他驅動器上的 DataForge 快取資料夾，然後重試。"
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "由於 DataForge 快取資料夾位於 OneDrive、網路驅動器或卸除式驅動器上，或巢狀層級很深，提取會在你的 Windows 暫存資料夾（{folder}）中進行。請釋放驅動器 {drive} 上的空間，然後重試。"
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "請釋放驅動器 {drive} 上的空間，然後重試。"
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "驅動器 {drive} 在儲存新的 DataForge 快取時空間已用盡，儲存位置：\n{folder}\n\n該快取不完整。請釋放驅動器 {drive} 上的空間，然後重新提取以重建快取。"
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows 拒絕了 Smart Citizen 在以下位置建立工作資料夾的權限：\n{folder}\n\n提取未開始，因此未做任何更改。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "請檢查該資料夾的權限，透過 Windows 安全性的受控資料夾存取允許 Smart Citizen，或在配置標籤頁中選擇其他 DataForge 快取資料夾，然後重試。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "請檢查該資料夾的權限，或透過 Windows 安全性的受控資料夾存取允許 Smart Citizen，然後重試。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 無法在以下位置使用工作資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
     }
   },
   "apply": {

@@ -605,14 +605,14 @@ class AppSettings:
     USER_DATA_DIR_ALIASES = ("UserDataDir",)
     # Explicit override for the DataForge XML cache root. Independent of
     # USER_DATA_DIR so a user can keep user.ini / source cache / backups in
-    # Documents (or wherever) while sending the ~1.4 GB DataForge tree to a
+    # Documents (or wherever) while sending the ~1.2 GB DataForge tree to a
     # fast local SSD (or to a folder excluded from OneDrive / Defender).
     # Pre-1.4.1 the cache was hard-pinned to %LOCALAPPDATA% with no way to
     # move it; this key is the configurable replacement.
     CACHE_DIR = "cache_dir"
     # Set by the Config tab when the user accepts a cache-path change with
     # "delete old cache after re-extraction". The path is removed after the
-    # next successful P4K extraction so the 1.4 GB orphan doesn't linger.
+    # next successful P4K extraction so the 1.2 GB orphan doesn't linger.
     PENDING_CACHE_CLEANUP = "pending_cache_cleanup"
     # When True (default) the components Tag Builder annotation is woven
     # into the POTENTIAL BLUEPRINTS lists inside mission descriptions
@@ -3045,7 +3045,7 @@ class AppSettings:
         r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
         Pre-1.0 the DataForge cache lived inside get_cache_dir() (Documents\…),
-        putting ~1.4 GB of extracted XMLs into the OneDrive sync tree. Moving it
+        putting ~1.2 GB of extracted XMLs into the OneDrive sync tree. Moving it
         out eliminates per-file OneDrive / Defender / Indexer hooks during
         extraction and keeps large build-artefact files out of cloud sync.
 
@@ -3238,7 +3238,7 @@ class AppSettings:
 
         Portable mode:
           1. ``CACHE_DIR`` override if set (portable users may want the
-             1.4 GB cache off a slow USB stick).
+             1.2 GB cache off a slow USB stick).
           2. ``<exe-dir>/data/cache/`` — sits next to all other portable
              data so a USB-stick install is one fully self-contained folder.
         """
@@ -3258,7 +3258,7 @@ class AppSettings:
 
         Defaults to ``%LOCALAPPDATA%\\Smart Citizen\\{channel}\\cache\\dataforge\\``
         — never OneDrive-synced, eliminating per-file sync hooks during
-        extraction of the ~1.4 GB / ~28k-file XML tree. A user can override
+        extraction of the ~1.2 GB / ~31k-file XML tree. A user can override
         the base via the Config tab (Smart Citizen Data → DataForge Cache
         Folder); see :meth:`get_dataforge_cache_base` for the resolution
         order. Channel nesting is preserved across all variants so each

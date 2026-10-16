@@ -616,7 +616,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "存放 user.ini、源缓存、增强内容 INI 及备份的文件夹。如果清理缓存失败，请将其移出 OneDrive 同步的“文档”文件夹。DataForge XML 缓存有独立的路径设置见下方——它约 1.4 GB，默认路径会自动让它避开 OneDrive。"
+      "at": "存放 user.ini、源缓存、增强内容 INI 及备份的文件夹。如果清理缓存失败，请将其移出 OneDrive 同步的“文档”文件夹。DataForge XML 缓存有独立的路径设置见下方——它约 1.2 GB，默认路径会自动让它避开 OneDrive。"
     },
     "app_data_label": {
       "ht": "",
@@ -808,7 +808,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "提取出的 DataForge XML 树的基础文件夹（约 1.4 GB）。每个频道会嵌套为 {base}\\{channel}\\cache\\dataforge\\。默认使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影响。更改路径会触发重新提取。"
+      "at": "提取出的 DataForge XML 树的基础文件夹（约 1.2 GB）。每个频道会嵌套为 {base}\\{channel}\\cache\\dataforge\\。提取运行期间，此驱动器最多需要约 4.5 GB 可用空间，如果已有缓存则需要更少。当此文件夹位于 OneDrive、网络驱动器或可移动驱动器上，或嵌套层级很深时，其工作文件会改为放在 %TEMP% 中。默认使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影响。更改路径会触发重新提取。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2361,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "正在恢复 user.ini 后重新加载 {channel}..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "正在使用提取的 base.ini 重新加载..."
     }
   },
   "status_bar": {
@@ -2803,6 +2807,58 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "游戏数据库转换超过 30 分钟已被中止。\n\n找到的数据库：{dcb}（{size} MB），位于：\n{path}\n\n正常安装的转换用时远少于一分钟。这通常表示 Smart Citizen 读取了错误的星际公民文件夹。驱动器上残留的旧安装看起来有效，但包含过时的游戏文件。\n\n请打开 RSI Launcher 查看其显示的安装位置。如果与上面的路径不同，请在 Smart Citizen 的 Config 标签页中更正。如果路径相同，请改为在启动器中运行 Verify Files。"
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "可用空间不足。未保存任何内容，你当前的 DataForge 缓存也未被更改。"
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "可用空间不足，无法从 Data.p4k 提取 global.ini。未做任何更改。"
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "驱动器 {drive} 的可用空间为 {free}，而提取运行期间需要在该驱动器上使用约 {needed}。"
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "请释放驱动器 {drive} 上的空间，或在配置标签页中选择其他驱动器上的 DataForge 缓存文件夹，然后重试。"
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "由于 DataForge 缓存文件夹位于 OneDrive、网络驱动器或可移动驱动器上，或嵌套层级很深，提取会在你的 Windows 临时文件夹（{folder}）中进行。请释放驱动器 {drive} 上的空间，然后重试。"
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "请释放驱动器 {drive} 上的空间，然后重试。"
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "驱动器 {drive} 在保存新的 DataForge 缓存时空间已用尽，保存位置：\n{folder}\n\n该缓存不完整。请释放驱动器 {drive} 上的空间，然后重新提取以重建缓存。"
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建工作文件夹的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，或通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，然后重试。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法在以下位置使用工作文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
     }
   },
   "apply": {

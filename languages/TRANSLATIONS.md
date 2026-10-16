@@ -55,9 +55,122 @@ them against the new source.
   descarga configurada..."). The AI `at` fallback for every other non-English
   language had the same staleness (no `ht` to protect there, so the 2026-10-01
   backfill below refreshed all of them directly instead of just flagging it).
+- `config.data_desc` — English's size for the DataForge cache changed from
+  ~1.4 GB to ~1.2 GB (#482, 2.5.0), the size measured on LIVE 4.10. Affects
+  french, portuguese_br and spanish, whose human `ht` still says 1,4 Go or
+  1,4 GB (in french and portuguese_br the `at` is a copy of that `ht` and
+  was left as it is too). The seven other languages had no `ht` there, so
+  their `at` was corrected directly (2.5.0 entry below).
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
+  whose working folder Windows refuses, with a message, instead of retrying
+  for hours. Three new keys after `extract.size_mb`:
+  `extract.folder_refused` (Windows denied Smart Citizen permission to
+  create a working folder in `{folder}`, which stands on a line of its own,
+  and nothing was changed), `extract.folder_refused_fix_cache` (check that
+  folder's permissions, allow Smart Citizen through Controlled folder
+  access in Windows Security, or choose another DataForge cache folder in
+  the Config tab, then try again) and `extract.folder_refused_fix` (the
+  same without the cache folder, for `%TEMP%`). In all 10 languages,
+  `at`-only (`ht` empty), in each file's own register (as its #482 strings:
+  du in german, tu in italian and spanish, vous in french, the polite forms
+  elsewhere) and its own names for the Config tab (`tabs.config`), the
+  DataForge cache folder and the extraction. Windows Security, Controlled
+  folder access and a folder's permissions use Microsoft's names in each
+  language, so the user can find them in Windows: french Sécurité Windows,
+  Accès contrôlé aux dossiers, autorisations; german Windows-Sicherheit,
+  überwachter Ordnerzugriff, Berechtigungen (the older AI text in
+  `apply.cannot_save_edits_body` says Ordnerzugriffssteuerung and was left
+  as it is); italian Sicurezza di Windows, accesso controllato alle
+  cartelle, autorizzazioni; spanish Seguridad de Windows, acceso controlado
+  a carpetas, permisos; portuguese_br Segurança do Windows, Acesso
+  controlado a pastas, permissões; turkish Windows Güvenliği, Denetimli
+  klasör erişimi, izinler; japanese Windows セキュリティ, アクセス許可;
+  korean Windows 보안, 제어된 폴더 액세스, 권한; chinese Windows 安全中心,
+  权限. japanese コントロールされたフォルダーアクセス and chinese
+  受控文件夹访问 are spelt as in each file's `apply.cannot_save_edits_body`.
+  chinese_traditional was converted from the chinese strings with OpenCC
+  `s2twp`, as in #403 and #482, then given Taiwan's terms by hand:
+  Windows 安全性, 受控資料夾存取 and 權限 (OpenCC gives 安全中心, 受控資料夾訪問
+  and 許可權). The italian and chinese_traditional names for Controlled
+  folder access follow Microsoft's documentation and were not checked
+  against a Windows in that language. Each string was back-translated and
+  compared with the English in the same pass, not by a separate checker: no
+  meaning errors, and the Korean sentence-spacing rule holds. No human
+  string changed. `tests/test_folder_refused_strings.py` checks every
+  language's placeholders and this `ht`/`at` split.
+  The same change adds an "Extraction says Windows denied permission to
+  create a working folder" bullet to the Troubleshooting section of
+  `docs/HELP.md` and the 10 translated `HELP.md` files, after the
+  not-enough-free-space one, worded from each language's own
+  `extract.folder_refused*` strings and its `HELP.md`'s own names for the
+  Config tab and the DataForge cache folder, and back-translated in the
+  same pass.
+  A fourth key followed on 2026-10-16, after `extract.folder_refused_fix`:
+  `extract.folder_unusable` (Smart Citizen could not use a working folder in
+  `{folder}`, then Windows' own reason as `{reason}`, each on a line of its
+  own, and nothing was changed), for a drive Windows will not write to
+  (write-protected, failing, or a file in the way held by another program),
+  which is not a matter of permissions. `{reason}` is Windows' own text,
+  already in the user's Windows language, and is never translated. In all
+  10 languages, `at`-only (`ht` empty), with each file's own words for a
+  working folder from its `extract.folder_refused` and its closing sentence
+  from the same string, back-translated in the same pass. No human string
+  changed, and no `HELP.md` change: the message carries its own reason.
+- **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #482 checks free space
+  before a P4K extraction. Ten new keys: the not-enough-space messages
+  `extract.no_space_dataforge`, `no_space_global_ini`, `no_space_drive`,
+  `no_space_fix_cache`, `no_space_fix_temp`, `no_space_fix` and
+  `no_space_cache_incomplete`, the size templates `extract.size_gb` and
+  `size_mb` (all nine after `extract.dataforge_timeout`), and
+  `progress.reloading_with_extracted_base` (the progress text after a
+  global.ini extraction, English-only in the code until now), after
+  `progress.reloading_after_user_ini_restore`. In all 10 languages,
+  `at`-only (`ht` empty), in each file's own register and terms, with every
+  placeholder kept and the line breaks where the English has them. The
+  Config tab is named with each file's own `tabs.config` (french
+  Paramètres, german Konfiguration, italian and portuguese_br Config,
+  spanish Configuración, turkish Yapılandırma, japanese 設定, korean 설정,
+  chinese and chinese_traditional 配置) and the folder with its
+  `config.dataforge_cache_label`. `{drive}` is a label such as `D:` or a
+  network share, so it carries no particle in korean and no case suffix in
+  turkish. The size templates own the decimal mark and the unit: a decimal
+  comma in french (`Go`, `Mo`), german, italian, portuguese_br, spanish and
+  turkish, and no space before the unit in korean.
+  Also reworded `config.cache_dir_tooltip` in all 10 languages to match the
+  new English: the cache is about 1.2 GB (it said ~1.4 GB), and two new
+  sentences say an extraction needs up to about 4.5 GB free on that drive
+  while it runs and when its working files go to `%TEMP%` instead. No
+  language had an `ht` there. The figure in `config.data_desc` went from
+  1.4 to 1.2 GB in the seven AI-only languages. french, portuguese_br and
+  spanish have a human `ht` there, which was left alone (see *Needs human
+  re-review*). chinese_traditional was converted from the chinese strings
+  with OpenCC `s2twp`, as in #403, and checked by hand. Each string was
+  back-translated and compared with the English in the same pass, not by a
+  separate checker: no meaning errors, and the Korean sentence-spacing rule
+  holds. No human string changed.
+  The same change updated `docs/HELP.md` and the 10 translated `HELP.md`
+  files. In the Config Tab's *DataForge cache folder* bullet, the "about
+  2 GB of working space" sentence now says an extraction needs up to about
+  4.5 GB free while it runs (less when a cache is already there), keeps the
+  `%TEMP%` fallback cases, and says it stops before it starts when there is
+  not enough room. Troubleshooting gained an "Extraction says there is not
+  enough free space" bullet after the locked Data.p4k one. Each file writes
+  the figure its own way (french 4,5 Go, german, italian, portuguese_br,
+  spanish and turkish 4,5 GB, and korean "4.5 GB" with a space, as its HELP
+  already wrote "2 GB"). Bold labels reuse each file's own *DataForge cache
+  folder* label and the Config Tab name its other Troubleshooting bullets
+  use, which for italian ("scheda Configurazione") and japanese ("Config
+  タブ") is the section heading rather than `tabs.config`. The new bullet
+  uses the separator the rest of each list uses. In chinese,
+  chinese_traditional, german, italian and japanese the older locked
+  Data.p4k bullet uses a colon instead (left as it was). The cache bullet
+  was AI text from the 2026-10-06 docs sync and every translated `HELP.md`
+  is AI-only, so no human text changed and nothing needs human re-review.
+  Korean keeps a space after every sentence end. HELP files have no
+  `ht`/`at` split, so this log is their only record.
 - **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
   current with English after the pre-release docs sync. In all 10 languages:
   `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge
