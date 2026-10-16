@@ -66,9 +66,17 @@ from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices
 from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
+from src.utils.pak_extractor import windows_reason
+from src.utils.settings import (
+    AppSettings,
+    CACHE_FOLDER_REFUSED,
+    CACHE_FOLDER_UNREACHABLE,
+    SC_LANGUAGE_IDS,
+    cache_folder_failure,
+)
 from src.utils.i18n import tr
 from src.utils.version import get_version
+from src.utils.win_paths import win_plain_path
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +238,53 @@ def _scan_queue_for_root(root) -> list:
         return []
     present = {folder.name for folder in channel_dirs(Path(root))}
     return _channels_to_scan(present)
+
+
+def _normalized_folder(path) -> str:
+    """*path* as text two folders can be compared by (#486): absolute, without
+    the ``\\\\?\\`` long-path prefix, one kind of separator, no trailing
+    separator and, on Windows, one case. Text only, nothing is read or made."""
+    return os.path.normcase(os.path.abspath(win_plain_path(path)))
+
+
+def _resolved_folder(path) -> str:
+    """:func:`_normalized_folder` with links followed (#486): a junction, a
+    symlink, a subst drive or an 8.3 short name becomes the folder it stands
+    for. Non-strict, so a folder that does not exist yet resolves through the
+    part of it that does. Reads the disk, makes nothing."""
+    return os.path.normcase(os.path.realpath(win_plain_path(path)))
+
+
+def _folders_overlap(a: str, b: str) -> bool:
+    """True when folder text *a* is *b*, sits inside it or holds it."""
+    # join(x, "") ends x with one separator, so a sibling whose name only
+    # starts like the other folder's (dataforge-old) is not inside it.
+    return (a == b
+            or a.startswith(os.path.join(b, ""))
+            or b.startswith(os.path.join(a, "")))
+
+
+def _cache_folder_overlapping(queued) -> Path | None:
+    """The DataForge cache folder that *queued* is, sits inside or contains, or
+    None when it overlaps none of them (#486).
+
+    Every channel's cache folder under the current cache location counts,
+    not only the active channel's: each is the cache in use for its channel.
+    Built with ``get_dataforge_cache_leaf``, which creates nothing, unlike
+    ``get_dataforge_cache_dir``. Two folders overlap when their normalized
+    text does or, failing that, their resolved paths do: the cache location
+    is not always stored resolved (an override is, the registry-mode default
+    is not), so the same folder reached through a junction, a symlink, a
+    subst drive or an 8.3 short name can be spelled two ways.
+    """
+    target = _normalized_folder(queued)
+    resolved = _resolved_folder(queued)
+    for channel in AppSettings.AVAILABLE_CHANNELS:
+        leaf = AppSettings.get_dataforge_cache_leaf(channel)
+        if (_folders_overlap(target, _normalized_folder(leaf))
+                or _folders_overlap(resolved, _resolved_folder(leaf))):
+            return leaf
+    return None
 
 
 def _stamp_frontend_version(merged: dict) -> dict:
@@ -5056,7 +5111,8 @@ class MainWindow(QMainWindow):
             return
 
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
-        records = AppSettings.get_dataforge_cache_dir() / DATAFORGE_RECORDS_SUBPATH
+        # Only reads, so it creates no cache folder (#494).
+        records = AppSettings.get_dataforge_cache_leaf() / DATAFORGE_RECORDS_SUBPATH
         if not records.exists():
             logger.warning(
                 f"{language!r} enhancements are stale/missing but no DataForge "
@@ -5121,10 +5177,12 @@ class MainWindow(QMainWindow):
         """Remove the orphaned old cache directory queued by the Config tab.
 
         Called from ``_on_dataforge_extract_finished`` after a successful
-        re-extract. No-op when nothing is queued. Failure to delete is
-        logged but doesn't surface as an error — the user can always remove
-        the orphan manually, and partial cleanup is preferable to blocking
-        the post-extract reload flow.
+        re-extract. No-op when nothing is queued. A queued folder that is,
+        holds or sits inside a cache in use, or that cannot be compared with
+        one, is never deleted, only dropped from the queue (#486). Failure
+        to delete is logged but doesn't surface as an error — the user can
+        always remove the orphan manually, and partial cleanup is preferable
+        to blocking the post-extract reload flow.
         """
         queued = AppSettings.get_pending_cache_cleanup()
         if not queued:
@@ -5134,6 +5192,26 @@ class MainWindow(QMainWindow):
         # want to retry it on every subsequent extraction and stomp on a
         # half-deleted tree.
         AppSettings.set_pending_cache_cleanup(None)
+        # #486: a cache-folder change that failed and was then switched back
+        # leaves the cache in use queued, and the delete would take it.
+        try:
+            in_use = _cache_folder_overlapping(old_path)
+        except (OSError, ValueError) as e:
+            # Non-strict realpath still raises on an error it does not
+            # expect. Keep what could not be checked rather than risk the
+            # cache in use, and don't stop the post-extract flow.
+            logger.warning(
+                f"Skipped the queued cache cleanup of {old_path}: could not "
+                f"compare it with the DataForge cache in use ({e}). Delete it "
+                "manually if it is an old cache you no longer need."
+            )
+            return
+        if in_use is not None:
+            logger.info(
+                f"Skipped the queued cache cleanup of {old_path}: it is, holds "
+                f"or sits inside the DataForge cache in use at {in_use}"
+            )
+            return
         if not old_path.exists():
             logger.info(f"Queued cache cleanup target already absent: {old_path}")
             return
@@ -5400,7 +5478,8 @@ class MainWindow(QMainWindow):
         unforge_exe = AppSettings.get_unforge_exe_path()
         if not p4k_path.exists() or not unp4k_exe.exists() or not unforge_exe.exists():
             return
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        # Only reads, so it creates no cache folder (#494).
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         if (not (forge_dir / P4K_MTIME_STAMP).exists()
                 and not (forge_dir / DATAFORGE_LIBS_SUBPATH).exists()):
             # Never extracted — handled later by _check_enhancements_freshness,
@@ -5729,7 +5808,9 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.mark_enhancements_clean()
 
         from src.utils.pak_extractor import dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        # Only reads (#494): a cache folder that is not there is not fresh,
+        # and the extraction below is what creates it.
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path  = AppSettings.get_p4k_path()
 
         if dataforge_cache_is_fresh(p4k_path, forge_dir):
@@ -5881,14 +5962,43 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr("status_bar.enhancement_generation_failed"))
 
     def _run_dataforge_extraction(self):
-        """Launch DataForgeExtractWorker in the background (non-blocking)."""
+        """Launch DataForgeExtractWorker in the background (non-blocking).
+
+        Returns True if a run started.
+        """
         if self._forge_worker is not None or self._close_committed:
-            return
+            return False
 
         p4k_path    = AppSettings.get_p4k_path()
         unp4k_exe   = AppSettings.get_unp4k_exe_path()
         unforge_exe = AppSettings.get_unforge_exe_path()
-        forge_dir   = AppSettings.get_dataforge_cache_dir()
+        # Creates the cache folder, because it is about to write the cache;
+        # every status check only reads it (#494).
+        # Windows can refuse the folder (its permissions, Controlled folder
+        # access), its drive can be gone or not ready, or Windows can reject
+        # it for another reason. Say which in one box before any worker or
+        # dialog exists, read the same way as the Config tab reads it, and
+        # leave the Simple page and the Generate button as a failed
+        # extraction leaves them.
+        try:
+            forge_dir = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            folder = os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
+            logger.warning(f"Could not create the DataForge cache folder in {folder}: {e}")
+            self._end_simple_run()
+            self.enhancements_tab.set_operation_idle(success=False)
+            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
+            failure = cache_folder_failure(e)
+            if failure == CACHE_FOLDER_REFUSED:
+                message = (tr("extract.cache_folder_refused", folder=folder) + "\n\n"
+                           + tr("extract.folder_refused_fix_cache"))
+            elif failure == CACHE_FOLDER_UNREACHABLE:
+                message = tr("extract.cache_folder_unreachable", folder=folder)
+            else:
+                message = tr("extract.cache_folder_unusable", folder=folder,
+                             reason=windows_reason(e))
+            QMessageBox.warning(self, tr("extract.dataforge_extraction_error_title"), message)
+            return False
 
         worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
         self._forge_worker = worker
@@ -5918,6 +6028,7 @@ class MainWindow(QMainWindow):
             lambda success, w=worker: self._on_dataforge_extract_finished(success, w)
         )
         worker.start()
+        return True
 
     def _confirm_stop_dataforge_extraction(self, worker) -> bool:
         """Esc or the title-bar X on the DataForge progress dialog (#471).
@@ -6001,7 +6112,13 @@ class MainWindow(QMainWindow):
             # window that is going away.
             logger.warning(f"DataForge extraction error while closing: {message}")
             return
-        logger.error(f"DataForge extraction error: {message}")
+        # WARNING, not ERROR (#482). The worker already logged an unexpected
+        # failure at ERROR, which opens the global error dialog, and an
+        # anticipated one (a locked Data.p4k, an unforge timeout, a full
+        # drive, a refused working folder) carries its own message, shown in
+        # the box below. ERROR here opened a second box, or a stray
+        # "(+1 suppressed)".
+        logger.warning(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
         self._end_simple_run()
         if getattr(self, "_forge_progress_dialog", None) is not None:
@@ -6185,7 +6302,7 @@ class MainWindow(QMainWindow):
             self._check_enhancements_after_loading = True
 
             # Show progress dialog while reloading with extracted data
-            self._show_loading_progress("Reloading with extracted base.ini...")
+            self._show_loading_progress(tr("progress.reloading_with_extracted_base"))
         else:
             if getattr(worker, "stopped", False):
                 # Stopped from its dialog (#471): base.ini is as it was.

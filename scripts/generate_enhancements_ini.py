@@ -154,13 +154,16 @@ def _get_default_forge_dir() -> Path:
     """Resolve the DataForge cache directory for standalone CLI defaults.
 
     Mirrors AppSettings.get_dataforge_cache_dir() — AppData\\Local, not
-    Documents, so the ~1.4 GB XML cache stays out of OneDrive.
+    Documents, so the ~1.2 GB XML cache stays out of OneDrive. Named through
+    get_dataforge_cache_leaf(), which creates nothing (#494): the generator
+    needs a cache that is already there, and only adds its lookup pickles
+    to it.
     """
     try:
         if str(PROJECT_ROOT) not in sys.path:
             sys.path.insert(0, str(PROJECT_ROOT))
         from src.utils.settings import AppSettings
-        return AppSettings.get_dataforge_cache_dir()
+        return AppSettings.get_dataforge_cache_leaf()
     except (ImportError, OSError) as e:
         logger.debug(f"Falling back to LocalAppData forge default: {e}")
         local_appdata = Path(
