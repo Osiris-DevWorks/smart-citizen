@@ -33,6 +33,10 @@ P4K_SIZE_STAMP = ".p4k_size"
 DATAFORGE_LIBS_SUBPATH = Path("raw") / "libs"
 DATAFORGE_RECORDS_UNDER_LIBS = Path("foundry") / "records"
 DATAFORGE_RECORDS_SUBPATH = DATAFORGE_LIBS_SUBPATH / DATAFORGE_RECORDS_UNDER_LIBS
+# The enhancements generator's lookup pickles (_cached_lookup) sit beside
+# raw/ in this folder, and EnhancementsGeneratorWorker sweeps the temp files
+# a hard kill leaves there, so the two join this one name.
+DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
 
 # ``shutil.rmtree`` replaced ``onerror`` with ``onexc`` in Python 3.12. The
 # frozen build runs on 3.11, so passing ``onexc=`` raises TypeError there.
@@ -909,8 +913,8 @@ def extract_dataforge(
         _close_scratch(run_dir, marker)
 
     # A stop that arrived during the copy ends here. The cache is complete and
-    # stamped; the next generation treats a missing manifest as "regenerate
-    # everything", which is what it does anyway.
+    # stamped; it only lacks the manifest, which generation does not read (it
+    # runs every enabled category).
     _raise_if_cancelled(should_cancel, "stopped once the new cache was written")
 
     # Snapshot the new cache so the next run can diff against it.

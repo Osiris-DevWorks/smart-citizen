@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  (mancante)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "I tuoi miglioramenti non sono aggiornati. L'ultima generazione non è terminata oppure sono stati generati da dati di gioco più vecchi.\nSeleziona quali generare.\nPuoi cambiare questo in seguito nella scheda Miglioramenti."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "I dati DataForge verranno estratti automaticamente se non già in cache.\nLa prima esecuzione richiede alcuni minuti."

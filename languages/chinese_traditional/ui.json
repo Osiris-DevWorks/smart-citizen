@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  （缺失）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "你的增強內容已過期。上次生成未完成，或它們是基於較舊的遊戲資料生成的。\n請選擇要生成的內容。\n你之後可以在增強內容標籤頁中更改此設定。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "如果 DataForge 資料尚未快取，將會自動提取。\n首次執行需要幾分鐘。"
