@@ -5362,7 +5362,10 @@ class MainWindow(QMainWindow):
     def _maybe_prompt_dataforge_refresh(self) -> None:
         """Prompt to re-extract DataForge if its cache is stale vs. Data.p4k.
 
-        Called during startup after base.ini passes its freshness check.
+        Called once base.ini is current: by startup, a channel switch and a
+        data-folder change when no global.ini extraction was needed or it
+        was declined, stopped or failed, and by ``_on_p4k_extract_finished``
+        after one of them had it extracted successfully (#478).
         A stale DataForge cache doesn't block the base-string workflow — the
         table loads fine — but it means the next enhancements regeneration
         will run against old entity data, so stats/missions/blueprints will
@@ -6183,6 +6186,16 @@ class MainWindow(QMainWindow):
 
             # Defer enhancements check until after file loading completes (avoid I/O contention)
             self._check_enhancements_after_loading = True
+
+            # Startup, a channel switch or a data-folder change left its
+            # reload to this run. Each asks about an outdated DataForge cache
+            # before it reloads, and dropping the follow-up dropped that
+            # question too, until the next launch (#478). A Yes runs the
+            # DataForge extraction beside the reload, as at startup. The
+            # Config tab's Extract button starts a run with no follow-up and
+            # asks nothing, as before.
+            if if_unfinished is not None:
+                self._maybe_prompt_dataforge_refresh()
 
             # Show progress dialog while reloading with extracted data
             self._show_loading_progress("Reloading with extracted base.ini...")
