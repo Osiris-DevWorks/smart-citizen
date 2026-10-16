@@ -1306,15 +1306,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Si está marcado, la etiqueta [CLASS-Sx-grade] configurada se añade a los nombres de componentes dentro de la lista POTENTIAL BLUEPRINTS de las descripciones de misión. Desmárcalo para un cuerpo de misión más limpio, manteniendo la etiqueta en los nombres reales de los componentes en otros lugares."
+      "at": "Si está marcado, la etiqueta de componente configurada y, con Armor > Weight activado, la etiqueta de peso de armadura se añaden a los nombres de objetos en la lista POTENTIAL BLUEPRINTS de las descripciones de misión. Desmárcalo para un cuerpo de misión más limpio. Las etiquetas siguen en los nombres de los objetos en otros lugares."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Restaurar el patrón, la asignación y el orden predeterminados de cada categoría (Componentes / Misiles / Armas de nave). No guarda ni regenera hasta que hagas clic en Aplicar cambios de etiquetas o Generar mejoras."
+      "at": "Restaurar el patrón, la asignación y el orden predeterminados en cada pestaña del generador de etiquetas (también vuelve a desactivar las etiquetas opcionales de mercancías y armaduras). Las configuraciones de etiquetas no se guardan ni se regeneran hasta que hagas clic en Aplicar cambios de etiquetas o Generar mejoras, pero las Etiquetas generales de la pestaña Mission Titles se guardan en cuanto cambian, así que el restablecimiento las devuelve al instante a sus valores predeterminados."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Guardar las configuraciones de etiquetas de Componentes / Misiles / Armas de nave y volver a ejecutar el generador de mejoras. Las nuevas etiquetas aparecen en el juego tras la siguiente aplicación de mejoras."
+      "at": "Guardar las configuraciones de etiquetas de todas las pestañas del generador de etiquetas y volver a ejecutar el generador de mejoras. Las nuevas etiquetas aparecen en el juego tras la siguiente aplicación de mejoras."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1363,6 +1363,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Editar el texto Corto / Medio / Largo de la etiqueta de colección (p. ej. Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Editar el texto Corto / Medio / Largo de cada clase de peso de armadura (p. ej. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -2949,7 +2953,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Construye las etiquetas entre corchetes añadidas a componentes, misiles, armas de nave y mercancías. Reordena elementos con ▲/▼, desmarca para excluir, cambia la longitud de abreviatura, elige separador y corchetes, o coloca la etiqueta después del nombre en lugar de antes."
+        "at": "Construye las etiquetas entre corchetes añadidas a componentes, misiles, armas de nave, mercancías y armaduras. Reordena elementos con ▲/▼, desmarca para excluir, cambia la longitud de abreviatura, elige separador y corchetes, o coloca la etiqueta después del nombre en lugar de antes."
       }
     },
     "blueprint_tracker": {
