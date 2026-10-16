@@ -4,7 +4,7 @@ Standalone CLI scripts and the build pipeline. See the root `CLAUDE.md` for proj
 
 ## Files
 
-- `generate_enhancements_ini.py` — reads DataForge entity XMLs (no external JSON) → enhancement INI files in cache (ships, components, ship weapons, FPS weapons descriptions).
+- `generate_enhancements_ini.py` — reads DataForge entity XMLs (no external JSON) → enhancement INI files in cache (ships, components, ship weapons, FPS weapons descriptions). The ship component generators (shield, radar, cooler, power plant, quantum drive, bomb rack) and `_run_gen_components` are locked by `tests/test_component_generators.py` (#485).
 - `extract_components.py` — diffs base.ini against stock vanilla to produce components.ini.
 - `gen_commodity_crafting.py` — generates `commodity_crafting_enhancements.ini` with crafting blueprint usage from DataForge XMLs.
 - `compare_kraken_fixture.py` — research/reporting: diffs the `kraken_4.7.ini` ground-truth fixture against the generated `mission_rewards_enhancements.ini` to validate blueprint list output. Read-only.
