@@ -52,7 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-from src.utils.atomic_io import atomic_writer
+from src.utils.atomic_io import atomic_writer, sweep_stale_temps
 from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
 from src.utils.win_paths import win_long_path
 
@@ -175,6 +175,14 @@ def _apply_single_patch(
         logger.warning(msg)
         report.errors.append(msg)
         return
+
+    # A hard kill between a rewrite's temp and its swap leaves a .sc-*.tmp
+    # beside the record, which nothing else finds (the generator reads only
+    # *.xml) until a re-extraction replaces the cache. Swept for every
+    # target, rewritten or not: a temp still under STALE_TEMP_AGE_S when the
+    # next run patched the record would otherwise outlive every later run,
+    # since an already patched record is never rewritten.
+    sweep_stale_temps(target_path.parent)
 
     # Keep UI progress short — just the file name, not the description.
     # The full description is logged separately for the Log Tab.

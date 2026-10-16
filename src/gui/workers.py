@@ -581,10 +581,9 @@ class EnhancementsGeneratorWorker(QThread):
             build_key    = AppSettings.get_dataforge_build_key(forge_dir)
             tag_stamp    = tag_config_fingerprint(self.tag_configs, self.annotate_mission_descs)
             # Temp files a hard kill left between a write and its swap
-            # (atomic_io). Only the INI folder and the generator's lookup
-            # pickle folder (_cached_lookup's DATAFORGE_LOOKUPS_SUBPATH) get
-            # written that way here: the patcher's record XMLs are only ever
-            # found by *.xml.
+            # (atomic_io): the INI folder and the generator's lookup pickle
+            # folder (_cached_lookup's DATAFORGE_LOOKUPS_SUBPATH). The patcher
+            # sweeps each record folder it patches itself.
             sweep_stale_temps(enh_dir)
             sweep_stale_temps(forge_dir / DATAFORGE_LOOKUPS_SUBPATH)
             # No diff-cache check: every category handed in is generated. The
@@ -772,7 +771,7 @@ class DataForgeExtractWorker(QThread):
     """Worker thread for extracting DataForge entity XMLs from Data.p4k.
 
     requestInterruption() stops it (#471). MainWindow does this when the
-    window closes (_stop_extractions_for_close) and when the user picks Stop
+    window closes (_stop_workers_for_close) and when the user picks Stop
     in the progress dialog's question. extract_dataforge polls
     isInterruptionRequested, kills unp4k or unforge, deletes its working
     folder and raises ExtractionCancelled. A stop is not a failure, so it

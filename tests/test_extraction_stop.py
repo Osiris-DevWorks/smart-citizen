@@ -442,14 +442,14 @@ def _window(**attrs):
     me._after_unfinished_p4k_extraction = None
     me._p4k_error_box_open = False
     me._p4k_follow_up_after_error = None
-    me._EXTRACTION_WORKER_ATTRS = MainWindow._EXTRACTION_WORKER_ATTRS
+    me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
     me._detach_progress_dialog = MainWindow._detach_progress_dialog
     for name, value in attrs.items():
         setattr(me, name, value)
     return me
 
 
-class TestStopExtractionsForClose:
+class TestStopWorkersForClose:
     def test_both_extractions_are_stopped_hidden_and_released(self):
         p4k, forge = _Worker(), _Worker()
         p4k_dialog, forge_dialog = MagicMock(), MagicMock()
@@ -460,7 +460,7 @@ class TestStopExtractionsForClose:
         me = _window(_p4k_worker=p4k, _p4k_progress=p4k_dialog,
                      _forge_worker=forge, _forge_progress_dialog=forge_dialog)
 
-        MainWindow._stop_extractions_for_close(me, timeout_ms=5000)
+        MainWindow._stop_workers_for_close(me, timeout_ms=5000)
 
         assert p4k.interrupted and forge.interrupted
         for dlg in (p4k_dialog, forge_dialog):
@@ -481,20 +481,20 @@ class TestStopExtractionsForClose:
         forge = _Worker(finishes=False)
         me = _window(_forge_worker=forge)
         with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
-            MainWindow._stop_extractions_for_close(me, timeout_ms=50)
+            MainWindow._stop_workers_for_close(me, timeout_ms=50)
         assert me._forge_worker is forge   # Qt must not destroy a live thread
         assert "still cleaning up" in caplog.text
 
     def test_nothing_running_hides_nothing(self):
         done = _Worker(running=False)
         me = _window(_forge_worker=done)
-        MainWindow._stop_extractions_for_close(me)
+        MainWindow._stop_workers_for_close(me)
         me.hide.assert_not_called()
         assert me._forge_worker is None
 
     def test_no_extraction_at_all_is_a_no_op(self):
         me = _window()
-        MainWindow._stop_extractions_for_close(me)
+        MainWindow._stop_workers_for_close(me)
         me.hide.assert_not_called()
 
     def test_a_real_thread_is_stopped_and_waited_for(self, qapp):
@@ -506,14 +506,14 @@ class TestStopExtractionsForClose:
         thread = Spinning()
         thread.start()
         me = _window(_forge_worker=thread)
-        MainWindow._stop_extractions_for_close(me, timeout_ms=5000)
+        MainWindow._stop_workers_for_close(me, timeout_ms=5000)
         assert thread.isFinished()
         assert me._forge_worker is None
 
-    def test_request_extraction_stops_only_asks(self):
+    def test_request_stops_for_close_only_asks(self):
         p4k, forge = _Worker(), _Worker()
         me = _window(_p4k_worker=p4k, _forge_worker=forge)
-        MainWindow._request_extraction_stops(me)
+        MainWindow._request_stops_for_close(me)
         assert p4k.interrupted and forge.interrupted
         assert p4k.waits == [] and forge.waits == []
 
@@ -524,7 +524,7 @@ class TestStopExtractionsForClose:
         heading for its next job boundary while the loader finishes."""
         generation = _Worker()
         me = _window(_enhancements_worker=generation)
-        MainWindow._request_extraction_stops(me)
+        MainWindow._request_stops_for_close(me)
         assert generation.interrupted
         assert generation.waits == []
 
@@ -536,7 +536,7 @@ class TestStopExtractionsForClose:
         me = _window(_enhancements_worker=generation,
                      _enhancements_progress_dialog=dialog)
 
-        MainWindow._stop_extractions_for_close(me, timeout_ms=5000)
+        MainWindow._stop_workers_for_close(me, timeout_ms=5000)
 
         assert generation.interrupted
         # Detached and cancelled, as the extraction dialogs are: a hidden one
@@ -555,7 +555,7 @@ class TestStopExtractionsForClose:
         generation = _Worker(finishes=False)
         me = _window(_enhancements_worker=generation)
         with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
-            MainWindow._stop_extractions_for_close(me, timeout_ms=50)
+            MainWindow._stop_workers_for_close(me, timeout_ms=50)
         assert me._enhancements_worker is generation   # Qt must not destroy a live thread
         warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
         assert len(warnings) == 1
@@ -576,7 +576,7 @@ class TestStopExtractionsForClose:
 
         forge, generation = _SlowForge(), _Worker()
         me = _window(_forge_worker=forge, _enhancements_worker=generation)
-        MainWindow._stop_extractions_for_close(me, timeout_ms=300)
+        MainWindow._stop_workers_for_close(me, timeout_ms=300)
         assert forge.waits[0] > 200
         assert generation.waits[0] < 100
 
@@ -612,7 +612,7 @@ class TestStopExtractionsForClose:
         try:
             assert started.wait(5)
             assert dialog.isVisible()
-            MainWindow._stop_extractions_for_close(me, timeout_ms=5000)
+            MainWindow._stop_workers_for_close(me, timeout_ms=5000)
             assert thread.isFinished()
             assert thread.wrote
             assert me._enhancements_worker is None
@@ -644,8 +644,8 @@ class TestCloseEventOrder:
             assert me._close_committed is True   # committed before anything is stopped
             order.append("interrupt")
 
-        me._request_extraction_stops.side_effect = interrupt
-        me._stop_extractions_for_close.side_effect = lambda: order.append("stop")
+        me._request_stops_for_close.side_effect = interrupt
+        me._stop_workers_for_close.side_effect = lambda: order.append("stop")
         return me
 
     def test_the_tools_are_stopped_early_and_waited_for_last(self, monkeypatch):
@@ -675,8 +675,8 @@ class TestCloseEventOrder:
         MainWindow.closeEvent(me, MagicMock())
 
         assert me._close_committed is False
-        me._request_extraction_stops.assert_not_called()
-        me._stop_extractions_for_close.assert_not_called()
+        me._request_stops_for_close.assert_not_called()
+        me._stop_workers_for_close.assert_not_called()
 
 
 class TestDataForgeSlots:

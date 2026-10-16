@@ -137,7 +137,7 @@ _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
 # and _start_next_blueprint_scan refuses anything that is not in it.
 _SCANNED_CHANNELS = (AppSettings.CHANNEL_LIVE, AppSettings.CHANNEL_HOTFIX)
 
-# What MainWindow._stop_extractions_for_close logs for a worker still running
+# What MainWindow._stop_workers_for_close logs for a worker still running
 # past its bound, by the attribute that holds it. The extractions' text is the
 # default. Module level, so a MagicMock self in the tests cannot stand in for
 # it.
@@ -6389,27 +6389,27 @@ class MainWindow(QMainWindow):
     # The workers closeEvent stops, each with the attribute that holds its
     # progress dialog: the two extractions (#471) and enhancement generation,
     # which stops at its next job boundary and never during its writes.
-    _EXTRACTION_WORKER_ATTRS = (
+    _WORKERS_STOPPED_ON_CLOSE = (
         ("_p4k_worker", "_p4k_progress"),
         ("_forge_worker", "_forge_progress_dialog"),
         ("_enhancements_worker", "_enhancements_progress_dialog"),
     )
 
-    def _request_extraction_stops(self) -> None:
+    def _request_stops_for_close(self) -> None:
         """Ask every running extraction (#471), and enhancement generation,
         to stop. Returns at once: an extraction's tool dies within a quarter
         of a second, and the worker then deletes its working folder in the
         background. Generation stops at its next job boundary."""
-        for worker_attr, _dialog_attr in self._EXTRACTION_WORKER_ATTRS:
+        for worker_attr, _dialog_attr in self._WORKERS_STOPPED_ON_CLOSE:
             worker = getattr(self, worker_attr, None)
             if worker is not None:
                 worker.requestInterruption()
 
-    def _stop_extractions_for_close(self, timeout_ms: int = 180_000) -> None:
+    def _stop_workers_for_close(self, timeout_ms: int = 180_000) -> None:
         """Stop a running global.ini or DataForge extraction (#471), or
         enhancement generation, before the window closes.
 
-        closeEvent has normally asked already (_request_extraction_stops,
+        closeEvent has normally asked already (_request_stops_for_close,
         ahead of the loader wait), so unp4k or unforge died within a quarter
         of a second and the worker is deleting its working folder: up to
         ~62,000 files for DataForge, which takes a while on a slow disk.
@@ -6432,7 +6432,7 @@ class MainWindow(QMainWindow):
         import time
 
         stopping = []
-        for worker_attr, dialog_attr in self._EXTRACTION_WORKER_ATTRS:
+        for worker_attr, dialog_attr in self._WORKERS_STOPPED_ON_CLOSE:
             worker = getattr(self, worker_attr, None)
             if worker is None:
                 continue
@@ -6536,9 +6536,9 @@ class MainWindow(QMainWindow):
         # that could call it off has been answered, so nothing new may start
         # (#471, see _close_committed). A running extraction is asked to stop
         # now, ahead of the unbounded loader wait below, so its tool dies at
-        # once; _stop_extractions_for_close waits for it last.
+        # once; _stop_workers_for_close waits for it last.
         self._close_committed = True
-        self._request_extraction_stops()
+        self._request_stops_for_close()
         if self._loader_worker:
             self._loader_worker.quit()
             self._loader_worker.wait()
@@ -6562,7 +6562,7 @@ class MainWindow(QMainWindow):
 
         # Last, once the window's state is saved: this hides the window while
         # a stopped extraction removes its working folder (#471).
-        self._stop_extractions_for_close()
+        self._stop_workers_for_close()
         event.accept()
 
     @timed

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import errno
 import json
+import os
+import time
 from pathlib import Path
 
 import pytest
@@ -248,6 +250,45 @@ def test_a_failed_swap_keeps_the_target_xml_whole(tmp_path: Path, monkeypatch):
     assert "hockrow.patch.json" in report.errors[0]
     assert target.read_bytes() == old_bytes
     assert not list(target.parent.glob(".sc-*.tmp"))
+
+
+def _leftover_temps(folder: Path) -> tuple[Path, Path]:
+    """Two temps a killed run could have left in *folder*: one past the
+    sweep's age and one still young enough to be another run's."""
+    old = folder / ".sc-deadbeef.tmp"
+    young = folder / ".sc-cafef00d.tmp"
+    for temp in (old, young):
+        temp.write_bytes(b"<root")
+    stale = time.time() - atomic_io.STALE_TEMP_AGE_S - 60
+    os.utime(old, (stale, stale))
+    return old, young
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("already_patched", [False, True])
+def test_a_temp_a_killed_run_left_beside_a_record_is_swept(tmp_path: Path, already_patched):
+    """A hard kill between a rewrite's temp and its swap leaves a .sc-*.tmp
+    beside the record, which nothing else finds until a re-extraction. The
+    next run sweeps an old one, also when the record is already patched and
+    is not rewritten (a temp too young at the run that patched it would
+    otherwise stay), and leaves a young one alone (#477 review)."""
+    records = _records_root(tmp_path)
+    body = _CONTRACT_XML
+    if already_patched:
+        body = body.replace(_P2M4_EDIT["expected"], _P2M4_EDIT["set"], 1)
+    target = _write_target(records, "contracts/hockrowagency.xml", body)
+    old, young = _leftover_temps(target.parent)
+    patches = tmp_path / "patches"
+    _write_patch(patches, "hockrow.patch.json", {
+        "target": "contracts/hockrowagency.xml",
+        "edits": [_P2M4_EDIT],
+    })
+
+    report = apply_patches(patches, tmp_path / "dataforge")
+
+    assert report.files_rewritten == (0 if already_patched else 1)
+    assert not old.exists()
+    assert young.exists()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
