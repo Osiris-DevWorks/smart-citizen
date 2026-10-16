@@ -475,7 +475,7 @@ class TestTrackerMatching:
         meta = build_blueprint_metadata(
             entries, enclosings,
             default_values={"item_Name_cds_heavy_armor_01_core": "ADP-mk4 Core"})
-        # The manual and starter items are always folded in too, so check
+        # The manual items are always folded in too, so check
         # only that the tagged bullet joined the bare row, with no tagged twin.
         assert not [name for name in meta
                     if "[H]" in name or ("ADP-mk4 Core" in name and name != "ADP-mk4 Core")]
