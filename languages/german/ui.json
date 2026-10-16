@@ -1070,7 +1070,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Optionale Funktionen, die die Basis-Lokalisierungsdaten erweitern: Kategorie-Umschalter für den Erweiterungsgenerator, ein Favoriten-Präfix für die In-Game-Schiffsliste und ein Tag-Generator, der die eingeklammerten Namens-Tags von Komponenten, Raketen und Schiffswaffen anpasst."
+      "at": "Optionale Funktionen, die die Basis-Lokalisierungsdaten erweitern: Kategorie-Umschalter für den Erweiterungsgenerator, ein Favoriten-Präfix für die In-Game-Schiffsliste und ein Tag-Generator, der die eingeklammerten Namens-Tags von Komponenten, Raketen, Schiffswaffen, Rohstoffen und Rüstungen anpasst."
     },
     "enhancements_group": {
       "ht": "",
@@ -1090,7 +1090,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "Kampfwerte für FPS-Waffen"
+      "at": "Kampfwerte für FPS-Waffen und Gewichtsklassen-Tags für Rüstungen"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1134,7 +1134,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "Passt die eingeklammerten Namens-Tags von Komponenten, Raketen und Schiffswaffen an. Änderungen wirken sich aus, nachdem du auf „Tag-Änderungen speichern“ geklickt und „Erweiterungen erstellen“ erneut ausgeführt hast."
+      "at": "Passt die eingeklammerten Namens-Tags von Komponenten, Raketen, Schiffswaffen, Rohstoffen und Rüstungen sowie die Route in Frachtmissionstiteln an. Änderungen wirken sich aus, nachdem du auf „Tag-Änderungen speichern“ geklickt und „Erweiterungen erstellen“ erneut ausgeführt hast."
     },
     "preview_label": {
       "ht": "",
@@ -1142,7 +1142,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "Komponenten in Missionsbeschreibungen kennzeichnen"
+      "at": "Komponenten und Rüstungen in Missionsbeschreibungen kennzeichnen"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1302,15 +1302,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Wenn aktiviert, wird das konfigurierte [KLASSE-Sx-Grad]-Tag zu Komponentennamen innerhalb der Liste MÖGLICHE BAUPLÄNE in Missionsbeschreibungen hinzugefügt. Deaktivieren für einen übersichtlicheren Missionstext bei gleichzeitigem Erhalt des Tags an den eigentlichen Komponentennamen andernorts."
+      "at": "Wenn aktiviert, werden das konfigurierte Komponenten-Tag und bei aktiviertem Armor > Weight das Gewichtsklassen-Tag zu Gegenstandsnamen in der Liste MÖGLICHE BAUPLÄNE in Missionsbeschreibungen hinzugefügt. Deaktivieren für einen übersichtlicheren Missionstext. Die Tags bleiben an den Gegenstandsnamen an anderer Stelle."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Das Standardmuster, die Zuordnung und die Reihenfolge für jede Kategorie (Komponenten / Raketen / Schiffswaffen) wiederherstellen. Speichert oder erzeugt nicht neu, bis du auf „Tag-Änderungen speichern“ oder „Erweiterungen erstellen“ klickst."
+      "at": "Das Standardmuster, die Zuordnung und die Reihenfolge auf jedem Tab des Tag-Generators wiederherstellen (schaltet auch die optionalen Rohstoff- und Rüstungs-Tags wieder aus). Die Tag-Konfigurationen werden erst gespeichert oder neu erzeugt, wenn du auf „Tag-Änderungen speichern“ oder „Erweiterungen erstellen“ klickst, aber die Allgemeinen Tags im Tab Mission Titles werden bei jeder Änderung sofort gespeichert, daher setzt Zurücksetzen sie sofort auf ihre Standardwerte."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Die Tag-Konfigurationen für Komponenten / Raketen / Schiffswaffen speichern und den Erweiterungsgenerator erneut ausführen. Neue Tags erscheinen im Spiel nach dem nächsten „Erweiterungen anwenden“."
+      "at": "Die Tag-Konfigurationen aller Tabs des Tag-Generators speichern und den Erweiterungsgenerator erneut ausführen. Neue Tags erscheinen im Spiel nach dem nächsten „Erweiterungen anwenden“."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1359,6 +1359,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Bearbeite den Kurz-/Mittel-/Lang-Text für die Sammlungsbeschriftung (z. B. Sammlung → Sam / Sammel / Sammlung)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Bearbeite den Kurz-/Mittel-/Lang-Text für jede Rüstungs-Gewichtsklasse (z. B. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -2949,7 +2953,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen und Rohstoffe. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
+        "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen, Rohstoffe und Rüstungen. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
       }
     },
     "blueprint_tracker": {

@@ -1070,7 +1070,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Funzionalità opzionali che estendono i dati di localizzazione di base: interruttori per categoria per il generatore di miglioramenti, un prefisso per i preferiti nella lista navi di gioco, e un Generatore di Tag che personalizza i tag tra parentesi sui nomi di componenti, missili e armi navali."
+      "at": "Funzionalità opzionali che estendono i dati di localizzazione di base: interruttori per categoria per il generatore di miglioramenti, un prefisso per i preferiti nella lista navi di gioco, e un Generatore di Tag che personalizza i tag tra parentesi sui nomi di componenti, missili, armi navali, merci e armature."
     },
     "enhancements_group": {
       "ht": "",
@@ -1090,7 +1090,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "Statistiche di combattimento per le armi FPS"
+      "at": "Statistiche di combattimento per le armi FPS e tag del peso delle armature"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1134,7 +1134,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "Personalizza i tag tra parentesi sui nomi di componenti, missili e armi navali. Le modifiche hanno effetto dopo aver cliccato su Salva Modifiche Tag e rieseguito Genera Miglioramenti."
+      "at": "Personalizza i tag tra parentesi sui nomi di componenti, missili, armi navali, merci e armature, oltre al percorso nei titoli delle missioni di trasporto. Le modifiche hanno effetto dopo aver cliccato su Salva Modifiche Tag e rieseguito Genera Miglioramenti."
     },
     "preview_label": {
       "ht": "",
@@ -1142,7 +1142,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "Annota i componenti nelle descrizioni delle missioni"
+      "at": "Annota componenti e armature nelle descrizioni delle missioni"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1302,15 +1302,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Se selezionato, il tag [CLASS-Sx-grade] configurato viene aggiunto ai nomi dei componenti all'interno della lista POTENTIAL BLUEPRINTS delle descrizioni missione. Deseleziona per un corpo missione più pulito, mantenendo comunque il tag sui nomi dei componenti altrove."
+      "at": "Se selezionato, il tag del componente configurato e, con Armor > Weight attivo, il tag del peso dell'armatura vengono aggiunti ai nomi degli oggetti nella lista POTENTIAL BLUEPRINTS delle descrizioni missione. Deseleziona per un corpo missione più pulito. I tag restano sui nomi degli oggetti altrove."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Ripristina il pattern, la mappatura e l'ordinamento predefiniti per ogni categoria (Componenti / Missili / Armi Navali). Non salva né rigenera finché non clicchi su Salva Modifiche Tag o Genera Miglioramenti."
+      "at": "Ripristina il pattern, la mappatura e l'ordinamento predefiniti in ogni scheda del Generatore di Tag (disattiva di nuovo anche i tag opzionali di merci e armature). Le configurazioni dei tag non vengono salvate né rigenerate finché non clicchi su Salva Modifiche Tag o Genera Miglioramenti, ma i Tag Generali della scheda Mission Titles si salvano appena cambiano, quindi il ripristino li riporta subito ai valori predefiniti."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Salva le configurazioni tag di Componenti / Missili / Armi Navali e riesegui il generatore di miglioramenti. I nuovi tag appariranno in gioco dopo il prossimo Applica Miglioramenti."
+      "at": "Salva le configurazioni tag di tutte le schede del Generatore di Tag e riesegui il generatore di miglioramenti. I nuovi tag appariranno in gioco dopo il prossimo Applica Miglioramenti."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1359,6 +1359,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Modifica il testo Breve / Medio / Lungo per l'etichetta collezione (es. Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Modifica il testo Breve / Medio / Lungo usato per ogni classe di peso dell'armatura (es. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -2949,7 +2953,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Crea i tag tra parentesi aggiunti ai nomi di componenti, missili, armi delle navi e merci. Riordina gli elementi con ▲/▼, deseleziona per escludere, cambia la lunghezza dell'abbreviazione, scegli il separatore e le parentesi, oppure posiziona il tag dopo il nome invece che prima."
+        "at": "Crea i tag tra parentesi aggiunti ai nomi di componenti, missili, armi delle navi, merci e armature. Riordina gli elementi con ▲/▼, deseleziona per escludere, cambia la lunghezza dell'abbreviazione, scegli il separatore e le parentesi, oppure posiziona il tag dopo il nome invece che prima."
       }
     },
     "blueprint_tracker": {
