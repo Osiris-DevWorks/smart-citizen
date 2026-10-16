@@ -102,6 +102,40 @@ def english_ui():
     i18n._current_lang, i18n._strings = saved_lang, saved_strings
 
 
+@pytest.fixture
+def tmp_profile(tmp_path, monkeypatch):
+    """A Smart Citizen profile entirely under tmp_path, for a test that runs
+    the real AppSettings paths: settings in a JsonSettings file (never the
+    registry), the registry build mode, and %LOCALAPPDATA%, the data folder
+    and a Star Citizen install with LIVE and PTU folders all in tmp_path.
+    The active channel is LIVE and there is no cache folder override, so the
+    DataForge cache defaults to tmp_path/LocalAppData/Smart Citizen. Returns
+    tmp_path; the install is tmp_path/StarCitizen."""
+    from src.utils.json_settings import JsonSettings
+    from src.utils.settings import AppSettings
+
+    monkeypatch.setattr(AppSettings, "_backend", JsonSettings(tmp_path / "config.json"))
+    monkeypatch.setattr("src.utils.build_mode.IS_PORTABLE", False)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+    AppSettings.set_user_data_dir(tmp_path / "data")
+    install = tmp_path / "StarCitizen"
+    for channel in ("LIVE", "PTU"):
+        (install / channel).mkdir(parents=True)
+    AppSettings.set_sc_install_root(str(install))
+    return tmp_path
+
+
+@pytest.fixture
+def slot_errors(monkeypatch):
+    """What reaches ``sys.excepthook``, where Qt hands an exception raised
+    in a slot (a button's click, a signal emitted by the test). Recorded
+    instead, because without a hook of its own PyQt6 aborts the whole run on
+    one. Returns the list of exceptions."""
+    seen = []
+    monkeypatch.setattr(sys, "excepthook", lambda *exc_info: seen.append(exc_info[1]))
+    return seen
+
+
 # The run's one QApplication, once _session_qapp has made it (at the first
 # qapp request, or before the first test in a run with GUI tests).
 _SESSION_QAPP: list = []

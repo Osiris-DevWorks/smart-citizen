@@ -730,6 +730,22 @@
       "ht": "",
       "at": "Geçersiz Önbellek Klasörü"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şu konumda kendi önbelleğini oluşturma iznini reddetti:\n{folder}\n\nDataForge önbellek klasörü değiştirilmedi."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen şu konuma ulaşamadı:\n{folder}\n\nDataForge önbellek klasörü değiştirilmedi."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen şu konumu kullanamadı:\n{folder}\n\n{reason}\n\nDataForge önbellek klasörü değiştirilmedi."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Seçilen önbellek klasörü bir klasör değil, bir dosya:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge Önbellek Yolu Değişti"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen şu konumda bir çalışma klasörü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şu konumda DataForge önbelleğini oluşturma iznini reddetti:\n{folder}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen DataForge önbellek klasörüne ulaşamadı:\n{folder}\n\nÇıkarma işlemi başlamadı. Sürücüyü yeniden bağlayın veya Yapılandırma sekmesinden başka bir DataForge önbellek klasörü seçin, ardından yeniden deneyin."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen DataForge önbellek klasörünü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
     }
   },
   "apply": {

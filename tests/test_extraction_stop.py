@@ -26,9 +26,11 @@ from __future__ import annotations
 
 import errno
 import logging
+import os
 import threading
 import time
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -42,6 +44,7 @@ from src.gui.main_window import MainWindow
 from src.gui.workers import AnimatedProgressDialog, DataForgeExtractWorker, P4kExtractWorker
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
+from tests.unusable_folder import missing_drive_folder, new_folders_denied
 
 pytestmark = pytest.mark.unit
 
@@ -733,6 +736,174 @@ class TestDataForgeSlots:
         box.warning.assert_called_once()
 
 
+class TestUnusableCacheFolderAtStart:
+    """#494. ``_run_dataforge_extraction`` creates the cache folder
+    (``get_dataforge_cache_dir``), because it is about to write the cache.
+    When it cannot (Windows refuses the folder, its drive is gone or not
+    ready, or Windows rejects it for another reason), it says which in one
+    box before any worker or progress dialog exists, naming the cache folder
+    the Config tab shows. It logs the Windows error at WARNING (an ERROR
+    record would open a second box), ends a Simple-mode run, lights Generate
+    again (the pipeline cleared it as the run started) and returns False.
+    Status checks only read the folder now
+    (test_refused_cache_window_paths.py), so an extraction reports it
+    here."""
+
+    @pytest.fixture
+    def box(self, monkeypatch):
+        """A fake QMessageBox. Neither a worker nor a progress dialog may be
+        built while it is in place."""
+        made, dialogs, box = MagicMock(), MagicMock(), MagicMock()
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker", made)
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", dialogs)
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        yield box
+        made.assert_not_called()
+        dialogs.assert_not_called()
+
+    @staticmethod
+    def _failing_with(monkeypatch, error) -> str:
+        settings = MagicMock()
+        settings.get_dataforge_cache_dir.side_effect = error
+        settings.get_dataforge_cache_base.return_value = Path("E:/Games/SC Cache")
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        return os.path.normpath("E:/Games/SC Cache")
+
+    @staticmethod
+    def _refused(folder: str) -> str:
+        return (tr("extract.cache_folder_refused", folder=folder) + "\n\n"
+                + tr("extract.folder_refused_fix_cache"))
+
+    @staticmethod
+    def _unreachable(folder: str) -> str:
+        return tr("extract.cache_folder_unreachable", folder=folder)
+
+    @staticmethod
+    def _unusable(folder: str, reason: str) -> str:
+        return tr("extract.cache_folder_unusable", folder=folder, reason=reason)
+
+    @staticmethod
+    def _reported_once(me, box, caplog, text, windows_error, started):
+        assert started is False
+        assert me._forge_worker is None
+        box.warning.assert_called_once_with(
+            me, tr("extract.dataforge_extraction_error_title"), text)
+        logged = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(logged) == 1 and windows_error in logged[0]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        me._end_simple_run.assert_called_once_with()
+        me.enhancements_tab.set_operation_idle.assert_called_once_with(success=False)
+        me.enhancements_tab.set_operation_running.assert_not_called()
+        me.statusBar().showMessage.assert_called_with(tr("extract.dataforge_extraction_failed"))
+
+    def test_a_refused_folder_opens_one_box_with_the_advice(self, monkeypatch, caplog, box):
+        error = PermissionError(13, "Access is denied", "E:/Games/SC Cache/LIVE")
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._refused(folder), str(error), started)
+
+    def test_a_drive_that_is_gone_says_it_could_not_be_reached(self, monkeypatch, caplog, box):
+        error = FileNotFoundError(2, "The system cannot find the path specified", "E:/")
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._unreachable(folder), str(error), started)
+
+    def test_a_drive_that_is_not_ready_says_it_could_not_be_reached(
+        self, monkeypatch, caplog, box
+    ):
+        """A drive letter with no media in it (a card reader with the card
+        out, an empty optical drive) gives ERROR_NOT_READY, which Python
+        raises as a PermissionError. Nothing was refused, so it gets the
+        could-not-reach text with its reconnect advice, not the permission
+        text."""
+        error = OSError(None, "The device is not ready", "E:/Games/SC Cache/LIVE", 21)
+        assert isinstance(error, PermissionError)
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._unreachable(folder), str(error), started)
+
+    @pytest.mark.parametrize("error, reason", [
+        (OSError(None, "The filename, directory name, or volume label syntax is incorrect",
+                 "E:/Games/SC Cache/LIVE", 123),
+         "The filename, directory name, or volume label syntax is incorrect"),
+        (OSError(None, "Cannot create a file when that file already exists",
+                 "E:/Games/SC Cache", 183),
+         "Cannot create a file when that file already exists"),
+        (OSError(None, "There is not enough space on the disk", "E:/Games/SC Cache/LIVE", 112),
+         "There is not enough space on the disk"),
+        (OSError("the cache folder could not be made"), "the cache folder could not be made"),
+    ], ids=["a bad name", "a file in the way", "a full drive", "no reason of its own"])
+    def test_any_other_error_gives_windows_own_reason(
+        self, monkeypatch, caplog, box, english_ui, error, reason
+    ):
+        """Neither a refusal nor a folder that is not there: the box says the
+        folder could not be used and gives Windows' own reason (its
+        ``strerror``, in the user's Windows language, so not translated), or
+        the whole error when it has none. It used to say the drive could not
+        be reached and to reconnect it."""
+        assert not isinstance(error, (PermissionError, FileNotFoundError))
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._unusable(folder, reason), str(error), started)
+        assert box.warning.call_args.args[2] == (
+            f"Smart Citizen could not use the DataForge cache folder:\n{folder}\n\n{reason}\n\n"
+            "The extraction did not start, so nothing was changed.")
+
+    def test_a_real_refusal(self, tmp_profile, caplog, box):
+        base = tmp_profile / "cache"
+        base.mkdir()
+        AppSettings.set_cache_dir(base)
+        me = _window()
+        with new_folders_denied(base):
+            with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+                started = MainWindow._run_dataforge_extraction(me)
+        folder = os.path.normpath(str(base.resolve()))
+        self._reported_once(me, box, caplog, self._refused(folder), "[WinError 5]", started)
+        assert list(base.iterdir()) == []
+
+    def test_a_real_missing_drive(self, tmp_profile, caplog, box):
+        base = missing_drive_folder()
+        AppSettings.set_cache_dir(base)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(
+            me, box, caplog, self._unreachable(str(base)), "[WinError 3]", started)
+
+    def test_a_simple_mode_apply_leaves_the_page_ready(self, tmp_profile, box):
+        """The one-button run, end to end on the stub: the pipeline finds no
+        cache, the extraction cannot make one, and the page is ready again
+        with nothing applied."""
+        box.question.return_value = box.StandardButton.Yes
+        base = tmp_profile / "cache"
+        base.mkdir()
+        AppSettings.set_cache_dir(base)
+        me = _window(_simple_run_active=False)
+        me._enhancements_worker = None
+        for name in ("_run_enhancements_pipeline", "_run_dataforge_extraction",
+                     "_end_simple_run"):
+            setattr(me, name, getattr(MainWindow, name).__get__(me))
+
+        with new_folders_denied(base):
+            MainWindow._run_simple_apply(me)
+
+        assert me.simple_page.set_busy.call_args_list == [call(True), call(False)]
+        assert me._simple_run_active is False
+        me.enhancements_tab.mark_enhancements_clean.assert_called_once_with()
+        me.enhancements_tab.set_operation_idle.assert_called_once_with(success=False)
+        box.warning.assert_called_once()
+        me.apply_to_game.assert_not_called()
+        assert list(base.iterdir()) == []
+
+
 class TestP4kSlots:
     def test_a_released_worker_finishing_changes_nothing(self):
         stale, current = _Worker(running=False), _Worker()
@@ -1204,7 +1375,7 @@ class TestNothingStartsOnceClosing:
     def test_no_dataforge_extraction(self, monkeypatch, settings):
         made = MagicMock()
         monkeypatch.setattr(main_window, "DataForgeExtractWorker", made)
-        MainWindow._run_dataforge_extraction(_window(_close_committed=True))
+        assert MainWindow._run_dataforge_extraction(_window(_close_committed=True)) is False
         made.assert_not_called()
 
     def test_no_global_ini_extraction(self, monkeypatch, settings):
@@ -1256,7 +1427,7 @@ class TestStartupRefreshPrompt:
         settings.get_p4k_path.return_value = tools / "Data.p4k"
         settings.get_unp4k_exe_path.return_value = tools / "unp4k.exe"
         settings.get_unforge_exe_path.return_value = tools / "unforge.exe"
-        settings.get_dataforge_cache_dir.return_value = leaf
+        settings.get_dataforge_cache_leaf.return_value = leaf
         monkeypatch.setattr(main_window, "AppSettings", settings)
         box = MagicMock()
         box.question.return_value = box.StandardButton.Yes
@@ -1499,7 +1670,7 @@ class TestExtractionWiring:
         monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock(return_value=dialog))
         me = _window()
 
-        MainWindow._run_dataforge_extraction(me)
+        assert MainWindow._run_dataforge_extraction(me) is True
 
         worker = made[0]
         assert me._forge_worker is worker

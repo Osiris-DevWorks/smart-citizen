@@ -543,7 +543,12 @@ class EnhancementsGeneratorWorker(QThread):
 
             base_ini  = AppSettings.get_base_ini_path(self.language)
             enh_dir   = AppSettings.get_enhancements_dir(self.language)
-            forge_dir = AppSettings.get_dataforge_cache_dir()
+            # Never makes the cache folder (#494): every launcher checks the
+            # cache is there first, so the creating getter has nothing to
+            # make, and it would raise for a folder Windows refuses. The run
+            # still writes into the cache (the patches, the generator's
+            # lookup pickles).
+            forge_dir = AppSettings.get_dataforge_cache_leaf()
             # ── Diff-cache check ──────────────────────────────────────────────
             # Compare the current DataForge XMLs against the last-run manifest.
             # None  → no manifest yet, run everything.

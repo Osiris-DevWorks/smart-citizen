@@ -702,6 +702,22 @@
       "ht": "",
       "at": "無效的快取資料夾"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒絕了 Smart Citizen 在以下位置建立快取的權限：\n{folder}\n\nDataForge 快取資料夾未更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 無法存取以下位置：\n{folder}\n\nDataForge 快取資料夾未更改。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 無法使用以下位置：\n{folder}\n\n{reason}\n\nDataForge 快取資料夾未更改。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "所選的快取資料夾是一個檔案，而不是資料夾：\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge 快取路徑已更改"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen 無法在以下位置使用工作資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒絕了 Smart Citizen 在以下位置建立 DataForge 快取的權限：\n{folder}\n\n提取未開始，因此未做任何更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 無法存取 DataForge 快取資料夾：\n{folder}\n\n提取未開始。請重新連線該驅動器，或在配置標籤頁中選擇其他 DataForge 快取資料夾，然後重試。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 無法使用 DataForge 快取資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
     }
   },
   "apply": {

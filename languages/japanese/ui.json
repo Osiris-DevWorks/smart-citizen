@@ -706,6 +706,22 @@
       "ht": "",
       "at": "無効なキャッシュフォルダー"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所にキャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所にアクセスできませんでした：\n{folder}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所を使用できませんでした：\n{folder}\n\n{reason}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "選択したキャッシュフォルダーはフォルダーではなくファイルです：\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge キャッシュパスが変更されました"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen が次の場所で作業フォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所に DataForge キャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen が DataForge キャッシュフォルダーにアクセスできませんでした：\n{folder}\n\n抽出は開始されていません。ドライブを再接続するか、設定タブで別の DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が DataForge キャッシュフォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
     }
   },
   "apply": {

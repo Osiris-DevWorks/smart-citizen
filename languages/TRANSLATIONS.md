@@ -64,6 +64,73 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #494 keeps a DataForge
+  cache folder that Windows refuses, or one on a drive that is gone, from
+  stopping Smart Citizen opening, and says so in one box where the folder
+  is about to be made. Seven new keys. After
+  `config.invalid_cache_folder_title`: `config.cache_folder_refused`
+  (Windows denied Smart Citizen permission to create its cache in
+  `{folder}`, and the DataForge cache folder was not changed),
+  `config.cache_folder_unreachable` (Smart Citizen could not reach
+  `{folder}`, and the folder was not changed),
+  `config.cache_folder_unusable` (Smart Citizen could not use `{folder}`,
+  then `{reason}`, and the folder was not changed) and
+  `config.cache_folder_is_file` (the selected cache folder is a file, not a
+  folder, which replaces English the Config tab had hard-coded). After
+  `extract.folder_refused_fix`: `extract.cache_folder_refused` (Windows
+  denied Smart Citizen permission to create the DataForge cache in
+  `{folder}`, so the extraction did not start and nothing was changed),
+  `extract.cache_folder_unreachable` (Smart Citizen could not reach the
+  DataForge cache folder `{folder}`, the extraction did not start, and the
+  user can reconnect the drive or choose another DataForge cache folder in
+  the Config tab) and `extract.cache_folder_unusable` (Smart Citizen could
+  not use the DataForge cache folder `{folder}`, then `{reason}`, so the
+  extraction did not start and nothing was changed). The two `*_unusable`
+  keys are for an error that is neither a refusal nor a folder that cannot
+  be reached, such as a folder name Windows does not take or a path that
+  runs through a file. `{reason}` is Windows' own reason (the error's
+  `strerror`), which is already in the user's Windows language, so it is
+  passed in as it is and never translated. `{folder}`, and `{reason}`
+  where there is one, stand on a line of their own in each. The
+  Config tab's refusal is followed by #490's `extract.folder_refused_fix`
+  and the extraction's by `extract.folder_refused_fix_cache`, so no new
+  advice was needed. In all 10 languages, `at`-only (`ht` empty), in each
+  file's own register and its own names, as in the #490 entry below: the
+  Config tab (`tabs.config`), the DataForge cache folder
+  (`config.dataforge_cache_label`), a drive (as in the #482 strings:
+  disque, Laufwerk, unità, unidad, unidade, sürücü, ドライブ, 드라이브,
+  驱动器, 驅動器) and the extraction. "Could not reach" became "could not
+  access" where that reads more naturally (french accéder, spanish acceder,
+  portuguese_br acessar, japanese アクセス, korean 접근, chinese 访问,
+  chinese_traditional 存取), and the Config tab's short version names what
+  could not be reached (this folder, the following location) where the
+  language needs an object. "Could not use" is each language's plain verb
+  for using something (french utiliser, german verwenden, italian usare,
+  spanish and portuguese_br usar, turkish kullanmak, japanese 使用, korean
+  사용, chinese and chinese_traditional 使用). The Config tab's short
+  version names what could not be used as its could-not-reach one does,
+  and each `*_unusable` value ends with its file's own last sentence from
+  `config.cache_folder_unreachable` or `extract.cache_folder_refused`. The
+  "is a file" text follows each file's `config.invalid_data_folder_body`,
+  saying folder where that one says directory, as the new English does.
+  chinese_traditional was converted from the chinese strings with OpenCC
+  `s2twp`, then given #490's Taiwan terms by hand: 權限, 安全性 and 存取
+  (OpenCC gives 許可權, 安全中心 and 訪問); the two `*_unusable` values
+  needed no hand fix. Each string was back-translated and compared with
+  the English in the same pass, not by a separate checker: no meaning
+  errors, and the Korean sentence-spacing rule holds. No human string
+  changed. `tests/test_cache_folder_strings.py` checks every language's
+  placeholders, the folder and the reason each on a line of its own, and
+  this `ht`/`at` split.
+  The same change adds a "Windows denied permission to create the
+  DataForge cache, or Smart Citizen could not reach it" bullet to the
+  Troubleshooting section of `docs/HELP.md` and the 10 translated
+  `HELP.md` files, after #490's working folder one, worded from each
+  language's own `*.cache_folder_*` strings and #490's bullet, with its
+  `HELP.md`'s own names for the Config tab, the DataForge cache folder and
+  the Enhancements tab, and back-translated in the same pass. The bullet
+  does not cover the two `*_unusable` boxes, which carry Windows' own
+  reason, and was left as it was when they were added.
 - **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
   whose working folder Windows refuses, with a message, instead of retrying
   for hours. Three new keys after `extract.size_mb`:

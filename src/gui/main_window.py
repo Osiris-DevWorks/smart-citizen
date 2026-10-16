@@ -66,7 +66,14 @@ from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices
 from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
+from src.utils.pak_extractor import windows_reason
+from src.utils.settings import (
+    AppSettings,
+    CACHE_FOLDER_REFUSED,
+    CACHE_FOLDER_UNREACHABLE,
+    SC_LANGUAGE_IDS,
+    cache_folder_failure,
+)
 from src.utils.i18n import tr
 from src.utils.version import get_version
 from src.utils.win_paths import win_plain_path
@@ -5104,7 +5111,8 @@ class MainWindow(QMainWindow):
             return
 
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
-        records = AppSettings.get_dataforge_cache_dir() / DATAFORGE_RECORDS_SUBPATH
+        # Only reads, so it creates no cache folder (#494).
+        records = AppSettings.get_dataforge_cache_leaf() / DATAFORGE_RECORDS_SUBPATH
         if not records.exists():
             logger.warning(
                 f"{language!r} enhancements are stale/missing but no DataForge "
@@ -5470,7 +5478,8 @@ class MainWindow(QMainWindow):
         unforge_exe = AppSettings.get_unforge_exe_path()
         if not p4k_path.exists() or not unp4k_exe.exists() or not unforge_exe.exists():
             return
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        # Only reads, so it creates no cache folder (#494).
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         if (not (forge_dir / P4K_MTIME_STAMP).exists()
                 and not (forge_dir / DATAFORGE_LIBS_SUBPATH).exists()):
             # Never extracted — handled later by _check_enhancements_freshness,
@@ -5799,7 +5808,9 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.mark_enhancements_clean()
 
         from src.utils.pak_extractor import dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        # Only reads (#494): a cache folder that is not there is not fresh,
+        # and the extraction below is what creates it.
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path  = AppSettings.get_p4k_path()
 
         if dataforge_cache_is_fresh(p4k_path, forge_dir):
@@ -5951,14 +5962,43 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr("status_bar.enhancement_generation_failed"))
 
     def _run_dataforge_extraction(self):
-        """Launch DataForgeExtractWorker in the background (non-blocking)."""
+        """Launch DataForgeExtractWorker in the background (non-blocking).
+
+        Returns True if a run started.
+        """
         if self._forge_worker is not None or self._close_committed:
-            return
+            return False
 
         p4k_path    = AppSettings.get_p4k_path()
         unp4k_exe   = AppSettings.get_unp4k_exe_path()
         unforge_exe = AppSettings.get_unforge_exe_path()
-        forge_dir   = AppSettings.get_dataforge_cache_dir()
+        # Creates the cache folder, because it is about to write the cache;
+        # every status check only reads it (#494).
+        # Windows can refuse the folder (its permissions, Controlled folder
+        # access), its drive can be gone or not ready, or Windows can reject
+        # it for another reason. Say which in one box before any worker or
+        # dialog exists, read the same way as the Config tab reads it, and
+        # leave the Simple page and the Generate button as a failed
+        # extraction leaves them.
+        try:
+            forge_dir = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            folder = os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
+            logger.warning(f"Could not create the DataForge cache folder in {folder}: {e}")
+            self._end_simple_run()
+            self.enhancements_tab.set_operation_idle(success=False)
+            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
+            failure = cache_folder_failure(e)
+            if failure == CACHE_FOLDER_REFUSED:
+                message = (tr("extract.cache_folder_refused", folder=folder) + "\n\n"
+                           + tr("extract.folder_refused_fix_cache"))
+            elif failure == CACHE_FOLDER_UNREACHABLE:
+                message = tr("extract.cache_folder_unreachable", folder=folder)
+            else:
+                message = tr("extract.cache_folder_unusable", folder=folder,
+                             reason=windows_reason(e))
+            QMessageBox.warning(self, tr("extract.dataforge_extraction_error_title"), message)
+            return False
 
         worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
         self._forge_worker = worker
@@ -5988,6 +6028,7 @@ class MainWindow(QMainWindow):
             lambda success, w=worker: self._on_dataforge_extract_finished(success, w)
         )
         worker.start()
+        return True
 
     def _confirm_stop_dataforge_extraction(self, worker) -> bool:
         """Esc or the title-bar X on the DataForge progress dialog (#471).

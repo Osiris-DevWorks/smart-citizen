@@ -706,6 +706,22 @@
       "ht": "Dossier de cache invalide",
       "at": "Dossier de cache invalide"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows a refusé à Smart Citizen l'autorisation de créer son cache dans :\n{folder}\n\nLe dossier du cache DataForge n'a pas été modifié."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu accéder à ce dossier :\n{folder}\n\nLe dossier du cache DataForge n'a pas été modifié."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu utiliser ce dossier :\n{folder}\n\n{reason}\n\nLe dossier du cache DataForge n'a pas été modifié."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Le dossier de cache sélectionné est un fichier, pas un dossier :\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "Chemin du cache DataForge modifié",
       "at": "Chemin du cache DataForge modifié"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen n'a pas pu utiliser un dossier de travail dans :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows a refusé à Smart Citizen l'autorisation de créer le cache DataForge dans :\n{folder}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu accéder au dossier du cache DataForge :\n{folder}\n\nL'extraction n'a pas démarré. Reconnectez le disque, ou choisissez un autre dossier du cache DataForge dans l'onglet Paramètres, puis réessayez."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu utiliser le dossier du cache DataForge :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
     }
   },
   "apply": {

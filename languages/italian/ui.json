@@ -706,6 +706,22 @@
       "ht": "",
       "at": "Cartella cache non valida"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la sua cache in:\n{folder}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a raggiungere questa cartella:\n{folder}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare questa cartella:\n{folder}\n\n{reason}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "La cartella cache selezionata è un file, non una cartella:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "Percorso cache DataForge modificato"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen non è riuscito a usare una cartella di lavoro in:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la cache DataForge in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a raggiungere la cartella cache DataForge:\n{folder}\n\nL'estrazione non è stata avviata. Ricollega l'unità oppure scegli un'altra cartella cache DataForge nella scheda Config, poi riprova."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare la cartella cache DataForge:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
     }
   },
   "apply": {

@@ -706,6 +706,22 @@
       "ht": "",
       "at": "无效的缓存文件夹"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建缓存的权限：\n{folder}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 无法访问以下位置：\n{folder}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法使用以下位置：\n{folder}\n\n{reason}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "所选的缓存文件夹是一个文件，而不是文件夹：\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge 缓存路径已更改"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen 无法在以下位置使用工作文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建 DataForge 缓存的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 无法访问 DataForge 缓存文件夹：\n{folder}\n\n提取未开始。请重新连接该驱动器，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法使用 DataForge 缓存文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
     }
   },
   "apply": {

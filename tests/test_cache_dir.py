@@ -22,7 +22,9 @@ staged migration to the default LOCALAPPDATA location.
 """
 from __future__ import annotations
 
+import ast
 import sys
+from collections import Counter
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -33,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
+from tests.unusable_folder import missing_drive_folder, new_folders_denied  # noqa: E402
 
 pytestmark = pytest.mark.unit
 
@@ -125,6 +128,19 @@ class TestRegistryModeDefault:
         monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
         assert AppSettings.get_dataforge_cache_base() == fake_local / "Smart Citizen"
 
+    def test_the_default_base_is_named_with_an_override_set(
+        self, json_backend, registry_mode, monkeypatch, tmp_path
+    ):
+        """The folder the Config tab names when a reset to the default fails
+        (#494): the default whatever the override, made nowhere."""
+        fake_local = tmp_path / "LocalAppData"
+        monkeypatch.setenv("LOCALAPPDATA", str(fake_local))
+        AppSettings.set_cache_dir(tmp_path / "ssd-cache")
+        assert AppSettings.get_default_dataforge_cache_base() == fake_local / "Smart Citizen"
+        AppSettings.set_cache_dir(None)
+        assert AppSettings.get_dataforge_cache_base() == fake_local / "Smart Citizen"
+        assert not fake_local.exists()
+
 
 class TestRegistryModeOverride:
     def test_override_redirects_base(self, json_backend, registry_mode, tmp_path):
@@ -171,6 +187,17 @@ class TestPortableMode:
         target = tmp_path / "ssd-cache"
         AppSettings.set_cache_dir(target)
         assert AppSettings.get_dataforge_cache_base() == target.resolve()
+
+    def test_the_default_base_is_named_with_an_override_set(
+        self, json_backend, portable_mode, tmp_path
+    ):
+        """As in registry mode (#494), the default here being next to the exe."""
+        AppSettings.set_cache_dir(tmp_path / "ssd-cache")
+        assert AppSettings.get_default_dataforge_cache_base() == (
+            tmp_path / "portable_data" / "cache")
+        AppSettings.set_cache_dir(None)
+        assert AppSettings.get_dataforge_cache_base() == tmp_path / "portable_data" / "cache"
+        assert not (tmp_path / "portable_data").exists()
 
 
 class TestPendingCleanup:
@@ -476,3 +503,166 @@ class TestMigrateDoesNotDestroyCache:
 
         assert _has_stamp(old), "source must be untouched when the target is gone"
         assert AppSettings.get_pending_cache_cleanup() == ""
+
+
+class TestCachePathDoesNotCreate:
+    """#494. ``get_dataforge_cache_leaf()`` names the active channel's cache
+    folder without creating it, for every check that only reads (the cache
+    status, its freshness, the build key). ``get_dataforge_cache_dir()`` is
+    the same folder plus the ``mkdir``, kept for the code about to write the
+    cache, and still raises when the folder cannot be made: the migrator and
+    the global.ini extraction depend on that. Status checks used the creating
+    one, so a cache folder Windows refused, or one on a drive that is gone,
+    stopped Smart Citizen opening."""
+
+    @staticmethod
+    def _named_then_made(expected: Path) -> None:
+        leaf = AppSettings.get_dataforge_cache_leaf()
+        assert leaf == expected
+        assert not leaf.exists(), "naming the cache folder must not create it"
+        assert AppSettings.get_dataforge_cache_dir() == leaf
+        assert leaf.is_dir()
+
+    def test_registry_default(self, json_backend, registry_mode, monkeypatch, tmp_path):
+        monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+        self._named_then_made(
+            tmp_path / "LocalAppData" / "Smart Citizen" / "LIVE" / "cache" / "dataforge")
+
+    def test_override(self, json_backend, registry_mode, tmp_path):
+        AppSettings.set_cache_dir(tmp_path / "fast-ssd")
+        self._named_then_made(
+            (tmp_path / "fast-ssd").resolve() / "LIVE" / "cache" / "dataforge")
+
+    def test_portable(self, json_backend, portable_mode, tmp_path):
+        self._named_then_made(
+            tmp_path / "portable_data" / "cache" / "LIVE" / "cache" / "dataforge")
+
+    def test_a_refused_folder_is_named_and_only_the_writer_raises(
+        self, json_backend, registry_mode, tmp_path
+    ):
+        base = tmp_path / "refused"
+        base.mkdir()
+        AppSettings.set_cache_dir(base)
+        with new_folders_denied(base):
+            leaf = AppSettings.get_dataforge_cache_leaf()
+            assert leaf == base.resolve() / "LIVE" / "cache" / "dataforge"
+            assert AppSettings.get_dataforge_build_key() == "unknown"
+            with pytest.raises(PermissionError):
+                AppSettings.get_dataforge_cache_dir()
+        assert list(base.iterdir()) == []
+
+    def test_a_missing_drive_is_named_and_only_the_writer_raises(
+        self, json_backend, registry_mode
+    ):
+        base = missing_drive_folder()
+        AppSettings.set_cache_dir(base)
+        assert AppSettings.get_dataforge_cache_leaf() == base / "LIVE" / "cache" / "dataforge"
+        assert AppSettings.get_dataforge_build_key() == "unknown"
+        with pytest.raises(FileNotFoundError):
+            AppSettings.get_dataforge_cache_dir()
+
+    def test_a_cache_already_there_under_refusing_folders_still_works(
+        self, json_backend, registry_mode, tmp_path
+    ):
+        """Every folder down to the cache denies new folders: the cache is
+        found by both, and its build key read."""
+        base = tmp_path / "refused"
+        leaf = _seed_cache(base / "LIVE" / "cache" / "dataforge", "1700000000.0")
+        AppSettings.set_cache_dir(base)
+        with new_folders_denied(base, base / "LIVE", base / "LIVE" / "cache", leaf):
+            assert AppSettings.get_dataforge_cache_leaf() == leaf.resolve()
+            assert AppSettings.get_dataforge_cache_dir() == leaf.resolve()
+            assert AppSettings.get_dataforge_build_key() == "1700000000.0"
+
+
+# The method that creates the cache folder, and the code allowed to call it:
+# what is about to write the cache, each calling it once.
+_CREATING_GETTER = "get_dataforge_cache_dir"
+_CACHE_WRITERS = {
+    # Moves an old cache into the new location.
+    "src/utils/settings.py::AppSettings.migrate_dataforge_cache_to_local": 1,
+    # Extracts DataForge into the cache.
+    "src/gui/main_window.py::MainWindow._run_dataforge_extraction": 1,
+    # Works beside the cache folder (#471), in %TEMP% when it cannot be made.
+    "src/gui/main_window.py::MainWindow._run_p4k_extraction": 1,
+    # Makes the new cache folder the user just picked, for the re-extract.
+    "src/gui/config_tab.py::ConfigTab._maybe_apply_cache_change": 1,
+}
+
+# Where the guard looks: the app and the scripts, the enhancement generator
+# among them.
+_SCANNED_FOLDERS = ("src", "scripts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _scanned_sources() -> list[Path]:
+    """Every .py file the drift guard reads."""
+    return [path for folder in _SCANNED_FOLDERS
+            for path in sorted((_REPO_ROOT / folder).rglob("*.py"))]
+
+
+def _uses_of_the_creating_getter(source: str, label: str) -> Counter:
+    """Every use of ``get_dataforge_cache_dir`` in *source* (a call, a bare
+    reference handed on, or its name as a string for ``getattr``), counted by
+    the function it sits in, as ``<label>::<Class.method>``."""
+    found: Counter = Counter()
+
+    def visit(node, scope):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            scope = f"{scope}.{node.name}" if scope else node.name
+        if ((isinstance(node, ast.Attribute) and node.attr == _CREATING_GETTER)
+                or (isinstance(node, ast.Name) and node.id == _CREATING_GETTER)
+                or (isinstance(node, ast.Constant) and node.value == _CREATING_GETTER)):
+            found[f"{label}::{scope or '<module>'}"] += 1
+        for child in ast.iter_child_nodes(node):
+            visit(child, scope)
+
+    visit(ast.parse(source), "")
+    return found
+
+
+class TestOnlyWritersCreateTheCache:
+    """#494 drift guard. ``get_dataforge_cache_dir()`` creates the cache
+    folder, so a status check that calls it fails when Windows refuses the
+    folder or its drive is gone, and building the Enhancements tab is such a
+    check: Smart Citizen could not open. Only the code about to write the
+    cache may call it, once each; anything that only reads uses
+    ``get_dataforge_cache_leaf()``. A new use anywhere in ``src/`` or
+    ``scripts/`` fails here: read through the leaf instead, or add a writer
+    to ``_CACHE_WRITERS`` with the reason it writes."""
+
+    def test_only_the_writers_call_the_creating_getter(self):
+        found: Counter = Counter()
+        for path in _scanned_sources():
+            found += _uses_of_the_creating_getter(
+                path.read_text(encoding="utf-8"), path.relative_to(_REPO_ROOT).as_posix())
+        assert dict(found) == _CACHE_WRITERS
+
+    def test_every_module_that_names_the_cache_folder_is_scanned(self):
+        """The modules that read or make the cache folder today. The
+        generator script is the one outside src/, so a scan narrowed to
+        src/ would let it make the cache folder again unseen."""
+        scanned = {path.relative_to(_REPO_ROOT).as_posix() for path in _scanned_sources()}
+        assert {
+            "scripts/generate_enhancements_ini.py",
+            "src/gui/config_tab.py",
+            "src/gui/enhancements_tab.py",
+            "src/gui/main_window.py",
+            "src/gui/workers.py",
+            "src/utils/settings.py",
+        } <= scanned
+
+    def test_every_kind_of_use_is_counted(self):
+        source = (
+            "class Tab:\n"
+            "    def check(self):\n"
+            "        AppSettings.get_dataforge_cache_dir()\n"
+            "        def later():\n"
+            "            return get_dataforge_cache_dir\n"
+            "        getattr(AppSettings, 'get_dataforge_cache_dir')\n"
+            "        '''Mentions get_dataforge_cache_dir in prose only.'''\n"
+            "AppSettings.get_dataforge_cache_leaf()\n"
+        )
+        assert _uses_of_the_creating_getter(source, "x.py") == Counter({
+            "x.py::Tab.check": 2, "x.py::Tab.check.later": 1,
+        })

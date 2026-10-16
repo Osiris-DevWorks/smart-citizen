@@ -730,6 +730,22 @@
       "ht": "",
       "at": "잘못된 캐시 폴더"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에 접근할 수 없었습니다:\n{folder}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "선택한 캐시 폴더는 폴더가 아니라 파일입니다:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge 캐시 경로 변경됨"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen이 다음 위치에서 작업 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 DataForge 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen이 DataForge 캐시 폴더에 접근할 수 없었습니다:\n{folder}\n\n추출이 시작되지 않았습니다. 드라이브를 다시 연결하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 DataForge 캐시 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
     }
   },
   "apply": {

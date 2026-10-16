@@ -706,6 +706,22 @@
       "ht": "Pasta de Cache inválida",
       "at": "Pasta de Cache inválida"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "O Windows negou ao Smart Citizen a permissão para criar o próprio cache em:\n{folder}\n\nA pasta cache do DataForge não foi alterada."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu acessar esta pasta:\n{folder}\n\nA pasta cache do DataForge não foi alterada."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu usar esta pasta:\n{folder}\n\n{reason}\n\nA pasta cache do DataForge não foi alterada."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "A pasta de cache selecionada é um arquivo, não uma pasta:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "Alterado o caminho do cache do DataForge",
       "at": "Alterado o caminho do cache do DataForge"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "O Smart Citizen não conseguiu usar uma pasta de trabalho em:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "O Windows negou ao Smart Citizen a permissão para criar o cache do DataForge em:\n{folder}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu acessar a pasta cache do DataForge:\n{folder}\n\nA extração não foi iniciada. Reconecte a unidade ou escolha outra pasta cache do DataForge na aba Config e tente novamente."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu usar a pasta cache do DataForge:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
     }
   },
   "apply": {

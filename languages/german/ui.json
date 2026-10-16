@@ -706,6 +706,22 @@
       "ht": "",
       "at": "Ungültiger Cache-Ordner"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, seinen Cache in diesem Ordner zu erstellen:\n{folder}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen konnte diesen Ordner nicht erreichen:\n{folder}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte diesen Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Der ausgewählte Cache-Ordner ist eine Datei, kein Ordner:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge-Cache-Pfad geändert"
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen konnte in diesem Ordner keinen Arbeitsordner verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, den DataForge-Cache in diesem Ordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht erreichen:\n{folder}\n\nDie Extraktion wurde nicht gestartet. Schließe das Laufwerk wieder an oder wähle im Konfiguration-Tab einen anderen DataForge-Cache-Ordner, und versuche es dann erneut."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
     }
   },
   "apply": {

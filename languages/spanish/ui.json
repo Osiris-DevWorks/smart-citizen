@@ -706,6 +706,22 @@
       "ht": "Carpeta de caché no válida",
       "at": ""
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear su caché en:\n{folder}\n\nLa carpeta de caché de DataForge no se cambió."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo acceder a esta carpeta:\n{folder}\n\nLa carpeta de caché de DataForge no se cambió."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar esta carpeta:\n{folder}\n\n{reason}\n\nLa carpeta de caché de DataForge no se cambió."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "La carpeta de caché seleccionada es un archivo, no una carpeta:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "Ruta de caché de DataForge cambiada",
       "at": ""
@@ -2859,6 +2875,18 @@
     "folder_unusable": {
       "ht": "",
       "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear la caché de DataForge en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo acceder a la carpeta de caché de DataForge:\n{folder}\n\nLa extracción no se inició. Reconecta la unidad o elige otra carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar la carpeta de caché de DataForge:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
     }
   },
   "apply": {

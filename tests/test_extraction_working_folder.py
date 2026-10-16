@@ -31,6 +31,10 @@ already failing to delete. These tests pin the replacement:
   builds and CI), so every test that refuses a folder counts the calls
   through ``_counting_mkdir``, whose spin guard fails a retry loop instead
   of hanging the run.
+* A DataForge run in %TEMP% (#494) makes and removes one test folder where
+  its cache folder is made again after the wipe, so a folder that refuses
+  new ones is the same refusal, before any tool runs and with the old cache
+  still there.
 
 Qt-free. Child processes run on the base interpreter (``sys._base_executable``)
 because a venv's ``python.exe`` is a launcher that starts a second process,
@@ -39,7 +43,6 @@ under test. Every child exits on its own within 30 s even if a kill fails.
 """
 from __future__ import annotations
 
-import contextlib
 import errno
 import json
 import logging
@@ -57,6 +60,7 @@ import pytest
 import src.utils.pak_extractor as pe
 from src.utils.dataforge_diff import MANIFEST_FILE
 from src.utils.win_paths import win_long_path
+from tests.unusable_folder import new_folders_denied
 
 pytestmark = [
     pytest.mark.unit,
@@ -78,9 +82,6 @@ _RUN_PREFIXES = (pe.DATAFORGE_SCRATCH_PREFIX, pe.GLOBAL_INI_SCRATCH_PREFIX,
 # 2**31 - 1 times on Windows, #490) is stopped here with an error the test
 # reports, instead of hanging the run for a day and a half.
 _SPIN_GUARD_CALLS = 100
-# The well-known SID of Everyone. The account name is translated on
-# non-English Windows, the SID never is.
-_EVERYONE_SID = "*S-1-1-0"
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -2746,7 +2747,9 @@ class TestMakeRunFolder:
 class TestRefusedWorkingFolder:
     """A refusal becomes one translated message that names the folder (#490):
     for DataForge at once, for global.ini only when %TEMP% refuses too. Any
-    other OSError is handled as before."""
+    other OSError is handled as before. With DataForge's work in %TEMP%, the
+    folder its cache folder is made again in is checked the same way before
+    any tool runs (#494)."""
 
     def test_a_refused_parent_of_the_cache_folder_is_the_same_box(
         self, root, monkeypatch, systemp
@@ -2827,6 +2830,201 @@ class TestRefusedWorkingFolder:
         assert raised.value.folder == str(systemp)
         assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
         assert "Config tab" not in str(raised.value)
+
+    def test_dataforge_in_temp_is_refused_when_the_cache_folder_could_not_be_made_again(
+        self, setup, monkeypatch, systemp, caplog, english_ui
+    ):
+        """#494. Just before it saves the new cache, the run deletes the
+        cache folder and makes it again in the same folder. Making the
+        working folder in %TEMP% shows nothing about that folder, so one
+        that refuses new folders let the run delete the old cache and then
+        fail to make the new one with a raw PermissionError. One test folder
+        made there before any tool runs finds it first: the folder named
+        with the cache advice, and the old cache kept, stamped and fresh."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        fake = _FakeTools()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run(fake)
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert calls[1].name.startswith(pe.DATAFORGE_SCRATCH_PREFIX)
+        assert str(raised.value) == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert "choose another DataForge cache folder in the Config tab" in str(raised.value)
+        assert raised.value.folder == str(leaf.parent)
+        assert isinstance(raised.value.__cause__, PermissionError)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{raised.value.__cause__}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_in_temp_makes_one_test_folder_and_removes_it(
+        self, setup, monkeypatch, systemp
+    ):
+        """The check on a folder that takes new folders: one test folder
+        beside the cache folder, gone again before the tools run."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch)
+        seen = []
+        fake = _FakeTools(during_unforge=lambda run_dir: seen.append(
+            _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)))
+        assert run(fake) is True
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert seen == [[]]
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_dataforge_in_temp_makes_the_folder_that_holds_the_cache_folder(
+        self, setup, monkeypatch, systemp
+    ):
+        """No cache folder yet, no folder to hold it, and no channel folder
+        above that either. The app makes the cache folder before an
+        extraction, but extract_dataforge does not need it to: the check
+        makes the folder that holds the cache folder, and every missing
+        folder above it, before its test folder, as the working folder does
+        beside the cache, so the run goes through and stamps the new
+        cache."""
+        leaf, run = setup
+        shutil.rmtree(leaf.parents[1])
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch)
+        assert run(_FakeTools()) is True
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_in_temp_with_a_refused_parent_is_the_same_box(
+        self, root, monkeypatch, systemp, caplog, english_ui
+    ):
+        """The %TEMP% twin of
+        test_a_refused_parent_of_the_cache_folder_is_the_same_box above.
+        The check makes the folder that holds the cache folder, and the
+        folders above it, when they are missing. Windows refusing one of
+        them is the same box, naming the folder that holds the cache folder
+        with the cache advice, not a raw error, and no tool runs."""
+        tools = root / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        new = root / "new"
+        leaf = new / "cache" / "dataforge"
+        real_mkdir = os.mkdir
+
+        def mkdir(path, *args, **kwargs):
+            if pe.win_plain_path(str(path)) == pe.win_plain_path(str(new)):
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_mkdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(pe.os, "mkdir", mkdir)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch)   # counts run folders, then calls the fake above
+        fake = _FakeTools()
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe",
+                                     tools / "unforge.exe", leaf)
+        assert raised.value.folder == str(leaf.parent)
+        assert str(raised.value) == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert isinstance(raised.value.__cause__, PermissionError)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{raised.value.__cause__}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp)]   # no test folder
+        assert fake.calls == []
+        assert not new.exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_beside_the_cache_the_working_folder_is_the_only_check(self, setup, monkeypatch):
+        """Making the working folder beside the cache folder already shows
+        that folder takes a new one, so no test folder is made there."""
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch)
+        assert run(_FakeTools()) is True
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(leaf.parent)]
+
+    def test_a_test_folder_that_will_not_go_is_left_for_a_later_run(
+        self, setup, monkeypatch, caplog
+    ):
+        """A test folder Windows will not remove at once (OneDrive or an
+        antivirus still holding it) is no reason to stop: the run goes on,
+        logs it at WARNING, and a later DataForge run sweeps it as it sweeps
+        a crashed run's leftover, because it has the working folder's
+        prefix."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        real_rmdir = os.rmdir
+
+        def rmdir(path, *args, **kwargs):
+            folder = Path(pe.win_plain_path(path))
+            if folder.parent == leaf.parent and folder.name.startswith(
+                    pe.DATAFORGE_SCRATCH_PREFIX):
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_rmdir(path, *args, **kwargs)
+
+        with monkeypatch.context() as patched:
+            patched.setattr(pe.os, "rmdir", rmdir)
+            with caplog.at_level(logging.INFO, logger=pe.logger.name):
+                assert run(_FakeTools()) is True
+        left = _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert len(left) == 1 and list(left[0].iterdir()) == []
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+        assert warnings[0].startswith(f"Could not remove the test folder {left[0]} (")
+        assert "Access is denied" in warnings[0]
+        assert warnings[0].endswith("); a later DataForge extraction removes it")
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+        old = time.time() - pe._UNMARKED_SCRATCH_GRACE_SECONDS - 60
+        os.utime(left[0], (old, old))
+        assert run(_FakeTools()) is True
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_making_the_test_folder_fails_dataforge_as_before(
+        self, setup, monkeypatch, systemp, make_error
+    ):
+        """A drive that is gone or a bad path is raised as it is, as for the
+        working folder, but now before any tool runs and with the old cache
+        kept."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        error = make_error()
+        calls = _counting_mkdir(monkeypatch, _failing_in(leaf.parent, error))
+        fake = _FakeTools()
+        with pytest.raises(OSError) as raised:
+            run(fake)
+        assert raised.value is error
+        assert len(calls) == 2
+        assert fake.calls == []
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert list(systemp.iterdir()) == []
+
+    def test_a_short_drive_is_reported_before_the_test_folder(self, setup, monkeypatch, systemp):
+        """The free-space check (#482) still runs before any folder is made,
+        so a full cache drive gets its own message, not an error from making
+        the test folder on it."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: _CACHE_4K - 1 if drive(folder) == "D:" else _PLENTY)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert [s[0] for s in raised.value.shortages] == ["D:"]
+        assert calls == []
 
     def test_a_marker_refused_in_the_new_folder_is_a_refusal_too(self, setup, monkeypatch):
         """A folder can allow new folders and refuse new files. The marker is
@@ -3004,39 +3202,6 @@ class TestRefusedWorkingFolder:
         assert bare.strerror is None and pe.windows_reason(bare) == "no strerror"
 
 
-def _icacls(*args: str) -> subprocess.CompletedProcess:
-    """Run Windows' own icacls (from System32, never from PATH). It writes to
-    a pipe in the OEM code page, not the ANSI one ``text=True`` would read,
-    so a folder name or a translated message with a letter only the OEM page
-    has would fail to decode."""
-    system_root = os.environ.get("SystemRoot", r"C:\Windows")
-    icacls = Path(system_root) / "System32" / "icacls.exe"
-    return subprocess.run([str(icacls), *args], capture_output=True, encoding="oem",
-                          errors="replace", timeout=30)
-
-
-@contextlib.contextmanager
-def _new_folders_denied(*folders: Path):
-    """Deny Everyone the right to add a subfolder (AD) in each of *folders*
-    for the block: what Windows answers when a folder's permissions refuse
-    Smart Citizen. The deny is removed in a finally, so pytest can clean up,
-    and skips the test when icacls cannot set it."""
-    denied = []
-    try:
-        for folder in folders:
-            result = _icacls(str(folder), "/deny", f"{_EVERYONE_SID}:(AD)")
-            if result.returncode != 0:
-                pytest.skip(f"icacls could not deny new folders here: "
-                            f"{result.stdout}{result.stderr}")
-            denied.append(folder)
-        yield
-    finally:
-        failed = [(folder, result.stdout + result.stderr) for folder, result in
-                  ((folder, _icacls(str(folder), "/remove:d", _EVERYONE_SID)) for folder in denied)
-                  if result.returncode != 0]
-    assert failed == [], failed
-
-
 class TestRealRefusal:
     """The same against folders that really refuse new folders, through an
     access control list, as a folder whose permissions deny Smart Citizen
@@ -3048,7 +3213,7 @@ class TestRealRefusal:
         leaf, run = setup
         with monkeypatch.context() as patched:
             calls = _counting_mkdir(patched)
-            with _new_folders_denied(leaf.parent):
+            with new_folders_denied(leaf.parent):
                 with pytest.raises(pe.WorkingFolderRefusedError) as raised:
                     run(_FakeTools())
         assert len(calls) == 1 and calls[0].parent == leaf.parent
@@ -3060,6 +3225,39 @@ class TestRealRefusal:
         assert run(_FakeTools()) is True
         assert (leaf / pe.P4K_SIZE_STAMP).exists()
 
+    def test_dataforge_in_temp_keeps_the_old_cache_when_it_could_not_be_made_again(
+        self, setup, monkeypatch, systemp, english_ui
+    ):
+        """#494: a OneDrive cache works in %TEMP%, and the folder that holds
+        the cache folder denies new folders. The cache folder is there, so
+        only making it again after the wipe would fail, and before the fix
+        the old cache was gone by then. Refused before any tool runs with the
+        cache advice, the old cache still stamped and fresh, no test folder
+        left, and the run goes through once the deny is gone."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        fake = _FakeTools()
+        with monkeypatch.context() as patched:
+            calls = _counting_mkdir(patched)
+            with new_folders_denied(leaf.parent):
+                with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                    run(fake)
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert raised.value.folder == str(leaf.parent)
+        assert str(raised.value) == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert getattr(raised.value.__cause__, "winerror", None) == 5   # ERROR_ACCESS_DENIED
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert list(systemp.iterdir()) == []
+
+        assert run(_FakeTools()) is True
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not (leaf / "old-cache-sentinel").exists()
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
     def test_global_ini_moves_to_temp_and_stops_when_temp_refuses_too(
         self, env, systemp, monkeypatch
     ):
@@ -3067,10 +3265,10 @@ class TestRealRefusal:
         leaf.parent.mkdir(parents=True)
         with monkeypatch.context() as patched:
             calls = _counting_mkdir(patched)
-            with _new_folders_denied(leaf.parent):
+            with new_folders_denied(leaf.parent):
                 assert run() is True
                 assert Path(fake.cwds[-1]).parent == systemp
-                with _new_folders_denied(systemp):
+                with new_folders_denied(systemp):
                     with pytest.raises(pe.WorkingFolderRefusedError) as raised:
                         run()
         assert [c.parent for c in calls] == [leaf.parent, systemp] * 2

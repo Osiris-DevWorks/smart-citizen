@@ -627,6 +627,37 @@ def _begin_scratch(near, prefix: str, temp_prefix: str, *,
         return attempt(temp_root, temp_prefix)
 
 
+def _require_cache_can_be_remade(run_dir: Path, leaf: Path) -> None:
+    """Refuse a DataForge run that works in %TEMP% when the folder holding
+    the cache folder *leaf* will not take a new folder (#494).
+
+    Just before the new cache is saved the run deletes *leaf* and makes it
+    again in that same folder. Beside the cache, making the run's working
+    folder there has already shown that it can, so nothing more is checked.
+    In %TEMP% nothing had: a folder that refuses new folders (its
+    permissions, Controlled Folder Access) let the run delete the old cache
+    and then fail to make the new one, with a raw error box. Here one empty
+    folder is made there and removed again, before any tool runs, and a
+    PermissionError is the #490 refusal with the cache advice, the old cache
+    untouched. Any other OSError (a drive that is gone) is raised as it is,
+    as _begin_scratch does. The folder takes the working folder's prefix,
+    so one that cannot be removed is swept by a later DataForge run, as a
+    crashed run's leftover is."""
+    parent = leaf.parent
+    if run_dir.parent == Path(win_plain_path(parent)):
+        return
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        probe = _make_run_folder(parent, DATAFORGE_SCRATCH_PREFIX)
+    except PermissionError as e:
+        raise _folder_refused_error(parent, False, e) from e
+    try:
+        os.rmdir(probe)
+    except OSError as e:
+        logger.warning(f"Could not remove the test folder {win_plain_path(probe)} ({e}); "
+                       "a later DataForge extraction removes it")
+
+
 # ── Free space (#482) ────────────────────────────────────────────────────────
 # Each extraction checks, before it makes its working folder, that every
 # drive it writes to has room for what it writes there, and DataForge checks
@@ -1468,7 +1499,9 @@ def extract_dataforge(
             is wiped (which then stays), or a drive filled while the new
             cache was saved (#482).
         WorkingFolderRefusedError: Windows refused the working folder,
-            found before any tool runs (#490). The old cache stays.
+            found before any tool runs (#490), or, with the work in %TEMP%,
+            a new folder where the cache folder is made again after the
+            wipe (#494). The old cache stays.
         ExtractionCancelled: A stop was requested. Not a failure.
     """
     for exe, name in [(unp4k_exe, "unp4k.exe"), (unforge_exe, "unforge.exe")]:
@@ -1493,6 +1526,10 @@ def extract_dataforge(
     )
     logger.info(f"DataForge working folder: {run_dir}")
     try:
+        # Work in %TEMP% has not shown that the cache folder can be made again
+        # after the wipe in step 3 (#494).
+        _require_cache_can_be_remade(run_dir, dataforge_cache_dir)
+
         # ── Step 1: Extract Game2.dcb ─────────────────────────────────────────
         if progress_callback:
             progress_callback(tr("progress.extract_dcb"))

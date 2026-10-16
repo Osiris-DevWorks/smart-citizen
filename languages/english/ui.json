@@ -730,6 +730,22 @@
       "ht": "Invalid Cache Folder",
       "at": ""
     },
+    "cache_folder_refused": {
+      "ht": "Windows denied Smart Citizen permission to create its cache in:\n{folder}\n\nThe DataForge cache folder was not changed.",
+      "at": ""
+    },
+    "cache_folder_unreachable": {
+      "ht": "Smart Citizen could not reach:\n{folder}\n\nThe DataForge cache folder was not changed.",
+      "at": ""
+    },
+    "cache_folder_unusable": {
+      "ht": "Smart Citizen could not use:\n{folder}\n\n{reason}\n\nThe DataForge cache folder was not changed.",
+      "at": ""
+    },
+    "cache_folder_is_file": {
+      "ht": "The selected cache folder is a file, not a folder:\n{folder}",
+      "at": ""
+    },
     "dataforge_cache_changed_title": {
       "ht": "DataForge Cache Path Changed",
       "at": ""
@@ -2858,6 +2874,18 @@
     },
     "folder_unusable": {
       "ht": "Smart Citizen could not use a working folder in:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "cache_folder_refused": {
+      "ht": "Windows denied Smart Citizen permission to create the DataForge cache in:\n{folder}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "cache_folder_unreachable": {
+      "ht": "Smart Citizen could not reach the DataForge cache folder:\n{folder}\n\nThe extraction did not start. Reconnect the drive, or choose another DataForge cache folder in the Config tab, then try again.",
+      "at": ""
+    },
+    "cache_folder_unusable": {
+      "ht": "Smart Citizen could not use the DataForge cache folder:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
       "at": ""
     }
   },
