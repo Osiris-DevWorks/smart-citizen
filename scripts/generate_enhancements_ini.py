@@ -368,6 +368,12 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 #     "[Mining Laser]" -> "[Mining Laser-S0]"). Both caches bake rendered
 #     tags into their stored names, so both bump or a regen against an
 #     unchanged DataForge keeps serving the size-less text.
+#   blueprint_pools v15 (2.5.0, found in the #492 review) — the loc-derived
+#     name_fallback_tags (fuel nozzle [FN]) were built from the run's own
+#     language, which has no English "Item Type: Fuel Nozzle" line, so a
+#     translated run pickled pools with untagged nozzle bullets and the next
+#     English run reused them. They now read the English loc (tag_loc); the
+#     bump flushes any pickle a translated run wrote before the fix.
 #   xml_path_index v2 (2.2.0, #231 follow-up) — main() now wraps forge_dir
 #     (and everything derived from it, including records_dir) via
 #     win_paths.win_long_path before building this index, so its stored path
@@ -384,7 +390,8 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # from mission text) + #281 filename-fallback aliases. Without this
     # bump, a regen against an unchanged DataForge reuses pools baked
     # before those fixes and the mission text stays untagged/garbled.
-    "blueprint_pools": "v14",
+    # v15: name_fallback_tags read the English loc (see the history above).
+    "blueprint_pools": "v15",
     "scitem_lookups": "v10",
     "standings": "v3",
     "wearables": "v1",
@@ -6410,9 +6417,14 @@ def enhancements_bare_type_tags(ctx: dict) -> dict[str, str]:
     Only fires when the user has the Components > Type element enabled --
     same opt-in switch that gates Shield Generator/Cooler/Power Plant/etc.
     Type tags. Respects whatever abbreviation length (short/medium/long)
-    they've chosen for it.
+    they've chosen for it. The name comes from the run's own loc, but the
+    "Item Type:" line is read from the English loc (tag_loc) first: a
+    translated description has no English "Item Type: Fuel Nozzle" line, so
+    a translated run used to leave the nozzle names bare while their mission
+    bullets (bare_type_name_tag_lookup, also English) were tagged.
     """
     loc = ctx["loc"]
+    tag_loc = ctx.get("tag_loc") or loc
     tag_configs = ctx.get("tag_configs") or {}
     comp_cfg = tag_configs.get("components") or DEFAULT_TAG_CONFIGS.get("components")
     if comp_cfg is None:
@@ -6426,7 +6438,8 @@ def enhancements_bare_type_tags(ctx: dict) -> dict[str, str]:
         kl = key.lower()
         if not kl.endswith("_name"):
             continue
-        desc_value = loc.get(f"{key[:-len('_Name')]}_Desc", "")
+        desc_key = f"{key[:-len('_Name')]}_Desc"
+        desc_value = tag_loc.get(desc_key) or loc.get(desc_key, "")
         if not desc_value:
             continue
         tag = _bare_type_tag_from_desc(desc_value, comp_cfg)
@@ -6970,9 +6983,14 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # whose entity XMLs aren't UUID-linked to their
     # blueprints in CIG's data — entity_name_tags can never cover them, so
     # the blueprint-pool weave falls back to this loc-derived dict. Gated on
-    # the same annotate toggle as effective_tags.
+    # the same annotate toggle as effective_tags. Read from the English loc:
+    # the "Item Type: Fuel Nozzle" line it keys on and the bullet names it is
+    # matched against are both English, and the blueprint_pools pickle it
+    # feeds has no language in its key. Reading the run's own language left a
+    # translated run's pools untagged, and a later English run reused them.
     name_fallback_tags = (
-        bare_type_name_tag_lookup(loc, _comp_cfg) if annotate_descs else {}
+        bare_type_name_tag_lookup(ctx.get("tag_loc") or loc, _comp_cfg)
+        if annotate_descs else {}
     )
     # Armor weight tags (#492) on POTENTIAL BLUEPRINTS bullets, behind the
     # same toggle. Applied when the bullets are written (see
@@ -7080,7 +7098,8 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
         # the annotate=0/1 suffix bursts it on the toggle. Armor tags (#492)
         # are added after this cache, when the bullets are written, so the
         # armor config is deliberately not part of the key.
-        extra_key=f"{ctx.get('_components_cfg_key', '')}|annotate={int(annotate_descs)}",
+        extra_key=(f"{ctx.get('_components_cfg_key', '')}|annotate={int(annotate_descs)}"
+                   f"{ctx.get('_en_loc_cache_mark', '')}"),
     )
 
     contractgen_dir = records / "contracts" / "contractgenerator"
@@ -7756,11 +7775,26 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # When no English path is supplied (CLI runs) the input loc is assumed
     # English, preserving pre-#30 behaviour.
     en_loc = loc
+    # Appended to the extra_key of every pickle built from en_loc when the
+    # English base.ini was asked for but is missing, so a run that fell back
+    # to its own language never leaves those language-blind pickles for the
+    # next English run to reuse: that run sees a different key and rebuilds.
+    en_loc_cache_mark = ""
     if english_base_ini_path is not None:
         english_base_ini_path = Path(english_base_ini_path)
-        if english_base_ini_path != base_ini_path and english_base_ini_path.exists():
-            en_loc = parse_ini(english_base_ini_path)
-            logger.info(f"Loaded {len(en_loc):,} English keys for annotation lookups")
+        if english_base_ini_path != base_ini_path:
+            if english_base_ini_path.exists():
+                en_loc = parse_ini(english_base_ini_path)
+                logger.info(f"Loaded {len(en_loc):,} English keys for annotation lookups")
+            else:
+                # Names this run's own base.ini, so two languages that both
+                # fell back never share a key either.
+                en_loc_cache_mark = f"|en_loc=fallback:{base_ini_path}"
+                logger.warning(
+                    f"English base.ini not found at {english_base_ini_path}: tags, "
+                    "entity names and blueprint lists use this run's language until "
+                    "it is extracted again."
+                )
 
     # ── Check DataForge cache ─────────────────────────────────────────────────
     # Long-path-prefix once here so every downstream path derived from
@@ -7856,7 +7890,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 xml_path_index=xml_path_index, records_dir=records,
                 tag_config=_components_cfg,
             ),
-            extra_key=_components_cfg_key,
+            extra_key=_components_cfg_key + en_loc_cache_mark,
         )
 
     def _build_reputation():
@@ -7951,7 +7985,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 except ET.ParseError:
                     continue
             return rank_out, track_out
-        return _cached_lookup(forge_dir, "standings", _builder)
+        return _cached_lookup(forge_dir, "standings", _builder, extra_key=en_loc_cache_mark)
 
     if _want("mission_rewards"):
         lookup_jobs["standings"] = _build_standings
@@ -8042,6 +8076,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "xml_path_index":    xml_path_index,
         "tag_configs":       tag_configs or {},
         "_components_cfg_key": _components_cfg_key,
+        "_en_loc_cache_mark": en_loc_cache_mark,
         "annotate_mission_descs": bool(annotate_mission_descs),
         "rep_xp_label":      rep_xp_label or _DEFAULT_REP_XP_LABEL,
         "mission_headers":   mission_headers or dict(_DEFAULT_MISSION_HEADERS),
