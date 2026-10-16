@@ -640,7 +640,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "user.ini, 소스 캐시, 강화 INI, 백업을 위한 폴더입니다. 캐시 정리가 실패하면 OneDrive와 동기화되는 문서 폴더에서 이동하세요. DataForge XML 캐시는 아래에 별도 경로가 있습니다. 약 1.4GB이므로 기본값은 자동으로 OneDrive 밖에 둡니다."
+      "at": "user.ini, 소스 캐시, 강화 INI, 백업을 위한 폴더입니다. 캐시 정리가 실패하면 OneDrive와 동기화되는 문서 폴더에서 이동하세요. DataForge XML 캐시는 아래에 별도 경로가 있습니다. 약 1.2GB이므로 기본값은 자동으로 OneDrive 밖에 둡니다."
     },
     "app_data_label": {
       "ht": "",
@@ -832,7 +832,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "추출된 DataForge XML 트리(약 1.4GB)를 위한 기본 폴더입니다. 각 채널은 이 아래에 {base}\\{channel}\\cache\\dataforge\\로 중첩됩니다. OneDrive 밖에 있도록 기본값은 %LOCALAPPDATA%\\Smart Citizen입니다. 경로를 변경하면 재추출이 트리거됩니다."
+      "at": "추출된 DataForge XML 트리(약 1.2GB)를 위한 기본 폴더입니다. 각 채널은 이 아래에 {base}\\{channel}\\cache\\dataforge\\로 중첩됩니다. 추출이 실행되는 동안 이 드라이브에 최대 약 4.5GB의 여유 공간이 필요하며, 캐시가 이미 있으면 더 적게 필요합니다. 이 폴더가 OneDrive, 네트워크 드라이브 또는 이동식 드라이브에 있거나 매우 깊이 중첩되어 있으면 작업 파일은 대신 %TEMP%에 저장됩니다. OneDrive 밖에 있도록 기본값은 %LOCALAPPDATA%\\Smart Citizen입니다. 경로를 변경하면 재추출이 트리거됩니다."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2361,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "user.ini 복원 후 {channel} 다시 불러오는 중..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "추출된 base.ini로 다시 불러오는 중..."
     }
   },
   "status_bar": {
@@ -2803,6 +2807,58 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "게임 데이터베이스 변환이 30분 넘게 걸려 중단되었습니다.\n\n발견된 데이터베이스는 다음 위치의 {dcb}({size}MB)입니다:\n{path}\n\n정상적인 설치는 1분도 채 안 되어 변환되므로, 이는 보통 Smart Citizen이 잘못된 Star Citizen 폴더를 읽고 있음을 의미합니다. 드라이브에 남아 있는 오래되거나 남은 설치는 유효해 보일 수 있지만 오래된 게임 파일을 담고 있습니다.\n\nRSI Launcher를 열어 Star Citizen에 표시된 설치 위치를 확인하세요. 위 경로와 다르면 Smart Citizen의 설정 탭에서 수정하세요. 같은 경로라면, 대신 런처에서 파일 검증을 실행해 설치를 복구하세요."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "여유 공간이 부족합니다. 아무것도 저장되지 않았으며 현재 DataForge 캐시도 변경되지 않았습니다."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Data.p4k에서 global.ini를 추출할 여유 공간이 부족합니다. 아무것도 변경되지 않았습니다."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "드라이브 {drive} 여유 공간은 {free} 남아 있으며, 추출이 실행되는 동안 이 드라이브에 약 {needed} 필요합니다."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "드라이브 {drive} 공간을 확보하거나, 설정 탭에서 다른 드라이브에 있는 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더가 OneDrive, 네트워크 드라이브 또는 이동식 드라이브에 있거나 매우 깊이 중첩되어 있어서, 추출 작업은 Windows 임시 폴더({folder})에서 진행됩니다. 드라이브 {drive} 공간을 확보한 후 다시 시도하세요."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "드라이브 {drive} 공간을 확보한 후 다시 시도하세요."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "새 DataForge 캐시를 다음 위치에 저장하는 동안 드라이브 {drive} 공간이 부족해졌습니다:\n{folder}\n\n이 캐시는 불완전합니다. 드라이브 {drive} 공간을 확보한 후 다시 추출하여 캐시를 다시 만드세요."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth}GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb}MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 작업 폴더를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용한 후 다시 시도하세요."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에서 작업 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
     }
   },
   "apply": {

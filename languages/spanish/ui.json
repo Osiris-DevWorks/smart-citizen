@@ -808,7 +808,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Carpeta base para el árbol XML de DataForge extraído (~1,4 GB). Cada canal se anida bajo esta como {base}\\{channel}\\cache\\dataforge\\. Por defecto %LOCALAPPDATA%\\Smart Citizen para mantenerse fuera de OneDrive. Cambiar la ruta activa una nueva extracción."
+      "at": "Carpeta base para el árbol XML de DataForge extraído (unos 1,2 GB). Cada canal se anida bajo esta como {base}\\{channel}\\cache\\dataforge\\. Una extracción necesita hasta unos 4,5 GB libres en esta unidad mientras se ejecuta, menos si ya hay una caché. Sus archivos de trabajo van a %TEMP% en su lugar cuando esta carpeta está en OneDrive, en una unidad de red o extraíble, o anidada a mucha profundidad. Por defecto %LOCALAPPDATA%\\Smart Citizen para mantenerse fuera de OneDrive. Cambiar la ruta activa una nueva extracción."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2361,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "Recargando {channel} tras restaurar user.ini..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Recargando con el base.ini extraído..."
     }
   },
   "status_bar": {
@@ -2803,6 +2807,58 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "La conversión de la base de datos del juego superó los 30 minutos y se detuvo.\n\nBase de datos encontrada: {dcb} ({size} MB) en:\n{path}\n\nUna instalación correcta se convierte en mucho menos de un minuto. Normalmente esto significa que Smart Citizen está leyendo la carpeta equivocada de Star Citizen. Una instalación antigua o sobrante en tu disco parece válida pero contiene archivos de juego desactualizados.\n\nAbre el RSI Launcher y comprueba la ubicación de instalación que muestra. Si no coincide con la ruta de arriba, corrígela en la pestaña Config de Smart Citizen. Si coincide, ejecuta \"Verify Files\" en el launcher."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "No hay suficiente espacio libre. No se guardó nada y tu caché actual de DataForge no se modificó."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "No hay suficiente espacio libre para extraer global.ini de Data.p4k. No se cambió nada."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "La unidad {drive} tiene {free} libres y la extracción necesita unos {needed} en ella mientras se ejecuta."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Libera espacio en la unidad {drive} o elige una carpeta de caché de DataForge en otra unidad en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "La extracción trabaja en tu carpeta temporal de Windows ({folder}) porque la carpeta de caché de DataForge está en OneDrive, en una unidad de red o extraíble, o anidada a mucha profundidad. Libera espacio en la unidad {drive} y vuelve a intentarlo."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Libera espacio en la unidad {drive} y vuelve a intentarlo."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "La unidad {drive} se quedó sin espacio mientras se guardaba la nueva caché de DataForge en:\n{folder}\n\nEsa caché está incompleta. Libera espacio en la unidad {drive} y vuelve a extraer para reconstruirla."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear una carpeta de trabajo en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Revisa los permisos de esa carpeta, permite Smart Citizen a través del acceso controlado a carpetas en Seguridad de Windows o elige otra carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Revisa los permisos de esa carpeta o permite Smart Citizen a través del acceso controlado a carpetas en Seguridad de Windows, y vuelve a intentarlo."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
     }
   },
   "apply": {
