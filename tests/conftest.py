@@ -50,6 +50,92 @@ def no_real_install_detection_inputs():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def no_real_free_space():
+    """Every extraction checks free space before it writes (#482), so any
+    test that runs a real extract_dataforge or extract_global_ini on tmp_path
+    would otherwise pass or fail with the free space of the developer's (or
+    the runner's) drive. For the whole session, shutil.disk_usage reports
+    1 TiB free (the real call still runs, so a missing folder still raises)
+    and pak_extractor's volume probe reports 4096-byte clusters and no quota
+    figure. Tests of the check patch in their own figures over these. Tests
+    import pak_extractor both as src.utils.pak_extractor and as
+    utils.pak_extractor, two separate module objects, so each loaded one is
+    patched; shutil is one module either way."""
+    import functools
+    import shutil
+
+    try:
+        import src.utils.pak_extractor  # noqa: F401  (load it so it is always patched)
+    except ImportError:
+        pass
+
+    real_disk_usage = shutil.disk_usage
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(
+            shutil, "disk_usage", lambda path: real_disk_usage(path)._replace(free=1 << 40)
+        )
+        for name in ("src.utils.pak_extractor", "utils.pak_extractor"):
+            module = sys.modules.get(name)
+            if module is None:
+                continue
+            real_measure = module._measure_volume
+
+            @functools.wraps(real_measure)
+            def measure(folder, _real=real_measure):
+                return _real(folder)._replace(cluster=4096, caller_free=None)
+
+            patcher.setattr(module, "_measure_volume", measure)
+        yield
+
+
+@pytest.fixture
+def english_ui():
+    """The real English ui.json for one test, whatever language another test
+    module left active (i18n's module-level state persists across tests in
+    the same process). Restored afterwards."""
+    from src.utils import i18n
+
+    saved_lang, saved_strings = i18n._current_lang, i18n._strings
+    i18n.set_language("english")
+    yield
+    i18n._current_lang, i18n._strings = saved_lang, saved_strings
+
+
+@pytest.fixture
+def tmp_profile(tmp_path, monkeypatch):
+    """A Smart Citizen profile entirely under tmp_path, for a test that runs
+    the real AppSettings paths: settings in a JsonSettings file (never the
+    registry), the registry build mode, and %LOCALAPPDATA%, the data folder
+    and a Star Citizen install with LIVE and PTU folders all in tmp_path.
+    The active channel is LIVE and there is no cache folder override, so the
+    DataForge cache defaults to tmp_path/LocalAppData/Smart Citizen. Returns
+    tmp_path; the install is tmp_path/StarCitizen."""
+    from src.utils.json_settings import JsonSettings
+    from src.utils.settings import AppSettings
+
+    monkeypatch.setattr(AppSettings, "_backend", JsonSettings(tmp_path / "config.json"))
+    monkeypatch.setattr("src.utils.build_mode.IS_PORTABLE", False)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
+    AppSettings.set_user_data_dir(tmp_path / "data")
+    install = tmp_path / "StarCitizen"
+    for channel in ("LIVE", "PTU"):
+        (install / channel).mkdir(parents=True)
+    AppSettings.set_sc_install_root(str(install))
+    return tmp_path
+
+
+@pytest.fixture
+def slot_errors(monkeypatch):
+    """What reaches ``sys.excepthook``, where Qt hands an exception raised
+    in a slot (a button's click, a signal emitted by the test). Recorded
+    instead, because without a hook of its own PyQt6 aborts the whole run on
+    one. Returns the list of exceptions."""
+    seen = []
+    monkeypatch.setattr(sys, "excepthook", lambda *exc_info: seen.append(exc_info[1]))
+    return seen
+
+
 # The run's one QApplication, once _session_qapp has made it (at the first
 # qapp request, or before the first test in a run with GUI tests).
 _SESSION_QAPP: list = []

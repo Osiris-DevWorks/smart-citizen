@@ -142,7 +142,7 @@ class TestChannelScopedPaths:
     ):
         # PR #26 moved the DataForge cache out of user_data_dir (Documents)
         # to LOCALAPPDATA so OneDrive sync / Defender don't churn on the
-        # 1.4 GB extract. The test mirrors that — path must be under
+        # ~1.2 GB extract. The test mirrors that — path must be under
         # %LOCALAPPDATA%\Smart Citizen\<channel>\cache\dataforge.
         fake_local = tmp_path / "LocalAppData"
         fake_local.mkdir()
