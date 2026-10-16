@@ -71,6 +71,7 @@ Smart Citizen ayrıca şu kaynaklardan gelen üst akış araçlarını da paketl
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) — Almanca dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi.
 - **[스타 시티즌 유저 한국어 프로젝트](https://sc.galaxyhub.kr)** (Shatagon, MGM Star Fleet ve Falco Rescue loncaları) — Korece yerelleştirmenin arkasındaki topluluk ekibi. Dosyaları Smart Citizen ile birlikte paketlenmez (lisansları yeniden dağıtıma izin vermez); Korece, kendi dosyanızı getirdiğiniz bir dildir ve *Dil Dosyası Eşle* aracılığıyla doğrudan onlardan aldığınız yerel bir kopyaya eşlenir.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — Geleneksel Çince dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi. En son Mayıs 2024'te güncellendi, bu nedenle mevcut oyun içi metinlerin kabaca üçte ikisini kapsar; geri kalanı için İngilizceye geri dönülür.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — Rusça dil seçeneğini besleyen topluluk tarafından sürdürülen `global.ini` çevirisi.
 
 ## Öne Çıkan Özellikler
 

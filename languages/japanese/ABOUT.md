@@ -71,6 +71,7 @@ Smart Citizen は、以下の上流ツールも同梱しています。
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)：ドイツ語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。
 - **[スタ―シチズンユーザー韓国語プロジェクト](https://sc.galaxyhub.kr)**（Shatagon、MGM Star Fleet、Falco Rescueの各ギルド）— 韓国語ローカライズを手がけるコミュニティチーム。ライセンス上再配布が認められていないため、そのファイルはSmart Citizenに同梱されていません。韓国語は「自分のファイルを使う」言語で、**言語ファイルのマッピング**から、直接入手したローカルファイルを指定します。
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP)：繁体字中国語の言語オプションを支える、コミュニティが管理する `global.ini` 翻訳。2024年5月を最後に更新が止まっており、現在のゲーム内文字列の約3分の2をカバーしています。残りは英語にフォールバックします。
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — ロシア語オプションを支えるコミュニティメンテナンスの `global.ini` 翻訳。
 
 ## 主な機能
 

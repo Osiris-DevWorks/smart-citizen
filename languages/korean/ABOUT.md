@@ -71,6 +71,7 @@ Smart Citizen은 다음의 업스트림 도구도 함께 번들로 제공합니�
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): 독일어 언어 옵션을 지원하는 커뮤니티 유지 관리 `global.ini` 번역입니다.
 - **[스타 시티즌 유저 한국어 프로젝트](https://sc.galaxyhub.kr)**(Shatagon, MGM Star Fleet, Falco Rescue 길드) — 한국어 현지화를 만들고 유지하는 커뮤니티 팀입니다. 라이선스상 이 파일을 재배포할 수 없어 Smart Citizen에는 번들로 포함되어 있지 않습니다. 대신 **언어 파일 매핑**(설정 탭)을 통해 자신이 직접 받은 `global.ini` 파일을 가리키도록 지정하세요.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — 번체 중국어 언어 옵션을 지원하는 커뮤니티 유지 관리 `global.ini` 번역입니다. 마지막 업데이트가 2024년 5월이어서 현재 게임 내 텍스트의 약 3분의 2만 다루며, 나머지는 영어로 대체됩니다.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — 러시아어 옵션을 지원하는 커뮤니티 관리 `global.ini` 번역입니다.
 
 ## 주요 기능
 

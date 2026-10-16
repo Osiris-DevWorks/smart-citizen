@@ -927,6 +927,8 @@ begin
            SCRegNode, 'selected_language', 'korean');
       10: RegWriteStringValue(HKCU,
            SCRegNode, 'selected_language', 'chinese_traditional');
+      11: RegWriteStringValue(HKCU,
+           SCRegNode, 'selected_language', 'russian');
     else
       RegWriteStringValue(HKCU,
         SCRegNode, 'selected_language', 'english');
@@ -1757,6 +1759,7 @@ begin
   LanguageChoicePage.Add('Turkish');
   LanguageChoicePage.Add('Korean');
   LanguageChoicePage.Add('Traditional Chinese');
+  LanguageChoicePage.Add('Russian');
 
   { Pre-select the prior choice on a reinstall so an upgrade doesn't
     silently reset a non-English user back to English. Defaults to
@@ -1787,6 +1790,8 @@ begin
       LanguageIndex := 9
     else if CompareText(SavedLanguage, 'chinese_traditional') = 0 then
       LanguageIndex := 10
+    else if CompareText(SavedLanguage, 'russian') = 0 then
+      LanguageIndex := 11
     else if CompareText(SavedLanguage, 'english') <> 0 then
       { A saved value that matches none of this page's options — e.g. a
         newer app version shipped a 5th language before this installer's

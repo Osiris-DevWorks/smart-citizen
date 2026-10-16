@@ -227,6 +227,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Switch game channel"
+    },
+    "channel_not_installed": {
+      "ht": "",
+      "at": "Not installed"
     }
   },
   "filters": {
@@ -577,6 +585,14 @@
     "channel_label": {
       "ht": "Canal:",
       "at": ""
+    },
+    "show_channel_switcher": {
+      "ht": "",
+      "at": "Mostrar selector de canal en la barra de herramientas"
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Mostrar u ocultar la insignia del canal en la barra de herramientas avanzada"
     },
     "language_label": {
       "ht": "Idioma:",

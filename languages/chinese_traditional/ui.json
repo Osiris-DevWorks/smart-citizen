@@ -227,6 +227,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Switch game channel"
+    },
+    "channel_not_installed": {
+      "ht": "",
+      "at": "Not installed"
     }
   },
   "filters": {
@@ -577,6 +585,14 @@
     "channel_label": {
       "ht": "",
       "at": "頻道："
+    },
+    "show_channel_switcher": {
+      "ht": "",
+      "at": "在工具列上顯示頻道切換器"
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "",
+      "at": "在進階工具列上顯示或隱藏頻道徽章"
     },
     "language_label": {
       "ht": "",

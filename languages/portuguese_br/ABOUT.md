@@ -73,6 +73,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): a tradução comunitária do `global.ini` que alimenta a opção de idioma alemão.
 - **[Projeto de Localização Coreana de Star Citizen](https://sc.galaxyhub.kr)** (as guildas Shatagon, MGM Star Fleet e Falco Rescue): a equipe da comunidade por trás da localização coreana. O arquivo deles não é incluído no Smart Citizen (a licença deles não permite redistribuição); o coreano é um idioma "traga seu próprio arquivo", mapeado via *Mapear Arquivo de Idioma* para uma cópia local que você obtém diretamente com eles.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP): a tradução comunitária do `global.ini` que alimenta a opção de idioma chinês tradicional. Atualizada pela última vez em maio de 2024, cobre cerca de dois terços das strings atuais do jogo; o restante recorre ao inglês.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — a tradução `global.ini` mantida pela comunidade que alimenta a opção de idioma russo.
 
 ## Principais Recursos
 
@@ -80,7 +81,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 - **Carregar e Editar**: carregue o `global.ini` da sua instalação do Star Citizen e personalize strings em uma tabela intuitiva
 - **Suporte Multicanal**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW têm cada um seu próprio `user.ini`, cache, backups e extração do DataForge isolados; troque de canal na aba Config sem reiniciar
 - **Verificar local da instalação**: encontra todas as instalações do Star Citizen no seu PC e lê o log do launcher da RSI para dizer qual delas o jogo realmente inicia, para que aplicar nunca grave em uma cópia que você não abre
-- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês (simplificado), italiano, alemão, turco, coreano (arquivo próprio) e chinês tradicional na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
+- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês (simplificado), italiano, alemão, turco, coreano (arquivo próprio) e chinês tradicional, russo na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
 - **Contratos de Missão**: edite textos de contratos e briefings na categoria Missions dedicada
 - **Filtragem Inteligente**: busque strings, filtre por categoria (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) ou por status de modificação
 - **Filtros por Coluna**: digite direto nas caixas de filtro sob cada cabeçalho de coluna para buscas refinadas

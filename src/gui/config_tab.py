@@ -60,6 +60,9 @@ class ConfigTab(QWidget):
     # the old path is also stashed in AppSettings.PENDING_CACHE_CLEANUP for
     # the post-extract cleanup step.
     cache_dir_changed = pyqtSignal(str)
+    # Emitted when the user toggles the channel switcher visibility checkbox.
+    # MainWindow listens and shows/hides the badge.
+    channel_switcher_visibility_changed = pyqtSignal(bool)
     # Emitted when the user picks a different language. MainWindow listens and
     # triggers a merge+reload so the table reflects the new language strings.
     language_changed = pyqtSignal(str)
@@ -274,6 +277,13 @@ class ConfigTab(QWidget):
         self._dupe_check_btn.clicked.connect(lambda: self._check_other_installs(deep=False))
         channel_row.addWidget(self._dupe_check_btn)
         game_layout.addLayout(channel_row)
+
+        # Checkbox to show/hide the channel switcher badge on the toolbar
+        self._show_switcher_cb = QCheckBox(tr("config.show_channel_switcher"))
+        self._show_switcher_cb.setToolTip(tr("config.show_channel_switcher_tooltip"))
+        self._show_switcher_cb.setChecked(AppSettings.get_channel_switcher_visible())
+        self._show_switcher_cb.toggled.connect(self._on_channel_switcher_toggled)
+        game_layout.addWidget(self._show_switcher_cb)
 
         self._populate_channel_combo()
         # Wire AFTER populate so the initial setCurrentIndex inside
@@ -522,6 +532,8 @@ class ConfigTab(QWidget):
         self._dupe_check_btn.setToolTip(tr("config.dupe_check_tooltip"))
         self._channel_label.setText(tr("config.channel_label"))
         self.channel_combo.setToolTip(tr("config.channel_tooltip"))
+        self._show_switcher_cb.setText(tr("config.show_channel_switcher"))
+        self._show_switcher_cb.setToolTip(tr("config.show_channel_switcher_tooltip"))
         self._language_label.setText(tr("config.language_label"))
         self.language_combo.setToolTip(tr("config.language_tooltip"))
         self._map_lang_btn.setText(tr("config.map_language_btn"))
@@ -603,6 +615,10 @@ class ConfigTab(QWidget):
 
     def _on_include_new_toggled(self, checked: bool):
         AppSettings.set_include_new_lines(checked)
+
+    def _on_channel_switcher_toggled(self, checked: bool):
+        AppSettings.set_channel_switcher_visible(checked)
+        self.channel_switcher_visibility_changed.emit(checked)
 
     # ── Game path ────────────────────────────────────────────────────────────
 

@@ -227,6 +227,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Switch game channel"
+    },
+    "channel_not_installed": {
+      "ht": "",
+      "at": "Not installed"
     }
   },
   "filters": {
@@ -601,6 +609,14 @@
     "channel_label": {
       "ht": "",
       "at": "채널:"
+    },
+    "show_channel_switcher": {
+      "ht": "",
+      "at": "도구 모음에 채널 전환기 표시"
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "",
+      "at": "고급 도구 모음의 채널 배지를 표시하거나 숨깁니다"
     },
     "language_label": {
       "ht": "",

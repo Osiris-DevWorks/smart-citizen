@@ -70,6 +70,12 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     # not recognise it.
     "turkish":       "polish_(poland)",
     "korean":        "korean_(south_korea)",
+    # Russian borrows the korean_(south_korea) slot, same as Korean. The
+    # Korean font is the only in-game font that covers Cyrillic, so all
+    # Slavic-language community translations ride this slot deliberately.
+    # Only one of Russian or Korean can be applied to the game at a time —
+    # switching overwrites the other's global.ini in that folder.
+    "russian":       "korean_(south_korea)",
     "chinese_traditional": "chinese_(traditional)",
 }
 
@@ -665,6 +671,10 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+
+    # Whether the channel switcher badge is shown on the Advanced toolbar.
+    # Off by default; users can turn it on via the Config tab checkbox.
+    CHANNEL_SWITCHER_VISIBLE = "ui/channel_switcher_visible"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1570,6 +1580,22 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
+    def get_channel_switcher_visible() -> bool:
+        """Whether the channel switcher badge is shown on the Advanced toolbar.
+        Default False."""
+        return bool(AppSettings.settings().value(
+            AppSettings.CHANNEL_SWITCHER_VISIBLE, False, type=bool
+        ))
+
+    @staticmethod
+    def set_channel_switcher_visible(visible: bool) -> None:
+        """Persist the channel switcher visibility checkbox state."""
+        AppSettings.settings().setValue(
+            AppSettings.CHANNEL_SWITCHER_VISIBLE, bool(visible)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
     def get_tutorial_completed_version() -> str:
         """App version string that last completed the guided tour, or '' if never."""
         return AppSettings.settings().value(AppSettings.TUTORIAL_COMPLETED_VERSION, "")
@@ -1728,6 +1754,42 @@ class AppSettings:
         except Exception as e:
             logger.debug(f"Could not read game version from {manifest_path}: {e}")
             return ""
+
+    @staticmethod
+    def get_channel_build_info(channel: str | None = None) -> tuple[str, str]:
+        """Return ``(branch_version, build_number)`` for a channel's build manifest.
+
+        *branch_version* is parsed from the ``Branch`` field (e.g.
+        ``"sc-alpha-4.10.2"`` → ``"4.10.2"``).  *build_number* is the
+        ``RequestedP4ChangeNum`` field (e.g. ``"12881860"``).  Returns
+        ``("", "")`` when the manifest is missing, malformed, or lacks the
+        fields.
+        """
+        import json
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        root = AppSettings.get_sc_install_root()
+        if not root:
+            return "", ""
+        manifest_path = Path(root) / channel / "build_manifest.id"
+        if not manifest_path.exists():
+            return "", ""
+        try:
+            with open(manifest_path, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return "", ""
+        block = data.get("Data") if isinstance(data, dict) else None
+        if not isinstance(block, dict):
+            return "", ""
+        branch = str(block.get("Branch", "") or "")
+        # Strip well-known prefixes: "sc-alpha-4.10.2" → "4.10.2"
+        for prefix in ("sc-alpha-", "sc-beta-", "sc-"):
+            if branch.startswith(prefix):
+                branch = branch[len(prefix):]
+                break
+        build_num = str(block.get("RequestedP4ChangeNum", "") or "")
+        return branch, build_num
 
     @staticmethod
     def set_game_install_path(path: str) -> None:
@@ -3460,6 +3522,7 @@ class AppSettings:
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
+            AppSettings.CHANNEL_SWITCHER_VISIBLE: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
         }
         # Composed from the same maps the getters read, so these can't drift.

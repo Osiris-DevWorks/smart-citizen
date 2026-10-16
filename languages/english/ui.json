@@ -227,6 +227,14 @@
     "venmo_fallback_text": {
       "ht": "Venmo",
       "at": ""
+    },
+    "channel_switcher_tooltip": {
+      "ht": "Switch game channel",
+      "at": ""
+    },
+    "channel_not_installed": {
+      "ht": "Not installed",
+      "at": ""
     }
   },
   "filters": {
@@ -600,6 +608,14 @@
     },
     "channel_label": {
       "ht": "Channel:",
+      "at": ""
+    },
+    "show_channel_switcher": {
+      "ht": "Show channel switcher on toolbar",
+      "at": ""
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "Show or hide the channel badge on the Advanced toolbar",
       "at": ""
     },
     "language_label": {

@@ -71,6 +71,7 @@
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)：由社区维护的 `global.ini` 翻译，为德语选项提供支持。
 - **[星际公民用户韩语项目](https://sc.galaxyhub.kr)**（Shatagon、MGM Star Fleet 和 Falco Rescue 公会）—— 负责韩语本地化的社区团队。由于其许可证不允许再分发，该文件未随智慧公民一起提供；韩语是"自带文件"语言，通过**映射语言文件**指向你直接从他们那里获取的本地副本。
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) —— 由社区维护的 `global.ini` 翻译，为繁体中文选项提供支持。最后更新于 2024 年 5 月，覆盖了目前约三分之二的游戏内字符串；其余部分会回退到英文。
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — 驱动俄语选项的社区维护 `global.ini` 翻译。
 
 ## 主要功能
 

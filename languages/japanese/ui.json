@@ -227,6 +227,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "channel_switcher_tooltip": {
+      "ht": "",
+      "at": "Switch game channel"
+    },
+    "channel_not_installed": {
+      "ht": "",
+      "at": "Not installed"
     }
   },
   "filters": {
@@ -577,6 +585,14 @@
     "channel_label": {
       "ht": "",
       "at": "チャンネル："
+    },
+    "show_channel_switcher": {
+      "ht": "",
+      "at": "ツールバーにチャンネルスイッチャーを表示"
+    },
+    "show_channel_switcher_tooltip": {
+      "ht": "",
+      "at": "高度なツールバーのチャンネルバッジを表示または非表示にする"
     },
     "language_label": {
       "ht": "",
