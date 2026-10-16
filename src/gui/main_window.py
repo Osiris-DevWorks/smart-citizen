@@ -66,7 +66,7 @@ from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices
 from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.pak_extractor import windows_reason
+from src.utils.pak_extractor import linked_cache_folder_error, windows_reason
 from src.utils.settings import (
     AppSettings,
     CACHE_FOLDER_REFUSED,
@@ -5980,14 +5980,20 @@ class MainWindow(QMainWindow):
         # dialog exists, read the same way as the Config tab reads it, and
         # leave the Simple page and the Generate button as a failed
         # extraction leaves them.
+        message = None
         try:
-            forge_dir = AppSettings.get_dataforge_cache_dir()
+            # A cache folder that is a link is refused before the getter
+            # (#491): the extraction would delete nothing through it, and a
+            # link whose target is gone fails the getter with Windows' "file
+            # already exists", which says nothing about the link.
+            linked = linked_cache_folder_error(AppSettings.get_dataforge_cache_leaf())
+            if linked is not None:
+                message = str(linked)
+            else:
+                forge_dir = AppSettings.get_dataforge_cache_dir()
         except OSError as e:
             folder = os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
             logger.warning(f"Could not create the DataForge cache folder in {folder}: {e}")
-            self._end_simple_run()
-            self.enhancements_tab.set_operation_idle(success=False)
-            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
             failure = cache_folder_failure(e)
             if failure == CACHE_FOLDER_REFUSED:
                 message = (tr("extract.cache_folder_refused", folder=folder) + "\n\n"
@@ -5997,6 +6003,10 @@ class MainWindow(QMainWindow):
             else:
                 message = tr("extract.cache_folder_unusable", folder=folder,
                              reason=windows_reason(e))
+        if message is not None:
+            self._end_simple_run()
+            self.enhancements_tab.set_operation_idle(success=False)
+            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
             QMessageBox.warning(self, tr("extract.dataforge_extraction_error_title"), message)
             return False
 

@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen non è riuscito a usare la cartella cache DataForge:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "La cartella cache DataForge è un collegamento a un'altra cartella:\n{folder}\n\nPorta a:\n{target}\n\nSmart Citizen non elimina nulla attraverso un collegamento, quindi l'estrazione non è stata avviata e non è stato modificato nulla. Scegli la cartella a cui porta come cartella cache DataForge nella scheda Config, poi riprova."
     }
   },
   "apply": {

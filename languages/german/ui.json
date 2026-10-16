@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "Der DataForge-Cache-Ordner ist ein Link auf einen anderen Ordner:\n{folder}\n\nEr führt zu:\n{target}\n\nSmart Citizen löscht nichts über einen Link, daher wurde die Extraktion nicht gestartet und nichts geändert. Wähle im Konfiguration-Tab den Ordner, zu dem er führt, als DataForge-Cache-Ordner, und versuche es dann erneut."
     }
   },
   "apply": {

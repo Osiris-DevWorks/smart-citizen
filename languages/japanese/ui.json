@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen が DataForge キャッシュフォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーは別のフォルダーへのリンクです：\n{folder}\n\nリンク先：\n{target}\n\nSmart Citizen はリンクを通して何も削除しないため、抽出は開始されず、何も変更されていません。設定タブでリンク先のフォルダーを DataForge キャッシュフォルダーとして選択してから、もう一度お試しください。"
     }
   },
   "apply": {

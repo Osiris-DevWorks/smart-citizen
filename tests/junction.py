@@ -1,12 +1,13 @@
 """A Windows junction, for the tests that need one.
 
 A junction is a folder that leads to another folder, the usual way to move a
-big folder off C:. Four test files make theirs here: ``test_install_scanner``
+big folder off C:. Six test files make theirs here: ``test_install_scanner``
 (a library that only a junction at the top of a drive reaches),
 ``test_sc_install_root`` (an install moved off C: with a junction left at its
 old path), ``test_pending_cache_cleanup`` (a junction to the DataForge cache
-in use) and ``test_config_tab_cache_folder`` (a junction typed as the
-DataForge cache folder, #494). The first three each used to carry their own
+in use), ``test_config_tab_cache_folder`` (a junction typed as the
+DataForge cache folder, #494), and ``test_linked_cache_folder`` and
+``test_extraction_stop`` (a DataForge cache folder that is a junction, #491). The first three each used to carry their own
 copy of the skip-or-fail block below. The first two made the junction with
 cmd's ``mklink /J``, which makes the same junction as
 ``_winapi.CreateJunction``. ``test_installer_wipe_safety``

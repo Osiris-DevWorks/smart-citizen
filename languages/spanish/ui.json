@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen no pudo usar la carpeta de caché de DataForge:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "La carpeta de caché de DataForge es un enlace a otra carpeta:\n{folder}\n\nLleva a:\n{target}\n\nSmart Citizen no elimina nada a través de un enlace, así que la extracción no se inició y no se cambió nada. Elige la carpeta a la que lleva como carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
     }
   },
   "apply": {

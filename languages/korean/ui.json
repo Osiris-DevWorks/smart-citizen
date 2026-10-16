@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen이 DataForge 캐시 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더가 다른 폴더로 연결되는 링크입니다:\n{folder}\n\n연결 대상:\n{target}\n\nSmart Citizen은 링크를 통해 아무것도 삭제하지 않으므로 추출이 시작되지 않았고 아무것도 변경되지 않았습니다. 설정 탭에서 링크가 가리키는 폴더를 DataForge 캐시 폴더로 선택한 후 다시 시도하세요."
     }
   },
   "apply": {

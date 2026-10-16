@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen 无法使用 DataForge 缓存文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 缓存文件夹是指向另一个文件夹的链接：\n{folder}\n\n它指向：\n{target}\n\nSmart Citizen 不会通过链接删除任何内容，因此提取未开始，未做任何更改。请在配置标签页中将它指向的文件夹选为 DataForge 缓存文件夹，然后重试。"
     }
   },
   "apply": {

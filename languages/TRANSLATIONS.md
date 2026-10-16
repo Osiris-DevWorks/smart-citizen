@@ -64,6 +64,41 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
+  cache folder that is a link (a junction or a symbolic link made by hand,
+  usually to keep the cache on another drive), because an extraction
+  deletes nothing through a link and used to fail after unforge. One new
+  key, after `extract.cache_folder_unusable`:
+  `extract.cache_folder_is_link` (the DataForge cache folder `{folder}` is
+  a link to another folder, it leads to `{target}`, Smart Citizen does not
+  delete anything through a link, so the extraction did not start and
+  nothing was changed, and the user can choose the folder it leads to as
+  the DataForge cache folder in the Config tab and try again). `{folder}`
+  and `{target}` each stand on a line of their own. In all 10 languages,
+  `at`-only (`ht` empty), with each file's own names from the #494 entry
+  below: the Config tab, the DataForge cache folder and the extraction. A
+  link is each language's plain word for one (french lien, german Link,
+  italian collegamento, spanish enlace, portuguese_br link, turkish
+  bağlantı, japanese リンク, korean 링크, chinese 链接, chinese_traditional
+  連結); german says Link, not Verknüpfung, which reads as a desktop
+  shortcut. "It leads to" became the language's own way of naming where
+  a link goes (japanese リンク先, korean 연결 대상, turkish Gittiği yer).
+  chinese_traditional follows the chinese strings in Taiwan terms (透過 as
+  in #490, and 連結 for a link). Each string was back-translated and compared with the
+  English in the same pass, not by a separate checker: no meaning errors,
+  and the Korean sentence-spacing rule holds. No human string changed.
+  `tests/test_linked_cache_folder.py` checks every language's
+  placeholders, the folder and the folder it leads to each on a line of
+  their own, and this `ht`/`at` split.
+  The same change adds an "Extraction says the DataForge cache folder is a
+  link to another folder" line to Troubleshooting in `docs/HELP.md` and the
+  10 translated `HELP.md` files, after #494's line, with each file's own
+  names for the Config tab and the DataForge cache folder. It names a
+  junction or a symbolic link in each language's Windows words (french
+  jonction, german Verzeichnisverbindung, italian giunzione, spanish unión,
+  portuguese_br junção, turkish bağlantı noktası with junction in brackets,
+  japanese ジャンクション, korean 정션, chinese 目录联接, chinese_traditional
+  目錄連接), back-translated the same way.
 - **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #494 keeps a DataForge
   cache folder that Windows refuses, or one on a drive that is gone, from
   stopping Smart Citizen opening, and says so in one box where the folder

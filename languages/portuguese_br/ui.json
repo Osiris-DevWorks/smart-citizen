@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "O Smart Citizen não conseguiu usar a pasta cache do DataForge:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "A pasta cache do DataForge é um link para outra pasta:\n{folder}\n\nEla leva a:\n{target}\n\nO Smart Citizen não exclui nada através de um link, então a extração não foi iniciada e nada foi alterado. Escolha a pasta para a qual ele leva como pasta cache do DataForge na aba Config e tente novamente."
     }
   },
   "apply": {

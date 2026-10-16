@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen DataForge önbellek klasörünü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge önbellek klasörü başka bir klasöre giden bir bağlantıdır:\n{folder}\n\nGittiği yer:\n{target}\n\nSmart Citizen bir bağlantı üzerinden hiçbir şeyi silmez, bu yüzden çıkarma işlemi başlamadı ve hiçbir şey değiştirilmedi. Yapılandırma sekmesinden bağlantının gittiği klasörü DataForge önbellek klasörü olarak seçin, ardından yeniden deneyin."
     }
   },
   "apply": {

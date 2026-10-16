@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen 無法使用 DataForge 快取資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 快取資料夾是指向另一個資料夾的連結：\n{folder}\n\n它指向：\n{target}\n\nSmart Citizen 不會透過連結刪除任何內容，因此提取未開始，未做任何更改。請在配置標籤頁中將它指向的資料夾選為 DataForge 快取資料夾，然後重試。"
     }
   },
   "apply": {

@@ -140,6 +140,33 @@ class WorkingFolderRefusedError(RuntimeError):
         self.folder = folder
 
 
+class CacheFolderIsLinkError(RuntimeError):
+    """The DataForge cache folder is a link to another folder (#491): a
+    junction or a symbolic link, made by hand, usually to keep the cache on
+    another drive. Step 3 wipes the cache folder with shutil.rmtree, which
+    deletes nothing through a link, so every re-extract met the old cache
+    after unforge and failed with a raw FileExistsError. Nothing is ever
+    deleted through a link, so the run is refused before anything runs, and
+    the old cache and the link stay as they were.
+
+    The message is user-ready (tr() at raise time, as for P4kLockedError),
+    names the folder and the folder it leads to, and says to choose that
+    one in the Config tab instead. ``folder`` and ``target`` keep both for
+    tests. A RuntimeError for the same reason as NotEnoughSpaceError."""
+
+    def __init__(self, message: str, folder: str = "", target: str = ""):
+        super().__init__(message)
+        self.folder = folder
+        self.target = target
+
+
+class LinkedFolderError(OSError):
+    """robust_rmtree was asked to delete a link (#491): a junction or a
+    symbolic link, which shutil.rmtree refuses, deleting nothing. An
+    OSError, so a caller's ``except OSError`` reports it as a folder that
+    could not be deleted, and robust_rmtree never tries it again."""
+
+
 class ExtractionCancelled(Exception):
     """A stop request ended the extraction (#471): Smart Citizen is closing,
     or the user stopped it from the progress dialog.
@@ -159,6 +186,7 @@ class ExtractionCancelled(Exception):
 # box their error signal opens.
 ANTICIPATED_EXTRACTION_ERRORS = (
     P4kLockedError, DataForgeTimeoutError, NotEnoughSpaceError, WorkingFolderRefusedError,
+    CacheFolderIsLinkError,
 )
 
 
@@ -239,6 +267,49 @@ def _unforge_timeout_error(exc, dcb_path: Path, dcb_mb: float,
     )
 
 
+def linked_folder_target(path) -> Optional[str]:
+    """Where *path* leads when it is a link that shutil.rmtree will not
+    delete through (#491): a symbolic link, or a junction (which is also how
+    a drive mounted in a folder looks). The rule is rmtree's own. None when
+    *path* is not a link or is not there. Read without following the link,
+    so a link whose target is gone counts too. The target is the folder at
+    the end of the link, any link on the way followed, with no long-path
+    prefix. Where that cannot be read (realpath raises for an error it does
+    not expect while it follows the link, such as a network that cannot be
+    reached) it is the link's own text, and "" when even that cannot be
+    read."""
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return None
+    if not (stat.S_ISLNK(st.st_mode)
+            or (getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                and getattr(st, "st_reparse_tag", 0) == stat.IO_REPARSE_TAG_MOUNT_POINT)):
+        return None
+    for read in (os.path.realpath, os.readlink):
+        try:
+            return win_plain_path(read(path))
+        except OSError:
+            continue
+    return ""
+
+
+def linked_cache_folder_error(leaf) -> Optional[CacheFolderIsLinkError]:
+    """The refusal for a DataForge cache folder *leaf* that is a link
+    (#491), or None when it is not one. Logs the link at WARNING. Asked by
+    MainWindow._run_dataforge_extraction before any worker exists, and by
+    extract_dataforge before anything runs."""
+    target = linked_folder_target(leaf)
+    if target is None:
+        return None
+    folder = win_plain_path(leaf)
+    logger.warning(f"The DataForge cache folder {folder} is a link to {target}; "
+                   "an extraction deletes nothing through a link, so it was refused")
+    return CacheFolderIsLinkError(
+        tr("extract.cache_folder_is_link", folder=folder, target=target),
+        folder=folder, target=target)
+
+
 def robust_rmtree(path: Path, attempts: int = 6) -> None:
     """Delete *path* recursively, surviving transient Windows locks.
 
@@ -255,8 +326,13 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 
     Silently succeeds if *path* doesn't exist. Raises the last error if
     every attempt fails so callers can surface it to the user.
+
+    A *path* that is a link (a junction or a symbolic link, also one whose
+    target is gone) raises LinkedFolderError at once, with nothing deleted
+    (#491). rmtree refuses a link and deletes nothing through it, and this
+    used to return as if the delete had worked.
     """
-    if not path.exists():
+    if not os.path.lexists(_win_long_path(path)):
         return
 
     def _on_error(func, target, *_):
@@ -266,6 +342,14 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
         # Clear the read-only bit and retry the single failing file/dir;
         # for other errors (e.g. lingering handle), propagate so the
         # outer retry loop picks it up.
+        if func is os.path.islink:
+            # rmtree refused *target* because it is a link, and returns
+            # once this hook does (#491). Calling islink again below only
+            # returned a bool, so a delete that never happened read as done.
+            raise LinkedFolderError(
+                f"{win_plain_path(target)} is a link to "
+                f"{linked_folder_target(target) or 'another folder'}, "
+                "and nothing is deleted through a link")
         try:
             os.chmod(target, stat.S_IWRITE)
         except OSError:
@@ -281,6 +365,8 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
             gc.collect()  # drop any lingering XML file handles we own
             shutil.rmtree(_win_long_path(path), **{_RMTREE_CB_KWARG: _on_error})
             return
+        except LinkedFolderError:
+            raise   # trying again changes nothing
         except OSError as e:
             last_err = e
             # Exponential-ish backoff: 0.2, 0.4, 0.8, 1.5, 3.0 seconds. Total
@@ -1502,6 +1588,9 @@ def extract_dataforge(
             found before any tool runs (#490), or, with the work in %TEMP%,
             a new folder where the cache folder is made again after the
             wipe (#494). The old cache stays.
+        CacheFolderIsLinkError: dataforge_cache_dir is a junction or a
+            symbolic link, found before anything runs (#491). The old cache
+            and the link stay.
         ExtractionCancelled: A stop was requested. Not a failure.
     """
     for exe, name in [(unp4k_exe, "unp4k.exe"), (unforge_exe, "unforge.exe")]:
@@ -1514,6 +1603,12 @@ def extract_dataforge(
     # this function hands to _cache_filtered_records/update_manifest) inherits
     # long-path safety — see win_paths.win_long_path (#221).
     dataforge_cache_dir = Path(_win_long_path(dataforge_cache_dir))
+
+    # Step 3's wipe deletes nothing through a link (see robust_rmtree), so a
+    # cache folder that is one is refused before anything runs (#491).
+    linked = linked_cache_folder_error(dataforge_cache_dir)
+    if linked is not None:
+        raise linked
 
     TOTAL_PHASES = 3
     # Where unp4k and unforge work (#471), with leftovers of earlier runs

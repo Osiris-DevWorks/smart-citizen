@@ -44,6 +44,7 @@ from src.gui.main_window import MainWindow
 from src.gui.workers import AnimatedProgressDialog, DataForgeExtractWorker, P4kExtractWorker
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
+from tests.junction import make_junction
 from tests.unusable_folder import missing_drive_folder, new_folders_denied
 
 pytestmark = pytest.mark.unit
@@ -128,11 +129,11 @@ def _error_records(caplog):
     return [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
-# The failures that carry their own user-ready message (#482, #490). Listed
-# here rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so dropping
-# one from that tuple fails the tests that use this.
+# The failures that carry their own user-ready message (#482, #490, #491).
+# Listed here rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so
+# dropping one from that tuple fails the tests that use this.
 _ANTICIPATED = (pe.P4kLockedError, pe.DataForgeTimeoutError, pe.NotEnoughSpaceError,
-                pe.WorkingFolderRefusedError)
+                pe.WorkingFolderRefusedError, pe.CacheFolderIsLinkError)
 
 
 class _Patches:
@@ -904,6 +905,72 @@ class TestUnusableCacheFolderAtStart:
         assert list(base.iterdir()) == []
 
 
+class TestLinkedCacheFolderAtStart:
+    """#491: a DataForge cache folder that is a link (a junction made by
+    hand to keep the cache on another drive) is refused where the extraction
+    starts, before the creating getter, any worker or progress dialog: one
+    box naming the folder and where it leads, the link once at WARNING and
+    nothing at ERROR, and the Simple run, Generate and the status bar left
+    as a failed extraction leaves them. A junction whose target is gone gets
+    the same box; it used to fail the creating getter with Windows' "file
+    already exists" and get #494's could-not-use box. A link higher up the
+    path is not refused. Real junctions, settings in ``tmp_profile``."""
+
+    @pytest.fixture
+    def box(self, monkeypatch):
+        """A fake QMessageBox. Neither a worker nor a progress dialog may be
+        built while it is in place."""
+        made, dialogs, box = MagicMock(), MagicMock(), MagicMock()
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker", made)
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", dialogs)
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        yield box
+        made.assert_not_called()
+        dialogs.assert_not_called()
+
+    @pytest.mark.parametrize("gone", [False, True], ids=["junction", "junction-to-nothing"])
+    def test_one_box_before_any_worker(self, tmp_profile, caplog, box, english_ui, gone):
+        leaf = AppSettings.get_dataforge_cache_leaf()
+        leaf.parent.mkdir(parents=True)
+        target = tmp_profile / "D" / "SC Cache"
+        make_junction(leaf, target)
+        if gone:
+            target.rmdir()
+        else:
+            (target / pe.P4K_MTIME_STAMP).write_text("1", encoding="utf-8")
+        target = os.path.realpath(target)
+        me = _window()
+
+        with caplog.at_level(logging.WARNING):
+            started = MainWindow._run_dataforge_extraction(me)
+
+        message = tr("extract.cache_folder_is_link", folder=str(leaf), target=target)
+        TestUnusableCacheFolderAtStart._reported_once(
+            me, box, caplog, message, f"{leaf} is a link to {target}", started)
+        assert pe.linked_folder_target(leaf) == target
+        assert gone or (leaf / pe.P4K_MTIME_STAMP).read_text(encoding="utf-8") == "1"
+
+    def test_a_link_above_the_cache_folder_still_starts(self, tmp_profile, monkeypatch):
+        """The channel folder of the default location (which the settings
+        never resolve) as a junction: the cache folder inside it is an
+        ordinary folder, so the extraction starts."""
+        made = []
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker",
+                            lambda *args: made.append(_Worker(*args)) or made[-1])
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        leaf = AppSettings.get_dataforge_cache_leaf()
+        leaf.parent.parent.parent.mkdir(parents=True)
+        make_junction(leaf.parent.parent, tmp_profile / "D" / "LIVE")
+
+        assert MainWindow._run_dataforge_extraction(_window()) is True
+
+        box.warning.assert_not_called()
+        assert made[0].args[3] == leaf
+        assert leaf.is_dir() and pe.linked_folder_target(leaf) is None
+
+
 class TestP4kSlots:
     def test_a_released_worker_finishing_changes_nothing(self):
         stale, current = _Worker(running=False), _Worker()
@@ -1165,6 +1232,61 @@ class TestRefusedWorkingFolderReachesTheUser:
         assert not any(str(leaf.parent) in w for w in warnings)
         assert f"P4K extraction: WorkingFolderRefusedError: {message}" in warnings
         assert not base_ini.exists()
+
+
+class TestLinkedCacheFolderReachesTheUser:
+    """#491 end to end past the start's own check (a link made while the
+    extraction starts): the real ``extract_dataforge`` refuses a cache
+    folder that is a junction before anything runs, and the worker on a
+    real thread reports it as an anticipated failure, so the error slot
+    opens one box and nothing is logged at ERROR. Before the fix the run
+    made its working folder and started unforge (here, a tool that must not
+    run), and with real tools failed with a raw error after it."""
+
+    def test_dataforge_shows_one_box_naming_the_link(
+        self, qapp, tmp_path, monkeypatch, patches, caplog, english_ui
+    ):
+        tools = tmp_path / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        systemp = tmp_path / "systemp"
+        systemp.mkdir()
+        monkeypatch.setattr(pe.tempfile, "tempdir", str(systemp))
+
+        def no_tool(*args, **kwargs):
+            raise AssertionError("a tool ran for a cache folder that is a link")
+
+        monkeypatch.setattr(pe, "_run_tool", no_tool)
+        leaf = tmp_path / "SC" / "LIVE" / "cache" / "dataforge"
+        leaf.parent.mkdir(parents=True)
+        make_junction(leaf, tmp_path / "D" / "SC Cache")
+        target = pe.linked_folder_target(leaf)
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = DataForgeExtractWorker(tools / "Data.p4k", tools / "unp4k.exe",
+                                        tools / "unforge.exe", leaf)
+        finished, errors = _collect(worker)
+        with caplog.at_level(logging.INFO):
+            worker.start()
+            assert worker.wait(10000)
+            me = _window(_forge_worker=worker)
+            for message in errors:
+                MainWindow._on_dataforge_extract_error(me, message, worker)
+
+        assert finished == [False] and worker.stopped is False
+        [message] = errors
+        assert message == tr("extract.cache_folder_is_link", folder=str(leaf), target=target)
+        box.warning.assert_called_once()
+        assert box.warning.call_args.args[1:] == (
+            tr("extract.dataforge_extraction_error_title"),
+            tr("extract.dataforge_extraction_error_body", message=message))
+        assert _error_records(caplog) == []
+        warnings = _warnings(caplog)
+        assert f"DataForge extraction: CacheFolderIsLinkError: {message}" in warnings
+        assert patches.calls == []
+        assert list(leaf.parent.iterdir()) == [leaf]
+        assert list(systemp.iterdir()) == []
 
 
 class TestCallersCarryOnAfterAnUnfinishedExtraction:

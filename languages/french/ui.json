@@ -2887,6 +2887,10 @@
     "cache_folder_unusable": {
       "ht": "",
       "at": "Smart Citizen n'a pas pu utiliser le dossier du cache DataForge :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "Le dossier du cache DataForge est un lien vers un autre dossier :\n{folder}\n\nIl mène à :\n{target}\n\nSmart Citizen ne supprime rien à travers un lien, donc l'extraction n'a pas démarré et rien n'a été modifié. Choisissez le dossier vers lequel il mène comme dossier du cache DataForge dans l'onglet Paramètres, puis réessayez."
     }
   },
   "apply": {
