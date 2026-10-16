@@ -2032,6 +2032,46 @@
       "ht": "",
       "at": "Cache svuotata"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Cancella Cache non è disponibile mentre è in corso un'estrazione o una generazione dei miglioramenti. Riprova quando è terminata."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Verranno eliminati i seguenti file in cache:\n\n{files}\n\nbase.ini dovrà essere estratto di nuovo da Data.p4k prima di poter caricare le stringhe."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Svuotare anche la cache DataForge?\n{folder}\n\nContiene i dati delle entità estratti da Data.p4k per le statistiche di navi e armi, e ricrearla richiede qualche minuto. Mantienila se vuoi solo aggiornare le stringhe di localizzazione."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Non è stato possibile raggiungere la cartella cache DataForge, quindi non è stata svuotata:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Svuotamento della cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Svuotamento dei file in cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Eliminazione di {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Svuotamento della cache DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Elementi eliminati dalla cache: {count}."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Impossibile eliminare:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Cartella non trovata"

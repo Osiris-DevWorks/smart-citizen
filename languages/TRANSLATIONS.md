@@ -64,6 +64,40 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #479 makes More > Clear
+  Cache clear the DataForge cache in use and moves every text it shows into
+  `ui.json`; before, only its four titles and its cache-empty text were
+  translated. Ten new keys, after `dialogs.cache_cleared_title`:
+  `dialogs.clear_cache_busy` (Clear
+  Cache is not available while an extraction or an enhancement generation
+  runs, try again once it has finished; shown in the status bar),
+  `dialogs.clear_cache_files_body` (the cached files that will be deleted,
+  `{files}`, and that base.ini will need extracting again from Data.p4k
+  before strings can load; the old English text kept),
+  `dialogs.clear_cache_dataforge_body` (also clear the DataForge cache?,
+  `{folder}`, what it holds and that making it again takes a few minutes,
+  and to keep it to refresh only the localization strings),
+  `dialogs.clear_cache_dataforge_unreachable` (the DataForge cache folder
+  `{folder}` could not be reached, so it was not cleared),
+  `dialogs.clear_cache_progress_title`, `dialogs.clear_cache_progress_files`,
+  `dialogs.clear_cache_progress_file` (`{name}`) and
+  `dialogs.clear_cache_progress_dataforge` (the progress dialog's title and
+  labels), `dialogs.cache_cleared_body` (`{count}` items deleted) and
+  `dialogs.cache_cleared_failed` (could not delete, then `{failures}`, one
+  per line, each Windows' own error text, not translated). `{folder}` stands
+  on a line of its own. In all 10 languages, `at`-only (`ht` empty), with
+  each file's own words for Clear Cache (the menu item's), the cache, the
+  DataForge cache folder (as in the #494 entry below) and the enhancements
+  (the Enhancements tab's name: enrichissements, Erweiterungen,
+  miglioramenti, mejoras, aprimoramentos, geliştirme, 拡張, 강화, 增强内容,
+  增強內容). The DataForge question's old warning sign and its closing
+  "Clear DataForge cache?" line are gone: the title already asks.
+  chinese_traditional follows the chinese strings in Taiwan terms (快取,
+  資料夾, 檔案, 存取, 重新整理). Each string was back-translated and compared
+  with the English in the same pass, not by a separate checker: no meaning
+  errors, and the Korean sentence-spacing rule holds. No human string
+  changed. `tests/test_clear_cache.py` checks every language's placeholders,
+  the folder on a line of its own, and this `ht`/`at` split.
 - **2.5.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
   cache folder that is a link (a junction or a symbolic link made by hand,
   usually to keep the cache on another drive), because an extraction

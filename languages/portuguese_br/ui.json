@@ -2032,6 +2032,46 @@
       "ht": "Cache Limpo",
       "at": "Cache Limpo"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Limpar Cache não está disponível enquanto uma extração ou uma geração de aprimoramentos está em andamento. Tente novamente quando ela terminar."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Os seguintes arquivos em cache serão excluídos:\n\n{files}\n\nO base.ini precisará ser extraído novamente do Data.p4k antes que as strings possam ser carregadas."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Limpar também o cache do DataForge?\n{folder}\n\nEle guarda os dados de entidades extraídos do Data.p4k para as estatísticas de naves e armas, e recriá-lo leva alguns minutos. Mantenha-o se quiser apenas atualizar as strings de localização."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Não foi possível acessar a pasta cache do DataForge, então ela não foi limpa:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Limpando o cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Limpando os arquivos em cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Excluindo {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Limpando o cache do DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} item(ns) excluído(s) do cache."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Não foi possível excluir:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "Diretório Não Encontrado",
       "at": "Diretório Não Encontrado"

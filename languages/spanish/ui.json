@@ -2032,6 +2032,46 @@
       "ht": "Caché limpiada",
       "at": ""
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Limpiar caché no está disponible mientras se ejecuta una extracción o una generación de mejoras. Vuelve a intentarlo cuando termine."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Se eliminarán los siguientes archivos en caché:\n\n{files}\n\nSerá necesario volver a extraer base.ini de Data.p4k antes de poder cargar las cadenas."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "¿Limpiar también la caché de DataForge?\n{folder}\n\nContiene los datos de entidades extraídos de Data.p4k para las estadísticas de naves y armas, y volver a crearla tarda unos minutos. Consérvala si solo quieres actualizar las cadenas de localización."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "No se pudo acceder a la carpeta de caché de DataForge, así que no se limpió:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Limpiando la caché"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Limpiando los archivos en caché..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Eliminando {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Limpiando la caché de DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Se eliminaron {count} elemento(s) de la caché."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "No se pudo eliminar:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "Directorio no encontrado",
       "at": ""

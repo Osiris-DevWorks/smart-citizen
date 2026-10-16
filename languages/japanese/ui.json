@@ -2032,6 +2032,46 @@
       "ht": "",
       "at": "キャッシュをクリアしました"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "抽出または拡張生成の実行中はキャッシュをクリアできません。完了してからもう一度お試しください。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "次のキャッシュファイルを削除します：\n\n{files}\n\n文字列を読み込む前に、Data.p4k から base.ini を再抽出する必要があります。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge キャッシュもクリアしますか？\n{folder}\n\nこれには艦船と武器のステータス用に Data.p4k から抽出したエンティティデータが入っており、作り直すには数分かかります。ローカライズ文字列を更新するだけなら残しておいてください。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーにアクセスできなかったため、クリアしていません：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "キャッシュをクリアしています"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "キャッシュファイルをクリアしています..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} を削除しています..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge キャッシュをクリアしています..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "キャッシュから {count} 件を削除しました。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "削除できませんでした：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "ディレクトリが見つかりません"

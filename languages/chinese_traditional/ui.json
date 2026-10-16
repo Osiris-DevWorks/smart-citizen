@@ -2032,6 +2032,46 @@
       "ht": "",
       "at": "快取已清除"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "正在執行提取或增強內容生成時無法清除快取。請在其完成後重試。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "這將刪除以下快取檔案：\n\n{files}\n\n在載入字串之前，需要從 Data.p4k 重新提取 base.ini。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "是否同時清除 DataForge 快取？\n{folder}\n\n它儲存著從 Data.p4k 提取、用於艦船和武器屬性的實體資料，重新產生需要幾分鐘。如果只想重新整理在地化字串，請保留它。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "無法存取 DataForge 快取資料夾，因此未清除它：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "正在清除快取"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "正在清除快取檔案..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "正在刪除 {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "正在清除 DataForge 快取..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "已從快取中刪除 {count} 項。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "無法刪除：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "未找到目錄"

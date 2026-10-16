@@ -2032,6 +2032,46 @@
       "ht": "",
       "at": "Cache geleert"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Cache leeren ist nicht verfügbar, während eine Extraktion oder eine Erweiterungsgenerierung läuft. Versuche es erneut, sobald sie abgeschlossen ist."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Die folgenden zwischengespeicherten Dateien werden gelöscht:\n\n{files}\n\nbase.ini muss erneut aus Data.p4k extrahiert werden, bevor Strings geladen werden können."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Auch den DataForge-Cache leeren?\n{folder}\n\nEr enthält die aus Data.p4k extrahierten Entitätsdaten für die Schiffs- und Waffenwerte, und ihn neu zu erstellen dauert einige Minuten. Behalte ihn, wenn du nur die Lokalisierungsstrings aktualisieren möchtest."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Der DataForge-Cache-Ordner war nicht erreichbar und wurde daher nicht geleert:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Cache wird geleert"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Cache-Dateien werden geleert..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} wird gelöscht..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge-Cache wird geleert..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} Element(e) aus dem Cache gelöscht."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Konnte nicht gelöscht werden:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Verzeichnis nicht gefunden"

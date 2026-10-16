@@ -2032,6 +2032,46 @@
       "ht": "Cache vidé",
       "at": "Cache vidé"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Vider le cache n'est pas disponible pendant une extraction ou une génération d'enrichissements. Réessayez une fois qu'elle est terminée."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Les fichiers en cache suivants vont être supprimés :\n\n{files}\n\nbase.ini devra être réextrait de Data.p4k avant de pouvoir charger les chaînes."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Vider aussi le cache DataForge ?\n{folder}\n\nIl contient les données d'entités extraites de Data.p4k pour les statistiques des vaisseaux et des armes, et le refaire prend quelques minutes. Gardez-le si vous voulez seulement actualiser les chaînes de localisation."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Le dossier du cache DataForge est inaccessible, il n'a donc pas été vidé :\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Vidage du cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Vidage des fichiers en cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Suppression de {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Vidage du cache DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} élément(s) supprimé(s) du cache."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Impossible de supprimer :\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "Répertoire introuvable",
       "at": "Répertoire introuvable"

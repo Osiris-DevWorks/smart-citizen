@@ -2032,6 +2032,46 @@
       "ht": "",
       "at": "Önbellek Temizlendi"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Bir çıkarma veya geliştirme oluşturma işlemi sürerken Önbelleği Temizle kullanılamaz. İşlem bittiğinde yeniden deneyin."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Aşağıdaki önbellek dosyaları silinecek:\n\n{files}\n\nMetinler yüklenmeden önce base.ini dosyasının Data.p4k'den yeniden çıkarılması gerekecek."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge önbelleği de temizlensin mi?\n{folder}\n\nGemi ve silah istatistikleri için Data.p4k'den çıkarılan varlık verilerini tutar ve yeniden oluşturulması birkaç dakika sürer. Yalnızca yerelleştirme metinlerini yenilemek istiyorsanız saklayın."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge önbellek klasörüne ulaşılamadı, bu yüzden temizlenmedi:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Önbellek temizleniyor"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Önbellek dosyaları temizleniyor..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} siliniyor..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge önbelleği temizleniyor..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Önbellekten {count} öğe silindi."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Silinemedi:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Dizin Bulunamadı"

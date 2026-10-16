@@ -2876,95 +2876,118 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def clear_cache(self):
-        """Delete cached source files from the cache directory. Optionally clear DataForge cache."""
-        from PyQt6.QtWidgets import QApplication
-        cache_dir = AppSettings.get_cache_dir()
-        cached_files = list(cache_dir.glob("*.ini")) + list(cache_dir.glob("*.txt"))
+        """More > Clear Cache: delete the active channel's cached base.ini and
+        enhancement INIs and, when the user agrees, the DataForge cache in use.
 
-        # Also check for dataforge directory
-        dataforge_dir = cache_dir / "dataforge"
-        has_dataforge = dataforge_dir.exists()
+        The DataForge cache is the active channel's cache folder wherever it
+        is (the default, the portable build's or a cache folder override),
+        named without creating it (#494) and offered only when it holds a
+        cache: its freshness stamp or its records. It used to be looked for
+        in the data folder's cache folder, where it lived before 1.x, so the
+        real cache was never offered (#479); a leftover there is the queued
+        old-cache cleanup's to remove. A cache folder on a drive or share
+        that is not there is named in the summary, and the rest still
+        clears. Nothing is cleared while an extraction or a generation runs,
+        because they write into these folders: the status bar says why.
+        Failures are listed in the summary and logged at WARNING, since an
+        ERROR record would open a second box on top of it.
+        """
+        from PyQt6.QtWidgets import QApplication
+        from src.utils.pak_extractor import (
+            DATAFORGE_LIBS_SUBPATH, P4K_MTIME_STAMP, robust_rmtree,
+        )
+
+        if any(worker is not None for worker in
+               (self._p4k_worker, self._forge_worker, self._enhancements_worker)):
+            self.statusBar().showMessage(tr("dialogs.clear_cache_busy"))
+            return
+
+        cache_dir = AppSettings.get_cache_dir()
+        cached_files = sorted(list(cache_dir.glob("*.ini")) + list(cache_dir.glob("*.txt")))
+
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
+        has_dataforge = ((forge_dir / P4K_MTIME_STAMP).exists()
+                         or (forge_dir / DATAFORGE_LIBS_SUBPATH).exists())
+        unreachable = ""
+        if not has_dataforge and not os.path.exists(forge_dir.anchor):
+            logger.warning(f"Clear Cache could not reach the DataForge cache folder {forge_dir}")
+            unreachable = tr("dialogs.clear_cache_dataforge_unreachable", folder=str(forge_dir))
 
         if not cached_files and not has_dataforge:
-            QMessageBox.information(self, tr("dialogs.cache_empty_title"), tr("dialogs.cache_empty_body"))
+            body = tr("dialogs.cache_empty_body")
+            if unreachable:
+                body += "\n\n" + unreachable
+            QMessageBox.information(self, tr("dialogs.cache_empty_title"), body)
             return
 
-        # First dialog: clear regular cache files
-        file_list = "\n".join(f"  {f.name}" for f in sorted(cached_files))
-        msg = f"This will delete the following cached files:\n\n{file_list}\n\n"
-        msg += "base.ini will need to be re-extracted from Data.p4k before strings can be loaded."
+        if cached_files:
+            reply = QMessageBox.question(
+                self, tr("dialogs.clear_cache_title"),
+                tr("dialogs.clear_cache_files_body",
+                   files="\n".join(f"  {f.name}" for f in cached_files)),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
-        reply = QMessageBox.question(
-            self, tr("dialogs.clear_cache_title"), msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        deleted, failed = 0, []
+        if cached_files:
+            progress = AnimatedProgressDialog(tr("dialogs.clear_cache_progress_files"), parent=self,
+                                              title=tr("dialogs.clear_cache_progress_title"))
+            for f in cached_files:
+                try:
+                    progress.setLabelText(tr("dialogs.clear_cache_progress_file", name=f.name))
+                    QApplication.processEvents()  # Keep dialog responsive
+                    f.unlink()
+                    deleted += 1
+                except OSError as e:
+                    failed.append(f"{f.name}: {e}")
+                    logger.warning(f"Clear Cache could not delete {f}: {e}")
+            progress.close()
 
-        deleted, failed = [], []
-
-        # Show progress dialog while deleting files
-        progress = AnimatedProgressDialog("Clearing cache files...", parent=self, title="Clearing Cache")
-
-        # Delete cache files
-        for f in cached_files:
-            try:
-                progress.setLabelText(f"Deleting {f.name}...")
-                QApplication.processEvents()  # Keep dialog responsive
-                f.unlink()
-                deleted.append(f.name)
-            except Exception as e:
-                failed.append(f"{f.name}: {e}")
-                logger.error(f"Failed to delete cache file {f}: {e}")
-
-        # Second dialog: ask about DataForge cache (only if it exists)
-        clear_dataforge = False
         if has_dataforge:
-            progress.close()  # Close progress dialog while asking user
             reply = QMessageBox.question(
                 self, tr("dialogs.dataforge_cache_title"),
-                "Also clear the DataForge entity cache?\n\n"
-                "⚠️  Warning: Recreating the DataForge cache takes a few minutes on first run.\n\n"
-                "The DataForge cache contains extracted entity data used for generating\n"
-                "ship and weapon stats. You can keep this cache and only clear the INI files\n"
-                "if you just want to refresh the localization strings.\n\n"
-                "Clear DataForge cache?",
+                tr("dialogs.clear_cache_dataforge_body", folder=str(forge_dir)),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                clear_dataforge = True
-                # Show progress dialog again for DataForge deletion
-                progress = AnimatedProgressDialog("Clearing DataForge cache...", parent=self, title="Clearing Cache")
-
-        # Delete dataforge directory if user agreed
-        if clear_dataforge:
-            try:
-                progress.setLabelText("Deleting DataForge directory...")
+                progress = AnimatedProgressDialog(tr("dialogs.clear_cache_progress_dataforge"),
+                                                  parent=self,
+                                                  title=tr("dialogs.clear_cache_progress_title"))
                 QApplication.processEvents()
-
-                # Shared helper — retries with backoff, clears read-only bits,
-                # and outlasts OneDrive/Defender/indexer locks that commonly
-                # reject the first attempt with WinError 5.
-                from src.utils.pak_extractor import robust_rmtree
-                robust_rmtree(dataforge_dir)
-                deleted.append("dataforge/")
-                logger.info("Deleted DataForge cache directory")
-            except Exception as e:
-                failed.append(f"dataforge/: {e}")
-                logger.error(f"Failed to delete DataForge cache: {e}")
-                logger.error(f"Failed to delete DataForge cache: {e}")
-
-        progress.close()
+                try:
+                    # Retries with backoff, clears read-only bits and outlasts
+                    # the OneDrive, Defender and indexer locks that often
+                    # refuse the first try. A link is reported, never deleted
+                    # through (#491).
+                    robust_rmtree(forge_dir)
+                    deleted += 1
+                    logger.info(f"Deleted the DataForge cache {forge_dir}")
+                except OSError as e:
+                    failed.append(f"{forge_dir}: {e}")
+                    logger.warning(f"Clear Cache could not delete the DataForge cache {forge_dir}: {e}")
+                progress.close()
+            elif not cached_files:
+                # No to the only question changes nothing, just as No to
+                # the file question: nothing was deleted, so the table and
+                # the tabs stay as they are.
+                return
 
         self.config_tab._refresh_p4k_status()
+        # The category dots and the DataForge label must not stay green over
+        # what was just deleted.
+        self.enhancements_tab.refresh_enhancements_status()
         self.entries = []
         self._model.set_data_source([], {}, AppSettings.get_favorite_prefix())
 
-        msg = f"Deleted {len(deleted)} item(s) from cache."
+        msg = tr("dialogs.cache_cleared_body", count=deleted)
         if failed:
-            msg += "\n\nFailed to delete:\n" + "\n".join(failed)
+            msg += "\n\n" + tr("dialogs.cache_cleared_failed", failures="\n".join(failed))
+        if unreachable:
+            msg += "\n\n" + unreachable
         QMessageBox.information(self, tr("dialogs.cache_cleared_title"), msg)
 
         # Re-sync all remote sources so they're available for the next Apply.

@@ -2032,6 +2032,46 @@
       "ht": "Cache Cleared",
       "at": ""
     },
+    "clear_cache_busy": {
+      "ht": "Clear Cache is not available while an extraction or an enhancement generation is running. Try again once it has finished.",
+      "at": ""
+    },
+    "clear_cache_files_body": {
+      "ht": "This will delete the following cached files:\n\n{files}\n\nbase.ini will need to be re-extracted from Data.p4k before strings can be loaded.",
+      "at": ""
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "Also clear the DataForge cache?\n{folder}\n\nIt holds the entity data extracted from Data.p4k for the ship and weapon stats, and making it again takes a few minutes. Keep it if you only want to refresh the localization strings.",
+      "at": ""
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "The DataForge cache folder could not be reached, so it was not cleared:\n{folder}",
+      "at": ""
+    },
+    "clear_cache_progress_title": {
+      "ht": "Clearing Cache",
+      "at": ""
+    },
+    "clear_cache_progress_files": {
+      "ht": "Clearing cache files...",
+      "at": ""
+    },
+    "clear_cache_progress_file": {
+      "ht": "Deleting {name}...",
+      "at": ""
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "Clearing the DataForge cache...",
+      "at": ""
+    },
+    "cache_cleared_body": {
+      "ht": "Deleted {count} item(s) from the cache.",
+      "at": ""
+    },
+    "cache_cleared_failed": {
+      "ht": "Could not delete:\n{failures}",
+      "at": ""
+    },
     "dir_not_found_title": {
       "ht": "Directory Not Found",
       "at": ""

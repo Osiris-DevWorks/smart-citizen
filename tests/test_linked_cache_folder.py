@@ -46,6 +46,7 @@ import pytest
 import src.gui.main_window as main_window
 import src.utils.pak_extractor as pe
 from src.gui.main_window import MainWindow
+from src.utils.i18n import tr
 from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP, P4K_SIZE_STAMP
 from src.utils.settings import AppSettings
 from src.utils.win_paths import win_long_path
@@ -311,31 +312,32 @@ class TestExtractionRefusesALinkedCacheFolder:
 class TestClearCacheReportsALink:
     def test_a_linked_dataforge_folder_is_reported_not_deleted(self, qapp, tmp_profile,
                                                                monkeypatch):
-        """Clear Cache's DataForge folder (#479 is about which folder that
-        is) as a junction: the summary lists it as not deleted. It used to
+        """The DataForge cache folder Clear Cache offers (the one in use,
+        #479) as a junction: the summary lists it as not deleted. It used to
         count it among the deleted items with nothing deleted."""
         box = MagicMock()
         box.question.return_value = box.StandardButton.Yes
         monkeypatch.setattr(main_window, "QMessageBox", box)
         monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
         cache = AppSettings.get_cache_dir()
-        cache.mkdir(parents=True, exist_ok=True)
         (cache / "base.ini").write_text("k=v", encoding="utf-8")
         target = tmp_profile / "D" / "SC Cache"
         target.mkdir(parents=True)
         files = _fill(target)
-        link = cache / "dataforge"
+        link = AppSettings.get_dataforge_cache_leaf()
+        link.parent.mkdir(parents=True)
         make_junction(link, target)
-        me = MagicMock()
+        me = MagicMock(_p4k_worker=None, _forge_worker=None, _enhancements_worker=None)
         me._startup_sync_worker = object()   # no sync started
 
         MainWindow.clear_cache(me)
 
         summary = box.information.call_args.args[2]
         assert summary == (
-            "Deleted 1 item(s) from cache.\n\nFailed to delete:\n"
-            f"dataforge/: {link} is a link to {os.path.realpath(target)}, "
-            f"{_NOT_THROUGH_A_LINK}")
+            tr("dialogs.cache_cleared_body", count=1) + "\n\n"
+            + tr("dialogs.cache_cleared_failed", failures=(
+                f"{link}: {link} is a link to {os.path.realpath(target)}, "
+                f"{_NOT_THROUGH_A_LINK}")))
         assert not (cache / "base.ini").exists()
         assert _unchanged(files)
         assert pe.linked_folder_target(link) == os.path.realpath(target)
