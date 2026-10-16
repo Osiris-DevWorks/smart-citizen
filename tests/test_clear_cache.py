@@ -319,8 +319,8 @@ class TestAFailedDelete:
         assert base.exists()
         assert not enhancements.exists()
 
-    def test_a_dataforge_cache_is_listed_and_logged_once_at_warning(self, clear, monkeypatch,
-                                                                     caplog):
+    def test_a_dataforge_cache_is_listed_and_logged_once_at_warning(
+            self, clear, monkeypatch, caplog):
         """It used to be logged twice at ERROR, which opened the global
         error box on top of the summary."""
         _cached_files()

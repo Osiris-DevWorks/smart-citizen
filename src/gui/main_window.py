@@ -2968,7 +2968,8 @@ class MainWindow(QMainWindow):
                     logger.info(f"Deleted the DataForge cache {forge_dir}")
                 except OSError as e:
                     failed.append(f"{forge_dir}: {e}")
-                    logger.warning(f"Clear Cache could not delete the DataForge cache {forge_dir}: {e}")
+                    logger.warning(
+                        f"Clear Cache could not delete the DataForge cache {forge_dir}: {e}")
                 progress.close()
             elif not cached_files:
                 # No to the only question changes nothing, just as No to
