@@ -706,6 +706,22 @@
       "ht": "Carpeta de caché no válida",
       "at": ""
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear su caché en:\n{folder}\n\nLa carpeta de caché de DataForge no se cambió."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo acceder a esta carpeta:\n{folder}\n\nLa carpeta de caché de DataForge no se cambió."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar esta carpeta:\n{folder}\n\n{reason}\n\nLa carpeta de caché de DataForge no se cambió."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "La carpeta de caché seleccionada es un archivo, no una carpeta:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "Ruta de caché de DataForge cambiada",
       "at": ""
@@ -808,7 +824,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Carpeta base para el árbol XML de DataForge extraído (~1,4 GB). Cada canal se anida bajo esta como {base}\\{channel}\\cache\\dataforge\\. Por defecto %LOCALAPPDATA%\\Smart Citizen para mantenerse fuera de OneDrive. Cambiar la ruta activa una nueva extracción."
+      "at": "Carpeta base para el árbol XML de DataForge extraído (unos 1,2 GB). Cada canal se anida bajo esta como {base}\\{channel}\\cache\\dataforge\\. Una extracción necesita hasta unos 4,5 GB libres en esta unidad mientras se ejecuta, menos si ya hay una caché. Sus archivos de trabajo van a %TEMP% en su lugar cuando esta carpeta está en OneDrive, en una unidad de red o extraíble, o anidada a mucha profundidad. Por defecto %LOCALAPPDATA%\\Smart Citizen para mantenerse fuera de OneDrive. Cambiar la ruta activa una nueva extracción."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2016,6 +2032,46 @@
       "ht": "Caché limpiada",
       "at": ""
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Limpiar caché no está disponible mientras se ejecuta una extracción o una generación de mejoras. Vuelve a intentarlo cuando termine."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Se eliminarán los siguientes archivos en caché:\n\n{files}\n\nSerá necesario volver a extraer base.ini de Data.p4k antes de poder cargar las cadenas."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "¿Limpiar también la caché de DataForge?\n{folder}\n\nContiene los datos de entidades extraídos de Data.p4k para las estadísticas de naves y armas, y volver a crearla tarda unos minutos. Consérvala si solo quieres actualizar las cadenas de localización."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "No se pudo acceder a la carpeta de caché de DataForge, así que no se limpió:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Limpiando la caché"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Limpiando los archivos en caché..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Eliminando {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Limpiando la caché de DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Se eliminaron {count} elemento(s) de la caché."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "No se pudo eliminar:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "Directorio no encontrado",
       "at": ""
@@ -2361,6 +2417,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "Recargando {channel} tras restaurar user.ini..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Recargando con el base.ini extraído..."
     }
   },
   "status_bar": {
@@ -2803,6 +2863,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "La conversión de la base de datos del juego superó los 30 minutos y se detuvo.\n\nBase de datos encontrada: {dcb} ({size} MB) en:\n{path}\n\nUna instalación correcta se convierte en mucho menos de un minuto. Normalmente esto significa que Smart Citizen está leyendo la carpeta equivocada de Star Citizen. Una instalación antigua o sobrante en tu disco parece válida pero contiene archivos de juego desactualizados.\n\nAbre el RSI Launcher y comprueba la ubicación de instalación que muestra. Si no coincide con la ruta de arriba, corrígela en la pestaña Config de Smart Citizen. Si coincide, ejecuta \"Verify Files\" en el launcher."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "No hay suficiente espacio libre. No se guardó nada y tu caché actual de DataForge no se modificó."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "No hay suficiente espacio libre para extraer global.ini de Data.p4k. No se cambió nada."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "La unidad {drive} tiene {free} libres y la extracción necesita unos {needed} en ella mientras se ejecuta."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Libera espacio en la unidad {drive} o elige una carpeta de caché de DataForge en otra unidad en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "La extracción trabaja en tu carpeta temporal de Windows ({folder}) porque la carpeta de caché de DataForge está en OneDrive, en una unidad de red o extraíble, o anidada a mucha profundidad. Libera espacio en la unidad {drive} y vuelve a intentarlo."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Libera espacio en la unidad {drive} y vuelve a intentarlo."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "La unidad {drive} se quedó sin espacio mientras se guardaba la nueva caché de DataForge en:\n{folder}\n\nEsa caché está incompleta. Libera espacio en la unidad {drive} y vuelve a extraer para reconstruirla."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear una carpeta de trabajo en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Revisa los permisos de esa carpeta, permite Smart Citizen a través del acceso controlado a carpetas en Seguridad de Windows o elige otra carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Revisa los permisos de esa carpeta o permite Smart Citizen a través del acceso controlado a carpetas en Seguridad de Windows, y vuelve a intentarlo."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows le denegó a Smart Citizen el permiso para crear la caché de DataForge en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo acceder a la carpeta de caché de DataForge:\n{folder}\n\nLa extracción no se inició. Reconecta la unidad o elige otra carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen no pudo usar la carpeta de caché de DataForge:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "La carpeta de caché de DataForge es un enlace a otra carpeta:\n{folder}\n\nLleva a:\n{target}\n\nSmart Citizen no elimina nada a través de un enlace, así que la extracción no se inició y no se cambió nada. Elige la carpeta a la que lleva como carpeta de caché de DataForge en la pestaña Configuración, y vuelve a intentarlo."
     }
   },
   "apply": {

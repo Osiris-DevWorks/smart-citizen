@@ -616,7 +616,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "Ordner für user.ini, Quellen-Cache, Erweiterungs-INIs und Sicherungen. Verschiebe diesen Ordner aus dem OneDrive-synchronisierten Dokumente-Ordner, falls die Cache-Bereinigung fehlschlägt. Der DataForge-XML-Cache hat unten seinen eigenen Pfad — er ist ca. 1,4 GB groß, daher hält ihn der Standardpfad automatisch aus OneDrive heraus."
+      "at": "Ordner für user.ini, Quellen-Cache, Erweiterungs-INIs und Sicherungen. Verschiebe diesen Ordner aus dem OneDrive-synchronisierten Dokumente-Ordner, falls die Cache-Bereinigung fehlschlägt. Der DataForge-XML-Cache hat unten seinen eigenen Pfad — er ist ca. 1,2 GB groß, daher hält ihn der Standardpfad automatisch aus OneDrive heraus."
     },
     "app_data_label": {
       "ht": "",
@@ -705,6 +705,22 @@
     "invalid_cache_folder_title": {
       "ht": "",
       "at": "Ungültiger Cache-Ordner"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, seinen Cache in diesem Ordner zu erstellen:\n{folder}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen konnte diesen Ordner nicht erreichen:\n{folder}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte diesen Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Der ausgewählte Cache-Ordner ist eine Datei, kein Ordner:\n{folder}"
     },
     "dataforge_cache_changed_title": {
       "ht": "",
@@ -808,7 +824,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Basisordner für den extrahierten DataForge-XML-Baum (~1,4 GB). Jeder Kanal wird darin unter {base}\\{channel}\\cache\\dataforge\\ verschachtelt. Standardmäßig %LOCALAPPDATA%\\Smart Citizen, damit er aus OneDrive herausgehalten wird. Eine Pfadänderung löst eine erneute Extraktion aus."
+      "at": "Basisordner für den extrahierten DataForge-XML-Baum (etwa 1,2 GB). Jeder Kanal wird darin unter {base}\\{channel}\\cache\\dataforge\\ verschachtelt. Eine Extraktion braucht während der Ausführung bis zu etwa 4,5 GB freien Speicherplatz auf diesem Laufwerk, weniger, wenn bereits ein Cache vorhanden ist. Die Arbeitsdateien der Extraktion landen stattdessen in %TEMP%, wenn dieser Ordner auf OneDrive, einem Netzwerk- oder Wechsellaufwerk liegt oder sehr tief verschachtelt ist. Standardmäßig %LOCALAPPDATA%\\Smart Citizen, damit er aus OneDrive herausgehalten wird. Eine Pfadänderung löst eine erneute Extraktion aus."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2016,6 +2032,46 @@
       "ht": "",
       "at": "Cache geleert"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Cache leeren ist nicht verfügbar, während eine Extraktion oder eine Erweiterungsgenerierung läuft. Versuche es erneut, sobald sie abgeschlossen ist."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Die folgenden zwischengespeicherten Dateien werden gelöscht:\n\n{files}\n\nbase.ini muss erneut aus Data.p4k extrahiert werden, bevor Strings geladen werden können."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Auch den DataForge-Cache leeren?\n{folder}\n\nEr enthält die aus Data.p4k extrahierten Entitätsdaten für die Schiffs- und Waffenwerte, und ihn neu zu erstellen dauert einige Minuten. Behalte ihn, wenn du nur die Lokalisierungsstrings aktualisieren möchtest."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Der DataForge-Cache-Ordner war nicht erreichbar und wurde daher nicht geleert:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Cache wird geleert"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Cache-Dateien werden geleert..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} wird gelöscht..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge-Cache wird geleert..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} Element(e) aus dem Cache gelöscht."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Konnte nicht gelöscht werden:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Verzeichnis nicht gefunden"
@@ -2361,6 +2417,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "{channel} wird nach Wiederherstellung der user.ini neu geladen..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Wird mit der extrahierten base.ini neu geladen..."
     }
   },
   "status_bar": {
@@ -2803,6 +2863,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "Die Konvertierung der Spieldatenbank hat länger als 30 Minuten gedauert und wurde abgebrochen.\n\nGefundene Datenbank: {dcb} ({size} MB) unter:\n{path}\n\nEine intakte Installation konvertiert in deutlich unter einer Minute. Meist bedeutet das, dass Smart Citizen den falschen Star-Citizen-Ordner liest. Eine alte oder übrig gebliebene Installation auf Ihrem Laufwerk wirkt gültig, enthält aber veraltete Spieldateien.\n\nÖffnen Sie den RSI Launcher und prüfen Sie den dort angezeigten Installationspfad. Stimmt er nicht mit dem obigen Pfad überein, korrigieren Sie ihn im Config-Tab von Smart Citizen. Ist es derselbe Pfad, führen Sie stattdessen \"Verify Files\" im Launcher aus."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Es ist nicht genug freier Speicherplatz vorhanden. Es wurde nichts gespeichert, und dein aktueller DataForge-Cache wurde nicht verändert."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Es ist nicht genug freier Speicherplatz vorhanden, um global.ini aus Data.p4k zu extrahieren. Es wurde nichts geändert."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "Laufwerk {drive} hat {free} frei, und die Extraktion braucht dort während der Ausführung etwa {needed}."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Gib auf Laufwerk {drive} Speicherplatz frei oder wähle im Konfiguration-Tab einen DataForge-Cache-Ordner auf einem anderen Laufwerk, und versuche es dann erneut."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "Die Extraktion arbeitet in deinem Windows-Temp-Ordner ({folder}), weil der DataForge-Cache-Ordner auf OneDrive, einem Netzwerk- oder Wechsellaufwerk liegt oder sehr tief verschachtelt ist. Gib auf Laufwerk {drive} Speicherplatz frei und versuche es dann erneut."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Gib auf Laufwerk {drive} Speicherplatz frei und versuche es dann erneut."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "Auf Laufwerk {drive} ist der Speicherplatz ausgegangen, während der neue DataForge-Cache hier gespeichert wurde:\n{folder}\n\nDieser Cache ist unvollständig. Gib auf Laufwerk {drive} Speicherplatz frei und extrahiere dann erneut, um ihn neu aufzubauen."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, in diesem Ordner einen Arbeitsordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Prüfe die Berechtigungen dieses Ordners, lass Smart Citizen in der Windows-Sicherheit durch den überwachten Ordnerzugriff zu oder wähle im Konfiguration-Tab einen anderen DataForge-Cache-Ordner, und versuche es dann erneut."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Prüfe die Berechtigungen dieses Ordners oder lass Smart Citizen in der Windows-Sicherheit durch den überwachten Ordnerzugriff zu, und versuche es dann erneut."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte in diesem Ordner keinen Arbeitsordner verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, den DataForge-Cache in diesem Ordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht erreichen:\n{folder}\n\nDie Extraktion wurde nicht gestartet. Schließe das Laufwerk wieder an oder wähle im Konfiguration-Tab einen anderen DataForge-Cache-Ordner, und versuche es dann erneut."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "Der DataForge-Cache-Ordner ist ein Link auf einen anderen Ordner:\n{folder}\n\nEr führt zu:\n{target}\n\nSmart Citizen löscht nichts über einen Link, daher wurde die Extraktion nicht gestartet und nichts geändert. Wähle im Konfiguration-Tab den Ordner, zu dem er führt, als DataForge-Cache-Ordner, und versuche es dann erneut."
     }
   },
   "apply": {
