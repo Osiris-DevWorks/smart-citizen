@@ -2613,6 +2613,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "No volver a avisarme"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "Se han movido {count} archivo(s) de OneDrive a la nueva carpeta de datos: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Algunos archivos se quedaron en OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "El instalador cambió tu carpeta de datos por una carpeta local, y Smart Citizen movió {moved} archivo(s) allí.\n\nDe:\n{old}\n\nA:\n{new}\n\n{left} archivo(s) se quedaron en la carpeta antigua, porque ya había un archivo con el mismo nombre en la carpeta nueva (ese se conservó) o porque no se pudo mover el archivo. La pestaña Registro los muestra.\n\nRevisa la carpeta antigua antes de borrarla y copia en la nueva todo lo que aún necesites."
     }
   },
   "user_ini_reset": {

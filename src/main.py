@@ -79,6 +79,7 @@ def main():
     # `<exe-dir>/data/` — there's no legacy Documents\Smart Citizen tree
     # to drain.
     from src.utils import build_mode
+    installer_data_move = None
     if not build_mode.IS_PORTABLE:
         # Move HKCU\Software\Osiris DevWorks\SC Localization Editor → Smart Citizen
         # on first launch after 0.9.2 (idempotent via marker). Must run FIRST —
@@ -104,6 +105,11 @@ def main():
 
         # Migrate global source from any remote URL to local P4K cache path (v0.6.0+)
         AppSettings.migrate_global_to_p4k_local()
+
+        # #455: a YES on Setup's OneDrive warning moves the data out of the
+        # OneDrive folder. Before the channel-layout and cache migrators, so
+        # they work on the moved data. The window reports the outcome.
+        installer_data_move = AppSettings.migrate_installer_data_move()
 
         # Split the pre-0.9.3 single-channel layout into channel-aware directories
         # (registry: GAME_INSTALL_PATH → SC_INSTALL_ROOT + ACTIVE_CHANNEL;
@@ -192,7 +198,7 @@ def main():
     app = QApplication(sys.argv)
     load_application_fonts()
     apply_theme(app, AppSettings.get_theme())
-    window = MainWindow()
+    window = MainWindow(installer_data_move=installer_data_move)
     window.show()
 
     logger.info("Application window shown")
