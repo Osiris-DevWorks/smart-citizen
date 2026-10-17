@@ -146,7 +146,8 @@ def patches(monkeypatch):
 
 
 def _forge_worker():
-    return DataForgeExtractWorker("Data.p4k", "unp4k.exe", "unforge.exe", "cache")
+    return DataForgeExtractWorker("Data.p4k", "unp4k.exe", "unforge.exe", "cache",
+                                  channel="LIVE", cache_base="Cache")
 
 
 class TestDataForgeExtractWorker:
@@ -397,6 +398,7 @@ class _Worker:
         self.finishes = finishes
         self.interrupted = False
         self.stopped = False
+        self.in_background = False   # Run in Background (#483)
         self.waits = []
         self.calls = []
         self.progress, self.progress_pct = _Signal(), _Signal()
@@ -444,6 +446,10 @@ def _window(**attrs):
     me._p4k_follow_up_after_error = None
     me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
     me._detach_progress_dialog = MainWindow._detach_progress_dialog
+    # The real one-job-at-a-time test (#483), reading the attributes above.
+    me._job_running = lambda: MainWindow._job_running(me)
+    me._send_dataforge_run_to_background = (
+        lambda *args: MainWindow._send_dataforge_run_to_background(me, *args))
     for name, value in attrs.items():
         setattr(me, name, value)
     return me
@@ -703,7 +709,15 @@ class TestDataForgeSlots:
         me = _window(_forge_worker=worker)
         MainWindow._on_dataforge_extract_finished(me, True, worker)
         me._cleanup_pending_old_cache.assert_called_once_with()
-        me._run_enhancements_generation.assert_called_once_with()
+        me._run_enhancements_generation.assert_called_once_with(background=False)
+
+    def test_a_run_sent_to_the_background_generates_in_the_background(self):
+        """Run in Background covers the generation that follows (#483)."""
+        worker = _Worker(running=False)
+        worker.in_background = True
+        me = _window(_forge_worker=worker)
+        MainWindow._on_dataforge_extract_finished(me, True, worker)
+        me._run_enhancements_generation.assert_called_once_with(background=True)
 
     def test_a_stop_from_the_dialog_says_stopped_not_failed(self):
         worker = _Worker(running=False)
@@ -1291,15 +1305,17 @@ class TestStartupRefreshPrompt:
 
 
 class TestStopPrompt:
-    """Esc or X on the DataForge dialog asks: Stop or Cancel. The dialog stays
-    modal while the run goes on, so nothing it depends on can change."""
+    """Esc or X on the DataForge dialog asks: Stop, Run in Background (#483)
+    or Cancel. What the run depends on is locked while it goes on in the
+    background (see test_run_in_background.py)."""
 
     @pytest.fixture
     def box(self, monkeypatch):
         cls = MagicMock()
         box = cls.return_value
-        box.choices = {name: MagicMock(name=name) for name in ("stop", "cancel")}
-        box.addButton.side_effect = [box.choices["stop"], box.choices["cancel"]]
+        box.choices = {name: MagicMock(name=name) for name in ("stop", "background", "cancel")}
+        box.addButton.side_effect = [box.choices["stop"], box.choices["background"],
+                                     box.choices["cancel"]]
         monkeypatch.setattr(main_window, "QMessageBox", cls)
         return box
 
@@ -1358,15 +1374,64 @@ class TestStopPrompt:
         me._end_simple_run.assert_called_once_with()
         dialog.deleteLater.assert_not_called()   # generation owns it now
 
+    def test_run_in_background_keeps_it_going_without_the_dialog(self, box):
+        """The dialog goes for good (a hidden one comes back while progress
+        keeps arriving), the run is not stopped, the status bar says it goes
+        on, and the generation that follows is marked to run without a dialog
+        too (#483)."""
+        self._answer(box, "background")
+        worker, dialog, me = self._setup()
+        assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is True
+        assert not worker.interrupted
+        assert worker.in_background is True
+        assert worker.progress.slots == [print] and worker.progress_pct.slots == []
+        assert me._forge_progress_dialog is None
+        dialog.deleteLater.assert_called_once_with()
+        me.statusBar().showMessage.assert_called_with(
+            tr("extract.dataforge_extracting_background"))
+        me._end_simple_run.assert_not_called()   # a Simple run still applies at the end
+
+    def test_background_after_it_finished_meanwhile_sends_generation_there(self, box):
+        """It finished while the question was open, so generation took the
+        dialog over. Run in Background must still hold: the dialog is detached
+        from generation and goes, instead of coming back as its dialog (#483)."""
+        worker, dialog, me = self._setup()
+        generation = _Worker()
+        generation.progress.connect(dialog.setLabelText)
+        generation.progress_pct.connect(dialog.set_progress)
+
+        def finished_and_handed_over():
+            worker.running = False
+            me._enhancements_worker = generation
+            me._enhancements_progress_dialog = dialog
+
+        self._answer(box, "background", meanwhile=finished_and_handed_over)
+        assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is True
+        assert generation.progress.slots == [] and generation.progress_pct.slots == []
+        assert me._enhancements_progress_dialog is None
+        dialog.deleteLater.assert_called_once_with()
+        assert not generation.interrupted
+        me._end_simple_run.assert_not_called()
+
+    def test_background_after_it_failed_meanwhile_just_closes(self, box):
+        """No generation took the dialog over (the run failed or stopped):
+        nothing to send anywhere, the dialog closes as it always did."""
+        worker, dialog, me = self._setup()
+        self._answer(box, "background", meanwhile=lambda: setattr(worker, "running", False))
+        assert MainWindow._confirm_stop_dataforge_extraction(me, worker) is True
+        dialog.deleteLater.assert_not_called()
+        assert worker.in_background is False
+
     def test_the_question_and_its_safe_default(self, box):
         self._answer(box, "cancel")
         worker, _dialog, me = self._setup()
         MainWindow._confirm_stop_dataforge_extraction(me, worker)
         box.setWindowTitle.assert_called_once_with(tr("extract.dataforge_running_title"))
         box.setText.assert_called_once_with(tr("extract.dataforge_running_body"))
-        assert box.addButton.call_count == 2   # Stop and Cancel, nothing else
-        assert box.addButton.call_args_list[0].args[0] == tr("extract.dataforge_stop_btn")
-        # Enter and Esc both mean Cancel: nothing is stopped by accident.
+        assert box.addButton.call_count == 3   # Stop, Run in Background and Cancel
+        assert [c.args[0] for c in box.addButton.call_args_list[:2]] == [
+            tr("extract.dataforge_stop_btn"), tr("extract.dataforge_background_btn")]
+        # Enter and Esc both mean Cancel: nothing is stopped or sent away by accident.
         box.setDefaultButton.assert_called_once_with(box.choices["cancel"])
         box.setEscapeButton.assert_called_once_with(box.choices["cancel"])
 
@@ -1489,8 +1554,9 @@ class TestExtractionWiring:
     def test_the_dataforge_dialog_asks_before_it_closes(self, monkeypatch):
         made = []
 
-        def make_worker(*args):
+        def make_worker(*args, **kwargs):
             made.append(_Worker(*args))
+            made[-1].kwargs = kwargs   # the channel and cache base (#483)
             return made[-1]
 
         dialog = MagicMock()

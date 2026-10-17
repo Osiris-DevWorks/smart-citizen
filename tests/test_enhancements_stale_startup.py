@@ -168,8 +168,13 @@ def _window(answer=None, **attrs):
     the category dialog returns: a set (Generate) or None (Skip)."""
     me = MagicMock()
     me._close_committed = False
+    # No job is running (#483): the real check over the real job list, since
+    # a MagicMock's own answer is truthy and its own list is empty.
+    me._p4k_worker = None
     me._enhancements_worker = None
     me._forge_worker = None
+    me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
+    me._job_running = lambda: MainWindow._job_running(me)
     me._enhancements_prompt_answer = None
     # A staticmethod read off the class is a plain function, as
     # tests/test_extraction_stop.py does for _detach_progress_dialog.
@@ -1102,6 +1107,10 @@ class TestLanguageEnhancementsFresh:
 
 def _switching_self():
     me = MagicMock()
+    # No extraction is running: a MagicMock's truthy default would read as
+    # one, and the switch then loads the prose without regenerating (#483).
+    me._p4k_worker = None
+    me._forge_worker = None
     me._language_enhancements_fresh = (
         lambda language: MainWindow._language_enhancements_fresh(me, language))
     me._reload_with_language_enhancements = (

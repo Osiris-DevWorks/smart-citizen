@@ -2766,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "A extração do DataForge ainda está em andamento.\n\nParar agora? Você pode executá-la novamente mais tarde."
+      "at": "A extração do DataForge ainda está em andamento.\n\nParar agora ou deixá-la continuar em segundo plano enquanto você continua trabalhando? Se parar, você poderá executá-la novamente mais tarde."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Parar"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Executar em segundo plano"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "A extração do DataForge terminou, mas a pasta cache do DataForge ou o canal mudou enquanto ela era executada, então nenhum aprimoramento foi gerado e nenhum cache antigo foi limpo."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Bloqueado enquanto uma extração ou uma geração de aprimoramentos está em andamento, e desbloqueado novamente quando ela terminar."
     },
     "dataforge_stopping": {
       "ht": "",

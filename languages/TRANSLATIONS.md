@@ -58,6 +58,30 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #483 brings back Run in
+  Background for the DataForge extraction (the 2.4.0 entry below has the
+  button's first pass) and locks what a running job depends on. Four
+  `extract.*` keys, the three new ones right after `dataforge_stop_btn`:
+  `dataforge_background_btn` ("Run in Background") and the three-choice
+  `dataforge_running_body` (stop it now, or let it carry on in the background
+  while you keep working; if you stop it, you can run it again later), both
+  with the text each file had when the button was dropped in 2.4.0, and two
+  new keys. `dataforge_settings_changed`: the DataForge extraction finished,
+  but the DataForge cache folder or the channel changed while it ran, so no
+  enhancements were generated and no old cache was cleared, with each file's
+  word for the DataForge cache folder from `config.dataforge_cache_label`.
+  `locked_while_job_runs`: locked while an extraction or an enhancement
+  generation is running, and unlocked again when it finishes (shown on the
+  Config tab, as the Apply Category Changes and Simple-mode tooltips and in
+  the status bar), with each file's words for the extraction and for
+  generating enhancements from `extract.dataforge_extraction_title` and
+  `status_bar.generating_enhancements_background`. In all 10 languages,
+  `at`-only (`ht` empty). No language had a human `dataforge_running_body`,
+  so nothing needs human re-review. The two new strings were back-translated
+  and compared with the English in the same pass, not by a separate checker:
+  no meaning errors, and the Korean sentence-spacing rule holds.
+  `tests/test_run_in_background.py` checks the four keys' `ht`/`at` split in
+  every language.
 - **2.5.0 cycle (2026-10-12, Claude Opus 5.5):** #476: a generation cut off by
   closing the app, a crash or a failed write is now offered again at the next
   start, and that question has its own body, `extract.outdated_categories_body`

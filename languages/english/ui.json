@@ -2765,11 +2765,23 @@
       "at": ""
     },
     "dataforge_running_body": {
-      "ht": "The DataForge extraction is still running.\n\nStop it now? You can run it again later.",
+      "ht": "The DataForge extraction is still running.\n\nStop it now, or let it carry on in the background while you keep working? If you stop it, you can run it again later.",
       "at": ""
     },
     "dataforge_stop_btn": {
       "ht": "Stop",
+      "at": ""
+    },
+    "dataforge_background_btn": {
+      "ht": "Run in Background",
+      "at": ""
+    },
+    "dataforge_settings_changed": {
+      "ht": "The DataForge extraction finished, but the DataForge cache folder or the channel changed while it ran, so no enhancements were generated and no old cache was cleared.",
+      "at": ""
+    },
+    "locked_while_job_runs": {
+      "ht": "Locked while an extraction or an enhancement generation is running, and unlocked again when it finishes.",
       "at": ""
     },
     "dataforge_stopping": {

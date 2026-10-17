@@ -2766,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요? 나중에 다시 실행할 수 있습니다."
+      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요, 아니면 작업을 계속하는 동안 백그라운드에서 계속 실행할까요? 중지하면 나중에 다시 실행할 수 있습니다."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "중지"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "백그라운드에서 실행"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 추출이 끝났지만 실행 중에 DataForge 캐시 폴더나 채널이 바뀌어 강화를 생성하지 않았고 이전 캐시도 지우지 않았습니다."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "추출이나 강화 생성이 실행 중일 때는 잠기며, 끝나면 다시 잠금이 해제됩니다."
     },
     "dataforge_stopping": {
       "ht": "",

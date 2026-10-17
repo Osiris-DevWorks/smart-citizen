@@ -423,6 +423,9 @@ class _StubWindow:
     def _end_simple_run(self):
         pass
 
+    def _refresh_job_lock(self):
+        pass  # the job lock (#483) is test_run_in_background.py's
+
 
 def _finish_generation(tab, success: bool):
     from src.gui.main_window import MainWindow

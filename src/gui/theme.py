@@ -116,6 +116,24 @@ def get_button_color(role: str) -> str:
     return palette[role]
 
 
+def needs_apply_style() -> str:
+    """Stylesheet for a button the dirty-tracking system lights up: the
+    needs_apply red, dimmed while the button is disabled (#483).
+
+    A running job locks some of these buttons while their change is still
+    pending (Generate Enhancements, Save Tag Changes, the Config tab's
+    Extract), and a stylesheet colour outlives setEnabled(False), so a
+    locked button looked ready to click. Dimmed, it still says a change is
+    waiting without looking clickable, and its tooltip or the Config tab's
+    lock label says why.
+    """
+    red = get_button_color("needs_apply")
+    color = QColor(red)
+    dimmed = f"rgba({color.red()}, {color.green()}, {color.blue()}, 110)"
+    return (f"QPushButton {{ color: {red}; }} "
+            f"QPushButton:disabled {{ color: {dimmed}; }}")
+
+
 def get_button_text_color() -> str:
     """Return the readable text color for toolbar action buttons.
 

@@ -2766,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "L'extraction DataForge est toujours en cours.\n\nL'arrêter maintenant ? Vous pourrez la relancer plus tard."
+      "at": "L'extraction DataForge est toujours en cours.\n\nL'arrêter maintenant, ou la laisser continuer en arrière-plan pendant que vous continuez à travailler ? Si vous l'arrêtez, vous pourrez la relancer plus tard."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Arrêter"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Exécuter en arrière-plan"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "L'extraction DataForge est terminée, mais le dossier du cache DataForge ou le canal a changé pendant son exécution : aucun enrichissement n'a donc été généré et aucun ancien cache n'a été vidé."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Verrouillé pendant une extraction ou une génération d'enrichissements, et déverrouillé dès qu'elle se termine."
     },
     "dataforge_stopping": {
       "ht": "",

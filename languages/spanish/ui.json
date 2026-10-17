@@ -2766,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "La extracción de DataForge sigue en curso.\n\n¿Detenerla ahora? Puedes volver a ejecutarla más tarde."
+      "at": "La extracción de DataForge sigue en curso.\n\n¿Detenerla ahora o dejar que siga en segundo plano mientras sigues trabajando? Si la detienes, podrás volver a ejecutarla más tarde."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Detener"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Ejecutar en segundo plano"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "La extracción de DataForge ha terminado, pero la carpeta de caché de DataForge o el canal cambiaron mientras se ejecutaba, así que no se generaron mejoras ni se limpió ninguna caché antigua."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Bloqueado mientras se ejecuta una extracción o una generación de mejoras, y desbloqueado de nuevo cuando termina."
     },
     "dataforge_stopping": {
       "ht": "",

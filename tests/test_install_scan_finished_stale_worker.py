@@ -120,6 +120,11 @@ class _Stub:
     def finish(self, report, worker):
         ConfigTab._on_install_scan_finished(self, report, worker)
 
+    def _refresh_locked_controls(self):
+        # What the real one does for this button when no extraction or
+        # generation holds the Config tab locked (#483).
+        self._dupe_check_btn.setEnabled(self._dupe_worker is None)
+
     def _use_install_root(self, root):
         pass  # only ever connected, never invoked, in these tests
 

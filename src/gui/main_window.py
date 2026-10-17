@@ -1575,7 +1575,12 @@ class MainWindow(QMainWindow):
         )
         dlg.exec()
 
-        if dlg.choice == UpdateDialog.CHOICE_UPDATE:
+        if dlg.choice == UpdateDialog.CHOICE_UPDATE and self._job_running():
+            # The installer relaunches the app while this one may still be
+            # finishing the job (#483). Check for Updates is locked while a
+            # job runs; this covers a check that was already under way.
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
+        elif dlg.choice == UpdateDialog.CHOICE_UPDATE:
             # Gate stays closed: the app exits to install. On download or
             # launch failure the handlers reopen it so startup continues.
             self._start_update_download(latest, url, asset_url, asset_size)
@@ -3395,10 +3400,17 @@ class MainWindow(QMainWindow):
         settings → re-detect the SC install (machine paths never travel in a
         backup) → set the post-import flag so the NEXT launch offers to
         regenerate + apply enhancements → offer restart.
+
+        Not while a job runs (#483): the restart starts the new copy before
+        this one closes, and both would write the same files. The button is
+        locked then too; this is the net behind it.
         """
         from src.utils.settings_profile import InvalidProfileError, read_profile_zip
         from src.utils.user_ini_manager import backup_user_ini
 
+        if self._job_running():
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
+            return
         path, _ = QFileDialog.getOpenFileName(
             self,
             tr("settings_backup.import_dialog_title"),
@@ -3612,10 +3624,15 @@ class MainWindow(QMainWindow):
         if box.clickedButton() is not apply_btn:
             return
 
-        if self._enhancements_worker is not None or self._forge_worker is not None:
-            return  # a pipeline is somehow already running; don't stack
+        if self._job_running():
+            # One job at a time (#483). The startup sync runs while the
+            # question is open and can start an extraction; the pipeline
+            # would refuse then and leave the Simple page busy for good.
+            # Apply Enhancements is there once the job ends.
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
+            return
         self._simple_run_active = True
-        self.simple_page.set_busy(True)
+        self._refresh_job_lock()
         self._run_enhancements_pipeline()
 
     def _handle_import_ini(self):
@@ -5105,6 +5122,15 @@ class MainWindow(QMainWindow):
         if self._language_enhancements_fresh(language):
             reload_language()
             return
+        if self._p4k_worker is not None or self._forge_worker is not None:
+            # An extraction is rewriting what generation reads (#483). The
+            # language selector is locked while it runs, so this is the net:
+            # load the prose now. A DataForge run's own generation reads the
+            # selected language when it starts, so it generates this one.
+            logger.info(f"An extraction is running; loading {language!r} with the "
+                        "enhancements it has")
+            reload_language()
+            return
 
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
         records = AppSettings.get_dataforge_cache_dir() / DATAFORGE_RECORDS_SUBPATH
@@ -5544,7 +5570,9 @@ class MainWindow(QMainWindow):
             return  # closing (#471): nothing new may start
         if not AppSettings.get_base_ini_path().exists():
             return
-        if self._enhancements_worker is not None or self._forge_worker is not None:
+        if self._job_running():
+            # One job at a time (#483): its Generate would be refused. A
+            # global.ini extraction's reload asks again when it ends.
             return
 
         # Only check enabled categories
@@ -5822,8 +5850,8 @@ class MainWindow(QMainWindow):
         once generation completes; this adds one continuation, not a parallel
         pipeline.
         """
-        if self._enhancements_worker is not None or self._forge_worker is not None:
-            return  # already running
+        if self._job_running():
+            return  # already running (the page shows busy meanwhile, #483)
 
         # Applying needs the game folder, but Config (where it's set) is hidden
         # in Simple mode — so guide the user to Advanced rather than no-op.
@@ -5846,7 +5874,7 @@ class MainWindow(QMainWindow):
             return
 
         self._simple_run_active = True
-        self.simple_page.set_busy(True)
+        self._refresh_job_lock()
         self._run_enhancements_pipeline()
 
     def _run_enhancements_pipeline(self):
@@ -5859,8 +5887,13 @@ class MainWindow(QMainWindow):
         regeneration skips this pipeline and clears it itself
         (_reload_with_language_enhancements). Extract DataForge if
         needed, then generate enhancements."""
-        if self._enhancements_worker is not None or self._forge_worker is not None:
-            return  # already running
+        if self._job_running():
+            # One job at a time (#483). Save Tag Changes is locked and Generate
+            # greyed out during a DataForge run or a generation; this says why
+            # if a click still arrives (Generate while a global.ini extraction
+            # is stopping).
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
+            return
 
         self.enhancements_tab.mark_enhancements_clean()
 
@@ -5875,7 +5908,7 @@ class MainWindow(QMainWindow):
 
     def _run_enhancements_generation(self, categories: set[str] | None = None,
                                      language: str | None = None,
-                                     if_unfinished=None) -> bool:
+                                     if_unfinished=None, background: bool = False) -> bool:
         """Launch EnhancementsGeneratorWorker in the background with animated progress dialog.
 
         *language* selects which language's base.ini to generate against
@@ -5886,6 +5919,9 @@ class MainWindow(QMainWindow):
         *if_unfinished* is what the caller does when the run fails, as for
         _check_p4k_freshness: a language switch leaves its reload to this
         run, and the finished slot runs it after a failure too.
+
+        *background* follows a DataForge extraction the user sent to the
+        background (#483): no progress dialog, the status bar reports.
 
         Returns True if a run started.
         """
@@ -5899,6 +5935,11 @@ class MainWindow(QMainWindow):
                 stale.close()
                 self._forge_progress_dialog = None
             return False  # already running
+        if self._p4k_worker is not None or self._forge_worker is not None:
+            # One job at a time (#483): an extraction rewrites the base.ini or
+            # the cache the generator reads. The extraction's own end chains
+            # generation or the caller's reload.
+            return False
 
         # Use enabled categories from settings if none specified
         if categories is None:
@@ -5927,6 +5968,7 @@ class MainWindow(QMainWindow):
             language=language,
         )
         self._enhancements_worker = worker
+        self._refresh_job_lock()
         # Every run sets it, so one left by an earlier run never carries over.
         self._after_unfinished_generation = if_unfinished
         self.enhancements_tab.set_operation_running(tr("enhancements.generating_enhancements_tooltip"))
@@ -5941,7 +5983,14 @@ class MainWindow(QMainWindow):
         # Falls back to a new dialog when called standalone (e.g. from
         # the Enhancements tab's Generate button).
         existing = getattr(self, "_forge_progress_dialog", None)
-        if existing is not None:
+        if background:
+            # The extraction was sent to the background (#483) and its dialog
+            # is gone: the status bar reports, as it did for the extraction.
+            if existing is not None:
+                existing.close()
+                self._forge_progress_dialog = None
+            self._enhancements_progress_dialog = None
+        elif existing is not None:
             self._enhancements_progress_dialog = existing
             self._forge_progress_dialog = None
             # The extraction is over, so Esc or X no longer asks to stop it
@@ -5963,8 +6012,9 @@ class MainWindow(QMainWindow):
         # The progress connections stay bound methods, which
         # _detach_progress_dialog can disconnect.
         worker.progress.connect(self.statusBar().showMessage)
-        worker.progress.connect(self._enhancements_progress_dialog.setLabelText)
-        worker.progress_pct.connect(self._enhancements_progress_dialog.set_progress)
+        if self._enhancements_progress_dialog is not None:
+            worker.progress.connect(self._enhancements_progress_dialog.setLabelText)
+            worker.progress_pct.connect(self._enhancements_progress_dialog.set_progress)
         # Bound to this worker, as the DataForge slots are (#471), so a worker
         # that is no longer the current one is told apart.
         worker.error.connect(
@@ -5979,9 +6029,11 @@ class MainWindow(QMainWindow):
     def _end_simple_run(self):
         """End the Simple-mode one-button flow: clear the active flag and let
         the Simple page leave its busy state. Idempotent — safe to call when no
-        Simple run is in progress (both are already idle)."""
+        Simple run is in progress (both are already idle). The page stays
+        busy while a job still runs (#483): a Stop answered after the run had
+        finished ends the Simple run while generation carries on."""
         self._simple_run_active = False
-        self.simple_page.set_busy(False)
+        self._refresh_job_lock()
 
     def _on_enhancements_generation_error(self, message: str, worker):
         if worker is not self._enhancements_worker or self._close_committed:
@@ -6006,6 +6058,7 @@ class MainWindow(QMainWindow):
         if worker is not self._enhancements_worker:
             return  # released: nothing may chain on
         self._enhancements_worker = None
+        self._refresh_job_lock()
         if_unfinished = self._after_unfinished_generation
         self._after_unfinished_generation = None
 
@@ -6071,14 +6124,23 @@ class MainWindow(QMainWindow):
         """Launch DataForgeExtractWorker in the background (non-blocking)."""
         if self._forge_worker is not None or self._close_committed:
             return
+        if self._job_running():
+            # One job at a time (#483): the extraction wipes the cache a
+            # running generation reads, as _run_enhancements_pipeline and
+            # _maybe_prompt_dataforge_refresh already knew.
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
+            return
 
         p4k_path    = AppSettings.get_p4k_path()
         unp4k_exe   = AppSettings.get_unp4k_exe_path()
         unforge_exe = AppSettings.get_unforge_exe_path()
         forge_dir   = AppSettings.get_dataforge_cache_dir()
 
-        worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
+        worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir,
+                                        channel=AppSettings.get_active_channel(),
+                                        cache_base=AppSettings.get_dataforge_cache_base())
         self._forge_worker = worker
+        self._refresh_job_lock()
         self.enhancements_tab.set_operation_running(tr("enhancements.extracting_dataforge_tooltip"))
         self.statusBar().showMessage(tr("extract.dataforge_extracting_background"))
 
@@ -6109,13 +6171,16 @@ class MainWindow(QMainWindow):
     def _confirm_stop_dataforge_extraction(self, worker) -> bool:
         """Esc or the title-bar X on the DataForge progress dialog (#471).
 
-        Asks whether to stop the running extraction: Stop, or Cancel to keep
-        the dialog. Returns True to let the dialog close, False to keep it
-        open. The dialog stays modal while the extraction runs, so nothing
-        the run depends on (the channel, the language, the data or cache
-        folder) can change under it. Once the extraction is over (or already
-        stopping) the dialog just closes as it always did: the same dialog
-        lives on into enhancement generation, which has no stop.
+        Asks what to do with the running extraction: Stop, Run in Background
+        (#483), or Cancel to keep the dialog. Returns True to let the dialog
+        close, False to keep it open. Run in Background dismisses the dialog
+        for good and the status bar reports; the generation that follows runs
+        without a dialog too. The window is then usable while the run goes
+        on, so what the run depends on (the channel, the language, the game,
+        data and cache folders) is locked until it ends (_refresh_job_lock).
+        Once the extraction is over (or already stopping) the dialog just
+        closes as it always did: the same dialog lives on into enhancement
+        generation, which has no stop.
         """
         def _still_running() -> bool:
             return (worker is self._forge_worker and worker.isRunning()
@@ -6131,11 +6196,17 @@ class MainWindow(QMainWindow):
         stop_btn = box.addButton(
             tr("extract.dataforge_stop_btn"), QMessageBox.ButtonRole.DestructiveRole
         )
+        background_btn = box.addButton(
+            tr("extract.dataforge_background_btn"), QMessageBox.ButtonRole.AcceptRole
+        )
         cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
         box.setDefaultButton(cancel_btn)
         box.setEscapeButton(cancel_btn)
         box.exec()
-        if box.clickedButton() is not stop_btn:
+        clicked = box.clickedButton()
+        if clicked is background_btn:
+            return self._send_dataforge_run_to_background(worker, dialog, _still_running())
+        if clicked is not stop_btn:
             return False   # Cancel: keep the dialog
         if not _still_running():
             # It finished (or failed) while the question was open, and its
@@ -6158,6 +6229,35 @@ class MainWindow(QMainWindow):
         logger.info("DataForge extraction: stop requested from the progress dialog")
         worker.requestInterruption()
         self.statusBar().showMessage(tr("extract.dataforge_stopping"))
+        return True
+
+    def _send_dataforge_run_to_background(self, worker, dialog, still_running: bool) -> bool:
+        """Run in Background, from the DataForge dialog's question (#483).
+
+        Dismisses the dialog for good (a hidden QProgressDialog shows itself
+        again while progress keeps arriving, so it gets no more of it) and
+        marks the run, so the generation that follows runs without a dialog
+        too. If the run finished while the question was open, generation has
+        already taken the same dialog over: it is detached from generation
+        instead, so the answer still holds. Always lets the dialog close.
+        """
+        if still_running:
+            worker.in_background = True
+            if dialog is not None:
+                self._detach_progress_dialog(worker, dialog)
+                self._forge_progress_dialog = None
+                dialog.deleteLater()
+            logger.info("DataForge extraction: carrying on in the background")
+            self.statusBar().showMessage(tr("extract.dataforge_extracting_background"))
+            return True
+        generation = self._enhancements_worker
+        if (dialog is not None and generation is not None
+                and self._enhancements_progress_dialog is dialog):
+            self._detach_progress_dialog(generation, dialog)
+            self._enhancements_progress_dialog = None
+            dialog.deleteLater()
+            logger.info("Enhancement generation: carrying on in the background")
+            self.statusBar().showMessage(tr("status_bar.generating_enhancements_background"))
         return True
 
     @staticmethod
@@ -6208,6 +6308,7 @@ class MainWindow(QMainWindow):
         if worker is not self._forge_worker:
             return  # stopped and released by closeEvent (#471): nothing may chain on
         self._forge_worker = None
+        self._refresh_job_lock()
         self.enhancements_tab.refresh_forge_status()
 
         if self._close_committed:
@@ -6216,6 +6317,25 @@ class MainWindow(QMainWindow):
             # GUI-thread delete) nor chain into generation (a new thread
             # during exit).
             self._end_simple_run()
+            return
+
+        if success and not self._dataforge_run_matches_settings(worker):
+            # The cache folder or the channel changed while the run went on
+            # (#483). The lock keeps the Config tab from doing that, so this
+            # is the net behind it: the queued cleanup could name the folder
+            # this run just filled, and generation would read a cache the run
+            # never wrote. Generate stays lit for the settings now in force.
+            logger.warning(
+                f"DataForge extraction finished into {worker.cache_dir} for "
+                f"{worker.channel or 'the channel it started on'}, but the settings "
+                "changed while it ran: the old-cache cleanup and generation are skipped"
+            )
+            self._end_simple_run()
+            if getattr(self, "_forge_progress_dialog", None) is not None:
+                self._forge_progress_dialog.close()
+                self._forge_progress_dialog = None
+            self.enhancements_tab.set_operation_idle(success=False)
+            self.statusBar().showMessage(tr("extract.dataforge_settings_changed"))
             return
 
         if success:
@@ -6229,9 +6349,10 @@ class MainWindow(QMainWindow):
             # appearing — long enough for users to wonder what the app is
             # doing. _run_enhancements_generation reuses the existing
             # dialog window if one is present, so the title/label change
-            # is the only thing the user sees.
+            # is the only thing the user sees. A run sent to the background
+            # has no dialog, and its generation runs without one (#483).
             self.statusBar().showMessage(tr("extract.dataforge_extracted_generating"))
-            self._run_enhancements_generation()
+            self._run_enhancements_generation(background=worker.in_background)
         else:
             # #180: extraction failed (or was stopped), so the Simple-mode
             # flow can't continue.
@@ -6249,6 +6370,18 @@ class MainWindow(QMainWindow):
             else:
                 self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
 
+    def _dataforge_run_matches_settings(self, worker) -> bool:
+        """Whether a finished DataForge run wrote the cache folder the settings
+        name now (#483): the same channel and the same cache base, which
+        together make the folder. Compared without making any folder, in
+        Windows' own case-insensitive way."""
+        def plain(path) -> str:
+            return os.path.normcase(os.path.normpath(str(path)))
+
+        if worker.channel != AppSettings.get_active_channel():
+            return False
+        return plain(worker.cache_base) == plain(AppSettings.get_dataforge_cache_base())
+
     def _run_p4k_extraction(self):
         """Launch P4kExtractWorker with a progress dialog; reload sources on success.
 
@@ -6258,6 +6391,11 @@ class MainWindow(QMainWindow):
             # One at a time: closing stops only the worker this attribute
             # holds, and one stopped from its dialog takes a moment to end
             # (#471). Closing: nothing new may start.
+            return False
+        if self._job_running():
+            # One job at a time (#483): a DataForge run or a generation is
+            # going. The caller carries on as if the extraction was declined.
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
             return False
         p4k_path = AppSettings.get_p4k_path()
         output_path = AppSettings.get_cache_dir() / 'base.ini'
@@ -6275,6 +6413,7 @@ class MainWindow(QMainWindow):
 
         worker = P4kExtractWorker(p4k_path, output_path, unp4k_exe, scratch_near=scratch_near)
         self._p4k_worker = worker
+        self._refresh_job_lock()
         self._p4k_progress = AnimatedProgressDialog(
             tr("extract.p4k_extracting_label"),
             parent=self,
@@ -6346,6 +6485,7 @@ class MainWindow(QMainWindow):
             self._p4k_progress.close()
             self._p4k_progress = None
         self._p4k_worker = None
+        self._refresh_job_lock()
         if_unfinished = self._after_unfinished_p4k_extraction
         self._after_unfinished_p4k_extraction = None
 
@@ -6394,6 +6534,33 @@ class MainWindow(QMainWindow):
         ("_forge_worker", "_forge_progress_dialog"),
         ("_enhancements_worker", "_enhancements_progress_dialog"),
     )
+
+    def _job_running(self) -> bool:
+        """True while any job closing stops is running: a global.ini or
+        DataForge extraction, or enhancement generation (#483). One job runs
+        at a time, and each depends on the channel, the language and the data
+        and cache folders it started with."""
+        return any(getattr(self, worker_attr, None) is not None
+                   for worker_attr, _dialog_attr in self._WORKERS_STOPPED_ON_CLOSE)
+
+    def _refresh_job_lock(self) -> None:
+        """Lock what a running job depends on, or unlock it once none runs
+        (#483).
+
+        With Run in Background, and with a generation whose dialog was
+        hidden, the window is usable while a job runs. Changing the channel,
+        the language, the game, data or cache folder, the category set or
+        the tags, or importing settings or installing an update then would
+        pull those out from under it. So they are locked, with the reason
+        shown, while any job runs, whether its dialog is shown or not. The
+        Simple page shows busy for the same time. Called wherever a job's
+        worker is set or cleared, and when a Simple run starts or ends.
+        """
+        running = self._job_running()
+        reason = tr("extract.locked_while_job_runs") if running else ""
+        self.config_tab.set_data_locations_locked(running, reason)
+        self.enhancements_tab.set_changes_locked(running, reason)
+        self.simple_page.set_busy(self._simple_run_active or running, reason)
 
     def _request_stops_for_close(self) -> None:
         """Ask every running extraction (#471), and enhancement generation,

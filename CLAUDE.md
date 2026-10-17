@@ -89,7 +89,7 @@ The "Extract DataForge from P4K" button triggers, in order:
 3. Run `scripts/generate_enhancements_ini.py` over the XMLs for every enabled category. Every file it writes is replaced in one step (`src/utils/atomic_io.py`), so a run cut off part-way leaves each file whole, old or new. Closing the app stops it at its next job boundary, never during its writes (see `src/gui/CLAUDE.md` → *Closing stops a running extraction*).
 4. Reload all strings to refresh the table.
 
-The progress dialog stays continuous across steps 1–3 so users see one bar from start to finish.
+The progress dialog stays continuous across steps 1–3 so users see one bar from start to finish. Run in Background, one of the choices Esc or the X on the dialog offers, sends the run and its generation to the status bar instead, with what they depend on locked until they end (#483, see `src/gui/CLAUDE.md` → *Run in Background and the job lock*).
 
 ### Merge hierarchy
 Sources merge in user-defined order. Later sources overwrite earlier ones; user overrides apply last and survive source updates. As of 1.0 the seeded default is just `[global, user]` — the URL sources (contracts/components/ships/commodities) and `gear` retired in 0.7.0 when extraction moved to local Data.p4k, and `migrate_remove_retired_url_sources()` removes them from upgrader registries. `load_sources_from_settings()` also injects a synthetic `enhancements` source at runtime when any enhancement category is enabled on the Enhancements tab — it is *not* a registry entry; don't add it to the hierarchy by hand.
@@ -172,6 +172,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change DataForge freshness | `src/utils/settings.py`, `src/gui/main_window.py` | `dataforge_cache_is_fresh()` |
 | Change how generated files are written | `src/utils/atomic_io.py` | `atomic_writer()`, `atomic_write_text()`, `read_bytes_retrying()` (the enhancement INIs, both stamps, the lookup pickles and patched cache XMLs are swapped in whole, never written in place) |
 | Change the enhancements out-of-date check | `src/utils/settings.py`, `src/gui/main_window.py`, `src/gui/workers.py` | `enhancements_built_from_current_dataforge()` (the one definition of "current", shared by the startup check, the Generate button and the language switch), `_check_enhancements_freshness()`, `EnhancementsGeneratorWorker.run()` (empties `.dataforge_stamp` before the generator runs, writes it after) |
+| Change Run in Background or the job lock | `src/gui/main_window.py`, `src/gui/config_tab.py`, `src/gui/enhancements_tab.py`, `src/gui/simple_mode_widget.py` | `_confirm_stop_dataforge_extraction()`, `_send_dataforge_run_to_background()`, `_job_running()`, `_refresh_job_lock()`, `_dataforge_run_matches_settings()`, `ConfigTab.set_data_locations_locked()`, `EnhancementsTab.set_changes_locked()`, `SimpleModeWidget.set_busy(busy, reason)`, `theme.needs_apply_style()` (#483) |
 | Change stats/favorites UI | `src/gui/enhancements_tab.py` | `setup_ui()` |
 | Manage Config tab UI | `src/gui/config_tab.py` | `setup_ui()`, drag-drop hierarchy |
 | Manage Enhancements tab UI | `src/gui/enhancements_tab.py` | `setup_ui()`, stats toggle, favorites config |
