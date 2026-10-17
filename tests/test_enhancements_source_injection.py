@@ -99,9 +99,11 @@ def test_no_enabled_category_means_no_enhancements_source(env):
 
 
 def test_an_enabled_category_with_no_generated_file_adds_no_source(env):
-    """A category can be enabled before its INI has been generated. The
-    missing file is skipped: the load carries on without an empty
-    enhancements source in the merge, and nothing is raised."""
+    """A category can be enabled before its INI has been generated. No
+    empty enhancements source joins the merge, and nothing is raised. This
+    does not pin the exists() check in load_sources_from_settings: without
+    it, parse_ini_file returns {} for the missing file and the result is the
+    same."""
     (AppSettings.get_enhancements_dir() / AppSettings.ENHANCEMENTS_FILES[LABEL]).unlink()
     sources, hierarchy, key_categories = load_sources_from_settings()
     assert set(sources) == {AppSettings.SOURCE_GLOBAL}
