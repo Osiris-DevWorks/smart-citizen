@@ -7,9 +7,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from utils.owned_items import (  # noqa: E402
+from src.utils.owned_items import (  # noqa: E402
     BULLET_NAME_ALIASES,
     NONE_STYLE_ENCLOSING,
     apply_owned_to_value,
@@ -408,10 +407,7 @@ class TestExtract:
         """
         import re
         from pathlib import Path
-        # Same `utils.` import path this module already uses at the top --
-        # `utils.owned_items` and `src.utils.owned_items` are distinct module
-        # objects under this repo's dual pythonpath.
-        from utils.owned_items import (
+        from src.utils.owned_items import (
             _ALT_BP_SECTION_HEADER, _build_bp_header_re, BP_SECTION_HEADER,
         )
 

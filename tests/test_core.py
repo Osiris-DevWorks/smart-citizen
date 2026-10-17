@@ -16,13 +16,10 @@ import os
 from pathlib import Path
 
 # Import app modules
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from models.string_model import StringEntry
-from parser.ini_parser import parse_ini_file, load_overrides
-from merger.ini_merger import merge_sources_by_hierarchy
-from utils.user_ini_manager import save_user_ini_dict as save_overrides
+from src.models.string_model import StringEntry
+from src.parser.ini_parser import parse_ini_file, load_overrides
+from src.merger.ini_merger import merge_sources_by_hierarchy
+from src.utils.user_ini_manager import save_user_ini_dict as save_overrides
 
 
 class TestIniParsing:
