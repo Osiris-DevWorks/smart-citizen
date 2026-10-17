@@ -35,6 +35,9 @@ already failing to delete. These tests pin the replacement:
   its cache folder is made again after the wipe, so a folder that refuses
   new ones is the same refusal, before any tool runs and with the old cache
   still there.
+* What the bar shows while a tool runs (#507): a total of 0, the busy bar,
+  for unp4k and unforge in both extractions, and the counted phases as
+  they were.
 
 Qt-free. Child processes run on the base interpreter (``sys._base_executable``)
 because a venv's ``python.exe`` is a launcher that starts a second process,
@@ -1787,6 +1790,65 @@ class TestExtractGlobalIni:
         p4k, py, _pid = _real_tools(root)
         pe.extract_global_ini(p4k, root / "base.ini", py)
         assert not dead.exists()
+
+
+# ── what the bar shows while a tool runs (#507) ─────────────────────────────
+
+class TestToolPhasesShowTheBusyBar:
+    """unp4k and unforge report nothing while they run, so a counted bar stood
+    still the whole time: at 0% while unp4k ran and at 33% for the minutes
+    unforge takes, which looked like a hang (#507). Each tool phase reports a
+    total of 0, the moving busy bar (tests/test_extraction_stop.py pins the
+    dialog's side), and the counted phases stay as they were. Each fake tool
+    records the last progress call made before it started, which is what the
+    bar shows while that tool runs."""
+
+    def test_the_dataforge_tools_run_under_the_busy_bar(self, setup):
+        _leaf, run = setup
+        calls, shown = [], {}
+        tools = _FakeTools()
+
+        def watched(args, **kwargs):
+            shown[Path(args[0]).stem] = calls[-1]
+            return tools(args, **kwargs)
+
+        assert run(watched, progress_pct_callback=lambda *call: calls.append(call)) is True
+        assert shown == {
+            "unp4k": (0, 0, pe.tr("progress.extract_dcb")),
+            "unforge": (0, 0, pe.tr("progress.unforge_short")),
+        }
+        caching = calls.index((2, 3, pe.tr("progress.caching_entities")))
+        assert calls[:caching] == [
+            (0, 0, pe.tr("progress.extract_dcb")),
+            (0, 0, pe.tr("progress.unforge_short")),
+        ]
+        # The diff snapshot still counts the cache's files from none to all
+        # (dataforge_diff's own calls), then the run ends at 3/3.
+        snapshot = [(done, total) for done, total, _label in calls[caching + 1:-1]]
+        files = snapshot[0][1]
+        assert files > 0 and snapshot[0] == (0, files) and (files, files) in snapshot
+        assert calls[-1] == (3, 3, "Done")
+
+    def test_unp4k_runs_under_the_busy_bar_for_global_ini(self, env, root, monkeypatch):
+        leaf, out, fake, _run = env
+        calls, shown = [], []
+
+        def watched(args, **kwargs):
+            shown.append(calls[-1])
+            return fake(args, **kwargs)
+
+        monkeypatch.setattr(pe, "_run_tool", watched)
+        tools = root / "tools"
+        assert pe.extract_global_ini(
+            tools / "Data.p4k", out, tools / "unp4k.exe", scratch_near=leaf,
+            progress_pct_callback=lambda *call: calls.append(call),
+        ) is True
+        assert shown == [(0, 0, pe.tr("progress.unp4k_launch_short"))]
+        assert calls == [
+            (0, 0, pe.tr("progress.unp4k_launch_short")),
+            (1, 2, pe.tr("progress.copy_global_short")),
+            (2, 2, "Done"),
+        ]
 
 
 # ── the free-space check (#482) ─────────────────────────────────────────────

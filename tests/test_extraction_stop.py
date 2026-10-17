@@ -6,6 +6,8 @@ extraction carried on unseen. This pins the Qt side of the fix:
 
 * AnimatedProgressDialog's close guard: Esc and the title-bar X ask, a
   programmatic close() never does.
+* AnimatedProgressDialog.set_progress with a total of 0, or nothing counted
+  yet (#507): the busy bar, and a counted phase after it counted again.
 * DataForgeExtractWorker / P4kExtractWorker on real threads: a stop ends with
   finished(False), no error signal and nothing at ERROR (an ERROR record would
   pop the global error dialog), while a real failure still reports, and one
@@ -37,6 +39,7 @@ import pytest
 from PyQt6.QtCore import Qt, QThread
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtTest import QTest
+from PyQt6.QtWidgets import QProgressBar
 
 import src.gui.main_window as main_window
 import src.utils.pak_extractor as pe
@@ -114,6 +117,50 @@ class TestProgressDialogCloseGuard:
     def test_without_a_guard_esc_hides_it_as_before(self, dialog):
         QTest.keyClick(dialog, Qt.Key.Key_Escape)
         assert not dialog.isVisible()
+
+
+class TestProgressDialogBusyBar:
+    """A total of 0 is the moving busy bar the extractions show while unp4k
+    or unforge runs (#507, the calls are pinned Qt-free in
+    test_extraction_working_folder.py): a 0 to 0 range, which Qt animates,
+    no percentage, and none of the counted bar's style, which would stop the
+    animation (see theme.py). Nothing counted yet (0 of N) is the busy bar
+    too. A counted phase after either is counted again."""
+
+    def test_a_total_of_0_is_the_busy_bar_and_a_count_ends_it(self, dialog):
+        bar = dialog.findChild(QProgressBar)
+        dialog.set_progress(1, 3, "Converting DataForge database…")
+        assert (dialog.minimum(), dialog.maximum(), dialog.value()) == (0, 3, 1)
+        assert bar.isTextVisible() and bar.styleSheet()
+
+        dialog.set_progress(0, 0, "Extracting Game2.dcb from Data.p4k…")
+        assert (dialog.minimum(), dialog.maximum()) == (0, 0)
+        assert not bar.isTextVisible() and bar.styleSheet() == ""
+        assert dialog.labelText() == "Extracting Game2.dcb from Data.p4k…"
+
+        dialog.set_progress(2, 3, "Caching entity files…")
+        assert (dialog.minimum(), dialog.maximum(), dialog.value()) == (0, 3, 2)
+        assert bar.isTextVisible() and bar.styleSheet()
+        assert dialog.labelText() == "Caching entity files…"
+
+    def test_nothing_counted_yet_is_the_busy_bar_until_the_first_count(self, dialog):
+        """The generator starts its count at 0 of N and its first lookups can
+        take seconds, which showed a bar standing at 0%. The string loader
+        and the update download start the same way."""
+        bar = dialog.findChild(QProgressBar)
+        dialog.set_progress(0, 14, "Generating enhancements…")
+        assert (dialog.minimum(), dialog.maximum()) == (0, 0)
+        assert not bar.isTextVisible() and bar.styleSheet() == ""
+        assert dialog.labelText() == "Generating enhancements…"
+
+        dialog.set_progress(1, 14, "Loaded base.ini")
+        assert (dialog.minimum(), dialog.maximum(), dialog.value()) == (0, 14, 1)
+        assert bar.isTextVisible() and bar.styleSheet()
+
+        # A new count from 0 after a counted phase is the busy bar again.
+        dialog.set_progress(0, 30, "Snapshotting cache for diff (0/30)…")
+        assert (dialog.minimum(), dialog.maximum()) == (0, 0)
+        assert not bar.isTextVisible() and bar.styleSheet() == ""
 
 
 # ── the workers, on real threads ────────────────────────────────────────────
@@ -1717,6 +1764,15 @@ class TestDismissedDialogStaysHidden:
             dlg.deleteLater()
 
     @staticmethod
+    def _start_show_timer(dialog):
+        """Start QProgressDialog's show timer, which shows the dialog about
+        4 s in. setValue at the bar's minimum starts it. set_progress(0, 2)
+        used to, but a count of 0 is the busy bar now and sets no value
+        (#507), so these tests start it themselves: the cancel() that keeps a
+        dismissed dialog hidden must still stop it."""
+        dialog.setValue(dialog.minimum())
+
+    @staticmethod
     def _watch(qapp, dialog, seconds):
         """True if *dialog* shows itself within *seconds*."""
         end = time.monotonic() + seconds
@@ -1736,7 +1792,7 @@ class TestDismissedDialogStaysHidden:
         control (hide) proves the timer is real here; cancel() stops it."""
         dialog = AnimatedProgressDialog("Launching unp4k…", title="P4K Extraction")
         try:
-            dialog.set_progress(0, 2, "Launching")
+            self._start_show_timer(dialog)
             qapp.processEvents()
             getattr(dialog, dismiss)()
             assert not dialog.isVisible()
@@ -1758,7 +1814,7 @@ class TestDismissedDialogStaysHidden:
         dialog.set_close_guard(
             lambda w=worker: MainWindow._stop_p4k_extraction_from_dialog(me, w))
         try:
-            dialog.set_progress(0, 2, "Launching")
+            self._start_show_timer(dialog)
             qapp.processEvents()
             QTest.keyClick(dialog, Qt.Key.Key_Escape)
             assert worker.interrupted and not dialog.isVisible()

@@ -1452,6 +1452,9 @@ def extract_global_ini(
         output_path: Destination path (e.g. cache/base.ini).
         unp4k_exe: Path to the bundled unp4k.exe.
         progress_callback: Optional callable(str) for status messages.
+        progress_pct_callback: Optional callable(completed, total, message)
+            for the progress bar. unp4k reports nothing while it runs, so
+            its phase is sent with a total of 0, the busy bar (#507).
         should_cancel: Optional callable() -> bool, polled while unp4k runs
             (#471). True kills unp4k, deletes the working folder and raises
             ExtractionCancelled; output_path is left untouched.
@@ -1497,7 +1500,10 @@ def extract_global_ini(
         if progress_callback:
             progress_callback(tr("progress.unp4k_launch"))
         if progress_pct_callback:
-            progress_pct_callback(0, TOTAL_PHASES, tr("progress.unp4k_launch_short"))
+            # A total of 0 is the dialog's moving busy bar (#507). unp4k
+            # reports nothing while it runs, and a bar held at 0% for the
+            # whole run looked as if the app had hung.
+            progress_pct_callback(0, 0, tr("progress.unp4k_launch_short"))
 
         logger.info(f"Running unp4k: {unp4k_exe} {p4k_path} global.ini (cwd={tmp_dir})")
         result = _run_tool(
@@ -1565,6 +1571,11 @@ def extract_dataforge(
         unforge_exe: Path to bundled unforge.exe.
         dataforge_cache_dir: Destination directory for the cached entity XMLs.
         progress_callback: Optional callable(str) for status messages.
+        progress_pct_callback: Optional callable(completed, total, message)
+            for the progress bar. unp4k and unforge report nothing while
+            they run, so their phases are sent with a total of 0, the busy
+            bar (#507). Caching the entity files is 2 of 3, the diff
+            snapshot counts its files, and Done is 3 of 3.
         should_cancel: Optional callable() -> bool (#471). Polled while each
             tool runs, which kills the tool, and checked between steps. The
             check just before the old cache is wiped is the last point a stop
@@ -1629,7 +1640,10 @@ def extract_dataforge(
         if progress_callback:
             progress_callback(tr("progress.extract_dcb"))
         if progress_pct_callback:
-            progress_pct_callback(0, TOTAL_PHASES, tr("progress.extract_dcb"))
+            # The busy bar while each tool runs, as for global.ini (#507).
+            # Neither reports progress, so a counted bar stood at 0% here
+            # and at 33% for the minutes unforge takes.
+            progress_pct_callback(0, 0, tr("progress.extract_dcb"))
         logger.info(f"Running unp4k to extract .dcb: {unp4k_exe} {p4k_path} .dcb")
         result = _run_tool(
             [str(unp4k_exe), str(p4k_path), ".dcb"],
@@ -1656,7 +1670,7 @@ def extract_dataforge(
         if progress_callback:
             progress_callback(tr("progress.unforge"))
         if progress_pct_callback:
-            progress_pct_callback(1, TOTAL_PHASES, tr("progress.unforge_short"))
+            progress_pct_callback(0, 0, tr("progress.unforge_short"))
         # Size is captured before the run so the timeout handler can name it:
         # "Game.dcb (114 MB)" versus a healthy "Game2.dcb (330 MB)" is the
         # entire diagnosis when this stalls (#370).

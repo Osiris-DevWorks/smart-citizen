@@ -59,10 +59,12 @@ class AnimatedProgressDialog(QProgressDialog):
 
     Starts indeterminate (range 0-0, auto-animating). Call `set_progress(completed,
     total, message)` to switch to determinate; pass total=0 to drop back to
-    indeterminate for phases with an unknown extent. The phase message shows
-    in the label above the bar. In determinate mode the bar displays the
-    percent-complete (default Qt ``%p%`` format); indeterminate mode hides
-    the bar text since there's no meaningful percentage to show.
+    indeterminate for phases with an unknown extent. Nothing counted yet
+    (completed=0) is indeterminate too, until the first count (#507). The
+    phase message shows in the label above the bar. In determinate mode the
+    bar displays the percent-complete (default Qt ``%p%`` format);
+    indeterminate mode hides the bar text since there's no meaningful
+    percentage to show.
     """
 
     def __init__(
@@ -142,12 +144,16 @@ class AnimatedProgressDialog(QProgressDialog):
     def set_progress(self, completed: int, total: int, message: str = "") -> None:
         """Drive the bar from a ProgressSink. total=0 ⇒ indeterminate.
 
+        So is completed=0 (#507): a bar standing at 0% while the first step
+        runs looked as if the app had hung, as the generator's first lookups
+        did for seconds. The moving bar stays until something is counted.
+
         Determinate mode applies a two-tone gradient QSS and shows ``%p%``
         inside the bar. Indeterminate mode clears the QSS so Fusion's
         animated busy indicator still works, and hides the bar text.
         Phase messages go to the label above the bar in both modes.
         """
-        if total <= 0:
+        if total <= 0 or completed <= 0:
             if self.maximum() != 0 or self.minimum() != 0:
                 self.setRange(0, 0)
             if self._bar is not None:
