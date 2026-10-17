@@ -15,6 +15,8 @@ Vos modifications personnelles se trouvent dans `user.ini`, dans votre dossier d
 
 Smart Citizen ne modifie que le texte de localisation (les mots affichés par le jeu) ; il ne touche pas à la logique du jeu, ne vous donne aucun avantage et ne communique pas avec les serveurs de CIG. Nos modifications **devraient** être sans risque.
 
+La **Superposition Smart Citizen** optionnelle (onglet Superposition) fonctionne de la même façon, sans intervenir sur le jeu. Elle affiche des fenêtres ordinaires par-dessus le jeu, lit les pixels de votre écran comme le ferait un outil de capture d'écran, et lit le fichier `Game.log` du jeu. Elle n'injecte jamais rien dans le jeu et ne s'y accroche jamais (aucun hook), n'ouvre jamais le processus du jeu et ne lit jamais sa mémoire, et n'envoie jamais d'entrées clavier ou souris. CIG ne s'est pas prononcé sur ce type de superposition : la même mise en garde « à vos propres risques » ci-dessous s'applique donc.
+
 CIG soutient publiquement la localisation communautaire. Leur billet [Community Localization Update](https://robertsspaceindustries.com/spectrum/community/SC/forum/1/thread/star-citizen-community-localization-update) présente leur soutien officiel aux traductions faites par les joueurs, ce que nous comprenons comme autorisant explicitement le type de modification de localisation que fait Smart Citizen.
 
 Des streamers très en vue mènent des projets de localisation similaires au grand jour, et aucun d'eux ne s'est vu demander d'arrêter.

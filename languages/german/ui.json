@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Rechtliche Informationen konnten nicht geladen werden."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Overlay"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Overlay"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen Overlay (SCO) starten oder beenden: Entschlüsselung von Bergbau-Signaturen und eine Blaupausen-Schublade über dem Spiel. Benötigt den randlosen Fenstermodus."
     }
   },
   "filters": {
@@ -2952,6 +2964,16 @@
         "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen und Rohstoffe. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Overlay"
+      },
+      "description": {
+        "ht": "",
+        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -2965,7 +2987,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Strings bearbeiten"
+        "at": "9. Strings bearbeiten"
       },
       "description": {
         "ht": "",
@@ -2975,7 +2997,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Nach Spalte filtern"
+        "at": "10. Nach Spalte filtern"
       },
       "description": {
         "ht": "",
@@ -2985,7 +3007,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Editor-Bereich"
+        "at": "11. Editor-Bereich"
       },
       "description": {
         "ht": "",
@@ -2995,7 +3017,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Vorschaubereich"
+        "at": "12. Vorschaubereich"
       },
       "description": {
         "ht": "",
@@ -3005,7 +3027,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Erweiterungen anwenden"
+        "at": "13. Erweiterungen anwenden"
       },
       "description": {
         "ht": "",
@@ -3015,7 +3037,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Konfiguration: Erscheinungsbild"
+        "at": "14. Konfiguration: Erscheinungsbild"
       },
       "description": {
         "ht": "",
@@ -3025,7 +3047,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Konfiguration: Star-Citizen-Installation"
+        "at": "15. Konfiguration: Star-Citizen-Installation"
       },
       "description": {
         "ht": "",
@@ -3035,7 +3057,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Konfiguration: Smart-Citizen-Daten"
+        "at": "16. Konfiguration: Smart-Citizen-Daten"
       },
       "description": {
         "ht": "",
@@ -3045,7 +3067,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Konfiguration: Basis-Lokalisierung"
+        "at": "17. Konfiguration: Basis-Lokalisierung"
       },
       "description": {
         "ht": "",
@@ -3055,7 +3077,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Konfiguration: Werkzeuge"
+        "at": "18. Konfiguration: Werkzeuge"
       },
       "description": {
         "ht": "",
@@ -3065,7 +3087,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Hilfe & Feedback"
+        "at": "19. Hilfe & Feedback"
       },
       "description": {
         "ht": "",
@@ -3185,6 +3207,246 @@
     "zip_filter": {
       "ht": "",
       "at": "Einstellungssicherung (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC-Mineral"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS-Mineral"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Bergung"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Blaupausen suchen..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Nur besessene"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "{owned} von {total} besessen"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Belohnt von {count} Missionen:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Neu: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Es sind noch keine Blaupausendaten geladen. Lade zuerst die Strings und starte dann das Overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...und {count} weitere"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Unbekannt"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Der Bergbau-Scan-Decoder wurde nach einem Fehler angehalten. Starte das Overlay neu, um es erneut zu versuchen; Details stehen im Tab „Protokoll“."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Baupläne"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Mineralien"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Herstellung"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral oder Ort..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Alle abwählen"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Die Scan-Anzeige leuchtet, wenn dieses Mineral erkannt wird"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral oder Komponente..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Keine Mineralien gefunden. Lade zuerst die Texte, falls die Liste leer bleibt."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Keine Treffer. Extrahiere DataForge und erzeuge dann die Erweiterungen mit aktiviertem Commodities oder Journal, um diese Liste zu füllen."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Sonstige"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Verwendet in (durch {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} benötigt:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Benötigt: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Stufe: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Scan-Signatur: {base} pro Gestein, bis zu {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "In {count} hergestellten Gegenständen verwendet"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "System: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Mineralien hier: {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log; den Spielprozess berührt es nie."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Overlay starten"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Overlay stoppen"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Bergbau-Scan-Decoder"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Liest die Scan-Signatur unter dem Radar und zeigt darunter Vorkommenstyp und Anzahl."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Neue Baupläne als besessen markieren"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Solange das Overlay läuft, werden im Spiel erhaltene Baupläne aus Game.log gelesen und als besessen markiert."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Scan-Proben speichern"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Speichert ein kleines Bild jeder neu gelesenen Signatur, damit Fehllesungen eingeschickt und der Decoder verbessert werden kann."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Probenordner öffnen"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Overlay-Schublade"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Eine Schublade am Bildschirmrand, an der unten gewählten Position. Ausschalten blendet sie samt Bereichen aus."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Baupläne"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Baupläne suchen, sehen, welche Missionen sie belohnen, und eigene abhaken."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Mineralien"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Mineral eingeben, um Fundorte nach Sternensystem zu sehen, oder einen Ort, um seine Mineralien zu sehen."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Herstellung"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Mineral eingeben, um die Komponenten zu sehen, die es nutzen, oder eine Komponente, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Position der Schublade:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Oben links"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Oben Mitte"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Oben rechts"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Mitte links"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Mitte rechts"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Unten links"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Unten Mitte"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Unten rechts"
     }
   }
 }
