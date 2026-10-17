@@ -2613,6 +2613,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Não avisar novamente"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} arquivo(s) movido(s) do OneDrive para a nova pasta de dados: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Alguns arquivos ficaram no OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "O instalador trocou sua pasta de dados por uma pasta local, e o Smart Citizen moveu {moved} arquivo(s) para lá.\n\nDe:\n{old}\n\nPara:\n{new}\n\n{left} arquivo(s) ficaram na pasta antiga, porque já havia um arquivo com o mesmo nome na pasta nova (esse foi mantido) ou porque o arquivo não pôde ser movido. A aba Log os lista.\n\nVerifique a pasta antiga antes de excluí-la e copie para a nova tudo de que você ainda precisar."
     }
   },
   "user_ini_reset": {

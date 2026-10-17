@@ -2613,6 +2613,18 @@
     "dont_warn_again": {
       "ht": "Don't warn me again",
       "at": ""
+    },
+    "installer_move_done": {
+      "ht": "Moved {count} file(s) out of OneDrive into the new data folder: {new}",
+      "at": ""
+    },
+    "installer_move_left_title": {
+      "ht": "Some Files Stayed in OneDrive",
+      "at": ""
+    },
+    "installer_move_left_body": {
+      "ht": "Setup switched your data folder to a local one, and Smart Citizen moved {moved} file(s) there.\n\nFrom:\n{old}\n\nTo:\n{new}\n\n{left} file(s) stayed in the old folder, either because a file with the same name was already in the new folder (that one was kept) or because the file could not be moved. The Log tab lists them.\n\nCheck the old folder before you delete it, and copy anything you still need into the new one.",
+      "at": ""
     }
   },
   "user_ini_reset": {

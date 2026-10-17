@@ -2613,6 +2613,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Bir daha uyarma"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} dosya OneDrive'dan yeni veri klasörüne taşındı: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Bazı Dosyalar OneDrive İçinde Kaldı"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "Kurulum veri klasörünüzü yerel bir klasörle değiştirdi ve Smart Citizen {moved} dosyayı oraya taşıdı.\n\nEski konum:\n{old}\n\nYeni konum:\n{new}\n\n{left} dosya eski klasörde kaldı: ya yeni klasörde aynı adlı bir dosya zaten vardı (o dosya korundu) ya da dosya taşınamadı. Günlük sekmesi bunları listeler.\n\nEski klasörü silmeden önce kontrol edin ve hâlâ ihtiyacınız olanları yeni klasöre kopyalayın."
     }
   },
   "user_ini_reset": {
