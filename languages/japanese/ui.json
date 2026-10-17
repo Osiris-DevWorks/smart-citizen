@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  （不足）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "拡張が古くなっています。前回の生成が完了しなかったか、古いゲームデータから生成されたものです。\n生成するものを選択してください。\nこれは後で拡張タブから変更できます。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge データはまだキャッシュされていない場合、自動的に抽出されます。\n初回実行には数分かかります。"
@@ -2762,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？後でもう一度実行できます。"
+      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？それとも、作業を続けながらバックグラウンドで実行を続けますか？停止した場合は、後でもう一度実行できます。"
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "停止"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "バックグラウンドで実行"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge の抽出は完了しましたが、実行中に DataForge キャッシュフォルダーまたはチャンネルが変更されたため、拡張は生成されず、古いキャッシュもクリアされていません。"
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "抽出または拡張の生成の実行中はロックされ、完了すると再びロックが解除されます。"
     },
     "dataforge_stopping": {
       "ht": "",

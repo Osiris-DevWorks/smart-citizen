@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  (eksik)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "Geliştirmeleriniz güncel değil. Son oluşturma işlemi tamamlanmadı ya da geliştirmeler daha eski oyun verilerinden oluşturuldu.\nHangilerinin oluşturulacağını seçin.\nBunu daha sonra Geliştirmeler sekmesinden değiştirebilirsiniz."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge verileri henüz önbelleğe alınmamışsa otomatik olarak çıkarılacaktır.\nİlk çalıştırma birkaç dakika sürer."
@@ -2762,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge çıkarma işlemi hâlâ çalışıyor.\n\nŞimdi durdurulsun mu? Daha sonra yeniden çalıştırabilirsiniz."
+      "at": "DataForge çıkarma işlemi hâlâ çalışıyor.\n\nŞimdi durdurulsun mu, yoksa siz çalışmaya devam ederken arka planda sürsün mü? Durdurursanız daha sonra yeniden çalıştırabilirsiniz."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Durdur"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Arka Planda Çalıştır"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge çıkarma işlemi bitti, ancak işlem sürerken DataForge önbellek klasörü veya kanal değişti. Bu yüzden hiçbir geliştirme oluşturulmadı ve eski önbellek temizlenmedi."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Bir çıkarma veya geliştirme oluşturma işlemi sürerken kilitlidir ve işlem bittiğinde kilidi yeniden açılır."
     },
     "dataforge_stopping": {
       "ht": "",

@@ -61,6 +61,13 @@ def build_main_window(tmp_dir, patch, mode: str):
     patch.setattr(AppSettings, "settings", staticmethod(lambda: shared))
     AppSettings.set_user_data_dir(tmp_dir / "data")
     AppSettings.set_cache_dir(tmp_dir / "cache")
+    # The game install too. With nothing saved, get_game_install_path falls
+    # back to the old installer's registry key and a scan of common install
+    # folders, which on a developer's PC find their real game, and
+    # MainWindow.__init__ then runs ensure_user_cfg_language on that
+    # channel's real user.cfg. The temp root has no channel folder, so the
+    # window resolves inside tmp_dir and that call skips.
+    AppSettings.set_sc_install_root(str(tmp_dir / "sc"))
     AppSettings.set_ui_mode(mode)
 
     from src.gui.main_window import MainWindow

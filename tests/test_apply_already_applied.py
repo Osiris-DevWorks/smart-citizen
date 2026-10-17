@@ -806,6 +806,12 @@ class TestReloadAfterACleanApply:
 def _generation_self(simple: bool, apply_cleans: bool, starts_dirty: bool = True):
     me = MagicMock()
     me._enhancements_progress_dialog = None
+    # A MagicMock attribute reads truthy, and the finished slot returns early
+    # while the window is closing, which would make these pass vacuously.
+    me._close_committed = False
+    # No language switch is waiting on the run, as in a real Simple-mode or
+    # Generate run (a MagicMock here would take the switch's reload instead).
+    me._after_unfinished_generation = None
     me._simple_run_active = simple
     me._apply_dirty = starts_dirty
     me._reload_follows_clean_apply = False
@@ -825,13 +831,13 @@ class TestSimpleFlowFlagsTheCleanReload:
 
     def test_a_successful_simple_apply_flags_the_reload(self):
         me = _generation_self(simple=True, apply_cleans=True)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         me.apply_to_game.assert_called_once_with()
         assert me._reload_follows_clean_apply is True
 
     def test_a_failed_or_cancelled_apply_does_not(self):
         me = _generation_self(simple=True, apply_cleans=False)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         assert me._reload_follows_clean_apply is False
 
     def test_a_failed_apply_does_not_flag_even_when_the_button_was_already_green(self):
@@ -839,7 +845,7 @@ class TestSimpleFlowFlagsTheCleanReload:
         game patch). A run that starts green and then fails to apply must not
         dress the reload up as a refresh of applied state."""
         me = _generation_self(simple=True, apply_cleans=False, starts_dirty=False)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         assert me._reload_follows_clean_apply is False
 
     def test_a_failed_reload_clears_the_one_shot(self):
@@ -852,13 +858,13 @@ class TestSimpleFlowFlagsTheCleanReload:
 
     def test_a_manual_generate_does_not_apply_or_flag(self):
         me = _generation_self(simple=False, apply_cleans=True)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         me.apply_to_game.assert_not_called()
         assert me._reload_follows_clean_apply is False
 
     def test_a_failed_generation_does_not_flag(self):
         me = _generation_self(simple=True, apply_cleans=True)
-        MainWindow._on_enhancements_generation_finished(me, False)
+        MainWindow._on_enhancements_generation_finished(me, False, me._enhancements_worker)
         me.apply_to_game.assert_not_called()
         assert me._reload_follows_clean_apply is False
 

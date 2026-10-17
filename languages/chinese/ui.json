@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  （缺失）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "你的增强内容已过期。上次生成未完成，或它们是基于较旧的游戏数据生成的。\n请选择要生成的内容。\n你之后可以在增强内容标签页中更改此设置。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "如果 DataForge 数据尚未缓存，将会自动提取。\n首次运行需要几分钟。"
@@ -2762,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 提取仍在进行中。\n\n现在停止吗？你可以稍后重新运行。"
+      "at": "DataForge 提取仍在进行中。\n\n现在停止，还是让它在后台继续运行，同时你继续工作？如果停止，你可以稍后重新运行。"
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "停止"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "在后台运行"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 提取已完成，但运行期间 DataForge 缓存文件夹或频道已更改，因此没有生成增强内容，也没有清除旧缓存。"
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "正在运行提取或增强内容生成时已锁定，完成后会再次解锁。"
     },
     "dataforge_stopping": {
       "ht": "",

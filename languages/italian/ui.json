@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  (mancante)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "I tuoi miglioramenti non sono aggiornati. L'ultima generazione non è terminata oppure sono stati generati da dati di gioco più vecchi.\nSeleziona quali generare.\nPuoi cambiare questo in seguito nella scheda Miglioramenti."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "I dati DataForge verranno estratti automaticamente se non già in cache.\nLa prima esecuzione richiede alcuni minuti."
@@ -2762,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora? Puoi eseguirla di nuovo più tardi."
+      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora o lasciarla proseguire in background mentre continui a lavorare? Se la interrompi, potrai eseguirla di nuovo più tardi."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Interrompi"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Esegui in Background"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "L'estrazione di DataForge è terminata, ma la cartella cache DataForge o il canale sono cambiati durante l'esecuzione, quindi non sono stati generati miglioramenti e nessuna vecchia cache è stata svuotata."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Bloccato mentre è in corso un'estrazione o una generazione dei miglioramenti, e sbloccato di nuovo quando termina."
     },
     "dataforge_stopping": {
       "ht": "",

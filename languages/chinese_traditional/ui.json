@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  （缺失）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "你的增強內容已過期。上次生成未完成，或它們是基於較舊的遊戲資料生成的。\n請選擇要生成的內容。\n你之後可以在增強內容標籤頁中更改此設定。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "如果 DataForge 資料尚未快取，將會自動提取。\n首次執行需要幾分鐘。"
@@ -2762,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 提取仍在進行中。\n\n現在停止嗎？你可以稍後重新執行。"
+      "at": "DataForge 提取仍在進行中。\n\n現在停止，還是讓它在後臺繼續執行，同時你繼續工作？如果停止，你可以稍後重新執行。"
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "停止"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "在後臺執行"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 提取已完成，但執行期間 DataForge 快取資料夾或頻道已變更，因此沒有生成增強內容，也沒有清除舊快取。"
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "正在執行提取或增強內容生成時已鎖定，完成後會再次解鎖。"
     },
     "dataforge_stopping": {
       "ht": "",

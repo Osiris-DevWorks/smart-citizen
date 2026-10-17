@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.gui.tag_mapping_dialog import TagMappingDialog
-from src.gui.theme import get_button_color
+from src.gui.theme import needs_apply_style
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 from src.utils.tag_builder import (
@@ -138,6 +138,10 @@ class EnhancementsTab(QWidget):
         self._enhancements_dirty = False
         self._tag_dirty = False
         self._prefix_dirty = False
+        # Apply Category Changes and Save Tag Changes are locked while an
+        # extraction or a generation runs (#483), see set_changes_locked.
+        self._changes_locked = False
+        self._changes_lock_reason = ""
         self.setup_ui()
 
     def setup_ui(self):
@@ -414,11 +418,10 @@ class EnhancementsTab(QWidget):
             tr("enhancements.generate_enabled_tooltip") if dirty
             else tr("enhancements.generate_disabled_tooltip")
         )
-        self._generate_enhancements_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        # Dimmed while a running job keeps it disabled (#483).
+        self._generate_enhancements_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
-    def _compute_initial_enhancements_dirty(self) -> bool:
+    def _compute_initial_enhancements_dirty(self, keys: "list[str] | None" = None) -> bool:
         """True if Generate Enhancements has work to do right now: the
         DataForge cache was never extracted or is stale vs. Data.p4k, or an
         enabled category's output file doesn't exist yet.
@@ -431,6 +434,19 @@ class EnhancementsTab(QWidget):
         selected, so a language with nothing generated could report "nothing
         to do" purely because English had been generated earlier. #363 made
         that reachable on every language switch, which is what surfaced it.
+
+        It also has work when a category is ticked and the selected
+        language's set was not built from the current DataForge build
+        (AppSettings.enhancements_built_from_current_dataforge): its last run
+        was cut off or failed, or it came from older game data. That is what
+        the startup check offers to regenerate, so after a Skip the button
+        stays lit over the stale set instead of going grey.
+
+        *keys* are the checkbox keys to check, the ticked ones by default
+        (at startup the ticks are the saved set). A finished run passes the
+        saved set (_saved_category_keys), because a tick not yet saved with
+        the category Apply button was not generated, and judging the run by
+        it would keep Generate lit after every run that never builds it.
         """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
         forge_dir = AppSettings.get_dataforge_cache_dir()
@@ -439,13 +455,24 @@ class EnhancementsTab(QWidget):
             return True
         if p4k_path.exists() and not dataforge_cache_is_fresh(p4k_path, forge_dir):
             return True
+        if keys is None:
+            keys = [key for key, cb in self._enhancements_checkboxes.items()
+                    if cb.isChecked()]
         enh_dir = AppSettings.get_enhancements_dir()
-        for key, cb in self._enhancements_checkboxes.items():
-            if cb.isChecked() and any(
-                not (enh_dir / fn).exists() for fn in self._files_for_category(key)
-            ):
+        for key in keys:
+            if any(not (enh_dir / fn).exists() for fn in self._files_for_category(key)):
                 return True
+        if keys and not AppSettings.enhancements_built_from_current_dataforge():
+            return True
         return False
+
+    def _saved_category_keys(self) -> list[str]:
+        """The checkbox keys whose category is saved as enabled: what a
+        Generate run actually builds (it reads the saved set, not the
+        checkboxes, and a tick only counts once the category Apply button
+        saves it)."""
+        return [key for key in self._enhancements_checkboxes
+                if AppSettings.get_enhancement_category_enabled(key)]
 
     def _mark_enhancements_dirty(self, *_args):
         """A setting that feeds Generate Enhancements changed since the last
@@ -465,8 +492,9 @@ class EnhancementsTab(QWidget):
     def mark_enhancements_clean(self) -> None:
         """Public entrypoint for external callers (MainWindow) to flag that
         a Generate Enhancements run is starting, regardless of how it was
-        triggered — manual click, Tag Builder apply, or the automated
-        freshness check (#292). Call at the point a run is launched, not on
+        triggered — manual click, Tag Builder apply, the automated
+        freshness check (#292), or a language switch's regeneration. Call
+        at the point a run is launched, not on
         completion: set_operation_idle() only re-enables the button on
         success, it doesn't force it clean, so if a run is triggered while
         already dirty this needs to have cleared the flag first or the
@@ -574,15 +602,37 @@ class EnhancementsTab(QWidget):
         )
 
     def _on_category_checkbox_changed(self):
-        """Enable Apply button if any checkbox differs from saved settings."""
+        """Enable Apply button if any checkbox differs from saved settings,
+        unless a running job keeps it locked (#483)."""
         has_changes = any(
             cb.isChecked() != AppSettings.get_enhancement_category_enabled(key)
             for key, cb in self._enhancements_checkboxes.items()
         )
-        self._apply_categories_btn.setEnabled(has_changes)
+        self._apply_categories_btn.setEnabled(has_changes and not self._changes_locked)
+
+    def set_changes_locked(self, locked: bool, reason: str = "") -> None:
+        """Lock Apply Category Changes and Save Tag Changes while an
+        extraction or a generation runs (#483), shown or hidden. Apply
+        Category Changes renames INIs to and from ``.disabled`` in the folder
+        a generation writes, and starts a reload that reads the set mid-run;
+        a category changed then came back beside its ``.disabled`` copy or was
+        restored from an older one, under a stamp that called the folder
+        current. Save Tag Changes asks for a regeneration that one job at a
+        time would refuse, after saving the tags and turning itself off. The
+        checkboxes and the Tag Builder stay free: the change waits for the
+        button. Each button's tooltip gives *reason* while locked."""
+        self._changes_locked = locked
+        self._changes_lock_reason = reason if locked else ""
+        self._apply_categories_btn.setToolTip(
+            reason if locked else tr("enhancements.apply_categories_tooltip")
+        )
+        self._on_category_checkbox_changed()
+        self._set_tag_btn_dirty(self._tag_dirty)
 
     def _apply_category_changes(self):
         """Save checkbox states, disable/restore enhancement files, and trigger reload."""
+        if self._changes_locked:
+            return  # a job is running (#483): the button is locked, this is the net
         for key, cb in self._enhancements_checkboxes.items():
             now_enabled = cb.isChecked()
             AppSettings.set_enhancement_category_enabled(key, now_enabled)
@@ -802,9 +852,7 @@ class EnhancementsTab(QWidget):
             tr("enhancements.prefix_enabled_tooltip") if dirty
             else tr("enhancements.prefix_disabled_tooltip")
         )
-        self._apply_prefix_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._apply_prefix_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _mark_prefix_dirty(self, *_args) -> None:
         """Recompute dirty state whenever the prefix combo selection
@@ -859,9 +907,16 @@ class EnhancementsTab(QWidget):
         """Re-enable after a background run. A successful run means
         mark_enhancements_clean() already cleared the dirty flag when the
         run was launched (#292), so leave it grey unless something changed
-        mid-run; a failed run re-enables unconditionally so the user has a
-        way to retry without first having to touch an unrelated setting."""
-        if not success:
+        mid-run or the set on disk is still not current. The second is read
+        from disk (_compute_initial_enhancements_dirty, the startup rule): a
+        run whose final .dataforge_stamp write failed still finishes as a
+        success, because set_enhancements_stamp only logs that, and the
+        button must stay lit over that set, as the next start will. It only
+        ever lights the button, so a change made mid-run is kept. A failed
+        run re-enables unconditionally so the user has a way to retry
+        without first having to touch an unrelated setting. The re-read
+        judges the saved categories, which are what the run generated."""
+        if not success or self._compute_initial_enhancements_dirty(self._saved_category_keys()):
             self._enhancements_dirty = True
         self._set_generate_btn_dirty(self._enhancements_dirty)
 
@@ -1132,16 +1187,19 @@ class EnhancementsTab(QWidget):
         text color so none of the three can drift apart. Same enabled/
         disabled tooltip pattern as Generate Enhancements; resolved via
         tr() here (not cached class constants) so they always reflect
-        the active language."""
+        the active language. A running job locks it, with the reason as the
+        tooltip (#483), and the colour dims but still says the tags are
+        unsaved."""
         self._tag_dirty = dirty
-        self._apply_tag_btn.setEnabled(dirty)
-        self._apply_tag_btn.setToolTip(
-            tr("enhancements.tag_enabled_tooltip") if dirty
-            else tr("enhancements.tag_disabled_tooltip")
-        )
-        self._apply_tag_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._apply_tag_btn.setEnabled(dirty and not self._changes_locked)
+        if self._changes_locked:
+            self._apply_tag_btn.setToolTip(self._changes_lock_reason)
+        else:
+            self._apply_tag_btn.setToolTip(
+                tr("enhancements.tag_enabled_tooltip") if dirty
+                else tr("enhancements.tag_disabled_tooltip")
+            )
+        self._apply_tag_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _mark_tag_dirty(self, *_args):
         """A Tag Builder config changed since the last save — light the
@@ -1150,6 +1208,8 @@ class EnhancementsTab(QWidget):
 
     def _apply_tag_builder(self):
         """Persist every page's TagConfig and kick off enhancement regen."""
+        if self._changes_locked:
+            return  # a job is running (#483): the button is locked, this is the net
         self._persist_tag_builder_state()
         # Re-run the generator so the new tags show up in the output INIs;
         # MainWindow handles the worker lifecycle + progress UI.

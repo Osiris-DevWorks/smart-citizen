@@ -27,10 +27,10 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QProgressBar, QProgressDialog, QStyledItemDelegate
 
 from src.parser.ini_parser import load_source_files, load_sources_from_settings
+from src.utils.atomic_io import sweep_stale_temps
 from src.utils.i18n import tr
 from src.utils.resource_path import resolve_patches_dir
 from src.utils.settings import AppSettings
-from src.utils.dataforge_diff import dirty_categories
 from src.utils.tag_builder import tag_config_fingerprint
 logger = logging.getLogger(__name__)
 
@@ -491,7 +491,17 @@ class InstallScanWorker(QThread):
 
 
 class EnhancementsGeneratorWorker(QThread):
-    """Worker thread for generating enhancements INI files via generate_enhancements_ini.py."""
+    """Worker thread for generating enhancements INI files via generate_enhancements_ini.py.
+
+    requestInterruption() stops it: MainWindow.closeEvent does this, as it
+    does for the extraction workers (#471). The generator's main() polls
+    isInterruptionRequested between jobs and raises GenerationStopped, never
+    during its write phase, so a stop leaves every INI whole: all old before
+    the writes began, all new once they had. A stop is not a failure, so it
+    ends with finished(False), no error signal and nothing logged at ERROR,
+    which would fire the global ErrorDialogHandler on a window that is
+    closing.
+    """
 
     progress = pyqtSignal(str)
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
@@ -527,11 +537,30 @@ class EnhancementsGeneratorWorker(QThread):
         # channel cache root; other languages use the downloaded per-language
         # base.ini, so output lands beside it in the language dir (#30).
         self.language = language
+        # True once a run ended because a stop was requested. Read it rather
+        # than isInterruptionRequested() after the thread is done: QThread
+        # reports no interruption once the thread has finished, so a finished
+        # slot that waits for the thread first would always see False.
+        self.stopped = False
+
+    def _stopped_before(self, where: str) -> bool:
+        """End the run quietly if a stop was requested before *where*.
+
+        Used ahead of the steps before the generator's main(). Nothing has
+        touched the INIs or the stamp yet, so the set stays as current as it
+        was and the next start asks nothing."""
+        if not self.isInterruptionRequested():
+            return False
+        logger.info(f"Enhancements generation stopped before {where}")
+        self.stopped = True
+        self.finished.emit(False)
+        return True
 
     def run(self):
         import importlib.util
         import sys as sys_module
         from src.utils.dataforge_patcher import apply_patches
+        from src.utils.pak_extractor import DATAFORGE_LOOKUPS_SUBPATH
         try:
             if getattr(sys, 'frozen', False):
                 script_path = Path(sys._MEIPASS) / 'scripts' / 'generate_enhancements_ini.py'
@@ -541,32 +570,27 @@ class EnhancementsGeneratorWorker(QThread):
             if not script_path.exists():
                 raise FileNotFoundError(f"Enhancements generator script not found: {script_path}")
 
-            base_ini  = AppSettings.get_base_ini_path(self.language)
-            enh_dir   = AppSettings.get_enhancements_dir(self.language)
-            forge_dir = AppSettings.get_dataforge_cache_dir()
-            # ── Diff-cache check ──────────────────────────────────────────────
-            # Compare the current DataForge XMLs against the last-run manifest.
-            # None  → no manifest yet, run everything.
-            # set() → nothing changed, skip entirely.
-            # {...} → only re-run the categories whose source XMLs changed.
-            from src.utils.pak_extractor import DATAFORGE_LIBS_SUBPATH
-            libs_dir = forge_dir / DATAFORGE_LIBS_SUBPATH
-            diff = dirty_categories(libs_dir)
-            # If enhancement files are missing, force regeneration even if the
-            # manifest says nothing changed — the manifest may have been written
-            # before enhancements were ever successfully generated.
-            if diff is not None and not diff:
-                missing = [
-                    name for name in AppSettings.ENHANCEMENTS_FILES.values()
-                    if not (enh_dir / name).exists()
-                ]
-                if missing:
-                    logger.info(
-                        f"Diff-cache: manifest clean but {len(missing)} enhancement "
-                        f"file(s) missing ({', '.join(missing[:3])}{'…' if len(missing) > 3 else ''}), forcing regeneration."
-                    )
-                    diff = None  # None = treat as first run, regenerate everything
-            # ─────────────────────────────────────────────────────────────────
+            # Everything the stamps will say is captured once, here. Reading
+            # the folder and the build key when the run ended let a channel,
+            # data-folder or cache-folder change during a hidden run stamp a
+            # set this run never wrote, which then read as current.
+            base_ini     = AppSettings.get_base_ini_path(self.language)
+            enh_dir      = AppSettings.get_enhancements_dir(self.language)
+            forge_dir    = AppSettings.get_dataforge_cache_dir()
+            english_base = AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
+            build_key    = AppSettings.get_dataforge_build_key(forge_dir)
+            tag_stamp    = tag_config_fingerprint(self.tag_configs, self.annotate_mission_descs)
+            # Temp files a hard kill left between a write and its swap
+            # (atomic_io): the INI folder and the generator's lookup pickle
+            # folder (_cached_lookup's DATAFORGE_LOOKUPS_SUBPATH). The patcher
+            # sweeps each record folder it patches itself.
+            sweep_stale_temps(enh_dir)
+            sweep_stale_temps(forge_dir / DATAFORGE_LOOKUPS_SUBPATH)
+            # No diff-cache check: every category handed in is generated. The
+            # manifest has not narrowed a run since ded720a, and asking it
+            # still hashed the whole DataForge cache on every generation.
+            if self._stopped_before("its patches"):
+                return
             # Re-apply DataForge patches before generation. apply_patches is
             # idempotent: already-patched files are a cheap no-op, so running
             # this every regen picks up newly-added patches without forcing
@@ -584,6 +608,8 @@ class EnhancementsGeneratorWorker(QThread):
                 for err in patch_report.errors:
                     logger.warning(f"  patch error: {err}")
 
+            if self._stopped_before("loading the generator"):
+                return
             self.progress.emit(tr("progress.loading_generator"))
 
             module_name = "generate_enhancements_ini_worker"
@@ -607,6 +633,20 @@ class EnhancementsGeneratorWorker(QThread):
             def _on_progress(completed: int, total: int, message: str) -> None:
                 self.progress_pct.emit(completed, total, message)
 
+            if self._stopped_before("the generator's main()"):
+                return
+            # From here on the set in enh_dir is in progress: a run cut off
+            # or failed before the stamp below is written reads as out of
+            # date, and the next start offers to generate it again. After the
+            # patches and the module load, so a failure there keeps a good
+            # stamp. Before main() rather than its write phase, so a
+            # same-build regenerate (Generate, Tag Builder, a label change)
+            # cut off before writing still reads as stale.
+            AppSettings.invalidate_enhancements_stamp(enh_dir)
+
+            # should_cancel: main() stops between jobs, never during its
+            # writes. A stop that lands during them is ignored, and the run
+            # goes on to certify the set it wrote.
             mod.main(base_ini, forge_dir, categories=self.categories,
                      progress_callback=_on_progress,
                      patches_dir=resolve_patches_dir(),
@@ -621,31 +661,38 @@ class EnhancementsGeneratorWorker(QThread):
                      stats_prepend=self.stats_prepend,
                      standardize_earnable_ship_names=self.standardize_earnable_ship_names,
                      rs_ore_name_annotations=self.rs_ore_name_annotations,
-                     english_base_ini_path=AppSettings.get_base_ini_path(
-                         AppSettings.DEFAULT_LANGUAGE))
+                     english_base_ini_path=english_base,
+                     should_cancel=self.isInterruptionRequested)
             logger.info("Enhancements generation worker: mod.main() completed successfully")
 
-            # Record which DataForge build these (per-language) enhancements
-            # were generated against, so a later language switch can tell fresh
-            # from stale and skip a redundant regen (#30, Approach 1).
-            AppSettings.set_enhancements_stamp(
-                AppSettings.get_dataforge_build_key(), self.language
-            )
-            # And which Tag Builder config they were generated against, so a
-            # later channel switch can tell whether the Save Tag Changes button
-            # actually needs to light up instead of always lighting it. Uses
-            # the configs captured for THIS run (self.*), not live settings, so
-            # the stamp reflects exactly what was generated. Belongs beside the
-            # DataForge stamp: both mark "what these INIs were built from".
-            AppSettings.set_tag_config_stamp(
-                tag_config_fingerprint(
-                    self.tag_configs, self.annotate_mission_descs
-                ),
-                self.language,
-            )
+            # Record which Tag Builder config these INIs were generated
+            # against, so a later channel switch can tell whether the Save Tag
+            # Changes button actually needs to light up instead of always
+            # lighting it. Uses the configs captured for THIS run (self.*),
+            # not live settings, so the stamp reflects exactly what was
+            # generated.
+            AppSettings.set_tag_config_stamp(tag_stamp, self.language, folder=enh_dir)
+            # And which DataForge build, so the startup check, the Generate
+            # button and a later language switch can tell fresh from stale
+            # (#30, Approach 1). This one is the certificate that the set is
+            # whole, so it is written last.
+            AppSettings.set_enhancements_stamp(build_key, self.language, folder=enh_dir)
 
             self.finished.emit(True)
         except Exception as e:
+            if self.isInterruptionRequested():
+                # A stop (see the class docstring). The generator module is
+                # loaded afresh for every run, so its GenerationStopped is
+                # told apart by name. Any other failure after a stop belongs
+                # to the stop too, and is reported the same quiet way, as
+                # the extraction workers do (#471).
+                if type(e).__name__ == "GenerationStopped":
+                    logger.info(f"Enhancements generation stopped ({e})")
+                else:
+                    logger.warning(f"Enhancements generation ended with an error after a stop: {e}")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             logger.exception(f"Enhancements generation failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
@@ -724,7 +771,7 @@ class DataForgeExtractWorker(QThread):
     """Worker thread for extracting DataForge entity XMLs from Data.p4k.
 
     requestInterruption() stops it (#471). MainWindow does this when the
-    window closes (_stop_extractions_for_close) and when the user picks Stop
+    window closes (_stop_workers_for_close) and when the user picks Stop
     in the progress dialog's question. extract_dataforge polls
     isInterruptionRequested, kills unp4k or unforge, deletes its working
     folder and raises ExtractionCancelled. A stop is not a failure, so it
@@ -738,17 +785,34 @@ class DataForgeExtractWorker(QThread):
     finished = pyqtSignal(bool)
     error = pyqtSignal(str)
 
-    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir):
+    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir, *, channel: str,
+                 cache_base):
         super().__init__()
         self._p4k       = p4k_path
         self._unp4k_exe = unp4k_exe
         self._unforge_exe = unforge_exe
         self._cache_dir = cache_dir
+        # The channel and the cache base (AppSettings.get_dataforge_cache_base)
+        # this run was started for, which together name its cache folder
+        # (#483). With Run in Background the window stays usable, so the
+        # finished slot checks the run still matches the settings before it
+        # chains anything.
+        self.channel = channel
+        self.cache_base = cache_base
         # True once a run ended because a stop was requested (#471). Read it
         # rather than isInterruptionRequested() after the thread is done:
         # QThread reports no interruption once the thread has finished, so a
         # finished slot that waits for the thread first would always see False.
         self.stopped = False
+        # Set when the user sends the run to the background from the progress
+        # dialog's question (#483): the generation that follows runs without a
+        # dialog too.
+        self.in_background = False
+
+    @property
+    def cache_dir(self):
+        """The DataForge cache folder this run writes (#483)."""
+        return self._cache_dir
 
     def run(self):
         from src.utils.pak_extractor import (

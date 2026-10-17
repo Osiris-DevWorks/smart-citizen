@@ -393,6 +393,9 @@ class _StubWorker:
     def wait(self):
         pass
 
+    def deleteLater(self):
+        pass
+
 
 class _StubStatusBar:
     def showMessage(self, *_args, **_kwargs):
@@ -406,7 +409,10 @@ class _StubWindow:
         self.enhancements_tab = tab
         self._enhancements_progress_dialog = None
         self._enhancements_worker = _StubWorker()
+        # No language switch is waiting on these runs.
+        self._after_unfinished_generation = None
         self._simple_run_active = False
+        self._close_committed = False
 
     def statusBar(self):
         return _StubStatusBar()
@@ -417,10 +423,14 @@ class _StubWindow:
     def _end_simple_run(self):
         pass
 
+    def _refresh_job_lock(self):
+        pass  # the job lock (#483) is test_run_in_background.py's
+
 
 def _finish_generation(tab, success: bool):
     from src.gui.main_window import MainWindow
-    MainWindow._on_enhancements_generation_finished(_StubWindow(tab), success)
+    window = _StubWindow(tab)
+    MainWindow._on_enhancements_generation_finished(window, success, window._enhancements_worker)
 
 
 def test_failed_generation_relights_the_optimistically_cleared_button(

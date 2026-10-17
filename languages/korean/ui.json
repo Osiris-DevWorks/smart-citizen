@@ -2716,6 +2716,10 @@
       "ht": "",
       "at": "{label}  (누락됨)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "강화가 최신 상태가 아닙니다. 마지막 생성이 완료되지 않았거나 오래된 게임 데이터로 생성되었습니다.\n생성할 항목을 선택하세요.\n나중에 강화 탭에서 이를 변경할 수 있습니다."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge 데이터가 아직 캐시되지 않았다면 자동으로 추출됩니다.\n첫 실행은 몇 분 정도 걸립니다."
@@ -2762,11 +2766,23 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요? 나중에 다시 실행할 수 있습니다."
+      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요, 아니면 작업을 계속하는 동안 백그라운드에서 계속 실행할까요? 중지하면 나중에 다시 실행할 수 있습니다."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "중지"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "백그라운드에서 실행"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 추출이 끝났지만 실행 중에 DataForge 캐시 폴더나 채널이 바뀌어 강화를 생성하지 않았고 이전 캐시도 지우지 않았습니다."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "추출이나 강화 생성이 실행 중일 때는 잠기며, 끝나면 다시 잠금이 해제됩니다."
     },
     "dataforge_stopping": {
       "ht": "",
