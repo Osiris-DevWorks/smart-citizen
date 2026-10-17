@@ -23,7 +23,6 @@ import pytest
 from lxml import etree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.tag_builder import (  # noqa: E402
     DEFAULT_TAG_CONFIGS,

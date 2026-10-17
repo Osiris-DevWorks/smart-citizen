@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
@@ -1124,18 +1123,16 @@ def inputs_a_module_fixture_sees():
 
 class TestRealInstallDetectionInputsAreStubbed:
     """tests/conftest.py keeps every test off the developer's real launcher log
-    and drive listing. These pin its two promises: both module copies of settings
-    are stubbed, and the stubs are in place before module-scoped fixtures run."""
+    and drive listing. These pin its two promises: the settings module is
+    stubbed, and the stubs are in place before module-scoped fixtures run."""
 
-    @pytest.mark.parametrize("module_name", ["src.utils.settings", "utils.settings"])
-    def test_both_settings_module_copies_are_stubbed(self, module_name):
+    def test_the_settings_module_is_stubbed(self):
         import src.utils.install_scanner as scanner
+        import src.utils.settings as settings
 
-        module = sys.modules.get(module_name)
-        if module is None:
-            pytest.skip(f"nothing in this run imported {module_name}")
-        assert module.read_launcher_installs is not scanner.read_launcher_installs
-        assert module.iter_shallow_sc_install_locations is not scanner.iter_shallow_sc_install_locations
+        assert settings.read_launcher_installs is not scanner.read_launcher_installs
+        assert (settings.iter_shallow_sc_install_locations
+                is not scanner.iter_shallow_sc_install_locations)
 
     def test_module_scoped_fixtures_see_the_stubs_too(self, inputs_a_module_fixture_sees):
         import src.utils.install_scanner as scanner
