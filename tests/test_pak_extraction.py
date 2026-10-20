@@ -182,10 +182,9 @@ class TestDataForgeExtraction:
     work, the copy and the stop points are in test_extraction_working_folder.py.
 
     The fake goes on src.utils.pak_extractor (``pe``), the module production
-    imports and whose extract_dataforge these tests call. Everything in this
-    file comes from that one copy: the legacy utils.pak_extractor path would
-    load a second one, and a fake set on one never reaches the other's
-    extract_dataforge."""
+    imports and whose extract_dataforge these tests call. A fake set on a
+    second copy of the module would never reach it, and tests/test_import_paths.py
+    keeps the short import that loaded one out (#510)."""
 
     pytestmark = pytest.mark.unit
 
@@ -590,9 +589,9 @@ class TestUnp4kFailureMessage:
         set_language("english")
 
     def test_setup_reaches_the_language_the_extractor_reads(self):
-        """setup_method must switch the i18n copy the extractor reads. The
-        legacy utils.i18n copy keeps a language of its own, so setting that
-        one left these tests on whatever language an earlier test had set."""
+        """setup_method must switch the language the extractor reads, on
+        src.utils.i18n. Set on a second copy of the module, it once left these
+        tests on whatever language an earlier test had set."""
         import src.utils.i18n as extractor_i18n
         try:
             extractor_i18n.set_language("german")
