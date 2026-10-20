@@ -718,6 +718,22 @@
       "ht": "",
       "at": "Cartella cache non valida"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la sua cache in:\n{folder}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a raggiungere questa cartella:\n{folder}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare questa cartella:\n{folder}\n\n{reason}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "La cartella cache selezionata è un file, non una cartella:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "Percorso cache DataForge modificato"
@@ -2028,6 +2044,46 @@
       "ht": "",
       "at": "Cache svuotata"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Cancella Cache non è disponibile mentre è in corso un'estrazione o una generazione dei miglioramenti. Riprova quando è terminata."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Verranno eliminati i seguenti file in cache:\n\n{files}\n\nbase.ini dovrà essere estratto di nuovo da Data.p4k prima di poter caricare le stringhe."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Svuotare anche la cache DataForge?\n{folder}\n\nContiene i dati delle entità estratti da Data.p4k per le statistiche di navi e armi, e ricrearla richiede qualche minuto. Mantienila se vuoi solo aggiornare le stringhe di localizzazione."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Non è stato possibile raggiungere la cartella cache DataForge, quindi non è stata svuotata:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Svuotamento della cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Svuotamento dei file in cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Eliminazione di {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Svuotamento della cache DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Elementi eliminati dalla cache: {count}."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Impossibile eliminare:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Cartella non trovata"
@@ -2867,6 +2923,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare una cartella di lavoro in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Controlla le autorizzazioni di quella cartella, consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows oppure scegli un'altra cartella cache DataForge nella scheda Config, poi riprova."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Controlla le autorizzazioni di quella cartella oppure consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows, poi riprova."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare una cartella di lavoro in:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la cache DataForge in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a raggiungere la cartella cache DataForge:\n{folder}\n\nL'estrazione non è stata avviata. Ricollega l'unità oppure scegli un'altra cartella cache DataForge nella scheda Config, poi riprova."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare la cartella cache DataForge:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "La cartella cache DataForge è un collegamento a un'altra cartella:\n{folder}\n\nPorta a:\n{target}\n\nSmart Citizen non elimina nulla attraverso un collegamento, quindi l'estrazione non è stata avviata e non è stato modificato nulla. Scegli la cartella a cui porta come cartella cache DataForge nella scheda Config, poi riprova."
     }
   },
   "apply": {

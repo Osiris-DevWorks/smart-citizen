@@ -742,6 +742,22 @@
       "ht": "Invalid Cache Folder",
       "at": ""
     },
+    "cache_folder_refused": {
+      "ht": "Windows denied Smart Citizen permission to create its cache in:\n{folder}\n\nThe DataForge cache folder was not changed.",
+      "at": ""
+    },
+    "cache_folder_unreachable": {
+      "ht": "Smart Citizen could not reach:\n{folder}\n\nThe DataForge cache folder was not changed.",
+      "at": ""
+    },
+    "cache_folder_unusable": {
+      "ht": "Smart Citizen could not use:\n{folder}\n\n{reason}\n\nThe DataForge cache folder was not changed.",
+      "at": ""
+    },
+    "cache_folder_is_file": {
+      "ht": "The selected cache folder is a file, not a folder:\n{folder}",
+      "at": ""
+    },
     "dataforge_cache_changed_title": {
       "ht": "DataForge Cache Path Changed",
       "at": ""
@@ -2028,6 +2044,46 @@
       "ht": "Cache Cleared",
       "at": ""
     },
+    "clear_cache_busy": {
+      "ht": "Clear Cache is not available while an extraction or an enhancement generation is running. Try again once it has finished.",
+      "at": ""
+    },
+    "clear_cache_files_body": {
+      "ht": "This will delete the following cached files:\n\n{files}\n\nbase.ini will need to be re-extracted from Data.p4k before strings can be loaded.",
+      "at": ""
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "Also clear the DataForge cache?\n{folder}\n\nIt holds the entity data extracted from Data.p4k for the ship and weapon stats, and making it again takes a few minutes. Keep it if you only want to refresh the localization strings.",
+      "at": ""
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "The DataForge cache folder could not be reached, so it was not cleared:\n{folder}",
+      "at": ""
+    },
+    "clear_cache_progress_title": {
+      "ht": "Clearing Cache",
+      "at": ""
+    },
+    "clear_cache_progress_files": {
+      "ht": "Clearing cache files...",
+      "at": ""
+    },
+    "clear_cache_progress_file": {
+      "ht": "Deleting {name}...",
+      "at": ""
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "Clearing the DataForge cache...",
+      "at": ""
+    },
+    "cache_cleared_body": {
+      "ht": "Deleted {count} item(s) from the cache.",
+      "at": ""
+    },
+    "cache_cleared_failed": {
+      "ht": "Could not delete:\n{failures}",
+      "at": ""
+    },
     "dir_not_found_title": {
       "ht": "Directory Not Found",
       "at": ""
@@ -2866,6 +2922,38 @@
     },
     "size_mb": {
       "ht": "{mb} MB",
+      "at": ""
+    },
+    "folder_refused": {
+      "ht": "Windows denied Smart Citizen permission to create a working folder in:\n{folder}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "folder_refused_fix_cache": {
+      "ht": "Check the permissions on that folder, allow Smart Citizen through Controlled folder access in Windows Security, or choose another DataForge cache folder in the Config tab, then try again.",
+      "at": ""
+    },
+    "folder_refused_fix": {
+      "ht": "Check the permissions on that folder, or allow Smart Citizen through Controlled folder access in Windows Security, then try again.",
+      "at": ""
+    },
+    "folder_unusable": {
+      "ht": "Smart Citizen could not use a working folder in:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "cache_folder_refused": {
+      "ht": "Windows denied Smart Citizen permission to create the DataForge cache in:\n{folder}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "cache_folder_unreachable": {
+      "ht": "Smart Citizen could not reach the DataForge cache folder:\n{folder}\n\nThe extraction did not start. Reconnect the drive, or choose another DataForge cache folder in the Config tab, then try again.",
+      "at": ""
+    },
+    "cache_folder_unusable": {
+      "ht": "Smart Citizen could not use the DataForge cache folder:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
+      "at": ""
+    },
+    "cache_folder_is_link": {
+      "ht": "The DataForge cache folder is a link to another folder:\n{folder}\n\nIt leads to:\n{target}\n\nSmart Citizen does not delete anything through a link, so the extraction did not start and nothing was changed. Choose the folder it leads to as the DataForge cache folder in the Config tab, then try again.",
       "at": ""
     }
   },

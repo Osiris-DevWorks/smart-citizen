@@ -718,6 +718,22 @@
       "ht": "",
       "at": "無効なキャッシュフォルダー"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所にキャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所にアクセスできませんでした：\n{folder}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所を使用できませんでした：\n{folder}\n\n{reason}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "選択したキャッシュフォルダーはフォルダーではなくファイルです：\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge キャッシュパスが変更されました"
@@ -2028,6 +2044,46 @@
       "ht": "",
       "at": "キャッシュをクリアしました"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "抽出または拡張生成の実行中はキャッシュをクリアできません。完了してからもう一度お試しください。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "次のキャッシュファイルを削除します：\n\n{files}\n\n文字列を読み込む前に、Data.p4k から base.ini を再抽出する必要があります。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge キャッシュもクリアしますか？\n{folder}\n\nこれには艦船と武器のステータス用に Data.p4k から抽出したエンティティデータが入っており、作り直すには数分かかります。ローカライズ文字列を更新するだけなら残しておいてください。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーにアクセスできなかったため、クリアしていません：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "キャッシュをクリアしています"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "キャッシュファイルをクリアしています..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} を削除しています..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge キャッシュをクリアしています..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "キャッシュから {count} 件を削除しました。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "削除できませんでした：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "ディレクトリが見つかりません"
@@ -2867,6 +2923,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所に作業フォルダーを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "このフォルダーのアクセス許可を確認するか、Windows セキュリティのコントロールされたフォルダーアクセスで Smart Citizen を許可するか、設定タブで別の DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "このフォルダーのアクセス許可を確認するか、Windows セキュリティのコントロールされたフォルダーアクセスで Smart Citizen を許可してから、もう一度お試しください。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所で作業フォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所に DataForge キャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen が DataForge キャッシュフォルダーにアクセスできませんでした：\n{folder}\n\n抽出は開始されていません。ドライブを再接続するか、設定タブで別の DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が DataForge キャッシュフォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーは別のフォルダーへのリンクです：\n{folder}\n\nリンク先：\n{target}\n\nSmart Citizen はリンクを通して何も削除しないため、抽出は開始されず、何も変更されていません。設定タブでリンク先のフォルダーを DataForge キャッシュフォルダーとして選択してから、もう一度お試しください。"
     }
   },
   "apply": {
