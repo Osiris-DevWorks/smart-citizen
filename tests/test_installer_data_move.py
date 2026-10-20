@@ -354,7 +354,7 @@ class TestEveryLanguage:
                 for f in sorted((ROOT / "languages").glob("*/ui.json"))}
 
     def test_each_text_is_there_english_in_ht_the_rest_in_at(self, languages):
-        assert "english" in languages and len(languages) == 11
+        assert "english" in languages and len(languages) == 12
         for language, onedrive in languages.items():
             for key in _PLACEHOLDERS:
                 node = onedrive[key]

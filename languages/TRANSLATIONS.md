@@ -82,6 +82,18 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-20, Claude):** New language **russian** added,
+  split out of #488 by **h0use** (Den McConan) without that PR's channel
+  badge. AI translation of every UI key (`at`-only, `ht` empty), the full
+  20-step guided tour (`tutorial.*`, translated from `assets/tutorial.json`
+  and including the Overlay step), and `HELP.md`, `ABOUT.md`, `LEGAL.md` and
+  `FAQ.md`, brought current with English (Overlay tab, armor weight tags,
+  starter blueprints, free-space and cache-folder troubleshooting). Base
+  `global.ini` mapped to **n1ghter/StarCitizenRu**
+  (`data/Localization/korean_(south_korea)/global.ini`). Russian borrows the
+  `korean_(south_korea)` slot, shared with Korean on purpose (see the
+  per-language note); `HELP.md` in every language now says the two replace
+  each other's applied file.
 - **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #479 makes More > Clear
   Cache clear the DataForge cache in use and moves every text it shows into
   `ui.json`; before, only its four titles and its cache-empty text were
@@ -874,3 +886,17 @@ them against the new source.
   reviewer replacing the `at`
   strings with `ht` is the next step to promote it from AI-only to
   human-reviewed.
+- **russian** — AI-translated by **Claude**. No human translator yet, so
+  **every** key is `at`-only (`ht` empty): the whole UI, the guided tour
+  (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review. The base `global.ini` is sourced from
+  **n1ghter/StarCitizenRu** (`data/Localization/korean_(south_korea)/global.ini`),
+  the main Russian community translation project. Russian writes to the
+  game's `korean_(south_korea)` Localization folder with
+  `g_language = korean_(south_korea)` (`SC_LANGUAGE_IDS`): a borrowed slot,
+  shared with Korean on purpose. `russian_(russia)` is not a value the game
+  accepts, and the Korean font is the only in-game font that covers
+  Cyrillic. Only one of Russian or Korean can be applied at a time: applying
+  one overwrites the other's `global.ini` in that folder. A Russian-speaking
+  reviewer replacing the `at` strings with `ht` is the next step to promote
+  it from AI-only to human-reviewed.

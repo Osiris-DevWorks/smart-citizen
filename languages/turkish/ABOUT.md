@@ -71,6 +71,7 @@ Smart Citizen ayrıca şu kaynaklardan gelen üst akış araçlarını da paketl
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) — Almanca dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi.
 - **[스타 시티즌 유저 한국어 프로젝트](https://sc.galaxyhub.kr)** (Shatagon, MGM Star Fleet ve Falco Rescue loncaları) — Korece yerelleştirmenin arkasındaki topluluk ekibi. Dosyaları Smart Citizen ile birlikte paketlenmez (lisansları yeniden dağıtıma izin vermez); Korece, kendi dosyanızı getirdiğiniz bir dildir ve *Dil Dosyası Eşle* aracılığıyla doğrudan onlardan aldığınız yerel bir kopyaya eşlenir.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — Geleneksel Çince dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi. En son Mayıs 2024'te güncellendi, bu nedenle mevcut oyun içi metinlerin kabaca üçte ikisini kapsar; geri kalanı için İngilizceye geri dönülür.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — Rusça dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi.
 
 ## Öne Çıkan Özellikler
 
@@ -78,7 +79,7 @@ Smart Citizen ayrıca şu kaynaklardan gelen üst akış araçlarını da paketl
 - **Yükle ve Düzenle**: Star Citizen kurulumunuzdaki `global.ini` dosyasını yükleyin ve metinleri sezgisel bir tablo görünümünde özelleştirin
 - **Çoklu Kanal Desteği**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW kanallarının her biri kendi yalıtılmış `user.ini` dosyasına, önbelleğine, yedeklerine ve DataForge çıkarımına sahiptir — kanallar arasında Yapılandırma sekmesinden yeniden başlatmadan geçiş yapın
 - **Kurulum Konumunu Doğrula**: Bilgisayarınızdaki tüm Star Citizen kurulumlarını bulur ve oyunun gerçekte hangisini başlattığını söylemek için RSI Launcher'ın günlüğünü okur; böylece Uygula, başlatmadığınız bir kopyaya asla yazmaz
-- **Çoklu Dil Desteği**: Uygulama ve oyun metinlerini Yapılandırma sekmesinden İngilizce, Fransızca, İspanyolca, Brezilya Portekizcesi, Japonca, Basitleştirilmiş Çince, İtalyanca, Almanca, Türkçe, Korece (kendi dosyanızı getirin) ve Geleneksel Çince arasında değiştirin. İngilizce dışındaki diller, topluluk tarafından çevrilmiş bir `global.ini` dosyasını İngilizce temelin üzerine katmanlar; çevrilmemiş her şey için İngilizceye geri dönülür. Topluluk çevirileri geldikçe daha fazla dil sunulacaktır (bkz. `languages/TRANSLATIONS.md`)
+- **Çoklu Dil Desteği**: Uygulama ve oyun metinlerini Yapılandırma sekmesinden İngilizce, Fransızca, İspanyolca, Brezilya Portekizcesi, Japonca, Basitleştirilmiş Çince, İtalyanca, Almanca, Türkçe, Korece (kendi dosyanızı getirin), Geleneksel Çince ve Rusça arasında değiştirin. İngilizce dışındaki diller, topluluk tarafından çevrilmiş bir `global.ini` dosyasını İngilizce temelin üzerine katmanlar; çevrilmemiş her şey için İngilizceye geri dönülür. Topluluk çevirileri geldikçe daha fazla dil sunulacaktır (bkz. `languages/TRANSLATIONS.md`)
 - **Görev Sözleşmeleri**: Görev sözleşmesi ve brifing metinlerini özel Görevler kategorisinden düzenleyin
 - **Akıllı Filtreleme**: Metinlerde arama yapın, kategoriye (Gemiler, Gemi Öğeleri, Görevler, Teçhizat, Emtialar, Günce, Diğer) veya değişiklik durumuna göre filtreleyin
 - **Sütun Bazlı Filtreler**: Ayrıntılı arama için her sütun başlığının altındaki filtre kutularına doğrudan yazın
