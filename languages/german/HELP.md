@@ -160,6 +160,21 @@ Verfolge, welche Herstellungs-Baupläne du bereits besitzt, und sieh es im Spiel
 - **Besessen-Tags anwenden** webt die `[Owned]`-Tags erneut in deine geladenen Strings ein, nachdem du die Besessen-Liste geändert hast. Wie die anderen Aktionsknöpfe wird er **rot**, wenn deine Besessen-Liste Änderungen hat, die die Tabelle noch nicht übernommen hat, und **grün**, sobald alles übereinstimmt.
 - Die Spalte **Besessen** der String-Tabelle zeigt weiterhin einen Stern und sortiert besessene zuerst, ist aber jetzt schreibgeschützt; der Besitz wird von diesem Tab aus verwaltet.
 
+## Overlay-Tab
+
+Das **Smart Citizen Overlay** zeichnet zwei kleine Fenster über Star Citizen: einen Bergbau-Scan-Decoder und eine Schublade mit Suchfunktionen. Starte und stoppe es mit **Overlay starten** auf diesem Tab oder mit der Schaltfläche **Overlay** in der Symbolleiste. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm, sonst kann das Overlay nicht darüber angezeigt werden. Das Overlay liest nur deinen Bildschirm und `Game.log`; das Spiel selbst berührt es nie.
+
+- **Bergbau-Scan-Decoder** liest die Scan-Signatur unter deinem Radar und zeigt Vorkommenstyp und Anzahl direkt darunter an (zum Beispiel `3 × Lindinium`). Die Anzeige ändert sich erst, wenn dieselbe Zahl zweimal hintereinander gelesen wurde, sodass eine Fehllesung in einem einzelnen Frame nicht aufblitzt.
+- **Overlay-Schublade** setzt Bereiche mit Reitern an den Bildschirmrand. Klicke auf einen Reiter, um seinen Bereich zu öffnen, und erneut, um ihn zu schließen. **Position der Schublade** wählt eine von acht Stellen (standardmäßig Mitte rechts).
+  - **Baupläne**: Baupläne suchen, sehen, welche Missionen sie belohnen, und die abhaken, die du besitzt (dieselbe Besessen-Liste wie im Bauplan-Tracker-Tab).
+  - **Mineralien**: Gib ein Mineral ein, um zu sehen, wo es vorkommt, gruppiert nach Sternensystem, oder einen Ort, um seine Mineralien zu sehen. Hake ein Mineral ab, um danach Ausschau zu halten: Die Scan-Anzeige leuchtet auf, wenn ein Scan es findet. Der Decoder lässt sich auch hier ein- und ausschalten.
+  - **Herstellung**: Gib ein Mineral ein, um zu sehen, welche Komponenten es verwenden, oder eine Komponente, um die benötigten Mineralien zu sehen. Wird gefüllt, wenn du Erweiterungen mit aktiviertem **Commodities** oder **Journal** erstellst.
+  - Jeder Bereich hat seinen eigenen Schalter; wenn du die Schublade ausschaltest, werden alle ausgeblendet.
+- **Neue Baupläne als besessen markieren** beobachtet `Game.log`, während das Overlay läuft, und markiert Baupläne, die du erhältst, als besessen. Wie **Protokolle nach besessenen Bauplänen durchsuchen** liest es nur LIVE und HOTFIX: Ist im Konfiguration-Tab PTU, EPTU oder TECH-PREVIEW ausgewählt, bleibt es aus.
+- **Scan-Proben speichern** legt von jeder neu gelesenen Signatur ein kleines Bild in `logs\sco_samples` ab, damit Fehllesungen eingeschickt werden können. **Probenordner öffnen** öffnet diesen Ordner. Standardmäßig aktiviert; es wird nichts hochgeladen. Pro Sitzung werden höchstens 200 Bilder gespeichert, und der Ordner behält nur die neuesten 1000.
+
+Wenn der Scan-Decoder auf einen Fehler stößt, hält er an, und die Statusleiste meldet das. Stoppe das Overlay und starte es erneut, um es noch einmal zu versuchen; Details findest du im Protokoll-Tab. Die geführte Tour (Schaltfläche **Tutorial**) enthält einen Schritt zu diesem Tab.
+
 ## Konfiguration-Tab
 
 - **Erscheinungsbild** — das App-Design wählen (siehe unten).

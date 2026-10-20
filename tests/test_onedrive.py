@@ -14,7 +14,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
 from src.utils.onedrive import (  # noqa: E402
     is_onedrive_path,

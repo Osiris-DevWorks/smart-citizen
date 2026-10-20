@@ -40,6 +40,7 @@ Tudo. Suas edições de localização, backups, configurações do app e cache d
 - **Edições do usuário + backups**: `Documents\Smart Citizen\{canal}\` por padrão (configurável na aba Config; a versão portátil usa `<pasta-do-exe>\data\`).
 - **Cache XML do DataForge**: `%LOCALAPPDATA%\Smart Citizen\{canal}\cache\dataforge\`.
 - **Relatórios de travamento + exportações manuais de log**: `Documents\Smart Citizen\logs\` (ou equivalente portátil), gravados somente quando o app trava ou quando você clica em *Exportar* na aba Log.
+- **Amostras de escaneamento da sobreposição**: `Documents\Smart Citizen\logs\sco_samples\` (ou equivalente portátil). Enquanto a Sobreposição do Smart Citizen roda com o decodificador de escaneamento de mineração ligado, ela salva uma pequena imagem de cada nova assinatura que lê (o número mais alguns pixels ao redor, no máximo 200 por sessão; a pasta mantém só as 1000 mais recentes) para que leituras erradas possam ser relatadas e corrigidas. Ativado por padrão; desmarque **Salvar amostras de escaneamento** na aba Sobreposição para desativar. Nada é enviado: se quiser, você mesmo envia uma imagem.
 
 ### O que passa pela rede
 

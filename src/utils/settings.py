@@ -446,7 +446,7 @@ class AppSettings:
         "blueprint": "mission_title_tag/blueprint",
         "ace":       "mission_title_tag/ace",
         # RS ("resonance signature") tag for Recco Battaglia's Scan/Mining
-        # contracts (4.9+) — see MINEABLE_RS_VALUES in generate_enhancements_ini.py.
+        # contracts (4.9+) — see MINEABLE_RS_VALUES in src/utils/mining_signatures.py.
         "rs":        "mission_title_tag/rs",
         # Reputation TRACK suffix (e.g. "(Security)"/"(Contractor)") on the
         # title's Rep tag — see issue #161. Off by default (see
@@ -665,6 +665,38 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+
+    # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
+    # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
+    # its sco_overlay.SECTION_ICONS name.
+    SCO_SCAN_DECODER = "scan_decoder"
+    SCO_DRAWER = "drawer"
+    SCO_DRAWER_SECTION_PREFIX = "drawer_"
+    SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
+    SCO_SAVE_SAMPLES = "save_samples"
+    # Option name -> (key, default). All on by default, matching how the
+    # overlay behaved before the tab existed.
+    SCO_OPTION_SETTING = {
+        SCO_SCAN_DECODER:         ("sco/scan_decoder", True),
+        SCO_DRAWER:               ("sco/drawer", True),
+        SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
+        SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
+        SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
+        SCO_SAVE_SAMPLES:         ("sco/save_samples", True),
+    }
+    # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
+    # every combination but the screen centre.
+    SCO_DRAWER_POSITION = "sco/drawer_position"
+    SCO_DRAWER_POSITIONS = (
+        "top_left", "top_center", "top_right",
+        "middle_left", "middle_right",
+        "bottom_left", "bottom_center", "bottom_right",
+    )
+    SCO_DRAWER_POSITION_DEFAULT = "middle_right"
+    # Ores ticked in the SCO drawer's Minerals section: a decoded scan of one
+    # makes the signature label glow. JSON list of ORE_SIGNATURES keys.
+    SCO_WATCHED_MINERALS = "sco/watched_minerals"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1551,6 +1583,51 @@ class AppSettings:
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP, bool(enabled)
         )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_drawer_position() -> str:
+        """Where the SCO drawer sits (one of ``SCO_DRAWER_POSITIONS``)."""
+        value = str(AppSettings.settings().value(
+            AppSettings.SCO_DRAWER_POSITION, AppSettings.SCO_DRAWER_POSITION_DEFAULT))
+        if value not in AppSettings.SCO_DRAWER_POSITIONS:
+            return AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        return value
+
+    @staticmethod
+    def set_sco_drawer_position(position: str) -> None:
+        if position not in AppSettings.SCO_DRAWER_POSITIONS:
+            position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        AppSettings.settings().setValue(AppSettings.SCO_DRAWER_POSITION, position)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_watched_minerals() -> set:
+        """Ores whose decoded scan makes the SCO label glow (lowercase
+        ``ORE_SIGNATURES`` keys). JSON, like ``get_owned_items``."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_WATCHED_MINERALS, "", type=str)
+        try:
+            return {str(name) for name in json.loads(raw)} if raw else set()
+        except (ValueError, TypeError):
+            return set()
+
+    @staticmethod
+    def set_sco_watched_minerals(names) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_option(name: str) -> bool:
+        """One of the Overlay tab's switches (``SCO_OPTION_SETTING``)."""
+        key, default = AppSettings.SCO_OPTION_SETTING[name]
+        return bool(AppSettings.settings().value(key, default, type=bool))
+
+    @staticmethod
+    def set_sco_option(name: str, enabled: bool) -> None:
+        key, _default = AppSettings.SCO_OPTION_SETTING[name]
+        AppSettings.settings().setValue(key, bool(enabled))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3077,6 +3154,12 @@ class AppSettings:
         return logs_dir
 
     @staticmethod
+    def get_sco_samples_dir() -> Path:
+        r"""Where the Smart Citizen Overlay keeps the readout crops it saves
+        for retraining its digit reader (``{logs_dir}\sco_samples\``)."""
+        return AppSettings.get_logs_dir() / "sco_samples"
+
+    @staticmethod
     def migrate_dataforge_cache_to_local() -> None:
         r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
@@ -3289,6 +3372,18 @@ class AppSettings:
         ) / "Smart Citizen"
 
     @staticmethod
+    def get_dataforge_cache_leaf(channel: "str | None" = None) -> Path:
+        """Return *channel*'s DataForge cache folder without creating it.
+
+        *channel* defaults to the active one. :meth:`get_dataforge_cache_dir`
+        is this plus the ``mkdir``; use this one for a check that must leave
+        the disk alone, such as the guard on a queued old-cache cleanup (#486).
+        """
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        return AppSettings.get_dataforge_cache_base() / channel / "cache" / "dataforge"
+
+    @staticmethod
     def get_dataforge_cache_dir() -> Path:
         """Return the directory where DataForge entity XMLs are cached after unforge.
 
@@ -3300,11 +3395,7 @@ class AppSettings:
         order. Channel nesting is preserved across all variants so each
         SC channel stays isolated.
         """
-        cache_dir = (
-            AppSettings.get_dataforge_cache_base()
-            / AppSettings.get_active_channel()
-            / "cache" / "dataforge"
-        )
+        cache_dir = AppSettings.get_dataforge_cache_leaf()
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
 
@@ -3497,6 +3588,8 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
+            AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
+            AppSettings.SCO_WATCHED_MINERALS: "[]",
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({
@@ -3505,6 +3598,9 @@ class AppSettings:
         })
         defaults.update({
             key: True for key in AppSettings._MISSION_FIELD_SETTING.values()
+        })
+        defaults.update({
+            key: default for key, default in AppSettings.SCO_OPTION_SETTING.values()
         })
         defaults.update({
             key: AppSettings._MISSION_TITLE_TAG_DEFAULTS.get(name, True)

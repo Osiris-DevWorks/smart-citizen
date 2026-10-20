@@ -108,7 +108,18 @@ try:
     # The DataForge cache layout, which pak_extractor (the module that
     # writes it) names once for every reader.
     from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+    # The curated per-ore RS table and the SCO drawer's crafting index,
+    # shared with the Smart Citizen Overlay (see the RS consumers below).
+    from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
+    from src.utils.mining_catalog import (
+        COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES,
+        CRAFTING_INDEX_FILE, write_crafting_index,
+    )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
+    ORE_SIGNATURES = {}  # type: ignore[assignment]
+    _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
+    CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
     def strip_raw_blueprint_filename_prefix(stem):  # type: ignore[misc]
         for prefix in ("bp_craft_", "bp_rewards_", "bp_"):
             if stem.lower().startswith(prefix):
@@ -2088,8 +2099,6 @@ def enhancements_radar(root: ET.Element) -> str:
 
     return "\\n".join(lines) if lines else ""
 
-    return "\\n".join(lines) if lines else ""
-
 
 def enhancements_cooler(root: ET.Element) -> str:
     cooling   = _find_resource(root, "Coolant")
@@ -2185,7 +2194,9 @@ def enhancements_quantum_drive(root: ET.Element) -> str:
     lines = []
     if speed is not None:
         speed_mm = float(speed) / 1_000_000
-        spool_str = _fmt(spool, "s") if spool else "?"
+        # Tenths, as Cooldown below: spool times are 4.4, 4.8, 5.3, 8.5... and
+        # whole seconds showed 4.8 and 5.3 both as "5s" (#485).
+        spool_str = _fmt(spool, "s", 1) if spool else "?"
         lines.append(f"QT Speed: {speed_mm:,.0f} Mm/s  |  Spool: {spool_str}")
     if cooldown is not None:
         lines.append(f"Cooldown: {_fmt(cooldown, 's', 1)}")
@@ -3652,14 +3663,9 @@ def _build_template_lookup(
     return lookup
 
 
-# CIG doesn't expose a per-ore "RS" (resonance-signature) number anywhere in
-# DataForge — checked the full PTU 4.9 cache for both the literal values and
-# any per-mineable stat registry, found neither — so this is a curated table
-# sourced from community reference data (MrKraken/StarStrings; the original 8
-# from the ptu/4.9 branch mining.ini, the rest cross-checked against
-# starminersdepot.com's Alpha 4.8 scanner table — the 7 ores present in both
-# sources agree exactly). "ice" has no confirmed reference for this patch but
-# is kept from the original 4.9 source. Two consumers:
+# Per-ore base "RS" (resource signature) values. The curated table and its
+# sourcing live in src/utils/mining_signatures.py, shared with the Smart
+# Citizen Overlay's scan decoder. Two consumers here:
 #   - Recco Battaglia's Scan/Mining contracts (4.9+, "Battaglia_RPT_Scan_*" /
 #     "Battaglia_RPT_ScanMine_*" title keys), each targeting 1-3 specific
 #     mineable ores via sibling MissionProperty overrides with
@@ -3670,74 +3676,31 @@ def _build_template_lookup(
 #     ore's base RS next to its mining locations.
 # Not every ore in either consumer has a known value; unmatched ores are
 # simply left without an RS line/tag (see each consumer for its own
-# unmatched-key handling).
-MINEABLE_RS_VALUES = {
-    "agricium":      3885,
-    "aluminium":     4285,
-    "aslarite":      3840,
-    "beryl":         3540,
-    "bexalite":      3600,
-    "borase":        3570,
-    "copper":        4240,
-    "corundum":      4225,
-    "gold":          3585,
-    "hephaestanite": 4180,
-    "ice":           4300,
-    "iron":          4270,
-    "laranite":      3825,
-    "lindinium":     3400,
-    "ouratite":      3370,
-    "quantainium":   3170,
-    "quartz":        4210,
-    "riccite":       3385,
-    "savrillium":    3200,
-    "silicon":       4255,
-    "stileron":      3185,
-    "taranite":      3555,
-    "tin":           4195,
-    "titanium":      3855,
-    "torite":        3900,
-    "tungsten":      3870,
-}
-
-# The Mining Compendium journal's own prose spells a couple of ore names
+# unmatched-key handling). MINEABLE_RS_VALUES is imported with the other
+# src/ names near the top of this file, as is _MINING_COMPENDIUM_ORE_ALIASES:
+# the Mining Compendium journal's own prose spells a couple of ore names
 # differently from their DataForge loc-key spelling (a CIG typo, not a
-# transcription error here) — "Savrilium" (single L) vs the canonical
-# mineabletype_primary_savrillium. Maps the journal's lowercased spelling to
-# the MINEABLE_RS_VALUES key so the lookup still matches.
-_MINING_COMPENDIUM_ORE_ALIASES = {
-    "savrilium": "savrillium",
-}
+# transcription error here), "Savrilium" (single L) vs the canonical
+# mineabletype_primary_savrillium, and that map takes the journal's
+# lowercased spelling to the MINEABLE_RS_VALUES key so the lookup still
+# matches.
 
-# Curated RS value PROGRESSIONS as scanned stack size scales (the in-game
-# Mining Compendium "signature strength" chart), for the mission-DETAILS
-# "Resource Signatures:" breakdown (#331) -- distinct from MINEABLE_RS_VALUES'
-# single flat number, which only feeds the mission-TITLE [RS ####] tag and the
-# ore-name annotation. Not every ore MINEABLE_RS_VALUES covers has a confirmed
-# progression yet; an ore missing here falls back to a single-value tuple (see
-# _rs_value_steps), so nothing regresses to no-value while more progressions
-# get curated.
+# RS value PROGRESSIONS as scanned stack size scales (the in-game Mining
+# Compendium "signature strength" chart), for the mission-DETAILS "Resource
+# Signatures:" breakdown (#331) -- distinct from MINEABLE_RS_VALUES' single
+# flat number, which only feeds the mission-TITLE [RS ####] tag and the
+# ore-name annotation. Built from ORE_SIGNATURES' base and largest cluster
+# size, the same caps the SCO scan decoder uses, so the two can't disagree.
 MINEABLE_RS_VALUE_STEPS: dict[str, tuple[int, ...]] = {
-    "savrillium": (3200, 6400),
-    "lindinium": (3400, 6800, 10200),
-    "bexalite": (3600, 7200, 10800, 14400),
-    "torite": (3900, 7800, 11700, 15600, 19500),
-    "iron": (4270, 8540, 12810, 17080, 21350, 25620),
-    "aluminium": (4285, 8570, 12855, 17140, 21425, 25710),
-    "ice": (4300, 8600, 12900, 17200, 21500, 25800),
+    ore: tuple(base * n for n in range(1, max_count + 1))
+    for ore, (base, max_count) in ORE_SIGNATURES.items()
 }
 
 
 def _rs_value_steps(ore: str) -> tuple[int, ...]:
     """Full RS value progression for ``ore`` (see MINEABLE_RS_VALUE_STEPS),
-    falling back to a single-value tuple from MINEABLE_RS_VALUES when this
-    ore's stack progression isn't curated yet, or ``()`` when neither table
-    knows this ore at all."""
-    if ore in MINEABLE_RS_VALUE_STEPS:
-        return MINEABLE_RS_VALUE_STEPS[ore]
-    if ore in MINEABLE_RS_VALUES:
-        return (MINEABLE_RS_VALUES[ore],)
-    return ()
+    or ``()`` when the table doesn't know this ore."""
+    return MINEABLE_RS_VALUE_STEPS.get(ore, ())
 
 
 def _format_rs_details_lines(ores: list[str], loc: dict) -> list[str]:
@@ -4937,6 +4900,7 @@ def scan_crafting_blueprints(
     tag_config: "TagConfig | None" = None,
     blueprint_data_header: str = "BLUEPRINT DATA",
     header_em_tag: str = "EM3",
+    crafting_index: dict | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Scan crafting blueprints and produce commodity + journal entries.
 
@@ -4946,6 +4910,10 @@ def scan_crafting_blueprints(
     Compendium augmentation. Both halves are always returned so the dispatcher
     in :func:`main` can unpack the result unconditionally, including when no
     crafting blueprints directory exists in the user's DataForge cache.
+
+    When *crafting_index* is given it is filled with every material's display
+    names and the ``[category, item]`` pairs it goes into, for the SCO
+    drawer's crafting search (``src/utils/mining_catalog.py``).
     """
     import os
 
@@ -5001,6 +4969,19 @@ def scan_crafting_blueprints(
     # Hitting 0 here almost always means base.ini is stale (missing modern
     # commodity strings) — surfacing that in the log beats silently writing an
     # empty enhancements file.
+    if crafting_index is not None:
+        for commodity, pairs_ in commodity_items.items():
+            names = sorted({
+                loc[name_key].strip()
+                for name_key, _desc in _discover_commodity_loc_pairs(commodity, loc)
+                if loc.get(name_key, "").strip()
+            }, key=lambda n: (len(n), n))   # shortest first; ties by name, not hash order
+            crafting_index[commodity] = {
+                "names": names,
+                "items": sorted({(_humanize_craft_category(cat), item) for cat, item in pairs_
+                                 if "$templates" not in cat.lower()}),
+            }
+
     loc_commodity_key_count = sum(
         1 for k in loc if k.lower().startswith("items_commodities_")
     )
@@ -7394,7 +7375,8 @@ def _run_gen_commodity_journal(ctx: dict) -> tuple[dict[str, str], dict[str, str
                                     xml_path_index=xml_path_index, records_dir=records,
                                     tag_config=tag_configs.get("commodities"),
                                     blueprint_data_header=mh.get("blueprint_data", _DEFAULT_MISSION_HEADERS["blueprint_data"]),
-                                    header_em_tag=mh_em)
+                                    header_em_tag=mh_em,
+                                    crafting_index=ctx.get("crafting_index"))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -7753,6 +7735,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "mission_title_tags": mission_title_tags or {},
         "stats_prepend":     bool(stats_prepend),
         "rs_ore_name_annotations": bool(rs_ore_name_annotations),
+        # Filled by the commodity/journal generator for the SCO drawer.
+        "crafting_index":    {},
     }
 
     gen_jobs: dict[str, Callable] = {}
@@ -7859,6 +7843,10 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         write_ini(output_dir / "missile_enhancements.ini", out_missiles)
     if _want("medical_consumables"):
         write_ini(output_dir / "medical_consumables_enhancements.ini", out_medical_consumables)
+    # Written whenever the job ran, empty or not, so a stale index never
+    # outlives the INIs it was built with.
+    if "commodity_journal" in gen_jobs and CRAFTING_INDEX_FILE:
+        write_crafting_index(output_dir / CRAFTING_INDEX_FILE, ctx["crafting_index"])
 
     total = (len(out_ships) + len(out_components) + len(out_ship_weapons) +
              len(out_fps_weapons) + len(out_missions) + len(out_commodities) +

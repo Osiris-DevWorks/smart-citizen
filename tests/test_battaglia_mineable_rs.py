@@ -151,10 +151,25 @@ class TestRsValueSteps:
         assert gen_module._rs_value_steps("ice") == (4300, 8600, 12900, 17200, 21500, 25800)
         assert gen_module._rs_value_steps("savrillium") == (3200, 6400)
 
-    def test_falls_back_to_single_value_from_flat_table(self, gen_module):
-        # "agricium" has a MINEABLE_RS_VALUES entry but no curated
-        # progression yet, so it falls back to a one-value tuple, not empty.
-        assert gen_module._rs_value_steps("agricium") == (3885,)
+    def test_hand_curated_progressions_still_match(self, gen_module):
+        # The seven progressions curated by hand before the steps were
+        # built from ORE_SIGNATURES' caps; the derived table must keep them.
+        assert gen_module._rs_value_steps("lindinium") == (3400, 6800, 10200)
+        assert gen_module._rs_value_steps("bexalite") == (3600, 7200, 10800, 14400)
+        assert gen_module._rs_value_steps("torite") == (3900, 7800, 11700, 15600, 19500)
+        assert gen_module._rs_value_steps("iron") == (4270, 8540, 12810, 17080, 21350, 25620)
+        assert gen_module._rs_value_steps("aluminium") == (
+            4285, 8570, 12855, 17140, 21425, 25710)
+
+    def test_every_rs_ore_has_a_progression(self, gen_module):
+        # Every ore with a base RS gets a full progression, starting at that
+        # base and ending at the largest cluster the scan decoder accepts.
+        from src.utils.mining_signatures import ORE_SIGNATURES
+        for ore, (base, max_count) in ORE_SIGNATURES.items():
+            steps = gen_module._rs_value_steps(ore)
+            assert steps[0] == gen_module.MINEABLE_RS_VALUES[ore] == base
+            assert len(steps) == max_count
+        assert gen_module._rs_value_steps("agricium") == (3885, 7770, 11655, 15540, 19425)
 
     def test_unknown_ore_yields_empty_tuple(self, gen_module):
         assert gen_module._rs_value_steps("unobtainium") == ()

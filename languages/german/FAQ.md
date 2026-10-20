@@ -15,6 +15,8 @@ Deine persönlichen Bearbeitungen liegen in `user.ini` in deinem Smart-Citizen-D
 
 Smart Citizen bearbeitet nur Lokalisierungstext (die Worte, die dir das Spiel zeigt), es greift nicht in die Spiellogik ein, verschafft dir keinen Vorteil und kommuniziert nicht mit CIGs Servern. Unsere Änderungen **sollten** unbedenklich sein.
 
+Das optionale **Smart Citizen Overlay** (Overlay-Tab) funktioniert genauso, ohne ins Spiel einzugreifen. Es zeichnet gewöhnliche Fenster über das Spiel, liest Pixel von deinem Bildschirm, wie es ein Screenshot-Werkzeug tut, und liest die Datei `Game.log` des Spiels. Es injiziert nie etwas ins Spiel und hakt sich nie darin ein, öffnet nie den Spielprozess, liest nie dessen Speicher und sendet nie Tastatur- oder Mauseingaben. CIG hat sich zu Overlays dieser Art bisher nicht geäußert, daher gilt auch hier der Hinweis zur Nutzung auf eigenes Risiko weiter unten.
+
 CIG hat Community-Lokalisierung öffentlich unterstützt. Ihr Beitrag [Community Localization Update](https://robertsspaceindustries.com/spectrum/community/SC/forum/1/thread/star-citizen-community-localization-update) legt die offizielle Unterstützung für von Spielern erstellte Übersetzungen dar, die unserem Verständnis nach ausdrücklich die Art von Lokalisierungsbearbeitung erlaubt, die Smart Citizen vornimmt.
 
 Bekannte Streamer betreiben ähnliche Lokalisierungsprojekte offen und öffentlich, und keinem von ihnen wurde gesagt, damit aufzuhören.

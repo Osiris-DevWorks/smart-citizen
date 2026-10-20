@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Impossible de charger les informations légales."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Superposition"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Superposition"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Démarrer ou arrêter la Superposition Smart Citizen (SCO) : décodage des signatures de minage et tiroir de plans par-dessus le jeu. Nécessite le mode fenêtré sans bordure."
     }
   },
   "filters": {
@@ -2955,7 +2967,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "7. Modifier les textes"
+        "at": "9. Modifier les textes"
       },
       "description": {
         "ht": "",
@@ -2965,7 +2977,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "8. Filtrer par colonne"
+        "at": "10. Filtrer par colonne"
       },
       "description": {
         "ht": "",
@@ -2975,7 +2987,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "9. Panneau d'édition"
+        "at": "11. Panneau d'édition"
       },
       "description": {
         "ht": "",
@@ -2985,7 +2997,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "10. Panneau d'aperçu"
+        "at": "12. Panneau d'aperçu"
       },
       "description": {
         "ht": "",
@@ -2995,7 +3007,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "11. Appliquer au jeu"
+        "at": "13. Appliquer au jeu"
       },
       "description": {
         "ht": "",
@@ -3005,7 +3017,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "12. Paramètres : Apparence"
+        "at": "14. Paramètres : Apparence"
       },
       "description": {
         "ht": "",
@@ -3015,7 +3027,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "13. Paramètres : Installation de Star Citizen"
+        "at": "15. Paramètres : Installation de Star Citizen"
       },
       "description": {
         "ht": "",
@@ -3025,7 +3037,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "14. Paramètres : Données Smart Citizen"
+        "at": "16. Paramètres : Données Smart Citizen"
       },
       "description": {
         "ht": "",
@@ -3035,7 +3047,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "15. Paramètres : Localisation de base"
+        "at": "17. Paramètres : Localisation de base"
       },
       "description": {
         "ht": "",
@@ -3045,7 +3057,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "16. Paramètres : Outils"
+        "at": "18. Paramètres : Outils"
       },
       "description": {
         "ht": "",
@@ -3055,11 +3067,21 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "17. Aide et retours"
+        "at": "19. Aide et retours"
       },
       "description": {
         "ht": "",
         "at": "Le bouton Aide ouvre un panneau latéral avec le guide complet, la liste des problèmes connus et un lien vers le canal Discord de Smart Citizen pour vos retours. Vous avez tout ce qu'il faut pour démarrer : bonne chance, citoyen."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Superposition Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Démarrez la superposition ici ou avec le bouton Superposition de la barre d'outils. Par-dessus le jeu, elle décode les signatures de scan minier, ouvre un tiroir pour chercher vos plans, minéraux et fabrications, et marque comme possédés les plans que vous obtenez. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal."
       }
     },
     "blueprint_tracker": {
@@ -3185,6 +3207,246 @@
     "zip_filter": {
       "ht": "",
       "at": "Sauvegarde des paramètres (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "Minerai ROC"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "Minerai FPS"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Récupération"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Rechercher des plans..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Possédés uniquement"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "Possédés {owned} sur {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Récompensé par {count} missions :"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Nouveau : {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Superposition Smart Citizen"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Aucune donnée de plan n'est encore chargée. Chargez d'abord les chaînes, puis démarrez la superposition."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...et {count} de plus"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Non identifié"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Le décodeur de scan minier s'est arrêté après une erreur. Redémarrez la superposition pour réessayer ; l'onglet Journal donne les détails."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Plans"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Minéraux"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Fabrication"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Minéral ou lieu..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Tout décocher"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Fait briller l'étiquette du scan quand ce minéral est décodé"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Minéral ou composant..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Aucun minéral trouvé. Chargez d'abord les textes si la liste reste vide."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Aucun résultat. Extrayez DataForge, puis générez les améliorations avec Commodities ou Journal coché pour remplir cette liste."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Autre"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Utilisé dans (par {material}) :"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} nécessite :"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Nécessite : {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Rang : {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Signature de scan : {base} par roche, jusqu'à {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "Utilisé dans {count} objets fabriqués"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Système : {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Minéraux ici : {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Superposition Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Fenêtres affichées par-dessus Star Citizen : le décodeur de scan minier et le tiroir des plans. Lancez le jeu en mode fenêtré sans bordure. La superposition lit seulement votre écran et Game.log ; elle ne touche jamais au processus du jeu."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Démarrer la superposition"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Arrêter la superposition"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Décodeur de scan minier"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Lit la signature de scan sous le radar et affiche le type et le nombre de gisements en dessous."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Marquer les nouveaux plans comme possédés"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Pendant que la superposition tourne, les plans reçus en jeu sont lus dans Game.log et marqués comme possédés."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Enregistrer des échantillons de scan"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Enregistre une petite image de chaque nouvelle signature lue, pour pouvoir envoyer les erreurs de lecture et améliorer le décodeur."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Ouvrir le dossier des échantillons"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Tiroir de la superposition"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Un tiroir ancré au bord de l'écran, à la position choisie ci-dessous. Désactivez-le pour le masquer avec ses sections."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Plans"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Cherchez des plans, voyez les missions qui les donnent et cochez ceux que vous possédez."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Minéraux"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Tapez un minéral pour voir où le trouver, par système stellaire, ou un lieu pour voir ses minéraux."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Fabrication"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Tapez un minéral pour voir les composants qui l'utilisent, ou un composant pour voir les minéraux requis. Nécessite une extraction DataForge."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Position du tiroir :"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "En haut à gauche"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "En haut au centre"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "En haut à droite"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Au milieu à gauche"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Au milieu à droite"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "En bas à gauche"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "En bas au centre"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "En bas à droite"
     }
   }
 }

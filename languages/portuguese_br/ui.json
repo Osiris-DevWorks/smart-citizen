@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Não foi possível carregar as informações legais."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Sobreposição"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Sobreposição"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Iniciar ou parar a Sobreposição do Smart Citizen (SCO): decodificação de assinaturas de mineração e uma gaveta de blueprints sobre o jogo. Requer o modo janela sem bordas."
     }
   },
   "filters": {
@@ -2955,7 +2967,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "7. Editar strings"
+        "at": "9. Editar strings"
       },
       "description": {
         "ht": "",
@@ -2965,7 +2977,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "8. Filtrar por coluna"
+        "at": "10. Filtrar por coluna"
       },
       "description": {
         "ht": "",
@@ -2975,7 +2987,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "9. Painel do Editor"
+        "at": "11. Painel do Editor"
       },
       "description": {
         "ht": "",
@@ -2985,7 +2997,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "10. Painel de Pré-visualização"
+        "at": "12. Painel de Pré-visualização"
       },
       "description": {
         "ht": "",
@@ -2995,7 +3007,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "11. Aplicar ao Jogo"
+        "at": "13. Aplicar ao Jogo"
       },
       "description": {
         "ht": "",
@@ -3005,7 +3017,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "12. Config: Aparência"
+        "at": "14. Config: Aparência"
       },
       "description": {
         "ht": "",
@@ -3015,7 +3027,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "13. Config: Instalação do Star Citizen"
+        "at": "15. Config: Instalação do Star Citizen"
       },
       "description": {
         "ht": "",
@@ -3025,7 +3037,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "14. Config: Dados do Smart Citizen"
+        "at": "16. Config: Dados do Smart Citizen"
       },
       "description": {
         "ht": "",
@@ -3035,7 +3047,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "15. Config: Localização Base"
+        "at": "17. Config: Localização Base"
       },
       "description": {
         "ht": "",
@@ -3045,7 +3057,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "16. Config: Ferramentas"
+        "at": "18. Config: Ferramentas"
       },
       "description": {
         "ht": "",
@@ -3055,11 +3067,21 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "17. Ajuda e feedback"
+        "at": "19. Ajuda e feedback"
       },
       "description": {
         "ht": "",
         "at": "O botão Ajuda abre um painel lateral com o guia completo, a lista de Problemas Conhecidos e um link para o canal do Smart Citizen no Discord. Isso é tudo o que você precisa para começar: boa sorte, cidadão."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Sobreposição do Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Inicie a sobreposição aqui ou com o botão Sobreposição da barra de ferramentas. Sobre o jogo, ela decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
       }
     },
     "blueprint_tracker": {
@@ -3185,6 +3207,246 @@
     "zip_filter": {
       "ht": "",
       "at": "Backup de configurações (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "Minério ROC"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "Minério FPS"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Salvamento"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Buscar blueprints..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Somente obtidos"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "Obtidos {owned} de {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Recompensa de {count} missões:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Novo: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Sobreposição do Smart Citizen"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Nenhum dado de blueprint foi carregado ainda. Carregue as strings primeiro e depois inicie a sobreposição."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...e mais {count}"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Não identificado"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "O decodificador de escaneamento de mineração parou após um erro. Reinicie a sobreposição para tentar de novo; a aba Log tem os detalhes."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Blueprints"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Minerais"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Fabricação"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral ou local..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Desmarcar tudo"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Faz a etiqueta do escaneamento brilhar quando este mineral for decodificado"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral ou componente..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Nenhum mineral encontrado. Carregue os textos primeiro se a lista continuar vazia."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Nenhum resultado. Extraia o DataForge e gere os aprimoramentos com Commodities ou Journal marcado para preencher esta lista."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Outro"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Usado em (por {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} precisa de:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Precisa de: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Nível: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Assinatura de varredura: {base} por rocha, até {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "Usado em {count} itens fabricados"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Sistema: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Minerais aqui: {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Sobreposição do Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log; nunca toca no processo do jogo."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Iniciar sobreposição"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Parar sobreposição"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Decodificador de escaneamento de mineração"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Lê a assinatura de escaneamento abaixo do radar e mostra embaixo o tipo e a quantidade de depósitos."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Marcar novos blueprints como possuídos"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Enquanto a sobreposição roda, os blueprints recebidos no jogo são lidos do Game.log e marcados como possuídos."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Salvar amostras de escaneamento"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Salva uma pequena imagem de cada nova assinatura lida, para que leituras erradas possam ser enviadas e melhorar o decodificador."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Abrir pasta de amostras"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Gaveta da sobreposição"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Uma gaveta presa à borda da tela, na posição escolhida abaixo. Desative para ocultá-la junto com suas seções."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Blueprints"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Pesquise blueprints, veja quais missões os dão e marque os que você possui."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Minerais"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Digite um mineral para ver onde ele é encontrado, por sistema estelar, ou um local para ver seus minerais."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Fabricação"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Digite um mineral para ver quais componentes o usam, ou um componente para ver os minerais necessários. Requer uma extração do DataForge."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Posição da gaveta:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Superior esquerda"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Superior central"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Superior direita"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Meio à esquerda"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Meio à direita"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Inferior esquerda"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Inferior central"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Inferior direita"
     }
   }
 }
