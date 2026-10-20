@@ -10,21 +10,12 @@ without rebuilding — production code paths set it at build time
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from utils import build_mode  # noqa: E402
-# Import via the `src.X` path that production code uses, so `isinstance`
-# checks against AppSettings._backend (set inside production via
-# `from src.utils.json_settings import JsonSettings`) actually match.
-# The bare `from utils.X` alternative would create a separate class
-# object in sys.modules — the same ImportPath-Inconsistency-Bug we hit
-# in PR #6's tests.
-from src.utils.json_settings import JsonSettings  # noqa: E402
-from src.utils.settings import AppSettings  # noqa: E402
+from src.utils import build_mode
+from src.utils.json_settings import JsonSettings
+from src.utils.settings import AppSettings
 
 pytestmark = pytest.mark.unit
 

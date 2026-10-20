@@ -404,6 +404,57 @@ class BlueprintLogScanWorker(QThread):
             self.finished.emit(None)
 
 
+class LiveBlueprintLogWorker(QThread):
+    """Watch the active channel's live ``Game.log`` for new blueprints while
+    the Smart Citizen Overlay runs.
+
+    Polls ``blueprint_log_scanner.GameLogTail`` every few seconds. The first
+    poll can read a whole (tens of MB) ``Game.log``, so this runs off the main
+    thread. Like ``BlueprintLogScanWorker`` it stays read-only: it emits raw
+    names plus the newest timestamp, and the main-thread slot normalizes them
+    and updates the owned set (the persisted watermark stays the Scan's).
+    Only started for LIVE or HOTFIX (#446). Stop with
+    ``requestInterruption()`` + ``wait()``.
+    """
+
+    POLL_MS = 3000
+
+    blueprints_found = pyqtSignal(object, object)  # (list[str] raw names, datetime newest)
+
+    def __init__(self, log_path, since):
+        super().__init__()
+        self._log_path = log_path
+        self._since = since
+
+    def run(self):
+        from src.utils.blueprint_log_scanner import GameLogTail
+        tail = GameLogTail(self._log_path, since=self._since)
+        failing = False
+        while not self.isInterruptionRequested():
+            try:
+                events = tail.poll()
+                failing = False
+            except Exception:
+                # The first failure in a row with its traceback; repeats at
+                # debug, so a lasting fault doesn't flood the Log tab every
+                # poll.
+                if failing:
+                    logger.debug("Live blueprint log poll failed again", exc_info=True)
+                else:
+                    logger.exception("Live blueprint log poll failed")
+                failing = True
+                events = []
+            if events:
+                self.blueprints_found.emit(
+                    [ev.name for ev in events], max(ev.timestamp for ev in events)
+                )
+            # Sleep in short steps so stop() doesn't wait a full poll interval.
+            for _ in range(self.POLL_MS // 100):
+                if self.isInterruptionRequested():
+                    return
+                self.msleep(100)
+
+
 class InstallScanWorker(QThread):
     """Find every Star Citizen install on this machine (2.4).
 
