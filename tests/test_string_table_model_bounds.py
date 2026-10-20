@@ -18,7 +18,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.gui.string_table_model import StringTableModel  # noqa: E402
 from src.models.string_model import StringEntry  # noqa: E402

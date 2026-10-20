@@ -50,68 +50,74 @@
       "preferred_side": "above"
     },
     {
+      "id": "overlay",
+      "title": "8. Smart Citizen Overlay",
+      "description": "Start the overlay here or with the toolbar's Overlay button. Over the game it decodes mining scan signatures, opens a drawer to search your blueprints, minerals and crafting, and marks blueprints you earn as owned. Run the game in borderless windowed mode on your main screen.",
+      "preferred_side": "below"
+    },
+    {
       "id": "edit",
-      "title": "8. Edit strings",
+      "title": "9. Edit strings",
       "description": "Each row is one localization record. Double-click a cell in the Custom Value column to edit — your changes are autosaved. The ★ column marks ships as favorites so they sort to the top of the ASOP.",
       "preferred_side": "auto"
     },
     {
       "id": "filter_row",
-      "title": "9. Filter by column",
+      "title": "10. Filter by column",
       "description": "The row of search boxes under the column headers filters the table as you type. Each box scopes to its own column (Key, Default Value, Current Value, Custom Value); filters across columns combine with AND. Click the × inside a box to clear it.",
       "preferred_side": "below"
     },
     {
       "id": "editor",
-      "title": "10. Editor pane",
+      "title": "11. Editor pane",
       "description": "For longer strings click Editor to open a side-docked editing canvas with more room. The pane follows the row you select; right-click selected text for Underline / Highlight emphasis. Drag the title bar to undock it into a free-floating window.",
       "preferred_side": "below"
     },
     {
       "id": "preview",
-      "title": "11. Preview pane",
+      "title": "12. Preview pane",
       "description": "Whenever you select a row, this pane on the right shows the rendered text of its current value.",
       "preferred_side": "below"
     },
     {
       "id": "apply",
-      "title": "12. Apply Enhancements",
+      "title": "13. Apply Enhancements",
       "description": "Apply writes the merged result to the game's global.ini. A timestamped backup of the current global.ini is created first (up to 5 are kept, restorable from Restore Backup).",
       "preferred_side": "below"
     },
     {
       "id": "cfg_appearance",
-      "title": "13. Config: Appearance",
+      "title": "14. Config: Appearance",
       "description": "Pick the app theme (Default / Light / Dark / ODW) and optionally disable the auto-tour on new versions.",
       "preferred_side": "right"
     },
     {
       "id": "cfg_sc_install",
-      "title": "14. Config: Star Citizen Installation",
+      "title": "15. Config: Star Citizen Installation",
       "description": "Path to your Star Citizen install root (the directory containing LIVE, PTU, EPTU, etc.). Auto-detected at install time; edit here if your game lives elsewhere. The Channel dropdown picks which channel the app reads and writes, and the Language dropdown switches both the app's UI and the game strings.",
       "preferred_side": "right"
     },
     {
       "id": "cfg_data_folder",
-      "title": "15. Config: Smart Citizen Data",
+      "title": "16. Config: Smart Citizen Data",
       "description": "Where user.ini, caches, DataForge extraction, generated enhancement INIs, and backups live. Defaults to Documents\\Smart Citizen; move it off OneDrive if extraction or cache cleanup is slow.",
       "preferred_side": "right"
     },
     {
       "id": "cfg_p4k_extraction",
-      "title": "16. Config: Base Localization",
+      "title": "17. Config: Base Localization",
       "description": "The Extract from Data.p4k button lives here. This is the sole source for base strings and enhancement data — re-run it after game patches to refresh.",
       "preferred_side": "right"
     },
     {
       "id": "cfg_tools",
-      "title": "17. Config: Tools",
+      "title": "18. Config: Tools",
       "description": "Import an external INI into your overrides via the conflict-resolution dialog, or reset your user.ini for the active channel (auto-backed-up before clearing).",
       "preferred_side": "right"
     },
     {
       "id": "help",
-      "title": "18. Help & feedback",
+      "title": "19. Help & feedback",
       "description": "The Help button opens a side-panel with the full guide, a Known Issues list, and a feedback link to the Smart Citizen Discord channel. That's everything you need to get started — good luck, citizen.",
       "preferred_side": "below"
     }

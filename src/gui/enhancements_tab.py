@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.gui.combo_box import NoScrollComboBox
 from src.gui.tag_mapping_dialog import TagMappingDialog
 from src.gui.theme import get_button_color
 from src.utils.i18n import tr
@@ -28,60 +29,10 @@ _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
 logger = logging.getLogger(__name__)
 
 
-def reposition_combo_popup_below_if_it_fits(combo, popup) -> None:
-    """Move *popup* to align with *combo*'s bottom-left corner, but only if
-    it actually fits on-screen there.
-
-    Qt's default popup placement flips the list above the box when it judges
-    there isn't room below (common in a scroll area, even when there visually
-    is room) — force it below whenever that actually fits, so the option list
-    is where the user expects it. A combo near the bottom of the screen is
-    the case Qt's flip logic exists for; forcing "below" there would run the
-    popup off the bottom of the display, so only override when there's room.
-
-    Shared by _NoScrollComboBox.showPopup below (initial placement) and
-    blueprint_tracker_tab.py's _NoWheelComboBox.showPopup (#388, re-checked
-    a second time there after forcibly shrinking an overlong popup — the
-    first check ran against the original, taller height).
-    """
-    below_point = combo.mapToGlobal(combo.rect().bottomLeft())
-    screen = combo.screen()
-    fits_below = (
-        screen is None
-        or below_point.y() + popup.height() <= screen.availableGeometry().bottom()
-    )
-    if fits_below:
-        popup.move(below_point)
-
-
-class _NoScrollComboBox(QComboBox):
-    """A combo box that ignores the mouse wheel unless it has focus (#197).
-
-    The Enhancements tab lives in a scroll area with many dropdowns; by default
-    a wheel scroll over an unfocused combo changes its selection instead of
-    scrolling the page. StrongFocus stops the wheel from focusing the combo, and
-    wheelEvent passes the scroll through to the page when the combo isn't focused.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
-    def wheelEvent(self, event):  # noqa: N802 (Qt override)
-        if self.hasFocus():
-            super().wheelEvent(event)
-        else:
-            event.ignore()
-
-    def showPopup(self):  # noqa: N802 (Qt override)
-        super().showPopup()
-        reposition_combo_popup_below_if_it_fits(self, self.view().window())
-
-
 class _NoScrollTabBar(QTabBar):
     """A tab bar that never switches tabs on mouse wheel scroll.
 
-    Unlike a combo box (_NoScrollComboBox above), there's no legitimate case
+    Unlike a combo box (NoScrollComboBox), there's no legitimate case
     for wheel-scrolling through tabs here — a hover-scroll over the Tag
     Builder's category tabs (Components/Missiles/.../Mission Titles) should
     scroll the page, not silently jump categories. Always ignores the wheel
@@ -678,7 +629,7 @@ class EnhancementsTab(QWidget):
         self._sort_prefix_label = QLabel(tr("enhancements.sort_prefix_label"))
         prefix_row.addWidget(self._sort_prefix_label)
 
-        self.favorite_prefix_combo = _NoScrollComboBox()
+        self.favorite_prefix_combo = NoScrollComboBox()
         self.favorite_prefix_combo.setToolTip(tr("enhancements.favorite_prefix_tooltip"))
         self.favorite_prefix_combo.setSizeAdjustPolicy(
             QComboBox.SizeAdjustPolicy.AdjustToContents
@@ -755,7 +706,7 @@ class EnhancementsTab(QWidget):
 
         self._header_style_label_widget = QLabel(tr("enhancements.mission_label_header_style"))
         grid.addWidget(self._header_style_label_widget, 1, 4)
-        self._header_em_combo = _NoScrollComboBox()
+        self._header_em_combo = NoScrollComboBox()
         # #164: show what the tags actually do in-game (EM3 underlines, EM4
         # renders blue) instead of the opaque EM3/EM4 names. The stored value
         # stays the EM tag, so the generator output is unchanged.
@@ -1278,7 +1229,7 @@ class _ElementRow(QWidget):
         self.label.setMinimumWidth(90)
         row.addWidget(self.label)
 
-        self.style_combo = _NoScrollComboBox()
+        self.style_combo = NoScrollComboBox()
         for style_key, style_label in STYLES_BY_KIND.get(spec.kind, ()):
             self.style_combo.addItem(
                 self._build_style_label(spec.kind, style_key, style_label),
@@ -1424,7 +1375,7 @@ class _TagBuilderPage(QWidget):
 
         self._sep_label = QLabel(tr("enhancements.tag_separator_label"))
         ctrl_grid.addWidget(self._sep_label, 0, 0)
-        self.sep_combo = _NoScrollComboBox()
+        self.sep_combo = NoScrollComboBox()
         for key, label, _ in SEPARATORS:
             # "None" is offered for every category, commodities included: a
             # deliberate no-separator commodity tag renders "[CFCollection]".
@@ -1437,7 +1388,7 @@ class _TagBuilderPage(QWidget):
 
         self._enc_label = QLabel(tr("enhancements.tag_enclosing_label"))
         ctrl_grid.addWidget(self._enc_label, 1, 0)
-        self.enc_combo = _NoScrollComboBox()
+        self.enc_combo = NoScrollComboBox()
         for key, label, _open, _close in enclosings_for(self.category):
             self.enc_combo.addItem(label, userData=key)
         self._select_combo(self.enc_combo, config.enclosing)
@@ -1446,7 +1397,7 @@ class _TagBuilderPage(QWidget):
 
         self._placement_label = QLabel(tr("enhancements.tag_placement_label"))
         ctrl_grid.addWidget(self._placement_label, 2, 0)
-        self.placement_combo = _NoScrollComboBox()
+        self.placement_combo = NoScrollComboBox()
         for key, label in PLACEMENTS:
             self.placement_combo.addItem(label, userData=key)
         self._select_combo(self.placement_combo, config.placement)
@@ -1460,7 +1411,7 @@ class _TagBuilderPage(QWidget):
         if self.category == "commodities":
             self._usage_sep_label = QLabel(tr("enhancements.tag_craft_usage_separator_label"))
             ctrl_grid.addWidget(self._usage_sep_label, 3, 0)
-            self.usage_sep_combo = _NoScrollComboBox()
+            self.usage_sep_combo = NoScrollComboBox()
             for key, label, _ in SEPARATORS:
                 self.usage_sep_combo.addItem(label, userData=key)
             self._select_combo(self.usage_sep_combo, config.usage_separator)
@@ -1661,7 +1612,7 @@ class _TagBuilderPage(QWidget):
         col.addWidget(self._mt_hint)
 
         def _combo(items) -> QComboBox:
-            c = _NoScrollComboBox()
+            c = NoScrollComboBox()
             for entry in items:
                 c.addItem(entry[1], userData=entry[0])
             # AdjustToContents (rather than the default

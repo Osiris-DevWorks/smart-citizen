@@ -4,13 +4,14 @@ Standalone CLI scripts and the build pipeline. See the root `CLAUDE.md` for proj
 
 ## Files
 
-- `generate_enhancements_ini.py` — reads DataForge entity XMLs (no external JSON) → enhancement INI files in cache (ships, components, ship weapons, FPS weapons descriptions, FPS armor weight tags).
+- `generate_enhancements_ini.py` — reads DataForge entity XMLs (no external JSON) → enhancement INI files in cache (ships, components, ship weapons, FPS weapons descriptions, FPS armor weight tags). The ship component generators (shield, radar, cooler, power plant, quantum drive, bomb rack) and `_run_gen_components` are locked by `tests/test_component_generators.py` (#485).
 - `extract_components.py` — diffs base.ini against stock vanilla to produce components.ini.
 - `gen_commodity_crafting.py` — generates `commodity_crafting_enhancements.ini` with crafting blueprint usage from DataForge XMLs.
 - `compare_kraken_fixture.py` — research/reporting: diffs the `kraken_4.7.ini` ground-truth fixture against the generated `mission_rewards_enhancements.ini` to validate blueprint list output. Read-only.
 - `diff_bp_kraken.py`, `diff_bp_annotations.py`, `diff_bp_csv_fixture.py` — read-only diagnostics for `[BP]` / `[BP?]` blueprint annotations on mission rewards. Each compares `mission_rewards_enhancements.ini` against a different ground truth (kraken fixture, applied LIVE `global.ini`, `missions_4.7.177.csv` per-variant fixture). Use when blueprint tags regress.
 - `diff_base_ini_channels.py` — read-only: diffs cached `base.ini` between two SC channels (e.g. `LIVE` vs `PTU`) and reports added / removed / changed loc keys as a category-bucket summary plus optional full machine-readable list. Defaults to `%USERPROFILE%\Documents\Smart Citizen`; `--user-data` overrides for OneDrive-redirected installs.
 - `diff_mission_rewards_channels.py` — companion to `diff_base_ini_channels.py` for the generated `mission_rewards_enhancements.ini`: diffs mission entries between channels and reports adds / removes / changes. Use to verify a CIG balance pass or new mission archetype propagated through the enhancements pipeline across `LIVE` / `PTU`.
+- `add_sco_sample.py` — turns SCO crops from `logs/sco_samples` (named `<...>_<digits>.png`; rename a misread one to the real number or pass `--digits`) into `DIGIT_SAMPLES` entries via `sco_digit_reader.cut_glyphs`. Prints them for review; `--write` adds the new ones to `src/utils/sco_digit_samples.py`, skipping glyphs already there. `--screen-height` for crops from screens other than 1600 px. Locked by `tests/test_add_sco_sample.py`.
 - `discord_notify.py` — GitHub Actions release webhook.
 - `build/build_exe.py`, `build/build_all.bat`, `build/clean_cache_for_distribution.py` — build pipeline; see `scripts/build/BUILD_INSTRUCTIONS.md`.
 

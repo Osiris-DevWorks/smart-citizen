@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from utils.dataforge_patcher import (
+from src.utils.dataforge_patcher import (
     LocstringWorkaround,
     apply_locstring_workarounds,
     apply_patches,

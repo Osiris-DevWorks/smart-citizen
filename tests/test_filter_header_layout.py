@@ -26,7 +26,6 @@ from PyQt6.QtGui import QStandardItemModel  # noqa: E402
 from PyQt6.QtWidgets import QApplication, QHeaderView, QTableView  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.gui.filter_header import FilterHeaderView  # noqa: E402
 

@@ -446,7 +446,7 @@ class AppSettings:
         "blueprint": "mission_title_tag/blueprint",
         "ace":       "mission_title_tag/ace",
         # RS ("resonance signature") tag for Recco Battaglia's Scan/Mining
-        # contracts (4.9+) — see MINEABLE_RS_VALUES in generate_enhancements_ini.py.
+        # contracts (4.9+) — see MINEABLE_RS_VALUES in src/utils/mining_signatures.py.
         "rs":        "mission_title_tag/rs",
         # Reputation TRACK suffix (e.g. "(Security)"/"(Contractor)") on the
         # title's Rep tag — see issue #161. Off by default (see
@@ -605,14 +605,14 @@ class AppSettings:
     USER_DATA_DIR_ALIASES = ("UserDataDir",)
     # Explicit override for the DataForge XML cache root. Independent of
     # USER_DATA_DIR so a user can keep user.ini / source cache / backups in
-    # Documents (or wherever) while sending the ~1.4 GB DataForge tree to a
+    # Documents (or wherever) while sending the ~1.2 GB DataForge tree to a
     # fast local SSD (or to a folder excluded from OneDrive / Defender).
     # Pre-1.4.1 the cache was hard-pinned to %LOCALAPPDATA% with no way to
     # move it; this key is the configurable replacement.
     CACHE_DIR = "cache_dir"
     # Set by the Config tab when the user accepts a cache-path change with
     # "delete old cache after re-extraction". The path is removed after the
-    # next successful P4K extraction so the 1.4 GB orphan doesn't linger.
+    # next successful P4K extraction so the 1.2 GB orphan doesn't linger.
     PENDING_CACHE_CLEANUP = "pending_cache_cleanup"
     # When True (default) the components Tag Builder annotation is woven
     # into the POTENTIAL BLUEPRINTS lists inside mission descriptions
@@ -665,6 +665,38 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+
+    # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
+    # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
+    # its sco_overlay.SECTION_ICONS name.
+    SCO_SCAN_DECODER = "scan_decoder"
+    SCO_DRAWER = "drawer"
+    SCO_DRAWER_SECTION_PREFIX = "drawer_"
+    SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
+    SCO_SAVE_SAMPLES = "save_samples"
+    # Option name -> (key, default). All on by default, matching how the
+    # overlay behaved before the tab existed.
+    SCO_OPTION_SETTING = {
+        SCO_SCAN_DECODER:         ("sco/scan_decoder", True),
+        SCO_DRAWER:               ("sco/drawer", True),
+        SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
+        SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
+        SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
+        SCO_SAVE_SAMPLES:         ("sco/save_samples", True),
+    }
+    # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
+    # every combination but the screen centre.
+    SCO_DRAWER_POSITION = "sco/drawer_position"
+    SCO_DRAWER_POSITIONS = (
+        "top_left", "top_center", "top_right",
+        "middle_left", "middle_right",
+        "bottom_left", "bottom_center", "bottom_right",
+    )
+    SCO_DRAWER_POSITION_DEFAULT = "middle_right"
+    # Ores ticked in the SCO drawer's Minerals section: a decoded scan of one
+    # makes the signature label glow. JSON list of ORE_SIGNATURES keys.
+    SCO_WATCHED_MINERALS = "sco/watched_minerals"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1558,6 +1590,51 @@ class AppSettings:
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP, bool(enabled)
         )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_drawer_position() -> str:
+        """Where the SCO drawer sits (one of ``SCO_DRAWER_POSITIONS``)."""
+        value = str(AppSettings.settings().value(
+            AppSettings.SCO_DRAWER_POSITION, AppSettings.SCO_DRAWER_POSITION_DEFAULT))
+        if value not in AppSettings.SCO_DRAWER_POSITIONS:
+            return AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        return value
+
+    @staticmethod
+    def set_sco_drawer_position(position: str) -> None:
+        if position not in AppSettings.SCO_DRAWER_POSITIONS:
+            position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        AppSettings.settings().setValue(AppSettings.SCO_DRAWER_POSITION, position)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_watched_minerals() -> set:
+        """Ores whose decoded scan makes the SCO label glow (lowercase
+        ``ORE_SIGNATURES`` keys). JSON, like ``get_owned_items``."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_WATCHED_MINERALS, "", type=str)
+        try:
+            return {str(name) for name in json.loads(raw)} if raw else set()
+        except (ValueError, TypeError):
+            return set()
+
+    @staticmethod
+    def set_sco_watched_minerals(names) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_option(name: str) -> bool:
+        """One of the Overlay tab's switches (``SCO_OPTION_SETTING``)."""
+        key, default = AppSettings.SCO_OPTION_SETTING[name]
+        return bool(AppSettings.settings().value(key, default, type=bool))
+
+    @staticmethod
+    def set_sco_option(name: str, enabled: bool) -> None:
+        key, _default = AppSettings.SCO_OPTION_SETTING[name]
+        AppSettings.settings().setValue(key, bool(enabled))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -2879,6 +2956,42 @@ class AppSettings:
         return lang_dir / "base.ini"
 
     @staticmethod
+    def get_global_source_base_ini(language: "str | None" = None) -> Path:
+        r"""The base.ini the ``global`` merge source reads for *language*
+        (default: the selected language): its own base.ini when the active
+        channel's cache has it, otherwise the English one (#502).
+
+        A language whose file has not been fetched for this channel or data
+        folder yet reads English until a language switch or Map Language
+        File fetches it. Startup, a channel switch, a data-folder change and
+        a successful global.ini extraction all point the source here; all
+        but startup used to point every language at the English base.ini,
+        so the table, and the next Apply, turned English.
+        """
+        if language is None:
+            language = AppSettings.get_selected_language()
+        own = AppSettings.get_base_ini_path(language)
+        if language != AppSettings.DEFAULT_LANGUAGE and not own.exists():
+            return AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
+        return own
+
+    @staticmethod
+    def sync_global_source_path(context: str) -> None:
+        """Point a file-backed ``global`` source at
+        :meth:`get_global_source_base_ini`; a URL source (a custom remote
+        one) is left alone. Run at every start and after a channel switch or
+        a data-folder change, because the loader reads the stored path, not
+        the channel-aware helpers. *context* goes in the log line."""
+        stored = AppSettings.get_source_path(AppSettings.SOURCE_GLOBAL)
+        if stored.startswith(("http://", "https://")):
+            return
+        canonical = str(AppSettings.get_global_source_base_ini())
+        if stored != canonical:
+            AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, canonical)
+            logger.info(f"Re-synced {AppSettings.SOURCE_GLOBAL} source path {context}: "
+                        f"{stored or '(unset)'} → {canonical}")
+
+    @staticmethod
     def get_enhancements_dir(language: "str | None" = None) -> Path:
         r"""Directory holding *language*'s generated ``*_enhancements.ini`` files.
 
@@ -3048,11 +3161,17 @@ class AppSettings:
         return logs_dir
 
     @staticmethod
+    def get_sco_samples_dir() -> Path:
+        r"""Where the Smart Citizen Overlay keeps the readout crops it saves
+        for retraining its digit reader (``{logs_dir}\sco_samples\``)."""
+        return AppSettings.get_logs_dir() / "sco_samples"
+
+    @staticmethod
     def migrate_dataforge_cache_to_local() -> None:
         r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
         Pre-1.0 the DataForge cache lived inside get_cache_dir() (Documents\…),
-        putting ~1.4 GB of extracted XMLs into the OneDrive sync tree. Moving it
+        putting ~1.2 GB of extracted XMLs into the OneDrive sync tree. Moving it
         out eliminates per-file OneDrive / Defender / Indexer hooks during
         extraction and keeps large build-artefact files out of cloud sync.
 
@@ -3245,7 +3364,7 @@ class AppSettings:
 
         Portable mode:
           1. ``CACHE_DIR`` override if set (portable users may want the
-             1.4 GB cache off a slow USB stick).
+             1.2 GB cache off a slow USB stick).
           2. ``<exe-dir>/data/cache/`` — sits next to all other portable
              data so a USB-stick install is one fully self-contained folder.
         """
@@ -3260,22 +3379,30 @@ class AppSettings:
         ) / "Smart Citizen"
 
     @staticmethod
+    def get_dataforge_cache_leaf(channel: "str | None" = None) -> Path:
+        """Return *channel*'s DataForge cache folder without creating it.
+
+        *channel* defaults to the active one. :meth:`get_dataforge_cache_dir`
+        is this plus the ``mkdir``; use this one for a check that must leave
+        the disk alone, such as the guard on a queued old-cache cleanup (#486).
+        """
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        return AppSettings.get_dataforge_cache_base() / channel / "cache" / "dataforge"
+
+    @staticmethod
     def get_dataforge_cache_dir() -> Path:
         """Return the directory where DataForge entity XMLs are cached after unforge.
 
         Defaults to ``%LOCALAPPDATA%\\Smart Citizen\\{channel}\\cache\\dataforge\\``
         — never OneDrive-synced, eliminating per-file sync hooks during
-        extraction of the ~1.4 GB / ~28k-file XML tree. A user can override
+        extraction of the ~1.2 GB / ~31k-file XML tree. A user can override
         the base via the Config tab (Smart Citizen Data → DataForge Cache
         Folder); see :meth:`get_dataforge_cache_base` for the resolution
         order. Channel nesting is preserved across all variants so each
         SC channel stays isolated.
         """
-        cache_dir = (
-            AppSettings.get_dataforge_cache_base()
-            / AppSettings.get_active_channel()
-            / "cache" / "dataforge"
-        )
+        cache_dir = AppSettings.get_dataforge_cache_leaf()
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
 
@@ -3468,6 +3595,8 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
+            AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
+            AppSettings.SCO_WATCHED_MINERALS: "[]",
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({
@@ -3476,6 +3605,9 @@ class AppSettings:
         })
         defaults.update({
             key: True for key in AppSettings._MISSION_FIELD_SETTING.values()
+        })
+        defaults.update({
+            key: default for key, default in AppSettings.SCO_OPTION_SETTING.values()
         })
         defaults.update({
             key: AppSettings._MISSION_TITLE_TAG_DEFAULTS.get(name, True)

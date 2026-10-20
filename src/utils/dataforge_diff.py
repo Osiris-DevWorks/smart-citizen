@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 MANIFEST_FILE = ".diff_manifest.json"
 
-# Default parallel workers for the per-file hash sweep. ~28k tiny XMLs on
+# Default parallel workers for the per-file hash sweep. ~31k tiny XMLs on
 # Windows hit Defender / Search Indexer / OneDrive on every open, so the
 # work is I/O-bound, not CPU-bound; oversubscribing past CPU count helps.
 _HASH_WORKERS = max(8, (os.cpu_count() or 4) * 2)
@@ -75,7 +75,7 @@ def _build_snapshot(
     Walk the dataforge cache and return a snapshot dict:
         { "relative/path.xml": {"mtime": float, "sha256": str}, ... }
 
-    Hashes every XML in parallel — the cache holds ~28k XMLs and a
+    Hashes every XML in parallel — the cache holds ~31k XMLs and a
     serial sweep over them costs minutes on Windows because each
     file-open is intercepted by Defender / Search Indexer / OneDrive.
     A bounded ThreadPoolExecutor brings that down to seconds-to-tens.
@@ -148,7 +148,7 @@ def update_manifest(
 
     ``progress_callback(completed, total, label)`` is forwarded to the
     underlying snapshot sweep. The sweep is the long-running part —
-    SHA-256 of ~28k files — so wiring this in is the difference between
+    SHA-256 of ~31k files — so wiring this in is the difference between
     a frozen progress bar and a moving one.
     """
     # Long-path safety for the hash sweep below — see win_paths.win_long_path
@@ -157,7 +157,7 @@ def update_manifest(
     cache_dir = Path(win_long_path(cache_dir))
     snapshot = _build_snapshot(cache_dir, progress_callback=progress_callback)
     # The hash sweep above reports 100% the instant it finishes, but writing
-    # ~28k entries out is itself not instantaneous — without this the bar
+    # ~31k entries out is itself not instantaneous — without this the bar
     # sat pinned at "100%"/full width while the JSON write was still going,
     # reading as frozen. Drop back to indeterminate with a distinct label so
     # it's visibly still doing something until the write actually completes.
@@ -165,7 +165,7 @@ def update_manifest(
         progress_callback(0, 0, "Writing diff manifest…")
     with open(_manifest_path(cache_dir), "w", encoding="utf-8") as f:
         # Compact (no indent) — this file is machine-read only, and skipping
-        # pretty-printing cuts the write time for ~28k entries noticeably.
+        # pretty-printing cuts the write time for ~31k entries noticeably.
         json.dump(snapshot, f)
 
 

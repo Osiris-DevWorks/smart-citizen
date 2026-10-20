@@ -3,7 +3,7 @@
 Pre-1.4.1 ``AppSettings.get_dataforge_cache_dir()`` was hard-pinned to
 ``%LOCALAPPDATA%\\Smart Citizen\\{channel}\\cache\\dataforge\\`` with no
 way to redirect it. The motivation for LOCALAPPDATA was sound
-(OneDrive churn on the ~1.4 GB / ~28k-file XML tree) but it ignored
+(OneDrive churn on the ~1.2 GB / ~31k-file XML tree) but it ignored
 two cases the user could reasonably control:
 
   * **Registry-mode override** — a user who has explicitly moved
@@ -29,7 +29,6 @@ from unittest.mock import Mock
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
@@ -107,7 +106,7 @@ class TestRegistryModeDefault:
 
     Locks the back-compat contract: a user upgrading from 1.4.0 with no
     CACHE_DIR set must continue to read/write the same path so their
-    existing 1.4 GB cache stays valid without re-extraction.
+    existing ~1.2 GB cache stays valid without re-extraction.
     """
 
     def test_default_uses_localappdata(self, json_backend, registry_mode, monkeypatch, tmp_path):
