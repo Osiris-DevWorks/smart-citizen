@@ -1361,6 +1361,12 @@ class AppSettings:
             return default_config(category)
         AppSettings._migrate_tag_config_mapping(category, cfg)
         AppSettings._backfill_new_elements(category, cfg)
+        # The Armor tab offers no "None (space only)" enclosing (#492, see
+        # tag_builder.NO_NONE_ENCLOSING_CATEGORIES); a stored one, from a
+        # hand-edited or imported config, reads as Square.
+        from src.utils.tag_builder import NO_NONE_ENCLOSING_CATEGORIES
+        if category in NO_NONE_ENCLOSING_CATEGORIES and cfg.enclosing == "none":
+            cfg.enclosing = "square"
         # 1.5.0: commodities gained a second flag (Collection). A stored
         # single-element config used separator "none" (meaningless when there
         # was only one flag), which post-1.5.0 would mash the two flags into
@@ -1465,11 +1471,12 @@ class AppSettings:
 
     @staticmethod
     def get_tag_annotate_mission_descs() -> bool:
-        """Whether component tags are woven into POTENTIAL BLUEPRINTS lists
-        inside mission descriptions. Default True (annotation enabled),
-        preserving the v1.4.0 behavior. Issue #31 follow-up — when False,
-        the BP-pool resolver skips the tag weave entirely and mission
-        bodies render with bare names."""
+        """Whether component tags, and armor weight tags while Armor > Weight
+        is on (#492), are woven into POTENTIAL BLUEPRINTS lists inside
+        mission descriptions. Default True (annotation enabled), preserving
+        the v1.4.0 behavior. Issue #31 follow-up — when False, the BP-pool
+        resolver skips the tag weave entirely and mission bodies render with
+        bare names."""
         raw = AppSettings.settings().value(
             AppSettings.TAG_ANNOTATE_MISSION_DESCS, True, type=bool
         )

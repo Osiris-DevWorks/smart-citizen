@@ -1098,7 +1098,7 @@
     },
     "desc": {
       "ht": "Recursos opcionais que expandem os dados de localização básicos: alternadores de categoria para o gerador de aprimoramentos, um prefixo de favoritos para a lista de naves no jogo e um Construtor de Tags que personaliza as tags entre colchetes nos componentes, mísseis e armas das naves.",
-      "at": "Recursos opcionais que expandem os dados de localização básicos: alternadores de categoria para o gerador de aprimoramentos, um prefixo de favoritos para a lista de naves no jogo e um Construtor de Tags que personaliza as tags entre colchetes nos componentes, mísseis e armas das naves."
+      "at": "Recursos opcionais que expandem os dados de localização básicos: alternadores de categoria para o gerador de aprimoramentos, um prefixo de favoritos para a lista de naves no jogo e um Construtor de Tags que personaliza as tags entre colchetes nos componentes, mísseis, armas das naves, commodities e armaduras."
     },
     "enhancements_group": {
       "ht": "Aprimoramentos na Localização",
@@ -1118,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "Estatísticas de combate para armas de FPS",
-      "at": "Estatísticas de combate para armas de FPS"
+      "at": "Estatísticas de combate para armas de FPS e etiquetas de peso das armaduras"
     },
     "cat_desc_missions": {
       "ht": "Recompensas de XP e obtenção de blueprints nas missões",
@@ -1162,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "Personaliza as etiquetas de nome entre colchetes em componentes, mísseis e armas da nave. As alterações entram em vigor após clicar em “Aplicar alterações nas tags” e executar novamente a opção “Gerar Aprimoramentos”.",
-      "at": "Personaliza as etiquetas de nome entre colchetes em componentes, mísseis e armas da nave. As alterações entram em vigor após clicar em “Aplicar alterações nas tags” e executar novamente a opção “Gerar Aprimoramentos”."
+      "at": "Personaliza as etiquetas de nome entre colchetes em componentes, mísseis, armas da nave, commodities e armaduras, além da rota nos títulos das missões de transporte. As alterações entram em vigor após clicar em “Aplicar alterações nas tags” e executar novamente a opção “Gerar Aprimoramentos”."
     },
     "preview_label": {
       "ht": "Pré-visualizar:",
@@ -1170,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "Anotar componentes nas descrições das missões",
-      "at": "Anotar componentes nas descrições das missões"
+      "at": "Anotar componentes e armaduras nas descrições das missões"
     },
     "apply_tag_changes_btn": {
       "ht": "Aplicar alterações nas tags",
@@ -1334,15 +1334,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Quando marcado, a tag [CLASS-Sx-grade] configurada é adicionada aos nomes de componentes dentro da lista POTENTIAL BLUEPRINTS das descrições de missão. Desmarque para um corpo de missão mais limpo, mantendo a tag nos nomes reais dos componentes em outros lugares."
+      "at": "Quando marcado, a tag de componente configurada e, com Armor > Weight ativado, a tag de peso da armadura são adicionadas aos nomes dos itens na lista POTENTIAL BLUEPRINTS das descrições de missão. Desmarque para um corpo de missão mais limpo. As tags continuam nos nomes dos itens em outros lugares."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Restaurar o padrão, mapeamento e ordenação padrão para cada categoria (Componentes / Mísseis / Armas de Nave). Não salva nem regenera até você clicar em Aplicar Alterações nas Tags ou Gerar Aprimoramentos."
+      "at": "Restaurar o padrão, mapeamento e ordenação padrão em cada aba do Construtor de Tags (também desliga de novo as tags opcionais de commodities e armaduras). As configurações de tags não são salvas nem regeneradas até você clicar em Aplicar Alterações nas Tags ou Gerar Aprimoramentos, mas as Tags gerais da aba Mission Titles são salvas assim que mudam, então a redefinição as volta aos padrões na hora."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Salvar as configurações de tags de Componentes / Mísseis / Armas de Nave e executar novamente o gerador de aprimoramentos. Novas tags aparecem no jogo após a próxima Aplicação de Aprimoramentos."
+      "at": "Salvar as configurações de tags de todas as abas do Construtor de Tags e executar novamente o gerador de aprimoramentos. Novas tags aparecem no jogo após a próxima Aplicação de Aprimoramentos."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1391,6 +1391,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Editar o texto Curto / Médio / Longo do rótulo de coleção (ex.: Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Editar o texto Curto / Médio / Longo de cada classe de peso de armadura (ex.: Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -3101,7 +3105,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Monte as tags entre colchetes adicionadas aos nomes de componentes, mísseis, armas de nave e commodities. Reordene os elementos com ▲/▼, desmarque para excluir, mude o tamanho das abreviações, escolha o separador e os colchetes, ou coloque a tag depois do nome em vez de antes."
+        "at": "Monte as tags entre colchetes adicionadas aos nomes de componentes, mísseis, armas de nave, commodities e armaduras. Reordene os elementos com ▲/▼, desmarque para excluir, mude o tamanho das abreviações, escolha o separador e os colchetes, ou coloque a tag depois do nome em vez de antes."
       }
     },
     "edit": {

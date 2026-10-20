@@ -55,6 +55,24 @@ them against the new source.
   descarga configurada..."). The AI `at` fallback for every other non-English
   language had the same staleness (no `ht` to protect there, so the 2026-10-01
   backfill below refreshed all of them directly instead of just flagging it).
+- `enhancements.cat_desc_gear` — English changed from "Combat stats for FPS
+  weapons" to "Combat stats for FPS weapons and armor weight tags" (#492: the
+  Gear checkbox now also governs the Tag Builder's armor tags). Affects
+  french, portuguese_br and spanish, whose human `ht` still describes weapon
+  stats only. The AI `at` fallbacks were refreshed.
+- `enhancements.annotate_mission_descs_cb` — English changed from "Annotate
+  components in mission descriptions" to "Annotate components and armor in
+  mission descriptions" (#492: the checkbox now also covers armor weight tags
+  in POTENTIAL BLUEPRINTS lists). Affects french, portuguese_br and spanish,
+  whose human `ht` still says components only. The AI `at` fallbacks were
+  refreshed where one existed (spanish's was empty and stays empty).
+- `enhancements.desc` and `enhancements.tag_builder_desc` — English now
+  lists every tagged category ("components, missiles, ship weapons,
+  commodities, and armor", and the caption also the route on hauling mission
+  titles) instead of only the first three (#492 review). Affects french,
+  portuguese_br and spanish, whose human `ht` still names three categories.
+  The AI `at` fallbacks were refreshed where one existed (spanish's are empty
+  and stay empty).
 - `config.data_desc` — English's size for the DataForge cache changed from
   ~1.4 GB to ~1.2 GB (#482, 2.5.0), the size measured on LIVE 4.10. Affects
   french, portuguese_br and spanish, whose human `ht` still says 1,4 Go or
@@ -234,6 +252,34 @@ them against the new source.
   cihazından" (the pack uses "üretici" for a manufacturer) and "mevcut
   listeye", and italian says "la loro ricezione" instead of "di averli
   ricevuti", which made the game the receiver.
+- **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #492 added
+  `enhancements.tag_mapping_tooltip_weight` (the Edit mapping tooltip on the
+  Tag Builder's Armor > Weight row) and reworded `enhancements.cat_desc_gear`.
+  AI `at` for the new key in all ten languages, styled on each file's
+  `tag_mapping_tooltip_type`. `cat_desc_gear`'s `at` refreshed in the seven
+  AI-only languages and in french and portuguese_br; spanish's `at` was
+  empty and stays empty. The guided tour's Tag Builder step
+  (`tutorial.enh_tag_builder.description`, English in
+  `assets/tutorial.json`) now lists armor too; its `at` was updated in all
+  ten languages, none of which has a human `ht` for it. Armor tags in mission
+  POTENTIAL BLUEPRINTS lists reworded `enhancements.annotate_mission_descs_cb`
+  and `enhancements.annotate_mission_descs_tooltip`: AI `at` refreshed for
+  both in all ten languages, except spanish's empty checkbox `at` beside its
+  human `ht`. The #492 review then reworded `enhancements.desc`,
+  `enhancements.tag_builder_desc`, `enhancements.reset_tag_tooltip` and
+  `enhancements.tag_enabled_tooltip` (they listed only components, missiles
+  and ship weapons) and shortened `annotate_mission_descs_tooltip`: AI `at`
+  refreshed in all ten languages except the empty spanish `at` beside its
+  human `desc` and `tag_builder_desc`. The #492 re-review then made
+  `reset_tag_tooltip` name the one exception (the Mission Titles tab's
+  General Tags save at once, so Reset restores them straight away) and
+  dropped the "not with None brackets" clause from
+  `annotate_mission_descs_tooltip`, since the Armor tab no longer offers None
+  brackets: AI `at` refreshed for both in all ten languages (neither has a
+  human `ht` anywhere; "Mission Titles" stays English as the tab label does,
+  "General Tags" uses each file's own `mt_general_tags_group`). No human `ht`
+  was touched. The translated `HELP.md` and `ABOUT.md` copies do not mention
+  the Armor tab yet and are left for the pre-release docs sync.
 - **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
   whose working folder Windows refuses, with a message, instead of retrying
   for hours. Three new keys after `extract.size_mb`:

@@ -1098,7 +1098,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Temel yerelleştirme verilerini genişleten isteğe bağlı özellikler: geliştirme oluşturucu için kategori anahtarları, oyun içi gemi listesi için bir favori ön eki ve bileşenler, füzeler ve gemi silahlarındaki köşeli parantezli ad etiketlerini özelleştiren bir Etiket Oluşturucu."
+      "at": "Temel yerelleştirme verilerini genişleten isteğe bağlı özellikler: geliştirme oluşturucu için kategori anahtarları, oyun içi gemi listesi için bir favori ön eki ve bileşenler, füzeler, gemi silahları, emtialar ve zırhlardaki köşeli parantezli ad etiketlerini özelleştiren bir Etiket Oluşturucu."
     },
     "enhancements_group": {
       "ht": "",
@@ -1118,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "FPS silahları için çatışma istatistikleri"
+      "at": "FPS silahları için çatışma istatistikleri ve zırh ağırlık etiketleri"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1162,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "Bileşenler, füzeler ve gemi silahlarındaki köşeli parantezli ad etiketlerini özelleştirir. Değişiklikler, Etiket Değişikliklerini Kaydet'e tıklayıp Geliştirmeleri Oluştur'u yeniden çalıştırdıktan sonra geçerli olur."
+      "at": "Bileşenler, füzeler, gemi silahları, emtialar ve zırhlardaki köşeli parantezli ad etiketlerini ve taşıma görevi başlıklarındaki rotayı özelleştirir. Değişiklikler, Etiket Değişikliklerini Kaydet'e tıklayıp Geliştirmeleri Oluştur'u yeniden çalıştırdıktan sonra geçerli olur."
     },
     "preview_label": {
       "ht": "",
@@ -1170,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "Görev açıklamalarındaki bileşenlere açıklama ekle"
+      "at": "Görev açıklamalarındaki bileşenlere ve zırhlara açıklama ekle"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1334,15 +1334,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "İşaretlendiğinde, yapılandırılmış [CLASS-Sx-grade] etiketi görev açıklamalarındaki POTENTIAL BLUEPRINTS listesinde yer alan bileşen adlarına eklenir. Etiketi başka yerlerdeki asıl bileşen adlarında tutarken daha sade bir görev gövdesi için işareti kaldırın."
+      "at": "İşaretlendiğinde, yapılandırılmış bileşen etiketi ve Armor > Weight açıkken zırh ağırlık etiketi, görev açıklamalarındaki POTENTIAL BLUEPRINTS listesindeki öğe adlarına eklenir. Daha sade bir görev metni için işareti kaldırın. Etiketler başka yerlerdeki öğe adlarında kalır."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Her kategori (Bileşenler / Füzeler / Gemi Silahları) için varsayılan deseni, eşlemeyi ve sıralamayı geri yükle. Etiket Değişikliklerini Kaydet'e veya Geliştirmeleri Oluştur'a tıklayana kadar kaydetmez ya da yeniden oluşturmaz."
+      "at": "Etiket Oluşturucu'nun her sekmesinde varsayılan deseni, eşlemeyi ve sıralamayı geri yükle (isteğe bağlı emtia ve zırh etiketlerini de yeniden kapatır). Etiket yapılandırmaları Etiket Değişikliklerini Kaydet'e veya Geliştirmeleri Oluştur'a tıklayana kadar kaydedilmez ya da yeniden oluşturulmaz, ancak Mission Titles sekmesindeki Genel Etiketler değiştikleri anda kaydedilir, bu yüzden sıfırlama onları hemen varsayılanlarına döndürür."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Bileşenler / Füzeler / Gemi Silahları etiket yapılandırmalarını kaydet ve geliştirme oluşturucuyu yeniden çalıştır. Yeni etiketler, bir sonraki Geliştirmeleri Uygula'dan sonra oyunda görünür."
+      "at": "Etiket Oluşturucu'nun tüm sekmelerindeki etiket yapılandırmalarını kaydet ve geliştirme oluşturucuyu yeniden çalıştır. Yeni etiketler, bir sonraki Geliştirmeleri Uygula'dan sonra oyunda görünür."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1391,6 +1391,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Koleksiyon etiketi için Kısa / Orta / Uzun metni düzenleyin (ör. Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Her zırh ağırlık sınıfı için kullanılan Kısa / Orta / Uzun metni düzenleyin (ör. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -3215,7 +3219,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Bileşenlere, füzelere, gemi silahlarına ve emtialara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
+        "at": "Bileşenlere, füzelere, gemi silahlarına, emtialara ve zırhlara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
       }
     },
     "overlay": {

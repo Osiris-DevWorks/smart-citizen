@@ -141,6 +141,47 @@ def test_matching_stamp_leaves_the_button_clean_at_construction(
     assert _new_tab()._tag_dirty is False
 
 
+def test_stamp_from_before_the_armor_tab_still_matches(qapp, isolated_settings):
+    """#492: a stamp written by 2.4, before the Armor category existed, hashed
+    only the other categories. With the Armor tag off (the default) it shapes
+    no output, so upgrading must not light the button for every user."""
+    _seed_generated_output()
+    pre_armor = {cat: cfg for cat, cfg in AppSettings.get_all_tag_configs().items()
+                 if cat != "armor"}
+    AppSettings.set_tag_config_stamp(
+        tag_config_fingerprint(pre_armor, AppSettings.get_tag_annotate_mission_descs()))
+    assert _new_tab()._tag_dirty is False
+
+
+def test_saved_armor_tag_turned_on_makes_the_output_stale(qapp, isolated_settings):
+    from src.utils.tag_builder import ElementSpec
+    _seed_generated_output()
+    _stamp_matching_live_config()
+    cfg = AppSettings.get_tag_config("armor")
+    cfg.elements = [ElementSpec("weight", True, "short")]
+    AppSettings.set_tag_config("armor", cfg)
+    assert _new_tab()._tag_dirty is True
+
+
+def test_unsaved_armor_edit_with_the_tag_off_stays_lit(qapp, isolated_settings):
+    """The fingerprint ignores an Armor config whose tag is off, so an unsaved
+    Armor-tab edit in that state must still keep the button lit through a
+    refresh (a channel or language switch, a finished run), or it would be
+    lost on restart with no warning."""
+    _seed_generated_output()
+    _stamp_matching_live_config()
+    tab = _new_tab()
+    assert tab._tag_dirty is False
+    page = tab._tag_builder_pages["armor"]
+    page.enc_combo.setCurrentIndex(page.enc_combo.findData("round"))
+    assert tab._tag_dirty is True
+    tab.refresh_tag_builder_dirty_state()
+    assert tab._tag_dirty is True
+    tab._persist_tag_builder_state()
+    tab.refresh_tag_builder_dirty_state()
+    assert tab._tag_dirty is False
+
+
 def test_annotate_toggle_alone_makes_the_output_stale(qapp, isolated_settings):
     """The reported symptom, reduced to one setting.
 

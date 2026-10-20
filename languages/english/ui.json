@@ -1097,7 +1097,7 @@
       "at": ""
     },
     "desc": {
-      "ht": "Optional features that extend the base localization data: category toggles for the enhancement generator, a favorites prefix for the in-game ship list, and a Tag Builder that customizes the bracketed name tags on components, missiles, and ship weapons.",
+      "ht": "Optional features that extend the base localization data: category toggles for the enhancement generator, a favorites prefix for the in-game ship list, and a Tag Builder that customizes the bracketed name tags on components, missiles, ship weapons, commodities, and armor.",
       "at": ""
     },
     "enhancements_group": {
@@ -1117,7 +1117,7 @@
       "at": ""
     },
     "cat_desc_gear": {
-      "ht": "Combat stats for FPS weapons",
+      "ht": "Combat stats for FPS weapons and armor weight tags",
       "at": ""
     },
     "cat_desc_missions": {
@@ -1161,7 +1161,7 @@
       "at": ""
     },
     "tag_builder_desc": {
-      "ht": "Customizes the bracketed name tags on components, missiles, and ship weapons. Changes take effect after clicking Save Tag Changes and re-running Generate Enhancements.",
+      "ht": "Customizes the bracketed name tags on components, missiles, ship weapons, commodities, and armor, plus the route on hauling mission titles. Changes take effect after clicking Save Tag Changes and re-running Generate Enhancements.",
       "at": ""
     },
     "preview_label": {
@@ -1169,7 +1169,7 @@
       "at": ""
     },
     "annotate_mission_descs_cb": {
-      "ht": "Annotate components in mission descriptions",
+      "ht": "Annotate components and armor in mission descriptions",
       "at": ""
     },
     "apply_tag_changes_btn": {
@@ -1333,15 +1333,15 @@
       "at": ""
     },
     "annotate_mission_descs_tooltip": {
-      "ht": "When checked, the configured [CLASS-Sx-grade] tag is added to component names inside the POTENTIAL BLUEPRINTS list of mission descriptions. Uncheck for a cleaner mission body while keeping the tag on the actual component names elsewhere.",
+      "ht": "When checked, the configured component tag, and the armor weight tag while Armor > Weight is on, are added to item names in the POTENTIAL BLUEPRINTS list of mission descriptions. Uncheck for a cleaner mission body. The tags stay on the item names elsewhere.",
       "at": ""
     },
     "reset_tag_tooltip": {
-      "ht": "Restore the default pattern, mapping, and ordering for every category (Components / Missiles / Ship Weapons). Does not save or regenerate until you click Save Tag Changes or Generate Enhancements.",
+      "ht": "Restore the default pattern, mapping, and ordering on every Tag Builder tab (this also turns the optional Commodities and Armor tags back off). The tag configs are not saved or regenerated until you click Save Tag Changes or Generate Enhancements, but the Mission Titles tab's General Tags save as soon as they change, so Reset puts them back to their defaults straight away.",
       "at": ""
     },
     "tag_enabled_tooltip": {
-      "ht": "Save the Components / Missiles / Ship Weapons tag configs and re-run the enhancement generator. New tags appear in-game after the next Apply Enhancements.",
+      "ht": "Save the tag configs on every Tag Builder tab and re-run the enhancement generator. New tags appear in-game after the next Apply Enhancements.",
       "at": ""
     },
     "tag_disabled_tooltip": {
@@ -1390,6 +1390,10 @@
     },
     "tag_mapping_tooltip_collection": {
       "ht": "Edit the Short / Medium / Long text for the collection label (e.g. Collection → Col / Collect / Collection).",
+      "at": ""
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "Edit the Short / Medium / Long text used for each armor weight class (e.g. Heavy → H / HV / Heavy).",
       "at": ""
     },
     "tag_mapping_tooltip_default": {

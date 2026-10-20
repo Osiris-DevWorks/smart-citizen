@@ -46,7 +46,8 @@ CATEGORY_SUBTREES: dict[str, list[str]] = {
     "ships":       ["entities/ships", "entities/spaceships"],
     "components":  ["entities/itemports", "entities/scitem"],
     "ship_weapons":["entities/scitem/weapons/spacecraft"],
-    "fps_weapons": ["entities/scitem/weapons/fps"],
+    # characters/human: the #492 armor weight tags, written with the FPS weapons
+    "fps_weapons": ["entities/scitem/weapons/fps", "entities/scitem/characters/human"],
     "missions":    ["entities/missions", "libs/foundry/records/missions", "reputation/standings"],
     "commodities": ["entities/scitem/cargo", "libs/economy"],
     "journal":     ["libs/foundry/records/journal"],

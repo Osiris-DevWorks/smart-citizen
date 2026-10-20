@@ -1098,7 +1098,7 @@
     },
     "desc": {
       "ht": "Fonctionnalités optionnelles qui enrichissent les données de localisation : sélecteurs de catégories pour le générateur d'enrichissements, un préfixe de tri pour la liste de vaisseaux favoris, et un Générateur d'étiquettes pour personnaliser les balises entre crochets sur les composants, missiles et armes de vaisseau.",
-      "at": "Fonctionnalités optionnelles qui enrichissent les données de localisation : sélecteurs de catégories pour le générateur d'enrichissements, un préfixe de tri pour la liste de vaisseaux favoris, et un Générateur d'étiquettes pour personnaliser les balises entre crochets sur les composants, missiles et armes de vaisseau."
+      "at": "Fonctionnalités optionnelles qui enrichissent les données de localisation : sélecteurs de catégories pour le générateur d'enrichissements, un préfixe de tri pour la liste de vaisseaux favoris, et un Générateur d'étiquettes pour personnaliser les balises entre crochets sur les composants, missiles, armes de vaisseau, marchandises et armures."
     },
     "enhancements_group": {
       "ht": "Enrichissements de localisation",
@@ -1118,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "Statistiques de combat des armes FPS",
-      "at": "Statistiques de combat des armes FPS"
+      "at": "Statistiques de combat des armes FPS et balises de poids des armures"
     },
     "cat_desc_missions": {
       "ht": "Gains d'XP et récompenses de plans de fabrication pour les missions",
@@ -1162,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "Personnalise les balises entre crochets des composants, missiles et armes de vaisseau. Les modifications prennent effet après avoir cliqué sur Appliquer les modifications et relancé la génération des enrichissements.",
-      "at": "Personnalise les balises entre crochets des composants, missiles et armes de vaisseau. Les modifications prennent effet après avoir cliqué sur Appliquer les modifications et relancé la génération des enrichissements."
+      "at": "Personnalise les balises entre crochets des composants, missiles, armes de vaisseau, marchandises et armures, ainsi que l'itinéraire dans les titres des missions de transport. Les modifications prennent effet après avoir cliqué sur « Enregistrer les modifications d'étiquettes » et relancé la génération des enrichissements."
     },
     "preview_label": {
       "ht": "Aperçu :",
@@ -1170,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "Annoter les composants dans les descriptions de mission",
-      "at": "Annoter les composants dans les descriptions de mission"
+      "at": "Annoter les composants et les armures dans les descriptions de mission"
     },
     "apply_tag_changes_btn": {
       "ht": "Appliquer les modifications d'étiquettes",
@@ -1334,15 +1334,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Si coché, l'étiquette [CLASS-Sx-grade] configurée est ajoutée aux noms de composants dans la liste POTENTIAL BLUEPRINTS des descriptions de mission. Décochez pour un corps de mission plus épuré, tout en conservant l'étiquette sur les noms de composants ailleurs."
+      "at": "Si coché, l'étiquette de composant configurée, et l'étiquette de poids d'armure quand Armor > Weight est activé, sont ajoutées aux noms d'objets dans la liste POTENTIAL BLUEPRINTS des descriptions de mission. Décochez pour un corps de mission plus épuré. Les étiquettes restent sur les noms d'objets ailleurs."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Restaurer le modèle, le mappage et l'ordre par défaut pour chaque catégorie (Composants / Missiles / Armes de vaisseau). N'enregistre ni ne régénère tant que vous n'avez pas cliqué sur « Enregistrer les modifications d'étiquettes » ou « Générer les enrichissements »."
+      "at": "Restaurer le modèle, le mappage et l'ordre par défaut dans chaque onglet du Générateur d'étiquettes (les étiquettes facultatives Marchandises et Armure sont aussi désactivées). Les configurations d'étiquettes ne sont ni enregistrées ni régénérées tant que vous n'avez pas cliqué sur « Enregistrer les modifications d'étiquettes » ou « Générer les enrichissements », mais les Étiquettes générales de l'onglet Mission Titles s'enregistrent dès qu'elles changent : la réinitialisation les remet donc tout de suite à leurs valeurs par défaut."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Enregistrer les configurations d'étiquettes Composants / Missiles / Armes de vaisseau et relancer le générateur d'enrichissements. Les nouvelles étiquettes apparaissent en jeu après la prochaine application des enrichissements."
+      "at": "Enregistrer les configurations d'étiquettes de chaque onglet du Générateur d'étiquettes et relancer le générateur d'enrichissements. Les nouvelles étiquettes apparaissent en jeu après la prochaine application des enrichissements."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1391,6 +1391,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Modifier le texte Court / Moyen / Long du libellé de collection (ex. Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Modifier le texte Court / Moyen / Long de chaque classe de poids d'armure (ex. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -3101,7 +3105,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Composez les balises entre crochets ajoutées aux noms des composants, missiles, armes de vaisseau et marchandises. Réordonnez les éléments avec ▲/▼, décochez pour exclure, changez la longueur des abréviations, choisissez le séparateur et les crochets, ou placez la balise après le nom plutôt qu'avant."
+        "at": "Composez les balises entre crochets ajoutées aux noms des composants, missiles, armes de vaisseau, marchandises et armures. Réordonnez les éléments avec ▲/▼, décochez pour exclure, changez la longueur des abréviations, choisissez le séparateur et les crochets, ou placez la balise après le nom plutôt qu'avant."
       }
     },
     "edit": {

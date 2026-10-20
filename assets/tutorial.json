@@ -40,7 +40,7 @@
     {
       "id": "enh_tag_builder",
       "title": "6. Enhancements: Tag Builder",
-      "description": "Build the bracketed name tags added to components, missiles, ship weapons, and commodities. Reorder elements with ▲/▼, untick to exclude, change abbreviation length, pick separator and brackets, or place the tag after the name instead of before.",
+      "description": "Build the bracketed name tags added to components, missiles, ship weapons, commodities, and armor. Reorder elements with ▲/▼, untick to exclude, change abbreviation length, pick separator and brackets, or place the tag after the name instead of before.",
       "preferred_side": "above"
     },
     {

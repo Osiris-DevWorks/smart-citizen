@@ -14,6 +14,10 @@ The toggle is plumbed end-to-end through:
     entity_name_tags dict for {} when off — same back-compat code path
     already locked by test_blueprint_pool_omits_tag_when_dict_unset.
 
+Since #492 the same toggle also gates the armor weight tags on armor
+bullets (while Armor > Weight is on); that side is covered in
+tests/test_armor_blueprint_bullets.py.
+
 These tests cover the settings round-trip (incl. the default) and the
 generator-side dict swap; the worker wiring and UI checkbox plumbing
 are exercised manually because EnhancementsGeneratorWorker requires a

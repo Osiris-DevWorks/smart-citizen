@@ -15,12 +15,12 @@ from src.gui.theme import get_button_color
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 from src.utils.tag_builder import (
-    CATEGORIES, ELEMENT_LABELS, ENCLOSINGS, LOCATION_DETAILS,
+    CATEGORIES, ELEMENT_LABELS, LOCATION_DETAILS,
     MAPPED_KIND_NAMES, MISSION_TITLE_PLACEMENTS, PLACEMENTS, RANK_SEPARATORS,
     REMOVE_WORD_OPTIONS, ROUTE_ARROWS, SEPARATORS, SHORTEN_PHRASE_OPTIONS,
     SIZE_ABBREV_BY_WORD, STYLES_BY_KIND, TITLE_SEPARATORS, TagConfig,
     USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
-    default_config, render_route, render_tag, route_enabled,
+    default_config, enclosings_for, render_route, render_tag, route_enabled,
 )
 
 # All cargo-size words, for the single "Shorten cargo sizes" master toggle.
@@ -52,12 +52,14 @@ _PREVIEW_VALUES: dict[str, dict[str, str]] = {
     "commodities":  {"label": "Crafting",
                      "usage": USAGE_INPUT_SEP.join(["Quantum Drive", "Shield"]),
                      "collection": "Collection"},
+    "armor":        {"weight": "Heavy"},
 }
 _PREVIEW_NAMES: dict[str, str] = {
     "components":   "FR-76",
     "missiles":     "Marksman I Missile",
     "ship_weapons": "MaxOx NN-14",
     "commodities":  "Agricium",
+    "armor":        "ADP-mk4 Core",
 }
 _CATEGORY_LABELS: dict[str, str] = {
     "components":   "Components",
@@ -65,6 +67,7 @@ _CATEGORY_LABELS: dict[str, str] = {
     "ship_weapons": "Ship Weapons",
     "commodities":  "Commodities",
     "mission_titles": "Mission Titles",
+    "armor":        "Armor",
 }
 
 
@@ -498,7 +501,20 @@ class EnhancementsTab(QWidget):
             return
         stamp = AppSettings.get_tag_config_stamp()
         current = self._live_tag_config_fingerprint()
-        self._set_tag_btn_dirty(not stamp or stamp != current)
+        self._set_tag_btn_dirty(not stamp or stamp != current
+                                or self._pages_differ_from_saved())
+
+    def _pages_differ_from_saved(self) -> bool:
+        """True when a Tag Builder page holds an edit not yet saved.
+
+        The fingerprint leaves the Armor config out while its tag is off
+        (#492), so an Armor-tab edit made in that state (brackets, mapping,
+        Reset) would not change it, and a refresh would grey the button over
+        an edit that is lost on restart. Comparing each page with its saved
+        config keeps the "you have unsaved changes" signal for those too."""
+        pages = getattr(self, "_tag_builder_pages", None) or {}
+        return any(page.config.to_json() != AppSettings.get_tag_config(cat).to_json()
+                   for cat, page in pages.items())
 
     def _enhancements_output_exists(self) -> bool:
         """True if any enabled category has at least one generated INI on disk.
@@ -895,9 +911,10 @@ class EnhancementsTab(QWidget):
         gl.addWidget(self._tag_builder_tabs)
 
         # Issue #31 follow-up: cross-surface toggle for the inline
-        # component annotation inside mission POTENTIAL BLUEPRINTS lists.
-        # Default ON preserves v1.4.0 behavior. When off, mission bodies
-        # render bare names ("Norfield") even though the same component
+        # component annotation inside mission POTENTIAL BLUEPRINTS lists,
+        # and the armor weight tag there too while Armor > Weight is on
+        # (#492). Default ON preserves v1.4.0 behavior. When off, mission
+        # bodies render bare names ("Norfield") even though the same item
         # on the strings tab still shows the configured tag. The toggle
         # is persisted alongside the per-category configs and applied
         # by the same "Save Tag Changes" button below — no separate
@@ -1179,6 +1196,7 @@ class _ElementRow(QWidget):
         "type":       "Shield Generator",
         "label":      "Crafting",
         "collection": "Collection",
+        "weight":     "Heavy",
     }
 
     def __init__(self, spec, mapping: dict | None = None,
@@ -1257,6 +1275,7 @@ class _ElementRow(QWidget):
             "type": "enhancements.tag_mapping_tooltip_type",
             "label": "enhancements.tag_mapping_tooltip_label",
             "collection": "enhancements.tag_mapping_tooltip_collection",
+            "weight": "enhancements.tag_mapping_tooltip_weight",
         }.get(kind, "enhancements.tag_mapping_tooltip_default")
 
     def retranslate_ui(self) -> None:
@@ -1379,7 +1398,7 @@ class _TagBuilderPage(QWidget):
         self._enc_label = QLabel(tr("enhancements.tag_enclosing_label"))
         ctrl_grid.addWidget(self._enc_label, 1, 0)
         self.enc_combo = NoScrollComboBox()
-        for key, label, _open, _close in ENCLOSINGS:
+        for key, label, _open, _close in enclosings_for(self.category):
             self.enc_combo.addItem(label, userData=key)
         self._select_combo(self.enc_combo, config.enclosing)
         self.enc_combo.currentIndexChanged.connect(self._on_enc_changed)
