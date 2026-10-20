@@ -160,13 +160,28 @@ Track which crafting blueprints you already own, and see it reflected in-game: o
 - **Apply Owned Tags** re-weaves the `[Owned]` tags into your loaded strings after you change the owned set. Like the other action buttons, it turns **red** when your owned list has changes the table hasn't picked up yet and **green** once everything matches.
 - The strings table's **Owned** column still shows a star and sorts owned-first, but it's read-only now; ownership is managed from this tab.
 
+## Overlay Tab
+
+The **Smart Citizen Overlay** draws two small windows over Star Citizen: a mining scan decoder and a drawer of searches. Start and stop it with **Start Overlay** on this tab or the toolbar's **Overlay** button. Run the game in borderless windowed mode on your main screen, or the overlay can't show on top of it. The overlay only reads your screen and `Game.log`; it never touches the game itself.
+
+- **Mining scan decoder** reads the scan signature under your radar and shows the deposit type and count just below it (for example `3 × Lindinium`). The label only changes after the same number is read twice in a row, so a one-frame misread doesn't flash.
+- **Overlay drawer** puts tabbed sections at the edge of the screen. Click a tab to open its section, click it again to close. **Drawer position** picks one of eight spots (middle right by default).
+  - **Blueprints**: search blueprints, see which missions reward them, and tick the ones you own (same owned list as the Blueprint Tracker tab).
+  - **Minerals**: type a mineral to see where it is found, grouped by star system, or a location to see its minerals. Tick a mineral to watch for it: the scan label glows when a scan finds it. The decoder can be switched on and off here too.
+  - **Crafting**: type a mineral to see which components use it, or a component to see the minerals it needs. Filled when you generate enhancements with **Commodities** or **Journal** ticked.
+  - Each section has its own switch; turning the drawer off hides all of them.
+- **Mark new blueprints as owned** watches `Game.log` while the overlay runs and marks blueprints you receive owned. Like Scan Logs, it only reads LIVE and HOTFIX: with PTU, EPTU or TECH-PREVIEW selected on the Config tab, it stays off.
+- **Save scan samples** keeps a small picture of each new signature read in `logs\sco_samples` so misreads can be sent in. **Open Samples Folder** opens it. On by default; nothing is uploaded. At most 200 pictures are kept per session, and the folder keeps only the newest 1000.
+
+If the scan decoder hits an error it stops, and the status bar says so. Stop and start the overlay to try again; the Log tab has the details. The guided tour (**Tutorial** button) has a step for this tab.
+
 ## Config Tab
 
 - **Appearance** — pick the app theme (see below) and the **Font size** (Small, Medium or Large). Font size scales the text and the controls around it together, so nothing gets cut off; Smart Citizen offers to restart, because the new size takes effect when the app starts.
 - **Star Citizen Installation** — path to your LIVE directory; auto-detected at install time, editable here. The **Channel** dropdown picks which channel the app reads and writes, and the **Language** dropdown switches the app and game strings (see *Switch Languages* above).
 - **Verify Install Location** — checks that Smart Citizen is pointed at the copy of Star Citizen you actually play. If you have more than one install on your PC (a moved library folder, a second drive, leftovers from a reinstall) it's possible to have the app writing to the one the RSI Launcher never starts: apply reports success, but nothing changes in game. This button finds every install it can and tells you which one the launcher is really using, reading the launcher's own log rather than guessing from folder names. Each install found is listed with its evidence, and **Use this install** repoints Smart Citizen at it in one click. If your install sits somewhere unusual, **Scan all drives** does a slower, deeper search.
 - **Smart Citizen Data** — folder for `user.ini`, the cached base strings, generated enhancement INIs, and backups. Defaults to `Documents\Smart Citizen`; move it off OneDrive if cache cleanup is slow.
-- **DataForge cache folder** — where the DataForge entity data extracted from `Data.p4k` is kept, separate from the data folder above. Defaults to `%LOCALAPPDATA%\Smart Citizen`. An extraction also needs about 2 GB of working space while it runs, and takes it next to this folder (falling back to `%TEMP%` when the folder is on OneDrive, a network or removable drive, or its path is very long). Point it at another drive with **Browse** to keep that disk load off `C:`; changing it means extracting again.
+- **DataForge cache folder** — where the DataForge entity data extracted from `Data.p4k` is kept, separate from the data folder above. Defaults to `%LOCALAPPDATA%\Smart Citizen`. An extraction needs up to about 4.5 GB free while it runs (less when a cache is already there) and does its work next to this folder, falling back to `%TEMP%` when the folder is on OneDrive, a network or removable drive, or its path is very long. If there is not enough room, it stops before it starts and says how much it needs. Point it at another drive with **Browse** to keep that disk load off `C:`; changing it means extracting again.
 - **Base Localization (P4K Extraction)** — click **Extract from Data.p4k** to unpack stock localization plus DataForge entity data directly from your installed game. This is the sole source for base strings and enhancement data.
 - **Import INI** — fold an existing INI file into your overrides via the conflict-resolution dialog.
 - **Reset user.ini** — wipe all of your personal edits for the active channel. Prompts for confirmation and auto-backs up the current `user.ini` before clearing it.
@@ -215,6 +230,7 @@ The **FAQ** tab answers the questions we get most often, right inside the app �
 - **Apply Enhancements fails** — Confirm the Star Citizen install path in the **Config Tab** and that the game isn't running.
 - **Apply says it worked but the game looks unchanged** — You may have more than one Star Citizen install, with Smart Citizen pointed at the one you don't launch. Click **Verify Install Location** on the **Config Tab**: it names the install the RSI Launcher actually uses and repoints the app in one click.
 - **Extraction says Data.p4k is locked** — The RSI Launcher is downloading or verifying an update. Wait for it to finish (or close the launcher), then click **Extract from Data.p4k** again.
+- **Extraction says there is not enough free space** — The message names each drive that is short, how much is free there and how much the extraction needs. Free up space on that drive, or pick a **DataForge cache folder** on a drive with more room in the **Config Tab**. Your current DataForge cache is left as it was.
 - **Stale data after game update** — Re-run **Extract from Data.p4k**, then regenerate enhancements.
 
 ## Known Issues

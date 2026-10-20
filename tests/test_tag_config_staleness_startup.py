@@ -49,7 +49,6 @@ import pytest
 from PyQt6.QtCore import QSettings  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 # Same import path src/gui/enhancements_tab.py uses, so patching
 # AppSettings.settings affects the exact class the tab sees (see the note in
