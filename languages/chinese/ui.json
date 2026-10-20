@@ -718,6 +718,22 @@
       "ht": "",
       "at": "无效的缓存文件夹"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建缓存的权限：\n{folder}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 无法访问以下位置：\n{folder}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法使用以下位置：\n{folder}\n\n{reason}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "所选的缓存文件夹是一个文件，而不是文件夹：\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge 缓存路径已更改"
@@ -2028,6 +2044,46 @@
       "ht": "",
       "at": "缓存已清除"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "正在运行提取或增强内容生成时无法清除缓存。请在其完成后重试。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "这将删除以下缓存文件：\n\n{files}\n\n在加载字符串之前，需要从 Data.p4k 重新提取 base.ini。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "是否同时清除 DataForge 缓存？\n{folder}\n\n它保存着从 Data.p4k 提取、用于舰船和武器属性的实体数据，重新生成需要几分钟。如果只想刷新本地化字符串，请保留它。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "无法访问 DataForge 缓存文件夹，因此未清除它：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "正在清除缓存"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "正在清除缓存文件..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "正在删除 {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "正在清除 DataForge 缓存..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "已从缓存中删除 {count} 项。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "无法删除：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "未找到目录"
@@ -2855,6 +2911,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建工作文件夹的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，或通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，然后重试。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法在以下位置使用工作文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建 DataForge 缓存的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 无法访问 DataForge 缓存文件夹：\n{folder}\n\n提取未开始。请重新连接该驱动器，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法使用 DataForge 缓存文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 缓存文件夹是指向另一个文件夹的链接：\n{folder}\n\n它指向：\n{target}\n\nSmart Citizen 不会通过链接删除任何内容，因此提取未开始，未做任何更改。请在配置标签页中将它指向的文件夹选为 DataForge 缓存文件夹，然后重试。"
     }
   },
   "apply": {
