@@ -5,7 +5,8 @@ When an enhancement category is enabled, its generated INI is loaded as the
 synthetic ``enhancements`` source (AppSettings.SOURCE_ENHANCEMENTS), inserted
 into the merge hierarchy just before ``user`` (or appended when there is no
 user entry), and every key it carries is mapped to that category's label for
-the table's category column. Also driven through load_source_files, so the
+the table's category column. An enabled category whose INI has not been
+generated adds no source. Also driven through load_source_files, so the
 source name, the Enhanced status and the map category are checked end to end.
 """
 from __future__ import annotations
@@ -94,6 +95,17 @@ def test_no_enabled_category_means_no_enhancements_source(env):
     sources, hierarchy, key_categories = load_sources_from_settings()
     assert AppSettings.SOURCE_ENHANCEMENTS not in sources
     assert AppSettings.SOURCE_ENHANCEMENTS not in hierarchy
+    assert key_categories == {}
+
+
+def test_an_enabled_category_with_no_generated_file_adds_no_source(env):
+    """A category can be enabled before its INI has been generated. The
+    missing file is skipped: the load carries on without an empty
+    enhancements source in the merge, and nothing is raised."""
+    (AppSettings.get_enhancements_dir() / AppSettings.ENHANCEMENTS_FILES[LABEL]).unlink()
+    sources, hierarchy, key_categories = load_sources_from_settings()
+    assert set(sources) == {AppSettings.SOURCE_GLOBAL}
+    assert hierarchy == [AppSettings.SOURCE_GLOBAL, AppSettings.SOURCE_USER]
     assert key_categories == {}
 
 
