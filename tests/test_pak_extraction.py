@@ -22,7 +22,7 @@ from src.utils.onedrive import _ONEDRIVE_ENV_VARS
 from src.utils.pak_extractor import (
     DATAFORGE_KEEP_SUBPATHS,
     P4kLockedError,
-    _copy_filtered_records,
+    _cache_filtered_records,
     _raise_unp4k_failure,
     dataforge_cache_is_fresh,
 )
@@ -501,9 +501,32 @@ class TestDataForgeKeepList:
             f"an ancestor entry: {redundant}"
         )
 
+    def test_no_entries_clash_or_nest_ignoring_case(self):
+        """NTFS ignores case, so 'Entities/SCItem' is entities/scitem there:
+        a second entry that names a kept subtree again in other capitals, or
+        one under it, would be moved or copied onto a subtree already in
+        place (#484)."""
+        folded = [entry.casefold() for entry in DATAFORGE_KEEP_SUBPATHS]
+        assert len(set(folded)) == len(folded), folded
+        nested = [(entry, other) for i, entry in enumerate(folded)
+                  for j, other in enumerate(folded) if i != j and _is_subpath_of(entry, other)]
+        assert not nested, nested
 
-class TestCopyFilteredRecords:
-    """Exercise the filtered-copy helper on a synthetic unforge output tree."""
+    def test_every_entry_is_a_plain_relative_path(self):
+        """Each entry is joined under unforge's records folder and renamed
+        out of it (#484), which takes its source away. '..', a drive or a
+        leading slash would reach outside that folder."""
+        bad = [entry for entry in DATAFORGE_KEEP_SUBPATHS
+               if not entry or entry.startswith("/") or "\\" in entry or ":" in entry
+               or any(part in ("", ".", "..") for part in entry.split("/"))]
+        assert not bad, bad
+
+
+class TestCacheFilteredRecords:
+    """Exercise the caching helper on a synthetic unforge output tree, with
+    the kept subtrees copied and moved (#484)."""
+
+    _DROPPED = ("ui", "actor", "missiondata", "tintpalettes", "starmap")
 
     @staticmethod
     def _make_fake_unforge_output(root: Path) -> None:
@@ -517,33 +540,68 @@ class TestCopyFilteredRecords:
             leaf.parent.mkdir(parents=True, exist_ok=True)
             leaf.write_text("<kept/>", encoding="utf-8")
         # Files in paths we want dropped — these must NOT survive.
-        for dropped in ("ui", "actor", "missiondata", "tintpalettes", "starmap"):
+        for dropped in TestCacheFilteredRecords._DROPPED:
             leaf = records / dropped / "sample.xml"
             leaf.parent.mkdir(parents=True, exist_ok=True)
             leaf.write_text("<dropped/>", encoding="utf-8")
+
+    @staticmethod
+    def _file_ids(records: Path) -> dict:
+        """{kept subtree: its sample.xml's file ID}. os.stat, because a
+        DirEntry's st_ino is 0 on Windows. A rename keeps the ID, a copy
+        makes a new one."""
+        return {kept: os.stat(records / kept / "sample.xml").st_ino
+                for kept in DATAFORGE_KEEP_SUBPATHS}
 
     def test_copies_only_keep_subpaths(self, tmp_path):
         src = tmp_path / "src"
         dst = tmp_path / "dst"
         self._make_fake_unforge_output(src)
 
-        copied, skipped = _copy_filtered_records(src / "libs", dst / "libs")
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=False)
 
         records_dst = dst / "libs" / "foundry" / "records"
+        records_src = src / "libs" / "foundry" / "records"
         for kept in DATAFORGE_KEEP_SUBPATHS:
             assert (records_dst / kept / "sample.xml").exists(), (
                 f"kept path {kept!r} missing from filtered output"
             )
-        for dropped in ("ui", "actor", "missiondata", "tintpalettes", "starmap"):
+            assert (records_src / kept / "sample.xml").exists(), (
+                f"kept path {kept!r} left the source on a copy"
+            )
+        for dropped in self._DROPPED:
             assert not (records_dst / dropped).exists(), (
                 f"{dropped!r} leaked into filtered output"
             )
-        assert copied == len(DATAFORGE_KEEP_SUBPATHS)
-        assert skipped == 0
+        assert counts == (0, len(DATAFORGE_KEEP_SUBPATHS), 0)
 
-    def test_skipped_when_source_subpath_missing(self, tmp_path):
+    def test_moves_only_keep_subpaths(self, tmp_path):
+        """Each kept subtree is renamed into place: gone from the source,
+        with its files' IDs, and every dropped folder stays behind."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+        records_src = src / "libs" / "foundry" / "records"
+        before = self._file_ids(records_src)
+
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=True)
+
+        records_dst = dst / "libs" / "foundry" / "records"
+        assert counts == (len(DATAFORGE_KEEP_SUBPATHS), 0, 0)
+        assert self._file_ids(records_dst) == before
+        for kept in DATAFORGE_KEEP_SUBPATHS:
+            assert not (records_src / kept).exists(), f"kept path {kept!r} still in the source"
+        for dropped in self._DROPPED:
+            assert (records_src / dropped / "sample.xml").exists(), f"{dropped!r} was taken"
+            assert not (records_dst / dropped).exists(), (
+                f"{dropped!r} leaked into filtered output"
+            )
+
+    @pytest.mark.parametrize("move", [False, True], ids=["copy", "move"])
+    def test_skipped_when_source_subpath_missing(self, tmp_path, move):
         """Some patches don't ship every subtree (e.g. entities/missions).
-        Missing source paths should increment `skipped`, not fail."""
+        Missing source paths should increment `skipped`, not fail, and count
+        as neither moved nor copied."""
         src = tmp_path / "src"
         dst = tmp_path / "dst"
         self._make_fake_unforge_output(src)
@@ -551,16 +609,17 @@ class TestCopyFilteredRecords:
         import shutil as _sh
         _sh.rmtree(src / "libs" / "foundry" / "records" / "entities" / "missions")
 
-        copied, skipped = _copy_filtered_records(src / "libs", dst / "libs")
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=move)
 
-        assert skipped == 1
-        assert copied == len(DATAFORGE_KEEP_SUBPATHS) - 1
+        present = len(DATAFORGE_KEEP_SUBPATHS) - 1
+        assert counts == ((present, 0, 1) if move else (0, present, 1))
         records_dst = dst / "libs" / "foundry" / "records"
         assert not (records_dst / "entities" / "missions").exists()
         # All other kept paths survived
         assert (records_dst / "entities" / "scitem" / "sample.xml").exists()
 
-    def test_raises_on_unexpected_layout(self, tmp_path):
+    @pytest.mark.parametrize("move", [False, True], ids=["copy", "move"])
+    def test_raises_on_unexpected_layout(self, tmp_path, move):
         """If unforge's output doesn't have the expected libs/foundry/records
         layout, fail loudly rather than producing a silently-empty cache."""
         src = tmp_path / "src"
@@ -568,7 +627,26 @@ class TestCopyFilteredRecords:
         # No foundry/records under libs — nothing for the filter to work with.
 
         with pytest.raises(FileNotFoundError):
-            _copy_filtered_records(src / "libs", tmp_path / "dst" / "libs")
+            _cache_filtered_records(src / "libs", tmp_path / "dst" / "libs", move=move)
+
+    def test_a_file_where_a_subtree_goes_is_never_replaced(self, tmp_path):
+        """A file named scitem sits where entities/scitem goes. The rename is
+        refused (WinError 183) and the fallback copy cannot make the folder,
+        so the run fails and the file keeps its text. os.replace would have
+        put the folder in place of the file without a word."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+        stray = dst / "libs" / "foundry" / "records" / "entities" / "scitem"
+        stray.parent.mkdir(parents=True)
+        stray.write_text("not a folder", encoding="utf-8")
+
+        with pytest.raises(FileExistsError):
+            _cache_filtered_records(src / "libs", dst / "libs", move=True)
+
+        assert stray.is_file() and stray.read_text(encoding="utf-8") == "not a folder"
+        assert (src / "libs" / "foundry" / "records" / "entities" / "scitem"
+                / "sample.xml").exists()
 
 
 class TestUnp4kFailureMessage:
