@@ -8,7 +8,8 @@ extraction carried on unseen. This pins the Qt side of the fix:
   programmatic close() never does.
 * DataForgeExtractWorker / P4kExtractWorker on real threads: a stop ends with
   finished(False), no error signal and nothing at ERROR (an ERROR record would
-  pop the global error dialog), while a real failure still reports.
+  pop the global error dialog), while a real failure still reports, and one
+  that carries its own message (#482) reports it with nothing at ERROR.
 * MainWindow on stub selves (no full window): the DataForge stop prompt,
   the global.ini dialog's stop, the identity-bound slots, the guards that
   keep anything new from starting once the close is committed, and
@@ -119,6 +120,12 @@ def _collect(worker):
 
 def _error_records(caplog):
     return [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+# The failures that carry their own user-ready message (#482). Listed here
+# rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so dropping one
+# from that tuple fails the tests that use this.
+_ANTICIPATED = (pe.P4kLockedError, pe.DataForgeTimeoutError, pe.NotEnoughSpaceError)
 
 
 class _Patches:
@@ -289,6 +296,50 @@ class TestDataForgeExtractWorker:
         assert len(patches.calls) == 1
         assert seen["should_cancel"] == worker.isInterruptionRequested
 
+    @pytest.mark.parametrize("error_type", _ANTICIPATED, ids=lambda t: t.__name__)
+    def test_an_anticipated_error_reports_its_message_quietly(
+        self, qapp, monkeypatch, patches, caplog, error_type
+    ):
+        """A locked Data.p4k, an unforge timeout or a full drive (#482) carries
+        its own message and was logged at WARNING where it was raised.
+        logger.exception would open the global error dialog on top of the
+        box the error signal shows."""
+        def extract(*args, **kwargs):
+            raise error_type("a friendly message")
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        worker = _forge_worker()
+        finished, errors = _collect(worker)
+        worker.start()
+        assert worker.wait(5000)
+        assert finished == [False]
+        assert errors == ["a friendly message"]
+        assert _error_records(caplog) == []
+        assert worker.stopped is False
+        assert patches.calls == []
+
+    @pytest.mark.parametrize("error_type", _ANTICIPATED, ids=lambda t: t.__name__)
+    def test_an_anticipated_error_after_a_stop_is_a_stop(
+        self, qapp, monkeypatch, patches, caplog, error_type
+    ):
+        """Before #482 the typed branches came ahead of the stop check, so a
+        locked Data.p4k or a timeout that raced a Stop opened an error box."""
+        holder = {}
+
+        def extract(*args, **kwargs):
+            holder["worker"].requestInterruption()
+            raise error_type("a friendly message")
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        worker = holder["worker"] = _forge_worker()
+        finished, errors = _collect(worker)
+        worker.start()
+        assert worker.wait(5000)
+        assert finished == [False]
+        assert errors == []
+        assert _error_records(caplog) == []
+        assert worker.stopped is True
+
 
 class TestP4kExtractWorker:
     def test_it_hands_the_dataforge_cache_folder_on(self, qapp, monkeypatch):
@@ -359,6 +410,45 @@ class TestP4kExtractWorker:
         assert finished == [False]
         assert errors == ["unp4k exited with code 3"]
         assert worker.stopped is False
+
+    @pytest.mark.parametrize("error_type", _ANTICIPATED, ids=lambda t: t.__name__)
+    def test_an_anticipated_error_reports_its_message_quietly(
+        self, qapp, monkeypatch, caplog, error_type
+    ):
+        """As for the DataForge worker: a locked Data.p4k or a full drive
+        (#482) reaches the box once, with nothing at ERROR."""
+        def extract(*args, **kwargs):
+            raise error_type("a friendly message")
+
+        monkeypatch.setattr(pe, "extract_global_ini", extract)
+        worker = P4kExtractWorker("Data.p4k", "base.ini", "unp4k.exe")
+        finished, errors = _collect(worker)
+        worker.start()
+        assert worker.wait(5000)
+        assert finished == [False]
+        assert errors == ["a friendly message"]
+        assert _error_records(caplog) == []
+        assert worker.stopped is False
+
+    @pytest.mark.parametrize("error_type", _ANTICIPATED, ids=lambda t: t.__name__)
+    def test_an_anticipated_error_after_a_stop_is_a_stop(
+        self, qapp, monkeypatch, caplog, error_type
+    ):
+        holder = {}
+
+        def extract(*args, **kwargs):
+            holder["worker"].requestInterruption()
+            raise error_type("a friendly message")
+
+        monkeypatch.setattr(pe, "extract_global_ini", extract)
+        worker = holder["worker"] = P4kExtractWorker("Data.p4k", "base.ini", "unp4k.exe")
+        finished, errors = _collect(worker)
+        worker.start()
+        assert worker.wait(5000)
+        assert finished == [False]
+        assert errors == []
+        assert _error_records(caplog) == []
+        assert worker.stopped is True
 
 
 # ── MainWindow, on stub selves ──────────────────────────────────────────────
@@ -602,6 +692,22 @@ class TestDataForgeSlots:
         MainWindow._on_dataforge_extract_finished(me, False, worker)
         me.statusBar().showMessage.assert_called_with(tr("extract.dataforge_extraction_failed"))
 
+    def test_an_ordinary_error_logs_nothing_at_error(self, monkeypatch, caplog):
+        """One box per failure (#482). The worker already logged an unexpected
+        failure at ERROR, which opens the global error dialog, and an
+        anticipated one (a locked Data.p4k, a timeout, a full drive) carries
+        its own message for the box below. An ERROR record here opened a
+        second box, or added a stray "(+1 suppressed)"."""
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = _Worker()
+        me = _window(_forge_worker=worker)
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            MainWindow._on_dataforge_extract_error(me, "There is not enough free space.", worker)
+        box.warning.assert_called_once()
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert "There is not enough free space." in caplog.text   # still in the log
+
     @pytest.mark.parametrize("released, closing", [(True, False), (False, True)])
     def test_an_error_while_closing_opens_no_dialog(self, monkeypatch, caplog, released, closing):
         box = MagicMock()
@@ -697,6 +803,16 @@ class TestP4kSlots:
         me._show_loading_progress.assert_called_once()
         carry_on.assert_not_called()
         assert me._after_unfinished_p4k_extraction is None
+
+    def test_the_reload_text_is_translated(self, monkeypatch):
+        """It was English in every language until #482's pass."""
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        monkeypatch.setattr(main_window, "tr", lambda key, **kwargs: f"<{key}>")
+        worker = _Worker(running=False)
+        me = _window(_p4k_worker=worker)
+        MainWindow._on_p4k_extract_finished(me, True, worker)
+        me._show_loading_progress.assert_called_once_with(
+            "<progress.reloading_with_extracted_base>")
 
     def test_the_fallback_is_dropped_when_closing(self):
         worker = _Worker(running=False)

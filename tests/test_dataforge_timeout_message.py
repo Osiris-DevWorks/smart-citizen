@@ -38,7 +38,9 @@ from src.utils.pak_extractor import (  # noqa: E402
     DataForgeTimeoutError, _unforge_timeout_error,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.regression]
+# english_ui (tests/conftest.py): the English asserts below would otherwise
+# depend on which language an earlier test module left active.
+pytestmark = [pytest.mark.unit, pytest.mark.regression, pytest.mark.usefixtures("english_ui")]
 
 # The p4k the extraction was pointed at. Named in the message because #370's
 # root cause was Smart Citizen reading a leftover install, so "which folder"

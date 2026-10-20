@@ -349,7 +349,7 @@ class ConfigTab(QWidget):
 
         # ── DataForge cache row ──────────────────────────────────────────
         # Independent from the app-data folder above so users can route the
-        # ~1.4 GB / ~28k-file DataForge tree to a fast local SSD while
+        # ~1.2 GB / ~31k-file DataForge tree to a fast local SSD while
         # keeping their tiny user.ini / sources where they like. Default
         # base is %LOCALAPPDATA% (registry) or <exe-dir>/data/cache/
         # (portable) — both never OneDrive-synced.
@@ -919,9 +919,9 @@ class ConfigTab(QWidget):
 
     # ── DataForge cache folder ───────────────────────────────────────────────
     # The cache path is independent of the app-data path so users can target
-    # a fast local SSD for the 1.4 GB DataForge tree without disturbing their
+    # a fast local SSD for the 1.2 GB DataForge tree without disturbing their
     # user.ini / sources. Changing the path requires a re-extraction (the
-    # old cache contents aren't migrated — moving 28k tiny files is slower
+    # old cache contents aren't migrated — moving ~31k tiny files is slower
     # than letting unforge rebuild from Data.p4k), so the user gets a
     # 3-button prompt: Re-extract + delete old / Re-extract + keep old /
     # Cancel. Cancel reverts the input to the previous value.
@@ -951,7 +951,7 @@ class ConfigTab(QWidget):
         # Only prompt when the old cache actually has extracted content.
         # The ``.p4k_mtime`` stamp is written by pak_extractor.py once an
         # extraction succeeds, so its presence is the cheapest "is this a
-        # populated cache" probe (avoids walking 28k files).
+        # populated cache" probe (avoids walking ~31k files).
         from src.utils.pak_extractor import P4K_MTIME_STAMP
         old_has_content = (old_leaf / P4K_MTIME_STAMP).exists()
         if not old_has_content:
@@ -962,7 +962,7 @@ class ConfigTab(QWidget):
             self.cache_dir_changed.emit(str(new_leaf))
             return True
 
-        # The shipped behavior is: never silently move ~1.4 GB. We ask the
+        # The shipped behavior is: never silently move ~1.2 GB. We ask the
         # user up-front whether to also clean up the orphan, and only the
         # cleanup is deferred (after re-extraction completes). The
         # re-extraction itself is triggered immediately via the signal so

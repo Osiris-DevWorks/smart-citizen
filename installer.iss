@@ -93,7 +93,7 @@ var
     out of it at its next start (AppSettings.migrate_installer_data_move). }
   OneDriveMoveFrom: String;
   PendingDataMoveFrom: String;
-  { 1.4.1: cache lives on a separate page so users can split the ~1.4 GB
+  { 1.4.1: cache lives on a separate page so users can split the ~1.2 GB
     DataForge tree off the user-data folder (e.g. SSD for cache,
     OneDrive Documents for user.ini). Saved to HKCU\...\cache_dir;
     cleared on Reset so the app's default (%LOCALAPPDATA%\Smart Citizen)
@@ -1927,7 +1927,7 @@ begin
     + 'generated enhancement INIs, and rolling backups under this folder. The default is your '
     + 'Documents folder.'
     + #13#10 + #13#10 +
-    'The ~1.4 GB DataForge XML cache lives on its own page next — splitting them lets you keep '
+    'The ~1.2 GB DataForge XML cache lives on its own page next — splitting them lets you keep '
     + 'your tiny user data wherever you like while sending the cache to a fast SSD.'
     + #13#10 + #13#10 +
     'Consider a custom location if:'
@@ -1977,8 +1977,8 @@ begin
   CacheDirPage := CreateInputDirPage(
     DataDirPage.ID,
     'DataForge Cache Location',
-    'Choose where Smart Citizen stores the ~1.4 GB DataForge XML cache.',
-    'The DataForge cache contains ~28,000 entity XMLs extracted from Star Citizen''s '
+    'Choose where Smart Citizen stores the ~1.2 GB DataForge XML cache.',
+    'The DataForge cache contains ~31,000 entity XMLs extracted from Star Citizen''s '
     + 'Data.p4k file. It''s used to generate the in-game item descriptions you see in the '
     + 'Enhancements tab.'
     + #13#10 + #13#10 +
@@ -1987,7 +1987,7 @@ begin
     + #13#10 + #13#10 +
     'Pick a custom location if you want to:'
     + #13#10 +
-    '  - Move the 1.4 GB tree to a different drive (faster SSD, or to free C: space)'
+    '  - Move the 1.2 GB tree to a different drive (faster SSD, or to free C: space)'
     + #13#10 +
     '  - Share the cache between multiple Smart Citizen installs on this PC'
     + #13#10 + #13#10 +

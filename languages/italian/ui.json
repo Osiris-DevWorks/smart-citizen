@@ -628,7 +628,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "Cartella per user.ini, cache delle sorgenti, INI degli enhancement e backup. Spostala fuori dalla cartella Documenti sincronizzata con OneDrive se la pulizia della cache fallisce. La cache XML di DataForge ha un proprio percorso qui sotto — è di circa 1,4 GB, quindi il percorso predefinito la tiene automaticamente fuori da OneDrive."
+      "at": "Cartella per user.ini, cache delle sorgenti, INI degli enhancement e backup. Spostala fuori dalla cartella Documenti sincronizzata con OneDrive se la pulizia della cache fallisce. La cache XML di DataForge ha un proprio percorso qui sotto — è di circa 1,2 GB, quindi il percorso predefinito la tiene automaticamente fuori da OneDrive."
     },
     "app_data_label": {
       "ht": "",
@@ -820,7 +820,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Cartella base per l'albero XML estratto di DataForge (~1,4 GB). Ogni canale viene annidato al suo interno come {base}\\{channel}\\cache\\dataforge\\. Il valore predefinito è %LOCALAPPDATA%\\Smart Citizen, così resta fuori da OneDrive. Cambiare il percorso avvia una nuova estrazione."
+      "at": "Cartella base per l'albero XML estratto di DataForge (circa 1,2 GB). Ogni canale viene annidato al suo interno come {base}\\{channel}\\cache\\dataforge\\. Un'estrazione richiede fino a circa 4,5 GB liberi su quest'unità mentre è in esecuzione, meno se è già presente una cache. I suoi file di lavoro vanno invece in %TEMP% quando questa cartella si trova su OneDrive, su un'unità di rete o rimovibile, oppure è annidata molto in profondità. Il valore predefinito è %LOCALAPPDATA%\\Smart Citizen, così resta fuori da OneDrive. Cambiare il percorso avvia una nuova estrazione."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2373,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "Ricaricamento di {channel} dopo il ripristino di user.ini..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Ricaricamento con il base.ini estratto..."
     }
   },
   "status_bar": {
@@ -2827,6 +2831,42 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "La conversione del database di gioco ha superato i 30 minuti ed è stata interrotta.\n\nDatabase trovato: {dcb} ({size} MB) in:\n{path}\n\nUn'installazione integra si converte in molto meno di un minuto. Di solito significa che Smart Citizen sta leggendo la cartella di Star Citizen sbagliata. Un'installazione vecchia o residua sul disco sembra valida ma contiene file di gioco obsoleti.\n\nApri l'RSI Launcher e controlla il percorso di installazione mostrato. Se non corrisponde al percorso sopra, correggilo nella scheda Config di Smart Citizen. Se corrisponde, esegui invece \"Verify Files\" nel launcher."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Lo spazio libero non è sufficiente. Non è stato salvato nulla e la tua cache DataForge attuale non è stata modificata."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Lo spazio libero non è sufficiente per estrarre global.ini da Data.p4k. Non è stato modificato nulla."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "L'unità {drive} ha {free} liberi e l'estrazione richiede circa {needed} su quell'unità mentre è in esecuzione."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Libera spazio sull'unità {drive} oppure scegli una cartella cache DataForge su un'altra unità nella scheda Config, poi riprova."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "L'estrazione lavora nella tua cartella temporanea di Windows ({folder}) perché la cartella cache DataForge si trova su OneDrive, su un'unità di rete o rimovibile, oppure è annidata molto in profondità. Libera spazio sull'unità {drive}, poi riprova."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Libera spazio sull'unità {drive}, poi riprova."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "L'unità {drive} ha esaurito lo spazio mentre la nuova cache DataForge veniva salvata in:\n{folder}\n\nQuella cache è incompleta. Libera spazio sull'unità {drive}, poi esegui di nuovo l'estrazione per ricostruirla."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
     }
   },
   "apply": {

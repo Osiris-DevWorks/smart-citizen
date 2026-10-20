@@ -651,7 +651,7 @@
       "at": ""
     },
     "data_desc": {
-      "ht": "Folder for user.ini, source cache, enhancement INIs, and backups. Move this off OneDrive-synced Documents if cache cleanup fails. The DataForge XML cache has its own path below — it’s ~1.4 GB so the default keeps it out of OneDrive automatically.",
+      "ht": "Folder for user.ini, source cache, enhancement INIs, and backups. Move this off OneDrive-synced Documents if cache cleanup fails. The DataForge XML cache has its own path below — it’s ~1.2 GB so the default keeps it out of OneDrive automatically.",
       "at": ""
     },
     "app_data_label": {
@@ -843,7 +843,7 @@
       "at": ""
     },
     "cache_dir_tooltip": {
-      "ht": "Base folder for the extracted DataForge XML tree (~1.4 GB). Each channel nests under this as {base}\\{channel}\\cache\\dataforge\\. Defaults to %LOCALAPPDATA%\\Smart Citizen so it stays out of OneDrive. Changing the path triggers a re-extraction.",
+      "ht": "Base folder for the extracted DataForge XML tree (about 1.2 GB). Each channel nests under this as {base}\\{channel}\\cache\\dataforge\\. An extraction needs up to about 4.5 GB free on this drive while it runs, less when a cache is already there. Its working files go to %TEMP% instead when this folder is on OneDrive, a network or removable drive, or nested very deep. Defaults to %LOCALAPPDATA%\\Smart Citizen so it stays out of OneDrive. Changing the path triggers a re-extraction.",
       "at": ""
     },
     "browse_cache_tooltip": {
@@ -2373,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "Reloading {channel} after user.ini restore...",
       "at": ""
+    },
+    "reloading_with_extracted_base": {
+      "ht": "Reloading with extracted base.ini...",
+      "at": ""
     }
   },
   "status_bar": {
@@ -2826,6 +2830,42 @@
     },
     "dataforge_timeout": {
       "ht": "Converting the game database took longer than 30 minutes and was stopped.\n\nThe database found was {dcb} ({size} MB) at:\n{path}\n\nA healthy install converts in well under a minute, so this usually means Smart Citizen is reading the wrong Star Citizen folder. An old or leftover install still on your drive will look valid but hold outdated game files.\n\nOpen the RSI Launcher and check the install location it shows for Star Citizen. If it is not the path above, correct it in Smart Citizen's Config tab. If it IS the same path, run Verify Files in the launcher to repair the install instead.",
+      "at": ""
+    },
+    "no_space_dataforge": {
+      "ht": "There is not enough free space. Nothing was saved, and your current DataForge cache was not changed.",
+      "at": ""
+    },
+    "no_space_global_ini": {
+      "ht": "There is not enough free space to extract global.ini from Data.p4k. Nothing was changed.",
+      "at": ""
+    },
+    "no_space_drive": {
+      "ht": "Drive {drive} has {free} free, and the extraction needs about {needed} there while it runs.",
+      "at": ""
+    },
+    "no_space_fix_cache": {
+      "ht": "Free up space on drive {drive}, or choose a DataForge cache folder on another drive in the Config tab, then try again.",
+      "at": ""
+    },
+    "no_space_fix_temp": {
+      "ht": "The extraction works in your Windows temp folder ({folder}) because the DataForge cache folder is on OneDrive, a network or removable drive, or nested very deep. Free up space on drive {drive}, then try again.",
+      "at": ""
+    },
+    "no_space_fix": {
+      "ht": "Free up space on drive {drive}, then try again.",
+      "at": ""
+    },
+    "no_space_cache_incomplete": {
+      "ht": "Drive {drive} ran out of space while the new DataForge cache was being saved in:\n{folder}\n\nThat cache is incomplete. Free up space on drive {drive}, then extract again to rebuild it.",
+      "at": ""
+    },
+    "size_gb": {
+      "ht": "{whole}.{tenth} GB",
+      "at": ""
+    },
+    "size_mb": {
+      "ht": "{mb} MB",
       "at": ""
     }
   },
