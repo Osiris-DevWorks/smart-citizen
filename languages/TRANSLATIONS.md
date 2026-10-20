@@ -98,6 +98,21 @@ them against the new source.
   errors, and the Korean sentence-spacing rule holds. No human string
   changed. `tests/test_clear_cache.py` checks every language's placeholders,
   the folder on a line of its own, and this `ht`/`at` split.
+- **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #455: a YES on Setup's
+  OneDrive warning now moves the data at the app's next start, and the app
+  says what it did. Three new `onedrive.*` keys after `dont_warn_again`:
+  `installer_move_done` (the status bar note: the files moved out of
+  OneDrive into the new data folder), `installer_move_left_title` and
+  `installer_move_left_body` (the box when some files stayed in the old
+  folder: why, that the Log tab lists them, and to check the old folder
+  before deleting it). In all 10 languages, `at`-only (`ht` empty), worded
+  with each file's own words from `onedrive.warning_*` and
+  `config.migrate_data_done_body` (the "file(s)" form, the data folder, the
+  reader's form of address) and its own name for the Log tab. Each string was
+  back-translated and compared with the English in the same pass, not by a
+  separate checker: no meaning errors, and the Korean sentence-spacing rule
+  holds. `tests/test_installer_data_move.py` checks every language's
+  `ht`/`at` split and placeholders.
 - **2.5.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
   cache folder that is a link (a junction or a symbolic link made by hand,
   usually to keep the cache on another drive), because an extraction

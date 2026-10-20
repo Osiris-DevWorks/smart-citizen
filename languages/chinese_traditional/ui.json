@@ -2685,6 +2685,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "不再提醒我"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "已將 {count} 個檔案從 OneDrive 移動到新的資料資料夾：{new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "部分檔案留在了 OneDrive 中"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "安裝程式已將你的資料資料夾切換為本地資料夾，Smart Citizen 已將 {moved} 個檔案移動到那裡。\n\n原位置：\n{old}\n\n新位置：\n{new}\n\n有 {left} 個檔案留在了舊資料夾中，原因是新資料夾中已有同名檔案（已保留該檔案），或者該檔案無法移動。「日誌」分頁列出了這些檔案。\n\n刪除舊資料夾之前請先檢查，並將仍需要的內容複製到新資料夾。"
     }
   },
   "user_ini_reset": {

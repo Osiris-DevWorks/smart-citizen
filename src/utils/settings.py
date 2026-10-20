@@ -662,6 +662,10 @@ class AppSettings:
     # "delete old cache after re-extraction". The path is removed after the
     # next successful P4K extraction so the 1.2 GB orphan doesn't linger.
     PENDING_CACHE_CLEANUP = "pending_cache_cleanup"
+    # Written by Setup when the user answers YES to its OneDrive warning: the
+    # data folder they left. The next start moves Smart Citizen's own folders
+    # out of it and deletes the value (#455, migrate_installer_data_move).
+    PENDING_DATA_MOVE_FROM = "pending_data_move_from"
     # When True (default) the components Tag Builder annotation is woven
     # into the POTENTIAL BLUEPRINTS lists inside mission descriptions
     # (e.g. "[MIL-S1-A] Norfield"). Users who want clean mission body
@@ -786,6 +790,7 @@ class AppSettings:
         "UserDataDir",
         "cache_dir",
         "pending_cache_cleanup",
+        "pending_data_move_from",
         "window_geometry",
         "window_state",
         # Column widths are machine-local for the same reason window geometry
@@ -2733,6 +2738,32 @@ class AppSettings:
         else:
             settings.setValue(AppSettings.PENDING_CACHE_CLEANUP, str(path))
         settings.sync()
+
+    @staticmethod
+    def migrate_installer_data_move():
+        """Move the data out of the OneDrive folder the user left in Setup (#455).
+
+        Setup's OneDrive warning offers a local folder, and a YES writes the
+        folder the data was in to ``PENDING_DATA_MOVE_FROM``. This moves Smart
+        Citizen's own folders from there into the data folder now in use
+        (``user_ini_manager.move_owned_user_data``: merged, never overwriting)
+        and returns its ``DataMoveResult`` for the window to report, or None
+        when Setup asked for nothing. The value is deleted before the move,
+        so it is tried once: what stays behind is reported, never retried.
+        Runs before ``migrate_game_path_to_channel_layout`` and the DataForge
+        cache migrator, so they see the moved data. Registry builds only:
+        there is no Setup for a portable build.
+        """
+        settings = AppSettings.settings()
+        old = str(settings.value(AppSettings.PENDING_DATA_MOVE_FROM, "", type=str) or "").strip()
+        if not old:
+            return None
+        settings.remove(AppSettings.PENDING_DATA_MOVE_FROM)
+        settings.sync()
+        from src.utils.user_ini_manager import move_owned_user_data
+        new = AppSettings.get_user_data_dir()
+        logger.info(f"Setup asked to move the data from {old} to {new}")
+        return move_owned_user_data(old, new)
 
     @staticmethod
     def get_user_data_dir() -> Path:

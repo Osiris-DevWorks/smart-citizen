@@ -655,8 +655,11 @@ class SingleRowScrollArea(QScrollArea):
 class MainWindow(QMainWindow):
     """Main application window."""
 
-    def __init__(self):
+    def __init__(self, installer_data_move=None):
         super().__init__()
+        # #455: what the data move Setup asked for did, reported once at startup
+        # (_report_installer_data_move).
+        self._installer_data_move = installer_data_move
         self.setWindowTitle(tr("window.title", version=get_version()))
         # Position only; the size is set after the UI is built — restored from
         # saved geometry, or sized to the compact content hint on first run
@@ -4474,6 +4477,7 @@ class MainWindow(QMainWindow):
             return
         self._startup_gate_pending = False
         self._start_startup_sync()
+        self._report_installer_data_move()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
         self._maybe_auto_scan_blueprints()
@@ -4516,6 +4520,33 @@ class MainWindow(QMainWindow):
         self._bp_scan_silent = True
         self.blueprint_tracker_tab.set_scan_logs_enabled(False)
         self._start_next_blueprint_scan()
+
+    def _report_installer_data_move(self) -> None:
+        """Say what the move Setup asked for did (#455), once.
+
+        A YES on Setup's OneDrive warning moved Smart Citizen's own folders out
+        of the OneDrive folder before this window was built
+        (``AppSettings.migrate_installer_data_move``). Everything moved: a
+        status bar note. Something stayed (a file already in the new folder,
+        which was kept, or one that could not be moved): a box naming both
+        folders, because the user may want what is left. Nothing to move: the
+        log only.
+        """
+        result, self._installer_data_move = self._installer_data_move, None
+        if result is None or (not result.moved and not result.left):
+            return
+        old, new = os.path.normpath(str(result.old_root)), os.path.normpath(str(result.new_root))
+        if result.left:
+            QMessageBox.warning(
+                self,
+                tr("onedrive.installer_move_left_title"),
+                tr("onedrive.installer_move_left_body", old=old, new=new,
+                   moved=result.moved, left=len(result.left)),
+            )
+            return
+        self.statusBar().showMessage(
+            tr("onedrive.installer_move_done", new=new, count=result.moved)
+        )
 
     def _maybe_warn_onedrive_data_dir(self) -> None:
         """Warn once when the data root is inside a OneDrive-managed folder (#172).

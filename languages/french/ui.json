@@ -2685,6 +2685,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Ne plus m'avertir"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} fichier(s) déplacé(s) de OneDrive vers le nouveau dossier de données : {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Certains fichiers sont restés dans OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "Le programme d'installation a remplacé votre dossier de données par un dossier local, et Smart Citizen y a déplacé {moved} fichier(s).\n\nDe :\n{old}\n\nVers :\n{new}\n\n{left} fichier(s) sont restés dans l'ancien dossier, soit parce qu'un fichier du même nom se trouvait déjà dans le nouveau dossier (celui-ci a été conservé), soit parce que le fichier n'a pas pu être déplacé. L'onglet Journal les liste.\n\nVérifiez l'ancien dossier avant de le supprimer, et copiez dans le nouveau tout ce dont vous avez encore besoin."
     }
   },
   "user_ini_reset": {

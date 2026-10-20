@@ -2685,6 +2685,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Non avvisarmi più"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "Spostati {count} file da OneDrive nella nuova cartella dati: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Alcuni File Sono Rimasti in OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "L'installazione ha sostituito la tua cartella dati con una cartella locale, e Smart Citizen vi ha spostato {moved} file.\n\nDa:\n{old}\n\nA:\n{new}\n\n{left} file sono rimasti nella vecchia cartella, perché nella nuova c'era già un file con lo stesso nome (che è stato mantenuto) oppure perché non è stato possibile spostarli. La scheda Log li elenca.\n\nControlla la vecchia cartella prima di eliminarla e copia nella nuova tutto ciò che ti serve ancora."
     }
   },
   "user_ini_reset": {

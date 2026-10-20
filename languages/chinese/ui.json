@@ -2685,6 +2685,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "不再提醒我"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "已将 {count} 个文件从 OneDrive 移动到新的数据文件夹：{new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "部分文件留在了 OneDrive 中"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "安装程序已将你的数据文件夹切换为本地文件夹，Smart Citizen 已将 {moved} 个文件移动到那里。\n\n原位置：\n{old}\n\n新位置：\n{new}\n\n有 {left} 个文件留在了旧文件夹中，原因是新文件夹中已有同名文件（已保留该文件），或者该文件无法移动。“日志”标签页列出了这些文件。\n\n删除旧文件夹之前请先检查，并将仍需要的内容复制到新文件夹。"
     }
   },
   "user_ini_reset": {

@@ -2685,6 +2685,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "다시 경고하지 않기"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count}개 파일을 OneDrive에서 새 데이터 폴더로 이동했습니다: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "일부 파일이 OneDrive에 남았습니다"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "설치 프로그램이 데이터 폴더를 로컬 폴더로 바꿨고, Smart Citizen이 {moved}개 파일을 그곳으로 이동했습니다.\n\n이전 위치:\n{old}\n\n새 위치:\n{new}\n\n{left}개 파일이 이전 폴더에 남았습니다. 새 폴더에 같은 이름의 파일이 이미 있었거나(그 파일을 유지했습니다) 파일을 이동할 수 없었기 때문입니다. 로그 탭에 목록이 있습니다.\n\n이전 폴더를 삭제하기 전에 확인하고, 아직 필요한 것은 새 폴더로 복사하세요."
     }
   },
   "user_ini_reset": {

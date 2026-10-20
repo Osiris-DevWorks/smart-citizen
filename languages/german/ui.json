@@ -2685,6 +2685,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Nicht erneut warnen"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} Datei(en) aus OneDrive in den neuen Datenordner verschoben: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Einige Dateien sind in OneDrive geblieben"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "Das Setup hat deinen Datenordner auf einen lokalen Ordner umgestellt, und Smart Citizen hat {moved} Datei(en) dorthin verschoben.\n\nVon:\n{old}\n\nNach:\n{new}\n\n{left} Datei(en) sind im alten Ordner geblieben, entweder weil im neuen Ordner schon eine Datei mit demselben Namen lag (diese wurde behalten) oder weil die Datei nicht verschoben werden konnte. Der Tab „Protokoll“ listet sie auf.\n\nPrüfe den alten Ordner, bevor du ihn löschst, und kopiere alles, was du noch brauchst, in den neuen."
     }
   },
   "user_ini_reset": {
