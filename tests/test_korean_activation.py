@@ -38,6 +38,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -158,6 +159,25 @@ def test_korean_is_available_in_selector():
 def test_korean_maps_to_south_korea_localization_id():
     assert SC_LANGUAGE_IDS["korean"] == "korean_(south_korea)"
     assert AppSettings.get_sc_language_id("korean") == "korean_(south_korea)"
+
+
+def test_korean_user_cfg_follows_the_stored_choice(tmp_path):
+    """Window start and Apply call ensure_user_cfg_language() with no
+    language, so it must read the stored choice. Korean shares its slot with
+    Russian, so the line it writes is the same one Russian writes."""
+    from src.utils.user_cfg import ensure_user_cfg_language
+
+    with patch("src.utils.user_cfg.AppSettings") as mock_settings:
+        mock_settings.get_game_install_path.return_value = str(tmp_path)
+        mock_settings.get_active_channel.return_value = "LIVE"
+        mock_settings.get_selected_language.return_value = "korean"
+        mock_settings.get_sc_language_id.side_effect = AppSettings.get_sc_language_id
+        cfg = tmp_path / "user.cfg"
+        cfg.write_text("g_language = english\nr_VSync = 1\n", encoding="utf-8")
+        assert ensure_user_cfg_language() is True
+        lines = (tmp_path / "user.cfg").read_text(encoding="utf-8").splitlines()
+    assert [ln for ln in lines if ln.startswith("g_language")] == ["g_language = korean_(south_korea)"]
+    assert "r_VSync = 1" in lines
 
 
 def test_sources_json_has_no_korean_url():

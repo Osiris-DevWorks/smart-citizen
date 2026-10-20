@@ -430,6 +430,19 @@ class TestComputeAlreadyApplied:
         (env.channel / "user.cfg").write_text("g_language = german_(germany)\n", encoding="utf-8")
         assert _compute_already_applied(self._snapshot(env)) is False
 
+    def test_false_for_korean_while_russian_content_is_applied(self, env):
+        """Russian and Korean share korean_(south_korea), so user.cfg reads
+        the same for both. With Korean selected and Russian strings in the
+        game file, only the content can tell them apart, and it must read
+        "not applied" so Apply stays reachable."""
+        cfg = env.channel / "user.cfg"
+        cfg.write_text("g_language = korean_(south_korea)\n", encoding="utf-8")
+        self._write_applied(env, {"a": "русский a", "b": "русский b"})
+        assert _compute_already_applied(self._snapshot(env, language="korean")) is False
+        # The same file with Russian selected and loaded is applied.
+        self._write_applied(env, self.STOCK)
+        assert _compute_already_applied(self._snapshot(env, language="russian")) is True
+
     def test_false_when_user_cfg_is_missing(self, env):
         self._write_applied(env, self.STOCK)
         (env.channel / "user.cfg").unlink()

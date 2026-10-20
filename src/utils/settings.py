@@ -67,9 +67,17 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     # Dymerz's guide maps Turkish onto german_(germany) instead, but that slot
     # is taken by our own German and the two would overwrite each other's
     # global.ini. russian_(russia) was tried first and rejected — the game does
-    # not recognise it.
+    # not recognise it. A borrowed slot is never shared with another of our
+    # languages, with one deliberate exception: Russian and Korean below.
     "turkish":       "polish_(poland)",
     "korean":        "korean_(south_korea)",
+    # Russian borrows the korean_(south_korea) slot, shared with Korean on
+    # purpose (approved by the owner). russian_(russia) is not a g_language
+    # value the game accepts, and the Korean font is the only in-game font that
+    # covers Cyrillic, so Russian community translations ride this slot. Only
+    # one of the two can be applied at a time: applying either replaces the
+    # other's global.ini, and user.cfg holds the same g_language for both.
+    "russian":       "korean_(south_korea)",
     "chinese_traditional": "chinese_(traditional)",
 }
 

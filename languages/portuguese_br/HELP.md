@@ -116,6 +116,7 @@ Escolha um idioma no menu **Idioma** da aba **Config** (ao lado de Canal). A tro
 - **Outros idiomas** baixam o `global.ini` traduzido pela comunidade para aquele idioma e o sobrepõem à base em inglês: qualquer string que a tradução não cobre cai de volta para o inglês em vez de sumir. O download fica em cache por idioma; voltar a um idioma já usado reaproveita o cache.
 - **Os aprimoramentos continuam em inglês.** Blocos de estatísticas, tags e detalhes de missão são gerados a partir dos dados do jogo e mantêm a forma em inglês sobre a prosa traduzida. Uma linha mista (digamos, um nome de função em português dentro de um bloco de estatísticas em inglês) é esperada, não é um bug.
 - **Mapear Arquivo de Idioma** (aba Config) permite apontar um idioma para outra URL de `global.ini`, por exemplo o seu próprio fork de uma tradução da comunidade. A sua URL vence o padrão incluído.
+- **Russo e coreano dividem o mesmo espaço de idioma do jogo.** O jogo não tem espaço para russo, e a fonte coreana é a única que exibe cirílico, então o russo é aplicado como o idioma coreano do jogo. Aplicar um substitui o arquivo do outro no jogo, e só o último aplicado aparece no jogo.
 - Alguns textos da interface só atualizam após reiniciar o app. As strings da tabela recarregam imediatamente.
 
 Ao aplicar, o app grava na pasta de idioma correspondente da instalação do jogo e define `g_language` no `user.cfg`, para que o jogo carregue o arquivo certo.
