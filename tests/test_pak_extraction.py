@@ -16,22 +16,17 @@ import tempfile
 import os
 from pathlib import Path
 from types import SimpleNamespace
-import sys
 
 import src.utils.pak_extractor as pe
 from src.utils.onedrive import _ONEDRIVE_ENV_VARS
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from utils.pak_extractor import (
+from src.utils.pak_extractor import (
     DATAFORGE_KEEP_SUBPATHS,
     P4kLockedError,
     _copy_filtered_records,
     _raise_unp4k_failure,
     dataforge_cache_is_fresh,
 )
-# The extractor translates through src.utils.i18n (its own import, in both
-# module copies), so the language has to be set on that copy.
+# The extractor translates through src.utils.i18n, so the language is set there.
 from src.utils.i18n import set_language, tr
 
 
@@ -187,9 +182,10 @@ class TestDataForgeExtraction:
     work, the copy and the stop points are in test_extraction_working_folder.py.
 
     The fake goes on src.utils.pak_extractor (``pe``), the module production
-    imports and whose extract_dataforge these tests call. The utils.pak_extractor
-    import above is a second copy of the module, and a fake set on one never
-    reaches the other's extract_dataforge."""
+    imports and whose extract_dataforge these tests call. Everything in this
+    file comes from that one copy: the legacy utils.pak_extractor path would
+    load a second one, and a fake set on one never reaches the other's
+    extract_dataforge."""
 
     pytestmark = pytest.mark.unit
 
@@ -654,7 +650,7 @@ class TestUnp4kFailureMessage:
         ERROR-level record anywhere in the app, which would duplicate the
         friendly dialog this raises into with a second, raw-stack-trace
         popup on top of it (the exact bug this regression-guards)."""
-        with caplog.at_level(logging.WARNING, logger="utils.pak_extractor"):
+        with caplog.at_level(logging.WARNING, logger="src.utils.pak_extractor"):
             with pytest.raises(RuntimeError):
                 _raise_unp4k_failure(3762504530, self._REAL_LOCK_STDERR)
         assert not any(r.levelno >= logging.ERROR for r in caplog.records)
@@ -664,7 +660,7 @@ class TestUnp4kFailureMessage:
         """A genuinely unexpected unp4k failure should still surface through
         the global ErrorDialogHandler — only the well-understood locked-file
         case is downgraded."""
-        with caplog.at_level(logging.WARNING, logger="utils.pak_extractor"):
+        with caplog.at_level(logging.WARNING, logger="src.utils.pak_extractor"):
             with pytest.raises(RuntimeError):
                 _raise_unp4k_failure(2, "some other unp4k error")
         assert any(r.levelno >= logging.ERROR for r in caplog.records)
@@ -712,7 +708,7 @@ class TestCacheLayoutNamedOnce:
         assert self._spellings() == self._ALLOWED
 
     def test_the_names_describe_the_layout_the_extraction_writes(self):
-        from utils.pak_extractor import (
+        from src.utils.pak_extractor import (
             DATAFORGE_LIBS_SUBPATH, DATAFORGE_RECORDS_SUBPATH, DATAFORGE_RECORDS_UNDER_LIBS,
         )
         assert DATAFORGE_LIBS_SUBPATH.as_posix() == "raw/libs"
