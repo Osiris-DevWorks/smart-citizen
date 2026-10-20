@@ -820,7 +820,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Pasta base para a árvore XML extraída do DataForge (~1,4 GB). Cada canal se aninha sob esta como {base}\\{channel}\\cache\\dataforge\\. O padrão é %LOCALAPPDATA%\\Smart Citizen para ficar fora do OneDrive. Alterar o caminho aciona uma nova extração."
+      "at": "Pasta base para a árvore XML extraída do DataForge (cerca de 1,2 GB). Cada canal se aninha sob esta como {base}\\{channel}\\cache\\dataforge\\. Uma extração precisa de até cerca de 4,5 GB livres nesta unidade enquanto é executada, menos quando já existe um cache. Os arquivos de trabalho dela vão para %TEMP% em vez disso quando esta pasta está no OneDrive, em uma unidade de rede ou removível, ou aninhada muito profundamente. O padrão é %LOCALAPPDATA%\\Smart Citizen para ficar fora do OneDrive. Alterar o caminho aciona uma nova extração."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2373,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "Recarregando {channel} após restaurar o user.ini..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Recarregando com o base.ini extraído..."
     }
   },
   "status_bar": {
@@ -2815,6 +2819,42 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "A conversão do banco de dados do jogo passou de 30 minutos e foi interrompida.\n\nBanco de dados encontrado: {dcb} ({size} MB) em:\n{path}\n\nUma instalação íntegra converte em bem menos de um minuto. Normalmente isso significa que o Smart Citizen está lendo a pasta errada do Star Citizen. Uma instalação antiga ou remanescente no disco parece válida, mas contém arquivos de jogo desatualizados.\n\nAbra o RSI Launcher e verifique o local de instalação exibido. Se não for o caminho acima, corrija-o na aba Config do Smart Citizen. Se for o mesmo caminho, execute \"Verify Files\" no launcher."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Não há espaço livre suficiente. Nada foi salvo, e o seu cache atual do DataForge não foi alterado."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Não há espaço livre suficiente para extrair o global.ini do Data.p4k. Nada foi alterado."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "A unidade {drive} tem {free} livres, e a extração precisa de cerca de {needed} nela enquanto é executada."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Libere espaço na unidade {drive} ou escolha uma pasta cache do DataForge em outra unidade na aba Config e tente novamente."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "A extração trabalha na sua pasta temporária do Windows ({folder}) porque a pasta cache do DataForge está no OneDrive, em uma unidade de rede ou removível, ou aninhada muito profundamente. Libere espaço na unidade {drive} e tente novamente."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Libere espaço na unidade {drive} e tente novamente."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "A unidade {drive} ficou sem espaço enquanto o novo cache do DataForge era salvo em:\n{folder}\n\nEsse cache está incompleto. Libere espaço na unidade {drive} e extraia novamente para reconstruí-lo."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
     }
   },
   "apply": {

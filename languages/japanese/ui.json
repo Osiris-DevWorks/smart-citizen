@@ -628,7 +628,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "user.ini、ソースキャッシュ、拡張 INI、バックアップを保存するフォルダーです。キャッシュのクリーンアップに失敗する場合は、OneDrive と同期される Documents の外に移動してください。DataForge XML キャッシュには下に独自のパスがあります。約 1.4 GB あるため、デフォルトでは自動的に OneDrive の外に保持されます。"
+      "at": "user.ini、ソースキャッシュ、拡張 INI、バックアップを保存するフォルダーです。キャッシュのクリーンアップに失敗する場合は、OneDrive と同期される Documents の外に移動してください。DataForge XML キャッシュには下に独自のパスがあります。約 1.2 GB あるため、デフォルトでは自動的に OneDrive の外に保持されます。"
     },
     "app_data_label": {
       "ht": "",
@@ -820,7 +820,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "抽出された DataForge XML ツリー（約 1.4 GB）のベースフォルダーです。各チャンネルはこの下に {base}\\{channel}\\cache\\dataforge\\ としてネストされます。OneDrive の外に保つため、既定では %LOCALAPPDATA%\\Smart Citizen になります。パスを変更すると再抽出が実行されます。"
+      "at": "抽出された DataForge XML ツリー（約 1.2 GB）のベースフォルダーです。各チャンネルはこの下に {base}\\{channel}\\cache\\dataforge\\ としてネストされます。抽出の実行中は、このドライブに最大で約 4.5 GB の空き容量が必要です（キャッシュがすでにある場合はより少なくて済みます）。このフォルダーが OneDrive、ネットワークドライブまたはリムーバブルドライブ上にあるか、非常に深くネストされている場合、作業ファイルは代わりに %TEMP% に置かれます。OneDrive の外に保つため、既定では %LOCALAPPDATA%\\Smart Citizen になります。パスを変更すると再抽出が実行されます。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2373,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "user.ini の復元後、{channel} を再読み込みしています..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "抽出した base.ini で再読み込みしています..."
     }
   },
   "status_bar": {
@@ -2815,6 +2819,42 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "ゲームデータベースの変換に30分以上かかったため中止されました。\n\n検出されたデータベース: {dcb} ({size} MB)\n場所: {path}\n\n正常なインストールなら1分もかかりません。多くの場合、Smart Citizen が誤った Star Citizen フォルダーを読み込んでいることを意味します。ドライブに残った古いインストールは有効に見えても、古いゲームファイルを含んでいます。\n\nRSI Launcher を開き、表示されているインストール先を確認してください。上記のパスと異なる場合は、Smart Citizen の Config タブで修正してください。同じパスの場合は、代わりに Verify Files を実行してください。"
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "空き容量が不足しています。何も保存されておらず、現在の DataForge キャッシュは変更されていません。"
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Data.p4k から global.ini を抽出するための空き容量が不足しています。何も変更されていません。"
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "ドライブ {drive} の空き容量は {free} で、抽出の実行中はこのドライブに約 {needed} が必要です。"
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "ドライブ {drive} の空き容量を確保するか、設定タブで別のドライブにある DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーが OneDrive、ネットワークドライブまたはリムーバブルドライブ上にあるか、非常に深くネストされているため、抽出は Windows の一時フォルダー（{folder}）で行われます。ドライブ {drive} の空き容量を確保してから、もう一度お試しください。"
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "ドライブ {drive} の空き容量を確保してから、もう一度お試しください。"
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "新しい DataForge キャッシュを次の場所に保存している間に、ドライブ {drive} の空き容量がなくなりました：\n{folder}\n\nこのキャッシュは不完全です。ドライブ {drive} の空き容量を確保してから、もう一度抽出してキャッシュを再構築してください。"
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
     }
   },
   "apply": {

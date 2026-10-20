@@ -44,6 +44,58 @@ def no_real_install_detection_inputs():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def no_real_free_space():
+    """Every extraction checks free space before it writes (#482), so any
+    test that runs a real extract_dataforge or extract_global_ini on tmp_path
+    would otherwise pass or fail with the free space of the developer's (or
+    the runner's) drive. For the whole session, shutil.disk_usage reports
+    1 TiB free (the real call still runs, so a missing folder still raises)
+    and pak_extractor's volume probe reports 4096-byte clusters and no quota
+    figure. Tests of the check patch in their own figures over these. Tests
+    import pak_extractor both as src.utils.pak_extractor and as
+    utils.pak_extractor, two separate module objects, so each loaded one is
+    patched; shutil is one module either way."""
+    import functools
+    import shutil
+
+    try:
+        import src.utils.pak_extractor  # noqa: F401  (load it so it is always patched)
+    except ImportError:
+        pass
+
+    real_disk_usage = shutil.disk_usage
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(
+            shutil, "disk_usage", lambda path: real_disk_usage(path)._replace(free=1 << 40)
+        )
+        for name in ("src.utils.pak_extractor", "utils.pak_extractor"):
+            module = sys.modules.get(name)
+            if module is None:
+                continue
+            real_measure = module._measure_volume
+
+            @functools.wraps(real_measure)
+            def measure(folder, _real=real_measure):
+                return _real(folder)._replace(cluster=4096, caller_free=None)
+
+            patcher.setattr(module, "_measure_volume", measure)
+        yield
+
+
+@pytest.fixture
+def english_ui():
+    """The real English ui.json for one test, whatever language another test
+    module left active (i18n's module-level state persists across tests in
+    the same process). Restored afterwards."""
+    from src.utils import i18n
+
+    saved_lang, saved_strings = i18n._current_lang, i18n._strings
+    i18n.set_language("english")
+    yield
+    i18n._current_lang, i18n._strings = saved_lang, saved_strings
+
+
 # The run's one QApplication, once _session_qapp has made it (at the first
 # qapp request, or before the first test in a run with GUI tests).
 _SESSION_QAPP: list = []
