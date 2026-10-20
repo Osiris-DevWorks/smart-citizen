@@ -1173,6 +1173,134 @@ class TestP4kSlots:
         assert me._after_unfinished_p4k_extraction is carry_on
 
 
+class TestDataForgeQuestionAfterASuccess:
+    """#478: a successful global.ini extraction that startup, a channel
+    switch or a data-folder change was waiting on (its follow-up,
+    ``if_unfinished``, is set) asks the "DataForge cache is out of date"
+    question before the reload, as those callers do when no extraction was
+    needed. The success used to drop the follow-up and reload at once, so
+    the question waited for the next launch. The Config tab's Extract
+    button starts a run with no follow-up and still asks nothing. The real
+    success slot runs the real ``_maybe_prompt_dataforge_refresh`` on a
+    stub window, against a cache folder in tmp_path, with QMessageBox
+    faked."""
+
+    @pytest.fixture
+    def game(self, tmp_path, monkeypatch):
+        """Data.p4k and both tools, a DataForge cache folder (not made yet)
+        and a fake QMessageBox whose question answers No. Returns the cache
+        folder, Data.p4k and the box."""
+        p4k = tmp_path / "LIVE" / "Data.p4k"
+        p4k.parent.mkdir()
+        p4k.write_bytes(b"the patched game")
+        tools = tmp_path / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe"):
+            (tools / name).write_bytes(b"x")
+        leaf = tmp_path / "cache" / "dataforge"
+        settings = MagicMock()
+        settings.get_p4k_path.return_value = p4k
+        settings.get_unp4k_exe_path.return_value = tools / "unp4k.exe"
+        settings.get_unforge_exe_path.return_value = tools / "unforge.exe"
+        # Both getters name the folder, whichever one the question reads.
+        settings.get_dataforge_cache_dir.return_value = leaf
+        settings.get_dataforge_cache_leaf.return_value = leaf
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        box = MagicMock()
+        box.question.return_value = box.StandardButton.No
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        return leaf, p4k, box
+
+    @staticmethod
+    def _cache(leaf, p4k, *, fresh):
+        """An extracted cache, stamped for this Data.p4k (fresh) or for the
+        one before the patch (a different size)."""
+        records = leaf / pe.DATAFORGE_LIBS_SUBPATH
+        records.mkdir(parents=True)
+        (records / "ship.xml").write_text("<ship/>", encoding="utf-8")
+        (leaf / pe.P4K_MTIME_STAMP).write_text("0", encoding="utf-8")
+        size = p4k.stat().st_size + (0 if fresh else 1)
+        (leaf / pe.P4K_SIZE_STAMP).write_text(str(size), encoding="utf-8")
+
+    @staticmethod
+    def _finish(box, follow_up, **attrs):
+        """The success slot on a stub window whose question is the real one.
+        Returns the window and what happened, in order."""
+        events = []
+        worker = _Worker(running=False)
+        me = _window(**{"_p4k_worker": worker, "_after_unfinished_p4k_extraction": follow_up,
+                        "_enhancements_worker": None, **attrs})
+        me._maybe_prompt_dataforge_refresh = MainWindow._maybe_prompt_dataforge_refresh.__get__(me)
+        answer = box.question.return_value
+        box.question.side_effect = lambda *args: events.append("question") or answer
+        me._run_dataforge_extraction.side_effect = lambda: events.append("dataforge extraction")
+        me._show_loading_progress.side_effect = lambda *args: events.append("reload")
+        MainWindow._on_p4k_extract_finished(me, True, worker)
+        return me, events
+
+    def test_an_outdated_cache_is_asked_about_before_the_reload(self, game):
+        leaf, p4k, box = game
+        self._cache(leaf, p4k, fresh=False)
+        carry_on = MagicMock()
+
+        me, events = self._finish(box, carry_on)
+
+        assert events == ["question", "reload"]
+        assert box.question.call_args.args[:3] == (
+            me, tr("extract.dataforge_outdated_title"), tr("extract.dataforge_outdated_body"))
+        carry_on.assert_not_called()
+        assert me._after_unfinished_p4k_extraction is None
+
+    def test_yes_starts_the_dataforge_extraction_and_the_reload_still_follows(self, game):
+        """As at startup: the extraction runs beside the reload, and
+        ``_check_enhancements_freshness`` after the reload stays quiet while
+        it runs."""
+        leaf, p4k, box = game
+        self._cache(leaf, p4k, fresh=False)
+        box.question.return_value = box.StandardButton.Yes
+
+        me, events = self._finish(box, MagicMock())
+
+        assert events == ["question", "dataforge extraction", "reload"]
+        assert me._check_enhancements_after_loading is True
+
+    def test_the_config_tabs_extract_button_still_asks_nothing(self, game):
+        """A run with no follow-up: the user asked for global.ini only."""
+        leaf, p4k, box = game
+        self._cache(leaf, p4k, fresh=False)
+
+        _me, events = self._finish(box, None)
+
+        assert events == ["reload"]
+        box.question.assert_not_called()
+
+    @pytest.mark.parametrize("case", ["fresh", "never extracted", "a DataForge extraction runs",
+                                      "a generation runs"])
+    def test_no_question_where_the_callers_ask_none(self, game, case):
+        """The question's own guards hold here too: a fresh cache, one never
+        extracted (the category dialog after the first load handles that)
+        and a DataForge extraction or a generation already running."""
+        leaf, p4k, box = game
+        if case != "never extracted":
+            self._cache(leaf, p4k, fresh=case == "fresh")
+        attrs = {"a DataForge extraction runs": {"_forge_worker": MagicMock()},
+                 "a generation runs": {"_enhancements_worker": MagicMock()}}.get(case, {})
+
+        _me, events = self._finish(box, MagicMock(), **attrs)
+
+        assert events == ["reload"]
+        box.question.assert_not_called()
+
+    def test_nothing_is_asked_while_closing(self, game):
+        leaf, p4k, box = game
+        self._cache(leaf, p4k, fresh=False)
+
+        _me, events = self._finish(box, MagicMock(), _close_committed=True)
+
+        assert events == []
+        box.question.assert_not_called()
+
+
 @pytest.fixture
 def refused_folders(tmp_path, monkeypatch):
     """Real extractions where Windows refuses every working folder, beside
