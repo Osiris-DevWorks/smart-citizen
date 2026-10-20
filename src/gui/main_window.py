@@ -4704,20 +4704,24 @@ class MainWindow(QMainWindow):
         self._channel_indicator.setText(tr("status_bar.channel_indicator", channel=AppSettings.get_active_channel()))
 
     def _sync_canonical_source_paths(self, context: str) -> None:
-        """Mirror canonical file-backed source paths into QSettings."""
-        for source_name, canonical in (
-            (AppSettings.SOURCE_GLOBAL, str(AppSettings.get_cache_dir() / "base.ini")),
-            (AppSettings.SOURCE_USER, str(AppSettings.get_user_ini_path())),
-        ):
-            stored = AppSettings.get_source_path(source_name)
-            if stored.startswith("http://") or stored.startswith("https://"):
-                continue
-            if stored != canonical:
-                AppSettings.set_source_path(source_name, canonical)
-                logger.info(
-                    f"Re-synced {source_name} source path {context}: "
-                    f"{stored or '(unset)'} → {canonical}"
-                )
+        """Mirror canonical file-backed source paths into QSettings.
+
+        The ``global`` source goes to the selected language's base.ini, as at
+        startup (``AppSettings.sync_global_source_path``). It used to go to
+        the English base.ini whatever the language, so a channel switch or a
+        data-folder change turned the table, and the next Apply, English
+        (#502)."""
+        AppSettings.sync_global_source_path(context)
+        stored = AppSettings.get_source_path(AppSettings.SOURCE_USER)
+        canonical = str(AppSettings.get_user_ini_path())
+        if stored.startswith(("http://", "https://")):
+            return
+        if stored != canonical:
+            AppSettings.set_source_path(AppSettings.SOURCE_USER, canonical)
+            logger.info(
+                f"Re-synced {AppSettings.SOURCE_USER} source path {context}: "
+                f"{stored or '(unset)'} → {canonical}"
+            )
 
     @pyqtSlot(str)
     def _on_channel_changed(self, channel: str) -> None:
@@ -6284,7 +6288,10 @@ class MainWindow(QMainWindow):
         if success:
             # Lock Global source to the local cache path with auto-update off,
             # so future startups don't overwrite the extracted file from a remote URL.
-            local_path = str(AppSettings.get_cache_dir() / 'base.ini')
+            # The selected language's own base.ini when it has one (#502):
+            # this run refreshed only the English one, and pointing every
+            # language at that turned the table, and the next Apply, English.
+            local_path = str(AppSettings.get_global_source_base_ini())
             AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, local_path)
             AppSettings.set_source_auto_update(AppSettings.SOURCE_GLOBAL, False)
             # Refresh the config tab P4K status
