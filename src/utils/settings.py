@@ -2980,6 +2980,42 @@ class AppSettings:
         return lang_dir / "base.ini"
 
     @staticmethod
+    def get_global_source_base_ini(language: "str | None" = None) -> Path:
+        r"""The base.ini the ``global`` merge source reads for *language*
+        (default: the selected language): its own base.ini when the active
+        channel's cache has it, otherwise the English one (#502).
+
+        A language whose file has not been fetched for this channel or data
+        folder yet reads English until a language switch or Map Language
+        File fetches it. Startup, a channel switch, a data-folder change and
+        a successful global.ini extraction all point the source here; all
+        but startup used to point every language at the English base.ini,
+        so the table, and the next Apply, turned English.
+        """
+        if language is None:
+            language = AppSettings.get_selected_language()
+        own = AppSettings.get_base_ini_path(language)
+        if language != AppSettings.DEFAULT_LANGUAGE and not own.exists():
+            return AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
+        return own
+
+    @staticmethod
+    def sync_global_source_path(context: str) -> None:
+        """Point a file-backed ``global`` source at
+        :meth:`get_global_source_base_ini`; a URL source (a custom remote
+        one) is left alone. Run at every start and after a channel switch or
+        a data-folder change, because the loader reads the stored path, not
+        the channel-aware helpers. *context* goes in the log line."""
+        stored = AppSettings.get_source_path(AppSettings.SOURCE_GLOBAL)
+        if stored.startswith(("http://", "https://")):
+            return
+        canonical = str(AppSettings.get_global_source_base_ini())
+        if stored != canonical:
+            AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, canonical)
+            logger.info(f"Re-synced {AppSettings.SOURCE_GLOBAL} source path {context}: "
+                        f"{stored or '(unset)'} → {canonical}")
+
+    @staticmethod
     def get_enhancements_dir(language: "str | None" = None) -> Path:
         r"""Directory holding *language*'s generated ``*_enhancements.ini`` files.
 
