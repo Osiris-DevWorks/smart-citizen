@@ -952,6 +952,10 @@ class MainWindow(QMainWindow):
         # queue to swap the completion popups for a status bar message, so a
         # launch with new blueprints doesn't interrupt with a modal dialog.
         self._bp_scan_silent = False
+        # #416: starter blueprints a load added for a deferred seed, waiting
+        # to be reported once the load and anything it set off is over (see
+        # _flush_deferred_starter_report).
+        self._deferred_starter_report: list = []
 
         self.log_tab = LogTab()
         self._log_tab_index = self.tabs.addTab(self.log_tab, tr("tabs.log"))
@@ -2534,9 +2538,10 @@ class MainWindow(QMainWindow):
         (#387, #397). Runs after every reload, not just the first: Simple mode
         applies and then reloads, and a reload on its own must not leave the
         button red over state that was just applied. A failed restore, a
-        cancelled close prompt and an Apply Now that stopped before it touched
-        the button call it too, since each can leave the button without a
-        current verdict. The verdict lands in _on_applied_state_ready.
+        cancelled close prompt, an Apply Now that stopped before it touched
+        the button and a log scan that added blueprints (#416) call it too,
+        since each can leave the button without a current verdict. The
+        verdict lands in _on_applied_state_ready.
 
         One check runs at a time. A reload that arrives mid-check interrupts
         it and queues a rerun, which snapshots the newer state when it starts.
@@ -2830,12 +2835,16 @@ class MainWindow(QMainWindow):
                 )
             else:
                 enhancement_block = "  Smart Citizen enhancements: 0"
+            # Mark before the success box, as Clear Localization does: its
+            # event loop can deliver a change made after the merge above (a
+            # blueprint scan finishing, #416), which marks Apply red. Marking
+            # afterwards painted that green and dropped its check.
+            self._mark_applied()
             QMessageBox.information(
                 self, tr("dialogs.success_title"),
                 tr("apply.applied_body", target_path=target_path, user_count=f"{user_count:,}",
                    enhancement_block=enhancement_block),
             )
-            self._mark_applied()
             return True
         except Exception as e:
             # Mark first: the dialog's event loop can deliver a queued verdict.
@@ -3196,6 +3205,7 @@ class MainWindow(QMainWindow):
 
                 # Update status bar with entry counts and per-source status
                 self._update_status_bar()
+                self._queue_deferred_starter_report()  # #416: last, see its docstring
             except Exception as e:
                 logger.exception(f"Error during merge: {e}")
                 QMessageBox.critical(self, tr("dialogs.error_title"), tr("dialogs.failed_to_merge_sources", error=e))
@@ -5814,6 +5824,7 @@ class MainWindow(QMainWindow):
         # From here on, dirty-marking reflects a real in-session change —
         # see _mark_apply_dirty / _session_has_unapplied_edit.
         self._initial_load_done = True
+        self._queue_deferred_starter_report()  # #416: last, see its docstring
 
     @pyqtSlot(str)
     def _on_loading_error(self, error_msg: str):
@@ -6518,7 +6529,11 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
             # exit_btn: fall through to the normal close sequence below,
-            # exiting without applying.
+            # exiting without applying. The prompt ran its own event loop, so
+            # a check may have started while it was open (a blueprint scan
+            # that finished, #416). Settle again so no thread outlives the
+            # window.
+            self._settle_applied_state_check()
 
         # Auto-save overrides if there are unsaved edits. Skipped when closing
         # for a post-import restart — the in-memory entries reflect the OLD
@@ -6925,6 +6940,113 @@ class MainWindow(QMainWindow):
         if hasattr(self, "blueprint_tracker_tab"):
             self.blueprint_tracker_tab.set_known_item_names(self._known_item_names)
         self._repair_foreign_owned_names()
+        # #416: a scan that finished before any strings had loaded left the
+        # starter blueprints pending. Strings are loaded now, so name them.
+        _seeded, pending = AppSettings.get_default_blueprints_seed()
+        if pending:
+            added = self._seed_default_owned_blueprints()
+            if added:
+                # That scan's own report went out before these existed, so
+                # they are reported later, once the load is over (see
+                # _queue_deferred_starter_report).
+                self._deferred_starter_report = sorted(
+                    set(self._deferred_starter_report) | added
+                )
+
+    def _queue_deferred_starter_report(self) -> None:
+        """Queue the report for starters a load added (#416). The last step
+        of both load paths: anything earlier can still open a modal dialog
+        (the enhancement categories prompt, for one) whose event loop would
+        run a call queued sooner, putting the report on top of it."""
+        if self._deferred_starter_report:
+            QTimer.singleShot(0, self._flush_deferred_starter_report)
+
+    def _flush_deferred_starter_report(self) -> None:
+        """Report starters a load added for a deferred seed (#416), the way a
+        silent auto-scan does (that is almost always the scan that deferred
+        them). Waits while a long job runs, since its status text or dialog
+        would bury the message: an extraction, an enhancements generation, a
+        Simple-mode run or another load. Each of those normally ends in a
+        reload, whose own last step queues this again. After one that failed
+        or was stopped, the report waits for the next load (the starters are
+        already in Owned, only the notice waits). Never while closing."""
+        names = self._deferred_starter_report
+        if not names or self._close_committed:
+            return
+        if (self._loader_worker is not None or self._enhancements_worker is not None
+                or self._forge_worker is not None or self._p4k_worker is not None
+                or self._simple_run_active):
+            return
+        self._deferred_starter_report = []
+        self._report_blueprints_added(names, silent=True)
+
+    def _seed_default_owned_blueprints(self) -> set:
+        """Add the starter blueprints to the Owned set, once (#416).
+
+        Every player owns ``blueprint_meta.DEFAULT_OWNED_BLUEPRINTS`` from
+        their first fabricator, but the game never logs receiving them and no
+        mission offers them, so no scan can find them. Called when a log scan
+        finishes (``_finish_blueprint_scan_queue``), so they arrive with the
+        player's first scan, and from ``_rebuild_blueprint_metadata`` while a
+        seed is pending.
+
+        One-shot per item, recorded by loc key: a starter the user moves back
+        to Available stays there, and a starter declared in a later release
+        still reaches Owned on that user's next scan. The names come from the
+        loaded strings (the selected language and the game's own wording), so
+        a scan that finishes before any strings have loaded (the startup
+        auto-scan can) only marks the seed pending, and the next metadata
+        rebuild finishes it.
+
+        Returns the names it added to the Owned set: empty when every starter
+        was already recorded, the seed is still pending, or the new ones were
+        already owned. Never raises, since it runs at the end of a scan and
+        inside a load, and a failure here must break neither. A failed seed
+        records nothing, so the next scan tries again.
+        """
+        try:
+            from src.utils.blueprint_meta import (
+                DEFAULT_OWNED_BLUEPRINTS, default_owned_blueprints,
+            )
+
+            seeded, pending = AppSettings.get_default_blueprints_seed()
+            new_keys = {key for key, _ in DEFAULT_OWNED_BLUEPRINTS} - seeded
+            if not new_keys:
+                return set()
+            if not self.entries:
+                if not pending:
+                    AppSettings.set_default_blueprints_seed(seeded, pending=True)
+                    logger.info(
+                        "Starter blueprints: no strings loaded yet, adding them "
+                        "once they load (#416)"
+                    )
+                return set()
+
+            from src.utils.owned_items import enclosings_from_tag_configs
+
+            enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+            names = {
+                nm for key, nm in default_owned_blueprints(
+                    self.entries, enclosings=enclosings,
+                    default_values=self.default_values,
+                )
+                if key in new_keys
+            }
+            owned = AppSettings.get_owned_items()
+            added = names - owned
+            if added:
+                AppSettings.set_owned_items(owned | added)
+            # Every new key is recorded, including one whose name came out the
+            # same as another starter's and so had no name of its own to add.
+            AppSettings.set_default_blueprints_seed(seeded | new_keys, pending=False)
+            logger.info(
+                f"Starter blueprints: added {len(added)} of {len(names)} to the "
+                f"Owned list (#416)"
+            )
+            return added
+        except Exception:
+            logger.exception("Starter blueprints: could not add them to the Owned list (#416)")
+            return set()
 
     def _repair_foreign_owned_names(self) -> None:
         """One-shot cleanup of owned entries left by another editor (#372).
@@ -7393,7 +7515,12 @@ class MainWindow(QMainWindow):
         self.blueprint_tracker_tab.set_scan_logs_enabled(True)
         silent = self._bp_scan_silent
         self._bp_scan_silent = False
-        new_names = sorted(self._bp_scan_new_names)
+        # #416: a scan also adds any starter blueprint every player owns that
+        # is not recorded yet (no log records them): all of them on the first
+        # scan, and one declared in a later release on the scan after it.
+        # Listed with the scan's own finds so the summary shows what arrived.
+        # Empty once every declared starter is recorded.
+        new_names = sorted(self._bp_scan_new_names | self._seed_default_owned_blueprints())
         self._bp_scan_new_names = set()
         # #308: one-shot -- the checkbox is consumed by the whole queued run
         # (every channel), whether it found anything new or errored, so it
@@ -7412,16 +7539,34 @@ class MainWindow(QMainWindow):
         owned = AppSettings.get_owned_items()
         AppSettings.set_owned_items(owned | set(new_names))
         self._recompute_owned()
+        # _recompute_owned() marks Apply dirty, but a new owned blueprint only
+        # changes the game file where a mission lists it, and starters (#416)
+        # are in no mission's list. Let the background check decide, as a
+        # reload does, so the first scan after updating doesn't leave Apply
+        # red and the close prompt armed over a file that would not change.
+        # Not while closing (the check is a thread closeEvent would no longer
+        # wait for), and not while nothing is loaded or a load is running:
+        # that load runs its own check after its own re-weave.
+        if (not self._close_committed and self.entries
+                and self._loader_worker is None):
+            self._refresh_apply_dirty_after_reload()
         # _recompute_owned() just did the exact re-weave Apply Owned Tags
         # performs, so mark the button clean rather than dirty (#296) —
         # otherwise it stayed red immediately after the summary below told
         # the user its tags were applied.
         self.blueprint_tracker_tab.mark_owned_clean()
+        self._report_blueprints_added(new_names, silent)
 
+    def _report_blueprints_added(self, new_names, silent: bool) -> None:
+        """Tell the user which blueprints were just added to the Owned set:
+        the summary box, or for a *silent* run (the startup auto-scan) a
+        status bar message. Shared by the scan finish and a load that
+        finishes a deferred starter-blueprint seed (#416)."""
         # #386 follow-up: an opt-in escape hatch back to the normal popup,
         # for anyone who wants the interruption on a launch that finds
-        # something new. A quiet run (the not-new_names branch above)
-        # ignores this setting entirely -- it only ever applies here.
+        # something new. A quiet run (the not-new_names branch of
+        # _finish_blueprint_scan_queue) never gets here, so it ignores this
+        # setting entirely.
         if silent and not AppSettings.get_auto_scan_show_popup_enabled():
             self.statusBar().showMessage(
                 tr("blueprint_tracker.auto_scan_status_added", count=len(new_names))

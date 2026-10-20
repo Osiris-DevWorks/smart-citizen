@@ -713,6 +713,18 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+    # #416: which of the starter blueprints every player owns
+    # (blueprint_meta.DEFAULT_OWNED_BLUEPRINTS) have been added to the Owned
+    # set, by loc key, and whether a log scan finished before the strings had
+    # loaded and is waiting to add them (the names come from the loaded
+    # strings). JSON: {"seeded": [loc keys], "pending": bool}. Unset or
+    # unreadable means none added and nothing waiting. One-shot per item: a
+    # starter the user moves back to Available stays there, and one declared
+    # in a later release still reaches Owned on that user's next scan. It
+    # describes the owned set, so in a settings backup it travels with
+    # owned_items (see import_values): restoring an owned set from before 2.5
+    # resets it, so the next scan adds the starters to that set.
+    DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
 
     # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
@@ -800,11 +812,16 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - the starter-blueprint seed marker (#416): it describes the owned
+    #     set, so it is exported only when stored, the same way owned_items
+    #     is, and import_values takes it from a backup only together with
+    #     owned_items.
     # Keys already in PROFILE_EXCLUDE_KEYS never reach this stage at all.
     PROFILE_DEFAULT_EXCLUDE_KEYS = frozenset({
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
         "test_plan/checks",
         "test_plan/tester_name",
@@ -1691,6 +1708,48 @@ class AppSettings:
         """Persist the auto-scan popup checkbox state (#386 follow-up)."""
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP, bool(enabled)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def _parse_default_blueprints_seed(raw) -> "tuple[frozenset, bool]":
+        """``(seeded loc keys, pending)`` from a stored seed marker (#416).
+
+        The one reader of the format, used by the getter and by
+        import_values. Anything unreadable is ``(frozenset(), False)``, so a
+        damaged value only means the starters are offered once more.
+        """
+        try:
+            data = json.loads(raw) if isinstance(raw, str) and raw else None
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return frozenset(), False
+        seeded = data.get("seeded")
+        keys = (frozenset(k for k in seeded if isinstance(k, str))
+                if isinstance(seeded, list) else frozenset())
+        return keys, data.get("pending") is True
+
+    @staticmethod
+    def _encode_default_blueprints_seed(seeded, pending: bool) -> str:
+        """The stored form of a seed marker (#416), stable for diffs."""
+        return json.dumps({"seeded": sorted(seeded), "pending": bool(pending)})
+
+    @staticmethod
+    def get_default_blueprints_seed() -> "tuple[frozenset, bool]":
+        """``(seeded, pending)`` for the starter blueprints (#416): the loc
+        keys already added to the Owned set, and whether a log scan is
+        waiting for the strings to load to add the rest."""
+        return AppSettings._parse_default_blueprints_seed(
+            AppSettings.settings().value(AppSettings.DEFAULT_BLUEPRINTS_SEED, "", type=str)
+        )
+
+    @staticmethod
+    def set_default_blueprints_seed(seeded, pending: bool) -> None:
+        """Persist the starter-blueprint seed marker (#416)."""
+        AppSettings.settings().setValue(
+            AppSettings.DEFAULT_BLUEPRINTS_SEED,
+            AppSettings._encode_default_blueprints_seed(seeded, pending),
         )
         AppSettings.settings().sync()
 
@@ -3755,15 +3814,34 @@ class AppSettings:
         not present in *values* are left untouched — an import layers the
         backup over the current profile rather than wiping it, so local
         state like the SC install path survives a same-machine restore.
+
+        One exception to "only the keys the backup holds" (#416): the
+        starter-blueprint seed marker describes the owned set, so it follows
+        ``owned_items``. A backup that carries an owned set brings its marker
+        too, and one from before 2.5 (no marker) resets it, so the next scan
+        adds the starters to the restored set instead of leaving them out for
+        good. A backup with no owned set leaves both alone, so it can't undo
+        the one-shot and bring back a starter the user moved out of Owned.
         """
         backend = AppSettings.settings()
         applied = 0
         for key, value in values.items():
             if not isinstance(key, str) or not key:
                 continue
+            if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
+                continue  # follows owned_items, below
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)
+            applied += 1
+        if AppSettings.OWNED_ITEMS in values:
+            seeded, pending = AppSettings._parse_default_blueprints_seed(
+                values.get(AppSettings.DEFAULT_BLUEPRINTS_SEED, "")
+            )
+            backend.setValue(
+                AppSettings.DEFAULT_BLUEPRINTS_SEED,
+                AppSettings._encode_default_blueprints_seed(seeded, pending),
+            )
             applied += 1
         backend.sync()
         logger.info("Import Settings: applied %d settings keys", applied)
