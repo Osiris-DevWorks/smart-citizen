@@ -62,6 +62,7 @@ import pytest
 
 import src.utils.pak_extractor as pe
 from src.utils.dataforge_diff import MANIFEST_FILE
+from src.utils.onedrive import _ONEDRIVE_ENV_VARS
 from src.utils.win_paths import win_long_path
 from tests.unusable_folder import new_folders_denied
 
@@ -274,7 +275,7 @@ def _isolated(tmp_path_factory, monkeypatch):
     systemp = root / "systemp"
     systemp.mkdir()
     monkeypatch.setattr(tempfile, "tempdir", str(systemp))
-    for var in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+    for var in _ONEDRIVE_ENV_VARS:
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(pe, "_drive_is_removable_or_network", lambda path: False)
     return root

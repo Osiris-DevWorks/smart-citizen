@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "法的情報を読み込めませんでした。"
+    },
+    "overlay": {
+      "ht": "",
+      "at": "オーバーレイ"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "オーバーレイ"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen オーバーレイ (SCO) を開始または停止します：ゲーム画面上で採掘シグネチャを解読し、ブループリントドロワーを表示します。ボーダーレスウィンドウモードが必要です。"
     }
   },
   "filters": {
@@ -3080,6 +3092,16 @@
         "at": "コンポーネント、ミサイル、艦船武器、商品に追加される角括弧付きの名称タグを組み立てます。▲/▼ で要素を並べ替え、チェックを外して除外し、省略の長さを変更し、区切り文字と括弧を選び、あるいはタグを名前の前ではなく後ろに配置できます。"
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen オーバーレイ"
+      },
+      "description": {
+        "ht": "",
+        "at": "ここかツールバーのオーバーレイボタンでオーバーレイを開始します。ゲームの上で採掘スキャンのシグネチャーを解読し、ブループリント・鉱物・クラフトを検索するドロワーを開き、入手したブループリントを所有済みにします。ゲームはメイン画面のボーダーレスウィンドウモードで実行してください。"
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3093,7 +3115,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. 文字列を編集"
+        "at": "9. 文字列を編集"
       },
       "description": {
         "ht": "",
@@ -3103,7 +3125,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. 列でフィルター"
+        "at": "10. 列でフィルター"
       },
       "description": {
         "ht": "",
@@ -3113,7 +3135,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. エディターペイン"
+        "at": "11. エディターペイン"
       },
       "description": {
         "ht": "",
@@ -3123,7 +3145,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. プレビューペイン"
+        "at": "12. プレビューペイン"
       },
       "description": {
         "ht": "",
@@ -3133,7 +3155,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. 拡張を適用"
+        "at": "13. 拡張を適用"
       },
       "description": {
         "ht": "",
@@ -3143,7 +3165,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Config：外観"
+        "at": "14. Config：外観"
       },
       "description": {
         "ht": "",
@@ -3153,7 +3175,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Config：Star Citizen のインストール"
+        "at": "15. Config：Star Citizen のインストール"
       },
       "description": {
         "ht": "",
@@ -3163,7 +3185,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Config：Smart Citizen データ"
+        "at": "16. Config：Smart Citizen データ"
       },
       "description": {
         "ht": "",
@@ -3173,7 +3195,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Config：ベースローカライズ"
+        "at": "17. Config：ベースローカライズ"
       },
       "description": {
         "ht": "",
@@ -3183,7 +3205,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Config：ツール"
+        "at": "18. Config：ツール"
       },
       "description": {
         "ht": "",
@@ -3193,7 +3215,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. ヘルプとフィードバック"
+        "at": "19. ヘルプとフィードバック"
       },
       "description": {
         "ht": "",
@@ -3313,6 +3335,246 @@
     "zip_filter": {
       "ht": "",
       "at": "設定バックアップ (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 鉱物"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS 鉱物"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "サルベージ"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "ブループリントを検索..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "所持のみ"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "所持 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "{count} 件のミッションの報酬："
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "新規：{names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen オーバーレイ"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "ブループリントデータがまだ読み込まれていません。先に文字列を読み込んでから、オーバーレイを開始してください。"
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...他 {count} 件"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "不明"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "採掘スキャンデコーダーがエラーで停止しました。オーバーレイを再起動すると再試行できます。詳細はログタブにあります。"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "ブループリント"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "鉱物"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "クラフト"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "鉱物または場所..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "すべて解除"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "この鉱物が解読されるとスキャンラベルが光ります"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "鉱物またはコンポーネント..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "一致する鉱物がありません。空のままなら先に文字列を読み込んでください。"
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "一致するものがありません。DataForge を抽出し、Commodities または Journal にチェックを入れて拡張を生成すると、この一覧が埋まります。"
+    },
+    "system_other": {
+      "ht": "",
+      "at": "その他"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "使用先（{material}）："
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} に必要なもの："
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "必要な素材：{materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "ティア：{tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "スキャン信号：岩1つあたり {base}、最大 {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "{count} 個のクラフトアイテムで使用"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "星系：{system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "ここの鉱物：{minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen オーバーレイ"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Star Citizen の上に表示するウィンドウです。採掘スキャンのデコーダーとブループリントドロワーを含みます。ゲームはボーダーレスウィンドウモードで起動してください。オーバーレイは画面と Game.log を読むだけで、ゲームのプロセスには一切触れません。"
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "オーバーレイを開始"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "オーバーレイを停止"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "採掘スキャンデコーダー"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "レーダーの下にあるスキャン署名を読み取り、その下に鉱床の種類と数を表示します。"
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "新しいブループリントを所持済みにする"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "オーバーレイの実行中、ゲーム内で受け取ったブループリントを Game.log から読み取り、所持済みにします。"
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "スキャンサンプルを保存"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "新しく読み取った署名ごとに小さな画像を保存します。誤読を送ってデコーダーの改善に役立てられます。"
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "サンプルフォルダーを開く"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "オーバーレイのドロワー"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "画面端に固定されるドロワーです。位置は下で選びます。オフにするとドロワーと各セクションを隠します。"
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "ブループリント"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "ブループリントを検索し、報酬として得られるミッションを確認して、所有しているものにチェックを入れます。"
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "鉱物"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "鉱物名を入力すると産出場所を星系ごとに表示します。場所を入力するとその場所の鉱物を表示します。"
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "クラフト"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "鉱物名を入力するとそれを使うコンポーネントを、コンポーネント名を入力すると必要な鉱物を表示します。DataForge の抽出が必要です。"
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "ドロワーの位置："
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "左上"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "上中央"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "右上"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "左中央"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "右中央"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "左下"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "下中央"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "右下"
     }
   }
 }

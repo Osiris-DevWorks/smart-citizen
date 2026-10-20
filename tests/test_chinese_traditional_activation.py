@@ -43,9 +43,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
-from utils.settings import AppSettings, SC_LANGUAGE_IDS  # noqa: E402
+from src.utils.settings import AppSettings, SC_LANGUAGE_IDS  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
@@ -170,7 +169,7 @@ def test_selector_uses_the_corrected_word_order_label():
     would go stale rather than keep warning accurately. installer.iss uses
     the same name ("Traditional Chinese", not "Chinese (Traditional)") so
     the two pickers agree."""
-    from gui.config_tab import _LANGUAGE_COMBO_LABEL_OVERRIDES
+    from src.gui.config_tab import _LANGUAGE_COMBO_LABEL_OVERRIDES
 
     label = _LANGUAGE_COMBO_LABEL_OVERRIDES["chinese_traditional"]
     assert label == "Traditional Chinese"

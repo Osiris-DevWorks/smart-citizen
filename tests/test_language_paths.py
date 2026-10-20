@@ -23,7 +23,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils import settings as settings_module  # noqa: E402
 from src.utils.json_settings import JsonSettings  # noqa: E402

@@ -162,6 +162,21 @@ Lleva el control de qué blueprints de fabricación ya posees, y míralo refleja
 - **Aplicar etiquetas [Owned]** vuelve a tejer las etiquetas `[Owned]` en tus textos cargados tras cambiar la colección. Como los demás botones de acción, se pone **rojo** cuando tu colección tiene cambios que la tabla aún no ha incorporado y **verde** cuando todo está sincronizado.
 - La columna **Adquirido** de la tabla de textos sigue mostrando una estrella y ordenando primero los adquiridos, pero ahora es de solo lectura; la colección se gestiona desde esta pestaña.
 
+## Pestaña Superposición
+
+La **Superposición de Smart Citizen** dibuja dos pequeñas ventanas sobre Star Citizen: un decodificador de escaneo minero y un cajón de búsquedas. Iníciala y detenla con **Iniciar superposición** en esta pestaña o con el botón **Superposición** de la barra de herramientas. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal; si no, la superposición no puede mostrarse encima. La superposición solo lee tu pantalla y `Game.log`; nunca toca el juego en sí.
+
+- **Decodificador de escaneo minero** lee la firma de escaneo bajo tu radar y muestra justo debajo el tipo y la cantidad del depósito (por ejemplo `3 × Lindinium`). La etiqueta solo cambia después de leer el mismo número dos veces seguidas, así que una lectura errónea de un solo fotograma no parpadea.
+- **Cajón de la superposición** coloca secciones con pestañas en el borde de la pantalla. Haz clic en una pestaña para abrir su sección y vuelve a hacer clic para cerrarla. **Posición del cajón** elige uno de ocho lugares (en el centro a la derecha por defecto).
+  - **Blueprints**: busca blueprints, mira qué misiones los otorgan y marca los que posees (la misma colección que la pestaña Rastreador de blueprints).
+  - **Minerales**: escribe un mineral para ver dónde se encuentra, agrupado por sistema estelar, o una ubicación para ver sus minerales. Marca un mineral para vigilarlo: la etiqueta del escaneo brilla cuando un escaneo lo encuentra. El decodificador también puede activarse y desactivarse aquí.
+  - **Fabricación**: escribe un mineral para ver qué componentes lo usan, o un componente para ver los minerales que necesita. Se rellena al generar las mejoras con **Commodities** o **Journal** marcados.
+  - Cada sección tiene su propio interruptor; desactivar el cajón las oculta todas.
+- **Marcar blueprints nuevos como poseídos** vigila `Game.log` mientras la superposición está en marcha y marca como adquiridos los blueprints que recibes. Como Escanear registros, solo lee LIVE y HOTFIX: con PTU, EPTU o TECH-PREVIEW seleccionado en la pestaña Configuración, permanece desactivado.
+- **Guardar muestras de escaneo** guarda una pequeña imagen de cada nueva firma leída en `logs\sco_samples` para que se puedan enviar las lecturas erróneas. **Abrir carpeta de muestras** abre esa carpeta. Activado por defecto; no se sube nada. Se guardan como máximo 200 imágenes por sesión, y la carpeta conserva solo las 1000 más recientes.
+
+Si el decodificador de escaneo encuentra un error, se detiene y la barra de estado lo indica. Detén e inicia la superposición para volver a intentarlo; la pestaña Registro tiene los detalles. La visita guiada (botón **Tutorial**) tiene un paso para esta pestaña.
+
 ## Pestaña Configuración
 
 - **Apariencia**: elige el tema de la aplicación (ver más abajo).

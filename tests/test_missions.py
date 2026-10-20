@@ -8,17 +8,13 @@ Tests cover:
 """
 
 import csv
-import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from merger.ini_merger import merge_sources_by_hierarchy, merge_ini_files
-from parser.ini_parser import parse_ini_file
+from src.merger.ini_merger import merge_sources_by_hierarchy, merge_ini_files
+from src.parser.ini_parser import parse_ini_file
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 ENHANCEMENTS_INI = FIXTURES_DIR / "mission_rewards_enhancements.ini"

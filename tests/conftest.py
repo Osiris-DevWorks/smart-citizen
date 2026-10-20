@@ -13,9 +13,6 @@ import tempfile
 import os
 import sys
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 # GUI tests run headless. Set here, before any test module is imported, so no
 # module needs its own copy.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -31,21 +28,18 @@ def no_real_install_detection_inputs():
     whole session, so module-scoped fixtures that build a MainWindow are
     covered too; tests of those inputs patch in their own (see
     test_sc_install_root.py), and their patches undo back to these stubs.
-    Tests import settings both as src.utils.settings and as utils.settings,
-    two separate module objects, so each one that is loaded gets patched."""
+    Every test imports settings as src.utils.settings, the one copy (#510,
+    tests/test_import_paths.py keeps the short utils.settings name out)."""
     try:
-        import src.utils.settings  # noqa: F401  (load it so it is always patched)
+        import src.utils.settings as settings
     except ImportError:  # no PyQt6: nothing in this run can reach detection
-        pass
+        settings = None
 
     with pytest.MonkeyPatch.context() as patcher:
-        for name in ("src.utils.settings", "utils.settings"):
-            module = sys.modules.get(name)
-            if module is None:
-                continue
-            patcher.setattr(module, "read_launcher_installs", lambda log_path=None: ({}, False))
+        if settings is not None:
+            patcher.setattr(settings, "read_launcher_installs", lambda log_path=None: ({}, False))
             patcher.setattr(
-                module, "iter_shallow_sc_install_locations", lambda drives=None: iter(())
+                settings, "iter_shallow_sc_install_locations", lambda drives=None: iter(())
             )
         yield
 

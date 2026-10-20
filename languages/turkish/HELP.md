@@ -160,6 +160,21 @@ Hangi üretim planlarına zaten sahip olduğunuzu takip edin ve bunun oyun için
 - **Sahip Olunan Etiketlerini Uygula** sahip olunan listeyi değiştirdikten sonra `[Owned]` etiketlerini yüklü metinlerinize yeniden işler. Diğer işlem düğmeleri gibi, sahip olunan listenizde tablonun henüz almadığı değişiklikler varsa **kırmızı**, her şey eşleştiğinde **yeşil** olur.
 - Metin tablosunun **Sahip Olunan** sütunu hâlâ bir yıldız gösterir ve sahip olunanları önce sıralar, ancak artık salt okunurdur; sahiplik bu sekmeden yönetilir.
 
+## Katman Sekmesi
+
+**Smart Citizen Katmanı**, Star Citizen'ın üzerine iki küçük pencere çizer: bir maden tarama çözücüsü ve bir arama çekmecesi. Katmanı bu sekmedeki **Katmanı Başlat** düğmesiyle veya araç çubuğundaki **Katman** düğmesiyle başlatıp durdurun. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın; aksi halde katman oyunun üzerinde görünemez. Katman yalnızca ekranınızı ve `Game.log` dosyasını okur; oyunun kendisine asla dokunmaz.
+
+- **Maden tarama çözücüsü** radarınızın altındaki tarama imzasını okur ve yatak türünü ve sayısını hemen altında gösterir (örneğin `3 × Lindinium`). Etiket yalnızca aynı sayı art arda iki kez okunduktan sonra değişir; böylece tek karelik bir yanlış okuma ekranda yanıp sönmez.
+- **Katman çekmecesi** ekranın kenarına sekmeli bölümler yerleştirir. Bir bölümü açmak için sekmesine tıklayın, kapatmak için yeniden tıklayın. **Çekmece konumu** sekiz noktadan birini seçer (varsayılan olarak sağ orta).
+  - **Planlar**: Plan arayın, hangi görevlerin onları ödül olarak verdiğini görün ve sahip olduklarınızı işaretleyin (Plan Takipçisi sekmesiyle aynı sahip olunan listesi).
+  - **Mineraller**: Yıldız sistemine göre gruplanmış olarak nerede bulunduğunu görmek için bir mineral, minerallerini görmek için de bir konum yazın. Bir minerali izlemek için işaretleyin: bir tarama onu bulduğunda tarama etiketi parlar. Çözücü burada da açılıp kapatılabilir.
+  - **Üretim**: Onu hangi bileşenlerin kullandığını görmek için bir mineral, gerektirdiği mineralleri görmek için de bir bileşen yazın. **Emtialar** veya **Günce** işaretliyken geliştirmeleri oluşturduğunuzda doldurulur.
+  - Her bölümün kendi anahtarı vardır; çekmeceyi kapatmak hepsini gizler.
+- **Yeni planları sahip olunan olarak işaretle**, katman çalışırken `Game.log` dosyasını izler ve aldığınız planları sahip olunan olarak işaretler. Günlükleri Tara gibi yalnızca LIVE ve HOTFIX'i okur: Yapılandırma sekmesinde PTU, EPTU veya TECH-PREVIEW seçiliyse kapalı kalır.
+- **Tarama örneklerini kaydet**, okunan her yeni imzanın küçük bir resmini `logs\sco_samples` klasöründe saklar; böylece yanlış okumalar gönderilebilir. **Örnek Klasörünü Aç** bu klasörü açar. Varsayılan olarak açıktır; hiçbir şey yüklenmez. Oturum başına en fazla 200 resim saklanır ve klasör yalnızca en yeni 1000 resmi tutar.
+
+Tarama çözücüsü bir hatayla karşılaşırsa durur ve durum çubuğu bunu bildirir. Yeniden denemek için katmanı durdurup yeniden başlatın; ayrıntılar Günlük sekmesindedir. Rehberli turda (**Rehberli Tur** düğmesi) bu sekme için bir adım bulunur.
+
 ## Yapılandırma Sekmesi
 
 - **Görünüm** — uygulama temasını seçin (aşağıya bakın).
