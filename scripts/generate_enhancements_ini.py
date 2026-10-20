@@ -2099,8 +2099,6 @@ def enhancements_radar(root: ET.Element) -> str:
 
     return "\\n".join(lines) if lines else ""
 
-    return "\\n".join(lines) if lines else ""
-
 
 def enhancements_cooler(root: ET.Element) -> str:
     cooling   = _find_resource(root, "Coolant")
@@ -2196,7 +2194,9 @@ def enhancements_quantum_drive(root: ET.Element) -> str:
     lines = []
     if speed is not None:
         speed_mm = float(speed) / 1_000_000
-        spool_str = _fmt(spool, "s") if spool else "?"
+        # Tenths, as Cooldown below: spool times are 4.4, 4.8, 5.3, 8.5... and
+        # whole seconds showed 4.8 and 5.3 both as "5s" (#485).
+        spool_str = _fmt(spool, "s", 1) if spool else "?"
         lines.append(f"QT Speed: {speed_mm:,.0f} Mm/s  |  Spool: {spool_str}")
     if cooldown is not None:
         lines.append(f"Cooldown: {_fmt(cooldown, 's', 1)}")
