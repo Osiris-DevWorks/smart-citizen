@@ -3336,6 +3336,18 @@ class AppSettings:
         ) / "Smart Citizen"
 
     @staticmethod
+    def get_dataforge_cache_leaf(channel: "str | None" = None) -> Path:
+        """Return *channel*'s DataForge cache folder without creating it.
+
+        *channel* defaults to the active one. :meth:`get_dataforge_cache_dir`
+        is this plus the ``mkdir``; use this one for a check that must leave
+        the disk alone, such as the guard on a queued old-cache cleanup (#486).
+        """
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        return AppSettings.get_dataforge_cache_base() / channel / "cache" / "dataforge"
+
+    @staticmethod
     def get_dataforge_cache_dir() -> Path:
         """Return the directory where DataForge entity XMLs are cached after unforge.
 
@@ -3347,11 +3359,7 @@ class AppSettings:
         order. Channel nesting is preserved across all variants so each
         SC channel stays isolated.
         """
-        cache_dir = (
-            AppSettings.get_dataforge_cache_base()
-            / AppSettings.get_active_channel()
-            / "cache" / "dataforge"
-        )
+        cache_dir = AppSettings.get_dataforge_cache_leaf()
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
 

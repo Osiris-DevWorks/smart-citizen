@@ -71,6 +71,7 @@ from src.utils.resource_path import get_resource_path
 from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
 from src.utils.i18n import tr
 from src.utils.version import get_version
+from src.utils.win_paths import win_plain_path
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,53 @@ def _scan_queue_for_root(root) -> list:
         return []
     present = {folder.name for folder in channel_dirs(Path(root))}
     return _channels_to_scan(present)
+
+
+def _normalized_folder(path) -> str:
+    """*path* as text two folders can be compared by (#486): absolute, without
+    the ``\\\\?\\`` long-path prefix, one kind of separator, no trailing
+    separator and, on Windows, one case. Text only, nothing is read or made."""
+    return os.path.normcase(os.path.abspath(win_plain_path(path)))
+
+
+def _resolved_folder(path) -> str:
+    """:func:`_normalized_folder` with links followed (#486): a junction, a
+    symlink, a subst drive or an 8.3 short name becomes the folder it stands
+    for. Non-strict, so a folder that does not exist yet resolves through the
+    part of it that does. Reads the disk, makes nothing."""
+    return os.path.normcase(os.path.realpath(win_plain_path(path)))
+
+
+def _folders_overlap(a: str, b: str) -> bool:
+    """True when folder text *a* is *b*, sits inside it or holds it."""
+    # join(x, "") ends x with one separator, so a sibling whose name only
+    # starts like the other folder's (dataforge-old) is not inside it.
+    return (a == b
+            or a.startswith(os.path.join(b, ""))
+            or b.startswith(os.path.join(a, "")))
+
+
+def _cache_folder_overlapping(queued) -> Path | None:
+    """The DataForge cache folder that *queued* is, sits inside or contains, or
+    None when it overlaps none of them (#486).
+
+    Every channel's cache folder under the current cache location counts,
+    not only the active channel's: each is the cache in use for its channel.
+    Built with ``get_dataforge_cache_leaf``, which creates nothing, unlike
+    ``get_dataforge_cache_dir``. Two folders overlap when their normalized
+    text does or, failing that, their resolved paths do: the cache location
+    is not always stored resolved (an override is, the registry-mode default
+    is not), so the same folder reached through a junction, a symlink, a
+    subst drive or an 8.3 short name can be spelled two ways.
+    """
+    target = _normalized_folder(queued)
+    resolved = _resolved_folder(queued)
+    for channel in AppSettings.AVAILABLE_CHANNELS:
+        leaf = AppSettings.get_dataforge_cache_leaf(channel)
+        if (_folders_overlap(target, _normalized_folder(leaf))
+                or _folders_overlap(resolved, _resolved_folder(leaf))):
+            return leaf
+    return None
 
 
 def _stamp_frontend_version(merged: dict) -> dict:
@@ -5162,10 +5210,12 @@ class MainWindow(QMainWindow):
         """Remove the orphaned old cache directory queued by the Config tab.
 
         Called from ``_on_dataforge_extract_finished`` after a successful
-        re-extract. No-op when nothing is queued. Failure to delete is
-        logged but doesn't surface as an error — the user can always remove
-        the orphan manually, and partial cleanup is preferable to blocking
-        the post-extract reload flow.
+        re-extract. No-op when nothing is queued. A queued folder that is,
+        holds or sits inside a cache in use, or that cannot be compared with
+        one, is never deleted, only dropped from the queue (#486). Failure
+        to delete is logged but doesn't surface as an error — the user can
+        always remove the orphan manually, and partial cleanup is preferable
+        to blocking the post-extract reload flow.
         """
         queued = AppSettings.get_pending_cache_cleanup()
         if not queued:
@@ -5175,6 +5225,26 @@ class MainWindow(QMainWindow):
         # want to retry it on every subsequent extraction and stomp on a
         # half-deleted tree.
         AppSettings.set_pending_cache_cleanup(None)
+        # #486: a cache-folder change that failed and was then switched back
+        # leaves the cache in use queued, and the delete would take it.
+        try:
+            in_use = _cache_folder_overlapping(old_path)
+        except (OSError, ValueError) as e:
+            # Non-strict realpath still raises on an error it does not
+            # expect. Keep what could not be checked rather than risk the
+            # cache in use, and don't stop the post-extract flow.
+            logger.warning(
+                f"Skipped the queued cache cleanup of {old_path}: could not "
+                f"compare it with the DataForge cache in use ({e}). Delete it "
+                "manually if it is an old cache you no longer need."
+            )
+            return
+        if in_use is not None:
+            logger.info(
+                f"Skipped the queued cache cleanup of {old_path}: it is, holds "
+                f"or sits inside the DataForge cache in use at {in_use}"
+            )
+            return
         if not old_path.exists():
             logger.info(f"Queued cache cleanup target already absent: {old_path}")
             return
