@@ -24,7 +24,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
 from src.gui.enhancements_tab import _TagBuilderPage  # noqa: E402
 from src.utils.tag_builder import default_config  # noqa: E402

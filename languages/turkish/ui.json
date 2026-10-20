@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Yasal bilgiler yüklenemedi."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Katman"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Katman"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen Katmanını (SCO) başlatır veya durdurur: oyunun üzerinde maden imzası çözümleme ve bir plan çekmecesi. Kenarlıksız pencere modu gerekir."
     }
   },
   "filters": {
@@ -640,7 +652,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "user.ini, kaynak önbelleği, geliştirme INI dosyaları ve yedekler için klasör. Önbellek temizliği başarısız oluyorsa bunu OneDrive ile eşitlenen Belgeler klasöründen dışarı taşıyın. DataForge XML önbelleğinin aşağıda kendi yolu vardır — yaklaşık 1,4 GB olduğundan varsayılan ayar onu otomatik olarak OneDrive dışında tutar."
+      "at": "user.ini, kaynak önbelleği, geliştirme INI dosyaları ve yedekler için klasör. Önbellek temizliği başarısız oluyorsa bunu OneDrive ile eşitlenen Belgeler klasöründen dışarı taşıyın. DataForge XML önbelleğinin aşağıda kendi yolu vardır — yaklaşık 1,2 GB olduğundan varsayılan ayar onu otomatik olarak OneDrive dışında tutar."
     },
     "app_data_label": {
       "ht": "",
@@ -832,7 +844,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Çıkarılan DataForge XML ağacı (~1,4 GB) için temel klasör. Her kanal bunun altında {base}\\{channel}\\cache\\dataforge\\ olarak yer alır. OneDrive dışında kalması için varsayılan olarak %LOCALAPPDATA%\\Smart Citizen kullanılır. Yolu değiştirmek yeniden çıkarma başlatır."
+      "at": "Çıkarılan DataForge XML ağacı (yaklaşık 1,2 GB) için temel klasör. Her kanal bunun altında {base}\\{channel}\\cache\\dataforge\\ olarak yer alır. Bir çıkarma işlemi çalışırken bu sürücüde yaklaşık 4,5 GB'a kadar boş alan gerektirir, önbellek zaten varsa daha az. Bu klasör OneDrive'da, bir ağ veya çıkarılabilir sürücüde ya da çok derinde iç içe bir konumdaysa çalışma dosyaları bunun yerine %TEMP% klasörüne gider. OneDrive dışında kalması için varsayılan olarak %LOCALAPPDATA%\\Smart Citizen kullanılır. Yolu değiştirmek yeniden çıkarma başlatır."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "user.ini geri yüklemesinin ardından {channel} yeniden yükleniyor..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Çıkarılan base.ini ile yeniden yükleniyor..."
     }
   },
   "status_bar": {
@@ -2803,6 +2819,42 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "Oyun veritabanının dönüştürülmesi 30 dakikadan uzun sürdü ve durduruldu.\n\nBulunan veritabanı {dcb} ({size} MB), konumu:\n{path}\n\nSağlıklı bir kurulum bir dakikadan çok daha kısa sürede dönüştürülür; bu nedenle bu durum genellikle Smart Citizen'ın yanlış Star Citizen klasörünü okuduğu anlamına gelir. Sürücünüzde kalan eski veya artık bir kurulum geçerli görünse de güncel olmayan oyun dosyaları içerir.\n\nRSI Launcher'ı açın ve Star Citizen için gösterdiği kurulum konumunu kontrol edin. Yukarıdaki yol değilse, Smart Citizen'ın Yapılandırma sekmesinden düzeltin. AYNI yol ise, kurulumu onarmak için bunun yerine başlatıcıda Dosyaları Doğrula'yı çalıştırın."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Yeterli boş alan yok. Hiçbir şey kaydedilmedi ve mevcut DataForge önbelleğiniz değiştirilmedi."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "global.ini dosyasını Data.p4k içinden çıkarmak için yeterli boş alan yok. Hiçbir şey değiştirilmedi."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "{drive} sürücüsünde {free} boş alan var ve çıkarma işlemi çalışırken orada yaklaşık {needed} alana ihtiyaç duyuyor."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "{drive} sürücüsünde yer açın veya Yapılandırma sekmesinden başka bir sürücüde bir DataForge önbellek klasörü seçin, ardından yeniden deneyin."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "DataForge önbellek klasörü OneDrive'da, bir ağ veya çıkarılabilir sürücüde ya da çok derinde iç içe bir konumda olduğundan çıkarma işlemi Windows geçici klasörünüzde ({folder}) çalışıyor. {drive} sürücüsünde yer açın, ardından yeniden deneyin."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "{drive} sürücüsünde yer açın, ardından yeniden deneyin."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "Yeni DataForge önbelleği şu konuma kaydedilirken {drive} sürücüsünde yer kalmadı:\n{folder}\n\nBu önbellek eksik. {drive} sürücüsünde yer açın, ardından önbelleği yeniden oluşturmak için çıkarma işlemini tekrar çalıştırın."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
     }
   },
   "apply": {
@@ -3066,6 +3118,16 @@
         "at": "Bileşenlere, füzelere, gemi silahlarına ve emtialara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Katmanı"
+      },
+      "description": {
+        "ht": "",
+        "at": "Katmanı buradan veya araç çubuğundaki Katman düğmesiyle başlatın. Oyunun üzerinde maden tarama imzalarını çözer, planlarınızı, minerallerinizi ve üretimi aramak için bir çekmece açar ve kazandığınız planları sahip olunan olarak işaretler. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın."
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3079,7 +3141,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Metinleri düzenleyin"
+        "at": "9. Metinleri düzenleyin"
       },
       "description": {
         "ht": "",
@@ -3089,7 +3151,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Sütuna göre filtreleyin"
+        "at": "10. Sütuna göre filtreleyin"
       },
       "description": {
         "ht": "",
@@ -3099,7 +3161,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Düzenleyici bölmesi"
+        "at": "11. Düzenleyici bölmesi"
       },
       "description": {
         "ht": "",
@@ -3109,7 +3171,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Önizleme bölmesi"
+        "at": "12. Önizleme bölmesi"
       },
       "description": {
         "ht": "",
@@ -3119,7 +3181,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Geliştirmeleri Uygula"
+        "at": "13. Geliştirmeleri Uygula"
       },
       "description": {
         "ht": "",
@@ -3129,7 +3191,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Yapılandırma: Görünüm"
+        "at": "14. Yapılandırma: Görünüm"
       },
       "description": {
         "ht": "",
@@ -3139,7 +3201,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Yapılandırma: Star Citizen Kurulumu"
+        "at": "15. Yapılandırma: Star Citizen Kurulumu"
       },
       "description": {
         "ht": "",
@@ -3149,7 +3211,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Yapılandırma: Smart Citizen Verileri"
+        "at": "16. Yapılandırma: Smart Citizen Verileri"
       },
       "description": {
         "ht": "",
@@ -3159,7 +3221,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Yapılandırma: Temel Yerelleştirme"
+        "at": "17. Yapılandırma: Temel Yerelleştirme"
       },
       "description": {
         "ht": "",
@@ -3169,7 +3231,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Yapılandırma: Araçlar"
+        "at": "18. Yapılandırma: Araçlar"
       },
       "description": {
         "ht": "",
@@ -3179,12 +3241,252 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Yardım ve geri bildirim"
+        "at": "19. Yardım ve geri bildirim"
       },
       "description": {
         "ht": "",
         "at": "Yardım düğmesi, tam kılavuzu, Bilinen Sorunlar listesini ve Smart Citizen Discord kanalına bir geri bildirim bağlantısını içeren bir yan panel açar. Başlamak için gereken her şey bu kadar — bol şans, vatandaş."
       }
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC ile Kazılabilir"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS ile Kazılabilir"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Hurda"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Plan ara..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Yalnızca sahip olunanlar"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "{total} plandan {owned} tanesine sahipsin"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "{count} görev ödül olarak veriyor:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Yeni: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen Katmanı"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Henüz plan verisi yüklenmedi. Önce metinleri yükleyin, sonra katmanı başlatın."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...ve {count} tane daha"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Tanımlanamadı"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Maden tarama çözücüsü bir hatadan sonra durdu. Yeniden denemek için katmanı yeniden başlatın; ayrıntılar Günlük sekmesinde."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Planlar"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Mineraller"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Üretim"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral veya konum..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Tümünü kaldır"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Bu mineral çözüldüğünde tarama etiketi parlar"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral veya bileşen..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Eşleşen mineral yok. Liste boş kalırsa önce metinleri yükleyin."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Eşleşme yok. Bu listeyi doldurmak için DataForge'u çıkarın, ardından Commodities veya Journal işaretliyken geliştirmeleri oluşturun."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Diğer"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Kullanıldığı yerler ({material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} için gerekenler:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Gerekenler: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Seviye: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Tarama imzası: kaya başına {base}, en fazla {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "{count} üretilmiş eşyada kullanılır"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Sistem: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Buradaki mineraller: {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen Katmanı"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur; oyun işlemine asla dokunmaz."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Katmanı Başlat"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Katmanı Durdur"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Maden tarama çözücüsü"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Radarın altındaki tarama imzasını okur ve altında yatak türünü ve sayısını gösterir."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Yeni planları sahip olunan olarak işaretle"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Katman çalışırken oyunda aldığınız planlar Game.log dosyasından okunur ve sahip olunan olarak işaretlenir."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Tarama örneklerini kaydet"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Okunan her yeni imzanın küçük bir resmini kaydeder; böylece yanlış okumalar gönderilip çözücü geliştirilebilir."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Örnek Klasörünü Aç"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Katman çekmecesi"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Ekran kenarına yerleşen, konumu aşağıda seçilen bir çekmece. Kapatırsanız çekmece ve bölümleri gizlenir."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Planlar"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Plan arayın, hangi görevlerin ödül olarak verdiğini görün ve sahip olduklarınızı işaretleyin."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Mineraller"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Bir mineral yazın, yıldız sistemine göre nerede bulunduğunu görün; ya da bir konum yazıp oradaki mineralleri görün."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Üretim"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Bir mineral yazın, onu kullanan bileşenleri görün; ya da bir bileşen yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Çekmece konumu:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Sol üst"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Üst orta"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Sağ üst"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Sol orta"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Sağ orta"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Sol alt"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Alt orta"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Sağ alt"
     }
   }
 }

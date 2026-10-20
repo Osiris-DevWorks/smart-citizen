@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "Unable to load legal information.",
       "at": ""
+    },
+    "overlay": {
+      "ht": "Overlay",
+      "at": ""
     }
   },
   "toolbar": {
@@ -226,6 +230,14 @@
     },
     "venmo_fallback_text": {
       "ht": "Venmo",
+      "at": ""
+    },
+    "sco_btn": {
+      "ht": "Overlay",
+      "at": ""
+    },
+    "sco_tooltip": {
+      "ht": "Start or stop the Smart Citizen Overlay (SCO): mining signature decoding and a blueprint drawer over the game. Needs borderless windowed mode.",
       "at": ""
     }
   },
@@ -639,7 +651,7 @@
       "at": ""
     },
     "data_desc": {
-      "ht": "Folder for user.ini, source cache, enhancement INIs, and backups. Move this off OneDrive-synced Documents if cache cleanup fails. The DataForge XML cache has its own path below — it’s ~1.4 GB so the default keeps it out of OneDrive automatically.",
+      "ht": "Folder for user.ini, source cache, enhancement INIs, and backups. Move this off OneDrive-synced Documents if cache cleanup fails. The DataForge XML cache has its own path below — it’s ~1.2 GB so the default keeps it out of OneDrive automatically.",
       "at": ""
     },
     "app_data_label": {
@@ -831,7 +843,7 @@
       "at": ""
     },
     "cache_dir_tooltip": {
-      "ht": "Base folder for the extracted DataForge XML tree (~1.4 GB). Each channel nests under this as {base}\\{channel}\\cache\\dataforge\\. Defaults to %LOCALAPPDATA%\\Smart Citizen so it stays out of OneDrive. Changing the path triggers a re-extraction.",
+      "ht": "Base folder for the extracted DataForge XML tree (about 1.2 GB). Each channel nests under this as {base}\\{channel}\\cache\\dataforge\\. An extraction needs up to about 4.5 GB free on this drive while it runs, less when a cache is already there. Its working files go to %TEMP% instead when this folder is on OneDrive, a network or removable drive, or nested very deep. Defaults to %LOCALAPPDATA%\\Smart Citizen so it stays out of OneDrive. Changing the path triggers a re-extraction.",
       "at": ""
     },
     "browse_cache_tooltip": {
@@ -2361,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "Reloading {channel} after user.ini restore...",
       "at": ""
+    },
+    "reloading_with_extracted_base": {
+      "ht": "Reloading with extracted base.ini...",
+      "at": ""
     }
   },
   "status_bar": {
@@ -2803,6 +2819,42 @@
     "dataforge_timeout": {
       "ht": "Converting the game database took longer than 30 minutes and was stopped.\n\nThe database found was {dcb} ({size} MB) at:\n{path}\n\nA healthy install converts in well under a minute, so this usually means Smart Citizen is reading the wrong Star Citizen folder. An old or leftover install still on your drive will look valid but hold outdated game files.\n\nOpen the RSI Launcher and check the install location it shows for Star Citizen. If it is not the path above, correct it in Smart Citizen's Config tab. If it IS the same path, run Verify Files in the launcher to repair the install instead.",
       "at": ""
+    },
+    "no_space_dataforge": {
+      "ht": "There is not enough free space. Nothing was saved, and your current DataForge cache was not changed.",
+      "at": ""
+    },
+    "no_space_global_ini": {
+      "ht": "There is not enough free space to extract global.ini from Data.p4k. Nothing was changed.",
+      "at": ""
+    },
+    "no_space_drive": {
+      "ht": "Drive {drive} has {free} free, and the extraction needs about {needed} there while it runs.",
+      "at": ""
+    },
+    "no_space_fix_cache": {
+      "ht": "Free up space on drive {drive}, or choose a DataForge cache folder on another drive in the Config tab, then try again.",
+      "at": ""
+    },
+    "no_space_fix_temp": {
+      "ht": "The extraction works in your Windows temp folder ({folder}) because the DataForge cache folder is on OneDrive, a network or removable drive, or nested very deep. Free up space on drive {drive}, then try again.",
+      "at": ""
+    },
+    "no_space_fix": {
+      "ht": "Free up space on drive {drive}, then try again.",
+      "at": ""
+    },
+    "no_space_cache_incomplete": {
+      "ht": "Drive {drive} ran out of space while the new DataForge cache was being saved in:\n{folder}\n\nThat cache is incomplete. Free up space on drive {drive}, then extract again to rebuild it.",
+      "at": ""
+    },
+    "size_gb": {
+      "ht": "{whole}.{tenth} GB",
+      "at": ""
+    },
+    "size_mb": {
+      "ht": "{mb} MB",
+      "at": ""
     }
   },
   "apply": {
@@ -2992,6 +3044,246 @@
     },
     "post_import_apply_later_btn": {
       "ht": "Later",
+      "at": ""
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "ROC Mineable",
+      "at": ""
+    },
+    "kind_fps": {
+      "ht": "FPS Mineable",
+      "at": ""
+    },
+    "kind_salvage": {
+      "ht": "Salvage",
+      "at": ""
+    },
+    "drawer_search_placeholder": {
+      "ht": "Search blueprints...",
+      "at": ""
+    },
+    "drawer_owned_only": {
+      "ht": "Owned only",
+      "at": ""
+    },
+    "drawer_summary": {
+      "ht": "Owned {owned} of {total}",
+      "at": ""
+    },
+    "drawer_missions": {
+      "ht": "Rewarded by {count} missions:",
+      "at": ""
+    },
+    "drawer_new_blueprints": {
+      "ht": "New: {names}",
+      "at": ""
+    },
+    "no_blueprints_title": {
+      "ht": "Smart Citizen Overlay",
+      "at": ""
+    },
+    "no_blueprints_body": {
+      "ht": "No blueprint data is loaded yet. Load strings first, then start the overlay.",
+      "at": ""
+    },
+    "drawer_more_missions": {
+      "ht": "...and {count} more",
+      "at": ""
+    },
+    "unidentified": {
+      "ht": "Unidentified",
+      "at": ""
+    },
+    "decoder_stopped": {
+      "ht": "Mining scan decoder stopped after an error. Restart the overlay to try again; the Log tab has the details.",
+      "at": ""
+    },
+    "section_blueprints": {
+      "ht": "Blueprints",
+      "at": ""
+    },
+    "section_minerals": {
+      "ht": "Minerals",
+      "at": ""
+    },
+    "section_crafting": {
+      "ht": "Crafting",
+      "at": ""
+    },
+    "minerals_search_placeholder": {
+      "ht": "Mineral or location...",
+      "at": ""
+    },
+    "clear_watched": {
+      "ht": "Clear all",
+      "at": ""
+    },
+    "watch_mineral_tooltip": {
+      "ht": "Glow the scan label when this mineral is decoded",
+      "at": ""
+    },
+    "crafting_search_placeholder": {
+      "ht": "Type a mineral or component name...",
+      "at": ""
+    },
+    "minerals_none": {
+      "ht": "No minerals match. Load strings first if this stays empty.",
+      "at": ""
+    },
+    "crafting_none": {
+      "ht": "No matches. Extract DataForge, then generate enhancements with Commodities or Journal ticked, to fill this list.",
+      "at": ""
+    },
+    "system_other": {
+      "ht": "Other",
+      "at": ""
+    },
+    "crafting_used_in": {
+      "ht": "Used in (by {material}):",
+      "at": ""
+    },
+    "crafting_needs": {
+      "ht": "{item} needs:",
+      "at": ""
+    },
+    "tooltip_needs": {
+      "ht": "Needs: {materials}",
+      "at": ""
+    },
+    "tooltip_tier": {
+      "ht": "Tier: {tier}",
+      "at": ""
+    },
+    "tooltip_signature": {
+      "ht": "Scan signature: {base} per rock, up to {count}",
+      "at": ""
+    },
+    "tooltip_used_in": {
+      "ht": "Used in {count} crafted items",
+      "at": ""
+    },
+    "tooltip_system": {
+      "ht": "System: {system}",
+      "at": ""
+    },
+    "tooltip_minerals_here": {
+      "ht": "Minerals here: {minerals}",
+      "at": ""
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "Smart Citizen Overlay",
+      "at": ""
+    },
+    "desc": {
+      "ht": "Windows drawn over Star Citizen: the mining scan decoder and the blueprint drawer. Run the game in borderless windowed mode. The overlay only reads your screen and Game.log; it never touches the game process.",
+      "at": ""
+    },
+    "start_btn": {
+      "ht": "Start Overlay",
+      "at": ""
+    },
+    "stop_btn": {
+      "ht": "Stop Overlay",
+      "at": ""
+    },
+    "scan_decoder": {
+      "ht": "Mining scan decoder",
+      "at": ""
+    },
+    "scan_decoder_hint": {
+      "ht": "Reads the scan signature under the radar and shows the deposit type and count below it.",
+      "at": ""
+    },
+    "live_blueprint_watch": {
+      "ht": "Mark new blueprints as owned",
+      "at": ""
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "While the overlay runs, blueprints you receive in game are read from Game.log and marked owned.",
+      "at": ""
+    },
+    "save_samples": {
+      "ht": "Save scan samples",
+      "at": ""
+    },
+    "save_samples_hint": {
+      "ht": "Saves a small picture of each new signature read, so misreads can be sent in to improve the decoder.",
+      "at": ""
+    },
+    "open_samples_btn": {
+      "ht": "Open Samples Folder",
+      "at": ""
+    },
+    "drawer": {
+      "ht": "Overlay drawer",
+      "at": ""
+    },
+    "drawer_hint": {
+      "ht": "A drawer docked at the screen edge, at the position chosen below. Turn off to hide it and its sections.",
+      "at": ""
+    },
+    "drawer_blueprints": {
+      "ht": "Blueprints",
+      "at": ""
+    },
+    "drawer_blueprints_hint": {
+      "ht": "Search blueprints, see which missions reward them and tick the ones you own.",
+      "at": ""
+    },
+    "drawer_minerals": {
+      "ht": "Minerals",
+      "at": ""
+    },
+    "drawer_minerals_hint": {
+      "ht": "Type a mineral to see where it is found, grouped by star system, or a location to see its minerals.",
+      "at": ""
+    },
+    "drawer_crafting": {
+      "ht": "Crafting",
+      "at": ""
+    },
+    "drawer_crafting_hint": {
+      "ht": "Type a mineral to see which components use it, or a component to see the minerals it needs. Needs a DataForge extraction.",
+      "at": ""
+    },
+    "drawer_position": {
+      "ht": "Drawer position:",
+      "at": ""
+    },
+    "position_top_left": {
+      "ht": "Top left",
+      "at": ""
+    },
+    "position_top_center": {
+      "ht": "Top center",
+      "at": ""
+    },
+    "position_top_right": {
+      "ht": "Top right",
+      "at": ""
+    },
+    "position_middle_left": {
+      "ht": "Middle left",
+      "at": ""
+    },
+    "position_middle_right": {
+      "ht": "Middle right",
+      "at": ""
+    },
+    "position_bottom_left": {
+      "ht": "Bottom left",
+      "at": ""
+    },
+    "position_bottom_center": {
+      "ht": "Bottom center",
+      "at": ""
+    },
+    "position_bottom_right": {
+      "ht": "Bottom right",
       "at": ""
     }
   }

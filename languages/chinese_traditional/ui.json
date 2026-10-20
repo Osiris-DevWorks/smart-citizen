@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "無法載入法律資訊。"
+    },
+    "overlay": {
+      "ht": "",
+      "at": "疊加層"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "疊加層"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "啟動或停止 Smart Citizen 疊加層 (SCO)：在遊戲畫面上解碼採礦訊號並顯示藍圖抽屜。需要無邊框視窗模式。"
     }
   },
   "filters": {
@@ -612,7 +624,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "存放 user.ini、源快取、增強內容 INI 及備份的資料夾。如果清理快取失敗，請將其移出 OneDrive 同步的“文件”資料夾。DataForge XML 快取有獨立的路徑設定見下方——它約 1.4 GB，預設路徑會自動讓它避開 OneDrive。"
+      "at": "存放 user.ini、源快取、增強內容 INI 及備份的資料夾。如果清理快取失敗，請將其移出 OneDrive 同步的“文件”資料夾。DataForge XML 快取有獨立的路徑設定見下方——它約 1.2 GB，預設路徑會自動讓它避開 OneDrive。"
     },
     "app_data_label": {
       "ht": "",
@@ -804,7 +816,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.4 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
+      "at": "提取出的 DataForge XML 樹的基礎資料夾（約 1.2 GB）。每個頻道會巢狀為 {base}\\{channel}\\cache\\dataforge\\。提取執行期間，此驅動器最多需要約 4.5 GB 可用空間，如果已有快取則需要更少。當此資料夾位於 OneDrive、網路驅動器或卸除式驅動器上，或巢狀層級很深時，其工作檔案會改為放在 %TEMP% 中。預設使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影響。更改路徑會觸發重新提取。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -2361,6 +2373,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "正在恢復 user.ini 後重新載入 {channel}..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "正在使用提取的 base.ini 重新載入..."
     }
   },
   "status_bar": {
@@ -2803,6 +2819,42 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "遊戲資料庫轉換超過 30 分鐘已被中止。\n\n找到的資料庫：{dcb}（{size} MB），位於：\n{path}\n\n正常安裝的轉換用時遠少於一分鐘。這通常表示 Smart Citizen 讀取了錯誤的星際公民資料夾。驅動器上殘留的舊安裝看起來有效，但包含過時的遊戲檔案。\n\n請開啟 RSI Launcher 檢視其顯示的安裝位置。如果與上面的路徑不同，請在 Smart Citizen 的 Config 標籤頁中更正。如果路徑相同，請改為在啟動器中執行 Verify Files。"
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "可用空間不足。未儲存任何內容，你當前的 DataForge 快取也未被更改。"
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "可用空間不足，無法從 Data.p4k 提取 global.ini。未做任何更改。"
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "驅動器 {drive} 的可用空間為 {free}，而提取執行期間需要在該驅動器上使用約 {needed}。"
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "請釋放驅動器 {drive} 上的空間，或在配置標籤頁中選擇其他驅動器上的 DataForge 快取資料夾，然後重試。"
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "由於 DataForge 快取資料夾位於 OneDrive、網路驅動器或卸除式驅動器上，或巢狀層級很深，提取會在你的 Windows 暫存資料夾（{folder}）中進行。請釋放驅動器 {drive} 上的空間，然後重試。"
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "請釋放驅動器 {drive} 上的空間，然後重試。"
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "驅動器 {drive} 在儲存新的 DataForge 快取時空間已用盡，儲存位置：\n{folder}\n\n該快取不完整。請釋放驅動器 {drive} 上的空間，然後重新提取以重建快取。"
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
     }
   },
   "apply": {
@@ -2952,6 +3004,16 @@
         "at": "構建新增到元件、導彈、飛船武器和商品上的括號名稱標籤。用 ▲/▼ 重新排序元素，取消勾選可排除，更改縮寫長度，選擇分隔符和括號，或將標籤放在名稱之後而不是之前。"
       }
     },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen 疊加層"
+      },
+      "description": {
+        "ht": "",
+        "at": "在這裡或用工具列的「疊加層」按鈕啟動疊加層。它在遊戲上方解碼採礦掃描訊號，開啟一個抽屜來搜尋你的藍圖、礦物和製作，並把你獲得的藍圖標記為已擁有。請在主螢幕上以無邊框視窗模式執行遊戲。"
+      }
+    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -2965,7 +3027,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. 編輯字串"
+        "at": "9. 編輯字串"
       },
       "description": {
         "ht": "",
@@ -2975,7 +3037,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. 按列篩選"
+        "at": "10. 按列篩選"
       },
       "description": {
         "ht": "",
@@ -2985,7 +3047,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. 編輯器面板"
+        "at": "11. 編輯器面板"
       },
       "description": {
         "ht": "",
@@ -2995,7 +3057,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. 預覽面板"
+        "at": "12. 預覽面板"
       },
       "description": {
         "ht": "",
@@ -3005,7 +3067,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. 應用增強內容"
+        "at": "13. 應用增強內容"
       },
       "description": {
         "ht": "",
@@ -3015,7 +3077,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. 配置：外觀"
+        "at": "14. 配置：外觀"
       },
       "description": {
         "ht": "",
@@ -3025,7 +3087,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. 配置：星際公民安裝"
+        "at": "15. 配置：星際公民安裝"
       },
       "description": {
         "ht": "",
@@ -3035,7 +3097,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. 配置：智慧公民資料"
+        "at": "16. 配置：智慧公民資料"
       },
       "description": {
         "ht": "",
@@ -3045,7 +3107,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. 配置：基礎本地化"
+        "at": "17. 配置：基礎本地化"
       },
       "description": {
         "ht": "",
@@ -3055,7 +3117,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. 配置：工具"
+        "at": "18. 配置：工具"
       },
       "description": {
         "ht": "",
@@ -3065,7 +3127,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. 幫助與反饋"
+        "at": "19. 幫助與反饋"
       },
       "description": {
         "ht": "",
@@ -3185,6 +3247,246 @@
     "zip_filter": {
       "ht": "",
       "at": "設定備份 (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 礦物"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "手採礦物"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "打撈"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "搜尋藍圖..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "僅顯示已擁有"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "已擁有 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "由 {count} 個任務獎勵："
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "新增：{names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen 疊加層"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "尚未載入藍圖資料。請先載入字串，然後再啟動疊加層。"
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "……以及另外 {count} 個"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "無法識別"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "採礦掃描解碼器因錯誤已停止。重新啟動疊加層即可重試；詳情見「日誌」分頁。"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "藍圖"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "礦物"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "製造"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "礦物或地點..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "全部取消"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "解碼出此礦物時，掃描標籤會發光"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "礦物或組件..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "沒有符合的礦物。如果清單一直是空的，請先載入字串。"
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "沒有符合的結果。擷取 DataForge，然後勾選 Commodities 或 Journal 產生增強內容，即可填入此清單。"
+    },
+    "system_other": {
+      "ht": "",
+      "at": "其他"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "用於（透過 {material}）："
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} 需要："
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "需要：{materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "等級：{tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "掃描訊號：每塊岩石 {base}，最多 {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "用於 {count} 個製造物品"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "星系：{system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "此處礦物：{minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen 疊加層"
+    },
+    "desc": {
+      "ht": "",
+      "at": "顯示在 Star Citizen 之上的視窗：採礦掃描解碼器和藍圖抽屜。請以無邊框視窗模式執行遊戲。疊加層只讀取螢幕和 Game.log，從不接觸遊戲程序。"
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "啟動疊加層"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "停止疊加層"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "採礦掃描解碼器"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "讀取雷達下方的掃描訊號，並在其下方顯示礦藏類型和數量。"
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "將新藍圖標記為已擁有"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "疊加層執行時，從 Game.log 讀取你在遊戲中獲得的藍圖並標記為已擁有。"
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "儲存掃描樣本"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "為每個新讀取的訊號儲存一張小圖片，以便回報誤讀來改進解碼器。"
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "開啟樣本資料夾"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "疊加層抽屜"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "停靠在螢幕邊緣的抽屜，位置由下方選擇。關閉後將隱藏抽屜及其各個分區。"
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "藍圖"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "搜尋藍圖，查看哪些任務獎勵它們，並勾選已擁有的藍圖。"
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "礦物"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "輸入礦物名稱可依星系查看其產地，輸入地點可查看該處的礦物。"
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "製造"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "輸入礦物可查看使用它的組件，輸入組件可查看所需礦物。需要先擷取 DataForge。"
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "抽屜位置："
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "左上"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "頂部置中"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "右上"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "左側置中"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "右側置中"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "左下"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "底部置中"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "右下"
     }
   }
 }

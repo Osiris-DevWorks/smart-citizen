@@ -404,6 +404,57 @@ class BlueprintLogScanWorker(QThread):
             self.finished.emit(None)
 
 
+class LiveBlueprintLogWorker(QThread):
+    """Watch the active channel's live ``Game.log`` for new blueprints while
+    the Smart Citizen Overlay runs.
+
+    Polls ``blueprint_log_scanner.GameLogTail`` every few seconds. The first
+    poll can read a whole (tens of MB) ``Game.log``, so this runs off the main
+    thread. Like ``BlueprintLogScanWorker`` it stays read-only: it emits raw
+    names plus the newest timestamp, and the main-thread slot normalizes them
+    and updates the owned set (the persisted watermark stays the Scan's).
+    Only started for LIVE or HOTFIX (#446). Stop with
+    ``requestInterruption()`` + ``wait()``.
+    """
+
+    POLL_MS = 3000
+
+    blueprints_found = pyqtSignal(object, object)  # (list[str] raw names, datetime newest)
+
+    def __init__(self, log_path, since):
+        super().__init__()
+        self._log_path = log_path
+        self._since = since
+
+    def run(self):
+        from src.utils.blueprint_log_scanner import GameLogTail
+        tail = GameLogTail(self._log_path, since=self._since)
+        failing = False
+        while not self.isInterruptionRequested():
+            try:
+                events = tail.poll()
+                failing = False
+            except Exception:
+                # The first failure in a row with its traceback; repeats at
+                # debug, so a lasting fault doesn't flood the Log tab every
+                # poll.
+                if failing:
+                    logger.debug("Live blueprint log poll failed again", exc_info=True)
+                else:
+                    logger.exception("Live blueprint log poll failed")
+                failing = True
+                events = []
+            if events:
+                self.blueprints_found.emit(
+                    [ev.name for ev in events], max(ev.timestamp for ev in events)
+                )
+            # Sleep in short steps so stop() doesn't wait a full poll interval.
+            for _ in range(self.POLL_MS // 100):
+                if self.isInterruptionRequested():
+                    return
+                self.msleep(100)
+
+
 class InstallScanWorker(QThread):
     """Find every Star Citizen install on this machine (2.4).
 
@@ -681,7 +732,7 @@ class P4kExtractWorker(QThread):
 
     def run(self):
         from src.utils.pak_extractor import (
-            ExtractionCancelled, P4kLockedError, extract_global_ini,
+            ANTICIPATED_EXTRACTION_ERRORS, ExtractionCancelled, extract_global_ini,
         )
         try:
             extract_global_ini(
@@ -698,15 +749,6 @@ class P4kExtractWorker(QThread):
             logger.info(f"global.ini extraction stopped ({e})")
             self.stopped = True
             self.finished.emit(False)
-        except P4kLockedError as e:
-            # Anticipated, already logged at WARNING by _raise_unp4k_failure
-            # with full diagnostic detail — logger.exception() here would
-            # independently trigger MainWindow's global ErrorDialogHandler
-            # (any ERROR-level record, app-wide) and duplicate the friendly
-            # dialog the `error` signal below shows.
-            logger.warning(f"P4K extraction: Data.p4k locked, likely updating: {e}")
-            self.error.emit(str(e))
-            self.finished.emit(False)
         except Exception as e:
             if self.isInterruptionRequested():
                 # A failure on the way out of a stop (#471) belongs to the
@@ -715,7 +757,15 @@ class P4kExtractWorker(QThread):
                 self.stopped = True
                 self.finished.emit(False)
                 return
-            logger.exception(f"P4K extraction failed: {e}")
+            if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
+                # A locked Data.p4k or a full drive (#482): it carries its own
+                # message and was logged at WARNING, with the detail, where it
+                # was raised. logger.exception would open the global error
+                # dialog (any ERROR-level record, app-wide) on top of the box
+                # the error signal shows.
+                logger.warning(f"P4K extraction: {type(e).__name__}: {e}")
+            else:
+                logger.exception(f"P4K extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
 
@@ -752,7 +802,7 @@ class DataForgeExtractWorker(QThread):
 
     def run(self):
         from src.utils.pak_extractor import (
-            DataForgeTimeoutError, ExtractionCancelled, P4kLockedError, extract_dataforge,
+            ANTICIPATED_EXTRACTION_ERRORS, ExtractionCancelled, extract_dataforge,
         )
         from src.utils.dataforge_patcher import apply_patches
         try:
@@ -807,23 +857,6 @@ class DataForgeExtractWorker(QThread):
             logger.info(f"DataForge extraction stopped ({e})")
             self.stopped = True
             self.finished.emit(False)
-        except P4kLockedError as e:
-            # See the matching comment in P4kExtractWorker.run(): already
-            # logged at WARNING by _raise_unp4k_failure; logger.exception()
-            # here would independently trigger the global ErrorDialogHandler
-            # and duplicate the friendly dialog the `error` signal shows.
-            logger.warning(f"DataForge extraction: Data.p4k locked, likely updating: {e}")
-            self.error.emit(str(e))
-            self.finished.emit(False)
-        except DataForgeTimeoutError as e:
-            # Same treatment as P4kLockedError above: _raise_unforge_timeout
-            # has already logged the DCB name, its size and unforge's partial
-            # output at WARNING, and the message is user-ready. Letting this
-            # fall through to the blanket handler would log at ERROR and pop
-            # the global ErrorDialogHandler on top of the friendly dialog.
-            logger.warning(f"DataForge extraction: unforge timed out: {e}")
-            self.error.emit(str(e))
-            self.finished.emit(False)
         except Exception as e:
             if self.isInterruptionRequested():
                 # A failure on the way out of a stop (a file the killed tool
@@ -833,7 +866,16 @@ class DataForgeExtractWorker(QThread):
                 self.stopped = True
                 self.finished.emit(False)
                 return
-            logger.exception(f"DataForge extraction failed: {e}")
+            if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
+                # A locked Data.p4k, an unforge timeout or a full drive
+                # (#482): it carries its own message and was logged at
+                # WARNING, with the detail (unforge's partial output, the
+                # byte counts), where it was raised. logger.exception would
+                # open the global error dialog on top of the box the error
+                # signal shows.
+                logger.warning(f"DataForge extraction: {type(e).__name__}: {e}")
+            else:
+                logger.exception(f"DataForge extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
 

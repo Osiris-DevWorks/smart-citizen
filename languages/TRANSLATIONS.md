@@ -55,6 +55,12 @@ them against the new source.
   descarga configurada..."). The AI `at` fallback for every other non-English
   language had the same staleness (no `ht` to protect there, so the 2026-10-01
   backfill below refreshed all of them directly instead of just flagging it).
+- `config.data_desc` — English's size for the DataForge cache changed from
+  ~1.4 GB to ~1.2 GB (#482, 2.5.0), the size measured on LIVE 4.10. Affects
+  french, portuguese_br and spanish, whose human `ht` still says 1,4 Go or
+  1,4 GB (in french and portuguese_br the `at` is a copy of that `ht` and
+  was left as it is too). The seven other languages had no `ht` there, so
+  their `at` was corrected directly (2.5.0 entry below).
 
 ## Backfill log
 
@@ -77,6 +83,58 @@ them against the new source.
   cihazından" (the pack uses "üretici" for a manufacturer) and "mevcut
   listeye", and italian says "la loro ricezione" instead of "di averli
   ricevuti", which made the game the receiver.
+- **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #482 checks free space
+  before a P4K extraction. Ten new keys: the not-enough-space messages
+  `extract.no_space_dataforge`, `no_space_global_ini`, `no_space_drive`,
+  `no_space_fix_cache`, `no_space_fix_temp`, `no_space_fix` and
+  `no_space_cache_incomplete`, the size templates `extract.size_gb` and
+  `size_mb` (all nine after `extract.dataforge_timeout`), and
+  `progress.reloading_with_extracted_base` (the progress text after a
+  global.ini extraction, English-only in the code until now), after
+  `progress.reloading_after_user_ini_restore`. In all 10 languages,
+  `at`-only (`ht` empty), in each file's own register and terms, with every
+  placeholder kept and the line breaks where the English has them. The
+  Config tab is named with each file's own `tabs.config` (french
+  Paramètres, german Konfiguration, italian and portuguese_br Config,
+  spanish Configuración, turkish Yapılandırma, japanese 設定, korean 설정,
+  chinese and chinese_traditional 配置) and the folder with its
+  `config.dataforge_cache_label`. `{drive}` is a label such as `D:` or a
+  network share, so it carries no particle in korean and no case suffix in
+  turkish. The size templates own the decimal mark and the unit: a decimal
+  comma in french (`Go`, `Mo`), german, italian, portuguese_br, spanish and
+  turkish, and no space before the unit in korean.
+  Also reworded `config.cache_dir_tooltip` in all 10 languages to match the
+  new English: the cache is about 1.2 GB (it said ~1.4 GB), and two new
+  sentences say an extraction needs up to about 4.5 GB free on that drive
+  while it runs and when its working files go to `%TEMP%` instead. No
+  language had an `ht` there. The figure in `config.data_desc` went from
+  1.4 to 1.2 GB in the seven AI-only languages. french, portuguese_br and
+  spanish have a human `ht` there, which was left alone (see *Needs human
+  re-review*). chinese_traditional was converted from the chinese strings
+  with OpenCC `s2twp`, as in #403, and checked by hand. Each string was
+  back-translated and compared with the English in the same pass, not by a
+  separate checker: no meaning errors, and the Korean sentence-spacing rule
+  holds. No human string changed.
+  The same change updated `docs/HELP.md` and the 10 translated `HELP.md`
+  files. In the Config Tab's *DataForge cache folder* bullet, the "about
+  2 GB of working space" sentence now says an extraction needs up to about
+  4.5 GB free while it runs (less when a cache is already there), keeps the
+  `%TEMP%` fallback cases, and says it stops before it starts when there is
+  not enough room. Troubleshooting gained an "Extraction says there is not
+  enough free space" bullet after the locked Data.p4k one. Each file writes
+  the figure its own way (french 4,5 Go, german, italian, portuguese_br,
+  spanish and turkish 4,5 GB, and korean "4.5 GB" with a space, as its HELP
+  already wrote "2 GB"). Bold labels reuse each file's own *DataForge cache
+  folder* label and the Config Tab name its other Troubleshooting bullets
+  use, which for italian ("scheda Configurazione") and japanese ("Config
+  タブ") is the section heading rather than `tabs.config`. The new bullet
+  uses the separator the rest of each list uses. In chinese,
+  chinese_traditional, german, italian and japanese the older locked
+  Data.p4k bullet uses a colon instead (left as it was). The cache bullet
+  was AI text from the 2026-10-06 docs sync and every translated `HELP.md`
+  is AI-only, so no human text changed and nothing needs human re-review.
+  Korean keeps a space after every sentence end. HELP files have no
+  `ht`/`at` split, so this log is their only record.
 - **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
   current with English after the pre-release docs sync. In all 10 languages:
   `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge
