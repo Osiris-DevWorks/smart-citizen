@@ -86,6 +86,13 @@ Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citize
 var
   SCDirectoryPage: TInputDirWizardPage;
   DataDirPage: TInputDirWizardPage;
+  { #455: a YES on the OneDrive warning (NextButtonClick) moves the data. This
+    is the data folder it was in, kept until a NO; PendingDataMoveFrom is what
+    WriteInstallerChoicesToRegistry saves as pending_data_move_from, worked
+    out each time the page is left. The app moves Smart Citizen's own folders
+    out of it at its next start (AppSettings.migrate_installer_data_move). }
+  OneDriveMoveFrom: String;
+  PendingDataMoveFrom: String;
   { 1.4.1: cache lives on a separate page so users can split the ~1.2 GB
     DataForge tree off the user-data folder (e.g. SSD for cache,
     OneDrive Documents for user.ini). Saved to HKCU\...\cache_dir;
@@ -846,6 +853,15 @@ begin
       SCRegNode, 'UserDataDir');
     ForceDirectories(DataDir);
     Log('Saved user_data_dir to registry: ' + DataDir);
+  end;
+
+  { #455: the YES on the OneDrive warning moves the data. Setup only names the
+    folder; the app moves Smart Citizen's own folders out of it at its next
+    start and deletes this value. }
+  if PendingDataMoveFrom <> '' then
+  begin
+    RegWriteStringValue(HKCU, SCRegNode, 'pending_data_move_from', PendingDataMoveFrom);
+    Log('Saved pending_data_move_from to registry: ' + PendingDataMoveFrom);
   end;
 
   { 1.4.1+: persist the cache folder choice. Same comparison rule as
@@ -2268,44 +2284,57 @@ begin
     returns False, and a silent Setup that gets False here exits without
     installing. So keep the folder as it is (the NO answer). After the
     relaunch the app shows its own OneDrive warning (#174,
-    _maybe_warn_onedrive_data_dir in src/gui/main_window.py). }
+    _maybe_warn_onedrive_data_dir in src/gui/main_window.py). A silent Setup
+    therefore never asks the app to move data either (#455). }
   if WizardSilent() then
     Exit;
 
   Chosen := Trim(DataDirPage.Values[0]);
-  if not IsPathOnOneDrive(Chosen) then
-    Exit;
-
-  Suggested := SuggestLocalDataDir();
-  Response := MsgBox(
-    'The data folder you chose is inside OneDrive:' + #13#10 + #13#10 +
-    '  ' + Chosen + #13#10 + #13#10 +
-    'OneDrive syncs and can dehydrate or empty files under its tree. Smart Citizen '
-    + 'has lost user.ini data this way (your favorited ships and custom edits live there). '
-    + 'A local folder outside OneDrive is strongly recommended.' + #13#10 + #13#10 +
-    'Switching does not move your existing data. If you already have data in that '
-    + 'OneDrive folder (user.ini, backups), it stays there and Smart Citizen will use '
-    + 'the new folder instead, so your saved edits will not show up. To keep them, '
-    + 'click NO. Smart Citizen then offers to move your data to a local folder the '
-    + 'next time it starts, and the data folder setting on the Config tab (Advanced '
-    + 'view) can do it too.' + #13#10 + #13#10 +
-    'Switch to a local folder?' + #13#10 +
-    '  - Click YES to use ' + Suggested + #13#10 +
-    '  - Click NO to keep the OneDrive folder anyway',
-    mbError, MB_YESNO);
-
-  if Response = IDYES then
+  if IsPathOnOneDrive(Chosen) then
   begin
-    { Only the folder name changes. WriteInstallerChoicesToRegistry saves it as
-      user_data_dir (it clears the override instead when the folder equals the
-      natural default), and nothing copies the old data across (the box says
-      so). }
-    DataDirPage.Values[0] := Suggested;
-    { Stay on the page so the user sees the swapped-in local path before
-      committing. Mirrors #174 keeping the user on the data-dir surface. }
-    Result := False;
+    Suggested := SuggestLocalDataDir();
+    Response := MsgBox(
+      'The data folder you chose is inside OneDrive:' + #13#10 + #13#10 +
+      '  ' + Chosen + #13#10 + #13#10 +
+      'OneDrive syncs and can dehydrate or empty files under its tree. Smart Citizen '
+      + 'has lost user.ini data this way (your favorited ships and custom edits live there). '
+      + 'A local folder outside OneDrive is strongly recommended.' + #13#10 + #13#10 +
+      'If you switch, Smart Citizen moves your existing data (user.ini, backups and the '
+      + 'rest of its own folders) out of that OneDrive folder the next time it starts. '
+      + 'A file that is already in the new folder is kept, and Smart Citizen tells you '
+      + 'about anything that stays behind.' + #13#10 + #13#10 +
+      'Switch to a local folder?' + #13#10 +
+      '  - Click YES to use ' + Suggested + ' and move your data there' + #13#10 +
+      '  - Click NO to keep the OneDrive folder anyway',
+      mbError, MB_YESNO);
+
+    if Response = IDYES then
+    begin
+      { #455: the data moves with the folder. Setup only remembers where it was,
+        and only when the folder the user is leaving holds it: the data folder
+        the app uses now (GetDocumentsDir, from before this install's writes).
+        A OneDrive folder typed in for the first time holds none of it. }
+      if CompareText(CanonDir(Chosen), CanonDir(GetDocumentsDir())) = 0 then
+        OneDriveMoveFrom := CanonDir(GetDocumentsDir());
+      DataDirPage.Values[0] := Suggested;
+      { Stay on the page so the user sees the swapped-in local path before
+        committing. Mirrors #174 keeping the user on the data-dir surface. }
+      Result := False;
+      Exit;
+    end;
+    { Response = IDNO: proceed with the OneDrive folder; the user was warned.
+      Keeping a OneDrive folder moves nothing, even after an earlier YES. }
+    OneDriveMoveFrom := '';
   end;
-  { Response = IDNO: proceed with the OneDrive folder; the user was warned. }
+
+  { Leaving the page. The data moves unless the folder chosen in the end is the
+    one it is already in (an empty field is the Documents default). }
+  if Chosen = '' then
+    Chosen := GetDefaultDocumentsDir();
+  if (OneDriveMoveFrom <> '') and (CompareText(CanonDir(Chosen), OneDriveMoveFrom) <> 0) then
+    PendingDataMoveFrom := OneDriveMoveFrom
+  else
+    PendingDataMoveFrom := '';
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;

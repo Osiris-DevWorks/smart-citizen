@@ -385,9 +385,12 @@ class EnhancementsTab(QWidget):
         selected, so a language with nothing generated could report "nothing
         to do" purely because English had been generated earlier. #363 made
         that reachable on every language switch, which is what surfaced it.
+
+        Reads the cache folder without creating it (#494), as
+        refresh_forge_status does.
         """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path = AppSettings.get_p4k_path()
         if not (forge_dir / P4K_MTIME_STAMP).exists():
             return True
@@ -855,9 +858,15 @@ class EnhancementsTab(QWidget):
         self.refresh_forge_status()
 
     def refresh_forge_status(self):
-        """Update the DataForge cache status label."""
+        """Update the DataForge cache status label.
+
+        Reads the cache folder without creating it (#494). This runs while
+        the tab is built, so a folder Windows refused to create, or one on a
+        drive that is gone, kept Smart Citizen from opening. A missing folder
+        has no stamp, so it reads as not extracted.
+        """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path = AppSettings.get_p4k_path()
         if not (forge_dir / P4K_MTIME_STAMP).exists():
             self._forge_status_label.setText(tr("enhancements.forge_status_not_extracted"))

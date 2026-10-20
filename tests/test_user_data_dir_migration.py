@@ -124,3 +124,24 @@ def test_new_nested_inside_old_terminates_without_recursion(tmp_path):
     assert (new / "LIVE" / "backups" / "global.ini.bak").exists()
     # No pathological deeper nesting (new/moved/… must not exist).
     assert not (new / "moved").exists()
+
+
+def test_exclude_leaves_a_file_where_it_is_and_uncounted(tmp_path):
+    # #455 leaves the DataForge cache trees behind this way. The predicate is
+    # asked with each file's path relative to the old root.
+    old = tmp_path / "old"
+    new = tmp_path / "new"
+    _seed(old)
+    seen = []
+
+    def exclude(rel: Path) -> bool:
+        seen.append(rel.as_posix())
+        return rel.parts[1] == "backups"
+
+    moved = migrate_user_data_dir(old, new, move=True, exclude=exclude)
+
+    assert moved == 1
+    assert (new / "LIVE" / "user.ini").exists()
+    assert not (new / "LIVE" / "backups").exists()
+    assert (old / "LIVE" / "backups" / "global.ini.bak").read_text(encoding="utf-8") == "backup"
+    assert sorted(seen) == ["LIVE/backups/global.ini.bak", "LIVE/user.ini"]

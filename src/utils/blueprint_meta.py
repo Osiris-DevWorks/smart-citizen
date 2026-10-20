@@ -24,7 +24,7 @@ tuple into :func:`build_blueprint_metadata`.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import Optional, Sequence
 
@@ -189,6 +189,83 @@ MANUAL_BLUEPRINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("NDB-28 Repeater", _TYPE_SHIP_WEAPON),
     ("NDB-30 Repeater", _TYPE_SHIP_WEAPON),
 )
+
+# Starter blueprints every player owns from their first fabricator (#416).
+# The game grants them with no "Received Blueprint" notification and no
+# mission offers them, so neither the log scan nor the POTENTIAL BLUEPRINTS
+# catalogue could ever see them: they showed in neither list. Unlike
+# MANUAL_BLUEPRINT_ITEMS, everyone owns these, so MainWindow also adds each to
+# the Owned set once, on the first log scan after it is declared here
+# (MainWindow._seed_default_owned_blueprints records them by loc key).
+#
+# Keyed by loc key rather than display name, so the name follows the loaded
+# strings: the game's own current wording (the magazines are "P4-AR Magazine
+# (40 cap)" and "S-38 Magazine (20 cap)", and CIG renames things) and the
+# selected language. The English name is only the fallback for a key the
+# loaded strings lack. The type comes from the key (blueprint_type_from_key),
+# so it isn't declared here. Extend this tuple for any other starter item:
+# players who already scanned get it on their next scan.
+DEFAULT_OWNED_MISSION_LABEL = "Default blueprint (every player has it)"
+DEFAULT_OWNED_BLUEPRINTS: tuple[tuple[str, str], ...] = (
+    ("item_Namebehr_rifle_ballistic_01", "P4-AR Rifle"),
+    ("item_Namebehr_rifle_ballistic_01_mag", "P4-AR Magazine (40 cap)"),
+    ("item_Namebehr_pistol_ballistic_01", "S-38 Pistol"),
+    ("item_Namebehr_pistol_ballistic_01_mag", "S-38 Magazine (20 cap)"),
+    ("item_Name_cds_light_armor_01_arms", "Field Recon Suit Arms"),
+    ("item_Name_cds_light_armor_01_core", "Field Recon Suit Core"),
+    ("item_Name_cds_light_helmet_01", "Field Recon Suit Helmet"),
+    ("item_Name_cds_light_armor_01_legs", "Field Recon Suit Legs"),
+)
+# Lower-cased loc key -> the key as declared above, so a lookup survives CIG
+# changing a key's capitalisation.
+_DEFAULT_OWNED_KEYS = {key.lower(): key for key, _ in DEFAULT_OWNED_BLUEPRINTS}
+
+
+def _resolve_default_owned(loaded, enclosings, default_values) -> "list[tuple[str, str]]":
+    """``(loc key, display name)`` for every DEFAULT_OWNED_BLUEPRINTS item.
+
+    *loaded* maps a declared key to the ``(entry key, value)`` the loaded
+    strings carry for it. The name is normalized exactly the way
+    build_blueprint_metadata's Pass 1 normalizes item names (the stock value
+    strips any Tag Builder tag), so it is the same identity the Owned set and
+    the Blueprint Tracker use. A key with no loaded value falls back to its
+    English name. Two keys that come out as one name keep the first.
+    """
+    out: "list[tuple[str, str]]" = []
+    seen: "set[str]" = set()
+    for key, english in DEFAULT_OWNED_BLUEPRINTS:
+        nm = ""
+        if key in loaded:
+            entry_key, value = loaded[key]
+            nm = normalize_item_name(value, enclosings, default_values.get(entry_key) or None)
+        if not nm:
+            nm = normalize_item_name(english, enclosings)
+        if nm and nm not in seen:
+            seen.add(nm)
+            out.append((key, nm))
+    return out
+
+
+def default_owned_blueprints(
+    entries,
+    enclosings: "Sequence[tuple[str, str]] | None" = None,
+    default_values: "dict[str, str] | None" = None,
+) -> "list[tuple[str, str]]":
+    """``(loc key, display name)`` for every starter blueprint (#416), named
+    from *entries* (see DEFAULT_OWNED_BLUEPRINTS). ``enclosings`` and
+    ``default_values`` are the same values build_blueprint_metadata takes,
+    and must match them, or a name here could differ from the Blueprint
+    Tracker's key for the same item.
+    """
+    enclosings = tuple(enclosings) if enclosings is not None else _DEFAULT_ENCLOSINGS
+    default_values = default_values or {}
+    loaded: dict = {}
+    for e in entries:
+        key = getattr(e, "key", "") or ""
+        ours = _DEFAULT_OWNED_KEYS.get(key.lower())
+        if ours is not None and ours not in loaded:
+            loaded[ours] = (key, getattr(e, "original_value", "") or "")
+    return _resolve_default_owned(loaded, enclosings, default_values)
 
 
 def _key_slug(key: str) -> str:
@@ -526,11 +603,12 @@ def known_item_names(
     Deliberately broader than ``set(build_blueprint_metadata(entries))``:
     that dict is scoped to names currently offered as a reward by some loaded
     mission's POTENTIAL BLUEPRINTS list (plus the fixed ``MANUAL_BLUEPRINT_
-    ITEMS``), which excludes any real item CIG has rotated out of every
-    mission's reward pool this patch -- an expected, recurring state for a
-    long-owned item, not an edge case. Recovery (#372) must anchor against
-    this wider set instead: ``resolve_against_catalogue`` cannot tell "a
-    foreign tool's decoration on a known item" apart from "a different, real,
+    ITEMS`` and ``DEFAULT_OWNED_BLUEPRINTS``), which excludes any real item
+    CIG has rotated out of every mission's reward pool this patch -- an
+    expected, recurring state for a long-owned item, not an edge case.
+    Recovery (#372) must anchor against this wider set instead:
+    ``resolve_against_catalogue`` cannot tell "a foreign tool's decoration
+    on a known item" apart from "a different, real,
     currently-unlisted item that happens to share a shorter real item's
     name as a suffix" unless the catalogue it searches actually contains
     every real name, not just the ones currently eligible for the tracker.
@@ -615,12 +693,17 @@ def build_blueprint_metadata(
     titles: dict = {}           # (base_lower, num) -> cleaned mission name
     bp_descs: list = []         # (pair_key | None, value)
     keyslug_to_name: dict = {}  # _key_slug(key) -> normalized display name
+    default_loaded: dict = {}   # #416: declared starter key -> (entry key, value)
 
     for e in entries:
         key = getattr(e, "key", "") or ""
         val = getattr(e, "original_value", "") or ""
         cat = getattr(e, "category", "") or ""
         kl = key.lower()
+
+        ours = _DEFAULT_OWNED_KEYS.get(kl)
+        if ours is not None and ours not in default_loaded:
+            default_loaded[ours] = (key, val)
 
         if (kl.startswith("item_name") or kl.startswith("vehicle_name")
                 or kl.startswith(_EXTRA_NAME_KEY_PREFIXES)):
@@ -731,6 +814,29 @@ def build_blueprint_metadata(
             name=nm,
             missions=frozenset({_MANUAL_MISSION_LABEL}),
             type=(blueprint_type_from_key(key) or manual_type),
+            cls=cls,
+            size=size,
+            grade=grade,
+            tagged_name=name_to_value.get(nm) or nm,
+        )
+
+    # Pass 4: the starter blueprints every player owns (#416). Named by loc
+    # key from the strings Pass 1 saw, with real facets when loaded, like
+    # Pass 3. An item a mission (or Pass 3) already supplied keeps its own
+    # entry and just gains the label, so its tooltip still says everyone
+    # has it.
+    for key, nm in _resolve_default_owned(default_loaded, enclosings, default_values):
+        existing = result.get(nm)
+        if existing is not None:
+            result[nm] = replace(
+                existing, missions=existing.missions | {DEFAULT_OWNED_MISSION_LABEL},
+            )
+            continue
+        cls, size, grade = attrs.get(nm, (None, None, None))
+        result[nm] = BlueprintItem(
+            name=nm,
+            missions=frozenset({DEFAULT_OWNED_MISSION_LABEL}),
+            type=blueprint_type_from_key(key) or _TYPE_OTHER,
             cls=cls,
             size=size,
             grade=grade,

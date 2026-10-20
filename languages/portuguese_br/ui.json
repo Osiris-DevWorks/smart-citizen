@@ -718,6 +718,22 @@
       "ht": "Pasta de Cache inválida",
       "at": "Pasta de Cache inválida"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "O Windows negou ao Smart Citizen a permissão para criar o próprio cache em:\n{folder}\n\nA pasta cache do DataForge não foi alterada."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu acessar esta pasta:\n{folder}\n\nA pasta cache do DataForge não foi alterada."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu usar esta pasta:\n{folder}\n\n{reason}\n\nA pasta cache do DataForge não foi alterada."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "A pasta de cache selecionada é um arquivo, não uma pasta:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "Alterado o caminho do cache do DataForge",
       "at": "Alterado o caminho do cache do DataForge"
@@ -2032,6 +2048,46 @@
       "ht": "Cache Limpo",
       "at": "Cache Limpo"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Limpar Cache não está disponível enquanto uma extração ou uma geração de aprimoramentos está em andamento. Tente novamente quando ela terminar."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Os seguintes arquivos em cache serão excluídos:\n\n{files}\n\nO base.ini precisará ser extraído novamente do Data.p4k antes que as strings possam ser carregadas."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Limpar também o cache do DataForge?\n{folder}\n\nEle guarda os dados de entidades extraídos do Data.p4k para as estatísticas de naves e armas, e recriá-lo leva alguns minutos. Mantenha-o se quiser apenas atualizar as strings de localização."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Não foi possível acessar a pasta cache do DataForge, então ela não foi limpa:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Limpando o cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Limpando os arquivos em cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Excluindo {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Limpando o cache do DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} item(ns) excluído(s) do cache."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Não foi possível excluir:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "Diretório Não Encontrado",
       "at": "Diretório Não Encontrado"
@@ -2633,6 +2689,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Não avisar novamente"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} arquivo(s) movido(s) do OneDrive para a nova pasta de dados: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Alguns arquivos ficaram no OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "O instalador trocou sua pasta de dados por uma pasta local, e o Smart Citizen moveu {moved} arquivo(s) para lá.\n\nDe:\n{old}\n\nPara:\n{new}\n\n{left} arquivo(s) ficaram na pasta antiga, porque já havia um arquivo com o mesmo nome na pasta nova (esse foi mantido) ou porque o arquivo não pôde ser movido. A aba Log os lista.\n\nVerifique a pasta antiga antes de excluí-la e copie para a nova tudo de que você ainda precisar."
     }
   },
   "user_ini_reset": {
@@ -2859,6 +2927,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "O Windows negou ao Smart Citizen a permissão para criar uma pasta de trabalho em:\n{folder}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Verifique as permissões dessa pasta, permita o Smart Citizen pelo Acesso controlado a pastas na Segurança do Windows ou escolha outra pasta cache do DataForge na aba Config e tente novamente."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Verifique as permissões dessa pasta ou permita o Smart Citizen pelo Acesso controlado a pastas na Segurança do Windows e tente novamente."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu usar uma pasta de trabalho em:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "O Windows negou ao Smart Citizen a permissão para criar o cache do DataForge em:\n{folder}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu acessar a pasta cache do DataForge:\n{folder}\n\nA extração não foi iniciada. Reconecte a unidade ou escolha outra pasta cache do DataForge na aba Config e tente novamente."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu usar a pasta cache do DataForge:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "A pasta cache do DataForge é um link para outra pasta:\n{folder}\n\nEla leva a:\n{target}\n\nO Smart Citizen não exclui nada através de um link, então a extração não foi iniciada e nada foi alterado. Escolha a pasta para a qual ele leva como pasta cache do DataForge na aba Config e tente novamente."
     }
   },
   "apply": {

@@ -718,6 +718,22 @@
       "ht": "Dossier de cache invalide",
       "at": "Dossier de cache invalide"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows a refusé à Smart Citizen l'autorisation de créer son cache dans :\n{folder}\n\nLe dossier du cache DataForge n'a pas été modifié."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu accéder à ce dossier :\n{folder}\n\nLe dossier du cache DataForge n'a pas été modifié."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu utiliser ce dossier :\n{folder}\n\n{reason}\n\nLe dossier du cache DataForge n'a pas été modifié."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Le dossier de cache sélectionné est un fichier, pas un dossier :\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "Chemin du cache DataForge modifié",
       "at": "Chemin du cache DataForge modifié"
@@ -2032,6 +2048,46 @@
       "ht": "Cache vidé",
       "at": "Cache vidé"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Vider le cache n'est pas disponible pendant une extraction ou une génération d'enrichissements. Réessayez une fois qu'elle est terminée."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Les fichiers en cache suivants vont être supprimés :\n\n{files}\n\nbase.ini devra être réextrait de Data.p4k avant de pouvoir charger les chaînes."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Vider aussi le cache DataForge ?\n{folder}\n\nIl contient les données d'entités extraites de Data.p4k pour les statistiques des vaisseaux et des armes, et le refaire prend quelques minutes. Gardez-le si vous voulez seulement actualiser les chaînes de localisation."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Le dossier du cache DataForge est inaccessible, il n'a donc pas été vidé :\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Vidage du cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Vidage des fichiers en cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Suppression de {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Vidage du cache DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} élément(s) supprimé(s) du cache."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Impossible de supprimer :\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "Répertoire introuvable",
       "at": "Répertoire introuvable"
@@ -2633,6 +2689,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Ne plus m'avertir"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} fichier(s) déplacé(s) de OneDrive vers le nouveau dossier de données : {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Certains fichiers sont restés dans OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "Le programme d'installation a remplacé votre dossier de données par un dossier local, et Smart Citizen y a déplacé {moved} fichier(s).\n\nDe :\n{old}\n\nVers :\n{new}\n\n{left} fichier(s) sont restés dans l'ancien dossier, soit parce qu'un fichier du même nom se trouvait déjà dans le nouveau dossier (celui-ci a été conservé), soit parce que le fichier n'a pas pu être déplacé. L'onglet Journal les liste.\n\nVérifiez l'ancien dossier avant de le supprimer, et copiez dans le nouveau tout ce dont vous avez encore besoin."
     }
   },
   "user_ini_reset": {
@@ -2859,6 +2927,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} Mo"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows a refusé à Smart Citizen l'autorisation de créer un dossier de travail dans :\n{folder}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Vérifiez les autorisations de ce dossier, autorisez Smart Citizen via l'Accès contrôlé aux dossiers dans Sécurité Windows, ou choisissez un autre dossier du cache DataForge dans l'onglet Paramètres, puis réessayez."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Vérifiez les autorisations de ce dossier, ou autorisez Smart Citizen via l'Accès contrôlé aux dossiers dans Sécurité Windows, puis réessayez."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu utiliser un dossier de travail dans :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows a refusé à Smart Citizen l'autorisation de créer le cache DataForge dans :\n{folder}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu accéder au dossier du cache DataForge :\n{folder}\n\nL'extraction n'a pas démarré. Reconnectez le disque, ou choisissez un autre dossier du cache DataForge dans l'onglet Paramètres, puis réessayez."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu utiliser le dossier du cache DataForge :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "Le dossier du cache DataForge est un lien vers un autre dossier :\n{folder}\n\nIl mène à :\n{target}\n\nSmart Citizen ne supprime rien à travers un lien, donc l'extraction n'a pas démarré et rien n'a été modifié. Choisissez le dossier vers lequel il mène comme dossier du cache DataForge dans l'onglet Paramètres, puis réessayez."
     }
   },
   "apply": {

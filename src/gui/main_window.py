@@ -68,7 +68,14 @@ from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices
 from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.settings import AppSettings, SC_LANGUAGE_IDS
+from src.utils.pak_extractor import linked_cache_folder_error, windows_reason
+from src.utils.settings import (
+    AppSettings,
+    CACHE_FOLDER_REFUSED,
+    CACHE_FOLDER_UNREACHABLE,
+    SC_LANGUAGE_IDS,
+    cache_folder_failure,
+)
 from src.utils.i18n import tr
 from src.utils.version import get_version
 from src.utils.win_paths import win_plain_path
@@ -648,8 +655,11 @@ class SingleRowScrollArea(QScrollArea):
 class MainWindow(QMainWindow):
     """Main application window."""
 
-    def __init__(self):
+    def __init__(self, installer_data_move=None):
         super().__init__()
+        # #455: what the data move Setup asked for did, reported once at startup
+        # (_report_installer_data_move).
+        self._installer_data_move = installer_data_move
         self.setWindowTitle(tr("window.title", version=get_version()))
         # Position only; the size is set after the UI is built — restored from
         # saved geometry, or sized to the compact content hint on first run
@@ -945,6 +955,10 @@ class MainWindow(QMainWindow):
         # queue to swap the completion popups for a status bar message, so a
         # launch with new blueprints doesn't interrupt with a modal dialog.
         self._bp_scan_silent = False
+        # #416: starter blueprints a load added for a deferred seed, waiting
+        # to be reported once the load and anything it set off is over (see
+        # _flush_deferred_starter_report).
+        self._deferred_starter_report: list = []
 
         self.log_tab = LogTab()
         self._log_tab_index = self.tabs.addTab(self.log_tab, tr("tabs.log"))
@@ -2527,9 +2541,10 @@ class MainWindow(QMainWindow):
         (#387, #397). Runs after every reload, not just the first: Simple mode
         applies and then reloads, and a reload on its own must not leave the
         button red over state that was just applied. A failed restore, a
-        cancelled close prompt and an Apply Now that stopped before it touched
-        the button call it too, since each can leave the button without a
-        current verdict. The verdict lands in _on_applied_state_ready.
+        cancelled close prompt, an Apply Now that stopped before it touched
+        the button and a log scan that added blueprints (#416) call it too,
+        since each can leave the button without a current verdict. The
+        verdict lands in _on_applied_state_ready.
 
         One check runs at a time. A reload that arrives mid-check interrupts
         it and queues a rerun, which snapshots the newer state when it starts.
@@ -2823,12 +2838,16 @@ class MainWindow(QMainWindow):
                 )
             else:
                 enhancement_block = "  Smart Citizen enhancements: 0"
+            # Mark before the success box, as Clear Localization does: its
+            # event loop can deliver a change made after the merge above (a
+            # blueprint scan finishing, #416), which marks Apply red. Marking
+            # afterwards painted that green and dropped its check.
+            self._mark_applied()
             QMessageBox.information(
                 self, tr("dialogs.success_title"),
                 tr("apply.applied_body", target_path=target_path, user_count=f"{user_count:,}",
                    enhancement_block=enhancement_block),
             )
-            self._mark_applied()
             return True
         except Exception as e:
             # Mark first: the dialog's event loop can deliver a queued verdict.
@@ -2893,95 +2912,119 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def clear_cache(self):
-        """Delete cached source files from the cache directory. Optionally clear DataForge cache."""
-        from PyQt6.QtWidgets import QApplication
-        cache_dir = AppSettings.get_cache_dir()
-        cached_files = list(cache_dir.glob("*.ini")) + list(cache_dir.glob("*.txt"))
+        """More > Clear Cache: delete the active channel's cached base.ini and
+        enhancement INIs and, when the user agrees, the DataForge cache in use.
 
-        # Also check for dataforge directory
-        dataforge_dir = cache_dir / "dataforge"
-        has_dataforge = dataforge_dir.exists()
+        The DataForge cache is the active channel's cache folder wherever it
+        is (the default, the portable build's or a cache folder override),
+        named without creating it (#494) and offered only when it holds a
+        cache: its freshness stamp or its records. It used to be looked for
+        in the data folder's cache folder, where it lived before 1.x, so the
+        real cache was never offered (#479); a leftover there is the queued
+        old-cache cleanup's to remove. A cache folder on a drive or share
+        that is not there is named in the summary, and the rest still
+        clears. Nothing is cleared while an extraction or a generation runs,
+        because they write into these folders: the status bar says why.
+        Failures are listed in the summary and logged at WARNING, since an
+        ERROR record would open a second box on top of it.
+        """
+        from PyQt6.QtWidgets import QApplication
+        from src.utils.pak_extractor import (
+            DATAFORGE_LIBS_SUBPATH, P4K_MTIME_STAMP, robust_rmtree,
+        )
+
+        if any(worker is not None for worker in
+               (self._p4k_worker, self._forge_worker, self._enhancements_worker)):
+            self.statusBar().showMessage(tr("dialogs.clear_cache_busy"))
+            return
+
+        cache_dir = AppSettings.get_cache_dir()
+        cached_files = sorted(list(cache_dir.glob("*.ini")) + list(cache_dir.glob("*.txt")))
+
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
+        has_dataforge = ((forge_dir / P4K_MTIME_STAMP).exists()
+                         or (forge_dir / DATAFORGE_LIBS_SUBPATH).exists())
+        unreachable = ""
+        if not has_dataforge and not os.path.exists(forge_dir.anchor):
+            logger.warning(f"Clear Cache could not reach the DataForge cache folder {forge_dir}")
+            unreachable = tr("dialogs.clear_cache_dataforge_unreachable", folder=str(forge_dir))
 
         if not cached_files and not has_dataforge:
-            QMessageBox.information(self, tr("dialogs.cache_empty_title"), tr("dialogs.cache_empty_body"))
+            body = tr("dialogs.cache_empty_body")
+            if unreachable:
+                body += "\n\n" + unreachable
+            QMessageBox.information(self, tr("dialogs.cache_empty_title"), body)
             return
 
-        # First dialog: clear regular cache files
-        file_list = "\n".join(f"  {f.name}" for f in sorted(cached_files))
-        msg = f"This will delete the following cached files:\n\n{file_list}\n\n"
-        msg += "base.ini will need to be re-extracted from Data.p4k before strings can be loaded."
+        if cached_files:
+            reply = QMessageBox.question(
+                self, tr("dialogs.clear_cache_title"),
+                tr("dialogs.clear_cache_files_body",
+                   files="\n".join(f"  {f.name}" for f in cached_files)),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
-        reply = QMessageBox.question(
-            self, tr("dialogs.clear_cache_title"), msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        deleted, failed = 0, []
+        if cached_files:
+            progress = AnimatedProgressDialog(tr("dialogs.clear_cache_progress_files"), parent=self,
+                                              title=tr("dialogs.clear_cache_progress_title"))
+            for f in cached_files:
+                try:
+                    progress.setLabelText(tr("dialogs.clear_cache_progress_file", name=f.name))
+                    QApplication.processEvents()  # Keep dialog responsive
+                    f.unlink()
+                    deleted += 1
+                except OSError as e:
+                    failed.append(f"{f.name}: {e}")
+                    logger.warning(f"Clear Cache could not delete {f}: {e}")
+            progress.close()
 
-        deleted, failed = [], []
-
-        # Show progress dialog while deleting files
-        progress = AnimatedProgressDialog("Clearing cache files...", parent=self, title="Clearing Cache")
-
-        # Delete cache files
-        for f in cached_files:
-            try:
-                progress.setLabelText(f"Deleting {f.name}...")
-                QApplication.processEvents()  # Keep dialog responsive
-                f.unlink()
-                deleted.append(f.name)
-            except Exception as e:
-                failed.append(f"{f.name}: {e}")
-                logger.error(f"Failed to delete cache file {f}: {e}")
-
-        # Second dialog: ask about DataForge cache (only if it exists)
-        clear_dataforge = False
         if has_dataforge:
-            progress.close()  # Close progress dialog while asking user
             reply = QMessageBox.question(
                 self, tr("dialogs.dataforge_cache_title"),
-                "Also clear the DataForge entity cache?\n\n"
-                "⚠️  Warning: Recreating the DataForge cache takes a few minutes on first run.\n\n"
-                "The DataForge cache contains extracted entity data used for generating\n"
-                "ship and weapon stats. You can keep this cache and only clear the INI files\n"
-                "if you just want to refresh the localization strings.\n\n"
-                "Clear DataForge cache?",
+                tr("dialogs.clear_cache_dataforge_body", folder=str(forge_dir)),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                clear_dataforge = True
-                # Show progress dialog again for DataForge deletion
-                progress = AnimatedProgressDialog("Clearing DataForge cache...", parent=self, title="Clearing Cache")
-
-        # Delete dataforge directory if user agreed
-        if clear_dataforge:
-            try:
-                progress.setLabelText("Deleting DataForge directory...")
+                progress = AnimatedProgressDialog(tr("dialogs.clear_cache_progress_dataforge"),
+                                                  parent=self,
+                                                  title=tr("dialogs.clear_cache_progress_title"))
                 QApplication.processEvents()
-
-                # Shared helper — retries with backoff, clears read-only bits,
-                # and outlasts OneDrive/Defender/indexer locks that commonly
-                # reject the first attempt with WinError 5.
-                from src.utils.pak_extractor import robust_rmtree
-                robust_rmtree(dataforge_dir)
-                deleted.append("dataforge/")
-                logger.info("Deleted DataForge cache directory")
-            except Exception as e:
-                failed.append(f"dataforge/: {e}")
-                logger.error(f"Failed to delete DataForge cache: {e}")
-                logger.error(f"Failed to delete DataForge cache: {e}")
-
-        progress.close()
+                try:
+                    # Retries with backoff, clears read-only bits and outlasts
+                    # the OneDrive, Defender and indexer locks that often
+                    # refuse the first try. A link is reported, never deleted
+                    # through (#491).
+                    robust_rmtree(forge_dir)
+                    deleted += 1
+                    logger.info(f"Deleted the DataForge cache {forge_dir}")
+                except OSError as e:
+                    failed.append(f"{forge_dir}: {e}")
+                    logger.warning(
+                        f"Clear Cache could not delete the DataForge cache {forge_dir}: {e}")
+                progress.close()
+            elif not cached_files:
+                # No to the only question changes nothing, just as No to
+                # the file question: nothing was deleted, so the table and
+                # the tabs stay as they are.
+                return
 
         self.config_tab._refresh_p4k_status()
+        # The category dots and the DataForge label must not stay green over
+        # what was just deleted.
+        self.enhancements_tab.refresh_enhancements_status()
         self.entries = []
         self._model.set_data_source([], {}, AppSettings.get_favorite_prefix())
 
-        msg = f"Deleted {len(deleted)} item(s) from cache."
+        msg = tr("dialogs.cache_cleared_body", count=deleted)
         if failed:
-            msg += "\n\nFailed to delete:\n" + "\n".join(failed)
+            msg += "\n\n" + tr("dialogs.cache_cleared_failed", failures="\n".join(failed))
+        if unreachable:
+            msg += "\n\n" + unreachable
         QMessageBox.information(self, tr("dialogs.cache_cleared_title"), msg)
 
         # Re-sync all remote sources so they're available for the next Apply.
@@ -3165,6 +3208,7 @@ class MainWindow(QMainWindow):
 
                 # Update status bar with entry counts and per-source status
                 self._update_status_bar()
+                self._queue_deferred_starter_report()  # #416: last, see its docstring
             except Exception as e:
                 logger.exception(f"Error during merge: {e}")
                 QMessageBox.critical(self, tr("dialogs.error_title"), tr("dialogs.failed_to_merge_sources", error=e))
@@ -4433,6 +4477,7 @@ class MainWindow(QMainWindow):
             return
         self._startup_gate_pending = False
         self._start_startup_sync()
+        self._report_installer_data_move()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
         self._maybe_auto_scan_blueprints()
@@ -4475,6 +4520,33 @@ class MainWindow(QMainWindow):
         self._bp_scan_silent = True
         self.blueprint_tracker_tab.set_scan_logs_enabled(False)
         self._start_next_blueprint_scan()
+
+    def _report_installer_data_move(self) -> None:
+        """Say what the move Setup asked for did (#455), once.
+
+        A YES on Setup's OneDrive warning moved Smart Citizen's own folders out
+        of the OneDrive folder before this window was built
+        (``AppSettings.migrate_installer_data_move``). Everything moved: a
+        status bar note. Something stayed (a file already in the new folder,
+        which was kept, or one that could not be moved): a box naming both
+        folders, because the user may want what is left. Nothing to move: the
+        log only.
+        """
+        result, self._installer_data_move = self._installer_data_move, None
+        if result is None or (not result.moved and not result.left):
+            return
+        old, new = os.path.normpath(str(result.old_root)), os.path.normpath(str(result.new_root))
+        if result.left:
+            QMessageBox.warning(
+                self,
+                tr("onedrive.installer_move_left_title"),
+                tr("onedrive.installer_move_left_body", old=old, new=new,
+                   moved=result.moved, left=len(result.left)),
+            )
+            return
+        self.statusBar().showMessage(
+            tr("onedrive.installer_move_done", new=new, count=result.moved)
+        )
 
     def _maybe_warn_onedrive_data_dir(self) -> None:
         """Warn once when the data root is inside a OneDrive-managed folder (#172).
@@ -5149,7 +5221,8 @@ class MainWindow(QMainWindow):
             return
 
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
-        records = AppSettings.get_dataforge_cache_dir() / DATAFORGE_RECORDS_SUBPATH
+        # Only reads, so it creates no cache folder (#494).
+        records = AppSettings.get_dataforge_cache_leaf() / DATAFORGE_RECORDS_SUBPATH
         if not records.exists():
             logger.warning(
                 f"{language!r} enhancements are stale/missing but no DataForge "
@@ -5477,7 +5550,10 @@ class MainWindow(QMainWindow):
     def _maybe_prompt_dataforge_refresh(self) -> None:
         """Prompt to re-extract DataForge if its cache is stale vs. Data.p4k.
 
-        Called during startup after base.ini passes its freshness check.
+        Called once base.ini is current: by startup, a channel switch and a
+        data-folder change when no global.ini extraction was needed or it
+        was declined, stopped or failed, and by ``_on_p4k_extract_finished``
+        after one of them had it extracted successfully (#478).
         A stale DataForge cache doesn't block the base-string workflow — the
         table loads fine — but it means the next enhancements regeneration
         will run against old entity data, so stats/missions/blueprints will
@@ -5515,7 +5591,8 @@ class MainWindow(QMainWindow):
         unforge_exe = AppSettings.get_unforge_exe_path()
         if not p4k_path.exists() or not unp4k_exe.exists() or not unforge_exe.exists():
             return
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        # Only reads, so it creates no cache folder (#494).
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         if (not (forge_dir / P4K_MTIME_STAMP).exists()
                 and not (forge_dir / DATAFORGE_LIBS_SUBPATH).exists()):
             # Never extracted — handled later by _check_enhancements_freshness,
@@ -5781,6 +5858,7 @@ class MainWindow(QMainWindow):
         # From here on, dirty-marking reflects a real in-session change —
         # see _mark_apply_dirty / _session_has_unapplied_edit.
         self._initial_load_done = True
+        self._queue_deferred_starter_report()  # #416: last, see its docstring
 
     @pyqtSlot(str)
     def _on_loading_error(self, error_msg: str):
@@ -5844,7 +5922,9 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.mark_enhancements_clean()
 
         from src.utils.pak_extractor import dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        # Only reads (#494): a cache folder that is not there is not fresh,
+        # and the extraction below is what creates it.
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path  = AppSettings.get_p4k_path()
 
         if dataforge_cache_is_fresh(p4k_path, forge_dir):
@@ -5996,14 +6076,53 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr("status_bar.enhancement_generation_failed"))
 
     def _run_dataforge_extraction(self):
-        """Launch DataForgeExtractWorker in the background (non-blocking)."""
+        """Launch DataForgeExtractWorker in the background (non-blocking).
+
+        Returns True if a run started.
+        """
         if self._forge_worker is not None or self._close_committed:
-            return
+            return False
 
         p4k_path    = AppSettings.get_p4k_path()
         unp4k_exe   = AppSettings.get_unp4k_exe_path()
         unforge_exe = AppSettings.get_unforge_exe_path()
-        forge_dir   = AppSettings.get_dataforge_cache_dir()
+        # Creates the cache folder, because it is about to write the cache;
+        # every status check only reads it (#494).
+        # Windows can refuse the folder (its permissions, Controlled folder
+        # access), its drive can be gone or not ready, or Windows can reject
+        # it for another reason. Say which in one box before any worker or
+        # dialog exists, read the same way as the Config tab reads it, and
+        # leave the Simple page and the Generate button as a failed
+        # extraction leaves them.
+        message = None
+        try:
+            # A cache folder that is a link is refused before the getter
+            # (#491): the extraction would delete nothing through it, and a
+            # link whose target is gone fails the getter with Windows' "file
+            # already exists", which says nothing about the link.
+            linked = linked_cache_folder_error(AppSettings.get_dataforge_cache_leaf())
+            if linked is not None:
+                message = str(linked)
+            else:
+                forge_dir = AppSettings.get_dataforge_cache_dir()
+        except OSError as e:
+            folder = os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
+            logger.warning(f"Could not create the DataForge cache folder in {folder}: {e}")
+            failure = cache_folder_failure(e)
+            if failure == CACHE_FOLDER_REFUSED:
+                message = (tr("extract.cache_folder_refused", folder=folder) + "\n\n"
+                           + tr("extract.folder_refused_fix_cache"))
+            elif failure == CACHE_FOLDER_UNREACHABLE:
+                message = tr("extract.cache_folder_unreachable", folder=folder)
+            else:
+                message = tr("extract.cache_folder_unusable", folder=folder,
+                             reason=windows_reason(e))
+        if message is not None:
+            self._end_simple_run()
+            self.enhancements_tab.set_operation_idle(success=False)
+            self.statusBar().showMessage(tr("extract.dataforge_extraction_failed"))
+            QMessageBox.warning(self, tr("extract.dataforge_extraction_error_title"), message)
+            return False
 
         worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir)
         self._forge_worker = worker
@@ -6033,6 +6152,7 @@ class MainWindow(QMainWindow):
             lambda success, w=worker: self._on_dataforge_extract_finished(success, w)
         )
         worker.start()
+        return True
 
     def _confirm_stop_dataforge_extraction(self, worker) -> bool:
         """Esc or the title-bar X on the DataForge progress dialog (#471).
@@ -6119,8 +6239,9 @@ class MainWindow(QMainWindow):
         # WARNING, not ERROR (#482). The worker already logged an unexpected
         # failure at ERROR, which opens the global error dialog, and an
         # anticipated one (a locked Data.p4k, an unforge timeout, a full
-        # drive) carries its own message, shown in the box below. ERROR here
-        # opened a second box, or a stray "(+1 suppressed)".
+        # drive, a refused working folder) carries its own message, shown in
+        # the box below. ERROR here opened a second box, or a stray
+        # "(+1 suppressed)".
         logger.warning(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
         self._end_simple_run()
@@ -6307,6 +6428,16 @@ class MainWindow(QMainWindow):
             # Defer enhancements check until after file loading completes (avoid I/O contention)
             self._check_enhancements_after_loading = True
 
+            # Startup, a channel switch or a data-folder change left its
+            # reload to this run. Each asks about an outdated DataForge cache
+            # before it reloads, and dropping the follow-up dropped that
+            # question too, until the next launch (#478). A Yes runs the
+            # DataForge extraction beside the reload, as at startup. The
+            # Config tab's Extract button starts a run with no follow-up and
+            # asks nothing, as before.
+            if if_unfinished is not None:
+                self._maybe_prompt_dataforge_refresh()
+
             # Show progress dialog while reloading with extracted data
             self._show_loading_progress(tr("progress.reloading_with_extracted_base"))
         else:
@@ -6442,7 +6573,11 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
             # exit_btn: fall through to the normal close sequence below,
-            # exiting without applying.
+            # exiting without applying. The prompt ran its own event loop, so
+            # a check may have started while it was open (a blueprint scan
+            # that finished, #416). Settle again so no thread outlives the
+            # window.
+            self._settle_applied_state_check()
 
         # Auto-save overrides if there are unsaved edits. Skipped when closing
         # for a post-import restart — the in-memory entries reflect the OLD
@@ -6849,6 +6984,113 @@ class MainWindow(QMainWindow):
         if hasattr(self, "blueprint_tracker_tab"):
             self.blueprint_tracker_tab.set_known_item_names(self._known_item_names)
         self._repair_foreign_owned_names()
+        # #416: a scan that finished before any strings had loaded left the
+        # starter blueprints pending. Strings are loaded now, so name them.
+        _seeded, pending = AppSettings.get_default_blueprints_seed()
+        if pending:
+            added = self._seed_default_owned_blueprints()
+            if added:
+                # That scan's own report went out before these existed, so
+                # they are reported later, once the load is over (see
+                # _queue_deferred_starter_report).
+                self._deferred_starter_report = sorted(
+                    set(self._deferred_starter_report) | added
+                )
+
+    def _queue_deferred_starter_report(self) -> None:
+        """Queue the report for starters a load added (#416). The last step
+        of both load paths: anything earlier can still open a modal dialog
+        (the enhancement categories prompt, for one) whose event loop would
+        run a call queued sooner, putting the report on top of it."""
+        if self._deferred_starter_report:
+            QTimer.singleShot(0, self._flush_deferred_starter_report)
+
+    def _flush_deferred_starter_report(self) -> None:
+        """Report starters a load added for a deferred seed (#416), the way a
+        silent auto-scan does (that is almost always the scan that deferred
+        them). Waits while a long job runs, since its status text or dialog
+        would bury the message: an extraction, an enhancements generation, a
+        Simple-mode run or another load. Each of those normally ends in a
+        reload, whose own last step queues this again. After one that failed
+        or was stopped, the report waits for the next load (the starters are
+        already in Owned, only the notice waits). Never while closing."""
+        names = self._deferred_starter_report
+        if not names or self._close_committed:
+            return
+        if (self._loader_worker is not None or self._enhancements_worker is not None
+                or self._forge_worker is not None or self._p4k_worker is not None
+                or self._simple_run_active):
+            return
+        self._deferred_starter_report = []
+        self._report_blueprints_added(names, silent=True)
+
+    def _seed_default_owned_blueprints(self) -> set:
+        """Add the starter blueprints to the Owned set, once (#416).
+
+        Every player owns ``blueprint_meta.DEFAULT_OWNED_BLUEPRINTS`` from
+        their first fabricator, but the game never logs receiving them and no
+        mission offers them, so no scan can find them. Called when a log scan
+        finishes (``_finish_blueprint_scan_queue``), so they arrive with the
+        player's first scan, and from ``_rebuild_blueprint_metadata`` while a
+        seed is pending.
+
+        One-shot per item, recorded by loc key: a starter the user moves back
+        to Available stays there, and a starter declared in a later release
+        still reaches Owned on that user's next scan. The names come from the
+        loaded strings (the selected language and the game's own wording), so
+        a scan that finishes before any strings have loaded (the startup
+        auto-scan can) only marks the seed pending, and the next metadata
+        rebuild finishes it.
+
+        Returns the names it added to the Owned set: empty when every starter
+        was already recorded, the seed is still pending, or the new ones were
+        already owned. Never raises, since it runs at the end of a scan and
+        inside a load, and a failure here must break neither. A failed seed
+        records nothing, so the next scan tries again.
+        """
+        try:
+            from src.utils.blueprint_meta import (
+                DEFAULT_OWNED_BLUEPRINTS, default_owned_blueprints,
+            )
+
+            seeded, pending = AppSettings.get_default_blueprints_seed()
+            new_keys = {key for key, _ in DEFAULT_OWNED_BLUEPRINTS} - seeded
+            if not new_keys:
+                return set()
+            if not self.entries:
+                if not pending:
+                    AppSettings.set_default_blueprints_seed(seeded, pending=True)
+                    logger.info(
+                        "Starter blueprints: no strings loaded yet, adding them "
+                        "once they load (#416)"
+                    )
+                return set()
+
+            from src.utils.owned_items import enclosings_from_tag_configs
+
+            enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+            names = {
+                nm for key, nm in default_owned_blueprints(
+                    self.entries, enclosings=enclosings,
+                    default_values=self.default_values,
+                )
+                if key in new_keys
+            }
+            owned = AppSettings.get_owned_items()
+            added = names - owned
+            if added:
+                AppSettings.set_owned_items(owned | added)
+            # Every new key is recorded, including one whose name came out the
+            # same as another starter's and so had no name of its own to add.
+            AppSettings.set_default_blueprints_seed(seeded | new_keys, pending=False)
+            logger.info(
+                f"Starter blueprints: added {len(added)} of {len(names)} to the "
+                f"Owned list (#416)"
+            )
+            return added
+        except Exception:
+            logger.exception("Starter blueprints: could not add them to the Owned list (#416)")
+            return set()
 
     def _repair_foreign_owned_names(self) -> None:
         """One-shot cleanup of owned entries left by another editor (#372).
@@ -7317,7 +7559,12 @@ class MainWindow(QMainWindow):
         self.blueprint_tracker_tab.set_scan_logs_enabled(True)
         silent = self._bp_scan_silent
         self._bp_scan_silent = False
-        new_names = sorted(self._bp_scan_new_names)
+        # #416: a scan also adds any starter blueprint every player owns that
+        # is not recorded yet (no log records them): all of them on the first
+        # scan, and one declared in a later release on the scan after it.
+        # Listed with the scan's own finds so the summary shows what arrived.
+        # Empty once every declared starter is recorded.
+        new_names = sorted(self._bp_scan_new_names | self._seed_default_owned_blueprints())
         self._bp_scan_new_names = set()
         # #308: one-shot -- the checkbox is consumed by the whole queued run
         # (every channel), whether it found anything new or errored, so it
@@ -7336,16 +7583,34 @@ class MainWindow(QMainWindow):
         owned = AppSettings.get_owned_items()
         AppSettings.set_owned_items(owned | set(new_names))
         self._recompute_owned()
+        # _recompute_owned() marks Apply dirty, but a new owned blueprint only
+        # changes the game file where a mission lists it, and starters (#416)
+        # are in no mission's list. Let the background check decide, as a
+        # reload does, so the first scan after updating doesn't leave Apply
+        # red and the close prompt armed over a file that would not change.
+        # Not while closing (the check is a thread closeEvent would no longer
+        # wait for), and not while nothing is loaded or a load is running:
+        # that load runs its own check after its own re-weave.
+        if (not self._close_committed and self.entries
+                and self._loader_worker is None):
+            self._refresh_apply_dirty_after_reload()
         # _recompute_owned() just did the exact re-weave Apply Owned Tags
         # performs, so mark the button clean rather than dirty (#296) —
         # otherwise it stayed red immediately after the summary below told
         # the user its tags were applied.
         self.blueprint_tracker_tab.mark_owned_clean()
+        self._report_blueprints_added(new_names, silent)
 
+    def _report_blueprints_added(self, new_names, silent: bool) -> None:
+        """Tell the user which blueprints were just added to the Owned set:
+        the summary box, or for a *silent* run (the startup auto-scan) a
+        status bar message. Shared by the scan finish and a load that
+        finishes a deferred starter-blueprint seed (#416)."""
         # #386 follow-up: an opt-in escape hatch back to the normal popup,
         # for anyone who wants the interruption on a launch that finds
-        # something new. A quiet run (the not-new_names branch above)
-        # ignores this setting entirely -- it only ever applies here.
+        # something new. A quiet run (the not-new_names branch of
+        # _finish_blueprint_scan_queue) never gets here, so it ignores this
+        # setting entirely.
         if silent and not AppSettings.get_auto_scan_show_popup_enabled():
             self.statusBar().showMessage(
                 tr("blueprint_tracker.auto_scan_status_added", count=len(new_names))

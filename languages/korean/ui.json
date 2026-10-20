@@ -742,6 +742,22 @@
       "ht": "",
       "at": "잘못된 캐시 폴더"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에 접근할 수 없었습니다:\n{folder}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "선택한 캐시 폴더는 폴더가 아니라 파일입니다:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge 캐시 경로 변경됨"
@@ -2032,6 +2048,46 @@
       "ht": "",
       "at": "캐시 지워짐"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "추출이나 강화 생성이 실행 중일 때는 캐시를 지울 수 없습니다. 완료된 후 다시 시도하세요."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "다음 캐시 파일을 삭제합니다:\n\n{files}\n\n문자열을 불러오기 전에 Data.p4k에서 base.ini를 다시 추출해야 합니다."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge 캐시도 지울까요?\n{folder}\n\n이 캐시에는 함선과 무기 능력치에 쓰이는, Data.p4k에서 추출한 엔티티 데이터가 들어 있으며 다시 만드는 데 몇 분이 걸립니다. 현지화 문자열만 새로 고치려면 그대로 두세요."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더에 접근할 수 없어 지우지 않았습니다:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "캐시 지우는 중"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "캐시 파일을 지우는 중..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} 삭제 중..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge 캐시를 지우는 중..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "캐시에서 {count}개 항목을 삭제했습니다."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "삭제할 수 없음:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "디렉터리를 찾을 수 없음"
@@ -2633,6 +2689,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "다시 경고하지 않기"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count}개 파일을 OneDrive에서 새 데이터 폴더로 이동했습니다: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "일부 파일이 OneDrive에 남았습니다"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "설치 프로그램이 데이터 폴더를 로컬 폴더로 바꿨고, Smart Citizen이 {moved}개 파일을 그곳으로 이동했습니다.\n\n이전 위치:\n{old}\n\n새 위치:\n{new}\n\n{left}개 파일이 이전 폴더에 남았습니다. 새 폴더에 같은 이름의 파일이 이미 있었거나(그 파일을 유지했습니다) 파일을 이동할 수 없었기 때문입니다. 로그 탭에 목록이 있습니다.\n\n이전 폴더를 삭제하기 전에 확인하고, 아직 필요한 것은 새 폴더로 복사하세요."
     }
   },
   "user_ini_reset": {
@@ -2859,6 +2927,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb}MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 작업 폴더를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용한 후 다시 시도하세요."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에서 작업 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 DataForge 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen이 DataForge 캐시 폴더에 접근할 수 없었습니다:\n{folder}\n\n추출이 시작되지 않았습니다. 드라이브를 다시 연결하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 DataForge 캐시 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더가 다른 폴더로 연결되는 링크입니다:\n{folder}\n\n연결 대상:\n{target}\n\nSmart Citizen은 링크를 통해 아무것도 삭제하지 않으므로 추출이 시작되지 않았고 아무것도 변경되지 않았습니다. 설정 탭에서 링크가 가리키는 폴더를 DataForge 캐시 폴더로 선택한 후 다시 시도하세요."
     }
   },
   "apply": {

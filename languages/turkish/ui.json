@@ -742,6 +742,22 @@
       "ht": "",
       "at": "Geçersiz Önbellek Klasörü"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şu konumda kendi önbelleğini oluşturma iznini reddetti:\n{folder}\n\nDataForge önbellek klasörü değiştirilmedi."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen şu konuma ulaşamadı:\n{folder}\n\nDataForge önbellek klasörü değiştirilmedi."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen şu konumu kullanamadı:\n{folder}\n\n{reason}\n\nDataForge önbellek klasörü değiştirilmedi."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Seçilen önbellek klasörü bir klasör değil, bir dosya:\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge Önbellek Yolu Değişti"
@@ -2032,6 +2048,46 @@
       "ht": "",
       "at": "Önbellek Temizlendi"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Bir çıkarma veya geliştirme oluşturma işlemi sürerken Önbelleği Temizle kullanılamaz. İşlem bittiğinde yeniden deneyin."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Aşağıdaki önbellek dosyaları silinecek:\n\n{files}\n\nMetinler yüklenmeden önce base.ini dosyasının Data.p4k'den yeniden çıkarılması gerekecek."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge önbelleği de temizlensin mi?\n{folder}\n\nGemi ve silah istatistikleri için Data.p4k'den çıkarılan varlık verilerini tutar ve yeniden oluşturulması birkaç dakika sürer. Yalnızca yerelleştirme metinlerini yenilemek istiyorsanız saklayın."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge önbellek klasörüne ulaşılamadı, bu yüzden temizlenmedi:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Önbellek temizleniyor"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Önbellek dosyaları temizleniyor..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} siliniyor..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge önbelleği temizleniyor..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Önbellekten {count} öğe silindi."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Silinemedi:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Dizin Bulunamadı"
@@ -2633,6 +2689,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Bir daha uyarma"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} dosya OneDrive'dan yeni veri klasörüne taşındı: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Bazı Dosyalar OneDrive İçinde Kaldı"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "Kurulum veri klasörünüzü yerel bir klasörle değiştirdi ve Smart Citizen {moved} dosyayı oraya taşıdı.\n\nEski konum:\n{old}\n\nYeni konum:\n{new}\n\n{left} dosya eski klasörde kaldı: ya yeni klasörde aynı adlı bir dosya zaten vardı (o dosya korundu) ya da dosya taşınamadı. Günlük sekmesi bunları listeler.\n\nEski klasörü silmeden önce kontrol edin ve hâlâ ihtiyacınız olanları yeni klasöre kopyalayın."
     }
   },
   "user_ini_reset": {
@@ -2859,6 +2927,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şu konumda bir çalışma klasörü oluşturma iznini reddetti:\n{folder}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Bu klasörün izinlerini kontrol edin, Windows Güvenliği'nde Denetimli klasör erişimi aracılığıyla Smart Citizen'a izin verin veya Yapılandırma sekmesinden başka bir DataForge önbellek klasörü seçin, ardından yeniden deneyin."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Bu klasörün izinlerini kontrol edin veya Windows Güvenliği'nde Denetimli klasör erişimi aracılığıyla Smart Citizen'a izin verin, ardından yeniden deneyin."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen şu konumda bir çalışma klasörü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şu konumda DataForge önbelleğini oluşturma iznini reddetti:\n{folder}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen DataForge önbellek klasörüne ulaşamadı:\n{folder}\n\nÇıkarma işlemi başlamadı. Sürücüyü yeniden bağlayın veya Yapılandırma sekmesinden başka bir DataForge önbellek klasörü seçin, ardından yeniden deneyin."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen DataForge önbellek klasörünü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge önbellek klasörü başka bir klasöre giden bir bağlantıdır:\n{folder}\n\nGittiği yer:\n{target}\n\nSmart Citizen bir bağlantı üzerinden hiçbir şeyi silmez, bu yüzden çıkarma işlemi başlamadı ve hiçbir şey değiştirilmedi. Yapılandırma sekmesinden bağlantının gittiği klasörü DataForge önbellek klasörü olarak seçin, ardından yeniden deneyin."
     }
   },
   "apply": {

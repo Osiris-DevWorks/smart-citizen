@@ -20,9 +20,11 @@ to ``Documents\\Smart Citizen`` at install time (``user.ini`` goes with it), so 
 local folder suggested for it would be saved as an override that points at an
 empty folder.
 
-The Next-click warning offers to switch to the local folder. That only changes
-the folder Setup saves: nothing copies the old data across. The warning says so,
-and a text check keeps that sentence and that behaviour in step.
+The Next-click warning offers to switch to the local folder. Setup itself moves
+nothing: since #455 a YES leaves the old folder's name for the app, which moves
+Smart Citizen's own folders out of it at its next start
+(``tests/test_installer_data_move.py``). The warning says so, and a text check
+keeps that sentence and that behaviour in step.
 
 The behaviour test cuts the OneDrive functions and the pre-fill ladder
 verbatim out of installer.iss, points their registry and environment reads at
@@ -106,17 +108,22 @@ def test_prefill_suggestion_asks_both_data_folder_names_through_their_helpers():
     assert "\\Smart Citizen" not in block and "SC Localization Editor" not in block
 
 
-def test_next_click_warning_says_yes_leaves_existing_data_behind():
-    # YES only swaps the folder in the edit box, and WriteInstallerChoicesToRegistry
-    # saves it as user_data_dir. Nothing copies the old data across, so the
-    # warning has to say so. If NextButtonClick ever moves data, reword it.
+def test_next_click_warning_says_yes_moves_the_data_at_the_next_start():
+    # #455: YES swaps the folder in the edit box and remembers the old one, and
+    # WriteInstallerChoicesToRegistry saves that as pending_data_move_from. The
+    # app moves the data at its next start, so the warning says that, and
+    # Setup itself still copies, renames and deletes nothing here.
     function = _pascal_function(_installer_source(), "NextButtonClick")
     code = re.sub(r"\{.*?\}", "", function, flags=re.S)
     message = re.sub(r"'\s*\+\s*'", "", code)
-    assert "Switching does not move your existing data." in message
-    assert message.index("Switching does not move") < message.index("Switch to a local folder?")
+    assert "Switching does not move" not in message
+    assert ("If you switch, Smart Citizen moves your existing data (user.ini, backups and the "
+            "rest of its own folders) out of that OneDrive folder the next time it starts."
+            ) in message
+    assert "and move your data there" in message
+    assert message.index("If you switch") < message.index("Switch to a local folder?")
     for mover in ("FileCopy(", "RenameFile(", "DelTree(", "DeleteFile(", "RemoveDir(", "Exec("):
-        assert mover not in code, f"NextButtonClick calls {mover}: the warning says no data moves"
+        assert mover not in code, f"NextButtonClick calls {mover}: the app moves the data"
 
 
 # -- Behaviour, in the compiled installer code -----------------------------------
