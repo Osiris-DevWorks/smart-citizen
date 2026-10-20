@@ -59,10 +59,12 @@ class AnimatedProgressDialog(QProgressDialog):
 
     Starts indeterminate (range 0-0, auto-animating). Call `set_progress(completed,
     total, message)` to switch to determinate; pass total=0 to drop back to
-    indeterminate for phases with an unknown extent. The phase message shows
-    in the label above the bar. In determinate mode the bar displays the
-    percent-complete (default Qt ``%p%`` format); indeterminate mode hides
-    the bar text since there's no meaningful percentage to show.
+    indeterminate for phases with an unknown extent. Nothing counted yet
+    (completed=0) is indeterminate too, until the first count (#507). The
+    phase message shows in the label above the bar. In determinate mode the
+    bar displays the percent-complete (default Qt ``%p%`` format);
+    indeterminate mode hides the bar text since there's no meaningful
+    percentage to show.
     """
 
     def __init__(
@@ -142,12 +144,16 @@ class AnimatedProgressDialog(QProgressDialog):
     def set_progress(self, completed: int, total: int, message: str = "") -> None:
         """Drive the bar from a ProgressSink. total=0 ⇒ indeterminate.
 
+        So is completed=0 (#507): a bar standing at 0% while the first step
+        runs looked as if the app had hung, as the generator's first lookups
+        did for seconds. The moving bar stays until something is counted.
+
         Determinate mode applies a two-tone gradient QSS and shows ``%p%``
         inside the bar. Indeterminate mode clears the QSS so Fusion's
         animated busy indicator still works, and hides the bar text.
         Phase messages go to the label above the bar in both modes.
         """
-        if total <= 0:
+        if total <= 0 or completed <= 0:
             if self.maximum() != 0 or self.minimum() != 0:
                 self.setRange(0, 0)
             if self._bar is not None:
@@ -594,7 +600,12 @@ class EnhancementsGeneratorWorker(QThread):
 
             base_ini  = AppSettings.get_base_ini_path(self.language)
             enh_dir   = AppSettings.get_enhancements_dir(self.language)
-            forge_dir = AppSettings.get_dataforge_cache_dir()
+            # Never makes the cache folder (#494): every launcher checks the
+            # cache is there first, so the creating getter has nothing to
+            # make, and it would raise for a folder Windows refuses. The run
+            # still writes into the cache (the patches, the generator's
+            # lookup pickles).
+            forge_dir = AppSettings.get_dataforge_cache_leaf()
             # ── Diff-cache check ──────────────────────────────────────────────
             # Compare the current DataForge XMLs against the last-run manifest.
             # None  → no manifest yet, run everything.
@@ -758,11 +769,12 @@ class P4kExtractWorker(QThread):
                 self.finished.emit(False)
                 return
             if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
-                # A locked Data.p4k or a full drive (#482): it carries its own
-                # message and was logged at WARNING, with the detail, where it
-                # was raised. logger.exception would open the global error
-                # dialog (any ERROR-level record, app-wide) on top of the box
-                # the error signal shows.
+                # A locked Data.p4k, a full drive (#482) or a working folder
+                # Windows refused (#490): it carries its own message and was
+                # logged at WARNING, with the detail, where it was raised.
+                # logger.exception would open the global error dialog (any
+                # ERROR-level record, app-wide) on top of the box the error
+                # signal shows.
                 logger.warning(f"P4K extraction: {type(e).__name__}: {e}")
             else:
                 logger.exception(f"P4K extraction failed: {e}")
@@ -867,12 +879,13 @@ class DataForgeExtractWorker(QThread):
                 self.finished.emit(False)
                 return
             if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
-                # A locked Data.p4k, an unforge timeout or a full drive
-                # (#482): it carries its own message and was logged at
-                # WARNING, with the detail (unforge's partial output, the
-                # byte counts), where it was raised. logger.exception would
-                # open the global error dialog on top of the box the error
-                # signal shows.
+                # A locked Data.p4k, an unforge timeout, a full drive (#482)
+                # or a working folder Windows refused (#490): it carries its
+                # own message and was logged at WARNING, with the detail
+                # (unforge's partial output, the byte counts, the Windows
+                # error), where it was raised. logger.exception would open
+                # the global error dialog on top of the box the error signal
+                # shows.
                 logger.warning(f"DataForge extraction: {type(e).__name__}: {e}")
             else:
                 logger.exception(f"DataForge extraction failed: {e}")

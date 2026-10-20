@@ -714,6 +714,22 @@
       "ht": "",
       "at": "無效的快取資料夾"
     },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒絕了 Smart Citizen 在以下位置建立快取的權限：\n{folder}\n\nDataForge 快取資料夾未更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 無法存取以下位置：\n{folder}\n\nDataForge 快取資料夾未更改。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 無法使用以下位置：\n{folder}\n\n{reason}\n\nDataForge 快取資料夾未更改。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "所選的快取資料夾是一個檔案，而不是資料夾：\n{folder}"
+    },
     "dataforge_cache_changed_title": {
       "ht": "",
       "at": "DataForge 快取路徑已更改"
@@ -2028,6 +2044,46 @@
       "ht": "",
       "at": "快取已清除"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "正在執行提取或增強內容生成時無法清除快取。請在其完成後重試。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "這將刪除以下快取檔案：\n\n{files}\n\n在載入字串之前，需要從 Data.p4k 重新提取 base.ini。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "是否同時清除 DataForge 快取？\n{folder}\n\n它儲存著從 Data.p4k 提取、用於艦船和武器屬性的實體資料，重新產生需要幾分鐘。如果只想重新整理在地化字串，請保留它。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "無法存取 DataForge 快取資料夾，因此未清除它：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "正在清除快取"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "正在清除快取檔案..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "正在刪除 {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "正在清除 DataForge 快取..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "已從快取中刪除 {count} 項。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "無法刪除：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "未找到目錄"
@@ -2855,6 +2911,38 @@
     "size_mb": {
       "ht": "",
       "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows 拒絕了 Smart Citizen 在以下位置建立工作資料夾的權限：\n{folder}\n\n提取未開始，因此未做任何更改。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "請檢查該資料夾的權限，透過 Windows 安全性的受控資料夾存取允許 Smart Citizen，或在配置標籤頁中選擇其他 DataForge 快取資料夾，然後重試。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "請檢查該資料夾的權限，或透過 Windows 安全性的受控資料夾存取允許 Smart Citizen，然後重試。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 無法在以下位置使用工作資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒絕了 Smart Citizen 在以下位置建立 DataForge 快取的權限：\n{folder}\n\n提取未開始，因此未做任何更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 無法存取 DataForge 快取資料夾：\n{folder}\n\n提取未開始。請重新連線該驅動器，或在配置標籤頁中選擇其他 DataForge 快取資料夾，然後重試。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 無法使用 DataForge 快取資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 快取資料夾是指向另一個資料夾的連結：\n{folder}\n\n它指向：\n{target}\n\nSmart Citizen 不會透過連結刪除任何內容，因此提取未開始，未做任何更改。請在配置標籤頁中將它指向的資料夾選為 DataForge 快取資料夾，然後重試。"
     }
   },
   "apply": {

@@ -6,10 +6,14 @@ extraction carried on unseen. This pins the Qt side of the fix:
 
 * AnimatedProgressDialog's close guard: Esc and the title-bar X ask, a
   programmatic close() never does.
+* AnimatedProgressDialog.set_progress with a total of 0, or nothing counted
+  yet (#507): the busy bar, and a counted phase after it counted again.
 * DataForgeExtractWorker / P4kExtractWorker on real threads: a stop ends with
   finished(False), no error signal and nothing at ERROR (an ERROR record would
   pop the global error dialog), while a real failure still reports, and one
-  that carries its own message (#482) reports it with nothing at ERROR.
+  that carries its own message (#482) reports it with nothing at ERROR. A
+  working folder Windows refuses (#490) reaches the user as one box, end to
+  end from the real extraction to the error slot.
 * MainWindow on stub selves (no full window): the DataForge stop prompt,
   the global.ini dialog's stop, the identity-bound slots, the guards that
   keep anything new from starting once the close is committed, and
@@ -22,16 +26,20 @@ Qt-free in test_extraction_working_folder.py. Offscreen Qt via the session
 """
 from __future__ import annotations
 
+import errno
 import logging
+import os
 import threading
 import time
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, call
 
 import pytest
 
 from PyQt6.QtCore import Qt, QThread
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtTest import QTest
+from PyQt6.QtWidgets import QProgressBar
 
 import src.gui.main_window as main_window
 import src.utils.pak_extractor as pe
@@ -39,6 +47,8 @@ from src.gui.main_window import MainWindow
 from src.gui.workers import AnimatedProgressDialog, DataForgeExtractWorker, P4kExtractWorker
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
+from tests.junction import make_junction
+from tests.unusable_folder import missing_drive_folder, new_folders_denied
 
 pytestmark = pytest.mark.unit
 
@@ -109,6 +119,50 @@ class TestProgressDialogCloseGuard:
         assert not dialog.isVisible()
 
 
+class TestProgressDialogBusyBar:
+    """A total of 0 is the moving busy bar the extractions show while unp4k
+    or unforge runs (#507, the calls are pinned Qt-free in
+    test_extraction_working_folder.py): a 0 to 0 range, which Qt animates,
+    no percentage, and none of the counted bar's style, which would stop the
+    animation (see theme.py). Nothing counted yet (0 of N) is the busy bar
+    too. A counted phase after either is counted again."""
+
+    def test_a_total_of_0_is_the_busy_bar_and_a_count_ends_it(self, dialog):
+        bar = dialog.findChild(QProgressBar)
+        dialog.set_progress(1, 3, "Converting DataForge database…")
+        assert (dialog.minimum(), dialog.maximum(), dialog.value()) == (0, 3, 1)
+        assert bar.isTextVisible() and bar.styleSheet()
+
+        dialog.set_progress(0, 0, "Extracting Game2.dcb from Data.p4k…")
+        assert (dialog.minimum(), dialog.maximum()) == (0, 0)
+        assert not bar.isTextVisible() and bar.styleSheet() == ""
+        assert dialog.labelText() == "Extracting Game2.dcb from Data.p4k…"
+
+        dialog.set_progress(2, 3, "Caching entity files…")
+        assert (dialog.minimum(), dialog.maximum(), dialog.value()) == (0, 3, 2)
+        assert bar.isTextVisible() and bar.styleSheet()
+        assert dialog.labelText() == "Caching entity files…"
+
+    def test_nothing_counted_yet_is_the_busy_bar_until_the_first_count(self, dialog):
+        """The generator starts its count at 0 of N and its first lookups can
+        take seconds, which showed a bar standing at 0%. The string loader
+        and the update download start the same way."""
+        bar = dialog.findChild(QProgressBar)
+        dialog.set_progress(0, 14, "Generating enhancements…")
+        assert (dialog.minimum(), dialog.maximum()) == (0, 0)
+        assert not bar.isTextVisible() and bar.styleSheet() == ""
+        assert dialog.labelText() == "Generating enhancements…"
+
+        dialog.set_progress(1, 14, "Loaded base.ini")
+        assert (dialog.minimum(), dialog.maximum(), dialog.value()) == (0, 14, 1)
+        assert bar.isTextVisible() and bar.styleSheet()
+
+        # A new count from 0 after a counted phase is the busy bar again.
+        dialog.set_progress(0, 30, "Snapshotting cache for diff (0/30)…")
+        assert (dialog.minimum(), dialog.maximum()) == (0, 0)
+        assert not bar.isTextVisible() and bar.styleSheet() == ""
+
+
 # ── the workers, on real threads ────────────────────────────────────────────
 
 def _collect(worker):
@@ -122,10 +176,11 @@ def _error_records(caplog):
     return [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
-# The failures that carry their own user-ready message (#482). Listed here
-# rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so dropping one
-# from that tuple fails the tests that use this.
-_ANTICIPATED = (pe.P4kLockedError, pe.DataForgeTimeoutError, pe.NotEnoughSpaceError)
+# The failures that carry their own user-ready message (#482, #490, #491).
+# Listed here rather than read from pe.ANTICIPATED_EXTRACTION_ERRORS, so
+# dropping one from that tuple fails the tests that use this.
+_ANTICIPATED = (pe.P4kLockedError, pe.DataForgeTimeoutError, pe.NotEnoughSpaceError,
+                pe.WorkingFolderRefusedError, pe.CacheFolderIsLinkError)
 
 
 class _Patches:
@@ -729,6 +784,240 @@ class TestDataForgeSlots:
         box.warning.assert_called_once()
 
 
+class TestUnusableCacheFolderAtStart:
+    """#494. ``_run_dataforge_extraction`` creates the cache folder
+    (``get_dataforge_cache_dir``), because it is about to write the cache.
+    When it cannot (Windows refuses the folder, its drive is gone or not
+    ready, or Windows rejects it for another reason), it says which in one
+    box before any worker or progress dialog exists, naming the cache folder
+    the Config tab shows. It logs the Windows error at WARNING (an ERROR
+    record would open a second box), ends a Simple-mode run, lights Generate
+    again (the pipeline cleared it as the run started) and returns False.
+    Status checks only read the folder now
+    (test_refused_cache_window_paths.py), so an extraction reports it
+    here."""
+
+    @pytest.fixture
+    def box(self, monkeypatch):
+        """A fake QMessageBox. Neither a worker nor a progress dialog may be
+        built while it is in place."""
+        made, dialogs, box = MagicMock(), MagicMock(), MagicMock()
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker", made)
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", dialogs)
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        yield box
+        made.assert_not_called()
+        dialogs.assert_not_called()
+
+    @staticmethod
+    def _failing_with(monkeypatch, error) -> str:
+        settings = MagicMock()
+        settings.get_dataforge_cache_dir.side_effect = error
+        settings.get_dataforge_cache_base.return_value = Path("E:/Games/SC Cache")
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        return os.path.normpath("E:/Games/SC Cache")
+
+    @staticmethod
+    def _refused(folder: str) -> str:
+        return (tr("extract.cache_folder_refused", folder=folder) + "\n\n"
+                + tr("extract.folder_refused_fix_cache"))
+
+    @staticmethod
+    def _unreachable(folder: str) -> str:
+        return tr("extract.cache_folder_unreachable", folder=folder)
+
+    @staticmethod
+    def _unusable(folder: str, reason: str) -> str:
+        return tr("extract.cache_folder_unusable", folder=folder, reason=reason)
+
+    @staticmethod
+    def _reported_once(me, box, caplog, text, windows_error, started):
+        assert started is False
+        assert me._forge_worker is None
+        box.warning.assert_called_once_with(
+            me, tr("extract.dataforge_extraction_error_title"), text)
+        logged = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(logged) == 1 and windows_error in logged[0]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        me._end_simple_run.assert_called_once_with()
+        me.enhancements_tab.set_operation_idle.assert_called_once_with(success=False)
+        me.enhancements_tab.set_operation_running.assert_not_called()
+        me.statusBar().showMessage.assert_called_with(tr("extract.dataforge_extraction_failed"))
+
+    def test_a_refused_folder_opens_one_box_with_the_advice(self, monkeypatch, caplog, box):
+        error = PermissionError(13, "Access is denied", "E:/Games/SC Cache/LIVE")
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._refused(folder), str(error), started)
+
+    def test_a_drive_that_is_gone_says_it_could_not_be_reached(self, monkeypatch, caplog, box):
+        error = FileNotFoundError(2, "The system cannot find the path specified", "E:/")
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._unreachable(folder), str(error), started)
+
+    def test_a_drive_that_is_not_ready_says_it_could_not_be_reached(
+        self, monkeypatch, caplog, box
+    ):
+        """A drive letter with no media in it (a card reader with the card
+        out, an empty optical drive) gives ERROR_NOT_READY, which Python
+        raises as a PermissionError. Nothing was refused, so it gets the
+        could-not-reach text with its reconnect advice, not the permission
+        text."""
+        error = OSError(None, "The device is not ready", "E:/Games/SC Cache/LIVE", 21)
+        assert isinstance(error, PermissionError)
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._unreachable(folder), str(error), started)
+
+    @pytest.mark.parametrize("error, reason", [
+        (OSError(None, "The filename, directory name, or volume label syntax is incorrect",
+                 "E:/Games/SC Cache/LIVE", 123),
+         "The filename, directory name, or volume label syntax is incorrect"),
+        (OSError(None, "Cannot create a file when that file already exists",
+                 "E:/Games/SC Cache", 183),
+         "Cannot create a file when that file already exists"),
+        (OSError(None, "There is not enough space on the disk", "E:/Games/SC Cache/LIVE", 112),
+         "There is not enough space on the disk"),
+        (OSError("the cache folder could not be made"), "the cache folder could not be made"),
+    ], ids=["a bad name", "a file in the way", "a full drive", "no reason of its own"])
+    def test_any_other_error_gives_windows_own_reason(
+        self, monkeypatch, caplog, box, english_ui, error, reason
+    ):
+        """Neither a refusal nor a folder that is not there: the box says the
+        folder could not be used and gives Windows' own reason (its
+        ``strerror``, in the user's Windows language, so not translated), or
+        the whole error when it has none. It used to say the drive could not
+        be reached and to reconnect it."""
+        assert not isinstance(error, (PermissionError, FileNotFoundError))
+        folder = self._failing_with(monkeypatch, error)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(me, box, caplog, self._unusable(folder, reason), str(error), started)
+        assert box.warning.call_args.args[2] == (
+            f"Smart Citizen could not use the DataForge cache folder:\n{folder}\n\n{reason}\n\n"
+            "The extraction did not start, so nothing was changed.")
+
+    def test_a_real_refusal(self, tmp_profile, caplog, box):
+        base = tmp_profile / "cache"
+        base.mkdir()
+        AppSettings.set_cache_dir(base)
+        me = _window()
+        with new_folders_denied(base):
+            with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+                started = MainWindow._run_dataforge_extraction(me)
+        folder = os.path.normpath(str(base.resolve()))
+        self._reported_once(me, box, caplog, self._refused(folder), "[WinError 5]", started)
+        assert list(base.iterdir()) == []
+
+    def test_a_real_missing_drive(self, tmp_profile, caplog, box):
+        base = missing_drive_folder()
+        AppSettings.set_cache_dir(base)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            started = MainWindow._run_dataforge_extraction(me)
+        self._reported_once(
+            me, box, caplog, self._unreachable(str(base)), "[WinError 3]", started)
+
+    def test_a_simple_mode_apply_leaves_the_page_ready(self, tmp_profile, box):
+        """The one-button run, end to end on the stub: the pipeline finds no
+        cache, the extraction cannot make one, and the page is ready again
+        with nothing applied."""
+        box.question.return_value = box.StandardButton.Yes
+        base = tmp_profile / "cache"
+        base.mkdir()
+        AppSettings.set_cache_dir(base)
+        me = _window(_simple_run_active=False)
+        me._enhancements_worker = None
+        for name in ("_run_enhancements_pipeline", "_run_dataforge_extraction",
+                     "_end_simple_run"):
+            setattr(me, name, getattr(MainWindow, name).__get__(me))
+
+        with new_folders_denied(base):
+            MainWindow._run_simple_apply(me)
+
+        assert me.simple_page.set_busy.call_args_list == [call(True), call(False)]
+        assert me._simple_run_active is False
+        me.enhancements_tab.mark_enhancements_clean.assert_called_once_with()
+        me.enhancements_tab.set_operation_idle.assert_called_once_with(success=False)
+        box.warning.assert_called_once()
+        me.apply_to_game.assert_not_called()
+        assert list(base.iterdir()) == []
+
+
+class TestLinkedCacheFolderAtStart:
+    """#491: a DataForge cache folder that is a link (a junction made by
+    hand to keep the cache on another drive) is refused where the extraction
+    starts, before the creating getter, any worker or progress dialog: one
+    box naming the folder and where it leads, the link once at WARNING and
+    nothing at ERROR, and the Simple run, Generate and the status bar left
+    as a failed extraction leaves them. A junction whose target is gone gets
+    the same box; it used to fail the creating getter with Windows' "file
+    already exists" and get #494's could-not-use box. A link higher up the
+    path is not refused. Real junctions, settings in ``tmp_profile``."""
+
+    @pytest.fixture
+    def box(self, monkeypatch):
+        """A fake QMessageBox. Neither a worker nor a progress dialog may be
+        built while it is in place."""
+        made, dialogs, box = MagicMock(), MagicMock(), MagicMock()
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker", made)
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", dialogs)
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        yield box
+        made.assert_not_called()
+        dialogs.assert_not_called()
+
+    @pytest.mark.parametrize("gone", [False, True], ids=["junction", "junction-to-nothing"])
+    def test_one_box_before_any_worker(self, tmp_profile, caplog, box, english_ui, gone):
+        leaf = AppSettings.get_dataforge_cache_leaf()
+        leaf.parent.mkdir(parents=True)
+        target = tmp_profile / "D" / "SC Cache"
+        make_junction(leaf, target)
+        if gone:
+            target.rmdir()
+        else:
+            (target / pe.P4K_MTIME_STAMP).write_text("1", encoding="utf-8")
+        target = os.path.realpath(target)
+        me = _window()
+
+        with caplog.at_level(logging.WARNING):
+            started = MainWindow._run_dataforge_extraction(me)
+
+        message = tr("extract.cache_folder_is_link", folder=str(leaf), target=target)
+        TestUnusableCacheFolderAtStart._reported_once(
+            me, box, caplog, message, f"{leaf} is a link to {target}", started)
+        assert pe.linked_folder_target(leaf) == target
+        assert gone or (leaf / pe.P4K_MTIME_STAMP).read_text(encoding="utf-8") == "1"
+
+    def test_a_link_above_the_cache_folder_still_starts(self, tmp_profile, monkeypatch):
+        """The channel folder of the default location (which the settings
+        never resolve) as a junction: the cache folder inside it is an
+        ordinary folder, so the extraction starts."""
+        made = []
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker",
+                            lambda *args: made.append(_Worker(*args)) or made[-1])
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        leaf = AppSettings.get_dataforge_cache_leaf()
+        leaf.parent.parent.parent.mkdir(parents=True)
+        make_junction(leaf.parent.parent, tmp_profile / "D" / "LIVE")
+
+        assert MainWindow._run_dataforge_extraction(_window()) is True
+
+        box.warning.assert_not_called()
+        assert made[0].args[3] == leaf
+        assert leaf.is_dir() and pe.linked_folder_target(leaf) is None
+
+
 class TestP4kSlots:
     def test_a_released_worker_finishing_changes_nothing(self):
         stale, current = _Worker(running=False), _Worker()
@@ -882,6 +1171,169 @@ class TestP4kSlots:
         MainWindow._on_p4k_extract_finished(me, False, stale)
         carry_on.assert_not_called()
         assert me._after_unfinished_p4k_extraction is carry_on
+
+
+@pytest.fixture
+def refused_folders(tmp_path, monkeypatch):
+    """Real extractions where Windows refuses every working folder, beside
+    the DataForge cache and in %TEMP% alike (#490). Returns the tools folder
+    (whose tools never run), the cache leaf, the private %TEMP% and the
+    base.ini path."""
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+        (tools / name).write_bytes(b"x")
+    leaf = tmp_path / "SC" / "LIVE" / "cache" / "dataforge"
+    leaf.mkdir(parents=True)
+    systemp = tmp_path / "systemp"
+    systemp.mkdir()
+    monkeypatch.setattr(pe.tempfile, "tempdir", str(systemp))
+    monkeypatch.setattr(pe, "_drive_is_removable_or_network", lambda path: False)
+    monkeypatch.setattr(pe, "is_onedrive_path", lambda path: False)
+    # These tests mean "beside the cache", however long tmp_path is on the
+    # machine that runs them (past the cap the work goes to %TEMP%).
+    monkeypatch.setattr(pe, "_MAX_SCRATCH_CHARS", 10_000)
+
+    def no_tool(*args, **kwargs):
+        raise AssertionError("a tool ran without a working folder")
+
+    def refuse(parent, prefix):
+        raise PermissionError(errno.EACCES, "Access is denied", str(parent))
+
+    monkeypatch.setattr(pe, "_run_tool", no_tool)
+    monkeypatch.setattr(pe, "_open_scratch", refuse)
+    return tools, leaf, systemp, tmp_path / "data" / "base.ini"
+
+
+def _warnings(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+
+
+class TestRefusedWorkingFolderReachesTheUser:
+    """#490 end to end: a working folder Windows refuses, from the real
+    extraction through the worker on a real thread to the error slot, opens
+    one box that names the folder. Each step logs at WARNING and nothing at
+    ERROR, which would open the global error dialog as a second box."""
+
+    def test_dataforge_shows_one_box_naming_the_folder(
+        self, qapp, monkeypatch, patches, caplog, english_ui, refused_folders
+    ):
+        tools, leaf, _systemp, _base_ini = refused_folders
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = DataForgeExtractWorker(tools / "Data.p4k", tools / "unp4k.exe",
+                                        tools / "unforge.exe", leaf)
+        finished, errors = _collect(worker)
+        with caplog.at_level(logging.INFO):
+            worker.start()
+            assert worker.wait(10000)
+            me = _window(_forge_worker=worker)
+            for message in errors:
+                MainWindow._on_dataforge_extract_error(me, message, worker)
+
+        assert finished == [False] and worker.stopped is False
+        [message] = errors
+        assert message.startswith(tr("extract.folder_refused", folder=str(leaf.parent)))
+        assert message.endswith(tr("extract.folder_refused_fix_cache"))
+        box.warning.assert_called_once()
+        assert box.warning.call_args.args[1:] == (
+            tr("extract.dataforge_extraction_error_title"),
+            tr("extract.dataforge_extraction_error_body", message=message))
+        assert _error_records(caplog) == []
+        warnings = _warnings(caplog)
+        assert (f"Windows refused an extraction working folder in {leaf.parent}: "
+                f"[Errno 13] Access is denied: {str(leaf.parent)!r}") in warnings
+        assert f"DataForge extraction: WorkingFolderRefusedError: {message}" in warnings
+        assert f"DataForge extraction error: {message}" in warnings
+        assert patches.calls == []
+
+    def test_global_ini_shows_one_box_once_temp_refuses_too(
+        self, qapp, monkeypatch, caplog, english_ui, refused_folders
+    ):
+        """The folder beside the cache refusing only moves the work to
+        %TEMP%, at INFO. The box comes when %TEMP% refuses too, and names
+        %TEMP%."""
+        tools, leaf, systemp, base_ini = refused_folders
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = P4kExtractWorker(tools / "Data.p4k", base_ini, tools / "unp4k.exe",
+                                  scratch_near=leaf)
+        finished, errors = _collect(worker)
+        with caplog.at_level(logging.INFO):
+            worker.start()
+            assert worker.wait(10000)
+            me = _window(_p4k_worker=worker)
+            for message in errors:
+                MainWindow._on_p4k_extract_error(me, message, worker)
+
+        assert finished == [False] and worker.stopped is False
+        [message] = errors
+        assert message.startswith(tr("extract.folder_refused", folder=str(systemp)))
+        assert message.endswith(tr("extract.folder_refused_fix"))
+        box.warning.assert_called_once_with(me, tr("extract.extraction_error_title"), message)
+        assert _error_records(caplog) == []
+        assert any(r.levelno == logging.INFO
+                   and r.getMessage().startswith(f"Could not work in {leaf.parent} (")
+                   for r in caplog.records)
+        warnings = _warnings(caplog)
+        assert not any(str(leaf.parent) in w for w in warnings)
+        assert f"P4K extraction: WorkingFolderRefusedError: {message}" in warnings
+        assert not base_ini.exists()
+
+
+class TestLinkedCacheFolderReachesTheUser:
+    """#491 end to end past the start's own check (a link made while the
+    extraction starts): the real ``extract_dataforge`` refuses a cache
+    folder that is a junction before anything runs, and the worker on a
+    real thread reports it as an anticipated failure, so the error slot
+    opens one box and nothing is logged at ERROR. Before the fix the run
+    made its working folder and started unforge (here, a tool that must not
+    run), and with real tools failed with a raw error after it."""
+
+    def test_dataforge_shows_one_box_naming_the_link(
+        self, qapp, tmp_path, monkeypatch, patches, caplog, english_ui
+    ):
+        tools = tmp_path / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        systemp = tmp_path / "systemp"
+        systemp.mkdir()
+        monkeypatch.setattr(pe.tempfile, "tempdir", str(systemp))
+
+        def no_tool(*args, **kwargs):
+            raise AssertionError("a tool ran for a cache folder that is a link")
+
+        monkeypatch.setattr(pe, "_run_tool", no_tool)
+        leaf = tmp_path / "SC" / "LIVE" / "cache" / "dataforge"
+        leaf.parent.mkdir(parents=True)
+        make_junction(leaf, tmp_path / "D" / "SC Cache")
+        target = pe.linked_folder_target(leaf)
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        worker = DataForgeExtractWorker(tools / "Data.p4k", tools / "unp4k.exe",
+                                        tools / "unforge.exe", leaf)
+        finished, errors = _collect(worker)
+        with caplog.at_level(logging.INFO):
+            worker.start()
+            assert worker.wait(10000)
+            me = _window(_forge_worker=worker)
+            for message in errors:
+                MainWindow._on_dataforge_extract_error(me, message, worker)
+
+        assert finished == [False] and worker.stopped is False
+        [message] = errors
+        assert message == tr("extract.cache_folder_is_link", folder=str(leaf), target=target)
+        box.warning.assert_called_once()
+        assert box.warning.call_args.args[1:] == (
+            tr("extract.dataforge_extraction_error_title"),
+            tr("extract.dataforge_extraction_error_body", message=message))
+        assert _error_records(caplog) == []
+        warnings = _warnings(caplog)
+        assert f"DataForge extraction: CacheFolderIsLinkError: {message}" in warnings
+        assert patches.calls == []
+        assert list(leaf.parent.iterdir()) == [leaf]
+        assert list(systemp.iterdir()) == []
 
 
 class TestCallersCarryOnAfterAnUnfinishedExtraction:
@@ -1092,7 +1544,7 @@ class TestNothingStartsOnceClosing:
     def test_no_dataforge_extraction(self, monkeypatch, settings):
         made = MagicMock()
         monkeypatch.setattr(main_window, "DataForgeExtractWorker", made)
-        MainWindow._run_dataforge_extraction(_window(_close_committed=True))
+        assert MainWindow._run_dataforge_extraction(_window(_close_committed=True)) is False
         made.assert_not_called()
 
     def test_no_global_ini_extraction(self, monkeypatch, settings):
@@ -1144,7 +1596,7 @@ class TestStartupRefreshPrompt:
         settings.get_p4k_path.return_value = tools / "Data.p4k"
         settings.get_unp4k_exe_path.return_value = tools / "unp4k.exe"
         settings.get_unforge_exe_path.return_value = tools / "unforge.exe"
-        settings.get_dataforge_cache_dir.return_value = leaf
+        settings.get_dataforge_cache_leaf.return_value = leaf
         monkeypatch.setattr(main_window, "AppSettings", settings)
         box = MagicMock()
         box.question.return_value = box.StandardButton.Yes
@@ -1312,6 +1764,15 @@ class TestDismissedDialogStaysHidden:
             dlg.deleteLater()
 
     @staticmethod
+    def _start_show_timer(dialog):
+        """Start QProgressDialog's show timer, which shows the dialog about
+        4 s in. setValue at the bar's minimum starts it. set_progress(0, 2)
+        used to, but a count of 0 is the busy bar now and sets no value
+        (#507), so these tests start it themselves: the cancel() that keeps a
+        dismissed dialog hidden must still stop it."""
+        dialog.setValue(dialog.minimum())
+
+    @staticmethod
     def _watch(qapp, dialog, seconds):
         """True if *dialog* shows itself within *seconds*."""
         end = time.monotonic() + seconds
@@ -1331,7 +1792,7 @@ class TestDismissedDialogStaysHidden:
         control (hide) proves the timer is real here; cancel() stops it."""
         dialog = AnimatedProgressDialog("Launching unp4k…", title="P4K Extraction")
         try:
-            dialog.set_progress(0, 2, "Launching")
+            self._start_show_timer(dialog)
             qapp.processEvents()
             getattr(dialog, dismiss)()
             assert not dialog.isVisible()
@@ -1353,7 +1814,7 @@ class TestDismissedDialogStaysHidden:
         dialog.set_close_guard(
             lambda w=worker: MainWindow._stop_p4k_extraction_from_dialog(me, w))
         try:
-            dialog.set_progress(0, 2, "Launching")
+            self._start_show_timer(dialog)
             qapp.processEvents()
             QTest.keyClick(dialog, Qt.Key.Key_Escape)
             assert worker.interrupted and not dialog.isVisible()
@@ -1387,7 +1848,7 @@ class TestExtractionWiring:
         monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock(return_value=dialog))
         me = _window()
 
-        MainWindow._run_dataforge_extraction(me)
+        assert MainWindow._run_dataforge_extraction(me) is True
 
         worker = made[0]
         assert me._forge_worker is worker
