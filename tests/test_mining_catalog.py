@@ -1,8 +1,10 @@
 """SCO drawer data: the Mining Compendium parse, star systems, crafting index."""
+import errno
 from pathlib import Path
 
 import pytest
 
+from src.utils import atomic_io
 from src.utils.mining_catalog import (
     CRAFTING_INDEX_FILE, NYX, PYRO, STANTON, CraftingIndex, load_crafting_index,
     locations_by_system, minerals_at, ore_signature, parse_mining_compendium,
@@ -111,6 +113,42 @@ def test_material_key_for_prefers_an_exact_name():
     assert index.material_key_for("Copper") == "copper"
     assert CraftingIndex({"copper_ore": {"names": ["Copper Ore"]}}).material_key_for(
         "Copper") == "copper_ore"
+
+
+def test_a_failed_index_write_keeps_the_old_index(tmp_path, monkeypatch):
+    """The index is swapped in like every generated file (atomic_io, #476):
+    a write that fails at the swap leaves the old index whole, and no temp."""
+    path = tmp_path / CRAFTING_INDEX_FILE
+    write_crafting_index(path, {"gold": {"names": ["Gold"], "items": []}})
+    old = path.read_bytes()
+
+    def refuse(*_args):
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(atomic_io.os, "replace", refuse)
+    with pytest.raises(OSError):
+        write_crafting_index(path, {"beryl": {"names": ["Beryl"], "items": []}})
+    assert path.read_bytes() == old
+    assert [p.name for p in tmp_path.iterdir()] == [CRAFTING_INDEX_FILE]
+
+
+def test_reading_the_index_retries_while_it_is_swapped(tmp_path, monkeypatch):
+    """On Windows a reader opening the index during the swap gets a brief
+    PermissionError. The drawer used to read that as an empty index."""
+    path = tmp_path / CRAFTING_INDEX_FILE
+    write_crafting_index(path, {"gold": {"names": ["Gold"], "items": []}})
+    real_read_bytes, calls = Path.read_bytes, []
+
+    def busy_once(self):
+        calls.append(self)
+        if len(calls) == 1:
+            raise PermissionError(errno.EACCES, "The process cannot access the file")
+        return real_read_bytes(self)
+
+    monkeypatch.setattr(Path, "read_bytes", busy_once)
+    monkeypatch.setattr(atomic_io, "READ_DELAY_S", 0)
+    assert load_crafting_index(path).material_key_for("Gold") == "gold"
+    assert len(calls) == 2
 
 
 @pytest.mark.parametrize("content", [None, "not json", "[1, 2]", '{"materials": 3}'])

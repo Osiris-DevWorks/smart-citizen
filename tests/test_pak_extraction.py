@@ -755,7 +755,11 @@ class TestUnp4kFailureMessage:
 class TestCacheLayoutNamedOnce:
     """pak_extractor names the DataForge cache layout (raw/libs and
     foundry/records) once, and every reader joins DATAFORGE_LIBS_SUBPATH /
-    DATAFORGE_RECORDS_SUBPATH (root CLAUDE.md, "Magic literals"). The only
+    DATAFORGE_RECORDS_SUBPATH (root CLAUDE.md, "Magic literals"). The same
+    goes for the generator's lookup pickle folder, .lookups, which its
+    _cached_lookup writes and EnhancementsGeneratorWorker sweeps for
+    leftover temps: both join DATAFORGE_LOOKUPS_SUBPATH, so a rename can
+    never leave the sweep looking in a folder nothing writes. The only
     other spellings allowed are the generator's fallback for a missing src/,
     the same deferred-import pattern as its other src imports, and the
     legacy build cleaner, which still targets the pre-1.x Documents cache."""
@@ -763,12 +767,14 @@ class TestCacheLayoutNamedOnce:
     # Any quoted "raw" or "foundry" path segment: joined with / one at a
     # time ("raw" / "libs", or a variable / "raw" with "libs" added later),
     # a Path("raw") or joinpath("raw", ...) argument, or the start of a
-    # "raw/libs" string. Neither word is used for anything else here.
-    _SPELLED = re.compile(r"""["'](?:raw|foundry)(?:["']|[/\\])""")
+    # "raw/libs" string. Neither word is used for anything else here. And
+    # any string that starts with ".lookups", so a renamed or versioned
+    # copy (".lookups-v2") is caught as well as the name itself.
+    _SPELLED = re.compile(r"""["'](?:(?:raw|foundry)(?:["']|[/\\])|\.lookups)""")
     _REPO = Path(__file__).resolve().parent.parent
     _ALLOWED = {
-        "src/utils/pak_extractor.py": 2,             # the definitions
-        "scripts/generate_enhancements_ini.py": 2,   # the src/-missing fallback (one line)
+        "src/utils/pak_extractor.py": 3,             # the definitions
+        "scripts/generate_enhancements_ini.py": 3,   # the src/-missing fallback (two lines)
         "scripts/build/clean_cache_for_distribution.py": 2,   # legacy, pre-1.x cache
     }
 
@@ -786,11 +792,13 @@ class TestCacheLayoutNamedOnce:
 
     def test_the_names_describe_the_layout_the_extraction_writes(self):
         from src.utils.pak_extractor import (
-            DATAFORGE_LIBS_SUBPATH, DATAFORGE_RECORDS_SUBPATH, DATAFORGE_RECORDS_UNDER_LIBS,
+            DATAFORGE_LIBS_SUBPATH, DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH,
+            DATAFORGE_RECORDS_UNDER_LIBS,
         )
         assert DATAFORGE_LIBS_SUBPATH.as_posix() == "raw/libs"
         assert DATAFORGE_RECORDS_UNDER_LIBS.as_posix() == "foundry/records"
         assert DATAFORGE_RECORDS_SUBPATH.as_posix() == "raw/libs/foundry/records"
+        assert DATAFORGE_LOOKUPS_SUBPATH.as_posix() == ".lookups"
 
     def test_the_guard_sees_a_hand_spelled_path(self):
         """Prove the pattern bites, so the guard can't pass by reading nothing."""
@@ -799,5 +807,11 @@ class TestCacheLayoutNamedOnce:
         assert self._SPELLED.search('raw_dir = cache / "raw"')      # the split form
         assert self._SPELLED.search('cache.joinpath("raw", "libs")')
         assert self._SPELLED.search('libs = cache / "raw/libs"')
+        assert self._SPELLED.search('sweep_stale_temps(forge_dir / ".lookups")')
+        assert self._SPELLED.search("cache_dir = forge_dir.joinpath('.lookups')")
+        assert self._SPELLED.search('pickle = forge_dir / ".lookups/standings.pkl"')
+        assert self._SPELLED.search('cache_dir = forge_dir / ".lookups-v2"')
         assert not self._SPELLED.search("records = forge_dir / DATAFORGE_RECORDS_SUBPATH")
+        assert not self._SPELLED.search("cache_dir = forge_dir / DATAFORGE_LOOKUPS_SUBPATH")
         assert not self._SPELLED.search('rawness = "rawhide"')
+        assert not self._SPELLED.search('docs = "cache/dataforge/.lookups/{name}.pkl"')

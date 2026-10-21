@@ -399,6 +399,27 @@ them against the new source.
   is AI-only, so no human text changed and nothing needs human re-review.
   Korean keeps a space after every sentence end. HELP files have no
   `ht`/`at` split, so this log is their only record.
+- **2.5.0 cycle (2026-10-12, Claude Opus 5.5):** #476: a generation cut off by
+  closing the app, a crash or a failed write is now offered again at the next
+  start, and that question has its own body, `extract.outdated_categories_body`
+  ("out of date", with no count, because the count's noun keys say "missing"
+  in several languages). It sits right after `extract.missing_category_label`.
+  In all 10 languages, `at`-only (`ht` empty), worded in that file's own
+  register and with its existing words for enhancements and for generating
+  them (german "erzeugen", like the rest of its `extract.*` block). The
+  newlines sit where the English has them. The second and third lines are
+  that file's own from `extract.missing_categories_body`, word for word,
+  except french: "Sélectionnez ceux à générer" (the enhancements) where the
+  missing body's "celles" stands for the categories it names. "Out of date"
+  follows the file's word for an outdated DataForge cache where one fits
+  (chinese 已过期, german veraltet, japanese 古くなっています, portuguese_br
+  desatualizados, turkish güncel değil). Each string was back-translated and
+  compared with the English in the same pass, not by a separate checker: no
+  meaning errors, and the Korean sentence-spacing rule holds. No existing
+  string changed. Russian, added later in 2.5.0 (#514), got the same key when
+  this was merged with it (2026-10-21), `at`-only, its second and third lines
+  taken from its own `extract.missing_categories_body`, back-translated with
+  no meaning errors.
 - **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
   current with English after the pre-release docs sync. In all 10 languages:
   `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge

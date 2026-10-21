@@ -37,6 +37,10 @@ P4K_SIZE_STAMP = ".p4k_size"
 DATAFORGE_LIBS_SUBPATH = Path("raw") / "libs"
 DATAFORGE_RECORDS_UNDER_LIBS = Path("foundry") / "records"
 DATAFORGE_RECORDS_SUBPATH = DATAFORGE_LIBS_SUBPATH / DATAFORGE_RECORDS_UNDER_LIBS
+# The enhancements generator's lookup pickles (_cached_lookup) sit beside
+# raw/ in this folder, and EnhancementsGeneratorWorker sweeps the temp files
+# a hard kill leaves there, so the two join this one name.
+DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
 
 # The folder unforge writes beside Game2.dcb in the working folder. The cache
 # keeps its contents under DATAFORGE_LIBS_SUBPATH; the two are separate names
@@ -1837,9 +1841,9 @@ def extract_dataforge(
         logger.info(f"Deleting the DataForge working folder took "
                     f"{time.monotonic() - cleanup:.1f} s")
 
-    # A stop that arrived while the cache was filled ends here. The cache is complete and
-    # stamped; the next generation treats a missing manifest as "regenerate
-    # everything", which is what it does anyway.
+    # A stop that arrived while the cache was filled ends here. The cache is
+    # complete and stamped; it only lacks the manifest, which generation does
+    # not read (it runs every enabled category).
     _raise_if_cancelled(should_cancel, "stopped once the new cache was written")
 
     # Snapshot the new cache so the next run can diff against it.

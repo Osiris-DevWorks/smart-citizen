@@ -936,7 +936,7 @@ class TestCloseSettlesAfterThePrompt:
         me.entries = []
         me.apply_to_game.return_value = True
         me._settle_applied_state_check.side_effect = lambda: order.append("settle")
-        me._request_extraction_stops.side_effect = lambda: order.append("commit")
+        me._request_stops_for_close.side_effect = lambda: order.append("commit")
         return me, order
 
     def test_exit_settles_again_before_committing(self, monkeypatch):

@@ -31,6 +31,7 @@ import re
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 from lxml import etree as ET
@@ -99,6 +100,29 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
     def win_long_path(path):  # type: ignore[misc]
         return str(path)
 
+# Same deferred-import pattern. Every file a run writes (the INIs and the
+# lookup pickles) goes to a temp file beside it and is swapped in with
+# os.replace, so a run cut off by a close or a crash leaves each one whole,
+# old or new, instead of truncated. See src/utils/atomic_io.py. The fallback
+# writes in place, as the script did before.
+try:
+    _gen_root = Path(__file__).parent.parent
+    if str(_gen_root) not in sys.path:
+        sys.path.insert(0, str(_gen_root))
+    from src.utils.atomic_io import atomic_write_text, atomic_writer
+except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    @contextmanager
+    def atomic_writer(path, mode="w", *, encoding="utf-8"):  # type: ignore[misc]
+        if mode == "wb":
+            with open(path, "wb") as f:
+                yield f
+        else:
+            with open(path, mode, encoding=encoding) as f:
+                yield f
+
+    def atomic_write_text(path, text, *, encoding="utf-8"):  # type: ignore[misc]
+        Path(path).write_text(text, encoding=encoding)
+
 # Same deferred-import pattern again. blueprint_meta.py's Blueprint Tracker
 # needs this exact same bp_craft_/bp_rewards_/bp_ prefix-strip when a raw
 # blueprint filename shows up verbatim in mission text; sharing it here
@@ -110,8 +134,9 @@ try:
         sys.path.insert(0, str(_gen_root))
     from src.utils.blueprint_meta import strip_raw_blueprint_filename_prefix
     # The DataForge cache layout, which pak_extractor (the module that
-    # writes it) names once for every reader.
-    from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+    # writes it) names once for every reader, and the lookup pickle folder
+    # in it, whose leftover temps EnhancementsGeneratorWorker sweeps.
+    from src.utils.pak_extractor import DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH
     # The curated per-ore RS table and the SCO drawer's crafting index,
     # shared with the Smart Citizen Overlay (see the RS consumers below).
     from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
@@ -131,6 +156,7 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
         return stem, False
 
     DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
+    DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -257,7 +283,9 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
     buf = io.StringIO()
     for k, v in sorted(entries.items()):
         buf.write(f"{k}={v}\n")
-    path.write_text(buf.getvalue(), encoding="utf-8")
+    # In one step, so a cut-off run leaves the old INI whole. Same bytes as
+    # path.write_text: UTF-8, no BOM, CRLF on Windows.
+    atomic_write_text(path, buf.getvalue())
     logger.info(f"Written {len(entries):,} entries -> {path}")
 
 
@@ -443,9 +471,12 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
     the version in _LOOKUP_VERSIONS; passing a different *extra_key* (used
     by scitem_lookups + blueprint_pools to fold in the user's components
     Tag Builder config so a config change rebuilds the baked-in tags)
-    bumps the third segment. Pickle errors silently fall back to rebuilding.
+    bumps the third segment. An unreadable pickle (a truncated one from a
+    run cut off before these writes became atomic, say) is rebuilt, with an
+    INFO line, since a rebuild can take a minute and a half. The pickle is
+    written in one step, so a run cut off mid-write keeps the old one.
     """
-    cache_dir = forge_dir / ".lookups"
+    cache_dir = forge_dir / DATAFORGE_LOOKUPS_SUBPATH
     cache_file = cache_dir / f"{name}.pkl"
     builder_version = _LOOKUP_VERSIONS.get(name, "v1")
     key = f"{builder_version}:{_dataforge_cache_key(forge_dir)}"
@@ -464,13 +495,13 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
                     f"Lookup cache invalidated: {name} "
                     f"(stored={stored_key!r}, expected={key!r})"
                 )
-        except (pickle.PickleError, OSError, EOFError, ValueError):
-            pass
+        except (pickle.PickleError, OSError, EOFError, ValueError) as e:
+            logger.info(f"Lookup cache unreadable, rebuilding: {name} ({type(e).__name__})")
 
     value = builder()
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
-        with cache_file.open("wb") as f:
+        with atomic_writer(cache_file, "wb") as f:
             pickle.dump((key, value), f, protocol=pickle.HIGHEST_PROTOCOL)
     except (pickle.PickleError, OSError) as e:
         logger.debug(f"Could not write lookup cache {name}: {e}")
@@ -7684,6 +7715,20 @@ def _run_gen_commodity_journal(ctx: dict) -> tuple[dict[str, str], dict[str, str
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+class GenerationStopped(Exception):
+    """A stop request ended the generation between two jobs: Smart Citizen
+    is closing.
+
+    Deliberately not a RuntimeError, like pak_extractor.ExtractionCancelled:
+    this is not a failure at all, so no ``except RuntimeError`` anywhere may
+    swallow or misreport it. EnhancementsGeneratorWorker catches it (by name,
+    because it loads this module afresh for every run), logs at INFO and
+    emits no error, because an ERROR record would fire the global
+    ErrorDialogHandler on a window that is closing. No INI has been written
+    when it is raised (lookup pickles may have been, each one whole): main()
+    never checks for a stop once its write phase has begun."""
+
+
 def main(base_ini_path: Path, forge_dir: Path | None = None,
          categories: set[str] | None = None,
          progress_callback: Optional[Callable[[int, int, str], None]] = None,
@@ -7699,7 +7744,21 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
          stats_prepend: bool = False,
          standardize_earnable_ship_names: bool = False,
          rs_ore_name_annotations: bool = True,
-         english_base_ini_path: Path | None = None) -> None:
+         english_base_ini_path: Path | None = None,
+         should_cancel: Optional[Callable[[], bool]] = None) -> None:
+    """Generate the enhancement INIs for *categories* (None means all) beside
+    *base_ini_path*.
+
+    *should_cancel* is asked between jobs: after each parse, after the XML
+    path index, before each lookup and each generator, and once more just
+    before the write phase. When it returns True, main() raises
+    GenerationStopped and has written no INI. It is never asked once the
+    write phase has begun, so a run that reached it writes every INI. The
+    lookups and generators are checked one by one only on the serial path,
+    the one the GUI always takes (its worker passes max_workers=1); with a
+    pool (CLI and tests) only the check before the write phase applies.
+    None, the default, never stops.
+    """
     import sys as sys_mod
     # Deferred import — the script is loaded by both the app worker (where
     # src.utils is on the path) and as a standalone CLI, so we swallow an
@@ -7727,6 +7786,14 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         """Return True if *cat* should be generated (None means all)."""
         return categories is None or cat in categories
 
+    def _stop_if_asked(where: str) -> None:
+        """End the run here if a stop was requested. Only ever called
+        between jobs and before the write phase, never inside it."""
+        if should_cancel is not None and should_cancel():
+            logger.info(f"Stop requested: ending the generation {where}")
+            _flush()
+            raise GenerationStopped(where)
+
     logger.info("=== SC Enhancements INI Generator (DataForge edition) ===")
     if categories is not None:
         logger.info(f"Selective generation: {', '.join(sorted(categories))}")
@@ -7750,6 +7817,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     loc = parse_ini(base_ini_path)
     logger.info(f"Loaded {len(loc):,} localization keys")
     _flush()
+    _stop_if_asked("after parsing base.ini")
 
     # English loc for annotation-side consumers (#30, option A). Tags,
     # entity names, standings, and blueprint lists deliberately stay
@@ -7780,6 +7848,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                     "entity names and blueprint lists use this run's language until "
                     "it is extracted again."
                 )
+    _stop_if_asked("after parsing the English base.ini")
 
     # ── Check DataForge cache ─────────────────────────────────────────────────
     # Long-path-prefix once here so every downstream path derived from
@@ -7804,6 +7873,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     )
     logger.info(f"XML path index: {sum(len(v) for v in xml_path_index.values()):,} files across {len(xml_path_index):,} dirs")
     _flush()
+    _stop_if_asked("after the xml_path_index")
 
     # ── Estimate total phases for determinate progress ────────────────────────
     # One tick per logical phase. The sink caps at total, so over-counting is
@@ -7983,7 +8053,10 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             # max_workers=1, so this is the path a normal GUI run takes.
             logger.info(f"Building {len(lookup_jobs)} lookup(s) serially…")
             _flush()
-            results = {name: fn() for name, fn in lookup_jobs.items()}
+            results = {}
+            for name, fn in lookup_jobs.items():
+                _stop_if_asked(f"before the {name} lookup")
+                results[name] = fn()
         else:
             logger.info(f"Building {len(lookup_jobs)} lookups in parallel (workers={min(max_workers, len(lookup_jobs))})…")
             _flush()
@@ -8106,6 +8179,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             logger.info(f"Running {len(gen_jobs)} output generator(s) serially…")
             _flush()
             for name, fn in gen_jobs.items():
+                _stop_if_asked(f"before the {name} generator")
                 gen_results[name] = fn(ctx)
                 _tick(f"Finished {name}")
         else:
@@ -8155,6 +8229,11 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 _flush()
         except ImportError:
             logger.debug("src.utils.dataforge_patcher unavailable; skipping workarounds")
+
+    # The last point a stop is honoured. From here every INI is written, so
+    # a run that got this far certifies a whole set: a stop requested during
+    # the writes waits for them.
+    _stop_if_asked("before writing")
 
     # ── Write output ──────────────────────────────────────────────────────────
     logger.info("Writing output files…")

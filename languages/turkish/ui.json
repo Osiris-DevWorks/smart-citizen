@@ -2804,6 +2804,10 @@
       "ht": "",
       "at": "{label}  (eksik)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "Geliştirmeleriniz güncel değil. Son oluşturma işlemi tamamlanmadı ya da geliştirmeler daha eski oyun verilerinden oluşturuldu.\nHangilerinin oluşturulacağını seçin.\nBunu daha sonra Geliştirmeler sekmesinden değiştirebilirsiniz."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge verileri henüz önbelleğe alınmamışsa otomatik olarak çıkarılacaktır.\nİlk çalıştırma birkaç dakika sürer."

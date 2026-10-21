@@ -10,6 +10,7 @@ from pathlib import Path
 from PyQt6.QtCore import QSettings
 import winreg
 
+from src.utils.atomic_io import atomic_write_text, read_bytes_retrying
 from src.utils.install_scanner import (
     GAME_DATA_FILE,
     SC_CHANNELS,
@@ -3154,6 +3155,13 @@ class AppSettings:
     # Marker file stamped into a language's enhancement dir recording which
     # DataForge build its enhancements were generated against. Regeneration is
     # forced when this is missing or stale (see get_/set_enhancements_stamp).
+    # A generation empties it before the generator's main() runs and writes it
+    # once main() has returned, so a run cut off or failed in between reads as
+    # stale too (invalidate_enhancements_stamp).
+    # Both stamps are written in one step (atomic_io), so a cut-off write
+    # never leaves half a key, and read with a short retry, because a reader
+    # that opens one during the swap gets PermissionError for a moment and
+    # would read it as missing.
     ENHANCEMENTS_STAMP_NAME = ".dataforge_stamp"
 
     @staticmethod
@@ -3162,22 +3170,64 @@ class AppSettings:
         or '' when no stamp has been written yet."""
         stamp = AppSettings.get_enhancements_dir(language) / AppSettings.ENHANCEMENTS_STAMP_NAME
         try:
-            return stamp.read_text(encoding="utf-8").strip()
+            return read_bytes_retrying(stamp).decode("utf-8").strip()
         except (OSError, ValueError):
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — treat it like a missing stamp, not a crash.
             return ""
 
     @staticmethod
-    def set_enhancements_stamp(key: str, language: "str | None" = None) -> None:
+    def set_enhancements_stamp(key: str, language: "str | None" = None, *,
+                               folder: "Path | None" = None) -> None:
         """Record *key* (a DataForge build fingerprint) for *language*'s
-        enhancements, so a later switch can tell fresh from stale."""
-        stamp = AppSettings.get_enhancements_dir(language) / AppSettings.ENHANCEMENTS_STAMP_NAME
+        enhancements, so a later switch can tell fresh from stale.
+
+        *folder* overrides ``get_enhancements_dir(language)``: the generator
+        passes the folder it captured when its run started, so a channel,
+        data-folder or language change during a hidden run can't stamp a set
+        that run never wrote."""
+        if folder is None:
+            folder = AppSettings.get_enhancements_dir(language)
+        AppSettings._write_stamp(folder, AppSettings.ENHANCEMENTS_STAMP_NAME, key)
+
+    @staticmethod
+    def _write_stamp(folder: Path, name: str, value: str) -> None:
+        """Write one stamp file in *folder* in a single step. Shared by both
+        stamp setters and :meth:`invalidate_enhancements_stamp`. An OSError
+        is only logged: a stamp that could not be written reads as missing,
+        which is the safe answer (the set reads as out of date)."""
+        stamp = Path(folder) / name
         try:
             stamp.parent.mkdir(parents=True, exist_ok=True)
-            stamp.write_text(key, encoding="utf-8")
+            atomic_write_text(stamp, value)
         except OSError as e:
-            logger.warning(f"Could not write enhancements stamp for {language!r}: {e}")
+            logger.warning(f"Could not write {name} in {folder}: {e}")
+
+    @staticmethod
+    def enhancements_built_from_current_dataforge(language: "str | None" = None) -> bool:
+        """True when *language*'s enhancements were generated from the current
+        DataForge build: their ``.dataforge_stamp`` is set and matches
+        :meth:`get_dataforge_build_key`.
+
+        The one definition of "current", shared by the startup check, the
+        Generate button and the language switch. An empty stamp means a run
+        was cut off or failed after it started (see
+        :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
+        """
+        stamp = AppSettings.get_enhancements_stamp(language)
+        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+
+    @staticmethod
+    def invalidate_enhancements_stamp(folder: Path) -> None:
+        """Empty the ``.dataforge_stamp`` in *folder*, which holds a set whose
+        generation is starting.
+
+        The set in *folder* is in progress from here on, so a run cut off or
+        failed before it writes its stamp reads as out of date, and the next
+        start offers to generate it again. The tag-config stamp is left alone:
+        the Save Tag Changes button already lights when the live config
+        differs from it. Like the setters, an OSError is only logged."""
+        AppSettings._write_stamp(folder, AppSettings.ENHANCEMENTS_STAMP_NAME, "")
 
     # Marker file stamped into a language's enhancement dir recording which
     # Tag Builder config its enhancements were generated against. Sibling of
@@ -3192,23 +3242,23 @@ class AppSettings:
         enhancements, or '' when no stamp has been written yet."""
         stamp = AppSettings.get_enhancements_dir(language) / AppSettings.TAG_CONFIG_STAMP_NAME
         try:
-            return stamp.read_text(encoding="utf-8").strip()
+            return read_bytes_retrying(stamp).decode("utf-8").strip()
         except (OSError, ValueError):
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — treat it like a missing stamp, not a crash.
             return ""
 
     @staticmethod
-    def set_tag_config_stamp(key: str, language: "str | None" = None) -> None:
+    def set_tag_config_stamp(key: str, language: "str | None" = None, *,
+                             folder: "Path | None" = None) -> None:
         """Record *key* (a Tag Builder config fingerprint) for *language*'s
         enhancements, so a later channel switch can tell whether the current
-        Tag Builder config still matches what these INIs were generated with."""
-        stamp = AppSettings.get_enhancements_dir(language) / AppSettings.TAG_CONFIG_STAMP_NAME
-        try:
-            stamp.parent.mkdir(parents=True, exist_ok=True)
-            stamp.write_text(key, encoding="utf-8")
-        except OSError as e:
-            logger.warning(f"Could not write tag-config stamp for {language!r}: {e}")
+        Tag Builder config still matches what these INIs were generated with.
+        *folder* overrides ``get_enhancements_dir(language)``, as for
+        :meth:`set_enhancements_stamp`."""
+        if folder is None:
+            folder = AppSettings.get_enhancements_dir(language)
+        AppSettings._write_stamp(folder, AppSettings.TAG_CONFIG_STAMP_NAME, key)
 
     @staticmethod
     def get_current_tag_config_fingerprint() -> str:
@@ -3570,19 +3620,23 @@ class AppSettings:
         return cache_dir
 
     @staticmethod
-    def get_dataforge_build_key() -> str:
+    def get_dataforge_build_key(forge_dir: "Path | None" = None) -> str:
         r"""Return a fingerprint for the current DataForge extraction.
 
         Reads the ``.p4k_mtime`` stamp pak_extractor writes, falling back to
-        the records-dir mtime. Mirrors ``_dataforge_cache_key`` in
+        the records-dir mtime. Mirrors ``_dataforge_cache_key(forge_dir)`` in
         ``scripts/generate_enhancements_ini.py`` so a per-language enhancement
         stamp can be compared against the build its files were generated from
-        (see :meth:`get_enhancements_stamp`). Returns 'unknown' when no
-        DataForge cache exists yet, including a cache folder that cannot be
-        made (#494): this only reads, so it never creates the folder.
+        (see :meth:`get_enhancements_stamp`). *forge_dir* defaults to
+        :meth:`get_dataforge_cache_leaf`; the generator passes the cache folder
+        its run started with. Returns 'unknown' when no DataForge cache exists
+        yet, including a cache folder that cannot be made (#494): this only
+        reads, so it never creates the folder.
         """
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP
-        forge_dir = AppSettings.get_dataforge_cache_leaf()
+        if forge_dir is None:
+            forge_dir = AppSettings.get_dataforge_cache_leaf()
+        forge_dir = Path(forge_dir)
         stamp = forge_dir / P4K_MTIME_STAMP
         try:
             text = stamp.read_text(encoding="utf-8").strip()

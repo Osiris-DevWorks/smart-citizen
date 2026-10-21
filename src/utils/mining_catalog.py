@@ -24,6 +24,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from src.utils.atomic_io import atomic_write_text, read_bytes_retrying
 from src.utils.mining_signatures import ORE_SIGNATURES
 
 COMPENDIUM_KEY = "Journal_General_Mining_Compendium_Content"
@@ -212,9 +213,13 @@ class CraftingIndex:
 
 
 def load_crafting_index(path: Path) -> CraftingIndex:
-    """Read ``crafting_index.json``; an empty index when missing or unreadable."""
+    """Read ``crafting_index.json``; an empty index when missing or unreadable.
+
+    Retries the moment a generation swaps the file in (atomic_io), which on
+    Windows refuses a reader, so a drawer refresh then never reads empty.
+    """
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = json.loads(read_bytes_retrying(path).decode("utf-8"))
     except (OSError, ValueError):
         return CraftingIndex()
     materials = data.get("materials") if isinstance(data, dict) else None
@@ -222,8 +227,12 @@ def load_crafting_index(path: Path) -> CraftingIndex:
 
 
 def write_crafting_index(path: Path, materials: dict[str, dict]) -> None:
-    """Write the index the generator builds (see :class:`CraftingIndex`)."""
-    Path(path).write_text(
+    """Write the index the generator builds (see :class:`CraftingIndex`).
+
+    Replaced in one step like every file a generation writes (atomic_io,
+    #476), so a run cut off here leaves the old index whole.
+    """
+    atomic_write_text(
+        path,
         json.dumps({"version": 1, "materials": materials}, ensure_ascii=False, indent=1),
-        encoding="utf-8",
     )

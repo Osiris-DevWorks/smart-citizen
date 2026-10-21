@@ -372,7 +372,7 @@ class EnhancementsTab(QWidget):
             f"color: {get_button_color('needs_apply')};" if dirty else ""
         )
 
-    def _compute_initial_enhancements_dirty(self) -> bool:
+    def _compute_initial_enhancements_dirty(self, keys: "list[str] | None" = None) -> bool:
         """True if Generate Enhancements has work to do right now: the
         DataForge cache was never extracted or is stale vs. Data.p4k, or an
         enabled category's output file doesn't exist yet.
@@ -386,6 +386,19 @@ class EnhancementsTab(QWidget):
         to do" purely because English had been generated earlier. #363 made
         that reachable on every language switch, which is what surfaced it.
 
+        It also has work when a category is ticked and the selected
+        language's set was not built from the current DataForge build
+        (AppSettings.enhancements_built_from_current_dataforge): its last run
+        was cut off or failed, or it came from older game data. That is what
+        the startup check offers to regenerate, so after a Skip the button
+        stays lit over the stale set instead of going grey.
+
+        *keys* are the checkbox keys to check, the ticked ones by default
+        (at startup the ticks are the saved set). A finished run passes the
+        saved set (_saved_category_keys), because a tick not yet saved with
+        the category Apply button was not generated, and judging the run by
+        it would keep Generate lit after every run that never builds it.
+
         Reads the cache folder without creating it (#494), as
         refresh_forge_status does.
         """
@@ -396,13 +409,24 @@ class EnhancementsTab(QWidget):
             return True
         if p4k_path.exists() and not dataforge_cache_is_fresh(p4k_path, forge_dir):
             return True
+        if keys is None:
+            keys = [key for key, cb in self._enhancements_checkboxes.items()
+                    if cb.isChecked()]
         enh_dir = AppSettings.get_enhancements_dir()
-        for key, cb in self._enhancements_checkboxes.items():
-            if cb.isChecked() and any(
-                not (enh_dir / fn).exists() for fn in self._files_for_category(key)
-            ):
+        for key in keys:
+            if any(not (enh_dir / fn).exists() for fn in self._files_for_category(key)):
                 return True
+        if keys and not AppSettings.enhancements_built_from_current_dataforge():
+            return True
         return False
+
+    def _saved_category_keys(self) -> list[str]:
+        """The checkbox keys whose category is saved as enabled: what a
+        Generate run actually builds (it reads the saved set, not the
+        checkboxes, and a tick only counts once the category Apply button
+        saves it)."""
+        return [key for key in self._enhancements_checkboxes
+                if AppSettings.get_enhancement_category_enabled(key)]
 
     def _mark_enhancements_dirty(self, *_args):
         """A setting that feeds Generate Enhancements changed since the last
@@ -422,8 +446,9 @@ class EnhancementsTab(QWidget):
     def mark_enhancements_clean(self) -> None:
         """Public entrypoint for external callers (MainWindow) to flag that
         a Generate Enhancements run is starting, regardless of how it was
-        triggered — manual click, Tag Builder apply, or the automated
-        freshness check (#292). Call at the point a run is launched, not on
+        triggered — manual click, Tag Builder apply, the automated
+        freshness check (#292), or a language switch's regeneration. Call
+        at the point a run is launched, not on
         completion: set_operation_idle() only re-enables the button on
         success, it doesn't force it clean, so if a run is triggered while
         already dirty this needs to have cleared the flag first or the
@@ -829,9 +854,16 @@ class EnhancementsTab(QWidget):
         """Re-enable after a background run. A successful run means
         mark_enhancements_clean() already cleared the dirty flag when the
         run was launched (#292), so leave it grey unless something changed
-        mid-run; a failed run re-enables unconditionally so the user has a
-        way to retry without first having to touch an unrelated setting."""
-        if not success:
+        mid-run or the set on disk is still not current. The second is read
+        from disk (_compute_initial_enhancements_dirty, the startup rule): a
+        run whose final .dataforge_stamp write failed still finishes as a
+        success, because set_enhancements_stamp only logs that, and the
+        button must stay lit over that set, as the next start will. It only
+        ever lights the button, so a change made mid-run is kept. A failed
+        run re-enables unconditionally so the user has a way to retry
+        without first having to touch an unrelated setting. The re-read
+        judges the saved categories, which are what the run generated."""
+        if not success or self._compute_initial_enhancements_dirty(self._saved_category_keys()):
             self._enhancements_dirty = True
         self._set_generate_btn_dirty(self._enhancements_dirty)
 

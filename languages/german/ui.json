@@ -2804,6 +2804,10 @@
       "ht": "",
       "at": "{label}  (fehlt)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "Deine Erweiterungen sind veraltet. Die letzte Erzeugung wurde nicht abgeschlossen, oder sie wurden aus älteren Spieldaten erzeugt.\nWähle aus, welche erzeugt werden sollen.\nDu kannst dies später im Erweiterungen-Tab ändern."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge-Daten werden automatisch extrahiert, falls noch nicht zwischengespeichert.\nDer erste Durchlauf dauert einige Minuten."

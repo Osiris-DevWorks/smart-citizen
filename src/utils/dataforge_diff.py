@@ -3,16 +3,19 @@ dataforge_diff.py — Diff-cache for the DataForge XML cache.
 
 Usage
 -----
-After unforge writes the cache, call `update_manifest` to snapshot it.
-Before running enhancement generators, call `dirty_categories` to find
-out which ones actually need to re-run.
+After unforge writes the cache, pak_extractor calls `update_manifest` to
+snapshot it. `dirty_categories` compares the cache with that snapshot and
+says which enhancement categories' source XMLs changed. Nothing calls it at
+run time: generation runs every enabled category, and has not been narrowed
+by it since ded720a. EnhancementsGeneratorWorker went on calling it anyway,
+hashing the whole cache on every run for an unused answer, until 2.5.0.
 
     from utils.dataforge_diff import update_manifest, dirty_categories
 
-    # In EnhancementsGeneratorWorker / pak_extractor, after extraction:
+    # In pak_extractor, after extraction:
     update_manifest(cache_dir)
 
-    # Before each generator run:
+    # To ask what changed since then:
     dirty = dirty_categories(cache_dir)
     # dirty == None  →  no prior manifest; run everything
     # dirty == set() →  nothing changed; skip everything

@@ -2804,6 +2804,10 @@
       "ht": "",
       "at": "{label}  (faltante)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "Tus mejoras están desactualizadas. La última generación no terminó o se generaron a partir de datos del juego más antiguos.\nSelecciona cuáles generar.\nPuedes cambiarlo más tarde en la pestaña Mejoras."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "Los datos de DataForge se extraerán automáticamente si aún no están en caché.\nLa primera ejecución tarda unos minutos."

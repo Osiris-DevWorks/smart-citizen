@@ -2804,6 +2804,10 @@
       "ht": "",
       "at": "{label}  （缺失）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "你的增强内容已过期。上次生成未完成，或它们是基于较旧的游戏数据生成的。\n请选择要生成的内容。\n你之后可以在增强内容标签页中更改此设置。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "如果 DataForge 数据尚未缓存，将会自动提取。\n首次运行需要几分钟。"

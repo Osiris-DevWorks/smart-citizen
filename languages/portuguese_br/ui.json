@@ -2804,6 +2804,10 @@
       "ht": "",
       "at": "{label}  (faltando)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "Seus aprimoramentos estão desatualizados. A última geração não terminou ou eles foram gerados a partir de dados do jogo mais antigos.\nSelecione quais gerar.\nVocê pode mudar isso depois na aba Aprimoramentos."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "Os dados do DataForge serão extraídos automaticamente se ainda não estiverem em cache.\nA primeira execução leva alguns minutos."
