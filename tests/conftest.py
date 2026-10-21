@@ -83,6 +83,26 @@ def no_real_free_space():
         yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def no_recent_p4k_refusal():
+    """Every extraction refuses a Data.p4k modified in the last two minutes
+    as one the launcher is still patching (#516), and every test's Data.p4k
+    was made a moment ago. For the whole session the window is 0 seconds, so
+    nothing counts as recent; tests of the check patch in their own window.
+    Both module objects are patched, as in no_real_free_space above."""
+    try:
+        import src.utils.pak_extractor  # noqa: F401  (load it so it is always patched)
+    except ImportError:
+        pass
+
+    with pytest.MonkeyPatch.context() as patcher:
+        for name in ("src.utils.pak_extractor", "utils.pak_extractor"):
+            module = sys.modules.get(name)
+            if module is not None:
+                patcher.setattr(module, "_P4K_RECENT_WRITE_SECONDS", 0)
+        yield
+
+
 @pytest.fixture
 def english_ui():
     """The real English ui.json for one test, whatever language another test
