@@ -1174,13 +1174,16 @@ class TestUnusableCacheFolderAtStart:
         me = _window(_simple_run_active=False)
         me._enhancements_worker = None
         for name in ("_run_enhancements_pipeline", "_run_dataforge_extraction",
-                     "_end_simple_run"):
+                     "_end_simple_run", "_refresh_job_lock"):
             setattr(me, name, getattr(MainWindow, name).__get__(me))
 
         with new_folders_denied(base):
             MainWindow._run_simple_apply(me)
 
-        assert me.simple_page.set_busy.call_args_list == [call(True), call(False)]
+        # The page shows busy through the job lock (#483); no job ran, so
+        # with no reason.
+        busy = me.simple_page.set_busy.call_args_list
+        assert busy[0] == call(True, "") and busy[-1] == call(False, "")
         assert me._simple_run_active is False
         me.enhancements_tab.mark_enhancements_clean.assert_called_once_with()
         me.enhancements_tab.set_operation_idle.assert_called_once_with(success=False)
@@ -1240,7 +1243,7 @@ class TestLinkedCacheFolderAtStart:
         ordinary folder, so the extraction starts."""
         made = []
         monkeypatch.setattr(main_window, "DataForgeExtractWorker",
-                            lambda *args: made.append(_Worker(*args)) or made[-1])
+                            lambda *args, **_kw: made.append(_Worker(*args)) or made[-1])
         monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
         box = MagicMock()
         monkeypatch.setattr(main_window, "QMessageBox", box)
