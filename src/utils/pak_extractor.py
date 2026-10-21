@@ -199,6 +199,78 @@ def _raise_if_cancelled(should_cancel, where: str) -> None:
         raise ExtractionCancelled(where)
 
 
+# A Data.p4k changed this recently is treated as still being patched (#516).
+# The RSI Launcher writes the archive in place for the whole of a patch, so
+# its modified time keeps moving until the patch ends.
+_P4K_RECENT_WRITE_SECONDS = 120
+
+_ERROR_SHARING_VIOLATION = 32
+
+
+def _p4k_has_writer(p4k_path: Path) -> bool:
+    """True when another program has Data.p4k open for writing (#516).
+
+    Opens the file for reading while sharing it for reading only. Windows
+    refuses that open with a sharing violation while any other handle on the
+    file can write, which is the RSI Launcher patching it. The game and an
+    idle launcher only read it, so they pass. Any other failure (the file is
+    gone, access denied) is left to the extraction itself to report, and is
+    False here. Always False off Windows."""
+    if sys.platform != "win32":
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateFileW.argtypes = (
+            wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+            wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
+        )
+        k32.CreateFileW.restype = wintypes.HANDLE
+        k32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    except Exception:
+        return False
+    generic_read, file_share_read, open_existing = 0x80000000, 0x1, 3
+    invalid_handle = wintypes.HANDLE(-1).value
+    handle = k32.CreateFileW(_win_long_path(p4k_path), generic_read, file_share_read,
+                             None, open_existing, 0, None)
+    if handle == invalid_handle or handle is None:
+        return ctypes.get_last_error() == _ERROR_SHARING_VIOLATION
+    k32.CloseHandle(handle)
+    return False
+
+
+def _p4k_changed_recently(p4k_path: Path, now: Optional[float] = None) -> bool:
+    """True when Data.p4k was modified in the last _P4K_RECENT_WRITE_SECONDS
+    (#516). A modified time in the future (a clock that moved) is not
+    counted, nor is a file whose time cannot be read."""
+    try:
+        age = (time.time() if now is None else now) - os.stat(_win_long_path(p4k_path)).st_mtime
+    except OSError:
+        return False
+    return 0 <= age < _P4K_RECENT_WRITE_SECONDS
+
+
+def _refuse_if_p4k_being_written(p4k_path: Path) -> None:
+    """Raise P4kLockedError before any tool runs when Data.p4k is being
+    written (#516): another program has it open for writing, or it changed
+    in the last couple of minutes.
+
+    The launcher does not always lock the archive against readers while it
+    patches. When it doesn't, unp4k reads a half-written archive and crashes
+    inside SharpZipLib's ReadEntries (#516), or hands unforge a database that
+    does not match the build. Refusing up front gives the same "wait for the
+    launcher, then try again" message as the locked case."""
+    if _p4k_has_writer(p4k_path):
+        reason = "another program has it open for writing"
+    elif _p4k_changed_recently(p4k_path):
+        reason = f"it changed in the last {_P4K_RECENT_WRITE_SECONDS} seconds"
+    else:
+        return
+    logger.warning(f"Not extracting from {p4k_path}: {reason} (game likely updating)")
+    raise P4kLockedError(tr("extract.p4k_locked"))
+
+
 def _raise_unp4k_failure(returncode: int, output: str) -> None:
     """Raise for a non-zero unp4k exit — P4kLockedError for a locked Data.p4k,
     plain RuntimeError otherwise.
@@ -1474,6 +1546,9 @@ def extract_global_ini(
         FileNotFoundError: If unp4k.exe or Data.p4k is missing, or the
             extracted file is not found after extraction.
         RuntimeError: If unp4k.exe exits with a non-zero return code.
+        P4kLockedError: Data.p4k is locked, or is being written (another
+            program has it open for writing, or it changed in the last two
+            minutes, #516). The latter is found before anything runs.
         NotEnoughSpaceError: %TEMP%'s drive or the data folder's drive is
             short of free space (#482). A short drive beside the cache only
             moves the work to %TEMP%. Nothing was written.
@@ -1486,6 +1561,7 @@ def extract_global_ini(
         raise FileNotFoundError(f"unp4k.exe not found at: {unp4k_exe}")
     if not p4k_path.exists():
         raise FileNotFoundError(f"Data.p4k not found at: {p4k_path}")
+    _refuse_if_p4k_being_written(p4k_path)
 
     TOTAL_PHASES = 2
     # unp4k writes every language's global.ini here (~31 MB). Like the
@@ -1595,6 +1671,9 @@ def extract_dataforge(
             keeps, or every one of the subtrees it keeps there, all found
             before the old cache is wiped (#484).
         RuntimeError: If either subprocess fails.
+        P4kLockedError: Data.p4k is locked, or is being written (another
+            program has it open for writing, or it changed in the last two
+            minutes, #516). The latter is found before anything runs.
         NotEnoughSpaceError: A drive the run writes to is short of free
             space, found before any tool runs or just before the old cache
             is wiped (which then stays), or a drive filled while the new
@@ -1613,6 +1692,7 @@ def extract_dataforge(
             raise FileNotFoundError(f"{name} not found at: {exe}")
     if not p4k_path.exists():
         raise FileNotFoundError(f"Data.p4k not found at: {p4k_path}")
+    _refuse_if_p4k_being_written(p4k_path)
 
     # Wrap once here so every use below (mkdir, exists checks, and whatever
     # this function hands to _cache_filtered_records/update_manifest) inherits
