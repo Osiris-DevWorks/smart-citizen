@@ -76,7 +76,7 @@ class TestSwitchesCompleteWithUnusableCache:
     def test_a_channel_switch_reaches_the_reload(self, ptu_refused):
         tab, _base = ptu_refused
         me = _window(tab)
-        me._enhancements_prompted_on_startup = True
+        me._enhancements_prompt_answer = False
         me._check_p4k_freshness.return_value = False
 
         MainWindow._on_channel_changed(me, "PTU")
@@ -85,7 +85,7 @@ class TestSwitchesCompleteWithUnusableCache:
         assert tab._generate_enhancements_btn.isEnabled()
         me._check_p4k_freshness.assert_called_once()
         me._reload_after_channel_switch.assert_called_once_with("PTU")
-        assert me._enhancements_prompted_on_startup is False
+        assert me._enhancements_prompt_answer is None
 
     def test_the_reload_after_a_channel_switch_asks_nothing_about_the_cache(
         self, ptu_refused, tmp_profile, monkeypatch
@@ -187,12 +187,13 @@ class TestSwitchesCompleteWithUnusableCache:
         monkeypatch.setattr(main_window, "QTimer", MagicMock())
         me = _window(tab)
         me._check_enhancements_after_loading = True
-        me._enhancements_prompted_on_startup = False
+        me._enhancements_prompt_answer = None
         me._reload_follows_clean_apply = False
         me._initial_load_done = False
         me._snapshot_pending_user_edits.return_value = {}
         me._restore_pending_user_edits.return_value = 0
         me._check_enhancements_freshness = lambda: MainWindow._check_enhancements_freshness(me)
+        me._out_of_date_build_key = lambda: MainWindow._out_of_date_build_key(me)
         dialogs = []
 
         def category_dialog(keys, **kwargs):
@@ -275,9 +276,11 @@ class TestRunEndingSlotsWithUnusableCache:
     def test_a_failed_generation_ends_without_raising(self, ptu_refused):
         tab, _base = ptu_refused
         me = _window(tab)
-        me._enhancements_worker = MagicMock()
+        worker = MagicMock()
+        me._enhancements_worker = worker
+        me._after_unfinished_generation = None
 
-        MainWindow._on_enhancements_generation_finished(me, False)
+        MainWindow._on_enhancements_generation_finished(me, False, worker)
 
         assert me._enhancements_worker is None
         _reads_not_extracted(tab)
