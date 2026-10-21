@@ -20,9 +20,8 @@ import pytest
 from PyQt6.QtCore import QSettings
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from utils.settings import AppSettings  # noqa: E402
+from src.utils.settings import AppSettings  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 

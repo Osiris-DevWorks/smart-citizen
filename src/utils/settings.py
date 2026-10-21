@@ -10,6 +10,7 @@ from pathlib import Path
 from PyQt6.QtCore import QSettings
 import winreg
 
+from src.utils.atomic_io import atomic_write_text, read_bytes_retrying
 from src.utils.install_scanner import (
     GAME_DATA_FILE,
     SC_CHANNELS,
@@ -67,9 +68,17 @@ SC_LANGUAGE_IDS: dict[str, str] = {
     # Dymerz's guide maps Turkish onto german_(germany) instead, but that slot
     # is taken by our own German and the two would overwrite each other's
     # global.ini. russian_(russia) was tried first and rejected — the game does
-    # not recognise it.
+    # not recognise it. A borrowed slot is never shared with another of our
+    # languages, with one deliberate exception: Russian and Korean below.
     "turkish":       "polish_(poland)",
     "korean":        "korean_(south_korea)",
+    # Russian borrows the korean_(south_korea) slot, shared with Korean on
+    # purpose (approved by the owner). russian_(russia) is not a g_language
+    # value the game accepts, and the Korean font is the only in-game font that
+    # covers Cyrillic, so Russian community translations ride this slot. Only
+    # one of the two can be applied at a time: applying either replaces the
+    # other's global.ini, and user.cfg holds the same g_language for both.
+    "russian":       "korean_(south_korea)",
     "chinese_traditional": "chinese_(traditional)",
 }
 
@@ -362,6 +371,54 @@ def _pick_live_sc_install(candidates: "list[str]", channel: str) -> "str | None"
         logger.info(f"Auto-detected Star Citizen install: {chosen}")
     return chosen
 
+
+# Why a DataForge cache folder could not be made, for the one box the Config
+# tab and the start of an extraction each show (#494). Both read the error
+# through cache_folder_failure, so they cannot disagree about it.
+CACHE_FOLDER_REFUSED = "refused"          # Windows denied permission (pak_extractor.windows_refused)
+CACHE_FOLDER_UNREACHABLE = "unreachable"  # the folder or its drive is not there
+CACHE_FOLDER_UNUSABLE = "unusable"        # anything else, told in Windows' own words
+# ERROR_NOT_READY: a drive letter with no media in it, such as a card reader
+# with the card taken out or an empty optical drive. Python raises it as a
+# PermissionError, but nothing was refused: the drive is not there.
+_ERROR_NOT_READY = 21
+# ERROR_BAD_PATHNAME: a path Windows cannot parse, such as one that starts
+# with four backslashes. ERROR_FILENAME_EXCED_RANGE: a path too long for
+# Windows, which a deep cache folder gets where long paths are not turned on,
+# as Windows ships. Python raises both as a FileNotFoundError, but nothing is
+# missing: Windows will not take the path, and its reason says why.
+_ERROR_BAD_PATHNAME = 161
+_ERROR_FILENAME_EXCED_RANGE = 206
+
+
+def cache_folder_failure(error: OSError) -> str:
+    """Why *error* kept a DataForge cache folder from being made (#494).
+
+    ``CACHE_FOLDER_UNREACHABLE`` for a folder or drive that is not there: a
+    ``FileNotFoundError`` (WinError 2, 3, 15, 53, 67 and the like) or a drive
+    that is not ready. ``CACHE_FOLDER_REFUSED`` when Windows denied
+    permission, as #490's working folder reads it
+    (``pak_extractor.windows_refused``: WinError 5, a folder's permissions
+    or Controlled folder access, or 65, a share). ``CACHE_FOLDER_UNUSABLE``
+    for everything else, whose box gives ``pak_extractor.windows_reason``:
+    the rest of the range Python raises as ``PermissionError`` (a
+    write-protected or failing drive, a file another program holds), a
+    name Windows does not take, a path that runs through a file, a full
+    drive, and a path Windows cannot parse or one too long for it (WinError
+    161 and 206), which Python raises as a ``FileNotFoundError`` although
+    nothing is missing.
+    """
+    from src.utils.pak_extractor import windows_refused
+    winerror = getattr(error, "winerror", None)
+    if winerror in (_ERROR_BAD_PATHNAME, _ERROR_FILENAME_EXCED_RANGE):
+        return CACHE_FOLDER_UNUSABLE
+    if isinstance(error, FileNotFoundError) or winerror == _ERROR_NOT_READY:
+        return CACHE_FOLDER_UNREACHABLE
+    if windows_refused(error):
+        return CACHE_FOLDER_REFUSED
+    return CACHE_FOLDER_UNUSABLE
+
+
 class AppSettings:
     """Wrapper around QSettings for application configuration."""
 
@@ -446,7 +503,7 @@ class AppSettings:
         "blueprint": "mission_title_tag/blueprint",
         "ace":       "mission_title_tag/ace",
         # RS ("resonance signature") tag for Recco Battaglia's Scan/Mining
-        # contracts (4.9+) — see MINEABLE_RS_VALUES in generate_enhancements_ini.py.
+        # contracts (4.9+) — see MINEABLE_RS_VALUES in src/utils/mining_signatures.py.
         "rs":        "mission_title_tag/rs",
         # Reputation TRACK suffix (e.g. "(Security)"/"(Contractor)") on the
         # title's Rep tag — see issue #161. Off by default (see
@@ -488,6 +545,13 @@ class AppSettings:
     UI_MODE = "ui_mode"
     UI_MODE_SIMPLE = "simple"
     UI_MODE_ADVANCED = "advanced"
+    # UI font size. Applied as a Qt scale factor at startup
+    # (src/utils/ui_scale.py), so a change takes effect after a restart.
+    FONT_SIZE = "font_size"
+    FONT_SIZE_SMALL = "small"
+    FONT_SIZE_MEDIUM = "medium"
+    FONT_SIZE_LARGE = "large"
+    FONT_SIZES = (FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE)
 
     # Settings keys - Enhancements
     ENHANCEMENTS_ENABLED = "enhancements_enabled"
@@ -598,15 +662,19 @@ class AppSettings:
     USER_DATA_DIR_ALIASES = ("UserDataDir",)
     # Explicit override for the DataForge XML cache root. Independent of
     # USER_DATA_DIR so a user can keep user.ini / source cache / backups in
-    # Documents (or wherever) while sending the ~1.4 GB DataForge tree to a
+    # Documents (or wherever) while sending the ~1.2 GB DataForge tree to a
     # fast local SSD (or to a folder excluded from OneDrive / Defender).
     # Pre-1.4.1 the cache was hard-pinned to %LOCALAPPDATA% with no way to
     # move it; this key is the configurable replacement.
     CACHE_DIR = "cache_dir"
     # Set by the Config tab when the user accepts a cache-path change with
     # "delete old cache after re-extraction". The path is removed after the
-    # next successful P4K extraction so the 1.4 GB orphan doesn't linger.
+    # next successful P4K extraction so the 1.2 GB orphan doesn't linger.
     PENDING_CACHE_CLEANUP = "pending_cache_cleanup"
+    # Written by Setup when the user answers YES to its OneDrive warning: the
+    # data folder they left. The next start moves Smart Citizen's own folders
+    # out of it and deletes the value (#455, migrate_installer_data_move).
+    PENDING_DATA_MOVE_FROM = "pending_data_move_from"
     # When True (default) the components Tag Builder annotation is woven
     # into the POTENTIAL BLUEPRINTS lists inside mission descriptions
     # (e.g. "[MIL-S1-A] Norfield"). Users who want clean mission body
@@ -658,6 +726,50 @@ class AppSettings:
     # the popup anyway. Only affects the "found something new" case; a
     # quiet run (nothing new) never pops anything either way.
     BLUEPRINT_AUTO_SCAN_SHOW_POPUP = "blueprints/auto_scan_show_popup"
+    # #416: which of the starter blueprints every player owns
+    # (blueprint_meta.DEFAULT_OWNED_BLUEPRINTS) have been added to the Owned
+    # set, by loc key, and whether a log scan finished before the strings had
+    # loaded and is waiting to add them (the names come from the loaded
+    # strings). JSON: {"seeded": [loc keys], "pending": bool}. Unset or
+    # unreadable means none added and nothing waiting. One-shot per item: a
+    # starter the user moves back to Available stays there, and one declared
+    # in a later release still reaches Owned on that user's next scan. It
+    # describes the owned set, so in a settings backup it travels with
+    # owned_items (see import_values): restoring an owned set from before 2.5
+    # resets it, so the next scan adds the starters to that set.
+    DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
+
+    # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
+    # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
+    # its sco_overlay.SECTION_ICONS name.
+    SCO_SCAN_DECODER = "scan_decoder"
+    SCO_DRAWER = "drawer"
+    SCO_DRAWER_SECTION_PREFIX = "drawer_"
+    SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
+    SCO_SAVE_SAMPLES = "save_samples"
+    # Option name -> (key, default). All on by default, matching how the
+    # overlay behaved before the tab existed.
+    SCO_OPTION_SETTING = {
+        SCO_SCAN_DECODER:         ("sco/scan_decoder", True),
+        SCO_DRAWER:               ("sco/drawer", True),
+        SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
+        SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
+        SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
+        SCO_SAVE_SAMPLES:         ("sco/save_samples", True),
+    }
+    # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
+    # every combination but the screen centre.
+    SCO_DRAWER_POSITION = "sco/drawer_position"
+    SCO_DRAWER_POSITIONS = (
+        "top_left", "top_center", "top_right",
+        "middle_left", "middle_right",
+        "bottom_left", "bottom_center", "bottom_right",
+    )
+    SCO_DRAWER_POSITION_DEFAULT = "middle_right"
+    # Ores ticked in the SCO drawer's Minerals section: a decoded scan of one
+    # makes the signature label glow. JSON list of ORE_SIGNATURES keys.
+    SCO_WATCHED_MINERALS = "sco/watched_minerals"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -687,6 +799,7 @@ class AppSettings:
         "UserDataDir",
         "cache_dir",
         "pending_cache_cleanup",
+        "pending_data_move_from",
         "window_geometry",
         "window_state",
         # Column widths are machine-local for the same reason window geometry
@@ -713,11 +826,16 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - the starter-blueprint seed marker (#416): it describes the owned
+    #     set, so it is exported only when stored, the same way owned_items
+    #     is, and import_values takes it from a backup only together with
+    #     owned_items.
     # Keys already in PROFILE_EXCLUDE_KEYS never reach this stage at all.
     PROFILE_DEFAULT_EXCLUDE_KEYS = frozenset({
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
         "test_plan/checks",
         "test_plan/tester_name",
@@ -862,6 +980,22 @@ class AppSettings:
         if mode not in (AppSettings.UI_MODE_SIMPLE, AppSettings.UI_MODE_ADVANCED):
             mode = AppSettings.UI_MODE_SIMPLE
         AppSettings.settings().setValue(AppSettings.UI_MODE, mode)
+
+    @staticmethod
+    def get_font_size() -> str:
+        """Return the UI font size: 'small', 'medium' (default) or 'large'.
+        Any unrecognized stored value coerces back to 'medium'."""
+        value = AppSettings.settings().value(
+            AppSettings.FONT_SIZE, AppSettings.FONT_SIZE_MEDIUM
+        )
+        return value if value in AppSettings.FONT_SIZES else AppSettings.FONT_SIZE_MEDIUM
+
+    @staticmethod
+    def set_font_size(size: str) -> None:
+        """Persist the UI font size. Unknown values fall back to 'medium'."""
+        if size not in AppSettings.FONT_SIZES:
+            size = AppSettings.FONT_SIZE_MEDIUM
+        AppSettings.settings().setValue(AppSettings.FONT_SIZE, size)
 
     @staticmethod
     def get_selected_language() -> str:
@@ -1236,6 +1370,12 @@ class AppSettings:
             return default_config(category)
         AppSettings._migrate_tag_config_mapping(category, cfg)
         AppSettings._backfill_new_elements(category, cfg)
+        # The Armor tab offers no "None (space only)" enclosing (#492, see
+        # tag_builder.NO_NONE_ENCLOSING_CATEGORIES); a stored one, from a
+        # hand-edited or imported config, reads as Square.
+        from src.utils.tag_builder import NO_NONE_ENCLOSING_CATEGORIES
+        if category in NO_NONE_ENCLOSING_CATEGORIES and cfg.enclosing == "none":
+            cfg.enclosing = "square"
         # 1.5.0: commodities gained a second flag (Collection). A stored
         # single-element config used separator "none" (meaningless when there
         # was only one flag), which post-1.5.0 would mash the two flags into
@@ -1340,11 +1480,12 @@ class AppSettings:
 
     @staticmethod
     def get_tag_annotate_mission_descs() -> bool:
-        """Whether component tags are woven into POTENTIAL BLUEPRINTS lists
-        inside mission descriptions. Default True (annotation enabled),
-        preserving the v1.4.0 behavior. Issue #31 follow-up — when False,
-        the BP-pool resolver skips the tag weave entirely and mission
-        bodies render with bare names."""
+        """Whether component tags, and armor weight tags while Armor > Weight
+        is on (#492), are woven into POTENTIAL BLUEPRINTS lists inside
+        mission descriptions. Default True (annotation enabled), preserving
+        the v1.4.0 behavior. Issue #31 follow-up — when False, the BP-pool
+        resolver skips the tag weave entirely and mission bodies render with
+        bare names."""
         raw = AppSettings.settings().value(
             AppSettings.TAG_ANNOTATE_MISSION_DESCS, True, type=bool
         )
@@ -1531,6 +1672,51 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
+    def get_sco_drawer_position() -> str:
+        """Where the SCO drawer sits (one of ``SCO_DRAWER_POSITIONS``)."""
+        value = str(AppSettings.settings().value(
+            AppSettings.SCO_DRAWER_POSITION, AppSettings.SCO_DRAWER_POSITION_DEFAULT))
+        if value not in AppSettings.SCO_DRAWER_POSITIONS:
+            return AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        return value
+
+    @staticmethod
+    def set_sco_drawer_position(position: str) -> None:
+        if position not in AppSettings.SCO_DRAWER_POSITIONS:
+            position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
+        AppSettings.settings().setValue(AppSettings.SCO_DRAWER_POSITION, position)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_watched_minerals() -> set:
+        """Ores whose decoded scan makes the SCO label glow (lowercase
+        ``ORE_SIGNATURES`` keys). JSON, like ``get_owned_items``."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_WATCHED_MINERALS, "", type=str)
+        try:
+            return {str(name) for name in json.loads(raw)} if raw else set()
+        except (ValueError, TypeError):
+            return set()
+
+    @staticmethod
+    def set_sco_watched_minerals(names) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_option(name: str) -> bool:
+        """One of the Overlay tab's switches (``SCO_OPTION_SETTING``)."""
+        key, default = AppSettings.SCO_OPTION_SETTING[name]
+        return bool(AppSettings.settings().value(key, default, type=bool))
+
+    @staticmethod
+    def set_sco_option(name: str, enabled: bool) -> None:
+        key, _default = AppSettings.SCO_OPTION_SETTING[name]
+        AppSettings.settings().setValue(key, bool(enabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
     def get_auto_scan_show_popup_enabled() -> bool:
         """Whether a startup auto-scan that finds new blueprints shows the
         manual scan's own summary popup (#386 follow-up). Default False."""
@@ -1543,6 +1729,48 @@ class AppSettings:
         """Persist the auto-scan popup checkbox state (#386 follow-up)."""
         AppSettings.settings().setValue(
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP, bool(enabled)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def _parse_default_blueprints_seed(raw) -> "tuple[frozenset, bool]":
+        """``(seeded loc keys, pending)`` from a stored seed marker (#416).
+
+        The one reader of the format, used by the getter and by
+        import_values. Anything unreadable is ``(frozenset(), False)``, so a
+        damaged value only means the starters are offered once more.
+        """
+        try:
+            data = json.loads(raw) if isinstance(raw, str) and raw else None
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            return frozenset(), False
+        seeded = data.get("seeded")
+        keys = (frozenset(k for k in seeded if isinstance(k, str))
+                if isinstance(seeded, list) else frozenset())
+        return keys, data.get("pending") is True
+
+    @staticmethod
+    def _encode_default_blueprints_seed(seeded, pending: bool) -> str:
+        """The stored form of a seed marker (#416), stable for diffs."""
+        return json.dumps({"seeded": sorted(seeded), "pending": bool(pending)})
+
+    @staticmethod
+    def get_default_blueprints_seed() -> "tuple[frozenset, bool]":
+        """``(seeded, pending)`` for the starter blueprints (#416): the loc
+        keys already added to the Owned set, and whether a log scan is
+        waiting for the strings to load to add the rest."""
+        return AppSettings._parse_default_blueprints_seed(
+            AppSettings.settings().value(AppSettings.DEFAULT_BLUEPRINTS_SEED, "", type=str)
+        )
+
+    @staticmethod
+    def set_default_blueprints_seed(seeded, pending: bool) -> None:
+        """Persist the starter-blueprint seed marker (#416)."""
+        AppSettings.settings().setValue(
+            AppSettings.DEFAULT_BLUEPRINTS_SEED,
+            AppSettings._encode_default_blueprints_seed(seeded, pending),
         )
         AppSettings.settings().sync()
 
@@ -2528,6 +2756,32 @@ class AppSettings:
         settings.sync()
 
     @staticmethod
+    def migrate_installer_data_move():
+        """Move the data out of the OneDrive folder the user left in Setup (#455).
+
+        Setup's OneDrive warning offers a local folder, and a YES writes the
+        folder the data was in to ``PENDING_DATA_MOVE_FROM``. This moves Smart
+        Citizen's own folders from there into the data folder now in use
+        (``user_ini_manager.move_owned_user_data``: merged, never overwriting)
+        and returns its ``DataMoveResult`` for the window to report, or None
+        when Setup asked for nothing. The value is deleted before the move,
+        so it is tried once: what stays behind is reported, never retried.
+        Runs before ``migrate_game_path_to_channel_layout`` and the DataForge
+        cache migrator, so they see the moved data. Registry builds only:
+        there is no Setup for a portable build.
+        """
+        settings = AppSettings.settings()
+        old = str(settings.value(AppSettings.PENDING_DATA_MOVE_FROM, "", type=str) or "").strip()
+        if not old:
+            return None
+        settings.remove(AppSettings.PENDING_DATA_MOVE_FROM)
+        settings.sync()
+        from src.utils.user_ini_manager import move_owned_user_data
+        new = AppSettings.get_user_data_dir()
+        logger.info(f"Setup asked to move the data from {old} to {new}")
+        return move_owned_user_data(old, new)
+
+    @staticmethod
     def get_user_data_dir() -> Path:
         r"""Get the user data directory.
 
@@ -2849,6 +3103,42 @@ class AppSettings:
         return lang_dir / "base.ini"
 
     @staticmethod
+    def get_global_source_base_ini(language: "str | None" = None) -> Path:
+        r"""The base.ini the ``global`` merge source reads for *language*
+        (default: the selected language): its own base.ini when the active
+        channel's cache has it, otherwise the English one (#502).
+
+        A language whose file has not been fetched for this channel or data
+        folder yet reads English until a language switch or Map Language
+        File fetches it. Startup, a channel switch, a data-folder change and
+        a successful global.ini extraction all point the source here; all
+        but startup used to point every language at the English base.ini,
+        so the table, and the next Apply, turned English.
+        """
+        if language is None:
+            language = AppSettings.get_selected_language()
+        own = AppSettings.get_base_ini_path(language)
+        if language != AppSettings.DEFAULT_LANGUAGE and not own.exists():
+            return AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
+        return own
+
+    @staticmethod
+    def sync_global_source_path(context: str) -> None:
+        """Point a file-backed ``global`` source at
+        :meth:`get_global_source_base_ini`; a URL source (a custom remote
+        one) is left alone. Run at every start and after a channel switch or
+        a data-folder change, because the loader reads the stored path, not
+        the channel-aware helpers. *context* goes in the log line."""
+        stored = AppSettings.get_source_path(AppSettings.SOURCE_GLOBAL)
+        if stored.startswith(("http://", "https://")):
+            return
+        canonical = str(AppSettings.get_global_source_base_ini())
+        if stored != canonical:
+            AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, canonical)
+            logger.info(f"Re-synced {AppSettings.SOURCE_GLOBAL} source path {context}: "
+                        f"{stored or '(unset)'} → {canonical}")
+
+    @staticmethod
     def get_enhancements_dir(language: "str | None" = None) -> Path:
         r"""Directory holding *language*'s generated ``*_enhancements.ini`` files.
 
@@ -2865,6 +3155,13 @@ class AppSettings:
     # Marker file stamped into a language's enhancement dir recording which
     # DataForge build its enhancements were generated against. Regeneration is
     # forced when this is missing or stale (see get_/set_enhancements_stamp).
+    # A generation empties it before the generator's main() runs and writes it
+    # once main() has returned, so a run cut off or failed in between reads as
+    # stale too (invalidate_enhancements_stamp).
+    # Both stamps are written in one step (atomic_io), so a cut-off write
+    # never leaves half a key, and read with a short retry, because a reader
+    # that opens one during the swap gets PermissionError for a moment and
+    # would read it as missing.
     ENHANCEMENTS_STAMP_NAME = ".dataforge_stamp"
 
     @staticmethod
@@ -2873,22 +3170,64 @@ class AppSettings:
         or '' when no stamp has been written yet."""
         stamp = AppSettings.get_enhancements_dir(language) / AppSettings.ENHANCEMENTS_STAMP_NAME
         try:
-            return stamp.read_text(encoding="utf-8").strip()
+            return read_bytes_retrying(stamp).decode("utf-8").strip()
         except (OSError, ValueError):
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — treat it like a missing stamp, not a crash.
             return ""
 
     @staticmethod
-    def set_enhancements_stamp(key: str, language: "str | None" = None) -> None:
+    def set_enhancements_stamp(key: str, language: "str | None" = None, *,
+                               folder: "Path | None" = None) -> None:
         """Record *key* (a DataForge build fingerprint) for *language*'s
-        enhancements, so a later switch can tell fresh from stale."""
-        stamp = AppSettings.get_enhancements_dir(language) / AppSettings.ENHANCEMENTS_STAMP_NAME
+        enhancements, so a later switch can tell fresh from stale.
+
+        *folder* overrides ``get_enhancements_dir(language)``: the generator
+        passes the folder it captured when its run started, so a channel,
+        data-folder or language change during a hidden run can't stamp a set
+        that run never wrote."""
+        if folder is None:
+            folder = AppSettings.get_enhancements_dir(language)
+        AppSettings._write_stamp(folder, AppSettings.ENHANCEMENTS_STAMP_NAME, key)
+
+    @staticmethod
+    def _write_stamp(folder: Path, name: str, value: str) -> None:
+        """Write one stamp file in *folder* in a single step. Shared by both
+        stamp setters and :meth:`invalidate_enhancements_stamp`. An OSError
+        is only logged: a stamp that could not be written reads as missing,
+        which is the safe answer (the set reads as out of date)."""
+        stamp = Path(folder) / name
         try:
             stamp.parent.mkdir(parents=True, exist_ok=True)
-            stamp.write_text(key, encoding="utf-8")
+            atomic_write_text(stamp, value)
         except OSError as e:
-            logger.warning(f"Could not write enhancements stamp for {language!r}: {e}")
+            logger.warning(f"Could not write {name} in {folder}: {e}")
+
+    @staticmethod
+    def enhancements_built_from_current_dataforge(language: "str | None" = None) -> bool:
+        """True when *language*'s enhancements were generated from the current
+        DataForge build: their ``.dataforge_stamp`` is set and matches
+        :meth:`get_dataforge_build_key`.
+
+        The one definition of "current", shared by the startup check, the
+        Generate button and the language switch. An empty stamp means a run
+        was cut off or failed after it started (see
+        :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
+        """
+        stamp = AppSettings.get_enhancements_stamp(language)
+        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+
+    @staticmethod
+    def invalidate_enhancements_stamp(folder: Path) -> None:
+        """Empty the ``.dataforge_stamp`` in *folder*, which holds a set whose
+        generation is starting.
+
+        The set in *folder* is in progress from here on, so a run cut off or
+        failed before it writes its stamp reads as out of date, and the next
+        start offers to generate it again. The tag-config stamp is left alone:
+        the Save Tag Changes button already lights when the live config
+        differs from it. Like the setters, an OSError is only logged."""
+        AppSettings._write_stamp(folder, AppSettings.ENHANCEMENTS_STAMP_NAME, "")
 
     # Marker file stamped into a language's enhancement dir recording which
     # Tag Builder config its enhancements were generated against. Sibling of
@@ -2903,23 +3242,23 @@ class AppSettings:
         enhancements, or '' when no stamp has been written yet."""
         stamp = AppSettings.get_enhancements_dir(language) / AppSettings.TAG_CONFIG_STAMP_NAME
         try:
-            return stamp.read_text(encoding="utf-8").strip()
+            return read_bytes_retrying(stamp).decode("utf-8").strip()
         except (OSError, ValueError):
             # ValueError: a corrupt stamp raises UnicodeDecodeError (#251
             # bug class) — treat it like a missing stamp, not a crash.
             return ""
 
     @staticmethod
-    def set_tag_config_stamp(key: str, language: "str | None" = None) -> None:
+    def set_tag_config_stamp(key: str, language: "str | None" = None, *,
+                             folder: "Path | None" = None) -> None:
         """Record *key* (a Tag Builder config fingerprint) for *language*'s
         enhancements, so a later channel switch can tell whether the current
-        Tag Builder config still matches what these INIs were generated with."""
-        stamp = AppSettings.get_enhancements_dir(language) / AppSettings.TAG_CONFIG_STAMP_NAME
-        try:
-            stamp.parent.mkdir(parents=True, exist_ok=True)
-            stamp.write_text(key, encoding="utf-8")
-        except OSError as e:
-            logger.warning(f"Could not write tag-config stamp for {language!r}: {e}")
+        Tag Builder config still matches what these INIs were generated with.
+        *folder* overrides ``get_enhancements_dir(language)``, as for
+        :meth:`set_enhancements_stamp`."""
+        if folder is None:
+            folder = AppSettings.get_enhancements_dir(language)
+        AppSettings._write_stamp(folder, AppSettings.TAG_CONFIG_STAMP_NAME, key)
 
     @staticmethod
     def get_current_tag_config_fingerprint() -> str:
@@ -3018,11 +3357,17 @@ class AppSettings:
         return logs_dir
 
     @staticmethod
+    def get_sco_samples_dir() -> Path:
+        r"""Where the Smart Citizen Overlay keeps the readout crops it saves
+        for retraining its digit reader (``{logs_dir}\sco_samples\``)."""
+        return AppSettings.get_logs_dir() / "sco_samples"
+
+    @staticmethod
     def migrate_dataforge_cache_to_local() -> None:
         r"""One-shot move of the DataForge XML cache out of the user-data tree.
 
         Pre-1.0 the DataForge cache lived inside get_cache_dir() (Documents\…),
-        putting ~1.4 GB of extracted XMLs into the OneDrive sync tree. Moving it
+        putting ~1.2 GB of extracted XMLs into the OneDrive sync tree. Moving it
         out eliminates per-file OneDrive / Defender / Indexer hooks during
         extraction and keeps large build-artefact files out of cloud sync.
 
@@ -3215,14 +3560,23 @@ class AppSettings:
 
         Portable mode:
           1. ``CACHE_DIR`` override if set (portable users may want the
-             1.4 GB cache off a slow USB stick).
+             1.2 GB cache off a slow USB stick).
           2. ``<exe-dir>/data/cache/`` — sits next to all other portable
              data so a USB-stick install is one fully self-contained folder.
         """
-        from src.utils import build_mode
         override = AppSettings._get_cache_dir_override()
         if override:
             return Path(os.path.expandvars(override)).expanduser().resolve()
+        return AppSettings.get_default_dataforge_cache_base()
+
+    @staticmethod
+    def get_default_dataforge_cache_base() -> Path:
+        """Return the DataForge cache base used when no ``CACHE_DIR``
+        override is set (step 2 of :meth:`get_dataforge_cache_base`), whether
+        or not one is set now. The Config tab names it when a reset to it, or
+        a cleared field, fails because its cache folder cannot be made (#494).
+        """
+        from src.utils import build_mode
         if build_mode.IS_PORTABLE:
             return AppSettings._portable_data_dir() / "cache"
         return Path(
@@ -3230,38 +3584,59 @@ class AppSettings:
         ) / "Smart Citizen"
 
     @staticmethod
+    def get_dataforge_cache_leaf(channel: "str | None" = None) -> Path:
+        """Return *channel*'s DataForge cache folder without creating it.
+
+        *channel* defaults to the active one. :meth:`get_dataforge_cache_dir`
+        is this plus the ``mkdir``; use this one for a check that must leave
+        the disk alone, such as the guard on a queued old-cache cleanup (#486),
+        and for every check that only reads the cache (its status, freshness
+        and build key, #494). A folder Windows refuses to create, or one on a
+        drive that is gone, then reads as a cache not extracted yet instead of
+        raising, which kept Smart Citizen from opening.
+        """
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        return AppSettings.get_dataforge_cache_base() / channel / "cache" / "dataforge"
+
+    @staticmethod
     def get_dataforge_cache_dir() -> Path:
         """Return the directory where DataForge entity XMLs are cached after unforge.
 
         Defaults to ``%LOCALAPPDATA%\\Smart Citizen\\{channel}\\cache\\dataforge\\``
         — never OneDrive-synced, eliminating per-file sync hooks during
-        extraction of the ~1.4 GB / ~28k-file XML tree. A user can override
+        extraction of the ~1.2 GB / ~31k-file XML tree. A user can override
         the base via the Config tab (Smart Citizen Data → DataForge Cache
         Folder); see :meth:`get_dataforge_cache_base` for the resolution
         order. Channel nesting is preserved across all variants so each
         SC channel stays isolated.
+
+        Creates the folder, and raises OSError when it cannot (#494), so only
+        code about to write the cache calls this; a check that only reads
+        uses :meth:`get_dataforge_cache_leaf`.
         """
-        cache_dir = (
-            AppSettings.get_dataforge_cache_base()
-            / AppSettings.get_active_channel()
-            / "cache" / "dataforge"
-        )
+        cache_dir = AppSettings.get_dataforge_cache_leaf()
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
 
     @staticmethod
-    def get_dataforge_build_key() -> str:
+    def get_dataforge_build_key(forge_dir: "Path | None" = None) -> str:
         r"""Return a fingerprint for the current DataForge extraction.
 
         Reads the ``.p4k_mtime`` stamp pak_extractor writes, falling back to
-        the records-dir mtime. Mirrors ``_dataforge_cache_key`` in
+        the records-dir mtime. Mirrors ``_dataforge_cache_key(forge_dir)`` in
         ``scripts/generate_enhancements_ini.py`` so a per-language enhancement
         stamp can be compared against the build its files were generated from
-        (see :meth:`get_enhancements_stamp`). Returns 'unknown' when no
-        DataForge cache exists yet.
+        (see :meth:`get_enhancements_stamp`). *forge_dir* defaults to
+        :meth:`get_dataforge_cache_leaf`; the generator passes the cache folder
+        its run started with. Returns 'unknown' when no DataForge cache exists
+        yet, including a cache folder that cannot be made (#494): this only
+        reads, so it never creates the folder.
         """
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        if forge_dir is None:
+            forge_dir = AppSettings.get_dataforge_cache_leaf()
+        forge_dir = Path(forge_dir)
         stamp = forge_dir / P4K_MTIME_STAMP
         try:
             text = stamp.read_text(encoding="utf-8").strip()
@@ -3419,6 +3794,7 @@ class AppSettings:
         defaults: dict = {
             AppSettings.THEME: DEFAULT_THEME,
             AppSettings.UI_MODE: AppSettings.UI_MODE_SIMPLE,
+            AppSettings.FONT_SIZE: AppSettings.FONT_SIZE_MEDIUM,
             AppSettings.ACTIVE_CHANNEL: AppSettings.DEFAULT_CHANNEL,
             AppSettings.SELECTED_LANGUAGE: AppSettings.DEFAULT_LANGUAGE,
             AppSettings.MERGE_HIERARCHY: list(AppSettings.AVAILABLE_SOURCES),
@@ -3437,6 +3813,8 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
+            AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
+            AppSettings.SCO_WATCHED_MINERALS: "[]",
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({
@@ -3445,6 +3823,9 @@ class AppSettings:
         })
         defaults.update({
             key: True for key in AppSettings._MISSION_FIELD_SETTING.values()
+        })
+        defaults.update({
+            key: default for key, default in AppSettings.SCO_OPTION_SETTING.values()
         })
         defaults.update({
             key: AppSettings._MISSION_TITLE_TAG_DEFAULTS.get(name, True)
@@ -3533,15 +3914,34 @@ class AppSettings:
         not present in *values* are left untouched — an import layers the
         backup over the current profile rather than wiping it, so local
         state like the SC install path survives a same-machine restore.
+
+        One exception to "only the keys the backup holds" (#416): the
+        starter-blueprint seed marker describes the owned set, so it follows
+        ``owned_items``. A backup that carries an owned set brings its marker
+        too, and one from before 2.5 (no marker) resets it, so the next scan
+        adds the starters to the restored set instead of leaving them out for
+        good. A backup with no owned set leaves both alone, so it can't undo
+        the one-shot and bring back a starter the user moved out of Owned.
         """
         backend = AppSettings.settings()
         applied = 0
         for key, value in values.items():
             if not isinstance(key, str) or not key:
                 continue
+            if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
+                continue  # follows owned_items, below
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)
+            applied += 1
+        if AppSettings.OWNED_ITEMS in values:
+            seeded, pending = AppSettings._parse_default_blueprints_seed(
+                values.get(AppSettings.DEFAULT_BLUEPRINTS_SEED, "")
+            )
+            backend.setValue(
+                AppSettings.DEFAULT_BLUEPRINTS_SEED,
+                AppSettings._encode_default_blueprints_seed(seeded, pending),
+            )
             applied += 1
         backend.sync()
         logger.info("Import Settings: applied %d settings keys", applied)

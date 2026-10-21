@@ -11,7 +11,9 @@ Output files (written to OUTPUT_DIR / cache):
   ships_desc_enhancements.ini             – vehicle_Desc* entries with flight/specs data
   components_desc_enhancements.ini        – item_Desc* COOL/SHLD/POWR/QDRV with numerical data
   ship_weapons_desc_enhancements.ini      – item_Desc* ship weapon data
-  fps_weapons_desc_enhancements.ini       – item_Desc* FPS weapon data
+  fps_weapons_desc_enhancements.ini       – item_Desc* FPS weapon data, plus item_Name*
+                                             FPS armor / clothing weight-class tags (#492)
+                                             while the Tag Builder's Armor tag is on
   medical_consumables_enhancements.ini    – item_Desc* CureLife pens; static curated
                                              effect text, not DataForge-derived (the
                                              stock descriptions are lore-only and never
@@ -29,6 +31,7 @@ import re
 import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 from lxml import etree as ET
@@ -54,7 +57,7 @@ try:
         DEFAULT_COMPONENT_TYPE_MAPPING, DEFAULT_TAG_CONFIGS, ElementSpec,
         SIZE_ABBREV_BY_WORD, TagConfig, USAGE_INPUT_SEP,
         abbreviate_title, apply_mission_title, join_tag, render_route,
-        render_tag, route_enabled,
+        render_tag, route_enabled, tag_enabled,
     )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
     CRAFT_USAGE_CATEGORIES = ()  # type: ignore[assignment]
@@ -77,6 +80,8 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
         return f"{name} {tag}" if placement == "append" else f"{tag} {name}"
     def route_enabled(_cfg):  # type: ignore[misc]
         return False
+    def tag_enabled(_cfg):  # type: ignore[misc]
+        return False
 
 # Same deferred-import pattern as tag_builder above. DataForge paths under a
 # deep portable/tester install directory can exceed the 260-char MAX_PATH;
@@ -95,6 +100,29 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
     def win_long_path(path):  # type: ignore[misc]
         return str(path)
 
+# Same deferred-import pattern. Every file a run writes (the INIs and the
+# lookup pickles) goes to a temp file beside it and is swapped in with
+# os.replace, so a run cut off by a close or a crash leaves each one whole,
+# old or new, instead of truncated. See src/utils/atomic_io.py. The fallback
+# writes in place, as the script did before.
+try:
+    _gen_root = Path(__file__).parent.parent
+    if str(_gen_root) not in sys.path:
+        sys.path.insert(0, str(_gen_root))
+    from src.utils.atomic_io import atomic_write_text, atomic_writer
+except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    @contextmanager
+    def atomic_writer(path, mode="w", *, encoding="utf-8"):  # type: ignore[misc]
+        if mode == "wb":
+            with open(path, "wb") as f:
+                yield f
+        else:
+            with open(path, mode, encoding=encoding) as f:
+                yield f
+
+    def atomic_write_text(path, text, *, encoding="utf-8"):  # type: ignore[misc]
+        Path(path).write_text(text, encoding=encoding)
+
 # Same deferred-import pattern again. blueprint_meta.py's Blueprint Tracker
 # needs this exact same bp_craft_/bp_rewards_/bp_ prefix-strip when a raw
 # blueprint filename shows up verbatim in mission text; sharing it here
@@ -106,9 +134,21 @@ try:
         sys.path.insert(0, str(_gen_root))
     from src.utils.blueprint_meta import strip_raw_blueprint_filename_prefix
     # The DataForge cache layout, which pak_extractor (the module that
-    # writes it) names once for every reader.
-    from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
+    # writes it) names once for every reader, and the lookup pickle folder
+    # in it, whose leftover temps EnhancementsGeneratorWorker sweeps.
+    from src.utils.pak_extractor import DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH
+    # The curated per-ore RS table and the SCO drawer's crafting index,
+    # shared with the Smart Citizen Overlay (see the RS consumers below).
+    from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
+    from src.utils.mining_catalog import (
+        COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES,
+        CRAFTING_INDEX_FILE, write_crafting_index,
+    )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
+    ORE_SIGNATURES = {}  # type: ignore[assignment]
+    _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
+    CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
     def strip_raw_blueprint_filename_prefix(stem):  # type: ignore[misc]
         for prefix in ("bp_craft_", "bp_rewards_", "bp_"):
             if stem.lower().startswith(prefix):
@@ -116,6 +156,7 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
         return stem, False
 
     DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
+    DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -154,13 +195,16 @@ def _get_default_forge_dir() -> Path:
     """Resolve the DataForge cache directory for standalone CLI defaults.
 
     Mirrors AppSettings.get_dataforge_cache_dir() — AppData\\Local, not
-    Documents, so the ~1.4 GB XML cache stays out of OneDrive.
+    Documents, so the ~1.2 GB XML cache stays out of OneDrive. Named through
+    get_dataforge_cache_leaf(), which creates nothing (#494): the generator
+    needs a cache that is already there, and only adds its lookup pickles
+    to it.
     """
     try:
         if str(PROJECT_ROOT) not in sys.path:
             sys.path.insert(0, str(PROJECT_ROOT))
         from src.utils.settings import AppSettings
-        return AppSettings.get_dataforge_cache_dir()
+        return AppSettings.get_dataforge_cache_leaf()
     except (ImportError, OSError) as e:
         logger.debug(f"Falling back to LocalAppData forge default: {e}")
         local_appdata = Path(
@@ -239,7 +283,9 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
     buf = io.StringIO()
     for k, v in sorted(entries.items()):
         buf.write(f"{k}={v}\n")
-    path.write_text(buf.getvalue(), encoding="utf-8")
+    # In one step, so a cut-off run leaves the old INI whole. Same bytes as
+    # path.write_text: UTF-8, no BOM, CRLF on Windows.
+    atomic_write_text(path, buf.getvalue())
     logger.info(f"Written {len(entries):,} entries -> {path}")
 
 
@@ -364,6 +410,12 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 #     "[Mining Laser]" -> "[Mining Laser-S0]"). Both caches bake rendered
 #     tags into their stored names, so both bump or a regen against an
 #     unchanged DataForge keeps serving the size-less text.
+#   blueprint_pools v15 (2.5.0, found in the #492 review) — the loc-derived
+#     name_fallback_tags (fuel nozzle [FN]) were built from the run's own
+#     language, which has no English "Item Type: Fuel Nozzle" line, so a
+#     translated run pickled pools with untagged nozzle bullets and the next
+#     English run reused them. They now read the English loc (tag_loc); the
+#     bump flushes any pickle a translated run wrote before the fix.
 #   xml_path_index v2 (2.2.0, #231 follow-up) — main() now wraps forge_dir
 #     (and everything derived from it, including records_dir) via
 #     win_paths.win_long_path before building this index, so its stored path
@@ -380,9 +432,11 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # from mission text) + #281 filename-fallback aliases. Without this
     # bump, a regen against an unchanged DataForge reuses pools baked
     # before those fixes and the mission text stays untagged/garbled.
-    "blueprint_pools": "v14",
+    # v15: name_fallback_tags read the English loc (see the history above).
+    "blueprint_pools": "v15",
     "scitem_lookups": "v10",
     "standings": "v3",
+    "wearables": "v1",
     "xml_path_index": "v2",
 }
 
@@ -417,9 +471,12 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
     the version in _LOOKUP_VERSIONS; passing a different *extra_key* (used
     by scitem_lookups + blueprint_pools to fold in the user's components
     Tag Builder config so a config change rebuilds the baked-in tags)
-    bumps the third segment. Pickle errors silently fall back to rebuilding.
+    bumps the third segment. An unreadable pickle (a truncated one from a
+    run cut off before these writes became atomic, say) is rebuilt, with an
+    INFO line, since a rebuild can take a minute and a half. The pickle is
+    written in one step, so a run cut off mid-write keeps the old one.
     """
-    cache_dir = forge_dir / ".lookups"
+    cache_dir = forge_dir / DATAFORGE_LOOKUPS_SUBPATH
     cache_file = cache_dir / f"{name}.pkl"
     builder_version = _LOOKUP_VERSIONS.get(name, "v1")
     key = f"{builder_version}:{_dataforge_cache_key(forge_dir)}"
@@ -438,13 +495,13 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
                     f"Lookup cache invalidated: {name} "
                     f"(stored={stored_key!r}, expected={key!r})"
                 )
-        except (pickle.PickleError, OSError, EOFError, ValueError):
-            pass
+        except (pickle.PickleError, OSError, EOFError, ValueError) as e:
+            logger.info(f"Lookup cache unreadable, rebuilding: {name} ({type(e).__name__})")
 
     value = builder()
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
-        with cache_file.open("wb") as f:
+        with atomic_writer(cache_file, "wb") as f:
             pickle.dump((key, value), f, protocol=pickle.HIGHEST_PROTOCOL)
     except (pickle.PickleError, OSError) as e:
         logger.debug(f"Could not write lookup cache {name}: {e}")
@@ -479,27 +536,27 @@ def _index_rglob(xml_path_index: dict, entity_dir: Path, records_dir: Path) -> l
     return result
 
 
-def _contractgen_xml_files(
-    contractgen_dir: Path,
+def _indexed_xml_files(
+    entity_dir: Path,
     xml_path_index: dict | None = None,
     records_dir: Path | None = None,
 ):
-    """Every XML file under contractgen_dir, index-aware when available.
+    """Every XML file under entity_dir, index-aware when available.
 
     Extracted (#413 review follow-up) after the third identical copy of this
     ternary showed up across the file's three contractgen-XML walkers
     (scan_contract_generators, the Battaglia RS-tag scan, and
     _titles_with_calculated_reward) -- root CLAUDE.md's DRY calibration
-    treats a third repeat as the extraction signal. Scoped to contractgen_dir
-    specifically rather than generalizing _index_rglob's other ~10 callers
-    (templates/bp/scitem/ammo/pu_missions dirs, etc.): those weren't part of
-    what this PR touched or what the review flagged, and folding them in too
-    would be a much larger, unrelated refactor.
+    treats a third repeat as the extraction signal. Named for any folder
+    since the #492 wearables scan uses it too. _index_rglob's other ~10
+    callers (templates/bp/scitem/ammo/pu_missions dirs, etc.) still spell
+    the ternary out: folding them in would be a much larger, unrelated
+    refactor.
     """
     return (
-        _index_rglob(xml_path_index, contractgen_dir, records_dir)
+        _index_rglob(xml_path_index, entity_dir, records_dir)
         if xml_path_index is not None and records_dir is not None
-        else contractgen_dir.rglob("*.xml")
+        else entity_dir.rglob("*.xml")
     )
 
 
@@ -739,6 +796,14 @@ def _synthesize_description(root: ET.Element, xml_file: Path, key: str) -> str:
 # missile TagConfig.class_mapping dict.
 _MISSILE_TRACKING_RAW = ("CrossSection", "Electromagnetic", "Infrared")
 
+# The value of a description's "Item Type: X" line. The character class
+# excludes backslash so the capture stops at CIG's literal "\n" line
+# separator (two characters in the parsed loc-value, not a real newline);
+# the alternation covers both the literal and the real-newline form for
+# robustness. Shared by the component tagger's Class: fallback, the
+# bare-type tags (#266) and the armor weight tags (#492).
+_ITEM_TYPE_LINE_RE = re.compile(r"Item Type:\s*([^\\\n]+?)\s*(?:\\n|\n|$)")
+
 # Item Type → abbreviation, used as a Class: fallback when the description
 # omits the Class: line. CIG authors ship components with the full
 # Size:/Grade:/Class: trio but leaner items (mining heads, ship weapons,
@@ -949,12 +1014,9 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
             return f"[{abbrev_tuple[1]}-S{size}-{grade_letter}]"
 
     # Fallback path: classify by Item Type when Class: is missing or
-    # unrecognised. The character class excludes backslash so the capture
-    # stops at CIG's literal "\n" line separator (two characters in the
-    # parsed loc-value, not a real newline); the alternation covers both
-    # the literal and the real-newline form for robustness.
+    # unrecognised.
     type_abbrev = None
-    type_m = re.search(r"Item Type:\s*([^\\\n]+?)\s*(?:\\n|\n|$)", desc_value)
+    type_m = _ITEM_TYPE_LINE_RE.search(desc_value)
     if type_m:
         type_abbrev = _ITEM_TYPE_ABBREV.get(type_m.group(1).strip())
     # Fall back to XML-derived item type when text has no Item Type: line
@@ -2088,8 +2150,6 @@ def enhancements_radar(root: ET.Element) -> str:
 
     return "\\n".join(lines) if lines else ""
 
-    return "\\n".join(lines) if lines else ""
-
 
 def enhancements_cooler(root: ET.Element) -> str:
     cooling   = _find_resource(root, "Coolant")
@@ -2185,7 +2245,9 @@ def enhancements_quantum_drive(root: ET.Element) -> str:
     lines = []
     if speed is not None:
         speed_mm = float(speed) / 1_000_000
-        spool_str = _fmt(spool, "s") if spool else "?"
+        # Tenths, as Cooldown below: spool times are 4.4, 4.8, 5.3, 8.5... and
+        # whole seconds showed 4.8 and 5.3 both as "5s" (#485).
+        spool_str = _fmt(spool, "s", 1) if spool else "?"
         lines.append(f"QT Speed: {speed_mm:,.0f} Mm/s  |  Spool: {spool_str}")
     if cooldown is not None:
         lines.append(f"Cooldown: {_fmt(cooldown, 's', 1)}")
@@ -3282,7 +3344,8 @@ def _warn_if_near_override_miss(fp_items: frozenset[str]) -> None:
 
 
 def _build_blueprint_body_parts(unique_fps: dict,
-                                allow_overrides: bool = True) -> list[str]:
+                                allow_overrides: bool = True,
+                                bullet_names: "dict[str, str] | None" = None) -> list[str]:
     """Render a mission's blueprint-pool fingerprints into POTENTIAL
     BLUEPRINTS body text blocks, one per distinct item set.
 
@@ -3316,19 +3379,30 @@ def _build_blueprint_body_parts(unique_fps: dict,
     (non-overridden) sets also share the same first item, a numeric suffix
     is appended as a last-resort tiebreaker so headers are always at least
     visually distinct.
+
+    *bullet_names* maps a bare item name to the text its bullet shows (the
+    armor weight tag, #492, see armor_bullet_names). It is applied only when
+    a bullet line is written, so the overrides, the drift check, the "Set"
+    headers and the ordering all keep reading bare names. Without it the
+    output is unchanged.
     """
+    shown = bullet_names or {}
+
+    def _bullets(names) -> str:
+        return "\\n".join(f"- {shown.get(name, name)}" for name in names)
+
     if len(unique_fps) == 1:
         items = list(next(iter(unique_fps)))
         only_keys = next(iter(unique_fps.values()))
         override = _pool_label_override(items, allow_overrides)
         if override is not None:
-            return [f"<EM4>[{override}]</EM4>\\n" + "\\n".join(f"- {name}" for name in items)]
+            return [f"<EM4>[{override}]</EM4>\\n" + _bullets(items)]
         only_labels = sorted({l for _, l in only_keys if l})
         if only_labels:
             only_systems = sorted({s for s, _ in only_keys})
             header = f"{', '.join(only_systems)}, {', '.join(only_labels)}"
-            return [f"<EM4>[{header}]</EM4>\\n" + "\\n".join(f"- {name}" for name in items)]
-        return ["\\n".join(f"- {name}" for name in items)]
+            return [f"<EM4>[{header}]</EM4>\\n" + _bullets(items)]
+        return [_bullets(items)]
 
     header_entries = []
     for fp, keys in unique_fps.items():
@@ -3384,9 +3458,7 @@ def _build_blueprint_body_parts(unique_fps: dict,
         if named_counts[header] > 1:
             seen_counts[header] = seen_counts.get(header, 0) + 1
             header = f"{header} ({seen_counts[header]})"
-        body_parts.append(
-            f"<EM4>[{header}]</EM4>\\n" + "\\n".join(f"- {name}" for name in fp)
-        )
+        body_parts.append(f"<EM4>[{header}]</EM4>\\n" + _bullets(fp))
     return body_parts
 
 
@@ -3474,6 +3546,9 @@ def build_blueprint_pool_lookup(
     UUID, which is exactly the linkage that's missing in those code
     paths, so there's nothing to look up. FPS gear / weapons / ships
     never get a tag entry, so they pass through bare even on a UUID hit.
+    Armor weight tags (#492) are not added here: _run_gen_missions applies
+    them when the bullets are written (armor_bullet_names), so nothing this
+    function returns, and nothing pickled from it, carries an armor tag.
 
     Args:
         pool_dir: Directory containing BlueprintPoolRecord XMLs.
@@ -3652,14 +3727,9 @@ def _build_template_lookup(
     return lookup
 
 
-# CIG doesn't expose a per-ore "RS" (resonance-signature) number anywhere in
-# DataForge — checked the full PTU 4.9 cache for both the literal values and
-# any per-mineable stat registry, found neither — so this is a curated table
-# sourced from community reference data (MrKraken/StarStrings; the original 8
-# from the ptu/4.9 branch mining.ini, the rest cross-checked against
-# starminersdepot.com's Alpha 4.8 scanner table — the 7 ores present in both
-# sources agree exactly). "ice" has no confirmed reference for this patch but
-# is kept from the original 4.9 source. Two consumers:
+# Per-ore base "RS" (resource signature) values. The curated table and its
+# sourcing live in src/utils/mining_signatures.py, shared with the Smart
+# Citizen Overlay's scan decoder. Two consumers here:
 #   - Recco Battaglia's Scan/Mining contracts (4.9+, "Battaglia_RPT_Scan_*" /
 #     "Battaglia_RPT_ScanMine_*" title keys), each targeting 1-3 specific
 #     mineable ores via sibling MissionProperty overrides with
@@ -3670,74 +3740,31 @@ def _build_template_lookup(
 #     ore's base RS next to its mining locations.
 # Not every ore in either consumer has a known value; unmatched ores are
 # simply left without an RS line/tag (see each consumer for its own
-# unmatched-key handling).
-MINEABLE_RS_VALUES = {
-    "agricium":      3885,
-    "aluminium":     4285,
-    "aslarite":      3840,
-    "beryl":         3540,
-    "bexalite":      3600,
-    "borase":        3570,
-    "copper":        4240,
-    "corundum":      4225,
-    "gold":          3585,
-    "hephaestanite": 4180,
-    "ice":           4300,
-    "iron":          4270,
-    "laranite":      3825,
-    "lindinium":     3400,
-    "ouratite":      3370,
-    "quantainium":   3170,
-    "quartz":        4210,
-    "riccite":       3385,
-    "savrillium":    3200,
-    "silicon":       4255,
-    "stileron":      3185,
-    "taranite":      3555,
-    "tin":           4195,
-    "titanium":      3855,
-    "torite":        3900,
-    "tungsten":      3870,
-}
-
-# The Mining Compendium journal's own prose spells a couple of ore names
+# unmatched-key handling). MINEABLE_RS_VALUES is imported with the other
+# src/ names near the top of this file, as is _MINING_COMPENDIUM_ORE_ALIASES:
+# the Mining Compendium journal's own prose spells a couple of ore names
 # differently from their DataForge loc-key spelling (a CIG typo, not a
-# transcription error here) — "Savrilium" (single L) vs the canonical
-# mineabletype_primary_savrillium. Maps the journal's lowercased spelling to
-# the MINEABLE_RS_VALUES key so the lookup still matches.
-_MINING_COMPENDIUM_ORE_ALIASES = {
-    "savrilium": "savrillium",
-}
+# transcription error here), "Savrilium" (single L) vs the canonical
+# mineabletype_primary_savrillium, and that map takes the journal's
+# lowercased spelling to the MINEABLE_RS_VALUES key so the lookup still
+# matches.
 
-# Curated RS value PROGRESSIONS as scanned stack size scales (the in-game
-# Mining Compendium "signature strength" chart), for the mission-DETAILS
-# "Resource Signatures:" breakdown (#331) -- distinct from MINEABLE_RS_VALUES'
-# single flat number, which only feeds the mission-TITLE [RS ####] tag and the
-# ore-name annotation. Not every ore MINEABLE_RS_VALUES covers has a confirmed
-# progression yet; an ore missing here falls back to a single-value tuple (see
-# _rs_value_steps), so nothing regresses to no-value while more progressions
-# get curated.
+# RS value PROGRESSIONS as scanned stack size scales (the in-game Mining
+# Compendium "signature strength" chart), for the mission-DETAILS "Resource
+# Signatures:" breakdown (#331) -- distinct from MINEABLE_RS_VALUES' single
+# flat number, which only feeds the mission-TITLE [RS ####] tag and the
+# ore-name annotation. Built from ORE_SIGNATURES' base and largest cluster
+# size, the same caps the SCO scan decoder uses, so the two can't disagree.
 MINEABLE_RS_VALUE_STEPS: dict[str, tuple[int, ...]] = {
-    "savrillium": (3200, 6400),
-    "lindinium": (3400, 6800, 10200),
-    "bexalite": (3600, 7200, 10800, 14400),
-    "torite": (3900, 7800, 11700, 15600, 19500),
-    "iron": (4270, 8540, 12810, 17080, 21350, 25620),
-    "aluminium": (4285, 8570, 12855, 17140, 21425, 25710),
-    "ice": (4300, 8600, 12900, 17200, 21500, 25800),
+    ore: tuple(base * n for n in range(1, max_count + 1))
+    for ore, (base, max_count) in ORE_SIGNATURES.items()
 }
 
 
 def _rs_value_steps(ore: str) -> tuple[int, ...]:
     """Full RS value progression for ``ore`` (see MINEABLE_RS_VALUE_STEPS),
-    falling back to a single-value tuple from MINEABLE_RS_VALUES when this
-    ore's stack progression isn't curated yet, or ``()`` when neither table
-    knows this ore at all."""
-    if ore in MINEABLE_RS_VALUE_STEPS:
-        return MINEABLE_RS_VALUE_STEPS[ore]
-    if ore in MINEABLE_RS_VALUES:
-        return (MINEABLE_RS_VALUES[ore],)
-    return ()
+    or ``()`` when the table doesn't know this ore."""
+    return MINEABLE_RS_VALUE_STEPS.get(ore, ())
 
 
 def _format_rs_details_lines(ores: list[str], loc: dict) -> list[str]:
@@ -3875,7 +3902,7 @@ def _build_battaglia_mineable_rs_tags(
         templates_dir, xml_path_index=xml_path_index, records_dir=records_dir
     )
 
-    _files = _contractgen_xml_files(contractgen_dir, xml_path_index, records_dir)
+    _files = _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
     for xml_file in _files:
         try:
             root = ET.parse(xml_file).getroot()
@@ -4036,7 +4063,7 @@ def scan_contract_generators(
     templates_dir = contractgen_dir.parent / "contracttemplates"
     template_lookup = _build_template_lookup(templates_dir, xml_path_index=xml_path_index, records_dir=records_dir)
 
-    _contractgen_files = _contractgen_xml_files(contractgen_dir, xml_path_index, records_dir)
+    _contractgen_files = _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
     try:
         for xml_file in _contractgen_files:
             try:
@@ -4417,7 +4444,7 @@ def _titles_with_calculated_reward(
     """
     if not contractgen_dir.exists():
         return set()
-    _files = _contractgen_xml_files(contractgen_dir, xml_path_index, records_dir)
+    _files = _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
     titles: set[str] = set()
     for xml_file in _files:
         try:
@@ -4937,6 +4964,7 @@ def scan_crafting_blueprints(
     tag_config: "TagConfig | None" = None,
     blueprint_data_header: str = "BLUEPRINT DATA",
     header_em_tag: str = "EM3",
+    crafting_index: dict | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Scan crafting blueprints and produce commodity + journal entries.
 
@@ -4946,6 +4974,10 @@ def scan_crafting_blueprints(
     Compendium augmentation. Both halves are always returned so the dispatcher
     in :func:`main` can unpack the result unconditionally, including when no
     crafting blueprints directory exists in the user's DataForge cache.
+
+    When *crafting_index* is given it is filled with every material's display
+    names and the ``[category, item]`` pairs it goes into, for the SCO
+    drawer's crafting search (``src/utils/mining_catalog.py``).
     """
     import os
 
@@ -5001,6 +5033,19 @@ def scan_crafting_blueprints(
     # Hitting 0 here almost always means base.ini is stale (missing modern
     # commodity strings) — surfacing that in the log beats silently writing an
     # empty enhancements file.
+    if crafting_index is not None:
+        for commodity, pairs_ in commodity_items.items():
+            names = sorted({
+                loc[name_key].strip()
+                for name_key, _desc in _discover_commodity_loc_pairs(commodity, loc)
+                if loc.get(name_key, "").strip()
+            }, key=lambda n: (len(n), n))   # shortest first; ties by name, not hash order
+            crafting_index[commodity] = {
+                "names": names,
+                "items": sorted({(_humanize_craft_category(cat), item) for cat, item in pairs_
+                                 if "$templates" not in cat.lower()}),
+            }
+
     loc_commodity_key_count = sum(
         1 for k in loc if k.lower().startswith("items_commodities_")
     )
@@ -6367,7 +6412,7 @@ def _bare_type_tag_from_desc(desc_value: str, comp_cfg: "TagConfig | None") -> s
     type_el = _component_element(comp_cfg, "type")
     if type_el is None or not type_el.enabled:
         return None
-    type_m = re.search(r"Item Type:\s*([^\\\n]+?)\s*(?:\\n|\n|$)", desc_value)
+    type_m = _ITEM_TYPE_LINE_RE.search(desc_value)
     type_name = type_m.group(1).strip() if type_m else None
     if type_name not in _BARE_TYPE_NAMES:
         return None
@@ -6387,9 +6432,14 @@ def enhancements_bare_type_tags(ctx: dict) -> dict[str, str]:
     Only fires when the user has the Components > Type element enabled --
     same opt-in switch that gates Shield Generator/Cooler/Power Plant/etc.
     Type tags. Respects whatever abbreviation length (short/medium/long)
-    they've chosen for it.
+    they've chosen for it. The name comes from the run's own loc, but the
+    "Item Type:" line is read from the English loc (tag_loc) first: a
+    translated description has no English "Item Type: Fuel Nozzle" line, so
+    a translated run used to leave the nozzle names bare while their mission
+    bullets (bare_type_name_tag_lookup, also English) were tagged.
     """
     loc = ctx["loc"]
+    tag_loc = ctx.get("tag_loc") or loc
     tag_configs = ctx.get("tag_configs") or {}
     comp_cfg = tag_configs.get("components") or DEFAULT_TAG_CONFIGS.get("components")
     if comp_cfg is None:
@@ -6403,7 +6453,8 @@ def enhancements_bare_type_tags(ctx: dict) -> dict[str, str]:
         kl = key.lower()
         if not kl.endswith("_name"):
             continue
-        desc_value = loc.get(f"{key[:-len('_Name')]}_Desc", "")
+        desc_key = f"{key[:-len('_Name')]}_Desc"
+        desc_value = tag_loc.get(desc_key) or loc.get(desc_key, "")
         if not desc_value:
             continue
         tag = _bare_type_tag_from_desc(desc_value, comp_cfg)
@@ -6621,6 +6672,247 @@ def _run_gen_fps_weapons(ctx: dict) -> dict[str, str]:
     return out
 
 
+# ── FPS armor weight tags (#492) ─────────────────────────────────────────────
+# Every wearable lives under characters/human: armor/ (arms, core, legs,
+# backpacks, undersuits), starwear/helmet/ and clothing/.
+_WEARABLES_SUBPATH = Path("entities") / "scitem" / "characters" / "human"
+
+# "Item Type:" values that name a weight class outright. CIG uses all three
+# nouns: "Heavy Armor", "Light Backpack", "Light Helmet".
+_ARMOR_ITEM_TYPE_RE = re.compile(
+    r"^(Light|Medium|Heavy|Super Heavy) (?:Armor|Backpack|Helmet)$"
+)
+# The environment suits (Novikov, Pembroke) say "Heavy Utility" instead.
+_UTILITY_ITEM_TYPE_RE = re.compile(r"^(?:Light|Medium|Heavy) Utility$")
+# AttachDef SubType → weight class, for armor slots whose description has no
+# usable "Item Type:" line. The Arden-CL backpacks spell theirs "LightArmor".
+# Anything else ("Helmet" on flight helmets, "Personal" on most backpacks,
+# "UNDEFINED" on undersuits) names no weight class.
+_ARMOR_SUBTYPE_WEIGHT = {
+    "Light": "Light", "LightArmor": "Light",
+    "Medium": "Medium",
+    "Heavy": "Heavy",
+}
+# When several entities share one name key, the class later in this order
+# wins, so the tag never depends on the order the files were read in. An
+# armor class always beats Clothing.
+_ARMOR_WEIGHT_PRECEDENCE = ("Clothing", "Light", "Medium", "Heavy", "Utility", "Super Heavy")
+
+
+def _armor_weight(desc_value: str, attach_type: str, attach_subtype: str) -> str | None:
+    """Resolve a wearable to a DEFAULT_ARMOR_WEIGHT_MAPPING key, or None.
+
+    The description's "Item Type:" line wins when it names a class: it is
+    the only place that says Super Heavy or Utility (the BUL-H4 and Novikov
+    records carry a plain or empty SubType), and it is the text the player
+    reads in-game. Otherwise an armor slot's AttachDef SubType decides where
+    it names a class (the game's own armor class): most racing and flight
+    helmets carry the plain "Helmet" SubType and get None, but the few in a
+    Light or Medium slot get that class (the Interceptor racing helmets and
+    the OMNI-AFS flight helmets Light, the Giocoso racing helmets Medium).
+    Any clothing or accessory slot (eyewear) is Clothing. Undersuits and
+    flight suits have no weight class and get None.
+    """
+    m = _ITEM_TYPE_LINE_RE.search(desc_value or "")
+    if m:
+        item_type = m.group(1).strip()
+        weight_m = _ARMOR_ITEM_TYPE_RE.match(item_type)
+        if weight_m:
+            return weight_m.group(1)
+        if _UTILITY_ITEM_TYPE_RE.match(item_type):
+            return "Utility"
+    if attach_type.startswith("Char_Armor_"):
+        return _ARMOR_SUBTYPE_WEIGHT.get(attach_subtype)
+    if attach_type.startswith(("Char_Clothing_", "Char_Accessory_")):
+        return "Clothing"
+    return None
+
+
+def build_wearable_index(
+    wear_dir: Path,
+    xml_path_index: dict | None = None,
+    records_dir: Path | None = None,
+) -> list[tuple[str, str, str, str]]:
+    """``(name_key, desc_key, attach_type, attach_subtype)`` for every
+    wearable entity XML under *wear_dir* that has a real name key.
+
+    Loc-free on purpose so it can be pickle-cached per DataForge build:
+    the weight class is resolved later against whichever base.ini is
+    loaded. *desc_key* is "" when the entity has no description.
+    """
+    out: list[tuple[str, str, str, str]] = []
+    for xml_file in _indexed_xml_files(wear_dir, xml_path_index, records_dir):
+        try:
+            root = ET.parse(xml_file).getroot()
+        except ET.ParseError:
+            continue
+        attach = root.find(".//SAttachableComponentParams/AttachDef")
+        if attach is None:
+            continue
+        name_key = _loc_name_key(root)
+        if not name_key:
+            continue
+        out.append((
+            name_key,
+            _loc_key(root) or "",
+            attach.get("Type", ""),
+            attach.get("SubType", ""),
+        ))
+    return out
+
+
+def _run_gen_armor(ctx: dict) -> dict[str, str]:
+    """Tag FPS armor and clothing names with their weight class (#492).
+
+    Writes nothing while the Armor > Weight element is off (the default), so
+    the scan is skipped too. Only ``item_Name*`` keys are tagged: a few
+    clothing records point their Name at shared item-port strings ("Body")
+    that must not change.
+    """
+    loc     = ctx["loc"]
+    tag_loc = ctx.get("tag_loc") or loc
+    cfg = _armor_tag_cfg(ctx.get("tag_configs"))
+    out: dict[str, str] = {}
+    if cfg is None:
+        logger.info("Finished armor tags (tag off)")
+        return out
+    wearables = _ctx_wearables(ctx)
+    if wearables is None:
+        logger.info("Finished armor tags (no wearables in the DataForge cache)")
+        return out
+
+    loc_key_by_lower = {k.lower(): k for k in loc}
+    weights = armor_name_weights(wearables, loc, tag_loc, loc_key_by_lower)
+    placement = getattr(cfg, "placement", "prepend")
+    for name_key, weight in weights.items():
+        tag = render_tag(cfg, {"weight": weight})
+        if not tag:
+            continue
+        out[name_key] = join_tag(loc[name_key], tag, placement)
+        short_key = loc_key_by_lower.get(f"{name_key}_short".lower())
+        if short_key and loc.get(short_key):
+            out[short_key] = join_tag(loc[short_key], tag, placement)
+    logger.info(f"Finished armor tags ({len(out)} entries)")
+    return out
+
+
+def armor_name_weights(
+    wearables: list[tuple[str, str, str, str]],
+    loc: dict[str, str],
+    tag_loc: dict[str, str] | None = None,
+    loc_key_by_lower: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """``{name_key: weight class}`` for every wearable with a class (#492).
+
+    *wearables* is ``build_wearable_index``'s output. Keys come back in
+    base.ini's own spelling: entity XMLs don't always match its casing
+    (item_Name_... vs Item_Name_...), and an override has to land on the key
+    base.ini carries. The description is looked up the same case-blind way,
+    in *tag_loc* (the English base.ini when generating another language)
+    first. Only ``item_Name*`` keys with a non-empty name count: a few
+    clothing records point their Name at shared item-port strings ("Body").
+    Several entities can share one name, so ``_ARMOR_WEIGHT_PRECEDENCE``
+    settles which class it gets.
+    """
+    if tag_loc is None:
+        tag_loc = loc
+    if loc_key_by_lower is None:
+        loc_key_by_lower = {k.lower(): k for k in loc}
+    tag_key_by_lower = (
+        loc_key_by_lower if tag_loc is loc else {k.lower(): k for k in tag_loc}
+    )
+    rank = {w: i for i, w in enumerate(_ARMOR_WEIGHT_PRECEDENCE)}
+    weights: dict[str, str] = {}
+    for name_key, desc_key, attach_type, attach_subtype in wearables:
+        if not name_key.lower().startswith("item_name"):
+            continue
+        real_key = loc_key_by_lower.get(name_key.lower())
+        if real_key is None or not loc[real_key]:
+            continue
+        desc_lower = desc_key.lower()
+        tag_desc_key = tag_key_by_lower.get(desc_lower)
+        loc_desc_key = loc_key_by_lower.get(desc_lower)
+        desc_value = (
+            (tag_loc[tag_desc_key] if tag_desc_key else "")
+            or (loc[loc_desc_key] if loc_desc_key else "")
+        )
+        weight = _armor_weight(desc_value, attach_type, attach_subtype)
+        if weight is None:
+            continue
+        current = weights.get(real_key)
+        if current is None or rank[weight] > rank[current]:
+            weights[real_key] = weight
+    return weights
+
+
+def _armor_tag_cfg(tag_configs) -> "TagConfig | None":
+    """The armor TagConfig when its tag is on, else None (#492).
+
+    The Armor tab offers no "None (space only)" enclosing (the Blueprint
+    Tracker could not strip a one-word armor tag back off a Game.log name), so
+    a hand-edited "none" reads as Square here, as in AppSettings.get_tag_config.
+    """
+    cfg = (tag_configs or {}).get("armor") or DEFAULT_TAG_CONFIGS.get("armor")
+    if render_tag is None or not tag_enabled(cfg):
+        return None
+    if cfg.enclosing == "none":
+        cfg = TagConfig.from_dict({**cfg.to_dict(), "enclosing": "square"})
+    return cfg
+
+
+def _load_wearables(records: Path, forge_dir: Path,
+                    xml_path_index: dict | None = None) -> "list | None":
+    """build_wearable_index's pickle-cached output, or None when the
+    DataForge cache has no characters/human folder."""
+    wear_dir = records / _WEARABLES_SUBPATH
+    if not wear_dir.exists():
+        return None
+    return _cached_lookup(
+        forge_dir, "wearables",
+        lambda: build_wearable_index(wear_dir, xml_path_index, records),
+    )
+
+
+def _ctx_wearables(ctx: dict) -> "list | None":
+    """The wearables main() loaded once for this run (ctx["wearables"]), so
+    the armor and mission generators never both write wearables.pkl at the
+    same time; loaded here instead when a generator is called on its own."""
+    wearables = ctx.get("wearables")
+    if wearables is not None:
+        return wearables
+    return _load_wearables(ctx["records"], ctx["forge_dir"], ctx.get("xml_path_index"))
+
+
+def armor_bullet_names(wearables, en_loc: dict[str, str], cfg) -> dict[str, str]:
+    """``{bare English bullet name: that name with its armor tag}`` (#492).
+
+    Uses the same per-name-key class (armor_name_weights), render_tag and
+    join_tag as _run_gen_armor, so a POTENTIAL BLUEPRINTS bullet shows the
+    tag the item name gets, or none. The bullets follow the annotate toggle,
+    not the Gear checkbox (as component tags do), so with Gear off a bullet
+    can be tagged while the item name stays bare. Keys are the raw English names (a
+    non-breaking space stays) with CIG's size prefix stripped, the strings
+    build_scitem_lookups gives the bullets. A display name behind two
+    different rendered tags stays bare, so a bullet never shows a tag one of
+    its items lacks. *cfg* is _armor_tag_cfg's, so its brackets are never
+    "None (space only)".
+    """
+    if cfg is None:
+        return {}
+    placement = getattr(cfg, "placement", "prepend")
+    tags: dict[str, "str | None"] = {}
+    for key, weight in armor_name_weights(wearables, en_loc, en_loc).items():
+        tag = render_tag(cfg, {"weight": weight})
+        if not tag:
+            continue
+        bare = _strip_cig_size_prefix(en_loc[key])
+        if bare not in tags:
+            tags[bare] = tag
+        elif tags[bare] != tag:
+            tags[bare] = None
+    return {bare: join_tag(bare, tag, placement) for bare, tag in tags.items() if tag}
+
+
 def _run_gen_ships(ctx: dict) -> dict[str, str]:
     records           = ctx["records"]
     loc               = ctx["loc"]
@@ -6687,11 +6979,12 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     def _show_title_tag(_field: str) -> bool:
         return bool(_mtt.get(_field, True))
     tag_configs       = ctx.get("tag_configs") or {}
-    # User toggle (Enhancements tab) for the inline component annotation
-    # in mission descriptions. Default True preserves v1.4.0 behavior. When
-    # False, we pass an empty tag dict so build_blueprint_pool_lookup
-    # produces bare names — same code path as the back-compat case
-    # locked by test_blueprint_pool_omits_tag_when_dict_unset.
+    # User toggle (Enhancements tab) for the inline component and armor
+    # (#492) annotation in mission descriptions. Default True preserves
+    # v1.4.0 behavior. When False, we pass an empty tag dict so
+    # build_blueprint_pool_lookup produces bare names — same code path as
+    # the back-compat case locked by
+    # test_blueprint_pool_omits_tag_when_dict_unset — and no armor bullets.
     annotate_descs    = ctx.get("annotate_mission_descs", True)
     effective_tags    = entity_name_tags if annotate_descs else {}
     # Mirror the components-pipeline placement onto the BP-pool tag
@@ -6705,10 +6998,28 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # whose entity XMLs aren't UUID-linked to their
     # blueprints in CIG's data — entity_name_tags can never cover them, so
     # the blueprint-pool weave falls back to this loc-derived dict. Gated on
-    # the same annotate toggle as effective_tags.
+    # the same annotate toggle as effective_tags. Read from the English loc:
+    # the "Item Type: Fuel Nozzle" line it keys on and the bullet names it is
+    # matched against are both English, and the blueprint_pools pickle it
+    # feeds has no language in its key. Reading the run's own language left a
+    # translated run's pools untagged, and a later English run reused them.
     name_fallback_tags = (
-        bare_type_name_tag_lookup(loc, _comp_cfg) if annotate_descs else {}
+        bare_type_name_tag_lookup(ctx.get("tag_loc") or loc, _comp_cfg)
+        if annotate_descs else {}
     )
+    # Armor weight tags (#492) on POTENTIAL BLUEPRINTS bullets, behind the
+    # same toggle. Applied when the bullets are written (see
+    # _build_blueprint_body_parts), never baked into the blueprint_pools
+    # pickle, so its key needs no armor segment. English loc on purpose: the
+    # bullet names come from entity_names, which build_scitem_lookups builds
+    # from the English base.ini.
+    armor_bullets: dict[str, str] = {}
+    _armor_cfg = _armor_tag_cfg(tag_configs) if annotate_descs else None
+    if _armor_cfg is not None:
+        _wearables = _ctx_wearables(ctx)
+        if _wearables:
+            armor_bullets = armor_bullet_names(
+                _wearables, ctx.get("tag_loc") or loc, _armor_cfg)
 
     mission_sep = f"\\n\\n<{mh_em}>{hdr_details}</{mh_em}>\\n"
 
@@ -6799,8 +7110,11 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
         # invalidates this cache alongside scitem_lookups (the source
         # of entity_name_tags). The full TagConfig.to_json() includes
         # placement so swapping prepend ↔ append still bursts the cache;
-        # the annotate=0/1 suffix bursts it on the toggle.
-        extra_key=f"{ctx.get('_components_cfg_key', '')}|annotate={int(annotate_descs)}",
+        # the annotate=0/1 suffix bursts it on the toggle. Armor tags (#492)
+        # are added after this cache, when the bullets are written, so the
+        # armor config is deliberately not part of the key.
+        extra_key=(f"{ctx.get('_components_cfg_key', '')}|annotate={int(annotate_descs)}"
+                   f"{ctx.get('_en_loc_cache_mark', '')}"),
     )
 
     contractgen_dir = records / "contracts" / "contractgenerator"
@@ -7142,7 +7456,8 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                     for pool_label, items in by_pool.values():
                         fp = tuple(items)
                         unique_fps.setdefault(fp, []).append((sys_name, pool_label))
-                bp_body_parts = _build_blueprint_body_parts(unique_fps, _overrides_ok)
+                bp_body_parts = _build_blueprint_body_parts(
+                    unique_fps, _overrides_ok, armor_bullets)
                 # Join regional sub-sections with a blank line between them
                 # (two `\n` literals = one empty line in CIG's renderer) so
                 # the eye can tell adjacent [Pyro RegionA] / [Pyro RegionB]
@@ -7394,10 +7709,25 @@ def _run_gen_commodity_journal(ctx: dict) -> tuple[dict[str, str], dict[str, str
                                     xml_path_index=xml_path_index, records_dir=records,
                                     tag_config=tag_configs.get("commodities"),
                                     blueprint_data_header=mh.get("blueprint_data", _DEFAULT_MISSION_HEADERS["blueprint_data"]),
-                                    header_em_tag=mh_em)
+                                    header_em_tag=mh_em,
+                                    crafting_index=ctx.get("crafting_index"))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
+class GenerationStopped(Exception):
+    """A stop request ended the generation between two jobs: Smart Citizen
+    is closing.
+
+    Deliberately not a RuntimeError, like pak_extractor.ExtractionCancelled:
+    this is not a failure at all, so no ``except RuntimeError`` anywhere may
+    swallow or misreport it. EnhancementsGeneratorWorker catches it (by name,
+    because it loads this module afresh for every run), logs at INFO and
+    emits no error, because an ERROR record would fire the global
+    ErrorDialogHandler on a window that is closing. No INI has been written
+    when it is raised (lookup pickles may have been, each one whole): main()
+    never checks for a stop once its write phase has begun."""
+
 
 def main(base_ini_path: Path, forge_dir: Path | None = None,
          categories: set[str] | None = None,
@@ -7414,7 +7744,21 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
          stats_prepend: bool = False,
          standardize_earnable_ship_names: bool = False,
          rs_ore_name_annotations: bool = True,
-         english_base_ini_path: Path | None = None) -> None:
+         english_base_ini_path: Path | None = None,
+         should_cancel: Optional[Callable[[], bool]] = None) -> None:
+    """Generate the enhancement INIs for *categories* (None means all) beside
+    *base_ini_path*.
+
+    *should_cancel* is asked between jobs: after each parse, after the XML
+    path index, before each lookup and each generator, and once more just
+    before the write phase. When it returns True, main() raises
+    GenerationStopped and has written no INI. It is never asked once the
+    write phase has begun, so a run that reached it writes every INI. The
+    lookups and generators are checked one by one only on the serial path,
+    the one the GUI always takes (its worker passes max_workers=1); with a
+    pool (CLI and tests) only the check before the write phase applies.
+    None, the default, never stops.
+    """
     import sys as sys_mod
     # Deferred import — the script is loaded by both the app worker (where
     # src.utils is on the path) and as a standalone CLI, so we swallow an
@@ -7442,6 +7786,14 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         """Return True if *cat* should be generated (None means all)."""
         return categories is None or cat in categories
 
+    def _stop_if_asked(where: str) -> None:
+        """End the run here if a stop was requested. Only ever called
+        between jobs and before the write phase, never inside it."""
+        if should_cancel is not None and should_cancel():
+            logger.info(f"Stop requested: ending the generation {where}")
+            _flush()
+            raise GenerationStopped(where)
+
     logger.info("=== SC Enhancements INI Generator (DataForge edition) ===")
     if categories is not None:
         logger.info(f"Selective generation: {', '.join(sorted(categories))}")
@@ -7465,6 +7817,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     loc = parse_ini(base_ini_path)
     logger.info(f"Loaded {len(loc):,} localization keys")
     _flush()
+    _stop_if_asked("after parsing base.ini")
 
     # English loc for annotation-side consumers (#30, option A). Tags,
     # entity names, standings, and blueprint lists deliberately stay
@@ -7475,11 +7828,27 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # When no English path is supplied (CLI runs) the input loc is assumed
     # English, preserving pre-#30 behaviour.
     en_loc = loc
+    # Appended to the extra_key of every pickle built from en_loc when the
+    # English base.ini was asked for but is missing, so a run that fell back
+    # to its own language never leaves those language-blind pickles for the
+    # next English run to reuse: that run sees a different key and rebuilds.
+    en_loc_cache_mark = ""
     if english_base_ini_path is not None:
         english_base_ini_path = Path(english_base_ini_path)
-        if english_base_ini_path != base_ini_path and english_base_ini_path.exists():
-            en_loc = parse_ini(english_base_ini_path)
-            logger.info(f"Loaded {len(en_loc):,} English keys for annotation lookups")
+        if english_base_ini_path != base_ini_path:
+            if english_base_ini_path.exists():
+                en_loc = parse_ini(english_base_ini_path)
+                logger.info(f"Loaded {len(en_loc):,} English keys for annotation lookups")
+            else:
+                # Names this run's own base.ini, so two languages that both
+                # fell back never share a key either.
+                en_loc_cache_mark = f"|en_loc=fallback:{base_ini_path}"
+                logger.warning(
+                    f"English base.ini not found at {english_base_ini_path}: tags, "
+                    "entity names and blueprint lists use this run's language until "
+                    "it is extracted again."
+                )
+    _stop_if_asked("after parsing the English base.ini")
 
     # ── Check DataForge cache ─────────────────────────────────────────────────
     # Long-path-prefix once here so every downstream path derived from
@@ -7504,6 +7873,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     )
     logger.info(f"XML path index: {sum(len(v) for v in xml_path_index.values()):,} files across {len(xml_path_index):,} dirs")
     _flush()
+    _stop_if_asked("after the xml_path_index")
 
     # ── Estimate total phases for determinate progress ────────────────────────
     # One tick per logical phase. The sink caps at total, so over-counting is
@@ -7511,14 +7881,21 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     need_mag = _want("ship_weapon_descs") or _want("fps_weapon_descs")
     need_names = _want("mission_rewards") or _want("commodity_crafting") or _want("journal")
     need_ammo = _want("ship_weapon_descs") or _want("fps_weapon_descs")
+    # #492: the wearables index is loaded once per run and shared by the armor
+    # name tags (Gear) and the armor bullets in mission descriptions, so two
+    # generators never write wearables.pkl at the same time. Only needed
+    # while the armor tag is on.
+    need_wearables = _armor_tag_cfg(tag_configs) is not None and (
+        _want("fps_weapon_descs") or (_want("mission_rewards") and annotate_mission_descs))
     phase_total = (
         1  # base.ini parsed
         + (1 if need_ammo else 0)
+        + (1 if need_wearables else 0)
         + (1 if need_mag or need_names else 0)
         + (1 if _want("component_descs") else 0)
         + (1 if _want("missile_enhancements") else 0)
         + (1 if _want("ship_weapon_descs") else 0)
-        + (1 if _want("fps_weapon_descs") else 0)
+        + (2 if _want("fps_weapon_descs") else 0)  # FPS weapons, armor tags
         + (2 if _want("ship_descs") else 0)  # controller+armor lookup, scan
         + (4 if _want("mission_rewards") else 0)  # rep lookup, scan, bp pools, contractgen+XP
         + (1 if _want("commodity_crafting") or _want("journal") else 0)
@@ -7549,6 +7926,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     reputation_lookup: dict[str, int] = {}
     standings_lookup: dict[str, str] = {}
     standing_track_lookup: dict[str, str] = {}
+    wearables: list | None = None
 
     # Components Tag Builder config — drives the [CLASS-Sx-grade] tags that
     # get baked into both scitem_lookups (entity_name_tags) and the pickle
@@ -7567,7 +7945,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 xml_path_index=xml_path_index, records_dir=records,
                 tag_config=_components_cfg,
             ),
-            extra_key=_components_cfg_key,
+            extra_key=_components_cfg_key + en_loc_cache_mark,
         )
 
     def _build_reputation():
@@ -7604,6 +7982,9 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         lookup_jobs["armor"]      = lambda: build_armor_lookup(records / "entities" / "scitem" / "ships" / "armor")
     if _want("mission_rewards"):
         lookup_jobs["reputation"] = _build_reputation
+    if need_wearables:
+        # Not "armor": that key is the ship armor lookup above.
+        lookup_jobs["wearables"] = lambda: _load_wearables(records, forge_dir, xml_path_index)
 
     def _build_standings():
         """Single walk over reputation/standings XMLs building two dicts at
@@ -7659,7 +8040,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 except ET.ParseError:
                     continue
             return rank_out, track_out
-        return _cached_lookup(forge_dir, "standings", _builder)
+        return _cached_lookup(forge_dir, "standings", _builder, extra_key=en_loc_cache_mark)
 
     if _want("mission_rewards"):
         lookup_jobs["standings"] = _build_standings
@@ -7672,7 +8053,10 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             # max_workers=1, so this is the path a normal GUI run takes.
             logger.info(f"Building {len(lookup_jobs)} lookup(s) serially…")
             _flush()
-            results = {name: fn() for name, fn in lookup_jobs.items()}
+            results = {}
+            for name, fn in lookup_jobs.items():
+                _stop_if_asked(f"before the {name} lookup")
+                results[name] = fn()
         else:
             logger.info(f"Building {len(lookup_jobs)} lookups in parallel (workers={min(max_workers, len(lookup_jobs))})…")
             _flush()
@@ -7711,6 +8095,10 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 f"{len(standing_track_lookup)} reputation track definitions"
             )
             _tick("Built standings + track lookups")
+        if "wearables" in results:
+            wearables = results["wearables"]
+            logger.info(f"Wearables index: {len(wearables or [])} entities")
+            _tick("Built wearables index")
 
     # ── Output-file generators ────────────────────────────────────────────────
     # Generators run in a thread pool when it would get more than one worker,
@@ -7742,9 +8130,11 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "reputation_lookup": reputation_lookup,
         "standings_lookup":  standings_lookup,
         "standing_track_lookup": standing_track_lookup,
+        "wearables":         wearables,
         "xml_path_index":    xml_path_index,
         "tag_configs":       tag_configs or {},
         "_components_cfg_key": _components_cfg_key,
+        "_en_loc_cache_mark": en_loc_cache_mark,
         "annotate_mission_descs": bool(annotate_mission_descs),
         "rep_xp_label":      rep_xp_label or _DEFAULT_REP_XP_LABEL,
         "mission_headers":   mission_headers or dict(_DEFAULT_MISSION_HEADERS),
@@ -7753,6 +8143,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "mission_title_tags": mission_title_tags or {},
         "stats_prepend":     bool(stats_prepend),
         "rs_ore_name_annotations": bool(rs_ore_name_annotations),
+        # Filled by the commodity/journal generator for the SCO drawer.
+        "crafting_index":    {},
     }
 
     gen_jobs: dict[str, Callable] = {}
@@ -7760,6 +8152,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     if _want("missile_enhancements"): gen_jobs["missiles"]          = _run_gen_missiles
     if _want("ship_weapon_descs"):    gen_jobs["ship_weapons"]      = _run_gen_ship_weapons
     if _want("fps_weapon_descs"):     gen_jobs["fps_weapons"]       = _run_gen_fps_weapons
+    if _want("fps_weapon_descs"):     gen_jobs["armor"]             = _run_gen_armor
     if _want("ship_descs"):           gen_jobs["ships"]             = _run_gen_ships
     if _want("mission_rewards"):      gen_jobs["missions"]          = _run_gen_missions
     if _want("commodity_crafting") or _want("journal"):
@@ -7770,6 +8163,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     out_missiles:    dict[str, str] = {}
     out_ship_weapons: dict[str, str] = {}
     out_fps_weapons: dict[str, str] = {}
+    out_armor:       dict[str, str] = {}
     out_ships:       dict[str, str] = {}
     out_missions:    dict[str, str] = {}
     out_commodities: dict[str, str] = {}
@@ -7785,6 +8179,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             logger.info(f"Running {len(gen_jobs)} output generator(s) serially…")
             _flush()
             for name, fn in gen_jobs.items():
+                _stop_if_asked(f"before the {name} generator")
                 gen_results[name] = fn(ctx)
                 _tick(f"Finished {name}")
         else:
@@ -7802,6 +8197,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             elif name == "missiles":          out_missiles     = result
             elif name == "ship_weapons":      out_ship_weapons = result
             elif name == "fps_weapons":       out_fps_weapons  = result
+            elif name == "armor":             out_armor        = result
             elif name == "ships":             out_ships        = result
             elif name == "missions":          out_missions     = result
             elif name == "commodity_journal": out_commodities, out_journal = result
@@ -7824,7 +8220,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             if workarounds:
                 total_applied = 0
                 for out_dict in (out_missions, out_components, out_ship_weapons,
-                                 out_fps_weapons, out_ships, out_missiles,
+                                 out_fps_weapons, out_armor, out_ships, out_missiles,
                                  out_commodities, out_journal, out_medical_consumables):
                     total_applied += apply_locstring_workarounds(out_dict, workarounds)
                 logger.info(
@@ -7833,6 +8229,11 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                 _flush()
         except ImportError:
             logger.debug("src.utils.dataforge_patcher unavailable; skipping workarounds")
+
+    # The last point a stop is honoured. From here every INI is written, so
+    # a run that got this far certifies a whole set: a stop requested during
+    # the writes waits for them.
+    _stop_if_asked("before writing")
 
     # ── Write output ──────────────────────────────────────────────────────────
     logger.info("Writing output files…")
@@ -7848,7 +8249,11 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     if _want("ship_weapon_descs"):
         write_ini(output_dir / "ship_weapons_desc_enhancements.ini",out_ship_weapons)
     if _want("fps_weapon_descs"):
-        write_ini(output_dir / "fps_weapons_desc_enhancements.ini", out_fps_weapons)
+        # #492: the armor weight tags share the Gear file rather than getting
+        # their own, so an upgrade has no missing INI to prompt about. The two
+        # never share a key (weapon item_Desc* vs armor item_Name*).
+        write_ini(output_dir / "fps_weapons_desc_enhancements.ini",
+                  {**out_fps_weapons, **out_armor})
     if _want("mission_rewards"):
         write_ini(output_dir / "mission_rewards_enhancements.ini", out_missions)
     if _want("commodity_crafting"):
@@ -7859,9 +8264,13 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         write_ini(output_dir / "missile_enhancements.ini", out_missiles)
     if _want("medical_consumables"):
         write_ini(output_dir / "medical_consumables_enhancements.ini", out_medical_consumables)
+    # Written whenever the job ran, empty or not, so a stale index never
+    # outlives the INIs it was built with.
+    if "commodity_journal" in gen_jobs and CRAFTING_INDEX_FILE:
+        write_crafting_index(output_dir / CRAFTING_INDEX_FILE, ctx["crafting_index"])
 
     total = (len(out_ships) + len(out_components) + len(out_ship_weapons) +
-             len(out_fps_weapons) + len(out_missions) + len(out_commodities) +
+             len(out_fps_weapons) + len(out_armor) + len(out_missions) + len(out_commodities) +
              len(out_journal) + len(out_missiles) + len(out_medical_consumables))
     logger.info(f"Done — {total:,} total stat entries written to {output_dir}")
     _tick("Wrote all output files")

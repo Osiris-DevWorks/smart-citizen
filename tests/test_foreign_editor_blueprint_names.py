@@ -30,10 +30,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from utils.blueprint_meta import known_item_names  # noqa: E402
-from utils.owned_items import (  # noqa: E402
+from src.utils.blueprint_meta import known_item_names  # noqa: E402
+from src.utils.owned_items import (  # noqa: E402
     repair_foreign_owned_names,
     resolve_against_catalogue,
 )
