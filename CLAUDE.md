@@ -86,7 +86,7 @@ On first run, the app sets up user data dirs, validates the SC install path, and
 The "Extract DataForge from P4K" button triggers, in order:
 1. Unpack Data.p4k → entity XMLs via `src/utils/pak_extractor.py`. The bundled unp4k is a parallelised fork (`odw-fast-unp4k`) using `ThreadPoolExecutor` for extraction and `lxml` for unforge. unp4k and unforge work in a per-run folder beside the DataForge cache rather than in `%TEMP%` (#471; `%TEMP%` is only the fallback for a cache on OneDrive, a network share, a removable or network drive, or nested too deep), and closing the app stops them; see `src/utils/CLAUDE.md` → `pak_extractor.py`.
 2. Apply declarative patches from `patches/` via `src/utils/dataforge_patcher.py` to fix upstream CIG data bugs. Idempotent; runs on the extracted cache even when step 1 is skipped as fresh.
-3. Run `scripts/generate_enhancements_ini.py` over the XMLs (only for categories the diff cache flags as dirty — see `src/utils/CLAUDE.md` → *DataForge diff cache*).
+3. Run `scripts/generate_enhancements_ini.py` over the XMLs for every enabled category.
 4. Reload all strings to refresh the table.
 
 The progress dialog stays continuous across steps 1–3 so users see one bar from start to finish.
@@ -116,8 +116,6 @@ Prefer one canonical implementation over copy-paste. Calibration:
 - **Near-duplicates differing in one literal or branch**: parameterize. Two functions that diverge on a single string or boolean are one function with an argument.
 
 Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_model.py`, `_entry_index_for_row()` on `MainWindow`, `AppSettings` helpers (one backend abstraction, not mode-conditional call sites), `ProgressSink` (one shared progress channel for all parallel workers).
-
-**Tolerated exception**: `CATEGORY_SUBTREES` (`src/utils/dataforge_diff.py`) ↔ `DATAFORGE_KEEP_SUBPATHS` (`src/utils/pak_extractor.py`) — two lists kept in sync deliberately; they serve different consumers and the contract is locked by tests.
 
 **Don't over-abstract.** Three similar lines beats a premature abstraction. Single-use helpers, one-off config classes, and clever metaprogramming for code that runs in one place are worse than the inline version.
 
@@ -186,7 +184,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change resource-path resolution (bundle vs dev) | `src/utils/resource_path.py` | `get_resource_path()`, `resolve_patches_dir()` |
 | Toggle portable vs registry build mode | `scripts/build/build_exe.py`, `src/utils/build_mode.py` | `--portable` flag, `IS_PORTABLE` |
 | Change portable-mode settings backend | `src/utils/json_settings.py`, `src/utils/settings.py` | `JsonSettings`, `AppSettings._backend` |
-| Skip clean enhancement categories on re-extract | `src/utils/dataforge_diff.py`, `src/utils/pak_extractor.py` | `update_manifest()`, `dirty_categories()`, `CATEGORY_SUBTREES` (mirrors `DATAFORGE_KEEP_SUBPATHS`) |
+| Change how the extracted subtrees reach the cache | `src/utils/pak_extractor.py` | `_move_filtered_records()` (renames each `DATAFORGE_KEEP_SUBPATHS` subtree into place; copies only when the working folder is on another drive) |
 | Change Export Loc-Pack zip behavior | `src/utils/locpack_exporter.py` | `default_locpack_filename()`, `write_locpack_zip()` |
 | Change apply-time launcher watermark | `src/gui/main_window.py` | `_stamp_frontend_version()`, `_FRONTEND_VERSION_KEY`, `_FRONTEND_VERSION_STAMP_RE` |
 | Change Modified/Enhanced/Unmodified/New status logic | `src/parser/ini_parser.py` | `_determine_status_from_source()` |
@@ -197,8 +195,8 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Add a tag-builder element/style/category | `src/utils/tag_builder.py` | `CATEGORY_ELEMENT_KINDS`, `STYLES_BY_KIND`, `DEFAULT_TAG_CONFIGS`, `render_tag()` |
 | Change Tag Builder UI / live preview | `src/gui/enhancements_tab.py`, `src/gui/tag_mapping_dialog.py` | `_PREVIEW_VALUES`, `TagMappingDialog` |
 | Persist/load tag configs | `src/utils/settings.py` | `AppSettings.get_tag_config()`, `set_tag_config()`, `get_all_tag_configs()` |
-| Add a new stats-enhancement generator (e.g. mining/salvage analogue) | `scripts/generate_enhancements_ini.py` | `enhancements_mining_laser`, `enhancements_salvage_tool` (reference pattern); register in `CATEGORY_SUBTREES` + `DATAFORGE_KEEP_SUBPATHS` |
-| Add a new *static* enhancement category with no DataForge dependency | `scripts/generate_enhancements_ini.py` | `enhancements_medical_consumables` (reference pattern) — reads only `loc`/base.ini, no XML scan, so it's exempt from `CATEGORY_SUBTREES` / `DATAFORGE_KEEP_SUBPATHS`; still needs `ENHANCEMENTS_FILES` + `ENHANCEMENT_LABELS` + `ENHANCEMENT_CATEGORY_FILES` entries in `settings.py` |
+| Add a new stats-enhancement generator (e.g. mining/salvage analogue) | `scripts/generate_enhancements_ini.py` | `enhancements_mining_laser`, `enhancements_salvage_tool` (reference pattern); register in `DATAFORGE_KEEP_SUBPATHS` |
+| Add a new *static* enhancement category with no DataForge dependency | `scripts/generate_enhancements_ini.py` | `enhancements_medical_consumables` (reference pattern) — reads only `loc`/base.ini, no XML scan, so it's exempt from `DATAFORGE_KEEP_SUBPATHS`; still needs `ENHANCEMENTS_FILES` + `ENHANCEMENT_LABELS` + `ENHANCEMENT_CATEGORY_FILES` entries in `settings.py` |
 | Change crash-dump behavior | `src/utils/crash_handler.py`, `src/main.py` | `install_crash_handler()`; install site is the early `main()` setup, before the QApplication is constructed |
 | Change error-dialog cooldown / coalescing | `src/gui/main_window.py`, `src/gui/error_dialog.py` | `MainWindow._show_error_dialog()` (cooldown / spam protection lives on the slot, not the `ErrorDialogHandler`) |
 | Move the DataForge cache off the default path | `src/utils/settings.py`, `src/gui/config_tab.py` | `AppSettings.get_cache_dir_override()` / `set_cache_dir()` (1.4.1+; independent of the user-data override) |

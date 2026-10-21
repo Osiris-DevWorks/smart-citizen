@@ -12,7 +12,6 @@ from pathlib import Path
 
 from src.utils.perf import timed
 
-from src.utils.dataforge_diff import update_manifest
 from src.utils.i18n import tr
 from src.utils.onedrive import is_onedrive_path
 from src.utils.win_paths import win_long_path as _win_long_path
@@ -242,8 +241,8 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # in its own folder beside the cache leaf,
 # {base}\{channel}\cache\dataforge.extracting-XXXXXXXX, which is:
 #   * on the cache's drive by construction;
-#   * outside the leaf, which step 3 wipes and which the freshness check, the
-#     diff manifest and the generator read;
+#   * outside the leaf, which step 3 wipes and which the freshness check and
+#     the generator read;
 #   * inside the channel folder the uninstaller's opt-in wipe deletes whole;
 #   * never named "dataforge" (installer LooksLikeScCache) or
 #     "dataforge.migrating" (the settings.py migrator).
@@ -459,19 +458,28 @@ DATAFORGE_KEEP_SUBPATHS: tuple[str, ...] = (
 )
 
 
-def _copy_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
-    """Copy only the generator's required subtrees from *src_libs* → *dst_libs*.
+def _move_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
+    """Move only the generator's required subtrees from *src_libs* → *dst_libs*.
 
     Both paths point at the ``libs/`` directory unforge writes (which in turn
     contains ``foundry/records/<subtree>/...``). Only subpaths listed in
-    :data:`DATAFORGE_KEEP_SUBPATHS` are copied; anything else in the source
+    :data:`DATAFORGE_KEEP_SUBPATHS` are moved; anything else in the source
     is left in the working folder, which extract_dataforge deletes when the
     run ends.
 
-    Returns ``(copied, skipped)`` — the number of keep-subpaths actually
-    present and copied, and the number that weren't in this game build
-    (common for ``entities/missions`` etc. which appear and disappear between
-    patches — the generator already guards each read with ``if dir.exists()``).
+    Each kept subtree is renamed into place. The working folder sits beside
+    the cache on the same drive by design (#471), so that is one directory
+    rename per subtree where the copy it replaced touched every one of the
+    ~31k kept files (24 s on an NVMe machine), and those files no longer
+    need deleting with the working folder either. When the rename is
+    refused, because the working folder fell back to a ``%TEMP%`` on another
+    drive, the subtree is copied as before.
+
+    Returns ``(moved, skipped)`` — the number of keep-subpaths actually
+    present and moved (or copied), and the number that weren't in this game
+    build (common for ``entities/missions`` etc. which appear and disappear
+    between patches — the generator already guards each read with
+    ``if dir.exists()``).
     """
     records_src = src_libs / DATAFORGE_RECORDS_UNDER_LIBS
     records_dst = dst_libs / DATAFORGE_RECORDS_UNDER_LIBS
@@ -484,7 +492,7 @@ def _copy_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
 
     Path(_win_long_path(records_dst)).mkdir(parents=True, exist_ok=True)
 
-    copied = 0
+    moved = 0
     skipped = 0
     for rel in DATAFORGE_KEEP_SUBPATHS:
         src = records_src / rel
@@ -501,10 +509,14 @@ def _copy_filtered_records(src_libs: Path, dst_libs: Path) -> tuple[int, int]:
         # Long-path-prefixed on both sides: the deepest entries under
         # entities/scitem/mission_entities/ routinely push the destination
         # past 260 chars once nested under a user's install dir (#221).
-        shutil.copytree(_win_long_path(src), _win_long_path(dst))
-        copied += 1
+        try:
+            os.rename(_win_long_path(src), _win_long_path(dst))
+        except OSError as e:
+            logger.info(f"Could not move {rel} into the cache ({e}); copying it instead")
+            shutil.copytree(_win_long_path(src), _win_long_path(dst))
+        moved += 1
 
-    return copied, skipped
+    return moved, skipped
 
 
 def _get_subprocess_kwargs() -> dict:
@@ -704,9 +716,8 @@ def extract_dataforge(
          folder, beside the cache or in %TEMP% (see _scratch_location, #471).
       2. unforge.exe converts Game2.dcb → individual XML entity files, next to
          the dcb.
-      3. The generator's subtrees are copied to dataforge_cache_dir and
+      3. The generator's subtrees are moved into dataforge_cache_dir and
          stamped, then the working folder is deleted.
-      4. The diff manifest snapshots the new cache.
 
     This is slow the first time (~several minutes) but results are cached and
     only need to be re-run when the p4k file changes.
@@ -721,7 +732,7 @@ def extract_dataforge(
             tool runs, which kills the tool, and checked between steps. The
             check just before the old cache is wiped is the last point a stop
             leaves that cache untouched; past it the run finishes and stamps
-            the new cache, then stops before the manifest.
+            the new cache, then stops.
 
     Returns:
         True on success.
@@ -738,7 +749,7 @@ def extract_dataforge(
         raise FileNotFoundError(f"Data.p4k not found at: {p4k_path}")
 
     # Wrap once here so every use below (mkdir, exists checks, and whatever
-    # this function hands to _copy_filtered_records/update_manifest) inherits
+    # this function hands to _move_filtered_records) inherits
     # long-path safety — see win_paths.win_long_path (#221).
     dataforge_cache_dir = Path(_win_long_path(dataforge_cache_dir))
 
@@ -827,7 +838,7 @@ def extract_dataforge(
         # Python-side reads under unforge's output get the long-path prefix
         # (#471). With the working folder near its depth cap the deepest keep
         # path is ~261 characters, where a plain exists() returns False and
-        # _copy_filtered_records would skip that subtree without a word. The
+        # _move_filtered_records would skip that subtree without a word. The
         # tools themselves only ever see plain paths.
         libs_dir = Path(_win_long_path(dcb_path.parent))
         if not (libs_dir / "libs").exists():
@@ -886,10 +897,10 @@ def extract_dataforge(
         # OneDrive/Defender/Indexer-burdened Windows paths our users live in.
         cache_libs = dataforge_cache_dir / DATAFORGE_LIBS_SUBPATH
         logger.info(f"Saving DataForge extraction to {cache_libs}…")
-        copied, skipped = _copy_filtered_records(libs_dir / "libs", cache_libs)
+        moved, skipped = _move_filtered_records(libs_dir / "libs", cache_libs)
         logger.info(
-            f"DataForge cache written: {copied}/{len(DATAFORGE_KEEP_SUBPATHS)} "
-            f"keep-subpaths copied ({skipped} not present in this build)"
+            f"DataForge cache written: {moved}/{len(DATAFORGE_KEEP_SUBPATHS)} "
+            f"keep-subpaths moved ({skipped} not present in this build)"
         )
 
         # Stamp the source Data.p4k's mtime AND size so a later launch can tell
@@ -908,20 +919,10 @@ def extract_dataforge(
         # itself. _close_scratch never raises over the real outcome.
         _close_scratch(run_dir, marker)
 
-    # A stop that arrived during the copy ends here. The cache is complete and
-    # stamped; the next generation treats a missing manifest as "regenerate
-    # everything", which is what it does anyway.
+    # A stop that arrived during the move ends here. The cache is complete and
+    # stamped, so the next launch finds it fresh; the run still reports the
+    # stop rather than a success.
     _raise_if_cancelled(should_cancel, "stopped once the new cache was written")
-
-    # Snapshot the new cache so the next run can diff against it.
-    # SHA-256 over ~28k files is multi-minute serial; we surface it
-    # to the progress bar (and parallelize it inside update_manifest)
-    # so the UI doesn't appear frozen.
-    logger.info("Snapshotting DataForge cache for diff manifest…")
-    if progress_callback:
-        progress_callback(tr("progress.snapshot_diff"))
-    update_manifest(cache_libs, progress_callback=progress_pct_callback)
-    logger.info("Diff manifest written")
 
     # Ensure all file handles are released before returning
     gc.collect()

@@ -34,7 +34,6 @@ from pathlib import Path
 import pytest
 
 import src.utils.pak_extractor as pe
-from src.utils.dataforge_diff import MANIFEST_FILE
 from src.utils.win_paths import win_long_path
 
 pytestmark = [
@@ -471,7 +470,6 @@ class TestExtractDataforgeWorkingFolder:
         assert (records / "entities" / "scitem" / "x.xml").exists()
         assert not (records / "unused").exists()
         assert (leaf / pe.P4K_MTIME_STAMP).exists() and (leaf / pe.P4K_SIZE_STAMP).exists()
-        assert (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
         assert not (leaf / "old-cache-sentinel").exists()
 
     def test_unforge_is_handed_the_dcb_inside_the_working_folder(self, setup):
@@ -514,28 +512,27 @@ class TestExtractDataforgeWorkingFolder:
         assert not (leaf / pe.P4K_SIZE_STAMP).exists()
         assert not Path(fake.calls[0][2]).exists()
 
-    def test_a_stop_during_the_copy_finishes_the_cache_and_skips_the_manifest(
+    def test_a_stop_during_the_move_still_finishes_and_stamps_the_cache(
         self, setup, monkeypatch
     ):
-        """Past the wipe a stop never leaves the cache half-copied: it is
-        written and stamped, and only the manifest is skipped."""
+        """Past the wipe a stop never leaves the cache half-moved: it is
+        written and stamped, and the run still reports the stop."""
         leaf, run = setup
         stopped = []
-        real_copy = pe._copy_filtered_records
+        real_move = pe._move_filtered_records
 
-        def copy_then_stop(src, dst):
-            result = real_copy(src, dst)
+        def move_then_stop(src, dst):
+            result = real_move(src, dst)
             stopped.append(True)
             return result
 
-        monkeypatch.setattr(pe, "_copy_filtered_records", copy_then_stop)
+        monkeypatch.setattr(pe, "_move_filtered_records", move_then_stop)
         fake = _FakeTools()
         with pytest.raises(pe.ExtractionCancelled):
             run(fake, should_cancel=lambda: bool(stopped))
         assert (leaf / pe.P4K_SIZE_STAMP).exists()
         records = leaf / "raw" / "libs" / "foundry" / "records"
         assert (records / "entities" / "scitem" / "x.xml").exists()
-        assert not (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
         assert not Path(fake.calls[0][2]).exists()
 
     def test_no_working_folder_means_no_tool_runs_and_the_cache_stays(self, setup, monkeypatch):
@@ -609,9 +606,9 @@ class TestExtractDataforgeWorkingFolder:
             assert live.exists()
         assert not dead.exists()
 
-    def test_a_deep_cache_still_copies_every_keep_path(self, root, monkeypatch):
+    def test_a_deep_cache_still_moves_every_keep_path(self, root, monkeypatch):
         """At the depth cap the deepest keep file passes 260 characters in the
-        working folder. The copy reads through the long-path prefix, so it is
+        working folder. The move reads through the long-path prefix, so it is
         not skipped without a word."""
         extra = 1 + len(pe.DATAFORGE_SCRATCH_PREFIX) + pe._MKDTEMP_RANDOM_CHARS
         beside = _pad_to(root / "deep", pe._MAX_SCRATCH_CHARS - extra)
@@ -638,20 +635,20 @@ class TestExtractDataforgeWorkingFolder:
                    if not Path(win_long_path(records / rel / "x.xml")).exists()]
         assert missing == []
 
-    def test_the_copy_reads_unforge_output_through_the_long_path_prefix(self, setup, monkeypatch):
+    def test_the_move_reads_unforge_output_through_the_long_path_prefix(self, setup, monkeypatch):
         """A plain exists() on a keep path past 260 characters returns False
         on a PC without Windows long paths turned on (the default), and the
-        copy would skip that subtree without a word. Checked directly, since a
+        move would skip that subtree without a word. Checked directly, since a
         developer machine with long paths enabled can't show the failure."""
         leaf, run = setup
         sources = []
-        real_copy = pe._copy_filtered_records
+        real_move = pe._move_filtered_records
 
         def spy(src, dst):
             sources.append(str(src))
-            return real_copy(src, dst)
+            return real_move(src, dst)
 
-        monkeypatch.setattr(pe, "_copy_filtered_records", spy)
+        monkeypatch.setattr(pe, "_move_filtered_records", spy)
         run(_FakeTools())
         assert len(sources) == 1 and sources[0].startswith("\\\\?\\")
 
@@ -708,7 +705,6 @@ class TestExtractDataforgeRealTools:
         assert pe.extract_dataforge(p4k, py, py, leaf) is True
         records = leaf / "raw" / "libs" / "foundry" / "records"
         assert (records / "entities" / "scitem" / "x.xml").exists()
-        assert (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
         assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
     def test_a_stop_mid_unforge_kills_it_and_cleans_up(self, root):

@@ -2334,10 +2334,6 @@
       "ht": "",
       "at": "Entitätsdateien werden zwischengespeichert…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "Cache-Momentaufnahme für Vergleich wird erstellt…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "Quellen werden synchronisiert..."

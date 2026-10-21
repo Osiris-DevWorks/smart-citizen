@@ -12,8 +12,7 @@ and silently truncated the strings table — a full blocker from one bad byte.
 
 Shared by ``src/parser/ini_parser.py`` and ``src/merger/ini_merger.py``.
 ``scripts/generate_enhancements_ini.py`` carries its own mirror so it stays
-stdlib+lxml-only for standalone runs (same tolerated-duplication shape as
-CATEGORY_SUBTREES ↔ DATAFORGE_KEEP_SUBPATHS); keep the two in sync.
+stdlib+lxml-only for standalone runs; keep the two in sync.
 """
 from __future__ import annotations
 

@@ -2334,10 +2334,6 @@
       "ht": "Guardando archivos de entidades en caché...",
       "at": ""
     },
-    "snapshot_diff": {
-      "ht": "Creando instantánea de caché para diferencias...",
-      "at": ""
-    },
     "syncing_sources": {
       "ht": "",
       "at": "Sincronizando fuentes..."

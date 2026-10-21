@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from utils.pak_extractor import (
     DATAFORGE_KEEP_SUBPATHS,
     P4kLockedError,
-    _copy_filtered_records,
+    _move_filtered_records,
     _raise_unp4k_failure,
     dataforge_cache_is_fresh,
     extract_dataforge,
@@ -521,8 +521,8 @@ class TestDataForgeKeepList:
         )
 
 
-class TestCopyFilteredRecords:
-    """Exercise the filtered-copy helper on a synthetic unforge output tree."""
+class TestMoveFilteredRecords:
+    """Exercise the filtered-move helper on a synthetic unforge output tree."""
 
     @staticmethod
     def _make_fake_unforge_output(root: Path) -> None:
@@ -541,12 +541,12 @@ class TestCopyFilteredRecords:
             leaf.parent.mkdir(parents=True, exist_ok=True)
             leaf.write_text("<dropped/>", encoding="utf-8")
 
-    def test_copies_only_keep_subpaths(self, tmp_path):
+    def test_moves_only_keep_subpaths(self, tmp_path):
         src = tmp_path / "src"
         dst = tmp_path / "dst"
         self._make_fake_unforge_output(src)
 
-        copied, skipped = _copy_filtered_records(src / "libs", dst / "libs")
+        copied, skipped = _move_filtered_records(src / "libs", dst / "libs")
 
         records_dst = dst / "libs" / "foundry" / "records"
         for kept in DATAFORGE_KEEP_SUBPATHS:
@@ -559,6 +559,37 @@ class TestCopyFilteredRecords:
             )
         assert copied == len(DATAFORGE_KEEP_SUBPATHS)
         assert skipped == 0
+        # Moved, not copied: the kept subtrees have left the working folder,
+        # so its delete no longer has them to do, while the rest stays for it.
+        records_src = src / "libs" / "foundry" / "records"
+        for kept in DATAFORGE_KEEP_SUBPATHS:
+            assert not (records_src / kept).exists(), (
+                f"kept path {kept!r} still in the working folder after the move"
+            )
+        for dropped in ("ui", "actor", "missiondata", "tintpalettes", "starmap"):
+            assert (records_src / dropped / "sample.xml").exists()
+
+    def test_falls_back_to_a_copy_when_the_rename_is_refused(self, tmp_path, monkeypatch):
+        """The %TEMP% fallback can put the working folder on another drive,
+        where os.rename refuses to move a directory; the subtree is then
+        copied as it always was, and the source is left for the cleanup."""
+        import os
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+
+        def refuse(*_args, **_kwargs):
+            raise OSError(17, "The system cannot move the file to a different disk drive")
+
+        monkeypatch.setattr(os, "rename", refuse)
+        copied, skipped = _move_filtered_records(src / "libs", dst / "libs")
+
+        assert (copied, skipped) == (len(DATAFORGE_KEEP_SUBPATHS), 0)
+        records_dst = dst / "libs" / "foundry" / "records"
+        records_src = src / "libs" / "foundry" / "records"
+        for kept in DATAFORGE_KEEP_SUBPATHS:
+            assert (records_dst / kept / "sample.xml").exists()
+            assert (records_src / kept / "sample.xml").exists()
 
     def test_skipped_when_source_subpath_missing(self, tmp_path):
         """Some patches don't ship every subtree (e.g. entities/missions).
@@ -570,7 +601,7 @@ class TestCopyFilteredRecords:
         import shutil as _sh
         _sh.rmtree(src / "libs" / "foundry" / "records" / "entities" / "missions")
 
-        copied, skipped = _copy_filtered_records(src / "libs", dst / "libs")
+        copied, skipped = _move_filtered_records(src / "libs", dst / "libs")
 
         assert skipped == 1
         assert copied == len(DATAFORGE_KEEP_SUBPATHS) - 1
@@ -587,7 +618,7 @@ class TestCopyFilteredRecords:
         # No foundry/records under libs — nothing for the filter to work with.
 
         with pytest.raises(FileNotFoundError):
-            _copy_filtered_records(src / "libs", tmp_path / "dst" / "libs")
+            _move_filtered_records(src / "libs", tmp_path / "dst" / "libs")
 
 
 if __name__ == '__main__':

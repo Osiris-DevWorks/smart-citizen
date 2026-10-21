@@ -17,7 +17,7 @@ Each check carries a severity:
 - **Portable mode** *(Critical)*: direct `QSettings(...)` constructor calls outside `src/utils/settings.py` and `src/utils/json_settings.py` break portable mode silently. Must use `AppSettings` helpers.
 - **Worker progress** *(Critical)*: `QProgressBar.setValue(...)` invoked from inside a `QThread` worker — must route through `ProgressSink` (`src/utils/progress_sink.py`).
 - **Worker settings access** *(Critical)*: workers in `src/gui/workers.py` that read `QSettings`/`JsonSettings` directly. Settings must be pre-fetched on the main thread and handed to the worker via `__init__`.
-- **DataForge coverage** *(Critical)*: new read paths in `scripts/generate_enhancements_ini.py` without matching entries in `DATAFORGE_KEEP_SUBPATHS` (`src/utils/pak_extractor.py`) AND `CATEGORY_SUBTREES` (`src/utils/dataforge_diff.py`). Both lists must agree on coverage.
+- **DataForge coverage** *(Critical)*: new read paths in `scripts/generate_enhancements_ini.py` without a matching entry in `DATAFORGE_KEEP_SUBPATHS` (`src/utils/pak_extractor.py`).
 - **Row→entry lookup** *(Critical)*: any `self.entries[row]` indexing or equivalent in `src/gui/` — row index ≠ entry index when filtered/sorted. Must use `_entry_index_for_row(row)`.
 - **Frontend stamp** *(Major)*: any code that writes to the `Frontend_PU_Version` loc-key without going through `_stamp_frontend_version` in `src/gui/main_window.py` — bypasses the no-double-stamp guard.
 - **Table column indices** *(Major)*: hard-coded literal column numbers in `src/gui/` instead of the `COL_*` constants exported from `src/gui/string_table_model.py`.
@@ -35,7 +35,6 @@ Calibration:
 - 3+ occurrences → recommend extraction.
 - 2 occurrences → note as "consider," not a hard finding.
 - Single-use helper proposals → do not recommend; premature abstraction is worse than inline duplication.
-- Honor the documented tolerated exception: `CATEGORY_SUBTREES` ↔ `DATAFORGE_KEEP_SUBPATHS`.
 
 ## Output
 

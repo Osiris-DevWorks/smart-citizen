@@ -10,14 +10,12 @@ inbox "Enable Win32 long paths" policy, which requires admin rights and
 isn't guaranteed to be on for any given user).
 
 The ``win_paths.win_long_path`` helper (#221) already covered
-``pak_extractor.py``'s copy/cleanup step and ``dataforge_patcher.py``'s
-patch target reads. This file locks the follow-up fix: ``dataforge_diff.py``
-(where a real crash was reported —
-the post-extraction snapshot/hash pass had no long-path protection at all),
+``pak_extractor.py``'s move/cleanup step and ``dataforge_patcher.py``'s
+patch target reads. This file locks the follow-up fix:
 ``pak_extractor.py``'s ``extract_dataforge``/``dataforge_cache_is_fresh``
-entry points, and ``generate_enhancements_ini.py``'s ``main()`` (20+
-``ET.parse`` call sites and 18+ ``rglob`` walks, all fixed for free by
-wrapping the single ``forge_dir`` root they all derive from).
+entry points, and ``generate_enhancements_ini.py``'s ``main()`` (20+ XML
+parse sites and 18+ ``rglob`` walks, all fixed for free by wrapping the
+single ``forge_dir`` root they all derive from).
 """
 from __future__ import annotations
 
@@ -32,7 +30,6 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from utils.win_paths import win_long_path, win_plain_path  # noqa: E402
-from utils import dataforge_diff  # noqa: E402
 from utils.pak_extractor import dataforge_cache_is_fresh  # noqa: E402
 
 pytestmark = pytest.mark.unit
@@ -111,55 +108,10 @@ class TestWinPlainPath:
             assert win_plain_path("/home/test") == "/home/test"
 
 
-class TestDataforgeDiffLongPath:
-    """#221 follow-up: the post-extraction snapshot/hash pass — where the
-    real crash was reported — must wrap its cache_dir like every other
-    DataForge-cache consumer."""
-
-    def test_update_manifest_wraps_cache_dir(self, tmp_path):
-        cache_dir = tmp_path / "dataforge"
-        (cache_dir / "libs").mkdir(parents=True)
-        (cache_dir / "libs" / "a.xml").write_text("<x/>")
-
-        with patch(
-            "utils.dataforge_diff.win_long_path", wraps=win_long_path
-        ) as spy:
-            dataforge_diff.update_manifest(cache_dir)
-            spy.assert_called_once_with(cache_dir)
-
-    def test_dirty_categories_wraps_cache_dir(self, tmp_path):
-        cache_dir = tmp_path / "dataforge"
-        (cache_dir / "libs").mkdir(parents=True)
-        (cache_dir / "libs" / "a.xml").write_text("<x/>")
-        dataforge_diff.update_manifest(cache_dir)
-
-        with patch(
-            "utils.dataforge_diff.win_long_path", wraps=win_long_path
-        ) as spy:
-            result = dataforge_diff.dirty_categories(cache_dir)
-            spy.assert_called_once_with(cache_dir)
-            assert result == set()  # nothing changed since the manifest snapshot
-
-    def test_update_manifest_and_dirty_categories_still_work_normally(self, tmp_path):
-        """Functional sanity check: wrapping doesn't change real behavior on
-        an ordinary (short) path."""
-        cache_dir = tmp_path / "dataforge"
-        (cache_dir / "libs").mkdir(parents=True)
-        (cache_dir / "libs" / "a.xml").write_text("<x/>")
-
-        assert dataforge_diff.dirty_categories(cache_dir) is None  # no manifest yet
-        dataforge_diff.update_manifest(cache_dir)
-        assert dataforge_diff.dirty_categories(cache_dir) == set()
-
-        (cache_dir / "libs" / "a.xml").write_text("<x changed='1'/>")
-        changed = dataforge_diff.dirty_categories(cache_dir)
-        assert changed is not None
-
-
 class TestPakExtractorLongPath:
     """extract_dataforge / dataforge_cache_is_fresh must wrap
     dataforge_cache_dir at their own entry point (not rely solely on
-    _copy_filtered_records' internal wrapping further down the call)."""
+    _move_filtered_records' internal wrapping further down the call)."""
 
     def test_dataforge_cache_is_fresh_wraps_cache_dir(self, tmp_path):
         p4k_path = tmp_path / "Data.p4k"

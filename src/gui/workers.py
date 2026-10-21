@@ -30,7 +30,6 @@ from src.parser.ini_parser import load_source_files, load_sources_from_settings
 from src.utils.i18n import tr
 from src.utils.resource_path import resolve_patches_dir
 from src.utils.settings import AppSettings
-from src.utils.dataforge_diff import dirty_categories
 from src.utils.tag_builder import tag_config_fingerprint
 logger = logging.getLogger(__name__)
 
@@ -542,31 +541,7 @@ class EnhancementsGeneratorWorker(QThread):
                 raise FileNotFoundError(f"Enhancements generator script not found: {script_path}")
 
             base_ini  = AppSettings.get_base_ini_path(self.language)
-            enh_dir   = AppSettings.get_enhancements_dir(self.language)
             forge_dir = AppSettings.get_dataforge_cache_dir()
-            # ── Diff-cache check ──────────────────────────────────────────────
-            # Compare the current DataForge XMLs against the last-run manifest.
-            # None  → no manifest yet, run everything.
-            # set() → nothing changed, skip entirely.
-            # {...} → only re-run the categories whose source XMLs changed.
-            from src.utils.pak_extractor import DATAFORGE_LIBS_SUBPATH
-            libs_dir = forge_dir / DATAFORGE_LIBS_SUBPATH
-            diff = dirty_categories(libs_dir)
-            # If enhancement files are missing, force regeneration even if the
-            # manifest says nothing changed — the manifest may have been written
-            # before enhancements were ever successfully generated.
-            if diff is not None and not diff:
-                missing = [
-                    name for name in AppSettings.ENHANCEMENTS_FILES.values()
-                    if not (enh_dir / name).exists()
-                ]
-                if missing:
-                    logger.info(
-                        f"Diff-cache: manifest clean but {len(missing)} enhancement "
-                        f"file(s) missing ({', '.join(missing[:3])}{'…' if len(missing) > 3 else ''}), forcing regeneration."
-                    )
-                    diff = None  # None = treat as first run, regenerate everything
-            # ─────────────────────────────────────────────────────────────────
             # Re-apply DataForge patches before generation. apply_patches is
             # idempotent: already-patched files are a cheap no-op, so running
             # this every regen picks up newly-added patches without forcing
