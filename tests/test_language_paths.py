@@ -25,7 +25,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils import atomic_io  # noqa: E402
 from src.utils import settings as settings_module  # noqa: E402
@@ -285,7 +284,7 @@ class TestStampsGoWhereTheRunStarted:
         for folder, key in ((current, "current-build"), (given, "run-build")):
             folder.mkdir()
             (folder / P4K_MTIME_STAMP).write_text(key, encoding="utf-8")
-        monkeypatch.setattr(AppSettings, "get_dataforge_cache_dir", staticmethod(lambda: current))
+        monkeypatch.setattr(AppSettings, "get_dataforge_cache_leaf", staticmethod(lambda: current))
         assert AppSettings.get_dataforge_build_key() == "current-build"
         assert AppSettings.get_dataforge_build_key(given) == "run-build"
 

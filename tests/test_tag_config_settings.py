@@ -14,7 +14,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
@@ -87,7 +86,8 @@ class TestGetAll:
     def test_get_all_returns_one_config_per_category(self, json_backend):
         all_cfgs = AppSettings.get_all_tag_configs()
         assert set(all_cfgs.keys()) == {
-            "components", "missiles", "ship_weapons", "commodities", "mission_titles"}
+            "components", "missiles", "ship_weapons", "commodities", "mission_titles",
+            "armor"}
         assert all(isinstance(v, TagConfig) for v in all_cfgs.values())
 
 

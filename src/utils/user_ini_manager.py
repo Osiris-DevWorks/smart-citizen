@@ -1,19 +1,27 @@
 """User INI persistence and import utilities."""
 import logging
 import shutil
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from src.models.string_model import StringEntry
 from src.parser.ini_parser import parse_ini_file
+from src.utils.install_scanner import SC_CHANNELS
 from src.utils.perf import timed
 
 logger = logging.getLogger(__name__)
 
+# What Smart Citizen writes in its data folder's root since the 0.9.3 channel
+# layout: a folder per channel, and logs (crash dumps and log exports). The
+# installer's DeleteOwnedSubpaths knows the same folders.
+OWNED_DATA_FOLDERS = (*SC_CHANNELS, "logs")
+
 
 def migrate_user_data_dir(
-    old_root: "str | Path", new_root: "str | Path", *, move: bool = False
+    old_root: "str | Path", new_root: "str | Path", *, move: bool = False,
+    exclude: "Optional[Callable[[Path], bool]]" = None,
 ) -> int:
     """Copy (or move) user data from ``old_root`` into ``new_root`` after the
     user changes the Smart Citizen data folder (issue #103).
@@ -30,6 +38,10 @@ def migrate_user_data_dir(
 
     When ``move=False`` (default), the originals are left untouched — copy
     semantics, safe to re-run.
+
+    ``exclude``, when given, is asked about each file's path relative to
+    ``old_root``; a file it says yes to is left where it is, neither moved
+    nor counted (#455 leaves the DataForge cache trees behind this way).
 
     Returns the number of files transferred. A no-op (returns 0) when the old
     root is missing or resolves to the same directory as the new root.
@@ -56,6 +68,11 @@ def migrate_user_data_dir(
     for src in list(old_root.rglob("*")):
         if src.is_dir():
             continue
+        rel = src.relative_to(old_root)
+        # Asked before the resolve below, so an excluded tree of thousands of
+        # files costs only the walk.
+        if exclude is not None and exclude(rel):
+            continue
         # Skip anything already under the destination (the new-inside-old
         # case), so we don't recursively re-copy the new folder's contents.
         try:
@@ -63,7 +80,6 @@ def migrate_user_data_dir(
             continue  # src is inside new_root → leave it alone
         except (ValueError, OSError):
             pass  # not under new_root → migrate it
-        rel = src.relative_to(old_root)
         dest = new_root / rel
         if dest.exists():
             continue  # never clobber data already present in the new location
@@ -95,6 +111,81 @@ def migrate_user_data_dir(
     verb = "Moved" if move else "Migrated"
     logger.info(f"{verb} {transferred} file(s) from {old_root} to {new_root}")
     return transferred
+
+
+def _is_dataforge_cache(rel: Path) -> bool:
+    """A DataForge cache tree, or an extraction's work folder, in a channel
+    folder's ``cache`` (``rel`` is relative to the channel folder). An old
+    data folder can still hold the pre-1.0 DataForge cache there, about
+    28,000 files that ``migrate_dataforge_cache_to_local`` would only delete
+    or queue again, and a queued ``pending_cache_cleanup`` may name it where
+    it is. It is rebuilt by an extraction, so it is not moved (#455)."""
+    parts = [part.lower() for part in rel.parts]
+    return len(parts) > 2 and parts[0] == "cache" and (
+        parts[1] == "dataforge" or parts[1].startswith(("dataforge.", "globalini.extracting-"))
+    )
+
+
+@dataclass(frozen=True)
+class DataMoveResult:
+    """What :func:`move_owned_user_data` did: the files it moved, and the
+    Smart Citizen files still in the old folder afterwards."""
+    old_root: Path
+    new_root: Path
+    moved: int
+    left: tuple
+
+
+def move_owned_user_data(old_root: "str | Path", new_root: "str | Path") -> DataMoveResult:
+    """Move Smart Citizen's own folders (``OWNED_DATA_FOLDERS``) from
+    ``old_root`` into ``new_root``, for the move Setup asks for when the user
+    leaves a OneDrive data folder (#455).
+
+    Nobody is asked first, so only what the app writes there moves. A data
+    folder set to a general folder, such as OneDrive's Documents itself,
+    keeps its other files. Each folder goes through
+    :func:`migrate_user_data_dir` with ``move=True``: merged, never
+    overwriting, so a file already in ``new_root`` wins and its old copy
+    stays, as does a file that cannot be moved. ``left`` lists what stayed.
+    The DataForge cache trees in each channel's ``cache`` are left out of
+    both (``_is_dataforge_cache``): rebuilt by an extraction, not user data.
+    ``old_root`` itself is removed when that leaves it empty. The same
+    folder, or an old folder that is gone, moves nothing.
+    """
+    old_root = Path(old_root)
+    new_root = Path(new_root)
+    nothing = DataMoveResult(old_root, new_root, 0, ())
+    try:
+        if old_root.resolve() == new_root.resolve():
+            return nothing
+        owned = {name.upper() for name in OWNED_DATA_FOLDERS}
+        folders = [p for p in old_root.iterdir() if p.is_dir() and p.name.upper() in owned]
+    except OSError as e:
+        logger.warning(f"Could not read the old data folder {old_root}: {e}")
+        return nothing
+
+    moved = 0
+    for folder in folders:
+        moved += migrate_user_data_dir(folder, new_root / folder.name, move=True,
+                                       exclude=_is_dataforge_cache)
+    left = []
+    for folder in folders:
+        try:
+            left.extend(p for p in folder.rglob("*")
+                        if p.is_file() and not _is_dataforge_cache(p.relative_to(folder)))
+        except OSError:
+            left.append(folder)
+    try:
+        if not any(old_root.iterdir()):
+            old_root.rmdir()
+    except OSError:
+        pass
+    if left:
+        # The startup box points at the Log tab for these.
+        logger.warning(f"{len(left)} Smart Citizen file(s) stayed in {old_root}:")
+        for path in left:
+            logger.warning(f"  {path}")
+    return DataMoveResult(old_root, new_root, moved, tuple(left))
 
 
 def reset_user_ini(user_ini_path: Path, backup: bool = True) -> Optional[Path]:

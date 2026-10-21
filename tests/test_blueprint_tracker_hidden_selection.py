@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (  # noqa: E402
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 

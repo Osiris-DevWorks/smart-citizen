@@ -11,7 +11,7 @@ import pytest
 from lxml import etree as ET
 
 from src.utils import atomic_io
-from utils.dataforge_patcher import (
+from src.utils.dataforge_patcher import (
     LocstringWorkaround,
     apply_locstring_workarounds,
     apply_patches,

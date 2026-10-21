@@ -15,6 +15,8 @@ Kişisel düzenlemeleriniz, oyundan ayrı olarak Smart Citizen veri klasörünü
 
 Smart Citizen yalnızca yerelleştirme metnini (oyunun size gösterdiği sözcükleri) düzenler; oyun mantığına dokunmaz, size herhangi bir avantaj sağlamaz ve CIG'in sunucularıyla iletişim kurmaz. Değişikliklerimiz sorun yaratmamalıdır **diye düşünüyoruz**.
 
+İsteğe bağlı **Smart Citizen Katmanı** (Katman sekmesi) de aynı şekilde oyuna dokunmadan çalışır. Oyunun üzerine sıradan pencereler çizer, ekranınızdaki pikselleri bir ekran görüntüsü aracının yaptığı gibi okur ve oyunun `Game.log` dosyasını okur. Oyuna asla kod enjekte etmez veya kanca atmaz, oyunun işlemini asla açmaz veya belleğini okumaz ve asla klavye ya da fare girdisi göndermez. CIG bu tür katmanlar hakkında herhangi bir açıklama yapmadı; bu nedenle aşağıdaki, kullanımın kendi sorumluluğunuzda olduğuna dair not burada da geçerlidir.
+
 CIG, topluluk yerelleştirmesini açıkça desteklemiştir. [Community Localization Update](https://robertsspaceindustries.com/spectrum/community/SC/forum/1/thread/star-citizen-community-localization-update) gönderisi, oyuncular tarafından yapılan çevirilere yönelik resmi desteği ortaya koyar; bizim anladığımız kadarıyla bu, Smart Citizen'ın yaptığı türden yerelleştirme düzenlemelerine açıkça izin vermektedir.
 
 Tanınmış yayıncılar benzer yerelleştirme projelerini herkesin gözü önünde yürütüyor ve hiçbirine durması söylenmedi.

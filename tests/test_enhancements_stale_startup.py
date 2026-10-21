@@ -123,8 +123,8 @@ def disk(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(AppSettings, "settings", staticmethod(lambda: shared))
     AppSettings.set_user_data_dir(tmp_path / "data")
     state = _Disk(tmp_path)
-    monkeypatch.setattr(AppSettings, "get_dataforge_cache_dir",
-                        staticmethod(lambda: state.forge_dir()))
+    for getter in ("get_dataforge_cache_dir", "get_dataforge_cache_leaf"):
+        monkeypatch.setattr(AppSettings, getter, staticmethod(lambda: state.forge_dir()))
     monkeypatch.setattr(AppSettings, "get_p4k_path", staticmethod(lambda: state.p4k))
     state.p4k.parent.mkdir(parents=True)
     state.p4k.write_bytes(b"p4k")
@@ -241,7 +241,7 @@ class TestStartupCheck:
 
     def test_a_never_extracted_cache_stays_quiet(self, disk):
         """Build key "unknown": there is nothing to generate from. The folder
-        exists (get_dataforge_cache_dir creates it), so the gate must be
+        exists (the fixture makes it), so the gate must be
         freshness, not the folder."""
         disk.never_extracted()
         _stamp("english", "empty")

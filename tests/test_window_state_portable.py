@@ -20,7 +20,6 @@ import pytest
 from PyQt6.QtCore import QByteArray
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 # Import via src.X so the backend swap matches the class production code uses.
 from src.utils.json_settings import JsonSettings  # noqa: E402
