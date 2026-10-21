@@ -4,30 +4,30 @@ Tests for P4K extraction and DataForge integration (v0.6.0 critical feature)
 Tests cover:
 - P4K extraction pipeline
 - DataForge cache management
-- Stats INI generation
 - Error handling for missing P4K or tools
 """
 
 import pytest
+import ast
 import logging
 import re
+import subprocess
 import tempfile
 import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import sys
+from types import SimpleNamespace
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from utils.pak_extractor import (
+import src.utils.pak_extractor as pe
+from src.utils.onedrive import _ONEDRIVE_ENV_VARS
+from src.utils.pak_extractor import (
     DATAFORGE_KEEP_SUBPATHS,
     P4kLockedError,
-    _copy_filtered_records,
+    _cache_filtered_records,
     _raise_unp4k_failure,
     dataforge_cache_is_fresh,
-    extract_dataforge,
 )
-from utils.i18n import set_language, tr
+# The extractor translates through src.utils.i18n, so the language is set there.
+from src.utils.i18n import set_language, tr
 
 
 class TestDataForgeCache:
@@ -162,274 +162,255 @@ class TestDataForgeCache:
             assert dataforge_cache_is_fresh(p4k_path, cache_dir) is True
 
 
+class _UnpackFailed(Exception):
+    """Stands in for whatever unp4k's _run_tool can raise: an OSError from
+    Popen, its timeout, a stop."""
+
+
+def _write_dcb(args, cwd: Path) -> subprocess.CompletedProcess:
+    """What a working unp4k leaves in its working folder."""
+    (cwd / "Data").mkdir()
+    (cwd / "Data" / "Game2.dcb").write_bytes(b"dcb")
+    return subprocess.CompletedProcess(args, 0, "", "")
+
+
 class TestDataForgeExtraction:
-    """Test P4K extraction pipeline"""
+    """extract_dataforge's early failures, with a fake _run_tool standing in
+    for unp4k and unforge: a missing tool or Data.p4k, and an unp4k that
+    fails by exit code or by exception. Each must end the run before unforge
+    starts, keep the old cache and leave no working folder. Where the tools
+    work, the copy and the stop points are in test_extraction_working_folder.py.
 
-    @patch('utils.pak_extractor.subprocess.run')
-    def test_extract_dataforge_calls_unp4k_and_unforge(self, mock_run):
-        """Test that extract_dataforge calls both unp4k and unforge tools"""
-        mock_run.return_value = MagicMock(returncode=0)
+    The fake goes on src.utils.pak_extractor (``pe``), the module production
+    imports and whose extract_dataforge these tests call. A fake set on a
+    second copy of the module would never reach it, and tests/test_import_paths.py
+    keeps the short import that loaded one out (#510)."""
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            p4k_path = os.path.join(tmpdir, 'Data.p4k')
-            cache_dir = os.path.join(tmpdir, 'dataforge')
+    pytestmark = pytest.mark.unit
 
-            # Create dummy p4k file
-            with open(p4k_path, 'w') as f:
-                f.write('dummy p4k')
+    @pytest.fixture
+    def env(self, tmp_path, monkeypatch):
+        """Dummy tools and Data.p4k, a cache leaf holding an old cache, and a
+        fake _run_tool that records each tool it is asked to run. unp4k does
+        what ``env.unp4k`` says (by default it writes Data/Game2.dcb) and
+        unforge writes every keep subtree next to the dcb. Isolated as in
+        test_extraction_working_folder.py: a private %TEMP%, no OneDrive in
+        the environment and no real drive-type probe."""
+        systemp = tmp_path / "systemp"
+        systemp.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(systemp))
+        for var in _ONEDRIVE_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setattr(pe, "_drive_is_removable_or_network", lambda path: False)
+        tools = tmp_path / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        leaf = tmp_path / "LIVE" / "cache" / "dataforge"
+        leaf.mkdir(parents=True)
+        (leaf / "old-cache-sentinel").write_text("old")
+        env = SimpleNamespace(tools=tools, leaf=leaf, systemp=systemp, calls=[],
+                              unp4k=_write_dcb)
 
-            # Attempt extraction (will fail without real tools, but we can check calls)
-            try:
-                extract_dataforge(p4k_path, cache_dir)
-            except Exception:
-                pass  # Expected to fail without real tools
+        def fake_run_tool(args, *, cwd, timeout, should_cancel=None):
+            tool = Path(args[0]).stem
+            env.calls.append(tool)
+            if tool == "unp4k":
+                return env.unp4k(args, Path(cwd))
+            records = Path(args[1]).parent / "libs" / pe.DATAFORGE_RECORDS_UNDER_LIBS
+            for rel in pe.DATAFORGE_KEEP_SUBPATHS:
+                (records / rel).mkdir(parents=True, exist_ok=True)
+                (records / rel / "x.xml").write_text("<x/>", encoding="utf-8")
+            return subprocess.CompletedProcess(args, 0, "", "")
 
-            # Verify subprocess.run was called (would be for unp4k)
-            # Note: actual behavior depends on implementation
-            assert mock_run.called or True  # Graceful failure
+        monkeypatch.setattr(pe, "_run_tool", fake_run_tool)
+        env.run = lambda: pe.extract_dataforge(
+            tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe", leaf
+        )
+        return env
 
-    @patch('utils.pak_extractor.subprocess.run')
-    def test_extract_dataforge_handles_missing_tools(self, mock_run):
-        """Test extraction error handling when tools are missing"""
-        # Simulate tool not found error
-        mock_run.side_effect = FileNotFoundError("unp4k.exe not found")
+    @staticmethod
+    def _assert_old_cache_kept_and_no_folder_left(env):
+        assert (env.leaf / "old-cache-sentinel").exists()
+        assert not (env.leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not (env.leaf / pe.P4K_MTIME_STAMP).exists()
+        assert list(env.leaf.parent.glob(pe.DATAFORGE_SCRATCH_PREFIX + "*")) == []
+        assert list(env.systemp.iterdir()) == []
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            p4k_path = os.path.join(tmpdir, 'Data.p4k')
-            cache_dir = os.path.join(tmpdir, 'dataforge')
+    @pytest.mark.parametrize("missing", ["unp4k.exe", "unforge.exe", "Data.p4k"])
+    def test_a_missing_tool_or_p4k_fails_before_any_tool_runs(self, env, missing):
+        (env.tools / missing).unlink()
+        with pytest.raises(FileNotFoundError, match=re.escape(missing) + " not found at"):
+            env.run()
+        assert env.calls == []
+        self._assert_old_cache_kept_and_no_folder_left(env)
 
-            with open(p4k_path, 'w') as f:
-                f.write('dummy p4k')
+        # With the file back the same run goes through the fake tools, so the
+        # fake reaches this extract_dataforge and only the missing file stopped it.
+        (env.tools / missing).write_bytes(b"x")
+        assert env.run() is True
+        assert env.calls == ["unp4k", "unforge"]
 
-            # Should raise or return error gracefully
-            with pytest.raises((FileNotFoundError, Exception)):
-                extract_dataforge(p4k_path, cache_dir)
+    def test_a_failed_unp4k_stops_the_run_with_its_error_output(self, env):
+        def failing_unp4k(args, cwd):
+            _write_dcb(args, cwd)   # a partial dcb, which unforge must never get
+            return subprocess.CompletedProcess(args, 1, "unp4k 3.0 banner", "Invalid P4K format")
 
-    @patch('utils.pak_extractor.subprocess.run')
-    def test_extract_dataforge_handles_invalid_p4k(self, mock_run):
-        """Test extraction error handling for invalid P4K file"""
-        # Simulate extraction failure
-        mock_run.return_value = MagicMock(returncode=1, stderr="Invalid P4K format")
+        env.unp4k = failing_unp4k
+        with pytest.raises(RuntimeError) as raised:
+            env.run()
+        assert not isinstance(raised.value, pe.P4kLockedError)
+        assert "exited with code 1" in str(raised.value)
+        assert "Invalid P4K format" in str(raised.value)
+        assert env.calls == ["unp4k"]
+        self._assert_old_cache_kept_and_no_folder_left(env)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            p4k_path = os.path.join(tmpdir, 'invalid.p4k')
-            cache_dir = os.path.join(tmpdir, 'dataforge')
+    def test_a_locked_p4k_reaches_the_caller_as_the_locked_error(self, env):
+        """The workers tell this case apart by its type (P4kLockedError), so it
+        must come out of extract_dataforge as it is. The helper alone is
+        tested in TestUnp4kFailureMessage."""
+        def locked_unp4k(args, cwd):
+            return subprocess.CompletedProcess(
+                args, 3762504530, "unp4k 3.0 banner",
+                "System.IO.IOException: The process cannot access the file 'Data.p4k' "
+                "because it is being used by another process.",
+            )
 
-            # Create invalid p4k file
-            with open(p4k_path, 'w') as f:
-                f.write('not a valid p4k file')
+        env.unp4k = locked_unp4k
+        with pytest.raises(pe.P4kLockedError):
+            env.run()
+        assert env.calls == ["unp4k"]
+        self._assert_old_cache_kept_and_no_folder_left(env)
 
-            # Should handle error gracefully
-            try:
-                extract_dataforge(p4k_path, cache_dir)
-            except Exception as e:
-                # Should provide meaningful error message
-                assert 'p4k' in str(e).lower() or 'extract' in str(e).lower() or True
+    def test_an_exception_from_unp4k_stops_the_run_unchanged(self, env):
+        boom = _UnpackFailed("unp4k failed")
 
-    def test_cache_directory_structure(self):
-        """Test that expected cache directories are created"""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            cache_dir = os.path.join(tmpdir, 'dataforge')
+        def raising_unp4k(args, cwd):
+            _write_dcb(args, cwd)   # a partial dcb, which unforge must never get
+            raise boom
 
-            expected_subdirs = [
-                'entity',
-                'entities',
-                'entityclasses',
-                'ships',
-                'weapons',
-            ]
-
-            # Simulate creating cache structure
-            os.makedirs(cache_dir, exist_ok=True)
-            for subdir in expected_subdirs:
-                subdir_path = os.path.join(cache_dir, subdir)
-                os.makedirs(subdir_path, exist_ok=True)
-
-            # Verify structure
-            assert os.path.exists(cache_dir)
-            for subdir in expected_subdirs:
-                assert os.path.exists(os.path.join(cache_dir, subdir))
-
-
-class TestStatsGeneration:
-    """Test stats INI file generation"""
-
-    def test_stats_file_format(self):
-        """Test that generated stats files have correct format"""
-        stats_content = 'vehicle_DescHunter=Max Speed: 210 m/s\n'
-        stats_content += 'vehicle_Desc_Avenger=Cargo: 46 SCU\n'
-
-        # Parse as INI format (key=value)
-        lines = stats_content.strip().split('\n')
-        entries = {}
-        for line in lines:
-            if '=' in line:
-                key, value = line.split('=', 1)
-                entries[key] = value
-
-        assert 'vehicle_DescHunter' in entries
-        assert entries['vehicle_DescHunter'] == 'Max Speed: 210 m/s'
-
-    def test_stats_generation_handles_missing_dataforge(self):
-        """Test stats generation graceful failure when DataForge cache missing"""
-        with tempfile.TemporaryDirectory():
-            # Cache doesn't exist - stats generation should handle gracefully
-            # (may create empty stats files or skip)
-            stats_files = [
-                'ships_desc_stats.ini',
-                'components_desc_stats.ini',
-                'ship_weapons_desc_stats.ini',
-                'fps_weapons_desc_stats.ini'
-            ]
-
-            # In production, script should handle missing cache
-            # Here we just verify the filenames are expected
-            for filename in stats_files:
-                assert filename.endswith('.ini')
-
-    def test_stats_file_merges_with_base(self):
-        """Test that stats entries properly merge with base source"""
-        base_entries = {
-            'vehicle_NameHunter': 'Drake Cutlass Black',
-            'vehicle_DescHunter': 'Original description'
-        }
-
-        stats_entries = {
-            'vehicle_DescHunter': 'Max Speed: 210 m/s | Cargo: 180 SCU | Shields: 8000',
-        }
-
-        # Merge with stats having priority (higher in hierarchy)
-        merged = base_entries.copy()
-        merged.update(stats_entries)
-
-        assert merged['vehicle_NameHunter'] == 'Drake Cutlass Black'
-        assert 'Max Speed' in merged['vehicle_DescHunter']
-
-    def test_component_stats_format(self):
-        """Test that component stats have expected format"""
-        component_stats = [
-            'item_DescSHLD_Aspirum=Shield Generator: 8000 HP',
-            'item_DescPOWR_TR1=Power: 4500W, Heat: 180',
-            'item_DescCOOL_Delphi=Cooling: 1200/s',
-            'item_DescQDRV_Soleris=Quantum Range: 46 Million KM',
-        ]
-
-        for line in component_stats:
-            assert '=' in line
-            key, value = line.split('=', 1)
-            assert key.startswith('item_Desc')
-            assert len(value) > 0
+        env.unp4k = raising_unp4k
+        with pytest.raises(_UnpackFailed) as raised:
+            env.run()
+        assert raised.value is boom
+        assert env.calls == ["unp4k"]
+        self._assert_old_cache_kept_and_no_folder_left(env)
 
 
-class TestStatsErrorHandling:
-    """Test error handling in stats pipeline"""
+class TestNoSubprocessRunPatches:
+    """pak_extractor runs unp4k and unforge through _run_tool, which uses
+    Popen (#471), so a patch of subprocess.run never reaches them. Four tests
+    in this file patched it and passed without testing anything. This fails
+    when a test file that mentions pak_extractor has a patch(), patch.object(),
+    mocker.patch(), monkeypatch.setattr() or setattr() call whose target,
+    given positionally or as the target=, attribute= or name= keyword, is
+    spelled through the name subprocess: the string
+    subprocess.run, utils.pak_extractor.subprocess.run or
+    src.utils.pak_extractor.subprocess.run, or an object such as subprocess
+    or pe.subprocess with the name "run". An aliased import is not seen
+    (import subprocess as sp, then patch.object(sp, "run")). Patch
+    ``pe._run_tool`` instead, as TestDataForgeExtraction does."""
 
-    def test_corrupted_stats_file_handling(self):
-        """Test that corrupted stats files are handled gracefully"""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            stats_file = os.path.join(tmpdir, 'corrupted.ini')
+    pytestmark = pytest.mark.unit
 
-            # Write corrupted content (no '=' on some lines)
-            with open(stats_file, 'w') as f:
-                f.write('valid_key=valid_value\n')
-                f.write('invalid_line_no_equals\n')
-                f.write('another_valid=value\n')
+    _TESTS = Path(__file__).resolve().parent
+    _TARGET = re.compile(r"(?:^|\.)subprocess\.run$")
 
-            # When parsing, invalid lines should be skipped gracefully
-            with open(stats_file, 'r') as f:
-                entries = {}
-                for line in f:
-                    line = line.strip()
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        entries[key] = value
+    @classmethod
+    def _subprocess_run_patches(cls, source: str) -> list:
+        """Lines of patch(), patch.object(), monkeypatch.setattr() and
+        setattr() calls (a decorator, a with block, mocker.patch too) whose
+        target is subprocess.run: a dotted string ending in subprocess.run,
+        or an object ending in subprocess with the name "run". Only the
+        target is read, so a fake that calls subprocess.run is no match."""
+        hits = []
+        for node in ast.walk(ast.parse(source)):
+            if not isinstance(node, ast.Call):
+                continue
+            func = ast.unparse(node.func).split(".")
+            if not (func[-1] in ("patch", "setattr") or func[-2:] == ["patch", "object"]):
+                continue
+            # The target and the name may also come as keywords: patch(target=...),
+            # patch.object(..., attribute=...), monkeypatch.setattr(target=..., name=...).
+            keywords = {k.arg: k.value for k in node.keywords if k.arg}
+            first = node.args[0] if node.args else keywords.get("target")
+            second = (node.args[1] if len(node.args) >= 2
+                      else keywords.get("attribute", keywords.get("name")))
+            if first is None:
+                continue
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                target = first.value
+            elif second is not None:
+                name = second.value if isinstance(second, ast.Constant) else ast.unparse(second)
+                target = f"{ast.unparse(first)}.{name}"
+            else:
+                continue
+            if cls._TARGET.search(target):
+                hits.append(node.lineno)
+        return hits
 
-            assert len(entries) == 2
-            assert 'valid_key' in entries
-            assert 'another_valid' in entries
+    def test_no_test_file_patches_subprocess_run_for_pak_extractor(self):
+        scanned, offenders = [], {}
+        for path in sorted(self._TESTS.glob("*.py")):
+            source = path.read_text(encoding="utf-8-sig")
+            if "pak_extractor" not in source:
+                continue
+            scanned.append(path.name)
+            lines = self._subprocess_run_patches(source)
+            if lines:
+                offenders[path.name] = lines
+        assert offenders == {}, (
+            f"These lines patch subprocess.run, which pak_extractor never calls: "
+            f"{offenders}. Patch pe._run_tool instead."
+        )
+        # It read the files it is there for, so it cannot pass by reading nothing.
+        assert {"test_pak_extraction.py", "test_extraction_working_folder.py"} <= set(scanned)
 
-    def test_missing_stats_file_fallback(self):
-        """Test that missing stats files don't crash the app"""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            stats_file = os.path.join(tmpdir, 'nonexistent.ini')
+    @pytest.mark.parametrize("snippet, line", [
+        pytest.param("@patch('utils.pak_extractor.subprocess.run')\ndef f(m): pass\n", 1,
+                     id="old-decorator"),
+        pytest.param("@patch('src.utils.pak_extractor.subprocess.run')\ndef f(m): pass\n", 1,
+                     id="src-decorator"),
+        pytest.param("def f():\n    with mock.patch('subprocess.run'):\n        pass\n", 2,
+                     id="with-block"),
+        pytest.param("@patch.object(pe.subprocess, 'run')\ndef f(m): pass\n", 1,
+                     id="patch-object"),
+        pytest.param("def f(monkeypatch):\n"
+                     "    monkeypatch.setattr(pe.subprocess, 'run', None)\n", 2,
+                     id="monkeypatch-object"),
+        pytest.param("def f(monkeypatch):\n"
+                     "    monkeypatch.setattr('utils.pak_extractor.subprocess.run', None)\n", 2,
+                     id="monkeypatch-string"),
+        pytest.param("def f(mocker):\n"
+                     "    mocker.patch('src.utils.pak_extractor.subprocess.run')\n", 2,
+                     id="mocker"),
+        pytest.param("setattr(subprocess, 'run', None)\n", 1, id="builtin-setattr"),
+        pytest.param("@patch(target='utils.pak_extractor.subprocess.run')\ndef f(m): pass\n", 1,
+                     id="patch-target-keyword"),
+        pytest.param("@patch.object(pe.subprocess, attribute='run')\ndef f(m): pass\n", 1,
+                     id="patch-object-attribute-keyword"),
+        pytest.param("def f(monkeypatch):\n"
+                     "    monkeypatch.setattr(target=pe.subprocess, name='run', value=None)\n", 2,
+                     id="monkeypatch-keywords"),
+    ])
+    def test_the_guard_sees_each_spelling(self, snippet, line):
+        assert self._subprocess_run_patches(snippet) == [line]
 
-            # Attempt to load missing file
-            entries = {}
-            try:
-                if os.path.exists(stats_file):
-                    with open(stats_file, 'r') as f:
-                        for line in f:
-                            if '=' in line:
-                                key, value = line.split('=', 1)
-                                entries[key] = value
-            except Exception:
-                pass  # Gracefully continue without stats
-
-            # App should continue with empty stats
-            assert entries == {}
-
-    def test_stats_disabled_flag(self):
-        """Test that stats can be disabled via settings"""
-        # Stats should be loadable only if stats_enabled=True in settings
-        stats_enabled = True
-
-        if stats_enabled:
-            # Stats would be loaded from files
-            stats_entries = {'vehicle_DescHunter': 'Max Speed: 210 m/s'}
-        else:
-            # Stats not loaded
-            stats_entries = {}
-
-        # Toggle off
-        stats_enabled = False
-        if stats_enabled:
-            stats_entries = {'vehicle_DescHunter': 'Max Speed: 210 m/s'}
-        else:
-            stats_entries = {}
-
-        # Verify toggle works
-        assert stats_entries == {}
-
-
-class TestIntegrationP4KToStats:
-    """Integration tests for full P4K → Stats pipeline"""
-
-    def test_pipeline_structure(self):
-        """Test that P4K pipeline has all expected stages"""
-        pipeline_stages = [
-            'Extract P4K (unp4k.exe)',
-            'Extract Game2.dcb',
-            'Convert DataForge (unforge.exe)',
-            'Generate entity XMLs',
-            'Parse XMLs for stats',
-            'Generate stats INI files',
-            'Merge stats with sources',
-        ]
-
-        # Verify stages are logical
-        assert 'P4K' in pipeline_stages[0]
-        assert 'unforge' in pipeline_stages[2].lower()
-        assert 'stats INI' in pipeline_stages[5]
-
-    @patch('utils.pak_extractor.subprocess.run')
-    def test_pipeline_stops_on_first_failure(self, mock_run):
-        """Test that pipeline stops gracefully on first error"""
-        # First call fails
-        mock_run.side_effect = [
-            Exception("unp4k failed"),
-            MagicMock(returncode=0)  # unforge wouldn't be called
-        ]
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            p4k_path = os.path.join(tmpdir, 'Data.p4k')
-            with open(p4k_path, 'w') as f:
-                f.write('dummy')
-
-            cache_dir = os.path.join(tmpdir, 'cache')
-
-            # Pipeline should fail at first stage
-            with pytest.raises(Exception):
-                extract_dataforge(p4k_path, cache_dir)
+    @pytest.mark.parametrize("snippet", [
+        pytest.param("def f(monkeypatch):\n    monkeypatch.setattr(pe, '_run_tool', None)\n",
+                     id="the-run-tool-seam"),
+        pytest.param("def f(monkeypatch):\n"
+                     "    monkeypatch.setattr(pe.subprocess, 'Popen', None)\n",
+                     id="popen"),
+        pytest.param("def f(monkeypatch):\n"
+                     "    monkeypatch.setattr(pe, '_run_tool',\n"
+                     "                        lambda *a, **k: subprocess.run(*a))\n",
+                     id="a-fake-that-calls-run"),
+        pytest.param("x = \"@patch('utils.pak_extractor.subprocess.run')\"\n",
+                     id="a-string-not-a-call"),
+    ])
+    def test_the_guard_ignores_what_is_not_a_subprocess_run_patch(self, snippet):
+        assert self._subprocess_run_patches(snippet) == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -520,9 +501,32 @@ class TestDataForgeKeepList:
             f"an ancestor entry: {redundant}"
         )
 
+    def test_no_entries_clash_or_nest_ignoring_case(self):
+        """NTFS ignores case, so 'Entities/SCItem' is entities/scitem there:
+        a second entry that names a kept subtree again in other capitals, or
+        one under it, would be moved or copied onto a subtree already in
+        place (#484)."""
+        folded = [entry.casefold() for entry in DATAFORGE_KEEP_SUBPATHS]
+        assert len(set(folded)) == len(folded), folded
+        nested = [(entry, other) for i, entry in enumerate(folded)
+                  for j, other in enumerate(folded) if i != j and _is_subpath_of(entry, other)]
+        assert not nested, nested
 
-class TestCopyFilteredRecords:
-    """Exercise the filtered-copy helper on a synthetic unforge output tree."""
+    def test_every_entry_is_a_plain_relative_path(self):
+        """Each entry is joined under unforge's records folder and renamed
+        out of it (#484), which takes its source away. '..', a drive or a
+        leading slash would reach outside that folder."""
+        bad = [entry for entry in DATAFORGE_KEEP_SUBPATHS
+               if not entry or entry.startswith("/") or "\\" in entry or ":" in entry
+               or any(part in ("", ".", "..") for part in entry.split("/"))]
+        assert not bad, bad
+
+
+class TestCacheFilteredRecords:
+    """Exercise the caching helper on a synthetic unforge output tree, with
+    the kept subtrees copied and moved (#484)."""
+
+    _DROPPED = ("ui", "actor", "missiondata", "tintpalettes", "starmap")
 
     @staticmethod
     def _make_fake_unforge_output(root: Path) -> None:
@@ -536,33 +540,68 @@ class TestCopyFilteredRecords:
             leaf.parent.mkdir(parents=True, exist_ok=True)
             leaf.write_text("<kept/>", encoding="utf-8")
         # Files in paths we want dropped — these must NOT survive.
-        for dropped in ("ui", "actor", "missiondata", "tintpalettes", "starmap"):
+        for dropped in TestCacheFilteredRecords._DROPPED:
             leaf = records / dropped / "sample.xml"
             leaf.parent.mkdir(parents=True, exist_ok=True)
             leaf.write_text("<dropped/>", encoding="utf-8")
+
+    @staticmethod
+    def _file_ids(records: Path) -> dict:
+        """{kept subtree: its sample.xml's file ID}. os.stat, because a
+        DirEntry's st_ino is 0 on Windows. A rename keeps the ID, a copy
+        makes a new one."""
+        return {kept: os.stat(records / kept / "sample.xml").st_ino
+                for kept in DATAFORGE_KEEP_SUBPATHS}
 
     def test_copies_only_keep_subpaths(self, tmp_path):
         src = tmp_path / "src"
         dst = tmp_path / "dst"
         self._make_fake_unforge_output(src)
 
-        copied, skipped = _copy_filtered_records(src / "libs", dst / "libs")
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=False)
 
         records_dst = dst / "libs" / "foundry" / "records"
+        records_src = src / "libs" / "foundry" / "records"
         for kept in DATAFORGE_KEEP_SUBPATHS:
             assert (records_dst / kept / "sample.xml").exists(), (
                 f"kept path {kept!r} missing from filtered output"
             )
-        for dropped in ("ui", "actor", "missiondata", "tintpalettes", "starmap"):
+            assert (records_src / kept / "sample.xml").exists(), (
+                f"kept path {kept!r} left the source on a copy"
+            )
+        for dropped in self._DROPPED:
             assert not (records_dst / dropped).exists(), (
                 f"{dropped!r} leaked into filtered output"
             )
-        assert copied == len(DATAFORGE_KEEP_SUBPATHS)
-        assert skipped == 0
+        assert counts == (0, len(DATAFORGE_KEEP_SUBPATHS), 0)
 
-    def test_skipped_when_source_subpath_missing(self, tmp_path):
+    def test_moves_only_keep_subpaths(self, tmp_path):
+        """Each kept subtree is renamed into place: gone from the source,
+        with its files' IDs, and every dropped folder stays behind."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+        records_src = src / "libs" / "foundry" / "records"
+        before = self._file_ids(records_src)
+
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=True)
+
+        records_dst = dst / "libs" / "foundry" / "records"
+        assert counts == (len(DATAFORGE_KEEP_SUBPATHS), 0, 0)
+        assert self._file_ids(records_dst) == before
+        for kept in DATAFORGE_KEEP_SUBPATHS:
+            assert not (records_src / kept).exists(), f"kept path {kept!r} still in the source"
+        for dropped in self._DROPPED:
+            assert (records_src / dropped / "sample.xml").exists(), f"{dropped!r} was taken"
+            assert not (records_dst / dropped).exists(), (
+                f"{dropped!r} leaked into filtered output"
+            )
+
+    @pytest.mark.parametrize("move", [False, True], ids=["copy", "move"])
+    def test_skipped_when_source_subpath_missing(self, tmp_path, move):
         """Some patches don't ship every subtree (e.g. entities/missions).
-        Missing source paths should increment `skipped`, not fail."""
+        Missing source paths should increment `skipped`, not fail, and count
+        as neither moved nor copied."""
         src = tmp_path / "src"
         dst = tmp_path / "dst"
         self._make_fake_unforge_output(src)
@@ -570,16 +609,17 @@ class TestCopyFilteredRecords:
         import shutil as _sh
         _sh.rmtree(src / "libs" / "foundry" / "records" / "entities" / "missions")
 
-        copied, skipped = _copy_filtered_records(src / "libs", dst / "libs")
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=move)
 
-        assert skipped == 1
-        assert copied == len(DATAFORGE_KEEP_SUBPATHS) - 1
+        present = len(DATAFORGE_KEEP_SUBPATHS) - 1
+        assert counts == ((present, 0, 1) if move else (0, present, 1))
         records_dst = dst / "libs" / "foundry" / "records"
         assert not (records_dst / "entities" / "missions").exists()
         # All other kept paths survived
         assert (records_dst / "entities" / "scitem" / "sample.xml").exists()
 
-    def test_raises_on_unexpected_layout(self, tmp_path):
+    @pytest.mark.parametrize("move", [False, True], ids=["copy", "move"])
+    def test_raises_on_unexpected_layout(self, tmp_path, move):
         """If unforge's output doesn't have the expected libs/foundry/records
         layout, fail loudly rather than producing a silently-empty cache."""
         src = tmp_path / "src"
@@ -587,11 +627,26 @@ class TestCopyFilteredRecords:
         # No foundry/records under libs — nothing for the filter to work with.
 
         with pytest.raises(FileNotFoundError):
-            _copy_filtered_records(src / "libs", tmp_path / "dst" / "libs")
+            _cache_filtered_records(src / "libs", tmp_path / "dst" / "libs", move=move)
 
+    def test_a_file_where_a_subtree_goes_is_never_replaced(self, tmp_path):
+        """A file named scitem sits where entities/scitem goes. The rename is
+        refused (WinError 183) and the fallback copy cannot make the folder,
+        so the run fails and the file keeps its text. os.replace would have
+        put the folder in place of the file without a word."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+        stray = dst / "libs" / "foundry" / "records" / "entities" / "scitem"
+        stray.parent.mkdir(parents=True)
+        stray.write_text("not a folder", encoding="utf-8")
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+        with pytest.raises(FileExistsError):
+            _cache_filtered_records(src / "libs", dst / "libs", move=True)
+
+        assert stray.is_file() and stray.read_text(encoding="utf-8") == "not a folder"
+        assert (src / "libs" / "foundry" / "records" / "entities" / "scitem"
+                / "sample.xml").exists()
 
 
 class TestUnp4kFailureMessage:
@@ -610,6 +665,23 @@ class TestUnp4kFailureMessage:
 
     def setup_method(self):
         set_language("english")
+
+    def test_setup_reaches_the_language_the_extractor_reads(self):
+        """setup_method must switch the language the extractor reads, on
+        src.utils.i18n. Set on a second copy of the module, it once left these
+        tests on whatever language an earlier test had set."""
+        import src.utils.i18n as extractor_i18n
+        try:
+            extractor_i18n.set_language("german")
+            german = extractor_i18n.tr("extract.p4k_locked")
+            self.setup_method()
+            english = tr("extract.p4k_locked")
+            assert german != english     # control: the two languages differ here
+            with pytest.raises(P4kLockedError) as exc:
+                _raise_unp4k_failure(3762504530, self._REAL_LOCK_STDERR)
+            assert str(exc.value) == english
+        finally:
+            extractor_i18n.set_language("english")
 
     def test_locked_file_raises_friendly_message(self):
         with pytest.raises(P4kLockedError) as exc:
@@ -655,7 +727,7 @@ class TestUnp4kFailureMessage:
         ERROR-level record anywhere in the app, which would duplicate the
         friendly dialog this raises into with a second, raw-stack-trace
         popup on top of it (the exact bug this regression-guards)."""
-        with caplog.at_level(logging.WARNING, logger="utils.pak_extractor"):
+        with caplog.at_level(logging.WARNING, logger="src.utils.pak_extractor"):
             with pytest.raises(RuntimeError):
                 _raise_unp4k_failure(3762504530, self._REAL_LOCK_STDERR)
         assert not any(r.levelno >= logging.ERROR for r in caplog.records)
@@ -665,7 +737,7 @@ class TestUnp4kFailureMessage:
         """A genuinely unexpected unp4k failure should still surface through
         the global ErrorDialogHandler — only the well-understood locked-file
         case is downgraded."""
-        with caplog.at_level(logging.WARNING, logger="utils.pak_extractor"):
+        with caplog.at_level(logging.WARNING, logger="src.utils.pak_extractor"):
             with pytest.raises(RuntimeError):
                 _raise_unp4k_failure(2, "some other unp4k error")
         assert any(r.levelno >= logging.ERROR for r in caplog.records)
@@ -719,7 +791,7 @@ class TestCacheLayoutNamedOnce:
         assert self._spellings() == self._ALLOWED
 
     def test_the_names_describe_the_layout_the_extraction_writes(self):
-        from utils.pak_extractor import (
+        from src.utils.pak_extractor import (
             DATAFORGE_LIBS_SUBPATH, DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH,
             DATAFORGE_RECORDS_UNDER_LIBS,
         )

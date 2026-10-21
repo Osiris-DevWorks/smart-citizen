@@ -21,7 +21,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils import i18n  # noqa: E402
 

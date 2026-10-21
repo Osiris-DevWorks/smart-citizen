@@ -9,17 +9,18 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.gui.combo_box import NoScrollComboBox
 from src.gui.tag_mapping_dialog import TagMappingDialog
 from src.gui.theme import needs_apply_style
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 from src.utils.tag_builder import (
-    CATEGORIES, ELEMENT_LABELS, ENCLOSINGS, LOCATION_DETAILS,
+    CATEGORIES, ELEMENT_LABELS, LOCATION_DETAILS,
     MAPPED_KIND_NAMES, MISSION_TITLE_PLACEMENTS, PLACEMENTS, RANK_SEPARATORS,
     REMOVE_WORD_OPTIONS, ROUTE_ARROWS, SEPARATORS, SHORTEN_PHRASE_OPTIONS,
     SIZE_ABBREV_BY_WORD, STYLES_BY_KIND, TITLE_SEPARATORS, TagConfig,
     USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
-    default_config, render_route, render_tag, route_enabled,
+    default_config, enclosings_for, render_route, render_tag, route_enabled,
 )
 
 # All cargo-size words, for the single "Shorten cargo sizes" master toggle.
@@ -28,60 +29,10 @@ _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
 logger = logging.getLogger(__name__)
 
 
-def reposition_combo_popup_below_if_it_fits(combo, popup) -> None:
-    """Move *popup* to align with *combo*'s bottom-left corner, but only if
-    it actually fits on-screen there.
-
-    Qt's default popup placement flips the list above the box when it judges
-    there isn't room below (common in a scroll area, even when there visually
-    is room) — force it below whenever that actually fits, so the option list
-    is where the user expects it. A combo near the bottom of the screen is
-    the case Qt's flip logic exists for; forcing "below" there would run the
-    popup off the bottom of the display, so only override when there's room.
-
-    Shared by _NoScrollComboBox.showPopup below (initial placement) and
-    blueprint_tracker_tab.py's _NoWheelComboBox.showPopup (#388, re-checked
-    a second time there after forcibly shrinking an overlong popup — the
-    first check ran against the original, taller height).
-    """
-    below_point = combo.mapToGlobal(combo.rect().bottomLeft())
-    screen = combo.screen()
-    fits_below = (
-        screen is None
-        or below_point.y() + popup.height() <= screen.availableGeometry().bottom()
-    )
-    if fits_below:
-        popup.move(below_point)
-
-
-class _NoScrollComboBox(QComboBox):
-    """A combo box that ignores the mouse wheel unless it has focus (#197).
-
-    The Enhancements tab lives in a scroll area with many dropdowns; by default
-    a wheel scroll over an unfocused combo changes its selection instead of
-    scrolling the page. StrongFocus stops the wheel from focusing the combo, and
-    wheelEvent passes the scroll through to the page when the combo isn't focused.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
-    def wheelEvent(self, event):  # noqa: N802 (Qt override)
-        if self.hasFocus():
-            super().wheelEvent(event)
-        else:
-            event.ignore()
-
-    def showPopup(self):  # noqa: N802 (Qt override)
-        super().showPopup()
-        reposition_combo_popup_below_if_it_fits(self, self.view().window())
-
-
 class _NoScrollTabBar(QTabBar):
     """A tab bar that never switches tabs on mouse wheel scroll.
 
-    Unlike a combo box (_NoScrollComboBox above), there's no legitimate case
+    Unlike a combo box (NoScrollComboBox), there's no legitimate case
     for wheel-scrolling through tabs here — a hover-scroll over the Tag
     Builder's category tabs (Components/Missiles/.../Mission Titles) should
     scroll the page, not silently jump categories. Always ignores the wheel
@@ -101,12 +52,14 @@ _PREVIEW_VALUES: dict[str, dict[str, str]] = {
     "commodities":  {"label": "Crafting",
                      "usage": USAGE_INPUT_SEP.join(["Quantum Drive", "Shield"]),
                      "collection": "Collection"},
+    "armor":        {"weight": "Heavy"},
 }
 _PREVIEW_NAMES: dict[str, str] = {
     "components":   "FR-76",
     "missiles":     "Marksman I Missile",
     "ship_weapons": "MaxOx NN-14",
     "commodities":  "Agricium",
+    "armor":        "ADP-mk4 Core",
 }
 _CATEGORY_LABELS: dict[str, str] = {
     "components":   "Components",
@@ -114,6 +67,7 @@ _CATEGORY_LABELS: dict[str, str] = {
     "ship_weapons": "Ship Weapons",
     "commodities":  "Commodities",
     "mission_titles": "Mission Titles",
+    "armor":        "Armor",
 }
 
 
@@ -447,9 +401,12 @@ class EnhancementsTab(QWidget):
         saved set (_saved_category_keys), because a tick not yet saved with
         the category Apply button was not generated, and judging the run by
         it would keep Generate lit after every run that never builds it.
+
+        Reads the cache folder without creating it (#494), as
+        refresh_forge_status does.
         """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path = AppSettings.get_p4k_path()
         if not (forge_dir / P4K_MTIME_STAMP).exists():
             return True
@@ -572,7 +529,20 @@ class EnhancementsTab(QWidget):
             return
         stamp = AppSettings.get_tag_config_stamp()
         current = self._live_tag_config_fingerprint()
-        self._set_tag_btn_dirty(not stamp or stamp != current)
+        self._set_tag_btn_dirty(not stamp or stamp != current
+                                or self._pages_differ_from_saved())
+
+    def _pages_differ_from_saved(self) -> bool:
+        """True when a Tag Builder page holds an edit not yet saved.
+
+        The fingerprint leaves the Armor config out while its tag is off
+        (#492), so an Armor-tab edit made in that state (brackets, mapping,
+        Reset) would not change it, and a refresh would grey the button over
+        an edit that is lost on restart. Comparing each page with its saved
+        config keeps the "you have unsaved changes" signal for those too."""
+        pages = getattr(self, "_tag_builder_pages", None) or {}
+        return any(page.config.to_json() != AppSettings.get_tag_config(cat).to_json()
+                   for cat, page in pages.items())
 
     def _enhancements_output_exists(self) -> bool:
         """True if any enabled category has at least one generated INI on disk.
@@ -712,7 +682,7 @@ class EnhancementsTab(QWidget):
         self._sort_prefix_label = QLabel(tr("enhancements.sort_prefix_label"))
         prefix_row.addWidget(self._sort_prefix_label)
 
-        self.favorite_prefix_combo = _NoScrollComboBox()
+        self.favorite_prefix_combo = NoScrollComboBox()
         self.favorite_prefix_combo.setToolTip(tr("enhancements.favorite_prefix_tooltip"))
         self.favorite_prefix_combo.setSizeAdjustPolicy(
             QComboBox.SizeAdjustPolicy.AdjustToContents
@@ -789,7 +759,7 @@ class EnhancementsTab(QWidget):
 
         self._header_style_label_widget = QLabel(tr("enhancements.mission_label_header_style"))
         grid.addWidget(self._header_style_label_widget, 1, 4)
-        self._header_em_combo = _NoScrollComboBox()
+        self._header_em_combo = NoScrollComboBox()
         # #164: show what the tags actually do in-game (EM3 underlines, EM4
         # renders blue) instead of the opaque EM3/EM4 names. The stored value
         # stays the EM tag, so the generator output is unchanged.
@@ -943,9 +913,15 @@ class EnhancementsTab(QWidget):
         self.refresh_forge_status()
 
     def refresh_forge_status(self):
-        """Update the DataForge cache status label."""
+        """Update the DataForge cache status label.
+
+        Reads the cache folder without creating it (#494). This runs while
+        the tab is built, so a folder Windows refused to create, or one on a
+        drive that is gone, kept Smart Citizen from opening. A missing folder
+        has no stamp, so it reads as not extracted.
+        """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path = AppSettings.get_p4k_path()
         if not (forge_dir / P4K_MTIME_STAMP).exists():
             self._forge_status_label.setText(tr("enhancements.forge_status_not_extracted"))
@@ -990,9 +966,10 @@ class EnhancementsTab(QWidget):
         gl.addWidget(self._tag_builder_tabs)
 
         # Issue #31 follow-up: cross-surface toggle for the inline
-        # component annotation inside mission POTENTIAL BLUEPRINTS lists.
-        # Default ON preserves v1.4.0 behavior. When off, mission bodies
-        # render bare names ("Norfield") even though the same component
+        # component annotation inside mission POTENTIAL BLUEPRINTS lists,
+        # and the armor weight tag there too while Armor > Weight is on
+        # (#492). Default ON preserves v1.4.0 behavior. When off, mission
+        # bodies render bare names ("Norfield") even though the same item
         # on the strings tab still shows the configured tag. The toggle
         # is persisted alongside the per-category configs and applied
         # by the same "Save Tag Changes" button below — no separate
@@ -1279,6 +1256,7 @@ class _ElementRow(QWidget):
         "type":       "Shield Generator",
         "label":      "Crafting",
         "collection": "Collection",
+        "weight":     "Heavy",
     }
 
     def __init__(self, spec, mapping: dict | None = None,
@@ -1320,7 +1298,7 @@ class _ElementRow(QWidget):
         self.label.setMinimumWidth(90)
         row.addWidget(self.label)
 
-        self.style_combo = _NoScrollComboBox()
+        self.style_combo = NoScrollComboBox()
         for style_key, style_label in STYLES_BY_KIND.get(spec.kind, ()):
             self.style_combo.addItem(
                 self._build_style_label(spec.kind, style_key, style_label),
@@ -1357,6 +1335,7 @@ class _ElementRow(QWidget):
             "type": "enhancements.tag_mapping_tooltip_type",
             "label": "enhancements.tag_mapping_tooltip_label",
             "collection": "enhancements.tag_mapping_tooltip_collection",
+            "weight": "enhancements.tag_mapping_tooltip_weight",
         }.get(kind, "enhancements.tag_mapping_tooltip_default")
 
     def retranslate_ui(self) -> None:
@@ -1465,7 +1444,7 @@ class _TagBuilderPage(QWidget):
 
         self._sep_label = QLabel(tr("enhancements.tag_separator_label"))
         ctrl_grid.addWidget(self._sep_label, 0, 0)
-        self.sep_combo = _NoScrollComboBox()
+        self.sep_combo = NoScrollComboBox()
         for key, label, _ in SEPARATORS:
             # "None" is offered for every category, commodities included: a
             # deliberate no-separator commodity tag renders "[CFCollection]".
@@ -1478,8 +1457,8 @@ class _TagBuilderPage(QWidget):
 
         self._enc_label = QLabel(tr("enhancements.tag_enclosing_label"))
         ctrl_grid.addWidget(self._enc_label, 1, 0)
-        self.enc_combo = _NoScrollComboBox()
-        for key, label, _open, _close in ENCLOSINGS:
+        self.enc_combo = NoScrollComboBox()
+        for key, label, _open, _close in enclosings_for(self.category):
             self.enc_combo.addItem(label, userData=key)
         self._select_combo(self.enc_combo, config.enclosing)
         self.enc_combo.currentIndexChanged.connect(self._on_enc_changed)
@@ -1487,7 +1466,7 @@ class _TagBuilderPage(QWidget):
 
         self._placement_label = QLabel(tr("enhancements.tag_placement_label"))
         ctrl_grid.addWidget(self._placement_label, 2, 0)
-        self.placement_combo = _NoScrollComboBox()
+        self.placement_combo = NoScrollComboBox()
         for key, label in PLACEMENTS:
             self.placement_combo.addItem(label, userData=key)
         self._select_combo(self.placement_combo, config.placement)
@@ -1501,7 +1480,7 @@ class _TagBuilderPage(QWidget):
         if self.category == "commodities":
             self._usage_sep_label = QLabel(tr("enhancements.tag_craft_usage_separator_label"))
             ctrl_grid.addWidget(self._usage_sep_label, 3, 0)
-            self.usage_sep_combo = _NoScrollComboBox()
+            self.usage_sep_combo = NoScrollComboBox()
             for key, label, _ in SEPARATORS:
                 self.usage_sep_combo.addItem(label, userData=key)
             self._select_combo(self.usage_sep_combo, config.usage_separator)
@@ -1702,7 +1681,7 @@ class _TagBuilderPage(QWidget):
         col.addWidget(self._mt_hint)
 
         def _combo(items) -> QComboBox:
-            c = _NoScrollComboBox()
+            c = NoScrollComboBox()
             for entry in items:
                 c.addItem(entry[1], userData=entry[0])
             # AdjustToContents (rather than the default

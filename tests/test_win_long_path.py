@@ -29,11 +29,9 @@ from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from utils.win_paths import win_long_path, win_plain_path  # noqa: E402
-from utils import dataforge_diff  # noqa: E402
-from utils.pak_extractor import dataforge_cache_is_fresh  # noqa: E402
+from src.utils.win_paths import win_long_path, win_plain_path
+from src.utils import dataforge_diff
+from src.utils.pak_extractor import dataforge_cache_is_fresh
 
 pytestmark = pytest.mark.unit
 
@@ -122,7 +120,7 @@ class TestDataforgeDiffLongPath:
         (cache_dir / "libs" / "a.xml").write_text("<x/>")
 
         with patch(
-            "utils.dataforge_diff.win_long_path", wraps=win_long_path
+            "src.utils.dataforge_diff.win_long_path", wraps=win_long_path
         ) as spy:
             dataforge_diff.update_manifest(cache_dir)
             spy.assert_called_once_with(cache_dir)
@@ -134,7 +132,7 @@ class TestDataforgeDiffLongPath:
         dataforge_diff.update_manifest(cache_dir)
 
         with patch(
-            "utils.dataforge_diff.win_long_path", wraps=win_long_path
+            "src.utils.dataforge_diff.win_long_path", wraps=win_long_path
         ) as spy:
             result = dataforge_diff.dirty_categories(cache_dir)
             spy.assert_called_once_with(cache_dir)
@@ -159,7 +157,7 @@ class TestDataforgeDiffLongPath:
 class TestPakExtractorLongPath:
     """extract_dataforge / dataforge_cache_is_fresh must wrap
     dataforge_cache_dir at their own entry point (not rely solely on
-    _copy_filtered_records' internal wrapping further down the call)."""
+    _cache_filtered_records' internal wrapping further down the call)."""
 
     def test_dataforge_cache_is_fresh_wraps_cache_dir(self, tmp_path):
         p4k_path = tmp_path / "Data.p4k"
@@ -173,7 +171,7 @@ class TestPakExtractorLongPath:
         (cache_dir / ".p4k_mtime").write_text("2000000000")
 
         with patch(
-            "utils.pak_extractor._win_long_path", wraps=win_long_path
+            "src.utils.pak_extractor._win_long_path", wraps=win_long_path
         ) as spy:
             result = dataforge_cache_is_fresh(p4k_path, cache_dir)
             assert result is True

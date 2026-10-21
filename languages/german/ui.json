@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Rechtliche Informationen konnten nicht geladen werden."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Overlay"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Overlay"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen Overlay (SCO) starten oder beenden: Entschlüsselung von Bergbau-Signaturen und eine Blaupausen-Schublade über dem Spiel. Benötigt den randlosen Fenstermodus."
     }
   },
   "filters": {
@@ -616,7 +628,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "Ordner für user.ini, Quellen-Cache, Erweiterungs-INIs und Sicherungen. Verschiebe diesen Ordner aus dem OneDrive-synchronisierten Dokumente-Ordner, falls die Cache-Bereinigung fehlschlägt. Der DataForge-XML-Cache hat unten seinen eigenen Pfad — er ist ca. 1,4 GB groß, daher hält ihn der Standardpfad automatisch aus OneDrive heraus."
+      "at": "Ordner für user.ini, Quellen-Cache, Erweiterungs-INIs und Sicherungen. Verschiebe diesen Ordner aus dem OneDrive-synchronisierten Dokumente-Ordner, falls die Cache-Bereinigung fehlschlägt. Der DataForge-XML-Cache hat unten seinen eigenen Pfad — er ist ca. 1,2 GB groß, daher hält ihn der Standardpfad automatisch aus OneDrive heraus."
     },
     "app_data_label": {
       "ht": "",
@@ -705,6 +717,22 @@
     "invalid_cache_folder_title": {
       "ht": "",
       "at": "Ungültiger Cache-Ordner"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, seinen Cache in diesem Ordner zu erstellen:\n{folder}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen konnte diesen Ordner nicht erreichen:\n{folder}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte diesen Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDer DataForge-Cache-Ordner wurde nicht geändert."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "Der ausgewählte Cache-Ordner ist eine Datei, kein Ordner:\n{folder}"
     },
     "dataforge_cache_changed_title": {
       "ht": "",
@@ -808,7 +836,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Basisordner für den extrahierten DataForge-XML-Baum (~1,4 GB). Jeder Kanal wird darin unter {base}\\{channel}\\cache\\dataforge\\ verschachtelt. Standardmäßig %LOCALAPPDATA%\\Smart Citizen, damit er aus OneDrive herausgehalten wird. Eine Pfadänderung löst eine erneute Extraktion aus."
+      "at": "Basisordner für den extrahierten DataForge-XML-Baum (etwa 1,2 GB). Jeder Kanal wird darin unter {base}\\{channel}\\cache\\dataforge\\ verschachtelt. Eine Extraktion braucht während der Ausführung bis zu etwa 4,5 GB freien Speicherplatz auf diesem Laufwerk, weniger, wenn bereits ein Cache vorhanden ist. Die Arbeitsdateien der Extraktion landen stattdessen in %TEMP%, wenn dieser Ordner auf OneDrive, einem Netzwerk- oder Wechsellaufwerk liegt oder sehr tief verschachtelt ist. Standardmäßig %LOCALAPPDATA%\\Smart Citizen, damit er aus OneDrive herausgehalten wird. Eine Pfadänderung löst eine erneute Extraktion aus."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -1070,7 +1098,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Optionale Funktionen, die die Basis-Lokalisierungsdaten erweitern: Kategorie-Umschalter für den Erweiterungsgenerator, ein Favoriten-Präfix für die In-Game-Schiffsliste und ein Tag-Generator, der die eingeklammerten Namens-Tags von Komponenten, Raketen und Schiffswaffen anpasst."
+      "at": "Optionale Funktionen, die die Basis-Lokalisierungsdaten erweitern: Kategorie-Umschalter für den Erweiterungsgenerator, ein Favoriten-Präfix für die In-Game-Schiffsliste und ein Tag-Generator, der die eingeklammerten Namens-Tags von Komponenten, Raketen, Schiffswaffen, Rohstoffen und Rüstungen anpasst."
     },
     "enhancements_group": {
       "ht": "",
@@ -1090,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "Kampfwerte für FPS-Waffen"
+      "at": "Kampfwerte für FPS-Waffen und Gewichtsklassen-Tags für Rüstungen"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1134,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "Passt die eingeklammerten Namens-Tags von Komponenten, Raketen und Schiffswaffen an. Änderungen wirken sich aus, nachdem du auf „Tag-Änderungen speichern“ geklickt und „Erweiterungen erstellen“ erneut ausgeführt hast."
+      "at": "Passt die eingeklammerten Namens-Tags von Komponenten, Raketen, Schiffswaffen, Rohstoffen und Rüstungen sowie die Route in Frachtmissionstiteln an. Änderungen wirken sich aus, nachdem du auf „Tag-Änderungen speichern“ geklickt und „Erweiterungen erstellen“ erneut ausgeführt hast."
     },
     "preview_label": {
       "ht": "",
@@ -1142,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "Komponenten in Missionsbeschreibungen kennzeichnen"
+      "at": "Komponenten und Rüstungen in Missionsbeschreibungen kennzeichnen"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1302,15 +1330,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Wenn aktiviert, wird das konfigurierte [KLASSE-Sx-Grad]-Tag zu Komponentennamen innerhalb der Liste MÖGLICHE BAUPLÄNE in Missionsbeschreibungen hinzugefügt. Deaktivieren für einen übersichtlicheren Missionstext bei gleichzeitigem Erhalt des Tags an den eigentlichen Komponentennamen andernorts."
+      "at": "Wenn aktiviert, werden das konfigurierte Komponenten-Tag und bei aktiviertem Armor > Weight das Gewichtsklassen-Tag zu Gegenstandsnamen in der Liste MÖGLICHE BAUPLÄNE in Missionsbeschreibungen hinzugefügt. Deaktivieren für einen übersichtlicheren Missionstext. Die Tags bleiben an den Gegenstandsnamen an anderer Stelle."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Das Standardmuster, die Zuordnung und die Reihenfolge für jede Kategorie (Komponenten / Raketen / Schiffswaffen) wiederherstellen. Speichert oder erzeugt nicht neu, bis du auf „Tag-Änderungen speichern“ oder „Erweiterungen erstellen“ klickst."
+      "at": "Das Standardmuster, die Zuordnung und die Reihenfolge auf jedem Tab des Tag-Generators wiederherstellen (schaltet auch die optionalen Rohstoff- und Rüstungs-Tags wieder aus). Die Tag-Konfigurationen werden erst gespeichert oder neu erzeugt, wenn du auf „Tag-Änderungen speichern“ oder „Erweiterungen erstellen“ klickst, aber die Allgemeinen Tags im Tab Mission Titles werden bei jeder Änderung sofort gespeichert, daher setzt Zurücksetzen sie sofort auf ihre Standardwerte."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Die Tag-Konfigurationen für Komponenten / Raketen / Schiffswaffen speichern und den Erweiterungsgenerator erneut ausführen. Neue Tags erscheinen im Spiel nach dem nächsten „Erweiterungen anwenden“."
+      "at": "Die Tag-Konfigurationen aller Tabs des Tag-Generators speichern und den Erweiterungsgenerator erneut ausführen. Neue Tags erscheinen im Spiel nach dem nächsten „Erweiterungen anwenden“."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1359,6 +1387,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Bearbeite den Kurz-/Mittel-/Lang-Text für die Sammlungsbeschriftung (z. B. Sammlung → Sam / Sammel / Sammlung)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Bearbeite den Kurz-/Mittel-/Lang-Text für jede Rüstungs-Gewichtsklasse (z. B. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -2016,6 +2048,46 @@
       "ht": "",
       "at": "Cache geleert"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Cache leeren ist nicht verfügbar, während eine Extraktion oder eine Erweiterungsgenerierung läuft. Versuche es erneut, sobald sie abgeschlossen ist."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Die folgenden zwischengespeicherten Dateien werden gelöscht:\n\n{files}\n\nbase.ini muss erneut aus Data.p4k extrahiert werden, bevor Strings geladen werden können."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Auch den DataForge-Cache leeren?\n{folder}\n\nEr enthält die aus Data.p4k extrahierten Entitätsdaten für die Schiffs- und Waffenwerte, und ihn neu zu erstellen dauert einige Minuten. Behalte ihn, wenn du nur die Lokalisierungsstrings aktualisieren möchtest."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Der DataForge-Cache-Ordner war nicht erreichbar und wurde daher nicht geleert:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Cache wird geleert"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Cache-Dateien werden geleert..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} wird gelöscht..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge-Cache wird geleert..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "{count} Element(e) aus dem Cache gelöscht."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Konnte nicht gelöscht werden:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Verzeichnis nicht gefunden"
@@ -2361,6 +2433,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "{channel} wird nach Wiederherstellung der user.ini neu geladen..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Wird mit der extrahierten base.ini neu geladen..."
     }
   },
   "status_bar": {
@@ -2613,6 +2689,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Nicht erneut warnen"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} Datei(en) aus OneDrive in den neuen Datenordner verschoben: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Einige Dateien sind in OneDrive geblieben"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "Das Setup hat deinen Datenordner auf einen lokalen Ordner umgestellt, und Smart Citizen hat {moved} Datei(en) dorthin verschoben.\n\nVon:\n{old}\n\nNach:\n{new}\n\n{left} Datei(en) sind im alten Ordner geblieben, entweder weil im neuen Ordner schon eine Datei mit demselben Namen lag (diese wurde behalten) oder weil die Datei nicht verschoben werden konnte. Der Tab „Protokoll“ listet sie auf.\n\nPrüfe den alten Ordner, bevor du ihn löschst, und kopiere alles, was du noch brauchst, in den neuen."
     }
   },
   "user_ini_reset": {
@@ -2819,6 +2907,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "Die Konvertierung der Spieldatenbank hat länger als 30 Minuten gedauert und wurde abgebrochen.\n\nGefundene Datenbank: {dcb} ({size} MB) unter:\n{path}\n\nEine intakte Installation konvertiert in deutlich unter einer Minute. Meist bedeutet das, dass Smart Citizen den falschen Star-Citizen-Ordner liest. Eine alte oder übrig gebliebene Installation auf Ihrem Laufwerk wirkt gültig, enthält aber veraltete Spieldateien.\n\nÖffnen Sie den RSI Launcher und prüfen Sie den dort angezeigten Installationspfad. Stimmt er nicht mit dem obigen Pfad überein, korrigieren Sie ihn im Config-Tab von Smart Citizen. Ist es derselbe Pfad, führen Sie stattdessen \"Verify Files\" im Launcher aus."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Es ist nicht genug freier Speicherplatz vorhanden. Es wurde nichts gespeichert, und dein aktueller DataForge-Cache wurde nicht verändert."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Es ist nicht genug freier Speicherplatz vorhanden, um global.ini aus Data.p4k zu extrahieren. Es wurde nichts geändert."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "Laufwerk {drive} hat {free} frei, und die Extraktion braucht dort während der Ausführung etwa {needed}."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Gib auf Laufwerk {drive} Speicherplatz frei oder wähle im Konfiguration-Tab einen DataForge-Cache-Ordner auf einem anderen Laufwerk, und versuche es dann erneut."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "Die Extraktion arbeitet in deinem Windows-Temp-Ordner ({folder}), weil der DataForge-Cache-Ordner auf OneDrive, einem Netzwerk- oder Wechsellaufwerk liegt oder sehr tief verschachtelt ist. Gib auf Laufwerk {drive} Speicherplatz frei und versuche es dann erneut."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Gib auf Laufwerk {drive} Speicherplatz frei und versuche es dann erneut."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "Auf Laufwerk {drive} ist der Speicherplatz ausgegangen, während der neue DataForge-Cache hier gespeichert wurde:\n{folder}\n\nDieser Cache ist unvollständig. Gib auf Laufwerk {drive} Speicherplatz frei und extrahiere dann erneut, um ihn neu aufzubauen."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, in diesem Ordner einen Arbeitsordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Prüfe die Berechtigungen dieses Ordners, lass Smart Citizen in der Windows-Sicherheit durch den überwachten Ordnerzugriff zu oder wähle im Konfiguration-Tab einen anderen DataForge-Cache-Ordner, und versuche es dann erneut."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Prüfe die Berechtigungen dieses Ordners oder lass Smart Citizen in der Windows-Sicherheit durch den überwachten Ordnerzugriff zu, und versuche es dann erneut."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte in diesem Ordner keinen Arbeitsordner verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen die Berechtigung verweigert, den DataForge-Cache in diesem Ordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht erreichen:\n{folder}\n\nDie Extraktion wurde nicht gestartet. Schließe das Laufwerk wieder an oder wähle im Konfiguration-Tab einen anderen DataForge-Cache-Ordner, und versuche es dann erneut."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen konnte den DataForge-Cache-Ordner nicht verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "Der DataForge-Cache-Ordner ist ein Link auf einen anderen Ordner:\n{folder}\n\nEr führt zu:\n{target}\n\nSmart Citizen löscht nichts über einen Link, daher wurde die Extraktion nicht gestartet und nichts geändert. Wähle im Konfiguration-Tab den Ordner, zu dem er führt, als DataForge-Cache-Ordner, und versuche es dann erneut."
     }
   },
   "apply": {
@@ -2965,7 +3121,17 @@
       },
       "description": {
         "ht": "",
-        "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen und Rohstoffe. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
+        "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen, Rohstoffe und Rüstungen. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Overlay"
+      },
+      "description": {
+        "ht": "",
+        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
       }
     },
     "blueprint_tracker": {
@@ -2981,7 +3147,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Strings bearbeiten"
+        "at": "9. Strings bearbeiten"
       },
       "description": {
         "ht": "",
@@ -2991,7 +3157,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Nach Spalte filtern"
+        "at": "10. Nach Spalte filtern"
       },
       "description": {
         "ht": "",
@@ -3001,7 +3167,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Editor-Bereich"
+        "at": "11. Editor-Bereich"
       },
       "description": {
         "ht": "",
@@ -3011,7 +3177,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Vorschaubereich"
+        "at": "12. Vorschaubereich"
       },
       "description": {
         "ht": "",
@@ -3021,7 +3187,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Erweiterungen anwenden"
+        "at": "13. Erweiterungen anwenden"
       },
       "description": {
         "ht": "",
@@ -3031,7 +3197,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Konfiguration: Erscheinungsbild"
+        "at": "14. Konfiguration: Erscheinungsbild"
       },
       "description": {
         "ht": "",
@@ -3041,7 +3207,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Konfiguration: Star-Citizen-Installation"
+        "at": "15. Konfiguration: Star-Citizen-Installation"
       },
       "description": {
         "ht": "",
@@ -3051,7 +3217,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Konfiguration: Smart-Citizen-Daten"
+        "at": "16. Konfiguration: Smart-Citizen-Daten"
       },
       "description": {
         "ht": "",
@@ -3061,7 +3227,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Konfiguration: Basis-Lokalisierung"
+        "at": "17. Konfiguration: Basis-Lokalisierung"
       },
       "description": {
         "ht": "",
@@ -3071,7 +3237,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Konfiguration: Werkzeuge"
+        "at": "18. Konfiguration: Werkzeuge"
       },
       "description": {
         "ht": "",
@@ -3081,7 +3247,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Hilfe & Feedback"
+        "at": "19. Hilfe & Feedback"
       },
       "description": {
         "ht": "",
@@ -3201,6 +3367,246 @@
     "zip_filter": {
       "ht": "",
       "at": "Einstellungssicherung (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC-Mineral"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS-Mineral"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Bergung"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Blaupausen suchen..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Nur besessene"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "{owned} von {total} besessen"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Belohnt von {count} Missionen:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Neu: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Es sind noch keine Blaupausendaten geladen. Lade zuerst die Strings und starte dann das Overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...und {count} weitere"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Unbekannt"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Der Bergbau-Scan-Decoder wurde nach einem Fehler angehalten. Starte das Overlay neu, um es erneut zu versuchen; Details stehen im Tab „Protokoll“."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Baupläne"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Mineralien"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Herstellung"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Mineral oder Ort..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Alle abwählen"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Die Scan-Anzeige leuchtet, wenn dieses Mineral erkannt wird"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Mineral oder Komponente..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Keine Mineralien gefunden. Lade zuerst die Texte, falls die Liste leer bleibt."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Keine Treffer. Extrahiere DataForge und erzeuge dann die Erweiterungen mit aktiviertem Commodities oder Journal, um diese Liste zu füllen."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Sonstige"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Verwendet in (durch {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} benötigt:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Benötigt: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Stufe: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Scan-Signatur: {base} pro Gestein, bis zu {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "In {count} hergestellten Gegenständen verwendet"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "System: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Mineralien hier: {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen Overlay"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log; den Spielprozess berührt es nie."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Overlay starten"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Overlay stoppen"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Bergbau-Scan-Decoder"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Liest die Scan-Signatur unter dem Radar und zeigt darunter Vorkommenstyp und Anzahl."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Neue Baupläne als besessen markieren"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Solange das Overlay läuft, werden im Spiel erhaltene Baupläne aus Game.log gelesen und als besessen markiert."
+    },
+    "save_samples": {
+      "ht": "",
+      "at": "Scan-Proben speichern"
+    },
+    "save_samples_hint": {
+      "ht": "",
+      "at": "Speichert ein kleines Bild jeder neu gelesenen Signatur, damit Fehllesungen eingeschickt und der Decoder verbessert werden kann."
+    },
+    "open_samples_btn": {
+      "ht": "",
+      "at": "Probenordner öffnen"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Overlay-Schublade"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Eine Schublade am Bildschirmrand, an der unten gewählten Position. Ausschalten blendet sie samt Bereichen aus."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Baupläne"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Baupläne suchen, sehen, welche Missionen sie belohnen, und eigene abhaken."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Mineralien"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Mineral eingeben, um Fundorte nach Sternensystem zu sehen, oder einen Ort, um seine Mineralien zu sehen."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Herstellung"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Mineral eingeben, um die Komponenten zu sehen, die es nutzen, oder eine Komponente, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Position der Schublade:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "Oben links"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "Oben Mitte"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "Oben rechts"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Mitte links"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Mitte rechts"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "Unten links"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "Unten Mitte"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "Unten rechts"
     }
   }
 }
