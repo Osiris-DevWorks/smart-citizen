@@ -6221,10 +6221,11 @@ class MainWindow(QMainWindow):
 
         closeEvent has normally asked already (_request_extraction_stops,
         ahead of the loader wait), so unp4k or unforge died within a quarter
-        of a second and the worker is deleting its working folder: up to
-        ~62,000 files for DataForge, which takes a while on a slow disk. The
-        window is hidden first so it can't sit there showing as Not
-        Responding meanwhile. Called last in closeEvent, after the window
+        of a second. The global.ini worker then deletes its working folder
+        itself; the DataForge worker hands its folder (up to ~62,000 files,
+        a while on a slow disk) to a background thread that the interpreter
+        waits for at exit, after the window is gone. The window is hidden
+        first so it can't sit there showing as Not Responding meanwhile. Called last in closeEvent, after the window
         state is saved, so the hide cannot change what saveState and
         saveGeometry record.
 

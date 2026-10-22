@@ -7,6 +7,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -241,8 +242,8 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # in its own folder beside the cache leaf,
 # {base}\{channel}\cache\dataforge.extracting-XXXXXXXX, which is:
 #   * on the cache's drive by construction;
-#   * outside the leaf, which step 3 wipes and which the freshness check and
-#     the generator read;
+#   * outside the leaf, which step 3 replaces and which the freshness check
+#     and the generator read;
 #   * inside the channel folder the uninstaller's opt-in wipe deletes whole;
 #   * never named "dataforge" (installer LooksLikeScCache) or
 #     "dataforge.migrating" (the settings.py migrator).
@@ -270,12 +271,23 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # process can delete that file while the run is alive, and Windows closes the
 # handle when the process ends for any reason (a crash, a hard kill). The
 # sweep at the start of every extraction removes only folders whose marker it
-# can delete, which keeps it off a live run in another window.
+# can delete, which keeps it off a live run in another window. The marker stays
+# open while the folder's contents are deleted, which happens on a background
+# thread once the run is over (_release_scratch_later), so the sweep stays off
+# a folder that is still going, too.
+#
+# Deletes are off the progress bar: step 3 moves the previous cache into the
+# run's working folder in one rename (_retire_old_cache) and that folder, with
+# the previous cache in it, is deleted after the run has returned. Deleting the
+# previous cache in place took 8 s and the working folder 10 s or more on an
+# NVMe machine, both between the move and "Done"; the generator that runs next
+# reads only the new cache, so the two overlap now.
 DATAFORGE_SCRATCH_PREFIX = "dataforge.extracting-"
 GLOBAL_INI_SCRATCH_PREFIX = "globalini.extracting-"
 _DATAFORGE_TEMP_PREFIX = "SmartCitizen-DataForge-"    # like %TEMP%\SmartCitizen-Update
 _GLOBAL_INI_TEMP_PREFIX = "SmartCitizen-GlobalIni-"
 _SCRATCH_MARKER = ".in_use"
+_RETIRED_CACHE_NAME = "previous-dataforge"   # the old cache, inside the working folder
 _MKDTEMP_RANDOM_CHARS = 8            # length of tempfile.mkdtemp's random suffix
 _MAX_SCRATCH_CHARS = 190
 # A folder with no marker is either the instant between mkdtemp and opening
@@ -366,20 +378,103 @@ def _open_scratch(parent: Path, prefix: str):
 
 
 def _close_scratch(run_dir: Path, marker) -> None:
-    """Close the marker and delete the working folder. Never raises: a folder
+    """Delete the working folder and close the marker. Never raises: a folder
     that will not go is logged and left for the next extraction's sweep, so a
     cleanup problem can never replace the run's real outcome (on 3.11,
     TemporaryDirectory's own cleanup could, even after the cache had been
-    stamped)."""
+    stamped).
+
+    The folder's contents go first and the marker last, so the folder reads
+    as live to another window's sweep for as long as the delete runs, which
+    is on a background thread after a DataForge run (_release_scratch_later).
+    The marker is closed whatever happens to the contents, so a folder that
+    would not go is left unmarked for that sweep, as before.
+    """
     try:
-        if marker is not None:
-            marker.close()
+        try:
+            if marker is not None:
+                for child in Path(_win_long_path(run_dir)).iterdir():
+                    if child.name == _SCRATCH_MARKER:
+                        continue
+                    if child.is_dir() and not child.is_symlink():
+                        robust_rmtree(child)
+                    else:
+                        os.unlink(child)
+        finally:
+            if marker is not None:
+                marker.close()
         robust_rmtree(run_dir)
     except OSError as e:
         logger.warning(
             f"Could not remove the extraction working folder {run_dir} ({e}); "
             "the next extraction removes it"
         )
+
+
+_deferred_cleanups: list[threading.Thread] = []
+_deferred_lock = threading.Lock()
+
+
+def _release_scratch_later(run_dir: Path, marker) -> threading.Thread:
+    """Start the working folder's delete on a background thread and return it.
+
+    Once the kept subtrees have moved out, a full run's folder still holds
+    about 1 GB (Game2.dcb and unforge's other ~31k records) plus the previous
+    cache _retire_old_cache moved into it: 18 s or more of deleting that used
+    to sit on the progress bar between the move and "Done". The generator
+    that runs next reads only the new cache, so the two overlap instead.
+
+    The thread is not a daemon: closing Smart Citizen waits for it at
+    interpreter exit, with no window showing, as the close used to wait for
+    the worker's own delete, so the folder does not outlive the process
+    unless that is killed. wait_for_deferred_cleanups joins it.
+    """
+    thread = threading.Thread(
+        target=_close_scratch, args=(run_dir, marker),
+        name="dataforge-cleanup", daemon=False,
+    )
+    with _deferred_lock:
+        _deferred_cleanups[:] = [t for t in _deferred_cleanups if t.is_alive()]
+        _deferred_cleanups.append(thread)
+    thread.start()
+    return thread
+
+
+def wait_for_deferred_cleanups(timeout: float | None = None) -> bool:
+    """Wait for every working-folder delete _release_scratch_later started.
+    Returns False when *timeout* seconds passed with one still running."""
+    deadline = None if timeout is None else time.monotonic() + timeout
+    with _deferred_lock:
+        threads = list(_deferred_cleanups)
+    for thread in threads:
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        thread.join(remaining)
+        if thread.is_alive():
+            return False
+    return True
+
+
+def _retire_old_cache(leaf: Path, run_dir: Path) -> None:
+    """Move the previous cache at *leaf* into the run's working folder, so it
+    goes with that folder's background delete instead of being deleted here
+    (8 s for 31k files on an NVMe machine, more on the disks and OneDrive
+    folders users have). One rename when the working folder is beside the
+    cache, which is the normal placement. A refused rename (the %TEMP%
+    fallback is on another drive; a file inside is open) deletes in place as
+    before, raising if even that fails: nothing may be moved into a leaf that
+    still holds the old cache."""
+    if not leaf.exists():
+        return
+    retired = run_dir / _RETIRED_CACHE_NAME
+    try:
+        os.rename(_win_long_path(leaf), _win_long_path(retired))
+    except OSError as e:
+        logger.info(
+            f"Could not move the previous DataForge cache aside ({e}); deleting it in place"
+        )
+        robust_rmtree(leaf)
+        return
+    logger.info("Moved the previous DataForge cache into the working folder; it goes with it")
 
 
 def _begin_scratch(near, prefix: str, temp_prefix: str, *, temp_if_refused: bool = False):
@@ -416,8 +511,8 @@ _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 
 
 # Subtrees of unforge's ``libs/foundry/records/`` that the enhancement
-# generator actually reads. Everything else unforge produces is copied nowhere
-# — the working folder is deleted when extract_dataforge finishes.
+# generator actually reads. Everything else unforge produces is moved nowhere
+# — the working folder is deleted once extract_dataforge has returned.
 #
 # Keeping this list tight:
 #   * halves the final cache's file count (~58k → ~28k) and disk footprint
@@ -716,8 +811,10 @@ def extract_dataforge(
          folder, beside the cache or in %TEMP% (see _scratch_location, #471).
       2. unforge.exe converts Game2.dcb → individual XML entity files, next to
          the dcb.
-      3. The generator's subtrees are moved into dataforge_cache_dir and
-         stamped, then the working folder is deleted.
+      3. The previous cache is moved into the working folder, the
+         generator's subtrees are moved into dataforge_cache_dir and
+         stamped, and the working folder (previous cache included) is
+         deleted on a background thread once this returns.
 
     This is slow the first time (~several minutes) but results are cached and
     only need to be re-run when the p4k file changes.
@@ -730,9 +827,9 @@ def extract_dataforge(
         progress_callback: Optional callable(str) for status messages.
         should_cancel: Optional callable() -> bool (#471). Polled while each
             tool runs, which kills the tool, and checked between steps. The
-            check just before the old cache is wiped is the last point a stop
-            leaves that cache untouched; past it the run finishes and stamps
-            the new cache, then stops.
+            check just before the old cache is moved aside is the last point
+            a stop leaves that cache untouched; past it the run finishes and
+            stamps the new cache, then stops.
 
     Returns:
         True on success.
@@ -879,15 +976,13 @@ def extract_dataforge(
 
         # The last point a stop leaves the previous cache untouched (#471).
         # Past here the run always finishes and stamps the new cache, so a
-        # stop never leaves it half-copied.
+        # stop never leaves it half-moved.
         _raise_if_cancelled(should_cancel, "stopped before the previous cache was replaced")
 
-        # Blow away any prior cache. Uses a retry loop because on Windows
-        # (particularly under OneDrive) a transient handle from the
-        # just-exited unforge.exe or from the OneDrive/Defender/indexer
-        # stack can reject the first few rmdir attempts with WinError 5.
-        if dataforge_cache_dir.exists():
-            robust_rmtree(dataforge_cache_dir)
+        # The previous cache moves into the working folder in one rename and
+        # is deleted with it in the background once this returns; deleting it
+        # here put 8 s on the progress bar (see _retire_old_cache).
+        _retire_old_cache(dataforge_cache_dir, run_dir)
         dataforge_cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Cache only the subtrees the enhancement generator actually reads.
@@ -914,10 +1009,12 @@ def extract_dataforge(
         (dataforge_cache_dir / P4K_SIZE_STAMP).write_text(str(p4k_stat.st_size))
         logger.info(f"DataForge cache written to {dataforge_cache_dir}")
     finally:
-        # Success, failure or stop, the working folder goes now (#471), so
-        # its ~2 GB never outlives the copy and a stopped run cleans up after
-        # itself. _close_scratch never raises over the real outcome.
-        _close_scratch(run_dir, marker)
+        # Success, failure or stop, the working folder's delete starts now
+        # (#471), on a background thread so what it still holds (about 1 GB,
+        # plus the previous cache moved into it) never sits on the progress
+        # bar, and a stopped run still cleans up after itself. _close_scratch
+        # never raises over the real outcome.
+        _release_scratch_later(run_dir, marker)
 
     # A stop that arrived during the move ends here. The cache is complete and
     # stamped, so the next launch finds it fresh; the run still reports the

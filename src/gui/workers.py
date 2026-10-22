@@ -701,8 +701,8 @@ class DataForgeExtractWorker(QThread):
     requestInterruption() stops it (#471). MainWindow does this when the
     window closes (_stop_extractions_for_close) and when the user picks Stop
     in the progress dialog's question. extract_dataforge polls
-    isInterruptionRequested, kills unp4k or unforge, deletes its working
-    folder and raises ExtractionCancelled. A stop is not a failure, so it
+    isInterruptionRequested, kills unp4k or unforge, hands its working
+    folder to a background delete and raises ExtractionCancelled. A stop is not a failure, so it
     ends with finished(False), no error signal and nothing logged at ERROR,
     which would fire the global ErrorDialogHandler for something the user
     asked for.
