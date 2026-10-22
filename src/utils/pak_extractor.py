@@ -1622,7 +1622,8 @@ _GLOBAL_INI_FILTER = _GLOBAL_INI_RELATIVE.relative_to("data").as_posix()
 
 # Subtrees of unforge's ``libs/foundry/records/`` that the enhancement
 # generator actually reads. Everything else unforge produces is kept nowhere
-# — the working folder is deleted when extract_dataforge finishes.
+# — it goes with the working folder, which extract_dataforge deletes before
+# it returns, or hands to *defer_cleanup* after a success.
 #
 # Keeping this list tight:
 #   * halves the final cache's file count (~62k → ~31k) and cuts its disk
@@ -1787,7 +1788,8 @@ def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool,
     Both point at a ``libs/`` folder (unforge's in the working folder, and
     the cache's) holding ``foundry/records/<subtree>``. Only the
     DATAFORGE_KEEP_SUBPATHS subtrees go. Everything else stays in the working
-    folder, which extract_dataforge deletes when the run ends.
+    folder, which extract_dataforge deletes before it returns, or hands to
+    *defer_cleanup* after a success.
 
     With *move*, each subtree is renamed into place: one rename instead of a
     copy of its files one by one, and the working folder then has half as

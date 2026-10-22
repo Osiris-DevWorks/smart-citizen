@@ -154,12 +154,18 @@ class TestCalculatedRewardTitles:
         """Every other test above runs without an xml_path_index, so only
         exercises the contractgen_dir.rglob("*.xml") fallback branch. Real
         generation runs always have one (main() builds it), routing
-        through _index_rglob instead -- this covers that branch too."""
+        through _index_rglob instead -- this covers that branch too. A
+        second XML sits in the folder but not in the index, so a run that
+        walked the folder instead would flag its title too."""
         records_dir = tmp_path
         contractgen_dir = records_dir / "contracts" / "contractgenerator"
         contractgen_dir.mkdir(parents=True)
         xml_file = contractgen_dir / "test_gen.xml"
         xml_file.write_text(_MIXED_REWARDS_XML, encoding="utf-8")
+        (contractgen_dir / "folder_only.xml").write_text(
+            _MIXED_REWARDS_XML.replace("dynamic_reward_title", "folder_only_dynamic_title"),
+            encoding="utf-8",
+        )
         xml_path_index = {"contracts/contractgenerator": [str(xml_file)]}
 
         titles = _generation_calculated_reward_titles(

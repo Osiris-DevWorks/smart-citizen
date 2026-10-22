@@ -290,7 +290,7 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 
 
 # ── Derived-lookup disk cache ─────────────────────────────────────────────────
-# Walking the DataForge tree is expensive (~85s for scitem alone). These
+# Walking the DataForge tree is expensive (scitem most of all). These
 # lookups are pure functions of the DataForge cache contents, so we pickle
 # them under cache/dataforge/.lookups/ keyed on the .p4k_mtime stamp written
 # by pak_extractor.py. When DataForge is re-extracted, the stamp changes and
@@ -485,7 +485,7 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
     they came to hold XML facts only, perf proposal) bumps the third
     segment. An unreadable pickle (a truncated one from a
     run cut off before these writes became atomic, say) is rebuilt, with an
-    INFO line, since a rebuild can take a minute and a half. The pickle is
+    INFO line, since a rebuild re-reads its whole subtree. The pickle is
     written in one step, so a run cut off mid-write keeps the old one.
     """
     cache_dir = forge_dir / DATAFORGE_LOOKUPS_SUBPATH

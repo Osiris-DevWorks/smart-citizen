@@ -1413,7 +1413,7 @@ class TestClosingWaitsForTheDelete:
         assert me._forge_worker is None
         assert not folder.folder.exists()
         assert me._working_folder_deleters == []
-        pump_until(lambda: True, seconds=0.1)   # the deleter's queued finished slot
+        qapp.processEvents()   # the deleter's queued finished slot
 
     def test_the_global_ini_worker_is_never_asked_for_a_folder(self):
         """Only a DataForge run keeps its working folder."""

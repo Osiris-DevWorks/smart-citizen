@@ -117,6 +117,11 @@ def _stamp_text(install: _Install) -> str:
     return install.stamp.read_text(encoding="utf-8")
 
 
+_UNREADABLE_STAMPS = pytest.mark.parametrize("content", [
+    b"", b"4096", b"4096 23 1", b"4096 twenty", b"\xff\xfe\x00 1",
+], ids=["empty", "one-number", "three-numbers", "not-a-number", "not-text"])
+
+
 def _recorded(install: _Install) -> str:
     """The stamp that records base.ini as taken from Data.p4k as it is now."""
     return f"{install.p4k.stat().st_size} {install.base_ini.stat().st_size}"
@@ -151,15 +156,29 @@ class TestBaseIniIsFresh:
         assert install.fresh() is False
         assert _stamp_text(install) == stamp
 
-    @pytest.mark.parametrize("content", [
-        b"", b"4096", b"4096 23 1", b"4096 twenty", b"\xff\xfe\x00 1",
-    ], ids=["empty", "one-number", "three-numbers", "not-a-number", "not-text"])
+    def test_a_stamp_for_another_base_ini_is_replaced_when_base_ini_is_newer(self, install):
+        """The fallback's other half: base.ini is newer than Data.p4k, so
+        it reads fresh and gets a stamp of its own."""
+        install.extract()
+        install.extract(stamp=False, text="Frontend_PU_Version=4.2.1\n")
+        assert _stamp_text(install) != _recorded(install)
+        assert install.fresh() is True
+        assert _stamp_text(install) == _recorded(install)
+
+    @_UNREADABLE_STAMPS
     def test_an_unreadable_stamp_falls_back_to_the_modified_times(self, install, content):
         install.extract(stamp=False)
         install.stamp.write_bytes(content)
         install.launch_game()
         assert install.fresh() is False
         assert install.stamp.read_bytes() == content
+
+    @_UNREADABLE_STAMPS
+    def test_an_unreadable_stamp_is_replaced_when_base_ini_is_newer(self, install, content):
+        install.extract(stamp=False)
+        install.stamp.write_bytes(content)
+        assert install.fresh() is True
+        assert _stamp_text(install) == _recorded(install)
 
     def test_missing_files_read_stale(self, install):
         assert install.fresh() is False            # no base.ini

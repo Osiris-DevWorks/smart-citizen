@@ -658,7 +658,8 @@ class TestLeftoverWorkingFoldersBesideIt:
         and a crashed run's working folder still sits beside the old one.
         The real finished slot deletes this run's working folder and the old
         cache, and the sweep then takes the crashed run's folder on a thread
-        of its own, once this run's delete is over, and leaves one whose
+        of its own, once this run's delete is over (held up here, so a
+        sweep that did not wait would run first), and leaves one whose
         marker a live run in another window holds."""
         leaf = _use_cache_location(tmp_path / "new")
         record = _fill(leaf)
@@ -684,8 +685,20 @@ class TestLeftoverWorkingFoldersBesideIt:
 
         monkeypatch.setattr(pe, "_sweep_stale_scratch", record_sweep)
         me, worker = _finished_run_window(run_dir, marker)
+        gate = threading.Event()
+        folder = worker.take_working_folder.return_value
+        real_delete = folder.delete
+
+        def held_delete():
+            gate.wait(10)
+            real_delete()
+
+        folder.delete = held_delete
         try:
             MainWindow._on_dataforge_extract_finished(me, True, worker)
+            pump_until(lambda: False, seconds=0.3)
+            assert sweeps == []   # not while this run's delete is held up
+            gate.set()
 
             assert pump_until(lambda: me._working_folder_deleters == [])
             assert not crashed.exists()
@@ -697,4 +710,5 @@ class TestLeftoverWorkingFoldersBesideIt:
             assert sweeps[0][2] != threading.get_ident()   # never on the GUI thread
             assert sweeps[0][3] is False   # after this run's own delete was over
         finally:
+            gate.set()
             held_marker.close()
