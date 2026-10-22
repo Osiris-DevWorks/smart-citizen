@@ -15,6 +15,10 @@ already failing to delete. These tests pin the replacement:
 * ``extract_dataforge`` / ``extract_global_ini``: placement, cleanup on every
   outcome, and the stop points (with fake tools for the branches, and Python
   scripts standing in for unp4k and unforge for the real process handling).
+* ``TestDeferredDelete``: the DataForge run moves the previous cache into its
+  working folder and deletes that folder on a background thread after it has
+  returned (``wait_for_deferred_cleanups`` joins it; the fixture's ``run``
+  does so unless told ``wait=False``).
 
 Qt-free. Child processes run on the base interpreter (``sys._base_executable``)
 because a venv's ``python.exe`` is a launcher that starts a second process,
@@ -28,6 +32,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -433,11 +438,16 @@ def setup(root, monkeypatch):
     (leaf / "raw" / "libs").mkdir(parents=True)
     (leaf / "old-cache-sentinel").write_text("old")
 
-    def run(fake, **kwargs):
+    def run(fake, *, wait=True, **kwargs):
         monkeypatch.setattr(pe, "_run_tool", fake)
-        return pe.extract_dataforge(
-            tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe", leaf, **kwargs
-        )
+        try:
+            return pe.extract_dataforge(
+                tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe", leaf, **kwargs
+            )
+        finally:
+            if wait:
+                # The working folder's delete runs on after the return.
+                pe.wait_for_deferred_cleanups(30)
 
     return leaf, run
 
@@ -621,6 +631,7 @@ class TestExtractDataforgeWorkingFolder:
         monkeypatch.setattr(pe, "_run_tool", fake)
 
         pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe", leaf)
+        assert pe.wait_for_deferred_cleanups(30)
 
         run_dir = Path(fake.calls[0][2])
         assert run_dir.parent == beside and len(str(run_dir)) == pe._MAX_SCRATCH_CHARS
@@ -651,6 +662,103 @@ class TestExtractDataforgeWorkingFolder:
         monkeypatch.setattr(pe, "_move_filtered_records", spy)
         run(_FakeTools())
         assert len(sources) == 1 and sources[0].startswith("\\\\?\\")
+
+
+class TestDeferredDelete:
+    """The previous cache and the working folder are deleted after the run has
+    returned, on a background thread, instead of on the progress bar: the
+    previous cache is moved into the working folder in one rename, and that
+    folder goes once the new cache is stamped."""
+
+    def test_the_previous_cache_moves_into_the_working_folder_before_the_move(
+        self, setup, monkeypatch
+    ):
+        leaf, run = setup
+        deleted = []
+        real_rmtree = pe.robust_rmtree
+
+        def rmtree(path, attempts=6):
+            deleted.append(Path(path).name)
+            return real_rmtree(path, attempts)
+
+        seen = {}
+        real_move = pe._move_filtered_records
+
+        def move(src, dst):
+            run_dir = Path(src).parent.parent          # <run>/Data/libs
+            seen["retired"] = (run_dir / pe._RETIRED_CACHE_NAME / "old-cache-sentinel").exists()
+            seen["leaf_cleared"] = not (leaf / "old-cache-sentinel").exists()
+            seen["deleted_so_far"] = list(deleted)
+            return real_move(src, dst)
+
+        monkeypatch.setattr(pe, "robust_rmtree", rmtree)
+        monkeypatch.setattr(pe, "_move_filtered_records", move)
+        assert run(_FakeTools()) is True
+        assert seen == {"retired": True, "leaf_cleared": True, "deleted_so_far": []}
+        assert not (leaf / "old-cache-sentinel").exists()
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert (records / "entities" / "scitem" / "x.xml").exists()
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_the_run_returns_while_the_working_folder_is_still_going(self, setup, monkeypatch):
+        leaf, run = setup
+        gate = threading.Event()
+        real_rmtree = pe.robust_rmtree
+
+        def rmtree(path, attempts=6):
+            if Path(path).name == "Data":
+                assert gate.wait(30)
+            return real_rmtree(path, attempts)
+
+        monkeypatch.setattr(pe, "robust_rmtree", rmtree)
+        fake = _FakeTools()
+        try:
+            assert run(fake, wait=False) is True
+            run_dir = Path(fake.calls[0][2])
+            assert (leaf / pe.P4K_SIZE_STAMP).exists()     # the cache is complete
+            assert run_dir.exists()                         # the delete is still going
+            assert not pe.wait_for_deferred_cleanups(0.2)
+            # Still live to another window's sweep while it goes: the marker
+            # is held open until the contents are gone.
+            pe._sweep_stale_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+            assert run_dir.exists()
+        finally:
+            gate.set()
+        assert pe.wait_for_deferred_cleanups(30)
+        assert not run_dir.exists()
+
+    def test_a_previous_cache_that_will_not_move_is_deleted_in_place(
+        self, setup, monkeypatch, caplog
+    ):
+        """The %TEMP% fallback is on another drive, so the rename is refused."""
+        leaf, run = setup
+        real_rename = os.rename
+
+        def rename(src, dst):
+            if Path(dst).name == pe._RETIRED_CACHE_NAME:
+                raise OSError(17, "The system cannot move the file to a different disk drive")
+            return real_rename(src, dst)
+
+        monkeypatch.setattr(pe.os, "rename", rename)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(_FakeTools()) is True
+        assert "deleting it in place" in caplog.text
+        assert not (leaf / "old-cache-sentinel").exists()
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert (records / "entities" / "scitem" / "x.xml").exists()
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_a_failed_run_still_deletes_its_folder_in_the_background(self, setup):
+        leaf, run = setup
+        fake = _FakeTools(unforge_rc=1)
+        with pytest.raises(RuntimeError, match="unforge.exe failed"):
+            run(fake, wait=False)
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.wait_for_deferred_cleanups(30)
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_nothing_waits_when_no_delete_is_running(self):
+        assert pe.wait_for_deferred_cleanups(0) is True
 
 
 # ── the real process handling, with Python scripts as the tools ─────────────
@@ -703,6 +811,7 @@ class TestExtractDataforgeRealTools:
         p4k, py, _pid = _real_tools(root)
         leaf = root / "cache" / "LIVE" / "cache" / "dataforge"
         assert pe.extract_dataforge(p4k, py, py, leaf) is True
+        assert pe.wait_for_deferred_cleanups(30)
         records = leaf / "raw" / "libs" / "foundry" / "records"
         assert (records / "entities" / "scitem" / "x.xml").exists()
         assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
@@ -717,6 +826,7 @@ class TestExtractDataforgeRealTools:
         pid = int(pid_file.read_text())
         assert _wait_for(lambda: not _pid_alive(pid), 5)
         assert (leaf / "old-cache-sentinel").exists()
+        assert pe.wait_for_deferred_cleanups(30)
         assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
     def test_a_timeout_kills_unforge_and_cleans_up(self, root, monkeypatch):
@@ -727,6 +837,7 @@ class TestExtractDataforgeRealTools:
             pe.extract_dataforge(p4k, py, py, leaf)
         pid = int(pid_file.read_text())
         assert _wait_for(lambda: not _pid_alive(pid), 5)
+        assert pe.wait_for_deferred_cleanups(30)
         assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
 
