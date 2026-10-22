@@ -14,6 +14,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from lxml import etree as ET
@@ -79,6 +80,35 @@ def _template_xml(ref: str, *, title_key: str = "", desc_key: str = "") -> str:
     if desc_key:
         locs += f'<LocID value="@{desc_key}" />'
     return f'<ContractTemplate __ref="{ref}">{locs}</ContractTemplate>'
+
+
+def _contractgen_dir(tmp_path: Path) -> Path:
+    """A contractgenerator folder where a generation reads it,
+    ``records/contracts/contractgenerator``, with its contracttemplates
+    folder beside it."""
+    contractgen_dir = tmp_path / "records" / "contracts" / "contractgenerator"
+    contractgen_dir.mkdir(parents=True)
+    return contractgen_dir
+
+
+def _generation_rs_tags(gen_module, contractgen_dir: Path):
+    """The ``(title_tags, desc_ores)`` a generation collects from
+    *contractgen_dir*: _run_gen_missions over the records tree it sits in,
+    with both dicts read off its calls to _battaglia_mineable_rs_in. The
+    generation runs that on the contractgen parse it shares with
+    scan_contract_generators (perf proposal), so there is no separate scan
+    to call."""
+    records = contractgen_dir.parent.parent
+    loc: dict[str, str] = {}
+    ctx = {"records": records, "forge_dir": records.parent / "forge", "loc": loc,
+           "tag_loc": loc, "entity_names": {}, "reputation_lookup": {}}
+    with mock.patch.object(gen_module, "_battaglia_mineable_rs_in",
+                           wraps=gen_module._battaglia_mineable_rs_in) as rs_in:
+        gen_module._run_gen_missions(ctx)
+    if not rs_in.call_args_list:
+        return {}, {}
+    _root, _template_lookup, title_tags, desc_ores = rs_in.call_args_list[0].args
+    return title_tags, desc_ores
 
 
 class TestBattagliaContractMineableOres:
@@ -262,15 +292,15 @@ class TestBuildMineableRsNameOverrides:
         assert overrides["mineabletype_primary_savrillium"] == "Savrillium (RS 3200)"
 
 
-class TestBuildBattagliaMineableRsTags:
-    """Returns a ``(title_tags, desc_ores)`` pair. ``desc_ores`` is keyed by
+class TestBattagliaMineableRsTags:
+    """A generation collects a ``(title_tags, desc_ores)`` pair
+    (``_generation_rs_tags``). ``desc_ores`` is keyed by
     desc_key -> raw ore list (order-preserved), which is what lets the real
     generator build the mission's own DETAILS "Resource Signatures" via
     ``_format_rs_details_lines``, not just the flattened title tag."""
 
     def test_builds_tag_for_scan_and_scanmine_titles(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_04_title",
@@ -280,7 +310,7 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert title_tags == {
             "Battaglia_RPT_Scan_04_title": "[RS 3600/4300/3900]",
             "Battaglia_RPT_ScanMine_01_title": "[RS 4285/4270]",
@@ -288,8 +318,7 @@ class TestBuildBattagliaMineableRsTags:
         assert desc_ores == {}
 
     def test_builds_desc_ores_alongside_title_tag(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_04_title",
@@ -298,27 +327,25 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert title_tags == {"Battaglia_RPT_Scan_04_title": "[RS 3600/4300/3900]"}
         assert desc_ores == {"Battaglia_RPT_Scan_04_desc": ["bexalite", "ice", "torite"]}
 
     def test_no_desc_param_yields_empty_desc_ores(self, gen_module, tmp_path):
         """A contract variant with no Description param (desc_key="") must
         not show up in desc_ores under a bogus empty-string key."""
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_01_title", ("ResourceType", "aluminium"))
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        _title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        _title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert desc_ores == {}
 
     def test_first_variant_wins_for_desc_key_shared_across_files(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "a_stanton.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_06_title",
@@ -335,15 +362,14 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        _title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        _title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert desc_ores == {"Battaglia_RPT_Scan_06_desc": ["lindinium", "savrillium"]}
 
     def test_ignores_non_battaglia_scan_titles(self, gen_module, tmp_path):
         """A mining-flavoured title from an unrelated contractor (or one of
         Battaglia's own non-scan mission types, e.g. Salvage) must not pick
         up an RS tag even if it happens to reference a mineabletype key."""
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "other.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Salvage_E_01_title", ("ResourceType", "aluminium"))
@@ -351,28 +377,26 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert title_tags == {}
         assert desc_ores == {}
 
     def test_intro_contract_wrapper_also_covered(self, gen_module, tmp_path):
         """Battaglia wraps its intro mission in a plain <Contract> tag under
         introContracts, not <CareerContract> — must still be picked up."""
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><introContracts>'
             + _contract("Battaglia_RPT_Scan_01_title", ("ResourceType", "aluminium"), tag="Contract")
             + '</introContracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert title_tags == {"Battaglia_RPT_Scan_01_title": "[RS 4285]"}
         assert desc_ores == {}
 
     def test_first_variant_wins_when_title_shared_across_files(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "a_stanton.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_06_title", ("ResourceType", "lindinium"), ("ResourceType2", "savrillium"))
@@ -385,12 +409,13 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert title_tags == {"Battaglia_RPT_Scan_06_title": "[RS 3400/3200]"}
         assert desc_ores == {}
 
     def test_missing_dir_returns_empty(self, gen_module, tmp_path):
-        title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(tmp_path / "does_not_exist")
+        title_tags, desc_ores = _generation_rs_tags(
+            gen_module, tmp_path / "records" / "contracts" / "contractgenerator")
         assert title_tags == {}
         assert desc_ores == {}
 
@@ -402,8 +427,7 @@ class TestBuildBattagliaMineableRsTags:
         stayed empty for every such contract even though its title_key
         resolved fine, silently dropping both the DETAILS "Resource
         Signatures:" block and the inline "(RS ####)" annotation."""
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_04_title",
@@ -412,7 +436,7 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        templates_dir = tmp_path / "contracttemplates"
+        templates_dir = contractgen_dir.parent / "contracttemplates"
         templates_dir.mkdir()
         (templates_dir / "templates.xml").write_text(
             # _build_template_lookup only registers a template ref when it
@@ -423,14 +447,13 @@ class TestBuildBattagliaMineableRsTags:
                           desc_key="Battaglia_RPT_Scan_04_desc"),
             encoding="utf-8",
         )
-        _title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        _title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert desc_ores == {"Battaglia_RPT_Scan_04_desc": ["bexalite", "ice"]}
 
     def test_inline_desc_param_wins_over_template(self, gen_module, tmp_path):
         """An inline Description param, when present, is authoritative; the
         template fallback only kicks in when the contract has none."""
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_04_title",
@@ -440,24 +463,23 @@ class TestBuildBattagliaMineableRsTags:
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        templates_dir = tmp_path / "contracttemplates"
+        templates_dir = contractgen_dir.parent / "contracttemplates"
         templates_dir.mkdir()
         (templates_dir / "templates.xml").write_text(
             _template_xml("tpl-uuid-1", title_key="Battaglia_RPT_Scan_04_tmpl_title",
                           desc_key="Battaglia_RPT_Scan_04_template_desc"),
             encoding="utf-8",
         )
-        _title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        _title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert desc_ores == {"Battaglia_RPT_Scan_04_inline_desc": ["ice"]}
 
     def test_no_template_and_no_inline_desc_yields_empty_desc_ores(self, gen_module, tmp_path):
-        contractgen_dir = tmp_path / "contractgenerator"
-        contractgen_dir.mkdir()
+        contractgen_dir = _contractgen_dir(tmp_path)
         (contractgen_dir / "battaglia_generator.xml").write_text(
             '<ContractGeneratorHandler_Career><contracts>'
             + _contract("Battaglia_RPT_Scan_01_title", ("ResourceType", "aluminium"))
             + '</contracts></ContractGeneratorHandler_Career>',
             encoding="utf-8",
         )
-        _title_tags, desc_ores = gen_module._build_battaglia_mineable_rs_tags(contractgen_dir)
+        _title_tags, desc_ores = _generation_rs_tags(gen_module, contractgen_dir)
         assert desc_ores == {}

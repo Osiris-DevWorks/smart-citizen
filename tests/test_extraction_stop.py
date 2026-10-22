@@ -24,6 +24,10 @@ extraction carried on unseen. This pins the Qt side of the fix:
   with its own warning. Its worker's stop is covered in
   test_enhancements_stale_startup.py, and the generator's stop points in
   test_generation_writes.py.
+* The perf proposal: a successful DataForge run's working folder is kept
+  by the worker (any other outcome deletes it before finished), deleted by
+  the window on a WorkingFolderDeleteWorker of its own once the extraction
+  thread is done, and waited for by closing within the same deadline.
 
 The P4K-side work (the stoppable runner, the working folder) is covered
 Qt-free in test_extraction_working_folder.py. Offscreen Qt via the session
@@ -32,10 +36,12 @@ Qt-free in test_extraction_working_folder.py. Offscreen Qt via the session
 from __future__ import annotations
 
 import errno
+import gc
 import logging
 import os
 import threading
 import time
+import weakref
 from pathlib import Path
 from unittest.mock import MagicMock, call
 
@@ -49,9 +55,16 @@ from PyQt6.QtWidgets import QProgressBar
 import src.gui.main_window as main_window
 import src.utils.pak_extractor as pe
 from src.gui.main_window import MainWindow
-from src.gui.workers import AnimatedProgressDialog, DataForgeExtractWorker, P4kExtractWorker
+from src.gui.workers import (
+    AnimatedProgressDialog,
+    DataForgeExtractWorker,
+    P4kExtractWorker,
+    StaleWorkingFolderSweepWorker,
+    WorkingFolderDeleteWorker,
+)
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
+from tests.event_loop import pump_until
 from tests.junction import make_junction
 from tests.unusable_folder import missing_drive_folder, new_folders_denied
 
@@ -163,7 +176,7 @@ class TestProgressDialogBusyBar:
         assert bar.isTextVisible() and bar.styleSheet()
 
         # A new count from 0 after a counted phase is the busy bar again.
-        dialog.set_progress(0, 30, "Snapshotting cache for diff (0/30)…")
+        dialog.set_progress(0, 30, "Building lookups (0/30)…")
         assert (dialog.minimum(), dialog.maximum()) == (0, 0)
         assert not bar.isTextVisible() and bar.styleSheet() == ""
 
@@ -536,8 +549,9 @@ class _Signal:
 class _Worker:
     """Stands in for an extraction worker in the MainWindow tests."""
 
-    def __init__(self, *args, running=True, finishes=True):
+    def __init__(self, *args, running=True, finishes=True, **kwargs):
         self.args = args
+        self.kwargs = kwargs   # the DataForge worker's wait_for (perf proposal)
         self.running = running
         self.finishes = finishes
         self.interrupted = False
@@ -546,6 +560,12 @@ class _Worker:
         self.calls = []
         self.progress, self.progress_pct = _Signal(), _Signal()
         self.error, self.finished = _Signal(), _Signal()
+        # What a successful DataForge run kept (perf proposal).
+        self.working_folder = None
+
+    def take_working_folder(self):
+        folder, self.working_folder = self.working_folder, None
+        return folder
 
     def isRunning(self):
         return self.running
@@ -589,6 +609,8 @@ def _window(**attrs):
     me._p4k_follow_up_after_error = None
     me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
     me._detach_progress_dialog = MainWindow._detach_progress_dialog
+    me._working_folder_deleters = []
+    me._startup_sweep_done = False
     for name, value in attrs.items():
         setattr(me, name, value)
     return me
@@ -647,6 +669,9 @@ class TestStopWorkersForClose:
             def run(self):
                 while not self.isInterruptionRequested():
                     self.msleep(10)
+
+            def take_working_folder(self):
+                return None   # a stopped run keeps none (perf proposal)
 
         thread = Spinning()
         thread.start()
@@ -1007,6 +1032,749 @@ class TestGenerationSlots:
         assert worker.progress_pct.slots == [dialog.set_progress]
 
 
+# ── the working folder deleted after the run (perf proposal) ────────────────
+
+class _Folder:
+    """Stands in for pak_extractor.WorkingFolder: records delete() and
+    release()."""
+
+    def __init__(self, order=None):
+        self.calls = order if order is not None else []
+
+    def delete(self):
+        self.calls.append("delete")
+
+    def release(self):
+        self.calls.append("release")
+
+
+def _working_folder(parent: Path):
+    """A real working folder beside a cache in *parent*, its marker held, a
+    set-aside old cache and what unforge left in it, as a successful run
+    hands it over. Returns ``(WorkingFolder, the files in it)``."""
+    run_dir, marker = pe._open_scratch(parent, pe.DATAFORGE_SCRATCH_PREFIX)
+    files = []
+    for rel in ("Data/Game2.dcb", "Data/libs/foundry/records/unused/x.xml",
+                pe._SET_ASIDE_CACHE_NAME + "/raw/libs/foundry/records/entities/scitem/x.xml"):
+        path = run_dir / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("<x/>", encoding="utf-8")
+        files.append(path)
+    return pe.WorkingFolder(run_dir, marker), files
+
+
+def _real_deletes(me) -> None:
+    """Give a stub window the real background delete, the real sweep of
+    leftovers and their finished slot."""
+    me._delete_working_folder_in_background = (
+        lambda folder: MainWindow._delete_working_folder_in_background(me, folder))
+    me._sweep_working_folders_in_background = (
+        lambda parent: MainWindow._sweep_working_folders_in_background(me, parent))
+    me._on_working_folder_deleted = (
+        lambda deleter: MainWindow._on_working_folder_deleted(me, deleter))
+
+
+class TestTheWorkerKeepsOnlyASuccessfulRunsFolder:
+    """DataForgeExtractWorker on a real thread: a successful run keeps the
+    working folder extract_dataforge hands over, for the window to delete
+    once the thread is done. Any other outcome deletes it before finished,
+    as extract_dataforge did, so a stop or a failure leaves nothing behind
+    and closing's wait for the thread covers the delete (#471)."""
+
+    def test_a_success_keeps_it_for_the_window(self, qapp, monkeypatch, patches):
+        folder = _Folder()
+        seen = {}
+
+        def extract(*args, defer_cleanup=None, **kwargs):
+            seen["defer_cleanup"] = defer_cleanup
+            defer_cleanup(folder)
+            return True
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        worker = _forge_worker()
+        finished, errors = _collect(worker)
+        worker.start()
+        assert worker.wait(5000)
+        assert (finished, errors) == ([True], [])
+        assert seen["defer_cleanup"] is not None
+        assert folder.calls == []
+        assert worker.take_working_folder() is folder
+        assert worker.take_working_folder() is None
+
+    @pytest.mark.parametrize("how", ["a stop after the cache was written",
+                                     "a stop during the patches", "a failure after a stop",
+                                     "cancelled after the hand-over", "the patches fail"])
+    def test_anything_else_deletes_it_before_finished(self, qapp, monkeypatch, how):
+        order, holder = [], {}
+        folder = _Folder(order)
+
+        def extract(*args, defer_cleanup=None, **kwargs):
+            defer_cleanup(folder)
+            if how == "a stop after the cache was written":
+                holder["worker"].requestInterruption()
+            elif how == "a failure after a stop":
+                holder["worker"].requestInterruption()
+                raise OSError("a file the killed tool still held")
+            elif how == "cancelled after the hand-over":
+                raise pe.ExtractionCancelled("stopped once the new cache was written")
+            return True
+
+        def apply_patches(*args, **kwargs):
+            if how == "a stop during the patches":
+                holder["worker"].requestInterruption()
+            elif how == "the patches fail":
+                raise RuntimeError("a patch could not be read")
+            report = MagicMock()
+            report.errors = []
+            report.summary_line.return_value = "0 patches"
+            return report
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        monkeypatch.setattr("src.utils.dataforge_patcher.apply_patches", apply_patches)
+        worker = holder["worker"] = _forge_worker()
+        worker.finished.connect(lambda ok: order.append(("finished", ok)),
+                                Qt.ConnectionType.DirectConnection)
+        worker.start()
+        assert worker.wait(5000)
+        assert order == ["delete", ("finished", False)]
+        assert worker.take_working_folder() is None
+
+    @pytest.mark.parametrize("how", ["a stop after the cache was written",
+                                     "a stop during the patches", "a failure after a stop",
+                                     "cancelled after the hand-over", "the patches fail"])
+    # A factory, so each case raises a fresh exception: one instance raised
+    # in every case would grow its traceback and keep each case's worker.
+    @pytest.mark.parametrize("make", [lambda: RuntimeError("a delete thread failed"),
+                                      MemoryError],
+                             ids=["RuntimeError", "MemoryError"])
+    def test_a_delete_that_raises_still_ends_with_finished(self, qapp, monkeypatch, caplog,
+                                                           slot_errors, how, make):
+        """WorkingFolder.delete keeps every OSError to itself, but anything
+        else (a MemoryError in a delete thread) gets out. finished must still
+        come, once, on every path that deletes the folder, or the window keeps
+        the run as its current extraction for the rest of the session. The
+        WARNING names the type, since a MemoryError has no text of its own.
+        slot_errors keeps a regression to this one test: without a hook of
+        its own, PyQt6 ends the whole run when an exception leaves run()."""
+        holder = {}
+        raised = make()
+
+        class _RaisingFolder(_Folder):
+            def delete(self):
+                super().delete()
+                raise raised
+
+        folder = _RaisingFolder()
+
+        def extract(*args, defer_cleanup=None, **kwargs):
+            defer_cleanup(folder)
+            if how == "a stop after the cache was written":
+                holder["worker"].requestInterruption()
+            elif how == "a failure after a stop":
+                holder["worker"].requestInterruption()
+                raise OSError("a file the killed tool still held")
+            elif how == "cancelled after the hand-over":
+                raise pe.ExtractionCancelled("stopped once the new cache was written")
+            return True
+
+        def apply_patches(*args, **kwargs):
+            if how == "a stop during the patches":
+                holder["worker"].requestInterruption()
+            elif how == "the patches fail":
+                raise RuntimeError("a patch could not be read")
+            report = MagicMock()
+            report.errors = []
+            report.summary_line.return_value = "0 patches"
+            return report
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        monkeypatch.setattr("src.utils.dataforge_patcher.apply_patches", apply_patches)
+        worker = holder["worker"] = _forge_worker()
+        finished, _errors = _collect(worker)
+        with caplog.at_level(logging.WARNING):
+            worker.start()
+            assert worker.wait(5000)
+        assert slot_errors == []
+        assert finished == [False]
+        assert folder.calls == ["delete"]
+        deletes = [r for r in caplog.records
+                   if r.getMessage().startswith("Could not delete the working folder")]
+        assert [(r.levelno, r.getMessage()) for r in deletes] == [(
+            logging.WARNING,
+            "Could not delete the working folder of a DataForge run that did not succeed "
+            f"({type(raised).__name__}: {raised}); the next extraction's sweep removes it")]
+
+
+class TestTheWindowDeletesItInTheBackground:
+    """The finished slot takes a successful run's working folder once the
+    thread is done and starts its delete on a thread of its own, before the
+    queued cleanup and generation, so neither waits for it."""
+
+    def test_a_success_starts_the_delete_before_cleanup_and_generation(self):
+        order = []
+        folder = _Folder()
+        worker = _Worker(running=False)
+        worker.working_folder = folder
+        real_take = worker.take_working_folder
+
+        def take():
+            order.append(("take", list(worker.waits)))
+            return real_take()
+
+        worker.take_working_folder = take
+        me = _window(_forge_worker=worker)
+        me._delete_working_folder_in_background.side_effect = lambda f: order.append(("delete", f))
+        me._cleanup_pending_old_cache.side_effect = lambda: order.append("cleanup")
+        me._run_enhancements_generation.side_effect = lambda: order.append("generate")
+        MainWindow._on_dataforge_extract_finished(me, True, worker)
+        assert order == [("take", [None]), ("delete", folder), "cleanup", "generate"]
+        assert folder.calls == []
+
+    @pytest.mark.parametrize("released, closing", [(True, False), (False, True)],
+                             ids=["released by the close", "finished during the close"])
+    def test_a_folder_nobody_can_delete_now_is_let_go(self, released, closing):
+        """A run that succeeded after closing stopped waiting for it: its
+        marker is let go and the next extraction's sweep takes the folder."""
+        folder = _Folder()
+        worker = _Worker(running=False)
+        worker.working_folder = folder
+        me = _window(_forge_worker=None if released else worker, _close_committed=closing)
+        MainWindow._on_dataforge_extract_finished(me, True, worker)
+        assert folder.calls == ["release"]
+        me._delete_working_folder_in_background.assert_not_called()
+        me._run_enhancements_generation.assert_not_called()
+
+    def test_end_to_end_on_real_threads(self, qapp, monkeypatch, patches, tmp_path):
+        """A real worker hands over a real working folder, the real finished
+        slot starts the real delete, and the window lets go of its thread
+        once it is done. The delete starts only once the extraction's
+        thread is done, on a thread that is neither the GUI's nor the
+        extraction's, and parses no XML in a folder full of it (#389 was
+        lxml parsing inside a thread pool nested in a QThread)."""
+        from lxml import etree
+        import xml.etree.ElementTree as ElementTree
+
+        parsed = []
+        for module, names in ((etree, ("parse", "fromstring", "iterparse", "XML")),
+                              (ElementTree, ("parse", "fromstring", "iterparse", "XML"))):
+            for name in names:
+                monkeypatch.setattr(module, name,
+                                    lambda *a, _name=name, **k: parsed.append(_name))
+        folder, _files = _working_folder(tmp_path)
+        seen = {}
+        real_delete = folder.delete
+
+        def recorded_delete():
+            seen["thread"] = threading.get_ident()
+            real_delete()
+
+        folder.delete = recorded_delete
+
+        def extract(*args, defer_cleanup=None, **kwargs):
+            seen["extraction_thread"] = threading.get_ident()
+            defer_cleanup(folder)
+            return True
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        worker = _forge_worker()
+        me = _window(_forge_worker=worker)
+        _real_deletes(me)
+        start_delete = me._delete_working_folder_in_background
+
+        def start_once_the_extraction_is_done(working_folder):
+            seen["extraction_done"] = worker.isFinished()
+            start_delete(working_folder)
+
+        me._delete_working_folder_in_background = start_once_the_extraction_is_done
+        worker.start()
+        assert worker.wait(5000)
+
+        MainWindow._on_dataforge_extract_finished(me, True, worker)
+
+        assert len(me._working_folder_deleters) == 1
+        assert pump_until(lambda: me._working_folder_deleters == [])
+        assert not folder.folder.exists()
+        assert seen["extraction_done"] is True
+        assert seen["thread"] not in (threading.get_ident(), seen["extraction_thread"])
+        assert parsed == []
+        me._run_enhancements_generation.assert_called_once_with()
+
+
+class _Gated(QThread):
+    """A thread that runs until *gate* is set: a busy deleter, or a busy
+    extraction that keeps no working folder."""
+
+    def __init__(self, gate):
+        super().__init__()
+        self.gate = gate
+
+    def run(self):
+        self.gate.wait(10)
+
+    def take_working_folder(self):
+        return None
+
+
+class TestClosingWaitsForTheDelete:
+    """#471: closing waits for a background delete within the extraction's
+    close deadline, hidden, and keeps a deleter still busy past it, whose
+    folder keeps its marker held until the process ends and is then the
+    next extraction's sweep's."""
+
+    def test_a_running_delete_is_waited_for_hidden(self, qapp):
+        gate = threading.Event()
+        deleter = _Gated(gate)
+        deleter.start()
+        me = _window(_working_folder_deleters=[deleter])
+        threading.Timer(0.3, gate.set).start()
+        MainWindow._stop_workers_for_close(me, timeout_ms=5000)
+        assert deleter.isFinished()
+        assert me._working_folder_deleters == []
+        me.hide.assert_called_once_with()
+
+    def test_a_sweep_is_stopped_not_waited_for(self, qapp, tmp_path):
+        """A sweep of leftovers stops when closing asks (perf proposal): one
+        still waiting on a delete that will not end in time ends at once, so
+        closing does not sit out its deadline for a housekeeping job."""
+        never = threading.Event()   # the done event of a delete that never ends
+        sweeper = StaleWorkingFolderSweepWorker(tmp_path, after=[never])
+        sweeper.start()
+        me = _window(_working_folder_deleters=[sweeper])
+        try:
+            started = time.monotonic()
+            MainWindow._stop_workers_for_close(me, timeout_ms=5000)
+            assert time.monotonic() - started < 2
+            assert sweeper.isFinished()
+            assert me._working_folder_deleters == []
+        finally:
+            never.set()
+            assert sweeper.wait(5000)
+
+    def test_a_sweep_hands_its_stop_to_the_sweep(self, qapp, tmp_path, monkeypatch):
+        """The sweep itself is asked before each leftover folder (see
+        pak_extractor._sweep_stale_scratch), with the worker's own stop."""
+        seen = {}
+
+        def sweep(parent, prefix, should_cancel=None):
+            seen.update(parent=parent, prefix=prefix, stop=should_cancel)
+
+        monkeypatch.setattr(pe, "_sweep_stale_scratch", sweep)
+        sweeper = StaleWorkingFolderSweepWorker(tmp_path)
+        sweeper.start()
+        assert sweeper.wait(5000)
+        assert seen["parent"] == tmp_path and seen["prefix"] == pe.DATAFORGE_SCRATCH_PREFIX
+        assert seen["stop"] == sweeper.isInterruptionRequested
+
+    def test_one_still_busy_past_the_deadline_is_kept(self, qapp, caplog):
+        gate = threading.Event()
+        deleter = _Gated(gate)
+        deleter.start()
+        me = _window(_working_folder_deleters=[deleter])
+        try:
+            with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+                MainWindow._stop_workers_for_close(me, timeout_ms=50)
+            assert me._working_folder_deleters == [deleter]   # Qt must not destroy a live thread
+            assert "was still being deleted when Smart Citizen closed" in caplog.text
+        finally:
+            gate.set()
+            assert deleter.wait(5000)
+
+    def test_the_deadline_is_shared_with_the_extraction(self, qapp):
+        """One deadline for everything closing waits for, as for the two
+        extraction workers: a busy extraction and a busy delete are given
+        up on together after 1 s, not 1 s each."""
+        gate = threading.Event()
+        forge, deleter = _Gated(gate), _Gated(gate)
+        forge.start()
+        deleter.start()
+        me = _window(_forge_worker=forge, _working_folder_deleters=[deleter])
+        try:
+            started = time.monotonic()
+            MainWindow._stop_workers_for_close(me, timeout_ms=1000)
+            elapsed = time.monotonic() - started
+            assert 0.9 < elapsed < 1.6
+            assert me._forge_worker is forge
+            assert me._working_folder_deleters == [deleter]
+        finally:
+            gate.set()
+            assert forge.wait(5000) and deleter.wait(5000)
+
+    def test_a_run_that_succeeded_just_before_the_close_has_its_folder_deleted(
+        self, qapp, tmp_path
+    ):
+        """Its finished slot had not run yet: closing takes the folder from
+        the worker it releases and waits for that delete too."""
+        folder, _files = _working_folder(tmp_path)
+        worker = _Worker(running=False)
+        worker.working_folder = folder
+        me = _window(_forge_worker=worker)
+        _real_deletes(me)
+        MainWindow._stop_workers_for_close(me, timeout_ms=5000)
+        assert me._forge_worker is None
+        assert not folder.folder.exists()
+        assert me._working_folder_deleters == []
+        pump_until(lambda: True, seconds=0.1)   # the deleter's queued finished slot
+
+    def test_the_global_ini_worker_is_never_asked_for_a_folder(self):
+        """Only a DataForge run keeps its working folder."""
+        p4k = _Worker(running=False)
+        p4k.take_working_folder = MagicMock(side_effect=AssertionError("asked"))
+        me = _window(_p4k_worker=p4k)
+        MainWindow._stop_workers_for_close(me, timeout_ms=1000)
+        assert me._p4k_worker is None
+
+
+class _Reaped:
+    """A finished thread that records quit(), wait() and deleteLater() in
+    one list, in the order they come."""
+
+    def __init__(self):
+        self.calls = []
+
+    def quit(self):
+        self.calls.append("quit")
+
+    def wait(self, ms=None):
+        self.calls.append("wait")
+        return True
+
+    def deleteLater(self):
+        self.calls.append("deleteLater")
+
+
+class TestTheDeletesFinishedSlot:
+    def test_it_quits_the_thread_before_it_waits_for_it(self):
+        """quit() and then wait(), as every other finished slot reaps its
+        worker (the root CLAUDE.md's threading model)."""
+        deleter = _Reaped()
+        me = _window(_working_folder_deleters=[deleter])
+        MainWindow._on_working_folder_deleted(me, deleter)
+        assert deleter.calls == ["quit", "wait", "deleteLater"]
+        assert me._working_folder_deleters == []
+
+    def test_a_delete_that_fails_still_says_it_is_done(self, qapp, caplog, slot_errors):
+        """On a real thread, a delete that raises (a delete thread's
+        exception raised again through robust_rmtree, which _close_scratch
+        does not catch) is logged once at WARNING, never ERROR (which opens
+        the error dialog), and still sets ``done``, so a DataForge extraction
+        waiting on it starts, and nothing reaches the crash handler.
+        slot_errors keeps a regression to this one test: without a hook of
+        its own, PyQt6 ends the whole run when an exception leaves run()."""
+        class _Breaks:
+            def delete(self):
+                raise RuntimeError("a delete thread failed")
+
+        deleter = WorkingFolderDeleteWorker(_Breaks())
+        with caplog.at_level(logging.WARNING, logger="src.gui.workers"):
+            deleter.start()
+            assert deleter.wait(5000)
+        assert slot_errors == []
+        assert deleter.done.is_set()
+        assert [(r.levelno, r.getMessage()) for r in caplog.records
+                if r.levelno >= logging.WARNING] == [(
+                    logging.WARNING,
+                    "A background delete or sweep of DataForge working folders failed "
+                    "(RuntimeError: a delete thread failed); a later sweep removes what is left")]
+
+    def test_a_failed_delete_lets_go_of_the_marker_before_done(
+            self, qapp, monkeypatch, tmp_path, slot_errors):
+        """A delete thread's exception that is not an OSError (a MemoryError)
+        leaves the working folder's marker open in the WorkingFolder, and an
+        extraction waiting on ``done`` sweeps beside it at once. The worker
+        lets go of the WorkingFolder before it sets ``done``, so with the
+        cyclic GC off and the worker itself still held, the marker is closed
+        by then and that sweep takes the folder (perf proposal review)."""
+        real_unlink = pe._unlink_files
+
+        def boom(_paths):
+            raise MemoryError()
+
+        folder, _files = _working_folder(tmp_path)
+        run_dir = folder.folder
+        marker_alive = weakref.ref(folder._marker)
+        deleter = WorkingFolderDeleteWorker(folder)
+        del folder
+        monkeypatch.setattr(pe, "_unlink_files", boom)
+        gc_was_on = gc.isenabled()
+        gc.disable()
+        try:
+            deleter.start()
+            done = deleter.done.wait(5)
+            marker_closed_at_done = marker_alive() is None
+            monkeypatch.setattr(pe, "_unlink_files", real_unlink)
+            pe._sweep_stale_scratch(tmp_path, pe.DATAFORGE_SCRATCH_PREFIX)
+            swept = not run_dir.exists()
+        finally:
+            finished = deleter.wait(5000)   # never leave Qt a running thread
+            if gc_was_on:
+                gc.enable()
+        assert done and finished
+        assert marker_closed_at_done
+        assert swept
+        assert slot_errors == []
+
+
+def _gated_folder(parent: Path, gate):
+    """A real working folder in *parent* whose delete() waits for *gate*
+    first: a background delete that takes as long as the test needs."""
+    folder, _files = _working_folder(parent)
+    real_delete = folder.delete
+
+    def slow_delete():
+        gate.wait(10)
+        real_delete()
+
+    folder.delete = slow_delete
+    return folder
+
+
+class TestANewRunWaitsForTheDelete:
+    """The user's choice (perf proposal review): a DataForge extraction
+    started while an earlier run's working folder is still being deleted in
+    the background waits for that delete before extract_dataforge, whose
+    sweep would skip the folder and whose free-space check would count it
+    as used. It waits on its own thread, never the GUI's, with the dialog's
+    busy bar, and a stop or a close ends the wait at once, as a stop."""
+
+    def test_extract_dataforge_starts_only_once_the_delete_is_over(
+        self, qapp, monkeypatch, patches
+    ):
+        over, going = threading.Event(), threading.Event()
+        over.set()   # a delete that ended before its finished slot ran
+        seen = []
+        monkeypatch.setattr(pe, "extract_dataforge",
+                            lambda *args, **kwargs: seen.append(going.is_set()) or True)
+        worker = DataForgeExtractWorker("Data.p4k", "unp4k.exe", "unforge.exe", "cache",
+                                        wait_for=[over, going])
+        finished, errors = _collect(worker)
+        worker.start()
+        try:
+            assert not worker.wait(300)
+            assert seen == []
+        finally:
+            going.set()
+        assert worker.wait(5000)
+        assert seen == [True]
+        assert (finished, errors) == ([True], [])
+        assert worker.stopped is False
+
+    @pytest.mark.parametrize("how", ["Stop in the dialog", "closing the window"])
+    def test_a_stop_or_a_close_during_the_wait_stops_the_run_at_once(
+        self, qapp, monkeypatch, patches, caplog, how
+    ):
+        going = threading.Event()   # the delete runs on throughout
+        extract = MagicMock(return_value=True)
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        worker = DataForgeExtractWorker("Data.p4k", "unp4k.exe", "unforge.exe", "cache",
+                                        wait_for=[going])
+        finished, errors = _collect(worker)
+        worker.start()
+        try:
+            assert not worker.wait(200)
+            started = time.monotonic()
+            with caplog.at_level(logging.INFO):
+                if how == "Stop in the dialog":
+                    worker.requestInterruption()   # what the Stop answer does
+                    assert worker.wait(1000)
+                else:
+                    me = _window(_forge_worker=worker)
+                    MainWindow._stop_workers_for_close(me, timeout_ms=5000)
+                    assert me._forge_worker is None
+            assert time.monotonic() - started < 1
+            assert worker.isFinished()
+        finally:
+            going.set()
+            assert worker.wait(5000)
+        assert (finished, errors) == ([False], [])
+        assert worker.stopped is True
+        extract.assert_not_called()
+        assert patches.calls == []
+        assert _error_records(caplog) == []
+
+    def test_the_window_hands_the_run_every_background_delete(self, monkeypatch):
+        """The working folder deletes and the sweeps of leftovers alike."""
+        made = []
+        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+        monkeypatch.setattr(main_window, "DataForgeExtractWorker",
+                            lambda *args, **kwargs: made.append(_Worker(*args, **kwargs))
+                            or made[-1])
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
+        deletes = [WorkingFolderDeleteWorker(_Folder()), StaleWorkingFolderSweepWorker("x")]
+        me = _window(_working_folder_deleters=list(deletes))
+        assert MainWindow._run_dataforge_extraction(me) is True
+        assert made[0].kwargs["wait_for"] == [d.done for d in deletes]
+
+    def test_from_the_window_on_real_threads(self, qapp, monkeypatch, patches, tmp_path):
+        """A real background delete of a real working folder, made slow, and
+        an extraction started from the window meanwhile: the window returns
+        at once, the dialog shows the busy bar while the run waits, and the
+        run's extract_dataforge starts on the run's own thread only once the
+        folder is gone."""
+        gate = threading.Event()
+        folder = _gated_folder(tmp_path, gate)
+        seen = {}
+
+        def extract(*args, **kwargs):
+            seen["folder_gone"] = not folder.folder.exists()
+            seen["thread"] = threading.get_ident()
+            return True
+
+        monkeypatch.setattr(pe, "extract_dataforge", extract)
+        settings = MagicMock()
+        settings.get_dataforge_cache_leaf.return_value = tmp_path / "cache"
+        settings.get_dataforge_cache_dir.return_value = tmp_path / "cache"
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        dialogs = []
+
+        def make_dialog(label, parent=None, title=""):
+            dialogs.append(AnimatedProgressDialog(label, title=title))
+            return dialogs[-1]
+
+        monkeypatch.setattr(main_window, "AnimatedProgressDialog", make_dialog)
+        me = _window()
+        _real_deletes(me)
+        me._delete_working_folder_in_background(folder)
+        try:
+            started = time.monotonic()
+            assert MainWindow._run_dataforge_extraction(me) is True
+            assert time.monotonic() - started < 0.5
+            worker = me._forge_worker
+            pump_until(lambda: False, seconds=0.3)
+            assert seen == {} and worker.isRunning()
+            assert (dialogs[0].minimum(), dialogs[0].maximum()) == (0, 0)   # the busy bar
+            assert dialogs[0].labelText() == tr("extract.dataforge_extracting_label")
+        finally:
+            gate.set()
+        try:
+            assert pump_until(lambda: me._on_dataforge_extract_finished.called)
+            assert worker.wait(5000)
+            me._on_dataforge_extract_finished.assert_called_once_with(True, worker)
+            assert seen["folder_gone"] is True
+            assert seen["thread"] != threading.get_ident()
+            assert pump_until(lambda: me._working_folder_deleters == [])
+        finally:
+            dialogs[0].set_close_guard(None)
+            dialogs[0].close()
+            dialogs[0].deleteLater()
+
+
+def _leftovers(parent: Path):
+    """In *parent*: the working folder a crashed run left (its marker
+    closed, an old cache set aside in it) and a live one whose marker is
+    held, as a run or a delete in another window holds it, with the dcb in
+    it. Returns ``(crashed folder, live WorkingFolder, the live one's
+    dcb)``."""
+    crashed, marker = pe._open_scratch(parent, pe.DATAFORGE_SCRATCH_PREFIX)
+    old_record = crashed / pe._SET_ASIDE_CACHE_NAME / "raw" / "ship.xml"
+    old_record.parent.mkdir(parents=True)
+    old_record.write_text("<old ship/>", encoding="utf-8")
+    marker.close()
+    live = pe.WorkingFolder(*pe._open_scratch(parent, pe.DATAFORGE_SCRATCH_PREFIX))
+    dcb = live.folder / "Data" / "Game2.dcb"
+    dcb.parent.mkdir()
+    dcb.write_bytes(b"dcb")
+    return crashed, live, dcb
+
+
+@pytest.fixture
+def sweeps(monkeypatch):
+    """Every sweep of pak_extractor's, with the thread it ran on, still
+    sweeping for real."""
+    real = pe._sweep_stale_scratch
+    calls = []
+
+    def record(parent, prefix, should_cancel=None):
+        calls.append((Path(parent), prefix, threading.get_ident()))
+        return real(parent, prefix, should_cancel=should_cancel)
+
+    monkeypatch.setattr(pe, "_sweep_stale_scratch", record)
+    return calls
+
+
+class TestLeftoversAreSweptAtStartup:
+    """A crash or a kill during a successful run's background delete leaves
+    its working folder, with the old cache set aside in it (perf proposal),
+    which only the next DataForge extraction beside the same cache folder
+    used to sweep. Once a session at startup the window sweeps beside the
+    active cache folder, on a thread of its own, with pak_extractor's own
+    sweep, which leaves a folder whose marker is held."""
+
+    def test_a_crashed_runs_folder_goes_and_a_live_one_stays(
+        self, qapp, monkeypatch, tmp_path, sweeps
+    ):
+        leaf = tmp_path / "SC" / "LIVE" / "cache" / "dataforge"
+        record = leaf / "raw" / "ship.xml"
+        record.parent.mkdir(parents=True)
+        record.write_text("<ship/>", encoding="utf-8")
+        crashed, live, dcb = _leftovers(leaf.parent)
+        settings = MagicMock()
+        settings.get_dataforge_cache_leaf.return_value = leaf
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        me = _window()
+        _real_deletes(me)
+        try:
+            MainWindow._sweep_stale_working_folders_at_startup(me)
+            assert pump_until(lambda: me._working_folder_deleters == [])
+            assert not crashed.exists()
+            assert dcb.read_bytes() == b"dcb"   # a folder whose marker is held is left whole
+            assert record.read_text(encoding="utf-8") == "<ship/>"
+            assert [(parent, prefix) for parent, prefix, _thread in sweeps] == [
+                (leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)]
+            assert sweeps[0][2] != threading.get_ident()   # never on the GUI thread
+            settings.get_dataforge_cache_dir.assert_not_called()   # creates nothing (#494)
+
+            MainWindow._sweep_stale_working_folders_at_startup(me)   # once a session
+            assert me._working_folder_deleters == [] and len(sweeps) == 1
+        finally:
+            live.delete()
+
+    @pytest.mark.parametrize("state", ["an extraction runs", "closing"])
+    def test_none_while_an_extraction_runs_or_the_window_closes(self, state):
+        """A running extraction sweeps there itself (_begin_scratch)."""
+        me = _window(_forge_worker=_Worker() if state == "an extraction runs" else None,
+                     _close_committed=state == "closing")
+        MainWindow._sweep_stale_working_folders_at_startup(me)
+        me._sweep_working_folders_in_background.assert_not_called()
+        assert me._startup_sweep_done is True
+
+    def test_a_cache_folder_that_cannot_be_named_never_stops_startup(self, monkeypatch, caplog):
+        settings = MagicMock()
+        settings.get_dataforge_cache_leaf.side_effect = OSError("the network is not there")
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        me = _window()
+        with caplog.at_level(logging.WARNING, logger=main_window.logger.name):
+            MainWindow._sweep_stale_working_folders_at_startup(me)
+        me._sweep_working_folders_in_background.assert_not_called()
+        assert [r.levelno for r in caplog.records] == [logging.WARNING]
+        assert "the network is not there" in caplog.text
+
+    def test_the_startup_gate_sweeps_before_anything_can_start_an_extraction(self):
+        me = MagicMock()
+        me._startup_gate_pending = True
+        order = []
+        me._sweep_stale_working_folders_at_startup.side_effect = lambda: order.append("sweep")
+        me._start_startup_sync.side_effect = lambda: order.append("sync")
+        MainWindow._continue_startup_after_update_gate(me)
+        assert order == ["sweep", "sync"]
+
+    def test_a_sweep_waits_for_the_deletes_already_running(self, qapp, tmp_path, sweeps):
+        """So it never works on a folder a delete is just finishing."""
+        gate = threading.Event()
+        folder = _gated_folder(tmp_path, gate)
+        me = _window()
+        _real_deletes(me)
+        me._delete_working_folder_in_background(folder)
+        me._sweep_working_folders_in_background(tmp_path)
+        try:
+            pump_until(lambda: False, seconds=0.3)
+            assert sweeps == []
+        finally:
+            gate.set()
+        assert pump_until(lambda: me._working_folder_deleters == [])
+        assert len(sweeps) == 1
+        assert not folder.folder.exists()
+
+
 class TestUnusableCacheFolderAtStart:
     """#494. ``_run_dataforge_extraction`` creates the cache folder
     (``get_dataforge_cache_dir``), because it is about to write the cache.
@@ -1226,7 +1994,8 @@ class TestLinkedCacheFolderAtStart:
         ordinary folder, so the extraction starts."""
         made = []
         monkeypatch.setattr(main_window, "DataForgeExtractWorker",
-                            lambda *args: made.append(_Worker(*args)) or made[-1])
+                            lambda *args, **kwargs: made.append(_Worker(*args, **kwargs))
+                            or made[-1])
         monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
         box = MagicMock()
         monkeypatch.setattr(main_window, "QMessageBox", box)
@@ -2075,24 +2844,24 @@ class TestDismissedDialogStaysHidden:
 
     @staticmethod
     def _keep_reporting(qapp, worker, seconds=2.0):
-        # Slow progress, like the real snapshot: QProgressDialog shows a
+        # Slow progress, like a long counted phase: QProgressDialog shows a
         # hidden dialog again once its own estimate of the time left passes
         # its 4 s minimum duration (or the phase has run that long already).
         deadline = time.monotonic() + seconds
         step = 0
         while time.monotonic() < deadline:
             step += 1
-            worker.progress_pct.emit(step * 100, 30000, "Snapshotting cache for diff…")
-            worker.progress.emit("Snapshotting cache for diff…")
+            worker.progress_pct.emit(step * 100, 30000, "Caching entity files…")
+            worker.progress.emit("Caching entity files…")
             qapp.processEvents()
             time.sleep(0.05)
 
     @staticmethod
     def _dialog(worker):
-        dlg = AnimatedProgressDialog("Snapshotting cache for diff…", title="DataForge Extraction")
+        dlg = AnimatedProgressDialog("Caching entity files…", title="DataForge Extraction")
         worker.progress.connect(dlg.setLabelText)
         worker.progress_pct.connect(dlg.set_progress)
-        worker.progress_pct.emit(0, 30000, "Snapshotting cache for diff…")
+        worker.progress_pct.emit(0, 30000, "Caching entity files…")
         return dlg
 
     def test_without_the_detach_it_comes_back(self, qapp):
@@ -2194,8 +2963,8 @@ class TestExtractionWiring:
     def test_the_dataforge_dialog_asks_before_it_closes(self, monkeypatch):
         made = []
 
-        def make_worker(*args):
-            made.append(_Worker(*args))
+        def make_worker(*args, **kwargs):
+            made.append(_Worker(*args, **kwargs))
             return made[-1]
 
         dialog = MagicMock()

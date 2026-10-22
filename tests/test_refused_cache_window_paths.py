@@ -245,6 +245,9 @@ class _Worker:
         self.calls.append("wait")
         return True
 
+    def take_working_folder(self):
+        return None   # no working folder kept (perf proposal)
+
     def deleteLater(self):
         self.calls.append("deleteLater")
 
