@@ -15,6 +15,7 @@ table, and per-body intersection guards shared titles. The stale
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -259,6 +260,63 @@ def test_location_detail_name_covers_canonical_family(gen_module):
     assert gen_module._derive_route_fragment([body2], cfg) == (
         "~mission(Pickup1|Address) > ~mission(Dropoff1|Address)"
     )
+
+
+# ── Deterministic body order at the generator's call sites ──────────────────
+
+_COURIER_LOC = {
+    # Two pooled courier bodies that spell the same endpoints both ways.
+    "Covalex_courier_dc_small_desc_002":
+        "Pick up at ~mission(Pickup1), drop off at ~mission(Dropoff1|Address).",
+    "Covalex_courier_dc_small_desc_001":
+        "Collect from ~mission(Pickup1|Address) and deliver to ~mission(Dropoff1).",
+}
+
+
+def test_route_bodies_follow_key_order_not_input_order(gen_module):
+    """The generator pools a title's desc keys in a set and the first body's
+    spelling of an endpoint wins, so the bodies must come back in one stable
+    order whatever order the keys arrive in."""
+    keys = list(_COURIER_LOC)
+    forward = gen_module._route_bodies(keys, _COURIER_LOC)
+    backward = gen_module._route_bodies(list(reversed(keys)), _COURIER_LOC)
+    as_set = gen_module._route_bodies(set(keys), _COURIER_LOC)
+    expected = [
+        _COURIER_LOC["Covalex_courier_dc_small_desc_001"],
+        _COURIER_LOC["Covalex_courier_dc_small_desc_002"],
+    ]
+    assert forward == backward == as_set == expected
+
+
+def test_route_bodies_tolerate_missing_keys_and_no_loc(gen_module):
+    assert gen_module._route_bodies({"missing"}, _COURIER_LOC) == [None]
+    assert gen_module._route_bodies({"x"}, None) == [None]
+    assert gen_module._route_bodies(set(), _COURIER_LOC) == []
+
+
+def test_pooled_courier_bodies_render_one_route(gen_module):
+    """Regression: two Generates on the same cache rendered
+    ``Pickup1|Address > Dropoff1`` in one run and ``Pickup1 > Dropoff1|Address``
+    in the next, following whichever desc key hashed first in that process.
+    The lowest key's spelling must win in every ordering."""
+    expected = "~mission(Pickup1|Address) > ~mission(Dropoff1)"
+    keys = list(_COURIER_LOC)
+    for ordering in (keys, list(reversed(keys)), set(keys)):
+        bodies = gen_module._route_bodies(ordering, _COURIER_LOC)
+        assert gen_module._derive_route_fragment(bodies, loc=_COURIER_LOC) == expected
+
+
+def test_generator_feeds_every_route_derivation_through_route_bodies(gen_module):
+    """Lock the call sites: a bare ``[loc.get(dk) for dk in <set>]`` at either
+    site reintroduces the hash-order flip."""
+    src = Path(gen_module.__file__).read_text(encoding="utf-8")
+    call_sites = [
+        m.end() for m in re.finditer(r"(?<!def )_derive_route_fragment\(", src)
+    ]
+    assert len(call_sites) >= 2, "expected the contractgen and pu-only call sites"
+    for pos in call_sites:
+        head = src[pos:pos + 80].lstrip()
+        assert head.startswith("_route_bodies("), head
 
 
 # ── Eligibility (haul / delivery / courier) ─────────────────────────────────
