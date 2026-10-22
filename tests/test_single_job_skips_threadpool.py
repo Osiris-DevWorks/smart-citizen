@@ -123,7 +123,7 @@ class TestSingleJobSkipsThreadPool:
         pool: one job, several workers. commodity_crafting needs only the
         scitem lookup, and its generator is stubbed, so this needs no XML."""
         base_ini, forge_dir = forge_layout
-        with patch.object(gen_module, "build_scitem_lookups",
+        with patch.object(gen_module, "build_scitem_facts",
                           return_value=({}, {}, {}, {})) as scitem, \
              patch.object(gen_module, "_run_gen_commodity_journal",
                           return_value=({}, {})) as commodity, \

@@ -165,6 +165,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change backup behavior | `src/gui/main_window.py` | `manage_backups()` |
 | Modify P4K extraction | `src/utils/pak_extractor.py` | `extract_dataforge()` |
 | Change enhancements generation | `scripts/generate_enhancements_ini.py` | (standalone script) |
+| Change what the scitem lookup pickles or how `[CLASS-Sx-grade]` name tags render | `scripts/generate_enhancements_ini.py` | `build_scitem_facts()` (tag-free, pickled as `scitem_lookups`), `render_scitem_name_tags()` (in memory, per run, from the components TagConfig), `_tag_inputs_from_root()` |
 | Add performance profiling | `src/utils/perf.py` | `@timed` decorator |
 | Change user data paths | `src/utils/settings.py` | `AppSettings.get_user_data_dir()` |
 | Change DataForge freshness | `src/utils/settings.py`, `src/gui/main_window.py` | `dataforge_cache_is_fresh()` |
