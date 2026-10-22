@@ -374,6 +374,14 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 #     prefixed bp_dir/entity_dir callers compare them against and crashing
 #     scan_crafting_blueprints's xml_file.relative_to(bp_dir) with "not in
 #     the subpath of". Bump flushes any pre-#231 pickle.
+#   scitem_lookups v11 (2.5.0) — the fourth slot is no longer the rendered
+#     entity_name_tags but the tag-free facts render_scitem_name_tags turns
+#     into them in memory, and the key no longer carries the components tag
+#     config: a Tag Builder change used to re-parse all 24k scitem XMLs (11 s
+#     on an NVMe machine). v10 pickles hold strings where the consumer now
+#     expects fact tuples, so bump invalidates them. blueprint_pools keeps the
+#     config in its key (its names bake the rendered tag in) and is a quick
+#     rebuild.
 _LOOKUP_VERSIONS: dict[str, str] = {
     # v13: tags apply regardless of name-resolution tier + loc-derived
     # name_fallback_tags for bare-type items (fuel nozzle [FN] missing
@@ -381,7 +389,7 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # bump, a regen against an unchanged DataForge reuses pools baked
     # before those fixes and the mission text stays untagged/garbled.
     "blueprint_pools": "v14",
-    "scitem_lookups": "v10",
+    "scitem_lookups": "v11",
     "standings": "v3",
     "xml_path_index": "v2",
 }
@@ -836,10 +844,40 @@ _ITEM_TYPE_ABBREV = {
 _SIZE_LINE_RE = re.compile(r"Size:\s*S?(\d+)")
 
 
+def _tag_inputs_from_root(root: ET.Element) -> tuple[str, str, str, str, str, str, str]:
+    """The seven XML-derived values the component and mining-laser taggers
+    read, as plain strings ("" when absent): the entity class token, the
+    loc-name key, AttachDef's Size, Grade and SubType, ItemComponentParams'
+    itemType, and the root Name attribute.
+
+    build_scitem_facts reads them once per scitem XML and pickles them in
+    place of the rendered tag, so a Tag Builder change renders from them
+    (render_scitem_name_tags) instead of re-parsing 24k files. Plain tuples
+    on purpose: the generator is loaded under several module names, and a
+    pickled class instance would not unpickle across them.
+    """
+    attach_el = _find(root, "SAttachableComponentParams")
+    attach_def = attach_el.find("AttachDef") if attach_el is not None else None
+    icp = _find(root, "ItemComponentParams")
+    return (
+        root.tag.split(".")[-1] if "." in root.tag else root.tag,
+        _loc_name_key(root) or "",
+        attach_def.get("Size", "") if attach_def is not None else "",
+        attach_def.get("Grade", "") if attach_def is not None else "",
+        attach_def.get("SubType", "") if attach_def is not None else "",
+        icp.get("itemType", "") if icp is not None else "",
+        root.get("Name") or root.get("name") or "",
+    )
+
+
 def _component_name_tag(desc_value: str, root: ET.Element | None = None,
                         config: "TagConfig | None" = None,
-                        component_type: str = "") -> str | None:
+                        component_type: str = "",
+                        inputs: tuple | None = None) -> str | None:
     """Build a bracket annotation tag from a component-style description.
+
+    *inputs* (see _tag_inputs_from_root) stands in for *root*: the same
+    XML-derived values, read earlier and pickled with the scitem facts.
 
     Two paths, both producing the same ``[…]`` shape:
 
@@ -871,15 +909,15 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
     Returns ``None`` when Size: itself is missing OR when the fallback's
     minimum-information bar isn't met. Those items pass through bare.
     """
-    # AttachDef is shared by the size fallback chain below and the
-    # grade/class fallbacks further down, so resolve it first.
-    attach_def = None
+    # The XML-derived inputs: read off the root here, or handed in by a
+    # caller that read them earlier (the pickled scitem facts).
+    if inputs is None and root is not None:
+        inputs = _tag_inputs_from_root(root)
+    class_token, name_key, attach_size, attach_grade, attach_subtype, item_type = (
+        inputs[:6] if inputs is not None else ("", "", "", "", "", "")
+    )
     attach_grade_letter = None
     attach_class_name = None
-    if root is not None:
-        attach_el = _find(root, "SAttachableComponentParams")
-        if attach_el is not None:
-            attach_def = attach_el.find("AttachDef")
 
     # _SIZE_LINE_RE tolerates the optional leading 'S' (see its definition).
     # Fallback chain when the loc text doesn't match (translated base.ini,
@@ -893,39 +931,30 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
     # English output.
     size_m = _SIZE_LINE_RE.search(desc_value)
     size = size_m.group(1) if size_m else None
-    if size is None and root is not None:
-        root_tag = root.tag.split(".")[-1] if "." in root.tag else root.tag
-        xml_size = _extract_item_size(root_tag)
+    if size is None and class_token:
+        xml_size = _extract_item_size(class_token)
         if xml_size:
             size = xml_size.lstrip("S")
-    if size is None and root is not None:
-        name_key = _loc_name_key(root)
-        if name_key:
-            key_size = _extract_item_size(name_key)
-            if key_size:
-                size = key_size.lstrip("S")
-    if size is None and attach_def is not None:
-        raw_size = attach_def.get("Size", "")
-        if raw_size.isdigit():
-            size = raw_size
+    if size is None and name_key:
+        key_size = _extract_item_size(name_key)
+        if key_size:
+            size = key_size.lstrip("S")
+    if size is None and attach_size.isdigit():
+        size = attach_size
     if size is None:
         return None
 
     grade_m = re.search(r"Grade:\s*([A-D])", desc_value)
     class_m = re.search(r"Class:\s*(\w+)", desc_value)
 
-    if not grade_m and attach_def is not None:
-        num_grade = attach_def.get("Grade", "")
-        if num_grade.isdigit():
-            g_idx = int(num_grade) - 1
-            if 0 <= g_idx <= 3:
-                attach_grade_letter = "ABCD"[g_idx]
+    if not grade_m and attach_grade.isdigit():
+        g_idx = int(attach_grade) - 1
+        if 0 <= g_idx <= 3:
+            attach_grade_letter = "ABCD"[g_idx]
 
-    if not class_m and attach_def is not None:
-        subtype = attach_def.get("SubType", "")
-        if subtype:
-            # CamelCase → space-separated (e.g. "BombRack" → "Bomb Rack")
-            attach_class_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", subtype)
+    if not class_m and attach_subtype:
+        # CamelCase → space-separated (e.g. "BombRack" → "Bomb Rack")
+        attach_class_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", attach_subtype)
 
     # Resolve effective grade and class for downstream paths
     grade_letter = (grade_m.group(1) if grade_m else None) or attach_grade_letter
@@ -933,13 +962,10 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
 
     # When Class: is missing from text, try to derive from XML ItemComponentParams
     xml_item_type = None
-    if not class_name and root is not None:
-        icp = _find(root, "ItemComponentParams")
-        if icp is not None:
-            raw_type = icp.get("itemType", "")
-            # CamelCase → space-separated, same split as attach_class_name
-            # (e.g. "ShieldGenerator" → "Shield Generator")
-            xml_item_type = re.sub(r"([a-z])([A-Z])", r"\1 \2", raw_type)
+    if not class_name and item_type:
+        # CamelCase → space-separated, same split as attach_class_name
+        # (e.g. "ShieldGenerator" → "Shield Generator")
+        xml_item_type = re.sub(r"([a-z])([A-Z])", r"\1 \2", item_type)
 
     # Strict path: full ship-component trio with a recognised class →
     # render via the Tag Builder pipeline so user customisation applies.
@@ -1091,7 +1117,8 @@ def _build_mining_laser_tag_cfg(mining_cfg_src: "TagConfig | None") -> "TagConfi
 
 
 def _mining_laser_component_tag(desc_value: str, root: "ET.Element | None",
-                                 mining_tag_cfg: "TagConfig | None") -> str | None:
+                                mining_tag_cfg: "TagConfig | None",
+                                inputs: tuple | None = None) -> str | None:
     """Render the component-style Type(+Size) tag for a ship-mounted
     mining laser entity (e.g. ``[Mining Laser-S1]``), or None when the
     entity isn't a mining laser, no tag config is available, or
@@ -1102,12 +1129,17 @@ def _mining_laser_component_tag(desc_value: str, root: "ET.Element | None",
     description. Shared by _ship_weapon_name_tag_factory and
     build_scitem_lookups -- see _build_mining_laser_tag_cfg.
     """
-    if mining_tag_cfg is None or render_tag is None or root is None:
+    if mining_tag_cfg is None or render_tag is None:
         return None
-    if _find(root, "SEntityComponentMiningLaserParams") is None:
-        return None
+    if inputs is None:
+        # *inputs* (see _tag_inputs_from_root) stands in for *root* when the
+        # caller already knows the entity is a mining laser, as
+        # render_scitem_name_tags does from the pickled scitem facts.
+        if root is None or _find(root, "SEntityComponentMiningLaserParams") is None:
+            return None
+        inputs = _tag_inputs_from_root(root)
     size = None
-    name_attr = root.get("Name") or root.get("name") or ""
+    name_attr = inputs[6]
     m = re.search(r"_S0*(\d+)_", name_attr)
     if m:
         size = str(int(m.group(1)))
@@ -5863,14 +5895,15 @@ _SUBDIR_TO_TYPE: dict[str, str] = {
 _TYPELESS_COMPONENT_TAG_RE = re.compile(r"^\[S\d")
 
 
-def build_scitem_lookups(
+def build_scitem_facts(
     scitem_dir: Path,
     loc: dict[str, str] | None = None,
     xml_path_index: dict | None = None,
     records_dir: Path | None = None,
-    tag_config: "TagConfig | None" = None,
-) -> tuple[dict[str, tuple[str, str]], dict[str, str], dict[str, str], dict[str, str]]:
-    """Single-pass scan of scitem XMLs that produces four lookups:
+) -> tuple[dict[str, tuple[str, str]], dict[str, str], dict[str, str], dict[str, tuple]]:
+    """Single-pass scan of scitem XMLs that produces three lookups and the
+    tag-free facts the fourth is rendered from (render_scitem_name_tags;
+    build_scitem_lookups does both in one call):
 
     * mag_lookup: magazine entity class name → (ammoParamsRecord, maxAmmoCount)
       — derived from SAmmoContainerComponentParams elements.
@@ -5885,8 +5918,10 @@ def build_scitem_lookups(
       assignments are finalised). The blueprint's own filename minus
       its `bp_craft_` / `bp_rewards_` prefix matches the entity XML's
       filename in CIG's authored layout.
-    * entity_name_tags: __ref UUID → ``[CLASS-Sx-grade]`` tag (e.g.
-      ``[MIL-S1-A]``) when the entity is a ship component whose
+    * tag_facts: __ref UUID → the tag-free facts behind the entity's
+      ``[CLASS-Sx-grade]`` name tag (``(desc_loc_key, component_type,
+      is_mining_laser, inputs)``, rendered by render_scitem_name_tags into
+      e.g. ``[MIL-S1-A]``) when the entity is a ship component whose
       description carries the Size:/Grade:/Class: header trio, plus
       two narrower exceptions (#266 follow-up): a Type-only tag for
       size-less Fuel Nozzle entities (matching
@@ -5910,12 +5945,10 @@ def build_scitem_lookups(
     mag_lookup: dict[str, tuple[str, str]] = {}
     entity_names: dict[str, str] = {}
     entity_names_by_filename: dict[str, str] = {}
-    entity_name_tags: dict[str, str] = {}
+    tag_facts: dict[str, tuple] = {}
     loc = loc or {}
     if not scitem_dir.exists():
-        return mag_lookup, entity_names, entity_names_by_filename, entity_name_tags
-
-    mining_tag_cfg = _build_mining_laser_tag_cfg(tag_config)
+        return mag_lookup, entity_names, entity_names_by_filename, tag_facts
 
     null_uuid = "00000000-0000-0000-0000-000000000000"
     xml_files = (
@@ -6000,39 +6033,88 @@ def build_scitem_lookups(
                 root, "SEntityComponentMiningLaserParams"
             ) is not None
             if desc_value and ("weapons" not in _parts or is_mining_laser):
-                if is_mining_laser:
-                    tag = _mining_laser_component_tag(desc_value, root, mining_tag_cfg)
-                else:
-                    # Derive the component type from the entity's subdir so the
-                    # blueprint-list tag carries the same Type element the
-                    # standalone component path emits (#101). Non-component
-                    # entities won't be under these subdirs (comp_type stays "")
-                    # and _component_name_tag returns None for them regardless.
-                    comp_type = next(
-                        (t for sd, t in _SUBDIR_TO_TYPE.items() if sd in _parts), ""
-                    )
-                    tag = _component_name_tag(
-                        desc_value, root, config=tag_config, component_type=comp_type
-                    )
-                    # #266 follow-up: Fuel Nozzle carries no
-                    # Size:/Grade:/Class: at all, so _component_name_tag above
-                    # always returns None for them -- fall back to the same
-                    # Type-only bare-type tag enhancements_bare_type_tags
-                    # applies to their own item_Name.
-                    if not tag:
-                        tag = _bare_type_tag_from_desc(desc_value, tag_config)
-                # #160: armour, magazines, salvage/mining heads and other FPS
-                # gear expose Size + Grade in their AttachDef but no ship
-                # component CLASS, so _component_name_tag falls back to a
-                # typeless "[S1-A]" (size+grade only). That tag is meaningless
-                # in a POTENTIAL BLUEPRINTS list — users reported it as an
-                # unknown tag. Only weave CLASS/TYPE-qualified tags (e.g.
-                # "[Mil-S1-A]", "[SAL-S2]") into blueprint lists; drop the
-                # typeless fallback so these items show bare.
-                if tag and not _TYPELESS_COMPONENT_TAG_RE.search(tag):
-                    entity_name_tags[ref] = tag
+                # Derive the component type from the entity's subdir so the
+                # blueprint-list tag carries the same Type element the
+                # standalone component path emits (#101). Non-component
+                # entities won't be under these subdirs (comp_type stays "")
+                # and _component_name_tag returns None for them regardless.
+                comp_type = "" if is_mining_laser else next(
+                    (t for sd, t in _SUBDIR_TO_TYPE.items() if sd in _parts), ""
+                )
+                tag_facts[ref] = (
+                    desc_loc_key, comp_type, is_mining_laser, _tag_inputs_from_root(root)
+                )
 
-    return mag_lookup, entity_names, entity_names_by_filename, entity_name_tags
+    return mag_lookup, entity_names, entity_names_by_filename, tag_facts
+
+
+def render_scitem_name_tags(
+    tag_facts: dict[str, tuple],
+    loc: dict[str, str] | None,
+    tag_config: "TagConfig | None" = None,
+) -> dict[str, str]:
+    """entity_name_tags (__ref UUID → ``[CLASS-Sx-grade]``) rendered from
+    build_scitem_facts' tag-free facts with the user's components TagConfig.
+
+    In memory, well under a second for the whole scitem tree. Rendering
+    inside the scitem walk meant the pickled lookups carried the tag config
+    in their key, so a Tag Builder change re-parsed all 24k scitem XMLs: 11 s
+    on an NVMe machine, the whole difference between a normal Generate and
+    one after a components tag edit. The rules are those of the walk before
+    the split:
+
+    * A mining laser (the one "weapons" entity the walk keeps, #266) gets
+      the component-style Type(+Size) tag, or none when Type is off.
+    * Anything else goes through _component_name_tag, then the Type-only
+      bare-type tag for a Fuel Nozzle, which carries no Size:/Grade:/Class:
+      at all (#266 follow-up; the same tag enhancements_bare_type_tags puts
+      on its own item_Name).
+    * #160: armour, magazines, salvage/mining heads and other FPS gear
+      expose Size + Grade in their AttachDef but no ship component CLASS,
+      so _component_name_tag falls back to a typeless "[S1-A]". That tag is
+      meaningless in a POTENTIAL BLUEPRINTS list (users reported it as an
+      unknown tag), so only CLASS/TYPE-qualified tags ("[Mil-S1-A]",
+      "[SAL-S2]") are kept; the typeless fallback is dropped and those items
+      show bare.
+    """
+    loc = loc or {}
+    mining_tag_cfg = _build_mining_laser_tag_cfg(tag_config)
+    out: dict[str, str] = {}
+    for ref, (desc_loc_key, comp_type, is_mining_laser, inputs) in tag_facts.items():
+        desc_value = loc.get(desc_loc_key, "")
+        if not desc_value:
+            continue
+        if is_mining_laser:
+            tag = _mining_laser_component_tag(desc_value, None, mining_tag_cfg, inputs=inputs)
+        else:
+            tag = _component_name_tag(
+                desc_value, config=tag_config, component_type=comp_type, inputs=inputs
+            )
+            if not tag:
+                tag = _bare_type_tag_from_desc(desc_value, tag_config)
+        if tag and not _TYPELESS_COMPONENT_TAG_RE.search(tag):
+            out[ref] = tag
+    return out
+
+
+def build_scitem_lookups(
+    scitem_dir: Path,
+    loc: dict[str, str] | None = None,
+    xml_path_index: dict | None = None,
+    records_dir: Path | None = None,
+    tag_config: "TagConfig | None" = None,
+) -> tuple[dict[str, tuple[str, str]], dict[str, str], dict[str, str], dict[str, str]]:
+    """build_scitem_facts plus render_scitem_name_tags in one call: the four
+    lookups (mag_lookup, entity_names, entity_names_by_filename,
+    entity_name_tags) as before the split. main() calls the two halves
+    itself so that only the facts are pickled."""
+    mag_lookup, entity_names, entity_names_by_filename, tag_facts = build_scitem_facts(
+        scitem_dir, loc, xml_path_index=xml_path_index, records_dir=records_dir
+    )
+    return (
+        mag_lookup, entity_names, entity_names_by_filename,
+        render_scitem_name_tags(tag_facts, loc, tag_config),
+    )
 
 
 def build_magazine_lookup(scitem_dir: Path) -> dict[str, tuple[str, str]]:
@@ -7560,25 +7642,27 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     standings_lookup: dict[str, str] = {}
     standing_track_lookup: dict[str, str] = {}
 
-    # Components Tag Builder config — drives the [CLASS-Sx-grade] tags that
-    # get baked into both scitem_lookups (entity_name_tags) and the pickle
-    # of blueprint_pools (POTENTIAL BLUEPRINTS list entries). Folding the
-    # JSON form into both caches' extra_key invalidates them on user edit
-    # so mission descriptions don't keep emitting the old style after a
-    # config change. JSON is sort_keys=True so the string is stable.
+    # Components Tag Builder config — drives the [CLASS-Sx-grade] tags
+    # rendered in memory from the scitem facts (entity_name_tags) and baked
+    # into the pickle of blueprint_pools (POTENTIAL BLUEPRINTS list entries).
+    # Folding the JSON form into that cache's extra_key invalidates it on
+    # user edit so mission descriptions don't keep emitting the old style
+    # after a config change; it is a quick rebuild. The scitem pickle no
+    # longer carries it: a Tag Builder change used to re-parse all 24k scitem
+    # XMLs for tags that take a fraction of a second to render. JSON is
+    # sort_keys=True so the string is stable.
     _components_cfg = (tag_configs or {}).get("components") or DEFAULT_TAG_CONFIGS.get("components")
     _components_cfg_key = _components_cfg.to_json() if _components_cfg else ""
 
     def _build_scitem_pair():
-        return _cached_lookup(
+        mag, names, by_filename, tag_facts = _cached_lookup(
             forge_dir, "scitem_lookups",
-            lambda: build_scitem_lookups(
+            lambda: build_scitem_facts(
                 records / "entities" / "scitem", en_loc,
                 xml_path_index=xml_path_index, records_dir=records,
-                tag_config=_components_cfg,
             ),
-            extra_key=_components_cfg_key,
         )
+        return mag, names, by_filename, render_scitem_name_tags(tag_facts, en_loc, _components_cfg)
 
     def _build_reputation():
         rep_rewards_dir = records / "reputation" / "rewards" / "missionrewards_reputation"
