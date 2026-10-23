@@ -3370,6 +3370,10 @@
       "ht": "",
       "at": "Recuperación"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (solo en superficie)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Buscar blueprints..."
@@ -3432,11 +3436,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "Ilumina la etiqueta del escaneo cuando se decodifica este mineral"
+      "at": "Avisar cuando se escanee este mineral"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Avisar cuando se escanee recuperación"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "Mineral o componente..."
+      "at": "Escribe algo escaneable o un objeto..."
     },
     "minerals_none": {
       "ht": "",
@@ -3470,6 +3478,10 @@
       "ht": "",
       "at": "Firma de escaneo: {base} por roca, hasta {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Firma de escaneo: {base} cada uno, hasta {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "Se usa en {count} objetos fabricados"
@@ -3490,7 +3502,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log; nunca toca el proceso del juego."
+      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log y, si defines un atajo para el cajón, observa las teclas pulsadas solo para esa combinación; nunca toca el proceso del juego."
     },
     "start_btn": {
       "ht": "",
@@ -3500,6 +3512,22 @@
       "ht": "",
       "at": "Detener superposición"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "Decodificador de escaneo"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Cajón"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Blueprints desde Game.log"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "Muestras de escaneo"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificador de escaneo minero"
@@ -3507,6 +3535,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "Lee la firma de escaneo bajo el radar y muestra debajo el tipo y la cantidad de depósitos."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Tamaño del texto del escaneo:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Pequeño"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Mediano"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Grande"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Muy grande"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "Cuando se escanea un mineral vigilado o recuperación:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Brillo"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Un brillo pulsante alrededor de la etiqueta mientras se muestra."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Parpadeo"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "La etiqueta parpadea tres veces cuando el objetivo se lee por primera vez."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Cambiar el color del texto"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "El texto de la etiqueta se vuelve verde brillante."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Texto más grande"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "El texto de la etiqueta se hace una vez y media más grande."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Reproducir un sonido"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Un breve tono cuando el objetivo se lee por primera vez."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3558,7 +3650,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "Escribe un mineral para ver qué componentes lo usan, o un componente para ver los minerales que necesita. Requiere una extracción de DataForge."
+      "at": "Escribe un mineral para ver qué objetos lo usan, o un objeto para ver los minerales que necesita. Requiere una extracción de DataForge."
     },
     "drawer_position": {
       "ht": "",
@@ -3595,6 +3687,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "Abajo a la derecha"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Atajo del cajón:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Borrar"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Abre y cierra el cajón desde el juego, en la última sección usada. En el juego sigue manteniendo pulsada la F para usar el ratón en él. Haz clic en la casilla y pulsa las teclas a la vez, por ejemplo Alt+8. Star Citizen sigue recibiendo estas teclas, así que elige una combinación que no uses en el juego."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows rechazó este atajo. Puede que otro programa ya lo use; elige otro."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Esto no puede ser un atajo. Mantén pulsada Ctrl, Alt o Win con una letra, un número, un símbolo, Espacio, Tab o una tecla de navegación (flechas, Inicio, Fin, Re Pág/Av Pág, Insert, Supr), y también Mayús si quieres. Una tecla F o Pausa también sirve sola."
     }
   }
 }

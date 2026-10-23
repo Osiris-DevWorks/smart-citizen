@@ -3370,6 +3370,10 @@
       "ht": "",
       "at": "Recupero"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (solo in superficie)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Cerca blueprint..."
@@ -3432,11 +3436,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "Fa brillare l'etichetta della scansione quando questo minerale viene decodificato"
+      "at": "Avvisa quando questo minerale viene scansionato"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Avvisa quando viene scansionato materiale di recupero"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "Minerale o componente..."
+      "at": "Scrivi un elemento scansionabile o un oggetto..."
     },
     "minerals_none": {
       "ht": "",
@@ -3470,6 +3478,10 @@
       "ht": "",
       "at": "Firma di scansione: {base} per roccia, fino a {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Firma di scansione: {base} ciascuno, fino a {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "Usato in {count} oggetti fabbricati"
@@ -3490,7 +3502,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei blueprint. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log; non tocca mai il processo del gioco."
+      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei blueprint. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log e, se imposti una scorciatoia per il cassetto, osserva i tasti premuti solo per quella combinazione; non tocca mai il processo del gioco."
     },
     "start_btn": {
       "ht": "",
@@ -3500,6 +3512,22 @@
       "ht": "",
       "at": "Ferma overlay"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "Decodificatore scansioni"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Cassetto"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Blueprint da Game.log"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "Campioni di scansione"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificatore scansioni minerarie"
@@ -3507,6 +3535,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "Legge la firma di scansione sotto il radar e mostra sotto il tipo e il numero di giacimenti."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Dimensione del testo della scansione:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Piccolo"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Medio"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Grande"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Molto grande"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "Quando viene scansionato un minerale osservato o materiale di recupero:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Bagliore"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Un bagliore pulsante attorno all'etichetta finché è visibile."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Lampeggio"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "L'etichetta lampeggia tre volte quando il bersaglio viene letto per la prima volta."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Cambia colore del testo"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "Il testo dell'etichetta diventa verde brillante."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Testo più grande"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "Il testo dell'etichetta diventa una volta e mezza più grande."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Riproduci un suono"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Un breve suono quando il bersaglio viene letto per la prima volta."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3558,7 +3650,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "Scrivi un minerale per vedere quali componenti lo usano, o un componente per vedere i minerali richiesti. Richiede un'estrazione DataForge."
+      "at": "Scrivi un minerale per vedere quali oggetti lo usano, o un oggetto per vedere i minerali richiesti. Richiede un'estrazione DataForge."
     },
     "drawer_position": {
       "ht": "",
@@ -3595,6 +3687,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "In basso a destra"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Scorciatoia del cassetto:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Cancella"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Apre e chiude il cassetto dal gioco, sull'ultima sezione usata. In gioco tieni comunque premuto F per usare il mouse al suo interno. Fai clic nella casella, poi premi i tasti insieme, per esempio Alt+8. Star Citizen riceve comunque questi tasti, quindi scegli una combinazione che non usi in gioco."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows ha rifiutato questa scorciatoia. Forse un altro programma la usa già; scegline un'altra."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Questa non può essere una scorciatoia. Tieni premuto Ctrl, Alt o Win con una lettera, un numero, un simbolo, Spazio, Tab o un tasto di navigazione (frecce, Home, Fine, Pag su/giù, Ins, Canc), e anche Maiusc se vuoi. Un tasto F o Pausa funziona anche da solo."
     }
   }
 }
