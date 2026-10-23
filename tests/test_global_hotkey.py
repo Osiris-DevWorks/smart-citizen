@@ -11,6 +11,7 @@ thread and must come out of the Qt event loop as ``activated``, and a second
 owner of the same combination is refused by Windows itself.
 """
 import sys
+import time
 
 import pytest
 
@@ -366,6 +367,19 @@ def _raw_hotkey(qapp, fake=None):
     return hotkey, clock, fired
 
 
+def _wait_for(qapp, condition, timeout_s: float = 5.0) -> bool:
+    """Run the event loop until *condition* holds. The raw-input wait is a
+    real 80 ms timer, and a busy CI runner can fire it late, so a test that
+    waits for a toggle waits for the toggle, not a fixed time."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        qapp.processEvents()
+        if condition():
+            return True
+        time.sleep(0.005)
+    return False
+
+
 def _press_raw(hotkey):
     for vk, released in ((CTRL, False), (ALT, False), (O_KEY, False),
                          (O_KEY, True), (ALT, True), (CTRL, True)):
@@ -401,18 +415,14 @@ def test_raw_input_refused_still_leaves_the_hotkey(qapp, caplog):
 def test_in_game_raw_input_toggles_once_per_press(qapp):
     """A game with focus keeps WM_HOTKEY away: raw input's sighting acts
     after RAW_GRACE_MS, once per press, and a later press acts again."""
-    from PyQt6.QtTest import QTest
-
-    from src.gui.global_hotkey import RAW_GRACE_MS, SAME_PRESS_S
+    from src.gui.global_hotkey import SAME_PRESS_S
     hotkey, clock, fired = _raw_hotkey(qapp)
     _press_raw(hotkey)
     assert fired == [] and hotkey._raw_wait.isActive()         # WM_HOTKEY gets its chance
-    QTest.qWait(RAW_GRACE_MS + 60)
-    assert fired == [50.0]
+    assert _wait_for(qapp, lambda: fired) and fired == [50.0]
     clock[0] += SAME_PRESS_S + 0.1
     _press_raw(hotkey)
-    QTest.qWait(RAW_GRACE_MS + 60)
-    assert len(fired) == 2
+    assert _wait_for(qapp, lambda: len(fired) == 2)
     hotkey.unregister()
 
 
@@ -434,9 +444,9 @@ def test_one_press_seen_both_ways_toggles_once(qapp):
     QTest.qWait(RAW_GRACE_MS + 60)
     assert len(fired) == 2
     clock[0] += SAME_PRESS_S + 0.1
-    _press_raw(hotkey)                                         # raw acted, WM_HOTKEY late
-    QTest.qWait(RAW_GRACE_MS + 60)
-    hotkey.hotkey_message()
+    _press_raw(hotkey)                                         # raw input acts first
+    assert _wait_for(qapp, lambda: len(fired) == 3)
+    hotkey.hotkey_message()                                    # its WM_HOTKEY, late
     assert len(fired) == 3
     hotkey.unregister()
 
@@ -467,9 +477,6 @@ class _RawEvents(_FakeUser32):
 
 def test_raw_messages_are_read_once_each(qapp):
     """Qt can hand one WM_INPUT to the filter twice; it is read once."""
-    from PyQt6.QtTest import QTest
-
-    from src.gui.global_hotkey import RAW_GRACE_MS
     events = {1: (1, CTRL, False), 2: (1, ALT, False), 3: (1, O_KEY, False),
               4: (0, O_KEY, False)}                            # 4: a mouse, not a keyboard
     fake = _RawEvents(events)
@@ -477,8 +484,7 @@ def test_raw_messages_are_read_once_each(qapp):
     for handle in (1, 1, 2, 2, 4, 3, 3):
         hotkey.raw_message(handle)
     assert fake.reads == [1, 2, 4, 3]
-    QTest.qWait(RAW_GRACE_MS + 60)
-    assert len(fired) == 1
+    assert _wait_for(qapp, lambda: fired) and len(fired) == 1
     hotkey.unregister()
 
 
