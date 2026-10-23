@@ -110,20 +110,25 @@ class _Report:
 class _Stub:
     """Carries just what _on_install_scan_finished touches."""
 
-    def __init__(self, current_worker, dialog=None):
+    def __init__(self, current_worker, dialog=None, locked=False):
         self._dupe_worker = current_worker
         self._dupe_progress = _FakeProgress()
         self._dupe_check_btn = _FakeButton()
+        self._check_updates_btn = _FakeButton()
+        self._update_check_running = False
+        self._data_locations_locked = locked
         if dialog is not None:
             self._dupe_dialog = dialog
 
     def finish(self, report, worker):
         ConfigTab._on_install_scan_finished(self, report, worker)
 
-    def _refresh_locked_controls(self):
-        # What the real one does for this button when no extraction or
-        # generation holds the Config tab locked (#483).
-        self._dupe_check_btn.setEnabled(self._dupe_worker is None)
+    # The real one (#483), so a finish that turned the button straight back
+    # on, lock or not, fails here.
+    _refresh_locked_controls = ConfigTab._refresh_locked_controls
+
+    def _job_locked_controls(self):
+        return []
 
     def _use_install_root(self, root):
         pass  # only ever connected, never invoked, in these tests
@@ -166,6 +171,18 @@ class TestStaleWorkerNeverTouchesCurrentState:
         assert stub._dupe_worker is None
         assert progress.closed
         assert stub._dupe_check_btn.enabled is True
+
+    def test_a_scan_that_ends_during_a_job_leaves_its_button_locked(self):
+        """A scan started before an extraction or a generation and finishing
+        during it turned Verify Install Location back on inside a locked
+        Config tab (#483)."""
+        worker = _FakeWorker()
+        stub = _Stub(current_worker=worker, locked=True)
+
+        stub.finish(_Report(cancelled=True), worker)
+
+        assert stub._dupe_worker is None
+        assert stub._dupe_check_btn.enabled is False
 
 
 class TestCancelledScanDoesNotReopenADismissedDialog:

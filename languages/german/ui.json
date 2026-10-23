@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Erzeugung der Erweiterungen fehlgeschlagen — Details im Log-Tab"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen gestoppt"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini für {channel} zurückgesetzt (Backup erstellt)"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "Gesperrt, solange eine Extraktion oder eine Erzeugung von Erweiterungen läuft, und wieder freigegeben, sobald sie abgeschlossen ist."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen läuft"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen läuft noch.\n\nJetzt stoppen oder im Hintergrund weiterlaufen lassen, während du weiterarbeitest? Wenn du sie stoppst, kannst du sie später erneut starten."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen wird gestoppt…"
     },
     "dataforge_stopping": {
       "ht": "",

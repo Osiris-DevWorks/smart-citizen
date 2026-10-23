@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Generazione dei miglioramenti fallita — controlla la scheda Log per i dettagli"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Generazione dei miglioramenti interrotta"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini reimpostato per {channel} (backup creato)"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "Bloccato mentre è in corso un'estrazione o una generazione dei miglioramenti, e sbloccato di nuovo quando termina."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Generazione Miglioramenti in Corso"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "La generazione dei miglioramenti è ancora in corso.\n\nInterromperla ora o lasciarla proseguire in background mentre continui a lavorare? Se la interrompi, potrai eseguirla di nuovo più tardi."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Interruzione della generazione dei miglioramenti…"
     },
     "dataforge_stopping": {
       "ht": "",

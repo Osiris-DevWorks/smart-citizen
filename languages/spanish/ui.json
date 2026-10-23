@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Falló la generación de mejoras — consulta la pestaña Registro para más detalles"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Generación de mejoras detenida"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini restablecido para {channel} (copia de seguridad creada)"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "Bloqueado mientras se ejecuta una extracción o una generación de mejoras, y desbloqueado de nuevo cuando termina."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Generación de mejoras en curso"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "La generación de mejoras sigue en curso.\n\n¿Detenerla ahora o dejar que siga en segundo plano mientras sigues trabajando? Si la detienes, podrás volver a ejecutarla más tarde."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Deteniendo la generación de mejoras…"
     },
     "dataforge_stopping": {
       "ht": "",

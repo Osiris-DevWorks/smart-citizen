@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "拡張の生成に失敗しました — 詳細はログタブを参照してください"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "拡張の生成を停止しました"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "{channel} の user.ini をリセットしました（バックアップ作成済み）"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "抽出または拡張の生成の実行中はロックされ、完了すると再びロックが解除されます。"
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "拡張の生成を実行中"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "拡張の生成はまだ実行中です。\n\n今すぐ停止しますか？それとも、作業を続けながらバックグラウンドで実行を続けますか？停止した場合は、後でもう一度実行できます。"
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "拡張の生成を停止しています…"
     },
     "dataforge_stopping": {
       "ht": "",

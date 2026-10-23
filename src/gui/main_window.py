@@ -8,7 +8,7 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QCheckBox,
     QFileDialog, QMessageBox, QTabWidget,
     QHeaderView, QFrame,
@@ -667,6 +667,40 @@ class SingleRowScrollArea(QScrollArea):
         return QSize(0, self._box_height())
 
 
+# The answers _ask_stop_or_background gives.
+_ANSWER_STOP = "stop"
+_ANSWER_BACKGROUND = "background"
+_ANSWER_CANCEL = "cancel"
+
+
+def _ask_stop_or_background(parent, title: str, body: str) -> str:
+    """The question Esc or the X on a running job's progress dialog asks
+    (#471, #483): Stop, Run in Background or Cancel, with Cancel the default
+    and what Esc picks. Returns _ANSWER_STOP, _ANSWER_BACKGROUND or
+    _ANSWER_CANCEL. The DataForge extraction and enhancement generation ask
+    it, each with its own title and body."""
+    box = QMessageBox(parent)
+    box.setIcon(QMessageBox.Icon.Question)
+    box.setWindowTitle(title)
+    box.setText(body)
+    stop_btn = box.addButton(
+        tr("extract.dataforge_stop_btn"), QMessageBox.ButtonRole.DestructiveRole
+    )
+    background_btn = box.addButton(
+        tr("extract.dataforge_background_btn"), QMessageBox.ButtonRole.AcceptRole
+    )
+    cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
+    box.setDefaultButton(cancel_btn)
+    box.setEscapeButton(cancel_btn)
+    box.exec()
+    clicked = box.clickedButton()
+    if clicked is stop_btn:
+        return _ANSWER_STOP
+    if clicked is background_btn:
+        return _ANSWER_BACKGROUND
+    return _ANSWER_CANCEL
+
+
 class MainWindow(QMainWindow):
     """Main application window."""
 
@@ -980,6 +1014,9 @@ class MainWindow(QMainWindow):
         # to be reported once the load and anything it set off is over (see
         # _flush_deferred_starter_report).
         self._deferred_starter_report: list = []
+        # #483: startup questions a running job put off, asked again once the
+        # load that ends it is over (see _flush_asks_after_the_job).
+        self._asks_after_the_job: list = []
 
         self.log_tab = LogTab()
         self._log_tab_index = self.tabs.addTab(self.log_tab, tr("tabs.log"))
@@ -3245,7 +3282,8 @@ class MainWindow(QMainWindow):
 
                 # Update status bar with entry counts and per-source status
                 self._update_status_bar()
-                self._queue_deferred_starter_report()  # #416: last, see its docstring
+                self._queue_deferred_starter_report()  # #416: last but one, see its docstring
+                self._queue_asks_after_the_job()  # #483: last too, the same reason
             except Exception as e:
                 logger.exception(f"Error during merge: {e}")
                 QMessageBox.critical(self, tr("dialogs.error_title"), tr("dialogs.failed_to_merge_sources", error=e))
@@ -3709,8 +3747,17 @@ class MainWindow(QMainWindow):
         the moment it's read, so declining just leaves the normal manual
         Apply Enhancements path. Reuses the Simple-mode continuation
         (#180) — generate, then apply_to_game — regardless of UI mode.
+
+        Put off while a job runs (#483), with the flag kept, and asked again
+        after it: the startup sync just before it can start a global.ini
+        extraction, and the pipeline would refuse an Apply Now then. An
+        Apply Now answered after a job started under the open question is
+        put off the same way, so the choice is never lost.
         """
         if not AppSettings.get_post_import_apply_pending():
+            return
+        if self._job_running():
+            self._ask_after_the_job(self._maybe_prompt_post_import_apply)
             return
         AppSettings.set_post_import_apply_pending(False)
 
@@ -3748,7 +3795,9 @@ class MainWindow(QMainWindow):
             # One job at a time (#483). The startup sync runs while the
             # question is open and can start an extraction; the pipeline
             # would refuse then and leave the Simple page busy for good.
-            # Apply Enhancements is there once the job ends.
+            # The question comes back once the job is over.
+            AppSettings.set_post_import_apply_pending(True)
+            self._ask_after_the_job(self._maybe_prompt_post_import_apply)
             self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
             return
         self._simple_run_active = True
@@ -4605,6 +4654,12 @@ class MainWindow(QMainWindow):
         Personal folder, so on a OneDrive-redirected machine the per-user data
         lands inside OneDrive. Offers a one-click move to a local folder and a
         'don't warn again' opt-out.
+
+        Put off while a job runs (#483), and asked again after it: the startup
+        sync just before it can start a global.ini extraction, and the move
+        would change the data folder under it. A job that starts while the
+        box is open puts a Move off the same way, without keeping its
+        'don't warn again', so the warning comes back to be answered.
         """
         if AppSettings.get_onedrive_warning_dismissed():
             return
@@ -4612,6 +4667,9 @@ class MainWindow(QMainWindow):
 
         data_dir = AppSettings.get_user_data_dir()
         if not is_onedrive_path(data_dir):
+            return
+        if self._job_running():
+            self._ask_after_the_job(self._maybe_warn_onedrive_data_dir)
             return
 
         local = suggest_local_data_dir()
@@ -4627,10 +4685,16 @@ class MainWindow(QMainWindow):
         box.setCheckBox(dont_warn)
         box.exec()
 
+        move = box.clickedButton() is move_btn
+        if move and self._job_running():
+            self._ask_after_the_job(self._maybe_warn_onedrive_data_dir)
+            self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
+            return
+
         if dont_warn.isChecked():
             AppSettings.set_onedrive_warning_dismissed(True)
 
-        if box.clickedButton() is move_btn:
+        if move:
             # Route through the Config tab's validated save + migrate + reload.
             self.config_tab.change_data_dir_to(str(local))
 
@@ -6020,7 +6084,8 @@ class MainWindow(QMainWindow):
         # From here on, dirty-marking reflects a real in-session change —
         # see _mark_apply_dirty / _session_has_unapplied_edit.
         self._initial_load_done = True
-        self._queue_deferred_starter_report()  # #416: last, see its docstring
+        self._queue_deferred_starter_report()  # #416: last but one, see its docstring
+        self._queue_asks_after_the_job()  # #483: last too, the same reason
 
     @pyqtSlot(str)
     def _on_loading_error(self, error_msg: str):
@@ -6188,9 +6253,9 @@ class MainWindow(QMainWindow):
         elif existing is not None:
             self._enhancements_progress_dialog = existing
             self._forge_progress_dialog = None
-            # The extraction is over, so Esc or X no longer asks to stop it
-            # (#471): generation keeps the dialog's old hide-and-continue.
-            existing.set_close_guard(None)
+            # The extraction is over, so Esc or X now asks about the
+            # generation instead (#483).
+            existing.set_close_guard(lambda w=worker: self._confirm_stop_generation(w))
             existing.setWindowTitle(tr("progress.generating_enhancements_title"))
             # Reset bar to indeterminate (0,0) with the new label so the
             # stale "Snapshotting cache (28000/28000)" 100% bar from the
@@ -6203,6 +6268,10 @@ class MainWindow(QMainWindow):
                 parent=self,
                 title=tr("progress.generating_enhancements_title"),
             )
+            # Esc or X asks Stop, Run in Background or Cancel (#483): a plain
+            # hide came back as soon as more progress arrived.
+            self._enhancements_progress_dialog.set_close_guard(
+                lambda w=worker: self._confirm_stop_generation(w))
 
         # The progress connections stay bound methods, which
         # _detach_progress_dialog can disconnect.
@@ -6303,7 +6372,11 @@ class MainWindow(QMainWindow):
             self._show_loading_progress(tr("progress.reloading_with_enhancements"))
         else:
             self._end_simple_run()
-            self.statusBar().showMessage(tr("status_bar.enhancement_generation_failed"))
+            # A Stop from its dialog (#483) is not a failure.
+            stopped = getattr(worker, "stopped", False) is True
+            self.statusBar().showMessage(tr(
+                "status_bar.enhancement_generation_stopped" if stopped
+                else "status_bar.enhancement_generation_failed"))
             if if_unfinished is not None:
                 # A language switch left its reload to this run: load the
                 # language picked anyway, with the stats it has. The run's
@@ -6414,8 +6487,8 @@ class MainWindow(QMainWindow):
         on, so what the run depends on (the channel, the language, the game,
         data and cache folders) is locked until it ends (_refresh_job_lock).
         Once the extraction is over (or already stopping) the dialog just
-        closes as it always did: the same dialog lives on into enhancement
-        generation, which has no stop.
+        closes as it always did. The same dialog lives on into enhancement
+        generation, which then asks its own question (_confirm_stop_generation).
         """
         def _still_running() -> bool:
             return (worker is self._forge_worker and worker.isRunning()
@@ -6424,43 +6497,29 @@ class MainWindow(QMainWindow):
         if not _still_running():
             return True
         dialog = self._forge_progress_dialog
-        box = QMessageBox(dialog or self)
-        box.setIcon(QMessageBox.Icon.Question)
-        box.setWindowTitle(tr("extract.dataforge_running_title"))
-        box.setText(tr("extract.dataforge_running_body"))
-        stop_btn = box.addButton(
-            tr("extract.dataforge_stop_btn"), QMessageBox.ButtonRole.DestructiveRole
-        )
-        background_btn = box.addButton(
-            tr("extract.dataforge_background_btn"), QMessageBox.ButtonRole.AcceptRole
-        )
-        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
-        box.setDefaultButton(cancel_btn)
-        box.setEscapeButton(cancel_btn)
-        box.exec()
-        clicked = box.clickedButton()
-        if clicked is background_btn:
+        answer = _ask_stop_or_background(dialog or self, tr("extract.dataforge_running_title"),
+                                         tr("extract.dataforge_running_body"))
+        if answer == _ANSWER_BACKGROUND:
             return self._send_dataforge_run_to_background(worker, dialog, _still_running())
-        if clicked is not stop_btn:
+        if answer != _ANSWER_STOP:
             return False   # Cancel: keep the dialog
         if not _still_running():
             # It finished (or failed) while the question was open, and its
             # own slot has already moved on: a success hands the dialog to
-            # enhancement generation, which has no stop and only rewrites
-            # the INIs. The user said stop, so a Simple-mode run must not go
-            # on to apply anything to the game.
+            # enhancement generation. The user said stop, so that generation
+            # stops too (#483), and a Simple-mode run must not go on to apply
+            # anything to the game.
+            generation = self._enhancements_worker
+            if (dialog is not None and generation is not None
+                    and self._enhancements_progress_dialog is dialog):
+                self._stop_generation_from_dialog(generation, dialog)
             self._end_simple_run()
             return True
         # Nothing may be applied after a stop, but the Simple page stays busy
         # until the stop has finished (the finished slot ends the run), so its
         # button never looks ready while a click would be turned away.
         self._simple_run_active = False
-        # Dismissed for good. A hidden QProgressDialog shows itself again
-        # while progress keeps arriving, so it gets no more of it.
-        if dialog is not None:
-            self._detach_progress_dialog(worker, dialog)
-            self._forge_progress_dialog = None
-            dialog.deleteLater()
+        self._dismiss_progress_dialog(worker, dialog)
         logger.info("DataForge extraction: stop requested from the progress dialog")
         worker.requestInterruption()
         self.statusBar().showMessage(tr("extract.dataforge_stopping"))
@@ -6478,21 +6537,64 @@ class MainWindow(QMainWindow):
         """
         if still_running:
             worker.in_background = True
-            if dialog is not None:
-                self._detach_progress_dialog(worker, dialog)
-                self._forge_progress_dialog = None
-                dialog.deleteLater()
+            self._dismiss_progress_dialog(worker, dialog)
             logger.info("DataForge extraction: carrying on in the background")
             self.statusBar().showMessage(tr("extract.dataforge_extracting_background"))
             return True
         generation = self._enhancements_worker
         if (dialog is not None and generation is not None
                 and self._enhancements_progress_dialog is dialog):
-            self._detach_progress_dialog(generation, dialog)
-            self._enhancements_progress_dialog = None
-            dialog.deleteLater()
-            logger.info("Enhancement generation: carrying on in the background")
-            self.statusBar().showMessage(tr("status_bar.generating_enhancements_background"))
+            self._send_generation_to_background(generation, dialog)
+        return True
+
+    def _send_generation_to_background(self, worker, dialog) -> bool:
+        """Run in Background for enhancement generation (#483): its dialog
+        goes for good, detached as Stop does, and the status bar reports, as
+        the worker's progress already reaches it. Always lets the dialog
+        close."""
+        self._dismiss_progress_dialog(worker, dialog)
+        logger.info("Enhancement generation: carrying on in the background")
+        self.statusBar().showMessage(tr("status_bar.generating_enhancements_background"))
+        return True
+
+    def _stop_generation_from_dialog(self, worker, dialog) -> None:
+        """Stop enhancement generation from its progress dialog (#483). It
+        ends at its next job boundary, never during its writes, and the
+        finished slot says it stopped. A Simple-mode run applies nothing after
+        a stop, while the job lock keeps its page busy until the stop has
+        finished. The dialog goes for good, as for the DataForge Stop."""
+        self._simple_run_active = False
+        self._dismiss_progress_dialog(worker, dialog)
+        logger.info("Enhancement generation: stop requested from the progress dialog")
+        worker.requestInterruption()
+        self.statusBar().showMessage(tr("extract.generation_stopping"))
+
+    def _confirm_stop_generation(self, worker) -> bool:
+        """Esc or the title-bar X on the enhancement generation dialog (#483).
+
+        Asks what to do with the running generation, as the DataForge dialog
+        does: Stop, Run in Background, or Cancel to keep the dialog. Returns
+        True to let the dialog close, False to keep it open. It used to just
+        hide the dialog, which showed itself again as soon as more progress
+        arrived. Once the generation is over (or already stopping) the dialog
+        just closes.
+        """
+        def _still_running() -> bool:
+            return (worker is self._enhancements_worker and worker.isRunning()
+                    and not worker.isInterruptionRequested())
+
+        if not _still_running():
+            return True
+        dialog = self._enhancements_progress_dialog
+        answer = _ask_stop_or_background(dialog or self, tr("extract.generation_running_title"),
+                                         tr("extract.generation_running_body"))
+        if answer == _ANSWER_CANCEL:
+            return False   # Cancel: keep the dialog
+        if not _still_running():
+            return True    # it finished while the question was open
+        if answer == _ANSWER_BACKGROUND:
+            return self._send_generation_to_background(worker, dialog)
+        self._stop_generation_from_dialog(worker, dialog)
         return True
 
     @staticmethod
@@ -6515,6 +6617,20 @@ class MainWindow(QMainWindow):
                 signal.disconnect(slot)
             except TypeError:
                 pass  # not connected, e.g. already detached
+
+    def _dismiss_progress_dialog(self, worker, dialog) -> None:
+        """Dismiss a job's progress dialog for good after a Stop or a Run in
+        Background from its question (#471, #483): detached from *worker*
+        (see _detach_progress_dialog), no longer held by the window, and
+        deleted once the close it answers is done. Nothing for no dialog."""
+        if dialog is None:
+            return
+        self._detach_progress_dialog(worker, dialog)
+        if self._forge_progress_dialog is dialog:
+            self._forge_progress_dialog = None
+        if self._enhancements_progress_dialog is dialog:
+            self._enhancements_progress_dialog = None
+        dialog.deleteLater()
 
     def _on_dataforge_extract_error(self, message: str, worker):
         if worker is not self._forge_worker or self._close_committed:
@@ -7358,9 +7474,11 @@ class MainWindow(QMainWindow):
 
     def _queue_deferred_starter_report(self) -> None:
         """Queue the report for starters a load added (#416). The last step
-        of both load paths: anything earlier can still open a modal dialog
-        (the enhancement categories prompt, for one) whose event loop would
-        run a call queued sooner, putting the report on top of it."""
+        but one of both load paths: anything earlier can still open a modal
+        dialog (the enhancement categories prompt, for one) whose event loop
+        would run a call queued sooner, putting the report on top of it. Only
+        _queue_asks_after_the_job (#483) follows, and its flush waits while
+        any modal box, this report's included, is open."""
         if self._deferred_starter_report:
             QTimer.singleShot(0, self._flush_deferred_starter_report)
 
@@ -7370,7 +7488,7 @@ class MainWindow(QMainWindow):
         them). Waits while a long job runs, since its status text or dialog
         would bury the message: an extraction, an enhancements generation, a
         Simple-mode run or another load. Each of those normally ends in a
-        reload, whose own last step queues this again. After one that failed
+        reload, whose own last steps queue this again. After one that failed
         or was stopped, the report waits for the next load (the starters are
         already in Owned, only the notice waits). Never while closing."""
         names = self._deferred_starter_report
@@ -7382,6 +7500,51 @@ class MainWindow(QMainWindow):
             return
         self._deferred_starter_report = []
         self._report_blueprints_added(names, silent=True)
+
+    def _ask_after_the_job(self, ask) -> None:
+        """Put off a startup question a running job would make unsafe (#483):
+        the OneDrive warning's Move would pull the data folder out from under
+        it, and the post-import Apply Now would be refused. *ask* is called
+        again, once, after the load that ends the job (each normally ends in
+        one, see _flush_deferred_starter_report), and asks again itself if a
+        job runs by then."""
+        if ask not in self._asks_after_the_job:
+            self._asks_after_the_job.append(ask)
+
+    # How often a put-off question looks again while a modal box is open.
+    _ASK_AFTER_MODAL_RETRY_MS = 250
+
+    def _queue_asks_after_the_job(self) -> None:
+        """Queue the questions a job put off. The last step of both load
+        paths, right after _queue_deferred_starter_report and for its reason.
+        That report can itself open a box, so the flush also waits while any
+        modal box is open."""
+        if self._asks_after_the_job:
+            QTimer.singleShot(0, self._flush_asks_after_the_job)
+
+    def _flush_asks_after_the_job(self) -> None:
+        """Ask the questions a job put off, once nothing that could start or
+        hold one is going: an extraction, a generation, a Simple-mode run or
+        a load. Never while closing. After a job that failed or was stopped
+        they wait for the next load; each is asked at the next start anyway,
+        since the OneDrive warning comes at every start until it is answered
+        and the post-import flag is kept until then.
+
+        While a modal box is open it looks again shortly instead: a question
+        asked then opened on top of it, inside its event loop. That was the
+        new-blueprints summary the load's report can open, or closeEvent's
+        unapplied-changes prompt before the close is final, where an Apply
+        Now would start a run the exit then stopped, losing the offer."""
+        if not self._asks_after_the_job or self._close_committed:
+            return
+        if self._loader_worker is not None or self._job_running() or self._simple_run_active:
+            return
+        if QApplication.activeModalWidget() is not None:
+            QTimer.singleShot(self._ASK_AFTER_MODAL_RETRY_MS, self._flush_asks_after_the_job)
+            return
+        asks, self._asks_after_the_job = self._asks_after_the_job, []
+        for ask in asks:
+            ask()
 
     def _seed_default_owned_blueprints(self) -> set:
         """Add the starter blueprints to the Owned set, once (#416).

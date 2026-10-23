@@ -107,8 +107,9 @@ class AnimatedProgressDialog(QProgressDialog):
         False to keep it open. None (the default) removes the guard. Only the
         user's own dismissal is asked about: a programmatic ``close()`` or
         ``hide()`` never is, so callers keep closing the dialog exactly as
-        before. The DataForge extraction uses this to ask whether to stop,
-        the global.ini one to stop without asking.
+        before. The DataForge extraction and enhancement generation use this
+        to ask Stop, Run in Background or Cancel (#483), the global.ini
+        extraction to stop without asking.
 
         Only for a dialog built without a cancel button (``cancel_text=None``,
         like those two). With a button, QProgressDialog adds its own Escape

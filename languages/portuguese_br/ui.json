@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Falha na geração de aprimoramentos — consulte a aba Log para detalhes"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Geração de aprimoramentos interrompida"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini redefinido para {channel} (backup criado)"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "Bloqueado enquanto uma extração ou uma geração de aprimoramentos está em andamento, e desbloqueado novamente quando ela terminar."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Geração de aprimoramentos em andamento"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "A geração de aprimoramentos ainda está em andamento.\n\nParar agora ou deixá-la continuar em segundo plano enquanto você continua trabalhando? Se parar, você poderá executá-la novamente mais tarde."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Parando a geração de aprimoramentos…"
     },
     "dataforge_stopping": {
       "ht": "",

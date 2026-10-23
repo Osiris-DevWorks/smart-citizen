@@ -157,10 +157,12 @@ them against the new source.
   word for the DataForge cache folder from `config.dataforge_cache_label`.
   `locked_while_job_runs`: locked while an extraction or an enhancement
   generation is running, and unlocked again when it finishes (shown on the
-  Config tab, as the Apply Category Changes and Simple-mode tooltips and in
-  the status bar), with each file's words for the extraction and for
+  Config tab, as the Apply Category Changes, Save Tag Changes, Generate
+  Enhancements and Simple-mode tooltips, in a box when an install the scan
+  found is picked during a job, and in the status bar), with each file's
+  words for the extraction and for
   generating enhancements from `extract.dataforge_extraction_title` and
-  `status_bar.generating_enhancements_background`. In all 10 languages,
+  `status_bar.generating_enhancements_background`. In all 11 languages,
   `at`-only (`ht` empty). No language had a human `dataforge_running_body`,
   so nothing needs human re-review. The two new strings were back-translated
   and compared with the English in the same pass, not by a separate checker:
@@ -171,6 +173,26 @@ them against the new source.
   merged with it (2026-10-21), `at`-only: the two new strings, the button, and
   its two-choice `extract.dataforge_running_body` rewritten as the
   three-choice question. Back-translated with no meaning errors.
+  The enhancement generation dialog asks the same question since 2026-10-23
+  (it used to hide, and showed itself again as soon as more progress
+  arrived). Three new `extract.*` keys after `locked_while_job_runs`:
+  `generation_running_title` (enhancement generation running),
+  `generation_running_body` (enhancement generation is still running, then
+  the same second paragraph as `dataforge_running_body`) and
+  `generation_stopping` (stopping enhancement generation), and one
+  `status_bar.*` key after `enhancement_generation_failed`:
+  `enhancement_generation_stopped` (enhancement generation stopped). Its
+  buttons reuse `dataforge_stop_btn` and `dataforge_background_btn`. In all
+  11 languages, `at`-only (`ht` empty). Each takes its second paragraph word
+  for word from its own `dataforge_running_body`, and its words for
+  generating enhancements from `progress.generating_enhancements_title` and
+  `status_bar.enhancement_generation_failed`. The pronoun follows the noun:
+  Russian's "его" for the neuter "Извлечение" becomes "её" for the feminine
+  "Генерация", while the French, Italian, Spanish, Portuguese and German
+  nouns for the extraction and the generation are both feminine, so their
+  pronouns stay. All 44 strings were back-translated and compared with the
+  English in the same pass, not by a separate checker: no meaning errors,
+  and the Korean sentence-spacing rule holds.
 - **2.5.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
   cache folder that is a link (a junction or a symbolic link made by hand,
   usually to keep the cache on another drive), because an extraction

@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QLabel,
 )
 
-from src.gui.theme import get_button_color, get_button_text_color
+from src.gui.theme import dimmed_color, get_button_color, get_button_text_color
 from src.utils.i18n import tr
 
 
@@ -125,12 +125,19 @@ class SimpleModeWidget(QWidget):
         extract/generate/apply entry point and must stay clickable even when
         the state reads as already applied. Tooltips are resolved via tr() on
         every refresh so a language switch picks them up.
+
+        Busy dims the fill and the text (#483): a stylesheet colour outlives
+        setEnabled(False), and with Run in Background a Simple user can sit
+        on this page through a whole run, where a button that still looked
+        ready dropped every click without a word.
         """
         color = get_button_color("needs_apply" if self._apply_dirty else "apply")
+        text = get_button_text_color()
         self.generate_apply_btn.setStyleSheet(
-            f"background-color: {color}; "
-            f"color: {get_button_text_color()}; font-weight: bold; "
-            f"font-size: 14px; padding: 10px 20px;"
+            f"QPushButton {{ background-color: {color}; color: {text}; "
+            f"font-weight: bold; font-size: 14px; padding: 10px 20px; }} "
+            f"QPushButton:disabled {{ background-color: {dimmed_color(color)}; "
+            f"color: {dimmed_color(text)}; }}"
         )
         if self._busy and self._busy_reason:
             self.generate_apply_btn.setToolTip(self._busy_reason)

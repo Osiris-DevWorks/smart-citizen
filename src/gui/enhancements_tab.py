@@ -96,6 +96,7 @@ class EnhancementsTab(QWidget):
         # extraction or a generation runs (#483), see set_changes_locked.
         self._changes_locked = False
         self._changes_lock_reason = ""
+        self._operation_message = ""
         self.setup_ui()
 
     def setup_ui(self):
@@ -365,13 +366,22 @@ class EnhancementsTab(QWidget):
         default look. The two tooltip variants are resolved via tr() here
         (not cached class constants) so they always reflect the active
         language — the disabled-state text is what a user hovering a
-        gone-grey button most wants to know: "why can't I click this?" """
+        gone-grey button most wants to know: "why can't I click this?"
+        A running job keeps it off (#483), with that job's own message as
+        the tooltip when it set one (set_operation_running), otherwise the
+        lock reason: a category tick or a setting changed meanwhile lit it
+        again in full red, and its click saved the Tag Builder pages before
+        the one-job rule refused the run."""
         self._enhancements_dirty = dirty
-        self._generate_enhancements_btn.setEnabled(dirty)
-        self._generate_enhancements_btn.setToolTip(
-            tr("enhancements.generate_enabled_tooltip") if dirty
-            else tr("enhancements.generate_disabled_tooltip")
-        )
+        self._generate_enhancements_btn.setEnabled(dirty and not self._changes_locked)
+        if self._changes_locked:
+            self._generate_enhancements_btn.setToolTip(
+                self._operation_message or self._changes_lock_reason)
+        else:
+            self._generate_enhancements_btn.setToolTip(
+                tr("enhancements.generate_enabled_tooltip") if dirty
+                else tr("enhancements.generate_disabled_tooltip")
+            )
         # Dimmed while a running job keeps it disabled (#483).
         self._generate_enhancements_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
@@ -581,8 +591,9 @@ class EnhancementsTab(QWidget):
         self._apply_categories_btn.setEnabled(has_changes and not self._changes_locked)
 
     def set_changes_locked(self, locked: bool, reason: str = "") -> None:
-        """Lock Apply Category Changes and Save Tag Changes while an
-        extraction or a generation runs (#483), shown or hidden. Apply
+        """Lock Apply Category Changes, Save Tag Changes and Generate
+        Enhancements while an extraction or a generation runs (#483), shown
+        or hidden. Generate would start a run one job at a time refuses. Apply
         Category Changes renames INIs to and from ``.disabled`` in the folder
         a generation writes, and starts a reload that reads the set mid-run;
         a category changed then came back beside its ``.disabled`` copy or was
@@ -590,7 +601,8 @@ class EnhancementsTab(QWidget):
         current. Save Tag Changes asks for a regeneration that one job at a
         time would refuse, after saving the tags and turning itself off. The
         checkboxes and the Tag Builder stay free: the change waits for the
-        button. Each button's tooltip gives *reason* while locked."""
+        button. Each button's tooltip gives *reason* while locked, except that
+        Generate keeps the running job's own message when it set one."""
         self._changes_locked = locked
         self._changes_lock_reason = reason if locked else ""
         self._apply_categories_btn.setToolTip(
@@ -598,6 +610,7 @@ class EnhancementsTab(QWidget):
         )
         self._on_category_checkbox_changed()
         self._set_tag_btn_dirty(self._tag_dirty)
+        self._set_generate_btn_dirty(self._enhancements_dirty)
 
     def _apply_category_changes(self):
         """Save checkbox states, disable/restore enhancement files, and trigger reload."""
@@ -870,6 +883,7 @@ class EnhancementsTab(QWidget):
     # ── Operation state ───────────────────────────────────────────────────────
 
     def set_operation_running(self, message: str):
+        self._operation_message = message  # kept while the job lock refreshes the button
         self._generate_enhancements_btn.setEnabled(False)
         self._generate_enhancements_btn.setToolTip(message)
 
@@ -886,6 +900,7 @@ class EnhancementsTab(QWidget):
         run re-enables unconditionally so the user has a way to retry
         without first having to touch an unrelated setting. The re-read
         judges the saved categories, which are what the run generated."""
+        self._operation_message = ""
         if not success or self._compute_initial_enhancements_dirty(self._saved_category_keys()):
             self._enhancements_dirty = True
         self._set_generate_btn_dirty(self._enhancements_dirty)

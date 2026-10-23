@@ -2504,6 +2504,10 @@
       "ht": "Enhancement generation failed — check the Log tab for details",
       "at": ""
     },
+    "enhancement_generation_stopped": {
+      "ht": "Enhancement generation stopped",
+      "at": ""
+    },
     "user_ini_reset": {
       "ht": "user.ini reset for {channel} (backup created)",
       "at": ""
@@ -2870,6 +2874,18 @@
     },
     "locked_while_job_runs": {
       "ht": "Locked while an extraction or an enhancement generation is running, and unlocked again when it finishes.",
+      "at": ""
+    },
+    "generation_running_title": {
+      "ht": "Enhancement Generation Running",
+      "at": ""
+    },
+    "generation_running_body": {
+      "ht": "Enhancement generation is still running.\n\nStop it now, or let it carry on in the background while you keep working? If you stop it, you can run it again later.",
+      "at": ""
+    },
+    "generation_stopping": {
+      "ht": "Stopping enhancement generation…",
       "at": ""
     },
     "dataforge_stopping": {

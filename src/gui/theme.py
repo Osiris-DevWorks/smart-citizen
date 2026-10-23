@@ -116,6 +116,18 @@ def get_button_color(role: str) -> str:
     return palette[role]
 
 
+# How opaque a stylesheet colour is drawn on a disabled button (#483).
+DISABLED_ALPHA = 110
+
+
+def dimmed_color(color: str) -> str:
+    """*color* as a stylesheet rgba() at DISABLED_ALPHA, for a button's
+    ``:disabled`` rule. A stylesheet colour outlives setEnabled(False), so a
+    button coloured by one has to dim itself to stop looking clickable."""
+    c = QColor(color)
+    return f"rgba({c.red()}, {c.green()}, {c.blue()}, {DISABLED_ALPHA})"
+
+
 def needs_apply_style() -> str:
     """Stylesheet for a button the dirty-tracking system lights up: the
     needs_apply red, dimmed while the button is disabled (#483).
@@ -128,10 +140,8 @@ def needs_apply_style() -> str:
     lock label says why.
     """
     red = get_button_color("needs_apply")
-    color = QColor(red)
-    dimmed = f"rgba({color.red()}, {color.green()}, {color.blue()}, 110)"
     return (f"QPushButton {{ color: {red}; }} "
-            f"QPushButton:disabled {{ color: {dimmed}; }}")
+            f"QPushButton:disabled {{ color: {dimmed_color(red)}; }}")
 
 
 def get_button_text_color() -> str:

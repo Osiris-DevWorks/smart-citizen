@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "增强内容生成失败 — 详情请查看日志标签页"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "增强内容生成已停止"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "{channel} 的 user.ini 已重置（已创建备份）"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "正在运行提取或增强内容生成时已锁定，完成后会再次解锁。"
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "增强内容生成正在进行"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "增强内容生成仍在进行中。\n\n现在停止，还是让它在后台继续运行，同时你继续工作？如果停止，你可以稍后重新运行。"
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "正在停止增强内容生成…"
     },
     "dataforge_stopping": {
       "ht": "",

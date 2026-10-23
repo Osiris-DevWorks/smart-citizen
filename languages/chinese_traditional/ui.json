@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "增強內容生成失敗 — 詳情請檢視日誌標籤頁"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "增強內容生成已停止"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "{channel} 的 user.ini 已重置（已建立備份）"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "正在執行提取或增強內容生成時已鎖定，完成後會再次解鎖。"
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "增強內容生成正在進行"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "增強內容生成仍在進行中。\n\n現在停止，還是讓它在後臺繼續執行，同時你繼續工作？如果停止，你可以稍後重新執行。"
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "正在停止增強內容生成…"
     },
     "dataforge_stopping": {
       "ht": "",

@@ -804,7 +804,19 @@ class ConfigTab(QWidget):
         Goes through the same field-then-``_save_game_path`` path a manual
         Browse does, so channel-combo refresh, P4K status, and the legacy
         GAME_INSTALL_PATH sync all happen exactly once and in one place.
+
+        A scan that finished during a job (#483) says so and leaves the field
+        and the dialog as they are, so the user can pick again once the job
+        ends. _save_game_path would refuse anyway, but its failure box blames
+        a drive that disconnected, and the field kept the unsaved root.
         """
+        if self._data_locations_locked:
+            QMessageBox.warning(
+                self,
+                tr("config.dupe_use_failed_title"),
+                tr("extract.locked_while_job_runs"),
+            )
+            return
         logger.info(f"Switching SC install root to {root!r} from the install check")
         self.game_path_input.setText(os.path.normpath(root))
         if not self._save_game_path():
@@ -826,8 +838,16 @@ class ConfigTab(QWidget):
     # ── Smart Citizen data folder ────────────────────────────────────────────
 
     def _save_data_dir(self):
-        """Persist the Smart Citizen data folder override."""
+        """Persist the Smart Citizen data folder override.
+
+        Not while a job runs (#483), the field put back: the field is locked
+        then, but change_data_dir_to (the startup OneDrive warning's Move)
+        reaches this without it, and a running global.ini extraction would
+        write base.ini into the folder being left."""
         current_dir = AppSettings.get_user_data_dir()
+        if self._data_locations_locked:
+            self.data_dir_input.setText(os.path.normpath(str(current_dir)))
+            return
         raw_path = self.data_dir_input.text().strip()
         if raw_path:
             raw_path = os.path.normpath(raw_path)

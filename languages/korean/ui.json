@@ -2504,6 +2504,10 @@
       "ht": "",
       "at": "강화 생성 실패. 자세한 내용은 로그 탭을 확인하세요"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "강화 생성이 중지됨"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "{channel}의 user.ini가 재설정됨(백업 생성됨)"
@@ -2871,6 +2875,18 @@
     "locked_while_job_runs": {
       "ht": "",
       "at": "추출이나 강화 생성이 실행 중일 때는 잠기며, 끝나면 다시 잠금이 해제됩니다."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "강화 생성 진행 중"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "강화 생성이 아직 실행 중입니다.\n\n지금 중지할까요, 아니면 작업을 계속하는 동안 백그라운드에서 계속 실행할까요? 중지하면 나중에 다시 실행할 수 있습니다."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "강화 생성을 중지하는 중…"
     },
     "dataforge_stopping": {
       "ht": "",

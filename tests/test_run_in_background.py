@@ -13,21 +13,25 @@ time (a global.ini extraction, a DataForge extraction or a generation), and
 while any of them runs, shown or not, the Config tab's game, data and cache
 folders, channel, language, Map Language File, global.ini Extract, install
 scan, Import Settings and Check for Updates, the Enhancements tab's Apply
-Category Changes and Save Tag Changes and the Simple page's button are locked
-with the reason shown. The finished slot also checks the run
-still matches the settings before it clears the old cache or chains
-generation, as the net behind the lock.
+Category Changes, Save Tag Changes and Generate Enhancements and the Simple
+page's button are locked with the reason shown. The finished slot also checks
+the run still matches the settings before it clears the old cache or chains
+generation, as the net behind the lock, and the startup questions a job
+would make unsafe (the post-import Apply Now, the OneDrive warning's Move)
+are put off and asked again once it is over.
 
 The lock is checked on a real MainWindow (tests/gui_window.py), and the cases
 from the issue on the real methods with a MagicMock self.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
+from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtGui import QColor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -174,6 +178,64 @@ class TestTheConfigTabsOwnBusyStates:
             tab.set_data_locations_locked(False)
             tab.game_path_input.setText(shown)
 
+    def test_the_data_folder_is_not_changed_while_locked(self, window, monkeypatch, tmp_path):
+        """The OneDrive warning's Move reaches _save_data_dir through
+        change_data_dir_to, without the locked field, and a running global.ini
+        extraction then wrote base.ini into the folder being left. The window's
+        data folder slot and the move prompt are swapped for recorders, so a
+        change that got through fails here instead of reloading the shared
+        window or opening a box."""
+        tab = window.config_tab
+        before = AppSettings.get_user_data_dir()
+        changed = []
+
+        def record(path):
+            changed.append(path)
+
+        monkeypatch.setattr(tab, "_maybe_migrate_data", MagicMock())
+        tab.data_dir_changed.disconnect(window._on_data_dir_changed)
+        tab.data_dir_changed.connect(record)
+        tab.set_data_locations_locked(True, REASON)
+        try:
+            tab.change_data_dir_to(str(tmp_path / "new"))
+            assert AppSettings.get_user_data_dir() == before
+            assert tab.data_dir_input.text() == os.path.normpath(str(before))
+            assert changed == []
+            assert not (tmp_path / "new").exists()
+            tab._maybe_migrate_data.assert_not_called()
+        finally:
+            tab.set_data_locations_locked(False)
+            if AppSettings.get_user_data_dir() != before:
+                AppSettings.set_user_data_dir(before)
+            tab.data_dir_input.setText(os.path.normpath(str(before)))
+            tab.data_dir_changed.disconnect(record)
+            tab.data_dir_changed.connect(window._on_data_dir_changed)
+
+    def test_an_install_picked_during_a_job_says_why_and_changes_nothing(
+            self, window, monkeypatch, tmp_path):
+        """A scan that finished during a job: Use was refused, but the box
+        blamed a drive that disconnected and the field kept the unsaved root,
+        which the next click away from it saved."""
+        import src.gui.config_tab as config_tab
+        box = MagicMock()
+        monkeypatch.setattr(config_tab, "QMessageBox", box)
+        tab = window.config_tab
+        before = AppSettings.get_sc_install_root()
+        shown = tab.game_path_input.text()
+        dialog = MagicMock()
+        tab._dupe_dialog = dialog
+        tab.set_data_locations_locked(True, REASON)
+        try:
+            tab._use_install_root(str(tmp_path))
+            box.warning.assert_called_once_with(tab, tr("config.dupe_use_failed_title"), REASON)
+            assert tab.game_path_input.text() == shown
+            assert AppSettings.get_sc_install_root() == before
+            dialog.accept.assert_not_called()   # still open, to pick again later
+        finally:
+            tab.set_data_locations_locked(False)
+            tab._dupe_dialog = None
+            tab.game_path_input.setText(shown)
+
 
 class TestTheEnhancementsTabsChanges:
     @staticmethod
@@ -245,6 +307,36 @@ class TestTheEnhancementsTabsChanges:
             tab.set_changes_locked(False)
             tab._set_tag_btn_dirty(was_dirty)
 
+    def test_generate_stays_off_through_a_change_made_while_locked(self, window):
+        """A category tick or a setting changed during a job lit Generate again
+        in full red, and its click saved the Tag Builder pages before the
+        one-job rule refused the run. It stays off with the reason, or with the
+        running job's own message, and comes back after."""
+        tab = window.enhancements_tab
+        btn = tab._generate_enhancements_btn
+        was_dirty = tab._enhancements_dirty
+        tab.set_changes_locked(True, REASON)
+        try:
+            tab._mark_enhancements_dirty()
+            assert not btn.isEnabled()
+            assert btn.toolTip() == REASON
+            tab.set_operation_running("running")
+            tab._mark_enhancements_dirty()
+            assert not btn.isEnabled()
+            assert btn.toolTip() == "running"
+            # The run ends while the lock holds (another job still runs): its
+            # message goes with it, and the lock reason is back.
+            tab.set_operation_idle()
+            tab._mark_enhancements_dirty()
+            assert not btn.isEnabled()
+            assert btn.toolTip() == REASON
+            tab.set_changes_locked(False)
+            assert btn.isEnabled()
+            assert btn.toolTip() == tr("enhancements.generate_enabled_tooltip")
+        finally:
+            tab.set_changes_locked(False)
+            tab._set_generate_btn_dirty(was_dirty)
+
     def test_a_locked_save_tag_changes_saves_and_asks_nothing(self, window, monkeypatch):
         """It saved the tags, turned itself off and asked for a regeneration
         that one job at a time refused, so the tags never reached the INIs."""
@@ -287,6 +379,27 @@ def _reddest(button) -> QColor:
     return best
 
 
+def _stand_out(button) -> tuple:
+    """How far the button, as its window shows it, stands out from the window
+    background: the mean colour distance of its pixels (the fill, which covers
+    most of them) and the largest (the label's ink). Taken from the window, so
+    a see-through dimmed colour is read over what is behind it. Not the most
+    common colour: the style draws the fill as a gradient, and shades it a
+    little when disabled with no dimming at all. Measured, busy over ready:
+    the mean 0.44 with the :disabled rule and 0.92 with the fill undimmed,
+    the largest 0.5 with it and 1.0 with the text undimmed."""
+    window = button.window()
+    bg = window.palette().window().color()
+    image = window.grab(QRect(button.mapTo(window, QPoint(0, 0)), button.size())).toImage()
+    distances = []
+    for x in range(image.width()):
+        for y in range(image.height()):
+            c = QColor(image.pixel(x, y))
+            distances.append(((c.red() - bg.red()) ** 2 + (c.green() - bg.green()) ** 2
+                              + (c.blue() - bg.blue()) ** 2) ** 0.5)
+    return sum(distances) / len(distances), max(distances)
+
+
 def _dimmed_but_red(lit: QColor, locked: QColor) -> bool:
     return (locked.isValid() and locked.red() > max(locked.green(), locked.blue())
             and locked.red() < lit.red())
@@ -321,7 +434,41 @@ class TestLitButtonsDimWhileLocked:
             tab.set_operation_running(tr("enhancements.extracting_dataforge_tooltip"))
             assert _dimmed_but_red(lit, _reddest(tab._generate_enhancements_btn))
         finally:
+            tab.set_operation_idle()   # ends the run, its message with it
             tab._set_generate_btn_dirty(was_dirty)
+
+    @pytest.mark.parametrize("dirty", [True, False], ids=["red", "green"])
+    def test_the_simple_pages_button(self, qapp, monkeypatch, dirty):
+        """Issue case 6's look: busy, the Simple page's fill and text dim too.
+        They are stylesheet colours, so they outlived setEnabled(False), and
+        with Run in Background a Simple user sat through the run looking at a
+        button that seemed ready while every click was dropped.
+
+        The theme is pinned to the default, whose label is black: the ink
+        reading takes the pixel farthest from the window, which is the label
+        only when it contrasts with the window more than the fill does. The
+        Light theme's white label does not, and the test would otherwise read
+        whatever theme the developer has saved."""
+        from src.gui import theme
+        from src.gui.simple_mode_widget import SimpleModeWidget
+        monkeypatch.setattr(AppSettings, "get_theme", staticmethod(lambda: theme.DEFAULT_THEME))
+        assert theme.get_button_text_color() == "black"
+        page = SimpleModeWidget()
+        page.resize(800, 500)
+        page.show()
+        qapp.processEvents()
+        try:
+            page.set_apply_dirty(dirty)
+            ready_fill, ready_ink = _stand_out(page.generate_apply_btn)
+            page.set_busy(True, REASON)
+            busy_fill, busy_ink = _stand_out(page.generate_apply_btn)
+            assert busy_fill < 0.7 * ready_fill   # measured 0.44, 0.92 undimmed
+            assert busy_ink < 0.7 * ready_ink     # measured 0.5, 1.0 undimmed
+            page.set_busy(False)
+            assert _stand_out(page.generate_apply_btn) == pytest.approx((ready_fill, ready_ink))
+        finally:
+            page.close()
+            page.deleteLater()
 
     def test_the_config_tabs_extract(self, window):
         tab = window.config_tab
@@ -340,8 +487,12 @@ class TestLitButtonsDimWhileLocked:
 
 # ── The strings ──────────────────────────────────────────────────────────────
 
-_STRINGS = ["dataforge_running_body", "dataforge_background_btn",
-            "dataforge_settings_changed", "locked_while_job_runs"]
+_STRINGS = [("extract", key) for key in (
+    "dataforge_running_body", "dataforge_background_btn", "dataforge_settings_changed",
+    "locked_while_job_runs",
+    # Generation's own Stop / Run in Background / Cancel question.
+    "generation_running_title", "generation_running_body", "generation_stopping",
+)] + [("status_bar", "enhancement_generation_stopped")]
 
 
 class TestEveryLanguage:
@@ -349,22 +500,23 @@ class TestEveryLanguage:
     def languages(self):
         import json
         root = Path(__file__).resolve().parent.parent / "languages"
-        return {f.parent.name: json.loads(f.read_text(encoding="utf-8"))["extract"]
+        return {f.parent.name: json.loads(f.read_text(encoding="utf-8"))
                 for f in sorted(root.glob("*/ui.json"))}
 
     def test_each_text_is_there_english_in_ht_the_rest_in_at(self, languages):
         assert "english" in languages
-        for language, extract in languages.items():
-            for key in _STRINGS:
-                node = extract[key]
+        for language, strings in languages.items():
+            for section, key in _STRINGS:
+                node = strings[section][key]
                 if language == "english":
                     assert node["ht"] and node["at"] == "", key
                 else:
                     assert node["ht"] == "" and node["at"], f"{language} {key}"
 
-    def test_the_question_offers_the_background(self, languages):
-        """The question names the third choice, as its English text does."""
-        english = languages["english"]["dataforge_running_body"]["ht"]
+    @pytest.mark.parametrize("key", ["dataforge_running_body", "generation_running_body"])
+    def test_the_question_offers_the_background(self, languages, key):
+        """Each question names the third choice, as its English text does."""
+        english = languages["english"]["extract"][key]["ht"]
         assert "background" in english and "Stop" in english
 
 
@@ -480,22 +632,49 @@ class TestOneJobAtATime:
         me._run_dataforge_extraction.assert_not_called()
         me.statusBar().showMessage.assert_called_once_with(REASON)
 
-    @pytest.mark.parametrize("running", [True, False])
-    def test_the_post_import_apply_waits_for_the_job(self, monkeypatch, running):
-        """The startup sync runs while the question is open and can start a
-        global.ini extraction. Apply Now then marked a Simple run whose
-        pipeline was refused, and the Simple page stayed busy for good."""
-        monkeypatch.setattr(main_window, "AppSettings", MagicMock())
+    def test_the_post_import_apply_is_asked_after_a_running_job(self, monkeypatch):
+        """The startup sync just before it can start a global.ini extraction.
+        An Apply Now would be refused then, and the choice was lost with the
+        flag: the question is put off instead, Import Settings' flag kept."""
+        settings = MagicMock()
+        settings.get_post_import_apply_pending.return_value = True
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        me = _stub(_p4k_worker=object())
+        MainWindow._maybe_prompt_post_import_apply(me)
+        box.assert_not_called()
+        settings.set_post_import_apply_pending.assert_not_called()
+        me._ask_after_the_job.assert_called_once_with(me._maybe_prompt_post_import_apply)
+        me._run_enhancements_pipeline.assert_not_called()
+
+    @pytest.mark.parametrize("job_starts", [True, False])
+    def test_an_apply_now_after_a_job_started_is_asked_again(self, monkeypatch, job_starts):
+        """The sync can also start one while the question is open. Apply Now
+        then marked a Simple run whose pipeline was refused, and the Simple
+        page stayed busy for good. It puts the question off again now, with
+        the flag back, so the choice is not lost."""
+        settings = MagicMock()
+        settings.get_post_import_apply_pending.return_value = True
+        monkeypatch.setattr(main_window, "AppSettings", settings)
         box = MagicMock()
         box.return_value.clickedButton.return_value = box.return_value.addButton.return_value
         monkeypatch.setattr(main_window, "QMessageBox", box)
-        me = _stub(_p4k_worker=object() if running else None)
+        me = _stub()
+        if job_starts:
+            box.return_value.exec.side_effect = lambda: setattr(me, "_p4k_worker", object())
         MainWindow._maybe_prompt_post_import_apply(me)
-        if running:
+        box.return_value.exec.assert_called_once_with()
+        if job_starts:
+            flags = settings.set_post_import_apply_pending.call_args_list
+            assert flags == [call(False), call(True)]
+            me._ask_after_the_job.assert_called_once_with(me._maybe_prompt_post_import_apply)
             assert me._simple_run_active is False
             me._run_enhancements_pipeline.assert_not_called()
             me.statusBar().showMessage.assert_called_once_with(REASON)
         else:
+            assert settings.set_post_import_apply_pending.call_args_list == [call(False)]
+            me._ask_after_the_job.assert_not_called()
             assert me._simple_run_active is True
             me._run_enhancements_pipeline.assert_called_once_with()
 
@@ -517,10 +696,13 @@ class TestOneJobAtATime:
         and stamped it current. The language selector is locked meanwhile;
         behind it, the switch loads the prose and leaves generation to the
         extraction's own chain. A cache is there, so only the extraction
-        keeps the switch from generating."""
+        keeps the switch from generating. The method reads the cache folder
+        without making it (#494), so that getter is the one patched: patching
+        the creating one left the method on its no-cache branch, and the test
+        passed with the guard removed."""
         from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
         (tmp_path / DATAFORGE_RECORDS_SUBPATH).mkdir(parents=True)
-        monkeypatch.setattr(main_window.AppSettings, "get_dataforge_cache_dir",
+        monkeypatch.setattr(main_window.AppSettings, "get_dataforge_cache_leaf",
                             staticmethod(lambda *args, **kwargs: tmp_path))
         me = _stub(**{job: object()})
         me._language_enhancements_fresh = lambda language: False
@@ -529,12 +711,14 @@ class TestOneJobAtATime:
         me.enhancements_tab.mark_enhancements_clean.assert_not_called()
         me._show_loading_progress.assert_called_once_with(tr("dialogs.merging_sources"))
 
-    def test_simple_mode_asks_nothing_while_a_job_runs(self, monkeypatch):
+    @pytest.mark.parametrize("job", JOBS)
+    def test_simple_mode_asks_nothing_while_a_job_runs(self, monkeypatch, job):
         """Issue case 6: the page's clicks were dropped silently. It shows busy
-        now, and a click that still arrives asks nothing."""
+        now, and a click that still arrives asks nothing, whichever job runs:
+        the global.ini extraction is the one the old check missed."""
         box = MagicMock()
         monkeypatch.setattr(main_window, "QMessageBox", box)
-        me = _stub(_forge_worker=object())
+        me = _stub(**{job: object()})
         MainWindow._run_simple_apply(me)
         box.question.assert_not_called()
         me._run_enhancements_pipeline.assert_not_called()
@@ -672,3 +856,193 @@ class TestTheLockFollowsEveryJob:
         me._run_enhancements_pipeline.side_effect = lambda: order.append(("pipeline", None))
         MainWindow._run_simple_apply(me)
         assert order == [("lock", True), ("pipeline", None)]
+
+
+class TestTheOneDriveWarningWaitsForTheJob:
+    """The startup sync just before the warning can start a global.ini
+    extraction, and Move then changed the data folder under it: base.ini
+    landed in the folder being left, and the new folder's extraction was
+    refused. The warning is put off until the job is over and asked again
+    (the Config tab refusing the change is the net, TestTheConfigTabsOwnBusyStates)."""
+
+    @pytest.fixture
+    def warning(self, monkeypatch, tmp_path):
+        settings = MagicMock()
+        settings.get_onedrive_warning_dismissed.return_value = False
+        settings.get_user_data_dir.return_value = tmp_path / "OneDrive" / "Smart Citizen"
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        import src.utils.onedrive as onedrive
+        monkeypatch.setattr(onedrive, "is_onedrive_path", lambda path: True)
+        monkeypatch.setattr(onedrive, "suggest_local_data_dir", lambda: tmp_path / "Local")
+        box = MagicMock()   # both buttons are one mock, so the click is Move
+        box.return_value.clickedButton.return_value = box.return_value.addButton.return_value
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        dont_warn = MagicMock()
+        dont_warn.return_value.isChecked.return_value = True
+        import PyQt6.QtWidgets as widgets
+        monkeypatch.setattr(widgets, "QCheckBox", dont_warn)
+        return settings, box, tmp_path / "Local"
+
+    def test_put_off_while_a_job_runs(self, warning):
+        _settings, box, _local = warning
+        me = _stub(_p4k_worker=object())
+        MainWindow._maybe_warn_onedrive_data_dir(me)
+        box.assert_not_called()
+        me._ask_after_the_job.assert_called_once_with(me._maybe_warn_onedrive_data_dir)
+        me.config_tab.change_data_dir_to.assert_not_called()
+
+    def test_a_move_after_a_job_started_is_asked_again(self, warning):
+        """Without keeping its 'don't warn again', so it comes back."""
+        settings, box, _local = warning
+        me = _stub()
+        box.return_value.exec.side_effect = lambda: setattr(me, "_p4k_worker", object())
+        MainWindow._maybe_warn_onedrive_data_dir(me)
+        me.config_tab.change_data_dir_to.assert_not_called()
+        me._ask_after_the_job.assert_called_once_with(me._maybe_warn_onedrive_data_dir)
+        settings.set_onedrive_warning_dismissed.assert_not_called()
+        me.statusBar().showMessage.assert_called_once_with(REASON)
+
+    def test_with_no_job_the_move_goes_ahead(self, warning):
+        settings, _box, local = warning
+        me = _stub()
+        MainWindow._maybe_warn_onedrive_data_dir(me)
+        me.config_tab.change_data_dir_to.assert_called_once_with(str(local))
+        settings.set_onedrive_warning_dismissed.assert_called_once_with(True)
+        me._ask_after_the_job.assert_not_called()
+
+
+class TestQuestionsPutOffUntilTheJobEnds:
+    """_ask_after_the_job keeps a startup question a running job put off, and
+    the load that ends the job asks it again (its queue is the last step of
+    both load paths, test_default_owned_blueprints.py)."""
+
+    @staticmethod
+    def _me(**attrs):
+        me = _stub(**{"_loader_worker": None, "_asks_after_the_job": [], **attrs})
+        me._ask_after_the_job = lambda ask: MainWindow._ask_after_the_job(me, ask)
+        me._ASK_AFTER_MODAL_RETRY_MS = MainWindow._ASK_AFTER_MODAL_RETRY_MS
+        return me
+
+    @pytest.fixture
+    def modal(self, monkeypatch):
+        """Stands in for whether a modal box is open, and records the timer."""
+        state = {"box": object()}
+        monkeypatch.setattr(main_window, "QApplication",
+                            MagicMock(activeModalWidget=lambda: state["box"]))
+        timer = MagicMock()
+        monkeypatch.setattr(main_window, "QTimer", timer)
+        return state, timer
+
+    def test_a_modal_box_puts_them_off_a_moment(self, modal):
+        """Asked while a box was open, a question opened on top of it, inside
+        its event loop: the new-blueprints summary a load's report opens, or
+        closeEvent's prompt before the close is final. The flush looks again
+        shortly instead, never at once, and asks once the box has gone."""
+        state, timer = modal
+        me = self._me()
+        ask = MagicMock()
+        me._asks_after_the_job = [ask]
+        MainWindow._flush_asks_after_the_job(me)
+        ask.assert_not_called()
+        assert me._asks_after_the_job == [ask]
+        timer.singleShot.assert_called_once_with(
+            MainWindow._ASK_AFTER_MODAL_RETRY_MS, me._flush_asks_after_the_job)
+        assert MainWindow._ASK_AFTER_MODAL_RETRY_MS > 0
+        state["box"] = None
+        MainWindow._flush_asks_after_the_job(me)
+        ask.assert_called_once_with()
+
+    def test_a_close_answered_in_the_prompt_asks_nothing_after(self, modal):
+        """The prompt closes because the close went ahead: nothing is asked
+        on the way out, where an Apply Now would start a run the exit stops."""
+        state, _timer = modal
+        me = self._me()
+        ask = MagicMock()
+        me._asks_after_the_job = [ask]
+        MainWindow._flush_asks_after_the_job(me)
+        state["box"] = None
+        me._close_committed = True
+        MainWindow._flush_asks_after_the_job(me)
+        ask.assert_not_called()
+
+    def test_one_put_off_again_during_the_flush_stays_put_off(self, monkeypatch):
+        """The OneDrive warning is asked first, and its Move can start a
+        global.ini extraction (the data folder change's freshness check). The
+        post-import question asked next then puts itself off again, and must
+        stay put off to be asked after that job, not be dropped."""
+        settings = MagicMock()
+        settings.get_post_import_apply_pending.return_value = True
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        me = self._me()
+        asked = []
+
+        def move_starts_an_extraction():
+            asked.append("onedrive")
+            me._p4k_worker = object()
+
+        def post_import():
+            asked.append("post-import")
+            MainWindow._maybe_prompt_post_import_apply(me)
+
+        me._maybe_prompt_post_import_apply = post_import
+        me._asks_after_the_job = [move_starts_an_extraction, post_import]
+        MainWindow._flush_asks_after_the_job(me)
+        assert asked == ["onedrive", "post-import"]
+        box.assert_not_called()
+        assert me._asks_after_the_job == [post_import]
+
+    def test_each_is_put_off_once(self):
+        me = self._me()
+        ask = MagicMock()
+        me._ask_after_the_job(ask)
+        me._ask_after_the_job(ask)
+        assert me._asks_after_the_job == [ask]
+
+    def test_asked_once_nothing_is_going(self):
+        me = self._me()
+        first, second = MagicMock(), MagicMock()
+        me._asks_after_the_job = [first, second]
+        MainWindow._flush_asks_after_the_job(me)
+        first.assert_called_once_with()
+        second.assert_called_once_with()
+        assert me._asks_after_the_job == []
+
+    @pytest.mark.parametrize("going", JOBS + ["_loader_worker", "_simple_run_active",
+                                              "_close_committed"])
+    def test_not_while_anything_is_going_or_the_window_closes(self, going):
+        me = self._me(**{going: object()})
+        ask = MagicMock()
+        me._asks_after_the_job = [ask]
+        MainWindow._flush_asks_after_the_job(me)
+        ask.assert_not_called()
+        assert me._asks_after_the_job == [ask]
+
+    def test_a_load_queues_them_only_when_one_waits(self, monkeypatch):
+        timer = MagicMock()
+        monkeypatch.setattr(main_window, "QTimer", timer)
+        me = self._me()
+        MainWindow._queue_asks_after_the_job(me)
+        timer.singleShot.assert_not_called()
+        me._asks_after_the_job = [MagicMock()]
+        MainWindow._queue_asks_after_the_job(me)
+        timer.singleShot.assert_called_once_with(0, me._flush_asks_after_the_job)
+
+    def test_a_put_off_question_is_asked_after_the_job(self, monkeypatch):
+        """On the real methods: put off while a global.ini extraction runs,
+        asked once it and its load are over, then gone."""
+        settings = MagicMock()
+        settings.get_post_import_apply_pending.return_value = True
+        monkeypatch.setattr(main_window, "AppSettings", settings)
+        box = MagicMock()
+        monkeypatch.setattr(main_window, "QMessageBox", box)
+        me = self._me(_p4k_worker=object())
+        me._maybe_prompt_post_import_apply = (
+            lambda: MainWindow._maybe_prompt_post_import_apply(me))
+        me._maybe_prompt_post_import_apply()
+        box.assert_not_called()
+        me._p4k_worker = None
+        MainWindow._flush_asks_after_the_job(me)
+        box.return_value.exec.assert_called_once_with()
+        assert me._asks_after_the_job == []
