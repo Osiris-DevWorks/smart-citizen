@@ -7,8 +7,11 @@ the default reader working on a real QImage.
 """
 from __future__ import annotations
 
+import sys
+
 import pytest
-from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtCore import QPoint, QRect, Qt
+from PyQt6.QtGui import QColor
 
 from src.gui.sco_overlay import (
     DEFAULT_OVERLAY_COLORS, DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_OVERLAP, DRAWER_HANDLE_WIDTH,
@@ -19,6 +22,7 @@ from src.gui.sco_overlay import (
 from src.utils.blueprint_meta import BlueprintItem
 from src.utils.mining_catalog import CraftingIndex, MineralInfo
 from src.utils.mining_signatures import decode_signature
+from src.utils.settings import AppSettings
 
 
 @pytest.fixture(autouse=True)
@@ -122,9 +126,17 @@ def test_tooltip_caps_long_mission_lists(qapp):
 def test_format_matches(qapp):
     assert format_matches(decode_signature(10200)) == "3 × Lindinium"
     assert format_matches(decode_signature(15697)) == "Unidentified"
+    # #523: a round number that fits salvage too lists salvage first and
+    # marks ROC and FPS surface only, since in space salvage is the answer.
     assert format_matches(decode_signature(12000)).splitlines() == [
-        "3 × ROC Mineable", "4 × FPS Mineable", "6 × Salvage",
+        "6 × Salvage", "3 × ROC Mineable (surface only)", "4 × FPS Mineable (surface only)",
     ]
+    assert format_matches(decode_signature(6000)).splitlines() == [
+        "3 × Salvage", "2 × FPS Mineable (surface only)",
+    ]
+    # Without salvage in the reading nothing is moved or marked.
+    assert format_matches(decode_signature(3000)) == "1 × FPS Mineable"
+    assert format_matches(decode_signature(2000)) == "1 × Salvage"
 
 
 def test_scan_region_scales_with_screen(qapp):
@@ -364,7 +376,49 @@ def test_only_ores_with_a_signature_get_a_checkbox(qapp):
     drawer = BlueprintDrawer()
     drawer.set_catalog({"Hadanite": MineralInfo("Hadanite", "Gems", ("Aberdeen",))},
                        CraftingIndex())
-    assert drawer._mineral_tree.topLevelItem(0).data(1, Qt.ItemDataRole.CheckStateRole) is None
+    rows = _top_rows(drawer._mineral_tree)
+    assert rows["Hadanite"].data(1, Qt.ItemDataRole.CheckStateRole) is None
+
+
+def _top_rows(tree):
+    return {tree.topLevelItem(i).text(0): tree.topLevelItem(i)
+            for i in range(tree.topLevelItemCount())}
+
+
+def test_salvage_can_be_watched(qapp):
+    """#523: salvage ends the Minerals list with its own watch box, and a
+    decode that includes it sets off the label's alerts."""
+    from PyQt6.QtCore import QPoint
+
+    overlay = ScoOverlay()
+    overlay.set_reader(None)
+    overlay.start()
+    try:
+        drawer = overlay.drawer
+        drawer.set_catalog(*_catalog())
+        tree = drawer._mineral_tree
+        assert [tree.topLevelItem(i).text(0) for i in range(tree.topLevelItemCount())] == [
+            "Beryl", "Hadanite", "Salvage"]                     # after the minerals
+        salvage = tree.topLevelItem(2)
+        assert salvage.checkState(1) == Qt.CheckState.Unchecked
+        assert "2,000 each, up to 30" in salvage.toolTip(0)
+        assert salvage.toolTip(1) == "Alert when salvage is scanned"
+        seen = []
+        overlay.watched_changed.connect(seen.append)
+        salvage.setCheckState(1, Qt.CheckState.Checked)
+        assert seen == [{"salvage"}]
+        for _ in range(2):
+            overlay._on_reading(6000, QPoint(500, 300))     # 3 × Salvage or 2 × FPS
+        assert overlay.label.watched and overlay.label.glowing
+        # Clear all takes it off too, and a search for a mineral hides the row.
+        drawer._clear_watched_btn.click()
+        assert seen[-1] == set() and not overlay.label.watched
+        drawer._mineral_search.setText("ber")
+        assert "Salvage" not in _top_rows(tree)
+        drawer._mineral_search.setText("salv")
+        assert list(_top_rows(tree)) == ["Salvage"]
+    finally:
+        overlay.stop()
 
 
 def test_drawer_scan_decoder_switch(qapp):
@@ -518,7 +572,10 @@ def test_drawer_follows_a_language_switch(qapp):
 def test_empty_catalog_says_how_to_fill_it(qapp):
     drawer = BlueprintDrawer()
     drawer.set_catalog({}, CraftingIndex())
-    assert drawer._mineral_tree.topLevelItem(0).text(0).startswith("No minerals match")
+    tree = drawer._mineral_tree
+    # Salvage needs no catalog, so it stays, under the message.
+    assert tree.topLevelItemCount() == 2 and tree.topLevelItem(1).text(0) == "Salvage"
+    assert tree.topLevelItem(0).text(0).startswith("No minerals match")
     assert drawer._crafting_tree.topLevelItem(0).text(0).startswith("No matches")
 
 
@@ -759,3 +816,602 @@ def test_every_drawer_section_has_its_own_switch():
     prefix = AppSettings.SCO_DRAWER_SECTION_PREFIX
     switches = {n[len(prefix):] for n in AppSettings.SCO_OPTION_SETTING if n.startswith(prefix)}
     assert switches == set(SECTION_ICONS)
+
+
+# -- #523: centring, the selected row, alerts, text size and the hotkey --------
+
+def test_every_alert_has_its_own_switch():
+    from src.gui.sco_overlay import ALERTS
+    from src.utils.settings import AppSettings
+
+    prefix = AppSettings.SCO_ALERT_PREFIX
+    switches = [n[len(prefix):] for n in AppSettings.SCO_OPTION_SETTING if n.startswith(prefix)]
+    assert switches == list(ALERTS)
+
+
+def test_the_label_centres_under_the_pin_and_the_number(qapp, tmp_path):
+    """The label sat under the digits alone, right of the readout's middle,
+    since the scanner's pin icon is left of them."""
+    from PyQt6.QtGui import QImage
+
+    from src.gui.sco_overlay import READOUT_PIN_WIDTH
+
+    overlay = ScoOverlay(sample_dir=tmp_path)
+    overlay.set_options({"save_samples": False})
+    region = QRect(1000, 500, 400, 200)
+    digits = QRect(100, 40, 34, 12)          # capture pixels, which are screen pixels here
+    image = QImage(400, 200, QImage.Format.Format_RGB32)
+    for _ in range(2):
+        overlay._handle_found(("7,200", digits), image, region)
+    label = overlay.label
+    centre = label.x() + label.width() / 2
+    pin_left = digits.left() - READOUT_PIN_WIDTH * digits.height()
+    assert abs(centre - (region.x() + (pin_left + digits.right()) / 2)) <= 1.5
+    assert abs(centre - (region.x() + digits.center().x())) > 10      # where it used to sit
+    label.layout().activate()
+    assert label.y() + label._label.y() == region.y() + digits.bottom() + LABEL_GAP
+    overlay.stop()
+
+
+def test_the_label_holds_still_while_the_readout_only_jitters(qapp, tmp_path):
+    """#523: the label moved on every capture, since captures of a still
+    readout put its box a few pixels apart. It follows the readout once it
+    has wandered more than ANCHOR_DEAD_ZONE digit heights, and down at once:
+    held over a readout that sank, it would cover the digits' bottom row."""
+    from PyQt6.QtGui import QImage
+
+    from src.gui.sco_overlay import ANCHOR_DEAD_ZONE
+
+    overlay = ScoOverlay(sample_dir=tmp_path)
+    overlay.set_options({"save_samples": False})
+    region = QRect(1000, 500, 400, 200)
+    image = QImage(400, 200, QImage.Format.Format_RGB32)
+    label = overlay.label
+    digits = QRect(100, 40, 34, 11)
+    for _ in range(2):
+        overlay._handle_found(("7,200", digits), image, region)
+    held, where, first_text = label.anchor(), label.geometry(), label._label.text()
+    # Sideways and upward wobble: held.
+    for jitter in (QRect(102, 40, 35, 11), QRect(98, 39, 33, 11), QRect(101, 38, 36, 11)):
+        overlay._handle_found(("7,200", jitter), image, region)
+        assert label.anchor() == held and label.geometry() == where
+    # A new number in the same place takes the same spot (centred, so only
+    # its width changes).
+    for _ in range(2):
+        overlay._handle_found(("3,400", QRect(101, 40, 34, 11)), image, region)
+    assert label.anchor() == held and label._label.text() != first_text
+    # Sunk by a pixel, sideways by a pixel too: followed down, held across.
+    overlay._handle_found(("3,400", digits.translated(1, 1)), image, region)
+    assert label.anchor() == held + QPoint(0, 1)
+    held = label.anchor()
+    step = int(ANCHOR_DEAD_ZONE * digits.height()) + 2
+    overlay._handle_found(("3,400", digits.translated(step, 1)), image, region)
+    assert label.anchor() == held + QPoint(step, 0)                   # the readout moved
+    # Hidden, the label is placed afresh, even 2 px from where it last was.
+    label.hide()
+    for _ in range(2):                                         # shown again once confirmed
+        overlay._handle_found(("3,400", digits.translated(step + 2, 1)), image, region)
+    assert label.isVisible() and label.anchor() == held + QPoint(step + 2, 0)
+    overlay.stop()
+
+
+def _fixture_capture(name, screen_h, dpi, drop=0):
+    """A capture of the scan region, in device pixels, holding fixture *name*
+    scaled to a *screen_h* px screen (*drop* px lower than usual), and that
+    region in logical pixels at Windows scale *dpi*."""
+    from pathlib import Path
+
+    from PyQt6.QtGui import QImage, QPainter
+
+    logical = QRect(0, 0, round(screen_h * 16 / 9 / dpi), round(screen_h / dpi))
+    region = scan_region_rect(logical)
+    capture = QImage(round(region.width() * dpi), round(region.height() * dpi),
+                     QImage.Format.Format_RGB32)
+    capture.fill(QColor(0, 0, 0))
+    crop = QImage(str(Path(__file__).parent / "fixtures" / "sco" / f"{name}.png"))
+    factor = screen_h / 1600
+    crop = crop.scaled(round(crop.width() * factor), round(crop.height() * factor),
+                       Qt.AspectRatioMode.IgnoreAspectRatio,
+                       Qt.TransformationMode.SmoothTransformation)
+    painter = QPainter(capture)
+    painter.drawImage(capture.width() // 3, capture.height() // 3 + drop, crop)
+    painter.end()
+    return capture, region
+
+
+@pytest.mark.parametrize("name, screen_h, dpi", [
+    ("live00_15600", 1080, 1.25), ("live01_8540", 1080, 1.25),
+    ("g1_7200", 1440, 1.5), ("p2_2000", 1600, 1.25), ("live16_3400", 2160, 1.5),
+])
+def test_the_label_never_covers_the_readout_on_a_scaled_screen(
+        qapp, tmp_path, name, screen_h, dpi):
+    """#523: with Windows display scaling, the box came out of the device to
+    logical conversion short of the digits, the label sat over their bottom
+    row, and its blackout in the next capture made the reads fail (13 or 14
+    of 16 at 1080 px and 125%). Captures of a still readout, as the overlay
+    takes them, must keep reading, with the label still."""
+    base, region = _fixture_capture(name, screen_h, dpi)
+    overlay = ScoOverlay(sample_dir=tmp_path)
+    overlay.set_options({"save_samples": False})
+    overlay._running = True
+    places = set()
+    for _ in range(8):
+        capture = base.copy()
+        overlay._mask_own_label(capture, region)
+        found = hud_signature_reader(capture)
+        assert found is not None
+        overlay._handle_found(found, capture, region)
+        if overlay.label.isVisible():
+            places.add(overlay.label.geometry().getRect())
+    assert len(places) == 1
+    overlay.stop()
+
+
+@pytest.mark.parametrize("name, screen_h, dpi", [
+    ("live00_15600", 1600, 1.0), ("g1_7200", 1600, 1.0), ("live00_15600", 2160, 1.5),
+    ("g1_7200", 2160, 1.0),
+])
+def test_a_sinking_readout_keeps_reading(qapp, tmp_path, name, screen_h, dpi):
+    """A readout that sinks a pixel per capture (the head bobbing) is
+    followed down at once. Held still, the label covered its bottom rows
+    and blacked them out, and the reads failed on every crop."""
+    overlay = ScoOverlay(sample_dir=tmp_path)
+    overlay.set_options({"save_samples": False})
+    overlay._running = True
+    columns = set()
+    for drop in range(7):
+        capture, region = _fixture_capture(name, screen_h, dpi, drop)
+        overlay._mask_own_label(capture, region)
+        found = hud_signature_reader(capture)
+        assert found is not None, drop
+        overlay._handle_found(found, capture, region)
+        if overlay.label.isVisible():
+            columns.add(overlay.label.geometry().x())
+    assert len(columns) == 1                                   # held across all the while
+    overlay.stop()
+
+
+@pytest.mark.parametrize("name", ["live25_3600", "live29_7200"])
+def test_a_still_readout_keeps_the_label_still(qapp, tmp_path, name):
+    """Captures of one readout differ in brightness and noise, which moved
+    its box by up to 3 px on these crops. The label keeps its column and at
+    most settles down a pixel or two (it follows a box that ends lower)."""
+    import random
+
+    from PyQt6.QtGui import QImage
+
+    capture, region = _fixture_capture(name, 1600, 1.0)
+    rgb = capture.convertToFormat(QImage.Format.Format_RGB32)
+    pixels = rgb.constBits().asstring(rgb.sizeInBytes())
+    rng = random.Random(name)
+    overlay = ScoOverlay(sample_dir=tmp_path)
+    overlay.set_options({"save_samples": False})
+    places = []
+    for gain in (1.0, 1.0, 0.85, 1.15, 0.92, 1.08):
+        varied = bytes(max(0, min(255, int(v * gain + rng.uniform(-8, 8)))) if i % 4 != 3 else v
+                       for i, v in enumerate(pixels))
+        frame = QImage(varied, rgb.width(), rgb.height(), rgb.bytesPerLine(),
+                       QImage.Format.Format_RGB32).copy()
+        found = hud_signature_reader(frame)
+        assert found is not None
+        overlay._handle_found(found, frame, region)
+        if overlay.label.isVisible():
+            places.append(overlay.label.geometry().topLeft())
+    assert len({point.x() for point in places}) == 1
+    tops = [point.y() for point in places]
+    assert tops == sorted(tops) and tops[-1] - tops[0] <= 2
+    overlay.stop()
+
+
+def test_only_a_clicked_search_box_takes_the_keyboard(qapp):
+    """#523: in game F is held to move the mouse, and a tab click gave the
+    Blueprints or Crafting search box focus, so it filled with "ffff". Only
+    a search box takes focus, and only when clicked; lists, trees, ticks and
+    buttons work by mouse without it."""
+    from PyQt6.QtWidgets import QWidget
+
+    from src.gui.sco_overlay import DrawerSearch
+
+    drawer = BlueprintDrawer()
+    searches = [drawer._search, drawer._mineral_search, drawer._crafting_search]
+    assert all(isinstance(s, DrawerSearch) for s in searches)
+    for widget in drawer._panel.findChildren(QWidget):
+        wanted = (Qt.FocusPolicy.ClickFocus if isinstance(widget, DrawerSearch)
+                  else Qt.FocusPolicy.NoFocus)
+        assert widget.focusPolicy() == wanted, type(widget).__name__
+    drawer.show_docked()
+    for name in SECTION_ICONS:
+        drawer.open_section(name)
+        drawer.activateWindow()
+        qapp.processEvents()
+        assert drawer.focusWidget() not in searches, name
+    drawer.hide()
+
+
+def test_a_held_key_types_nothing_in_a_drawer_search(qapp):
+    """A key held since before the box had focus (F, in game) only sends
+    repeats: they type nothing, while a press types and a held Backspace
+    still deletes."""
+    from PyQt6.QtCore import QEvent
+    from PyQt6.QtGui import QKeyEvent
+    from PyQt6.QtWidgets import QApplication
+
+    drawer = BlueprintDrawer()
+    search = drawer._search
+
+    def key(qt_key, text, repeat):
+        QApplication.sendEvent(search, QKeyEvent(QEvent.Type.KeyPress, qt_key,
+                                                 Qt.KeyboardModifier.NoModifier, text, repeat))
+
+    for _ in range(5):
+        key(Qt.Key.Key_F, "f", True)
+    assert search.text() == ""
+    key(Qt.Key.Key_A, "a", False)
+    key(Qt.Key.Key_G, "g", False)
+    assert search.text() == "ag"
+    key(Qt.Key.Key_Backspace, "\b", True)
+    assert search.text() == "a"
+
+
+def test_a_selected_row_keeps_light_text(qapp):
+    """The selected row took the theme's highlighted text colour, near black
+    in the default SCLE theme, on the dark see-through panel."""
+    from PyQt6.QtGui import QPalette
+    from PyQt6.QtWidgets import QApplication
+
+    # The theme is set on the whole app, as theme.apply_theme does: a palette
+    # on the drawer alone is dropped when its style sheet polishes it.
+    saved = QApplication.palette()
+    palette = QApplication.palette()
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(10, 18, 32))   # SCLE's
+    QApplication.setPalette(palette)
+    drawer = BlueprintDrawer()
+    drawer.set_catalog(*_catalog())
+    drawer.open_section("minerals")
+    drawer.show_docked()
+    try:
+        tree = drawer._mineral_tree
+        row = _top_rows(tree)["Beryl"]
+        tree.setCurrentItem(row)
+        qapp.processEvents()
+        image = tree.viewport().grab().toImage()
+        rect = tree.visualRect(tree.indexFromItem(row, 0))
+        dark = light = 0
+        for y in range(rect.top(), rect.bottom() + 1):
+            for x in range(rect.left(), rect.right() + 1):
+                c = image.pixelColor(x, y)
+                if c.alpha() < 200:
+                    continue
+                luma = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
+                dark += luma < 60
+                light += luma > 150
+        assert light > 20 and dark == 0
+    finally:
+        drawer.hide()
+        QApplication.setPalette(saved)
+
+
+def _shown(overlay, value):
+    """Two readings in a row put a new value on the label."""
+    from PyQt6.QtCore import QPoint
+
+    for _ in range(2):
+        overlay._on_reading(value, QPoint(500, 300))
+
+
+def _running_overlay():
+    overlay = ScoOverlay()
+    overlay.set_reader(None)
+    overlay.start()
+    overlay.set_watched_minerals({"lindinium"})
+    return overlay
+
+
+def test_default_alerts_are_the_glow_and_the_flash(qapp):
+    from src.gui.sco_overlay import ScanLabelWindow
+    assert ScanLabelWindow()._alerts == {"glow", "flash"}
+
+
+def test_the_alerts_follow_the_options(qapp, monkeypatch):
+    from PyQt6.QtCore import QPoint
+
+    from src.gui.sco_overlay import ALERT_COLOR, ALERT_TEXT_SCALE
+    chimes = []
+    monkeypatch.setattr("src.gui.sco_overlay.play_alert_sound", lambda: chimes.append(True))
+    overlay = _running_overlay()
+    label = overlay.label
+    try:
+        overlay.set_options({"alert_glow": False, "alert_flash": False})
+        _shown(overlay, 10200)                                  # 3 × Lindinium, watched
+        assert label.watched and not label.glowing and not label._flash_timer.isActive()
+        assert f"color: {ALERT_COLOR}" not in label._label.styleSheet() and chimes == []
+        points, width = label._font_points(), label.width()
+        overlay.set_options({"alert_color": True, "alert_bigger": True, "alert_sound": True,
+                             "alert_flash": False})
+        assert label.glowing and f"color: {ALERT_COLOR}" in label._label.styleSheet()
+        assert label._font_points() == pytest.approx(points * ALERT_TEXT_SCALE)
+        assert label.width() > width and abs(label.x() + label.width() // 2 - 500) <= 1
+        assert chimes == []            # switching an alert on is no new reading
+        _shown(overlay, 7200)                                   # 2 × Bexalite, not watched
+        assert not (label.watched or label.glowing)
+        assert f"color: {ALERT_COLOR}" not in label._label.styleSheet()
+        assert label._font_points() == pytest.approx(points)
+        _shown(overlay, 10200)                                  # watched and new: one chime
+        assert chimes == [True]
+        overlay._on_reading(10200, QPoint(500, 300))            # still showing: no more
+        assert chimes == [True]
+    finally:
+        overlay.stop()
+
+
+def test_a_watched_target_flashes_three_times_when_first_read(qapp):
+    from PyQt6.QtCore import QPoint
+
+    from src.gui.sco_overlay import ALERT_COLOR
+    overlay = _running_overlay()
+    label = overlay.label
+    try:
+        _shown(overlay, 10200)
+        assert label._flash_timer.isActive() and label._flash_on
+        green = QColor(ALERT_COLOR)
+        assert f"rgba({green.red()}, {green.green()}, {green.blue()}," in label._label.styleSheet()
+        size = label._label.sizeHint()
+        states = [label._flash_on]
+        while label._flash_timer.isActive():
+            label._flash_tick()
+            states.append(label._flash_on)
+            assert label._label.sizeHint() == size              # a flash moves nothing
+        assert states.count(True) == 3 and not label._flash_on
+        overlay._on_reading(10200, QPoint(500, 300))            # a steady repeat: no flash
+        assert not label._flash_timer.isActive()
+        label.hide()
+        _shown(overlay, 10200)                                  # back after it was gone
+        assert label._flash_timer.isActive()
+        overlay.set_options({"alert_flash": False})             # switched off: stops at once
+        assert not label._flash_timer.isActive() and not label._flash_on
+    finally:
+        overlay.stop()
+
+
+def test_the_scan_text_size(qapp):
+    from PyQt6.QtCore import QPoint
+
+    from src.gui.sco_overlay import LABEL_SIZE_SCALE, ScanLabelWindow
+    assert set(LABEL_SIZE_SCALE) == set(AppSettings.SCO_LABEL_SIZES)
+    label = ScanLabelWindow()
+    label.show_text("3 × Lindinium", QPoint(500, 300))
+    points, width = label._font_points(), label.width()
+    label.set_text_size("extra_large")
+    assert label._font_points() == pytest.approx(points * LABEL_SIZE_SCALE["extra_large"])
+    assert f"font-size: {label._font_points():.1f}pt" in label._label.styleSheet()
+    assert label.width() > width and abs(label.x() + label.width() // 2 - 500) <= 1
+    label.set_text_size("enormous")                             # unknown: medium
+    assert label._font_points() == pytest.approx(points)
+    label.hide()
+    overlay = ScoOverlay()
+    overlay.set_label_size("small")
+    assert overlay.label._size == "small"
+
+
+def test_the_chime_is_a_short_wav():
+    import io
+    import wave
+
+    from src.gui.sco_overlay import alert_chime_wav
+    with wave.open(io.BytesIO(alert_chime_wav())) as wav:
+        assert (wav.getnchannels(), wav.getsampwidth()) == (1, 2)
+        assert 0.1 < wav.getnframes() / wav.getframerate() < 0.5
+
+
+@pytest.mark.skipif(not sys.platform.startswith("win"), reason="PlaySound is Windows only")
+def test_the_chime_plays_from_memory_without_waiting(monkeypatch):
+    from src.gui import sco_overlay
+    calls = []
+    monkeypatch.setattr(sco_overlay, "_play_sound",
+                        lambda data, module, flags: calls.append((data, module, flags)) or True)
+    assert sco_overlay.play_alert_sound()
+    (data, module, flags), = calls
+    assert data and module is None
+    assert flags == sco_overlay.SND_MEMORY | sco_overlay.SND_ASYNC | sco_overlay.SND_NODEFAULT
+    assert sco_overlay._chime is not None          # kept alive while Windows reads it
+
+
+class _FakeUser32:
+    """RegisterHotKey, UnregisterHotKey and the raw input switch, recorded
+    instead of called."""
+
+    def __init__(self, refuse=False):
+        self.calls, self.refuse, self.raw = [], refuse, []
+
+    def RegisterHotKey(self, hwnd, hotkey_id, modifiers, key):  # noqa: N802
+        self.calls.append(("register", modifiers, key))
+        return not self.refuse
+
+    def UnregisterHotKey(self, hwnd, hotkey_id):  # noqa: N802
+        self.calls.append(("unregister",))
+        return True
+
+    def RegisterRawInputDevices(self, device, count, size):  # noqa: N802
+        self.raw.append(device._obj.dwFlags)
+        return True
+
+    def CreateWindowExW(self, *args):  # noqa: N802
+        return 0x5150
+
+    def DestroyWindow(self, hwnd):  # noqa: N802
+        return True
+
+
+def _overlay_with_fake_hotkey(refuse=False):
+    from src.gui.global_hotkey import GlobalHotkey
+
+    overlay = ScoOverlay()
+    overlay.set_reader(None)
+    fake = _FakeUser32(refuse)
+    overlay._hotkey = GlobalHotkey(overlay, user32=fake)
+    overlay._hotkey.activated.connect(overlay.toggle_drawer)
+    return overlay, fake
+
+
+CTRL_SHIFT_O = ("register", 0x2 | 0x4 | 0x4000, 0x4F)
+
+
+def test_the_hotkey_is_held_only_while_the_drawer_shows(qapp):
+    overlay, fake = _overlay_with_fake_hotkey()
+    problems = []
+    overlay.hotkey_problem.connect(problems.append)
+    overlay.set_drawer_hotkey("Ctrl+Shift+O")
+    assert fake.calls == []                                     # not running
+    overlay.start()
+    assert fake.calls == [CTRL_SHIFT_O] and problems == [""]
+    overlay.set_options({"drawer": False})
+    assert fake.calls[-1] == ("unregister",)
+    overlay.set_options({})
+    assert fake.calls[-1] == CTRL_SHIFT_O
+    overlay.set_drawer_hotkey("F9")
+    assert fake.calls[-2:] == [("unregister",), ("register", 0x4000, 0x78)]
+    overlay.set_drawer_hotkey("")
+    assert fake.calls[-1] == ("unregister",)
+    overlay.set_drawer_hotkey("F9")
+    overlay.stop()
+    assert fake.calls[-1] == ("unregister",) and overlay._hotkey.registered is None
+
+
+def test_a_refused_hotkey_is_reported_once_per_start(qapp, caplog):
+    overlay, fake = _overlay_with_fake_hotkey(refuse=True)
+    problems = []
+    overlay.hotkey_problem.connect(problems.append)
+    overlay.set_drawer_hotkey("Ctrl+Shift+O")
+    with caplog.at_level("WARNING", logger="src.gui.global_hotkey"):
+        overlay.start()
+        overlay.set_options({})                                 # MainWindow applies options next
+    assert fake.calls == [CTRL_SHIFT_O] and problems == ["taken"]
+    assert overlay._hotkey.registered is None
+    assert [r.levelname for r in caplog.records] == ["WARNING"]
+    overlay.stop()                                              # the refusal is cleared
+    assert problems == ["taken", ""]
+    overlay.start()                                             # and tried again
+    assert fake.calls == [CTRL_SHIFT_O, CTRL_SHIFT_O]
+    overlay.stop()
+
+
+def test_the_hotkey_opens_the_drawer_on_its_last_section_and_hands_focus_back(qapp, monkeypatch):
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)   # the game
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    activated = []
+    monkeypatch.setattr(drawer, "activateWindow", lambda: activated.append(True))
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    try:
+        overlay._hotkey.activated.emit()                        # as Windows delivers it
+        assert drawer.is_open() and drawer._current == "blueprints" and activated == [True]
+        overlay._hotkey.activated.emit()
+        assert not drawer.is_open() and handed == [4242]
+        drawer.open_section("crafting")                         # opened by a click
+        drawer.close_drawer()
+        assert handed == [4242]                                 # the hotkey took nothing
+        overlay.toggle_drawer()
+        assert drawer._current == "crafting"                    # the section used last
+        drawer.open_section("crafting")                         # its own tab closes it
+        assert not drawer.is_open() and handed == [4242, 4242]
+    finally:
+        overlay.stop()
+
+
+def test_a_drawer_hidden_by_its_switch_forgets_the_window(qapp, monkeypatch):
+    """Switched off while the hotkey had it open, the drawer closes nothing
+    the hotkey opened, so a later close by its own tab hands focus nowhere."""
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    try:
+        overlay.toggle_drawer()                                 # the hotkey opens it
+        overlay.set_options({"drawer": False})                  # switched off on the tab
+        overlay.set_options({})                                 # and back on, still open
+        assert drawer.isVisible() and drawer.is_open()
+        drawer.open_section(drawer._current)                    # its own tab closes it
+        assert not drawer.is_open() and handed == []
+    finally:
+        overlay.stop()
+
+
+def test_the_hotkey_leaves_focus_alone_once_the_player_moved_on(qapp, monkeypatch):
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: False)   # the player clicked away
+    try:
+        overlay.toggle_drawer()
+        overlay.toggle_drawer()
+        assert not drawer.is_open() and handed == []
+        overlay.set_options({"drawer": False})                  # no drawer, nothing to open
+        overlay.toggle_drawer()
+        assert not drawer.is_open()
+    finally:
+        overlay.stop()
+
+
+def test_the_hotkey_watches_raw_input_only_while_it_is_held(qapp):
+    from src.gui.global_hotkey import RIDEV_INPUTSINK, RIDEV_REMOVE
+
+    overlay, fake = _overlay_with_fake_hotkey()
+    overlay.set_drawer_hotkey("Ctrl+Shift+O")
+    assert fake.raw == []                                       # not running
+    overlay.start()
+    assert fake.raw == [RIDEV_INPUTSINK]
+    overlay.set_options({"drawer": False})
+    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE]
+    overlay.set_options({})
+    overlay.stop()
+    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE, RIDEV_INPUTSINK, RIDEV_REMOVE]
+
+
+def test_a_drawer_opened_without_focus_is_logged(qapp, monkeypatch, caplog):
+    """Raw input saw the hotkey but Windows kept focus on the game: the log
+    says so, once the check after the open has run."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    monkeypatch.setattr(sco_overlay, "FOCUS_CHECK_MS", 0)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    messages = lambda: [r.getMessage() for r in caplog.records  # noqa: E731
+                        if "without focus" in r.getMessage()]
+    try:
+        with caplog.at_level("INFO", logger="src.gui.sco_overlay"):
+            overlay.toggle_drawer()
+            QTest.qWait(20)
+            assert messages() == ["SCO: the drawer opened without focus: "
+                                  "Windows kept it on window 4242"]
+            overlay.toggle_drawer()                             # closed
+            focus["window"] = int(drawer.winId())               # this time it took focus
+            overlay.toggle_drawer()
+            QTest.qWait(20)
+            assert len(messages()) == 1
+            overlay.toggle_drawer()
+            focus["window"] = 4242
+            overlay.toggle_drawer()
+            overlay.toggle_drawer()                             # closed before the check
+            QTest.qWait(20)
+            assert len(messages()) == 1
+    finally:
+        overlay.stop()
