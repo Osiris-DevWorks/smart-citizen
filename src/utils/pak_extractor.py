@@ -663,14 +663,11 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 
 # ── Extraction working folders (#471) ────────────────────────────────────────
 # unp4k and unforge used to work in tempfile.TemporaryDirectory(), which is
-# always under %TEMP% on the system drive. A DataForge run writes Game2.dcb
-# (~317 MB) plus unforge's XMLs in its working folder: about 31,200 files and
-# 1.6 GB in all now that unforge writes only the kept subtrees (measured on
-# LIVE, perf proposal), and about 62,600 files and 2.3 GB from an unforge
-# without --include. With that folder in %TEMP%, a user who moved the
-# DataForge cache off C: still had every extraction hammer C: — on an HDD
-# system drive that stalls the whole PC. Each DataForge run now works in its
-# own folder beside the cache leaf,
+# always under %TEMP% on the system drive. A full DataForge run writes
+# Game2.dcb (~317 MB) plus unforge's ~62k XMLs (~1.8 GB) there, so a user who
+# moved the DataForge cache off C: still had every extraction hammer C: — on
+# an HDD system drive that stalls the whole PC. Each DataForge run now works
+# in its own folder beside the cache leaf,
 # {base}\{channel}\cache\dataforge.extracting-XXXXXXXX, which is:
 #   * on the cache's drive by construction;
 #   * outside the leaf, which step 3 wipes and which the freshness check and
@@ -683,8 +680,8 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # installer.iss suggests sharing one cache between installs.
 #
 # %TEMP% stays the working place where beside the cache would do harm:
-#   * a network share or drive (~1.6 GB of SMB writes);
-#   * OneDrive (~31k files queued for sync);
+#   * a network share or drive (~1.8 GB of SMB writes);
+#   * OneDrive (~62k files queued for sync);
 #   * a removable drive (slow flash against unforge's 1800 s budget);
 #   * a cache so deep that unp4k's working folder would pass what
 #     CreateProcess accepts as a current directory.
@@ -732,9 +729,9 @@ _UNMARKED_SCRATCH_GRACE_SECONDS = 10 * 60
 _DRIVE_REMOVABLE, _DRIVE_REMOTE = 2, 4   # GetDriveTypeW
 
 # Free space (#482). Measured on LIVE 4.10 (October 2026): Game2.dcb 317 MiB,
-# unforge's whole tree 61,950 files and 1.84 GB, the kept cache about 30,700
-# files and 1.2 GB, with GB read as GiB (the larger reading). _space_for adds
-# 15% for growth between builds and one cluster per file for slack and file
+# unforge's tree 61,950 files and 1.84 GB, the kept cache about 30,700 files
+# and 1.2 GB, with GB read as GiB (the larger reading). _space_for adds 15%
+# for growth between builds and one cluster per file for slack and file
 # records. The working folder lives until the kept files are in the cache,
 # and the old cache is wiped only just before that. Beside the cache the kept
 # files are moved, which needs no new room, but a subtree whose move is
@@ -742,12 +739,6 @@ _DRIVE_REMOVABLE, _DRIVE_REMOTE = 2, 4   # GetDriveTypeW
 # copy: both at once unless a stamped cache at the leaf makes room.
 # _require_room_for_new_cache logs what each run really wrote, so these can
 # be checked against real runs.
-#
-# The working folder stays sized for unforge's whole tree on purpose (perf
-# proposal). Handed the kept subtrees, unforge writes about 31,200 files and
-# 1.60 GB with the dcb (measured on LIVE), so the check asks for about 0.7 GB
-# more than such a run needs. But an unforge without --include is run again
-# for every record (extract_dataforge), and that run writes the whole tree.
 _MIB, _GIB = 1 << 20, 1 << 30
 _SPACE_GROWTH_PERCENT = 115
 _DATAFORGE_WORK_BYTES = 317 * _MIB + math.ceil(1.84 * _GIB)
@@ -946,13 +937,13 @@ class WorkingFolder:
     proposal). It holds Game2.dcb, what unforge wrote that the cache does
     not keep, and the old cache when it was set aside there
     (_set_old_cache_aside). On a re-extract beside the cache that is about
-    31,000 files, nearly all of them the old cache, now that unforge writes
-    only the kept subtrees (about 62,000 from an unforge without --include).
-    In %TEMP% the old cache is wiped in place and the kept files are copied,
-    so the folder holds unforge's ~31,200 files, and on a first extraction
-    beside the cache little but the dcb. Enhancement generation used to wait
-    for both halves (6.9 s for unforge's unkept files and about 7 s for the
-    old cache on the PC this was measured on, far longer on a slow disk).
+    62,000 files: the ~31,000 unforge wrote that the cache does not keep,
+    and the ~31,000 of the old cache. In %TEMP% the old cache is wiped in
+    place and the kept files are copied, so the folder holds all of
+    unforge's ~62,000, and on a first extraction beside the cache the
+    ~31,000 it does not keep and the dcb. Enhancement generation used to
+    wait for both halves (6.9 s for unforge's unkept files and about 7 s for
+    the old cache on the PC this was measured on, far longer on a slow disk).
 
     The run's .in_use marker stays open until delete() has removed
     everything else, so another window's sweep leaves the folder alone the
@@ -1636,10 +1627,9 @@ _GLOBAL_INI_FILTER = _GLOBAL_INI_RELATIVE.relative_to("data").as_posix()
 #     prone to transient WinError 5 retries, since there are half as many
 #     files for the AV/indexer stack to hold open briefly.
 #
-# unforge is handed the same list (_unforge_include_args, its ``--include``
-# flag), so it builds and writes only these subtrees in the first place: about
-# 31k of its ~62k records, and its run is about a third shorter. The cache
-# still keeps only these subtrees whatever unforge writes.
+# unp4k and unforge themselves are unaffected — unforge has no filter flag,
+# so we still produce the full DCB-expansion into the working folder. The savings
+# are on the persistent cache, not on the first-time CPU work.
 #
 # MAINTENANCE CONTRACT: paths here must cover everything ``scripts/
 # generate_enhancements_ini.py`` reads via ``records / ...``. If a future
@@ -1737,31 +1727,6 @@ def _set_old_cache_aside(leaf: Path, run_dir: Path) -> Optional[Path]:
     return target
 
 
-# The start of the usage text unforge prints when it does not take its
-# arguments. One without --include (built before the perf proposal) prints
-# it for any argument after the dcb, writes nothing and exits 0
-# (odw-fast-unp4k a76607f, src/unforge.cli/Program.cs).
-_UNFORGE_USAGE = "Usage: unforge.exe"
-
-
-def _unforge_include_args() -> list[str]:
-    """unforge's ``--include`` arguments for the DATAFORGE_KEEP_SUBPATHS
-    subtrees, so it builds and writes only the records the cache keeps.
-
-    unforge names each record by its path under the folder of the dcb
-    (``libs/foundry/records/entities/scitem/...``), and an include takes the
-    records at or under that path, whole path segments only, ignoring case.
-    The bundled unforge.exe has the flag; one without it prints its usage
-    (_UNFORGE_USAGE) and writes nothing, and extract_dataforge then runs it
-    again with the dcb alone, for every record.
-    """
-    records = f"{_UNFORGE_LIBS_DIR}/{DATAFORGE_RECORDS_UNDER_LIBS.as_posix()}"
-    args: list[str] = []
-    for rel in DATAFORGE_KEEP_SUBPATHS:
-        args += ["--include", f"{records}/{rel}"]
-    return args
-
-
 def _unforge_records(src_libs: Path) -> Path:
     """unforge's records folder under *src_libs* (its ``libs/``), or
     FileNotFoundError when its output does not have the layout the cache
@@ -1856,9 +1821,7 @@ _TOOL_POLL_SECONDS = 0.25
 _TOOL_REAP_SECONDS = 30
 _UNP4K_GLOBAL_INI_TIMEOUT_SECONDS = 300
 _UNP4K_DCB_TIMEOUT_SECONDS = 600
-# A healthy unforge run takes about 26 s handed the kept subtrees (perf
-# proposal), and about 40 s for every record (#370).
-_UNFORGE_TIMEOUT_SECONDS = 1800
+_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~40 s (#370)
 
 
 def _run_tool(args, *, cwd, timeout, should_cancel=None) -> subprocess.CompletedProcess:
@@ -2080,9 +2043,7 @@ def extract_dataforge(
       1. unp4k.exe extracts Game2.dcb from the p4k into this run's working
          folder, beside the cache or in %TEMP% (see _scratch_location, #471).
       2. unforge.exe converts Game2.dcb → individual XML entity files, next to
-         the dcb, only the kept subtrees (_unforge_include_args). One that
-         prints its usage for the includes instead (an unforge without
-         --include) is run again with the dcb alone (perf proposal).
+         the dcb.
       3. The old cache is set aside in the working folder (wiped in place in
          %TEMP%, on a tight drive or when the rename is refused), the
          generator's subtrees are moved into dataforge_cache_dir (copied
@@ -2225,40 +2186,19 @@ def extract_dataforge(
         # "Game.dcb (114 MB)" versus a healthy "Game2.dcb (330 MB)" is the
         # entire diagnosis when this stalls (#370).
         dcb_mb = dcb_path.stat().st_size / 1_048_576
-        # Python-side reads under unforge's output get the long-path prefix
-        # (#471). With the working folder near its depth cap the deepest keep
-        # path is ~261 characters, where a plain exists() returns False and
-        # _cache_filtered_records would skip that subtree without a word. The
-        # tools themselves only ever see plain paths.
-        libs_dir = Path(_win_long_path(dcb_path.parent))
-
-        def run_unforge(*includes):
-            logger.info(f"Running unforge: {unforge_exe} {dcb_path}")
-            try:
-                # cwd too: unforge writes next to the dcb, and anything else it
-                # might drop in its working folder then stays inside the run's
-                # folder as well.
-                return _run_tool(
-                    [str(unforge_exe), str(dcb_path), *includes],
-                    cwd=str(run_dir),
-                    timeout=_UNFORGE_TIMEOUT_SECONDS,
-                    should_cancel=should_cancel,
-                )
-            except subprocess.TimeoutExpired as e:
-                raise _unforge_timeout_error(e, dcb_path, dcb_mb, p4k_path) from e
-
-        result = run_unforge(*_unforge_include_args())
-        # An unforge without --include printed its usage and wrote nothing
-        # (perf proposal). It is run once more with the dcb alone, which
-        # converts every record as before the flag, and only that run's
-        # output goes through the checks below. A stop during the first run
-        # has already raised in _run_tool, so it never runs again.
-        if (_UNFORGE_USAGE in (result.stdout or "")
-                and not (libs_dir / _UNFORGE_LIBS_DIR).exists()):
-            logger.warning(f"The bundled unforge.exe ({unforge_exe}) does not know --include: "
-                           "it printed its usage and wrote nothing. It is run again for "
-                           "every record, which takes longer.")
-            result = run_unforge()
+        logger.info(f"Running unforge: {unforge_exe} {dcb_path}")
+        try:
+            # cwd too: unforge writes next to the dcb, and anything else it
+            # might drop in its working folder then stays inside the run's
+            # folder as well.
+            result = _run_tool(
+                [str(unforge_exe), str(dcb_path)],
+                cwd=str(run_dir),
+                timeout=_UNFORGE_TIMEOUT_SECONDS,
+                should_cancel=should_cancel,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise _unforge_timeout_error(e, dcb_path, dcb_mb, p4k_path) from e
         # Always log unforge's output at INFO (truncated). A zero-length
         # stdout + sub-second runtime is typically a silent failure — e.g.
         # antivirus blocking unforge.exe or quarantining a file it wrote, or
@@ -2285,6 +2225,13 @@ def extract_dataforge(
         # dcb file. When it's missing we surface whatever we captured from
         # unforge's stdout/stderr in the exception so the user (and the Log
         # Tab) can see what went wrong.
+        #
+        # Python-side reads under unforge's output get the long-path prefix
+        # (#471). With the working folder near its depth cap the deepest keep
+        # path is ~261 characters, where a plain exists() returns False and
+        # _cache_filtered_records would skip that subtree without a word. The
+        # tools themselves only ever see plain paths.
+        libs_dir = Path(_win_long_path(dcb_path.parent))
         if not (libs_dir / _UNFORGE_LIBS_DIR).exists():
             diagnostic = ""
             if _stdout or _stderr:
@@ -2420,9 +2367,8 @@ def extract_dataforge(
             defer_cleanup(WorkingFolder(run_dir, marker))
             handed_off = True
     finally:
-        # Failure or stop, the working folder goes now (#471), so its ~1.6 GB
-        # (~2.3 GB from an unforge without --include, perf proposal) never
-        # outlives the run and a stopped run cleans up after itself,
+        # Failure or stop, the working folder goes now (#471), so its ~2.3 GB
+        # never outlives the run and a stopped run cleans up after itself,
         # and so does a success nobody took it from. _close_scratch logs
         # every OSError, never raising it over the real outcome.
         if not handed_off:

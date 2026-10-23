@@ -41,8 +41,7 @@ already failing to delete. These tests pin the replacement:
 * What the tools are asked for and what they print (perf proposal): the
   global.ini run takes the English file alone and is sized for it, and a
   tool that exits 0 after an error it caught fails the run before the old
-  cache is wiped, with no pauses between the steps. The bundled unforge.exe
-  takes ``--include``, and one that does not is run again for every record.
+  cache is wiped, with no pauses between the steps.
 
 * The perf proposal: beside the cache the old cache is set aside in the
   working folder with one rename instead of wiped (wiped in place in
@@ -101,7 +100,6 @@ _RUN_PREFIXES = (pe.DATAFORGE_SCRATCH_PREFIX, pe.GLOBAL_INI_SCRATCH_PREFIX,
 _SPIN_GUARD_CALLS = 100
 # The unp4k.exe and unforge.exe Smart Citizen ships (perf proposal).
 _BUNDLED_TOOLS = Path(__file__).resolve().parents[1] / "assets" / "unp4k"
-_BUNDLED_UNFORGE = _BUNDLED_TOOLS / "unforge.exe"
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -609,13 +607,6 @@ def _working_records(run_dir: Path) -> Path:
     return run_dir / "Data" / "libs" / "foundry" / "records"
 
 
-# What an unforge.exe built before --include prints, in its own words
-# (odw-fast-unp4k a76607f), for any argument after the dcb, before it exits
-# 0 with nothing written.
-_OLD_UNFORGE_USAGE = ("Usage: unforge.exe [infile]\n\n"
-                      "Converts any Star Citizen binary file into an actual XML file.\n")
-
-
 class _FakeTools:
     """Stands in for _run_tool: unp4k writes Data/Game2.dcb into its working
     folder, unforge writes libs/foundry/records next to the dcb (every keep
@@ -624,20 +615,16 @@ class _FakeTools:
     multiple of 100, NTFS's resolution), and ``records=False`` writes a
     libs/ folder without foundry/records. *unp4k_out* and *unforge_out*
     are what each tool prints, as ``{"stdout": ..., "stderr": ...}``, and
-    nothing by default (perf proposal). Also perf proposal: *old_unforge*
-    answers any argument after the dcb as an unforge without --include does
-    (_OLD_UNFORGE_USAGE, nothing written, exit code 0), and
-    ``unforge_writes=False`` writes nothing at all. *options* keeps each
-    call's timeout and should_cancel. *during_unp4k* and *during_unforge*
-    are called with the working folder once that tool has written its
-    output."""
+    nothing by default (perf proposal), and ``unforge_writes=False`` makes
+    unforge write nothing at all. *during_unp4k* and *during_unforge* are
+    called with the working folder once that tool has written its output."""
 
     def __init__(self, *, unforge_rc: int = 0, deep_name: str | None = None, during_unforge=None,
                  siblings: bool = False, fixed_ns: int | None = None, records: bool = True,
                  unp4k_out: dict | None = None, unforge_out: dict | None = None,
-                 old_unforge: bool = False, unforge_writes: bool = True, during_unp4k=None):
+                 unforge_writes: bool = True, during_unp4k=None):
         self.calls: list[tuple[str, list, str]] = []
-        self.options: list[dict] = []
+        self.unforge_writes = unforge_writes
         self.unforge_rc = unforge_rc
         self.deep_name = deep_name
         self.during_unp4k = during_unp4k
@@ -646,8 +633,6 @@ class _FakeTools:
         self.fixed_ns = fixed_ns
         self.records = records
         self.output = {"unp4k": unp4k_out or {}, "unforge": unforge_out or {}}
-        self.old_unforge = old_unforge
-        self.unforge_writes = unforge_writes
 
     def _write(self, path: Path, data: bytes) -> None:
         path = Path(win_long_path(path))
@@ -659,14 +644,11 @@ class _FakeTools:
     def __call__(self, args, *, cwd, timeout, should_cancel=None):
         tool = Path(args[0]).stem
         self.calls.append((tool, list(args), cwd))
-        self.options.append({"timeout": timeout, "should_cancel": should_cancel})
         if tool == "unp4k":
             (Path(cwd) / "Data").mkdir()
             self._write(Path(cwd) / "Data" / "Game2.dcb", b"dcb")
             if self.during_unp4k:
                 self.during_unp4k(Path(cwd))
-        elif self.old_unforge and len(args) > 2:
-            return subprocess.CompletedProcess(args, 0, _OLD_UNFORGE_USAGE, "")
         elif self.unforge_writes:
             libs = Path(args[1]).parent / "libs"
             records = libs / "foundry" / "records"
@@ -800,52 +782,33 @@ class TestExtractDataforgeWorkingFolder:
         assert (unp4k, unforge) == ("unp4k", "unforge")
         assert unp4k_args[1:] == [str(setup[0].parents[3] / "tools" / "Data.p4k"), ".dcb"]
         assert Path(unforge_args[1]) == Path(unforge_cwd) / "Data" / "Game2.dcb"
+        # The dcb alone: the bundled unforge prints its usage and writes
+        # nothing when handed anything after it.
+        assert len(unforge_args) == 2
         # Plain paths only: whether the tools accept \\?\ was never tested.
         assert not unforge_args[1].startswith("\\\\?\\") and not unforge_cwd.startswith("\\\\?\\")
 
-    def test_unforge_is_told_to_write_only_the_kept_subtrees(self, setup):
-        """After the dcb, one ``--include`` per kept subtree, named the way
-        unforge names its records (under libs/foundry/records), so unforge
-        builds and writes only what the cache keeps."""
-        _leaf, run = setup
-        fake = _FakeTools()
-        assert run(fake) is True
-        _unforge, unforge_args, _cwd = fake.calls[1]
-        expected = []
-        for rel in pe.DATAFORGE_KEEP_SUBPATHS:
-            expected += ["--include", "libs/foundry/records/" + rel]
-        assert expected and unforge_args[2:] == expected
-
-    def test_unforge_includes_follow_the_keep_list(self, setup, monkeypatch):
-        """The includes are read from DATAFORGE_KEEP_SUBPATHS when unforge
-        starts, not from a second list: a changed keep list reaches unforge,
-        and the cache keeps the same subtrees unforge was told to write."""
+    def test_the_cache_keeps_the_keep_list_as_it_is_when_the_run_caches(
+            self, setup, monkeypatch):
+        """DATAFORGE_KEEP_SUBPATHS is read when the run caches, not from a
+        copy made earlier: unforge writes every subtree of the shipped list,
+        and a list patched to two of them leaves exactly those two in the
+        cache."""
         leaf, run = setup
-        monkeypatch.setattr(pe, "DATAFORGE_KEEP_SUBPATHS", ("entities/scitem", "ammoparams/fps"))
-        fake = _FakeTools()
+        shipped = pe.DATAFORGE_KEEP_SUBPATHS
+        two = ("entities/scitem", "ammoparams/fps")
+        monkeypatch.setattr(pe, "DATAFORGE_KEEP_SUBPATHS", two)
+
+        def write_the_shipped_list(cwd):
+            for rel in shipped:
+                fake._write(_working_records(cwd) / rel / "x.xml", b"<x/>")
+
+        fake = _FakeTools(during_unforge=write_the_shipped_list)
         assert run(fake) is True
-        _unforge, unforge_args, _cwd = fake.calls[1]
-        assert unforge_args[2:] == [
-            "--include", "libs/foundry/records/entities/scitem",
-            "--include", "libs/foundry/records/ammoparams/fps",
-        ]
         records = leaf / "raw" / "libs" / "foundry" / "records"
         assert sorted(p.relative_to(records).as_posix() for p in records.rglob("x.xml")) == [
             "ammoparams/fps/x.xml", "entities/scitem/x.xml",
         ]
-
-    def test_the_bundled_unforge_knows_include(self):
-        """The fake tools ignore --include, so this is what shows the
-        unforge.exe Smart Citizen ships takes it (perf proposal): its usage
-        line names the flag, in the UTF-16LE text .NET keeps string literals
-        in (a single-file build with compression on would hide it, and the
-        bundled one has none). An unforge built before the flag
-        (odw-fast-unp4k a76607f) holds only "Usage: unforge.exe [infile]",
-        and costs every run a second, full one (TestAnUnforgeWithoutInclude).
-        The line starts with what that fallback looks for. Nothing is run."""
-        usage = "Usage: unforge.exe [infile] [--include <record path prefix>]..."
-        assert usage.startswith(pe._UNFORGE_USAGE)
-        assert usage.encode("utf-16-le") in _BUNDLED_UNFORGE.read_bytes()
 
     @pytest.mark.parametrize("exe, text", [
         ("unp4k.exe", pe._UNP4K_ENTRY_FAILED),
@@ -858,8 +821,8 @@ class TestExtractDataforgeWorkingFolder:
         with it worded otherwise would pass every other test while the
         check never fired again, so a run that lost a file would be used,
         and stamped, as complete. Read as the UTF-16LE text .NET keeps
-        string literals in, as for the --include usage line. Nothing is
-        run."""
+        string literals in (a single-file build with compression on would
+        hide it, and the bundled ones have none). Nothing is run."""
         assert text.encode("utf-16-le") in (_BUNDLED_TOOLS / exe).read_bytes()
 
     def test_a_onedrive_cache_keeps_the_work_in_temp(self, setup, monkeypatch, systemp):
@@ -883,6 +846,34 @@ class TestExtractDataforgeWorkingFolder:
         assert (leaf / "old-cache-sentinel").exists()
         assert pe.dataforge_cache_is_fresh(p4k, leaf)
         assert not Path(fake.calls[0][2]).exists()
+
+    def test_an_unforge_that_writes_nothing_and_says_nothing(self, setup):
+        """Exit code 0, no libs/ folder and nothing printed: the message
+        points at antivirus or a working folder unforge could not write to,
+        and the old cache is kept stamped, so it still reads as fresh."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(unforge_writes=False)
+        with pytest.raises(FileNotFoundError, match="No output from unforge") as raised:
+            run(fake)
+        assert "libs/ directory was not created" in str(raised.value)
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_an_unforge_that_writes_nothing_shows_what_it_printed(self, setup):
+        """With anything on either stream, the message shows it instead."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(unforge_writes=False,
+                          unforge_out={"stdout": "what it said", "stderr": "what it warned"})
+        with pytest.raises(FileNotFoundError, match="libs/ directory was not created") as raised:
+            run(fake)
+        message = str(raised.value)
+        assert "unforge stdout:\nwhat it said" in message
+        assert "unforge stderr:\nwhat it warned" in message
+        assert "No output from unforge" not in message
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
 
     def test_a_stop_before_the_wipe_keeps_the_old_cache(self, setup):
         """The old cache is kept stamped, so it still reads as fresh."""
@@ -2084,32 +2075,13 @@ with open({ids_file!r}, "w", encoding="utf-8") as f:
 """
 
 
-# _UNFORGE_SCRIPT's {before} for an unforge built before --include (perf
-# proposal): each start's arguments noted in {starts}, then for any argument
-# after the dcb its usage, nothing written and exit code 0, after {wait}.
-_OLD_UNFORGE_BEFORE = """\
-import sys
-with open({starts!r}, "a", encoding="utf-8") as _f:
-    _f.write(" ".join(sys.argv[1:]) + "\\n")
-if len(sys.argv) > 1:
-{wait}    print("Usage: unforge.exe [infile]")
-    sys.exit(0)
-"""
-
-
 def _real_tools(root: Path, *, slow_unforge: bool = False, slow_global_ini: bool = False,
-                ids_file: Path | None = None, old_unforge: Path | None = None):
+                ids_file: Path | None = None):
     """A Data.p4k that is really an unp4k-like script, whose Game2.dcb is
     really an unforge-like script, both run by the base interpreter. With
-    *ids_file*, unforge saves the kept files' IDs there. With *old_unforge*,
-    a file, unforge notes each start's arguments there and answers any
-    argument after the dcb as one without --include does, after the slow
-    wait when there is one."""
+    *ids_file*, unforge saves the kept files' IDs there."""
     pid_file = root / "tool.pid"
     before = (_write_pid_code(pid_file) + "time.sleep(30)\n") if slow_unforge else ""
-    if old_unforge is not None:
-        wait = (_write_pid_code(pid_file, "    ") + "    time.sleep(30)\n") if slow_unforge else ""
-        before = _OLD_UNFORGE_BEFORE.format(starts=str(old_unforge), wait=wait)
     keep = list(pe.DATAFORGE_KEEP_SUBPATHS)
     after = _SAVE_IDS_SCRIPT.format(keep=keep, ids_file=str(ids_file)) if ids_file else ""
     dcb = _UNFORGE_SCRIPT.format(before=before, keep=keep, after=after)
@@ -2678,146 +2650,6 @@ class TestToolsThatExitZeroAfterAnError:
         assert run(_FakeTools()) is True
         assert collected and set(collected) == {"robust_rmtree"}
         assert slept == []
-
-
-class TestAnUnforgeWithoutInclude:
-    """An unforge.exe built before --include prints its usage for any
-    argument after the dcb, writes nothing and exits 0, which failed the run
-    with no libs/ folder. Now the run logs one WARNING and runs unforge
-    again with the dcb alone, for every record, and only that run's output
-    goes through the checks (perf proposal)."""
-
-    @staticmethod
-    def _records(leaf: Path) -> Path:
-        return leaf / "raw" / "libs" / "foundry" / "records"
-
-    def test_it_is_run_again_for_every_record_and_the_cache_is_the_same(self, setup, caplog):
-        """The second run has the dcb alone, the same timeout and the same
-        stop check. One WARNING says why, nothing is logged at ERROR, and
-        the cache is stamped, fresh and the same as a normal run's, to the
-        byte and the modified time."""
-        leaf, run = setup
-        p4k = leaf.parents[3] / "tools" / "Data.p4k"
-        fixed_ns = 1_700_000_000 * 10**9
-        assert run(_FakeTools(siblings=True, fixed_ns=fixed_ns)) is True
-        normal = _tree(self._records(leaf))
-        assert set(normal) == {rel + "/x.xml" for rel in pe.DATAFORGE_KEEP_SUBPATHS}
-
-        def never():
-            return False
-
-        fake = _FakeTools(old_unforge=True, siblings=True, fixed_ns=fixed_ns)
-        caplog.clear()
-        with caplog.at_level(logging.INFO, logger=pe.logger.name):
-            assert run(fake, should_cancel=never) is True
-        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge", "unforge"]
-        (_, first, _), (_, second, _) = fake.calls[1:]
-        assert first[2:] == pe._unforge_include_args() and second == first[:2]
-        # Both work in the run's own folder, as unp4k did.
-        assert {cwd for _tool, _args, cwd in fake.calls} == {fake.calls[0][2]}
-        assert fake.options[1] == fake.options[2] == {
-            "timeout": pe._UNFORGE_TIMEOUT_SECONDS, "should_cancel": never}
-        warned = [(r.levelno, r.getMessage()) for r in caplog.records
-                  if r.levelno >= logging.WARNING]
-        assert len(warned) == 1 and warned[0][0] == logging.WARNING
-        assert "unforge.exe" in warned[0][1] and "does not know --include" in warned[0][1]
-        assert "run again for every record" in warned[0][1]
-        assert _tree(self._records(leaf)) == normal
-        assert pe.dataforge_cache_is_fresh(p4k, leaf)
-        assert not Path(fake.calls[0][2]).exists()
-
-    @pytest.mark.parametrize("how", ["an Error converting line", "a non-zero exit"])
-    def test_the_second_run_is_checked_as_any_run_is(self, setup, monkeypatch, how):
-        """Its exit code and an "Error converting" line fail the run before
-        anything is moved, with the old cache stamped and fresh, as for a
-        run that knows --include. Checked against the first run's output
-        instead, both would pass."""
-        leaf, run = setup
-        p4k = _stamp_old_cache(leaf)
-        renames = _record_renames(monkeypatch)
-        if how == "a non-zero exit":
-            fake = _FakeTools(old_unforge=True, unforge_rc=1)
-        else:
-            fake = _FakeTools(old_unforge=True, unforge_out={"stdout": _UNFORGE_FAILED})
-        with pytest.raises(RuntimeError) as raised:
-            run(fake)
-        assert str(raised.value).startswith(f"unforge.exe failed (code {fake.unforge_rc}):\n")
-        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge", "unforge"]
-        assert renames == []
-        assert (leaf / "old-cache-sentinel").exists()
-        assert pe.dataforge_cache_is_fresh(p4k, leaf)
-        assert not Path(fake.calls[0][2]).exists()
-
-    def test_usage_from_both_runs_fails_as_before_and_keeps_the_old_cache(self, setup, caplog):
-        """An unforge that prints its usage for the dcb alone too gets the
-        error a run with no libs/ folder always got, with the second run's
-        usage in it, and is not run a third time."""
-        leaf, run = setup
-        p4k = _stamp_old_cache(leaf)
-        fake = _FakeTools(unforge_writes=False, unforge_out={"stdout": _OLD_UNFORGE_USAGE})
-        with caplog.at_level(logging.INFO, logger=pe.logger.name):
-            with pytest.raises(FileNotFoundError) as raised:
-                run(fake)
-        assert str(raised.value).startswith("unforge ran but libs/ directory was not created")
-        assert "unforge stdout:\nUsage: unforge.exe [infile]" in str(raised.value)
-        unforge = [args for tool, args, _cwd in fake.calls if tool == "unforge"]
-        assert len(unforge) == 2 and unforge[1] == unforge[0][:2]
-        assert [r.levelno for r in caplog.records if r.levelno >= logging.WARNING] == [
-            logging.WARNING]
-        assert (leaf / "old-cache-sentinel").exists()
-        assert pe.dataforge_cache_is_fresh(p4k, leaf)
-        assert not Path(fake.calls[0][2]).exists()
-
-    def test_the_usage_after_a_libs_folder_is_not_run_again(self, setup, caplog):
-        """Only no libs/ folder and the usage together mean an unforge
-        without --include: one that wrote its records and printed its usage
-        line too (a later build might echo it) is run once, with no
-        WARNING, and the run goes on as usual."""
-        leaf, run = setup
-        p4k = leaf.parents[3] / "tools" / "Data.p4k"
-        fake = _FakeTools(unforge_out={"stdout": _OLD_UNFORGE_USAGE})
-        with caplog.at_level(logging.INFO, logger=pe.logger.name):
-            assert run(fake) is True
-        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge"]
-        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
-        assert pe.dataforge_cache_is_fresh(p4k, leaf)
-
-    def test_no_libs_folder_without_the_usage_is_not_run_again(self, setup, caplog):
-        """An unforge that wrote nothing and printed nothing (antivirus, a
-        folder it could not write to) knows --include for all the run can
-        tell: one run, no WARNING, and the error it always got."""
-        leaf, run = setup
-        p4k = _stamp_old_cache(leaf)
-        fake = _FakeTools(unforge_writes=False)
-        with caplog.at_level(logging.INFO, logger=pe.logger.name):
-            with pytest.raises(FileNotFoundError, match="No output from unforge"):
-                run(fake)
-        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge"]
-        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
-        assert pe.dataforge_cache_is_fresh(p4k, leaf)
-
-    @pytest.mark.integration
-    def test_a_stop_during_the_first_run_stops_and_runs_nothing_again(self, root, caplog):
-        """With the real _run_tool and a child standing in for an unforge
-        without --include: a stop while the run with the includes is going
-        kills it and ends the extraction, with no second start, no WARNING
-        about --include and the old cache kept."""
-        starts = root / "unforge.starts"
-        p4k, py, pid_file = _real_tools(root, slow_unforge=True, old_unforge=starts)
-        leaf = root / "cache" / "LIVE" / "cache" / "dataforge"
-        leaf.mkdir(parents=True)
-        (leaf / "old-cache-sentinel").write_text("old")
-        with caplog.at_level(logging.INFO, logger=pe.logger.name):
-            with pytest.raises(pe.ExtractionCancelled, match="was stopped"):
-                pe.extract_dataforge(p4k, py, py, leaf, should_cancel=pid_file.exists)
-        pid = int(pid_file.read_text())
-        assert _wait_for(lambda: not _pid_alive(pid), 5)
-        assert starts.read_text(encoding="utf-8").splitlines() == [
-            " ".join(pe._unforge_include_args())]
-        assert [r for r in caplog.records if "--include" in r.getMessage()
-                and r.levelno >= logging.WARNING] == []
-        assert (leaf / "old-cache-sentinel").exists()
-        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
 
 class TestExtractGlobalIni:
