@@ -113,7 +113,9 @@ class DataForgeTimeoutError(RuntimeError):
     Overwhelmingly this means the game install is inconsistent rather than
     the machine being slow. Measured on a healthy 4.9.188.23497 install,
     unforge converts the 330 MB Game2.dcb in about 40 seconds against a
-    1800 second budget. Issue #370 was a user whose Data.p4k carried a
+    1800 second budget (the unforge.exe bundled since the perf proposal
+    took about 15 s for the 337 MB Game2.dcb of 23 Oct 2026). Issue #370
+    was a user whose Data.p4k carried a
     114 MB ``Game.dcb`` while their build_manifest.id was byte-for-byte
     identical to a working install's: a patch that never finished applying
     to the 160 GB archive. unforge sat on the mismatched database until the
@@ -1602,10 +1604,11 @@ _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 # language's file, 11 of them: 20 to 26 s and 9 GB of memory on a 150 GB
 # Data.p4k. This one file, byte for byte the same, took 5.4 s and 1.65 GB
 # with the release's unp4k.exe, which reads the whole archive's directory
-# again for each parallel worker, and takes 2.3 to 2.6 s and under 1 GB with
-# the bundled one, built from odw-fast-unp4k eb060c3, which extracts up to 16
-# matches through the archive it opened for the listing. A rebuilt unp4k.exe
-# without that change keeps the filter's gain but not the rest. Only the
+# again for each parallel worker, and takes about 2 s and 1 GB with
+# the bundled one, whose workers all extract through the archive it
+# opened for the listing (src/utils/CLAUDE.md names the odw-fast-unp4k
+# commit it is built from). A rebuilt unp4k.exe without that change
+# keeps the filter's gain but not the rest. Only the
 # English file is read from the run; the other languages come from
 # community downloads (languages/sources.json).
 _GLOBAL_INI_FILTER = _GLOBAL_INI_RELATIVE.relative_to("data").as_posix()
@@ -1821,7 +1824,7 @@ _TOOL_POLL_SECONDS = 0.25
 _TOOL_REAP_SECONDS = 30
 _UNP4K_GLOBAL_INI_TIMEOUT_SECONDS = 300
 _UNP4K_DCB_TIMEOUT_SECONDS = 600
-_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~40 s (#370)
+_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~15 s, ~40 s before the perf proposal (#370)
 
 
 def _run_tool(args, *, cwd, timeout, should_cancel=None) -> subprocess.CompletedProcess:
