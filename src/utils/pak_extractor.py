@@ -1,22 +1,24 @@
 """Extracts files from Star Citizen's Data.p4k using bundled unp4k.exe."""
+import atexit
 import errno
 import gc
 import logging
 import math
 import os
+import queue
 import secrets
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import NamedTuple, Optional
 
 from src.utils.perf import timed
 
-from src.utils.dataforge_diff import update_manifest
 from src.utils.i18n import tr
 from src.utils.onedrive import is_onedrive_path
 from src.utils.win_paths import win_long_path as _win_long_path
@@ -29,6 +31,12 @@ logger = logging.getLogger(__name__)
 # legacy fallback for caches written before the size stamp existed.
 P4K_MTIME_STAMP = ".p4k_mtime"
 P4K_SIZE_STAMP = ".p4k_size"
+
+# base.ini's freshness stamp, beside it in the channel's cache folder (perf
+# proposal): the size of the Data.p4k it was extracted from, then base.ini's
+# own size. Written by extract_global_ini and read by base_ini_is_fresh, by
+# the same size rule as the DataForge stamps above.
+BASE_INI_STAMP = ".base_ini_stamp"
 
 # Layout inside a DataForge cache folder: unforge's libs/ tree is kept under
 # raw/, and the records everything reads sit in foundry/records inside it.
@@ -61,6 +69,21 @@ _RMTREE_CB_KWARG = "onexc" if sys.version_info >= (3, 12) else "onerror"
 # a raw stack trace.
 _P4K_LOCKED_SIGNATURE = "being used by another process"
 
+# unp4k catches an archive entry it cannot extract, prints "Exception while
+# extracting <entry>: <message>" and goes on to exit 0, so a run could pass
+# with its file missing or cut short. unforge does the same with "Error
+# converting <file>: <message>" when anything in its conversion fails, from
+# reading the dcb to saving a file (one catch around it all), which can leave
+# a partial tree that passes _unforge_records and would be stamped as a
+# complete cache. Either one fails the run as a non-zero exit does (perf
+# proposal), so a dcb unforge cannot read fails at this check, before the
+# libs/ one. Nothing is required of their output on success. Both texts are
+# copies of literals in odw-fast-unp4k's src/unp4k/Program.cs and
+# src/unforge.cli/Program.cs, and tests/test_extraction_working_folder.py
+# checks the bundled exes still hold them.
+_UNP4K_ENTRY_FAILED = "Exception while extracting"
+_UNFORGE_FILE_FAILED = "Error converting"
+
 
 class P4kLockedError(RuntimeError):
     """Data.p4k is locked by another process (RSI Launcher updating/verifying).
@@ -90,7 +113,9 @@ class DataForgeTimeoutError(RuntimeError):
     Overwhelmingly this means the game install is inconsistent rather than
     the machine being slow. Measured on a healthy 4.9.188.23497 install,
     unforge converts the 330 MB Game2.dcb in about 40 seconds against a
-    1800 second budget. Issue #370 was a user whose Data.p4k carried a
+    1800 second budget (the unforge.exe bundled since the perf proposal
+    took about 15 s for the 337 MB Game2.dcb of 23 Oct 2026). Issue #370
+    was a user whose Data.p4k carried a
     114 MB ``Game.dcb`` while their build_manifest.id was byte-for-byte
     identical to a working install's: a patch that never finished applying
     to the 160 GB archive. unforge sat on the mismatched database until the
@@ -272,8 +297,9 @@ def _refuse_if_p4k_being_written(p4k_path: Path) -> None:
 
 
 def _raise_unp4k_failure(returncode: int, output: str) -> None:
-    """Raise for a non-zero unp4k exit — P4kLockedError for a locked Data.p4k,
-    plain RuntimeError otherwise.
+    """Raise for a failed unp4k run — P4kLockedError for a locked Data.p4k,
+    plain RuntimeError otherwise. A run has failed when it exits non-zero,
+    or exits 0 after an entry it says it could not extract (_check_unp4k).
 
     Upgrades the generic "exited with code N" message to a clear "Star Citizen
     is updating, wait and retry" hint when the failure is Data.p4k being locked
@@ -287,14 +313,32 @@ def _raise_unp4k_failure(returncode: int, output: str) -> None:
     ERROR — those are genuinely unexpected and should still surface through
     the generic handler."""
     output = output or ""
+    how = f"exited with code {returncode}"
+    if not returncode:
+        how += " but could not extract a file"
     if _P4K_LOCKED_SIGNATURE in output.lower():
         logger.warning(
-            f"unp4k.exe exited with code {returncode} — Data.p4k is locked "
+            f"unp4k.exe {how} — Data.p4k is locked "
             f"(game likely updating); output:\n{output[:2000]}"
         )
         raise P4kLockedError(tr("extract.p4k_locked"))
-    logger.error(f"unp4k.exe exited with code {returncode}; output:\n{output[:2000]}")
-    raise RuntimeError(f"unp4k.exe exited with code {returncode}.\n\n{output}")
+    logger.error(f"unp4k.exe {how}; output:\n{output[:2000]}")
+    raise RuntimeError(f"unp4k.exe {how}.\n\n{output}")
+
+
+def _check_unp4k(result) -> None:
+    """Log unp4k's stdout at INFO, truncated as unforge's is (its "Found N
+    files to extract." says what the filter matched), then raise through
+    _raise_unp4k_failure when the run failed: a non-zero exit, or an entry
+    it says it could not extract (_UNP4K_ENTRY_FAILED, perf proposal)."""
+    stdout = (result.stdout or "").strip()
+    if stdout:
+        logger.info(f"unp4k stdout ({len(stdout)} bytes, truncated): {stdout[:2000]}")
+    if result.returncode != 0:
+        _raise_unp4k_failure(result.returncode, result.stderr or result.stdout)
+    if _UNP4K_ENTRY_FAILED in f"{result.stdout or ''}\n{result.stderr or ''}":
+        _raise_unp4k_failure(result.returncode,
+                             "\n".join(filter(None, (result.stderr, result.stdout))))
 
 
 def _unforge_timeout_error(exc, dcb_path: Path, dcb_mb: float,
@@ -343,6 +387,15 @@ def _unforge_timeout_error(exc, dcb_path: Path, dcb_mb: float,
     )
 
 
+def _is_link(st) -> bool:
+    """True when the ``lstat`` result *st* is a link by shutil.rmtree's own
+    rule (#491): a symbolic link, or a junction (which is also how a drive
+    mounted in a folder looks). rmtree never goes through one."""
+    return bool(stat.S_ISLNK(st.st_mode)
+                or (getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                    and getattr(st, "st_reparse_tag", 0) == stat.IO_REPARSE_TAG_MOUNT_POINT))
+
+
 def linked_folder_target(path) -> Optional[str]:
     """Where *path* leads when it is a link that shutil.rmtree will not
     delete through (#491): a symbolic link, or a junction (which is also how
@@ -358,9 +411,7 @@ def linked_folder_target(path) -> Optional[str]:
         st = os.lstat(path)
     except OSError:
         return None
-    if not (stat.S_ISLNK(st.st_mode)
-            or (getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
-                and getattr(st, "st_reparse_tag", 0) == stat.IO_REPARSE_TAG_MOUNT_POINT)):
+    if not _is_link(st):
         return None
     for read in (os.path.realpath, os.readlink):
         try:
@@ -386,6 +437,147 @@ def linked_cache_folder_error(leaf) -> Optional[CacheFolderIsLinkError]:
         folder=folder, target=target)
 
 
+# robust_rmtree deletes a tree's files with this many threads before
+# shutil.rmtree removes the folders (perf proposal). A delete is mostly
+# Windows' own work (the file system, antivirus), done outside Python's lock,
+# so several overlap well. Measured on this PC on a 30,000-file tree shaped
+# like the DataForge records: rmtree alone took 3.9 to 5.1 s, with 8 threads
+# 1.3 to 1.4 s, and 16 threads were no faster than 8.
+_DELETE_THREADS = min(8, os.cpu_count() or 1)
+# Files handed to one thread at a time: one job per file would cost more to
+# hand out than to delete, and one per folder would leave a folder with
+# thousands of files to a single thread.
+_DELETE_BATCH = 64
+# Set once Python begins to exit (perf proposal). The threaded pass then
+# hands out no more batches, and its threads drop the ones still queued.
+_EXITING = threading.Event()
+atexit.register(_EXITING.set)
+
+
+def _unlink_files(paths) -> None:
+    """Delete each file in *paths*, clearing the read-only bit and trying
+    once more when the first try fails. A file that still will not go is
+    left for shutil.rmtree, which meets it again and reports it, so this
+    never raises an OSError."""
+    for path in paths:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            try:
+                os.chmod(path, stat.S_IWRITE)
+                os.unlink(path)
+            except OSError:
+                pass
+
+
+def _delete_batches(batches: queue.Queue, failed: list) -> None:
+    """One thread of _delete_files_first: deletes each batch of files it is
+    handed until it gets None. Once Python has begun to exit, or another of
+    these threads has failed, it drops each batch it gets instead, so the
+    walking thread is never left waiting on a full queue. An exception
+    (never an OSError, which _unlink_files keeps to itself) goes in *failed*
+    for the walking thread to raise."""
+    while True:
+        batch = batches.get()
+        if batch is None:
+            return
+        if failed or _EXITING.is_set():
+            continue
+        try:
+            _unlink_files(batch)
+        except BaseException as e:   # raised again on the walking thread
+            failed.append(e)
+
+
+def _delete_files_first(top: str) -> None:
+    """Delete the plain files under the folder *top* with _DELETE_THREADS
+    threads (perf proposal), leaving shutil.rmtree, which robust_rmtree runs
+    next, the folders and whatever would not go.
+
+    It walks by rmtree's own rule: it goes into a folder only when that is a
+    real folder, never a junction or a symbolic link, and deletes only plain
+    files. So every link, *top* itself or one inside it, is left to rmtree,
+    which refuses the first (#491) and unlinks the others without following
+    them, as before. A folder it cannot list is left to rmtree too, which
+    reports it. Never raises an OSError.
+
+    The threads are daemon threads, handed a few batches ahead through a
+    bounded queue, so Python's exit never waits for them. A
+    ThreadPoolExecutor's threads were joined at exit only after every batch
+    queued had run, and the walk queues nearly the whole tree while the
+    first deletes run: a close past its wait kept the hidden process alive
+    until the tree was gone, or for ever behind one delete that blocked. Once
+    Python has begun to exit (_EXITING) the walk stops and the queued
+    batches are dropped. rmtree then goes on with the rest on the calling
+    thread, which Python does not wait for either (a QThread in the app),
+    and what the process does not finish is left with the working folder's
+    marker file for the next extraction's sweep (_close_scratch deletes the
+    marker last). Where Python starts no new thread (while it exits, from
+    3.12) rmtree deletes it all, one file at a time."""
+    try:
+        st = os.lstat(top)
+    except OSError:
+        return
+    if not stat.S_ISDIR(st.st_mode) or _is_link(st):
+        return
+    # Twice as many batches as threads: enough that no thread waits for the
+    # walk, few enough that dropping them at exit costs nothing.
+    batches = queue.Queue(maxsize=2 * _DELETE_THREADS)
+    failed: list = []
+    threads: list = []
+    may_start = True
+    try:
+        folders = [top]
+        while folders and not failed and not _EXITING.is_set():
+            folder = folders.pop()
+            files = []
+            try:
+                with os.scandir(folder) as listing:
+                    for entry in listing:
+                        try:
+                            st = entry.stat(follow_symlinks=False)
+                        except OSError:
+                            continue
+                        if stat.S_ISDIR(st.st_mode) and not _is_link(st):
+                            folders.append(entry.path)
+                        elif stat.S_ISREG(st.st_mode):
+                            files.append(entry.path)
+            except OSError:
+                continue
+            for start in range(0, len(files), _DELETE_BATCH):
+                if failed or _EXITING.is_set():
+                    break
+                # One thread more for each batch, up to _DELETE_THREADS, as
+                # a pool starts them, so a small tree starts only a few.
+                if may_start and len(threads) < _DELETE_THREADS:
+                    thread = threading.Thread(target=_delete_batches, args=(batches, failed),
+                                              name="robust_rmtree", daemon=True)
+                    try:
+                        thread.start()
+                        threads.append(thread)
+                    except RuntimeError:
+                        may_start = False
+                if not threads:
+                    return   # no thread to be had: rmtree deletes it all
+                batches.put(files[start:start + _DELETE_BATCH])
+    finally:
+        for _ in threads:
+            batches.put(None)
+        for thread in threads:
+            thread.join()
+    if failed:
+        # Emptied as it is raised: the exception's traceback holds the frames
+        # whose `failed` holds the exception, a cycle that kept everything in
+        # those frames (a working folder's marker, up the stack) alive until
+        # the cyclic GC ran, so a sweep straight after skipped the folder.
+        try:
+            raise failed[0]
+        finally:
+            failed.clear()
+
+
 def robust_rmtree(path: Path, attempts: int = 6) -> None:
     """Delete *path* recursively, surviving transient Windows locks.
 
@@ -400,8 +592,14 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
     3. A non-empty directory whose children are mid-delete. Re-walking the
        tree on each attempt catches files added or unlocked between tries.
 
+    Each attempt deletes the files with several threads first
+    (_delete_files_first, perf proposal: about 3x faster on ~30k files),
+    then shutil.rmtree removes the folders bottom-up and anything that
+    would not go, one at a time, with the hook below.
+
     Silently succeeds if *path* doesn't exist. Raises the last error if
-    every attempt fails so callers can surface it to the user.
+    every attempt fails so callers can surface it to the user, without a
+    wait after the last attempt (perf proposal).
 
     A *path* that is a link (a junction or a symbolic link, also one whose
     target is gone) raises LinkedFolderError at once, with nothing deleted
@@ -439,15 +637,22 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
     for i in range(attempts):
         try:
             gc.collect()  # drop any lingering XML file handles we own
+            _delete_files_first(_win_long_path(path))
             shutil.rmtree(_win_long_path(path), **{_RMTREE_CB_KWARG: _on_error})
             return
         except LinkedFolderError:
             raise   # trying again changes nothing
         except OSError as e:
             last_err = e
-            # Exponential-ish backoff: 0.2, 0.4, 0.8, 1.5, 3.0 seconds. Total
-            # ceiling ~6s before we bail, enough to outlast most AV/indexer
-            # scans without hanging the UI forever.
+            if i + 1 == attempts:
+                # Nothing follows the last attempt, so waiting first only
+                # held up the caller (perf proposal).
+                logger.warning(f"rmtree {path} attempt {i + 1}/{attempts} failed ({e}); "
+                               "giving up")
+                break
+            # Exponential-ish backoff: 0.2, 0.4, 0.8, 1.6 and 3.0 seconds
+            # between the six attempts, 6 s in all, enough to outlast most
+            # AV/indexer scans without hanging the UI forever.
             delay = min(0.2 * (2 ** i), 3.0)
             logger.warning(
                 f"rmtree {path} attempt {i + 1}/{attempts} failed ({e}); "
@@ -467,8 +672,8 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # in its own folder beside the cache leaf,
 # {base}\{channel}\cache\dataforge.extracting-XXXXXXXX, which is:
 #   * on the cache's drive by construction;
-#   * outside the leaf, which step 3 wipes and which the freshness check, the
-#     diff manifest and the generator read;
+#   * outside the leaf, which step 3 wipes and which the freshness check and
+#     the generator read;
 #   * inside the channel folder the uninstaller's opt-in wipe deletes whole;
 #   * never named "dataforge" (installer LooksLikeScCache) or
 #     "dataforge.migrating" (the settings.py migrator).
@@ -486,7 +691,7 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # with its dcb in a 197-character folder (58,290 of them past 260 characters,
 # the longest 368), so it copes with long output paths itself. The dcb folder
 # is the run folder plus "\Data", so a cap of 190 stays inside what was
-# proven. The global.ini extraction (every language's global.ini, ~31 MB)
+# proven. The global.ini extraction (the English global.ini alone, ~10 MB)
 # follows the same rules with its own globalini.extracting-XXXXXXXX folder, so
 # nothing Smart Citizen extracts lands in %TEMP% unless one of the fallbacks
 # above applies.
@@ -542,10 +747,12 @@ _DATAFORGE_WORK_BYTES = 317 * _MIB + math.ceil(1.84 * _GIB)
 _DATAFORGE_WORK_FILES = 61_950 + 1           # the tree and the dcb
 _DATAFORGE_CACHE_BYTES = math.ceil(1.2 * _GIB)
 _DATAFORGE_CACHE_FILES = 30_700
-_GLOBAL_INI_WORK_BYTES = 31 * _MIB           # every language's global.ini
-_GLOBAL_INI_WORK_FILES = 16
 _BASE_INI_BYTES = 11 * _MIB                  # the English global.ini
-_NEW_CACHE_RESERVE_BYTES = 64 * _MIB         # the gate: folders, stamps, the manifest
+# unp4k extracts the English global.ini alone (perf proposal): one file,
+# measured at 10.1 MB, the same file base.ini is a copy of.
+_GLOBAL_INI_WORK_BYTES = _BASE_INI_BYTES
+_GLOBAL_INI_WORK_FILES = 1
+_NEW_CACHE_RESERVE_BYTES = 64 * _MIB         # the gate: folders, stamps (sized with the manifest)
 _DEFAULT_CLUSTER_BYTES = 4096
 # ERROR_HANDLE_DISK_FULL, ERROR_DISK_FULL, ERROR_DISK_QUOTA_EXCEEDED. Python
 # maps only 112 to ENOSPC (39 and 1295 become EINVAL), so errno alone misses two.
@@ -593,15 +800,21 @@ def _scratch_location(plain_leaf: Path, prefix: str = DATAFORGE_SCRATCH_PREFIX,
     return temp, temp_prefix
 
 
-def _sweep_stale_scratch(parent: Path, prefix: str) -> None:
+def _sweep_stale_scratch(parent: Path, prefix: str, should_cancel=None) -> None:
     """Delete working folders an earlier extraction left in *parent*: a crash,
     a hard kill, or a close that stopped waiting (#471). Skips any folder a
-    live run still holds. Never raises."""
+    live run still holds. Never raises an OSError.
+
+    *should_cancel*, when given, is asked before each folder, and a stop
+    leaves the rest for a later sweep: closing stops the window's own sweep
+    (StaleWorkingFolderSweepWorker, perf proposal) this way."""
     try:
         folders = [p for p in parent.glob(prefix + "*") if p.is_dir()]
     except OSError:
         return
     for folder in folders:
+        if should_cancel is not None and should_cancel():
+            return
         try:
             os.unlink(_win_long_path(folder / _SCRATCH_MARKER))
         except FileNotFoundError:
@@ -663,11 +876,52 @@ def _open_scratch(parent: Path, prefix: str):
 
 
 def _close_scratch(run_dir: Path, marker) -> None:
-    """Close the marker and delete the working folder. Never raises: a folder
-    that will not go is logged and left for the next extraction's sweep, so a
-    cleanup problem can never replace the run's real outcome (on 3.11,
-    TemporaryDirectory's own cleanup could, even after the cache had been
-    stamped)."""
+    """Delete the working folder, its marker last. Never raises an OSError: a
+    folder that will not go is logged and left for the next extraction's
+    sweep, so a cleanup problem Windows reports can never replace the run's
+    real outcome (on 3.11, TemporaryDirectory's own cleanup could, even after
+    the cache had been stamped). Anything else, such as a MemoryError in a
+    delete thread, still gets out.
+
+    Everything but the marker goes while the marker is still held (perf
+    proposal), so another window's sweep, which deletes only a folder whose
+    marker it can delete, never works on a folder that is still being
+    deleted, which can now take a while in the background (see
+    WorkingFolder). A crash part-way, or a folder that will not go, leaves
+    the marker file, closed, so the next sweep takes the folder at once
+    rather than waiting out the grace for an unmarked one. An entry that
+    will not go (a file another program holds under Data) does not stop the
+    others (perf proposal): the set-aside old cache beside it still goes."""
+    failed = None
+    try:
+        entries = list(os.scandir(_win_long_path(run_dir)))
+    except FileNotFoundError:
+        entries = []
+    except OSError as e:
+        entries, failed = [], e
+    for entry in entries:
+        if entry.name == _SCRATCH_MARKER:
+            continue
+        try:
+            if entry.is_dir(follow_symlinks=False):
+                robust_rmtree(Path(entry.path))
+                continue
+            try:
+                os.chmod(entry.path, stat.S_IWRITE)
+                os.unlink(entry.path)
+            except FileNotFoundError:
+                pass
+        except OSError as e:
+            if failed is None:
+                failed = e
+    if failed is not None:
+        if marker is not None:
+            marker.close()
+        logger.warning(
+            f"Could not remove the extraction working folder {run_dir} ({failed}); "
+            "the next extraction removes it"
+        )
+        return
     try:
         if marker is not None:
             marker.close()
@@ -677,6 +931,62 @@ def _close_scratch(run_dir: Path, marker) -> None:
             f"Could not remove the extraction working folder {run_dir} ({e}); "
             "the next extraction removes it"
         )
+
+
+class WorkingFolder:
+    """A DataForge run's working folder, handed by extract_dataforge to its
+    caller to delete later instead of deleted before it returned (perf
+    proposal). It holds Game2.dcb, what unforge wrote that the cache does
+    not keep, and the old cache when it was set aside there
+    (_set_old_cache_aside). On a re-extract beside the cache that is about
+    62,000 files: the ~31,000 unforge wrote that the cache does not keep,
+    and the ~31,000 of the old cache. In %TEMP% the old cache is wiped in
+    place and the kept files are copied, so the folder holds all of
+    unforge's ~62,000, and on a first extraction beside the cache the
+    ~31,000 it does not keep and the dcb. Enhancement generation used to
+    wait for both halves (6.9 s for unforge's unkept files and about 7 s for
+    the old cache on the PC this was measured on, far longer on a slow disk).
+
+    The run's .in_use marker stays open until delete() has removed
+    everything else, so another window's sweep leaves the folder alone the
+    whole time, as it does a running extraction (#471). A crash before then
+    closes the marker with the process, and the next extraction's sweep
+    removes the folder, as it does a crashed run's. delete() touches nothing
+    outside the folder: the new cache was moved or copied out of it, and the
+    folder is beside the cache folder, or in %TEMP% when the work was there,
+    never inside the cache folder."""
+
+    def __init__(self, folder: Path, marker):
+        self.folder = folder
+        self._marker = marker
+        self._done = False
+
+    def delete(self) -> None:
+        """Delete the folder, its marker last (_close_scratch). Never
+        raises an OSError (anything else, such as a MemoryError in a delete
+        thread, still gets out). Only the first call (of this or release)
+        does anything."""
+        if self._done:
+            return
+        self._done = True
+        started = time.monotonic()
+        _close_scratch(self.folder, self._marker)
+        logger.info(f"Deleting the DataForge working folder after the run took "
+                    f"{time.monotonic() - started:.1f} s")
+
+    def release(self) -> None:
+        """Close the marker and leave the folder for the next extraction's
+        sweep, as a crash would: for a folder nobody will delete now (the
+        app is closing). Only the first call (of this or delete) does
+        anything."""
+        if self._done:
+            return
+        self._done = True
+        try:
+            self._marker.close()
+        except OSError as e:
+            logger.warning(f"Could not close the marker of {self.folder}: {e}")
+        logger.info(f"Left the DataForge working folder {self.folder} for the next extraction")
 
 
 # Python raises a whole range of Windows errors as PermissionError, but only
@@ -927,18 +1237,25 @@ class _SpaceNeed(NamedTuple):
     logical: int
     files: int
     # What the run frees on that drive before it needs the room: an old
-    # cache of credit bytes in credit_files files (see _credit).
+    # cache of credit bytes in credit_files files, which the run sets aside
+    # or wipes, and frees before any copy (see _credit).
     credit: int = 0
     credit_files: int = 0
     fix: str = _FIX_PLAIN
 
 
 def _credit(part: _SpaceNeed, cluster: int) -> int:
-    """Bytes the wipe frees for *part* on a drive with *cluster*-byte
-    clusters. Each file takes at least one cluster, so the old cache takes at
-    least its bytes and at least a cluster per file, whichever is more. The
-    new cache is charged a cluster per file on top, so on a large-cluster
-    drive a byte-only credit asked for far more than a re-extract needs."""
+    """Bytes the old cache frees for *part* on a drive with *cluster*-byte
+    clusters. Beside the cache the run now sets the old cache aside rather
+    than wiping it, and frees it after the run (perf proposal), but the
+    credit still holds: on a drive that has room only once the old cache is
+    gone it is wiped in place first, as before (_require_room_for_new_cache
+    returns True), a move takes no new room, and a copy deletes a set-aside
+    cache first (_cache_filtered_records' before_copy). Each file takes at
+    least one cluster, so the old cache takes at least its bytes and at
+    least a cluster per file, whichever is more. The new cache is charged a
+    cluster per file on top, so on a large-cluster drive a byte-only credit
+    asked for far more than a re-extract needs."""
     return max(part.credit, part.credit_files * cluster)
 
 
@@ -957,9 +1274,10 @@ class _Shortage(NamedTuple):
 
 
 def _holds_complete_cache(leaf) -> bool:
-    """True when *leaf* holds a stamped cache, which the run wipes before it
-    writes the new one. The same stamp config_tab uses as its "populated
-    cache" probe; a cache cut off between the wipe and the stamps has none."""
+    """True when *leaf* holds a stamped cache, which the run sets aside or
+    wipes before it fills the new one (see _credit). The same stamp
+    config_tab uses as its "populated cache" probe; a cache cut off between
+    the wipe and the stamps has none."""
     leaf = Path(_win_long_path(leaf))
     try:
         return (leaf / P4K_MTIME_STAMP).is_file() and (leaf / DATAFORGE_LIBS_SUBPATH).is_dir()
@@ -969,9 +1287,10 @@ def _holds_complete_cache(leaf) -> bool:
 
 def _dataforge_needs(parent, leaf, in_temp: bool):
     """A DataForge run's parts: its working folder in *parent*, and the new
-    cache at *leaf*, less the old one it wipes first when that is complete.
-    Sized for a copy of the new cache, the most a run needs when every move
-    is refused (#484)."""
+    cache at *leaf*, less the old one when that is complete, which the run
+    sets aside or wipes, and frees before any copy (see _credit). Sized for
+    a copy of the new cache, the most a run needs when every move is refused
+    (#484)."""
     complete = _holds_complete_cache(leaf)
     return (
         _SpaceNeed(parent, _DATAFORGE_WORK_BYTES, _DATAFORGE_WORK_FILES,
@@ -1149,7 +1468,7 @@ def _walk_files(folder: Path, should_cancel, keep_prefixes=frozenset(), *, local
                     yield info.st_size, kept
 
 
-def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> None:
+def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> bool:
     """The check just before the old cache is wiped (#482): the drive may
     have filled while unforge ran (another program, a second Smart Citizen).
     Counts what copying this run's kept files would take, the most filling
@@ -1160,7 +1479,14 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
     online-only files), which free nothing. Raises NotEnoughSpaceError with
     nothing wiped, its figures counting this run's working folder when it is
     on the cache's drive. Best effort: a walk or a probe that fails is
-    logged and the run goes on."""
+    logged and the run goes on.
+
+    Returns True when the run goes on only because the old cache's room was
+    counted (or the drive is short and that room could not be measured):
+    the old cache must then be wiped before the new one is filled, and the
+    working folder deleted before the run returns, as before the perf
+    proposal. False when the drive has room for a full copy without it, or
+    nothing could be measured."""
     keep_prefixes = frozenset(
         tuple(part.casefold() for part in
               (_UNFORGE_LIBS_DIR, *DATAFORGE_RECORDS_UNDER_LIBS.parts, *rel.split("/")))
@@ -1176,12 +1502,12 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
         if folder is None:
             logger.warning(f"Could not check the space for the new DataForge cache in {leaf}: "
                            "no folder above it exists")
-            return
+            return False
         volume = _measure_volume(folder)
         free = _free_bytes(folder, volume)
     except OSError as e:
         logger.warning(f"Could not check the space for the new DataForge cache ({e}); going on")
-        return
+        return False
     cluster = volume.cluster
     need = sum(max(cluster, _allocated(size, cluster)) for size in kept_sizes)
     need += _NEW_CACHE_RESERVE_BYTES
@@ -1191,7 +1517,9 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
         f"{volume.label} ({cluster}-byte clusters), {free:,} free there."
     )
     if free >= need:
-        return
+        return False
+    # Short without the old cache's room from here on: the run goes on only
+    # if the old cache is wiped before the new one is filled (perf proposal).
     credit = 0
     try:
         if Path(_win_long_path(leaf)).is_dir():
@@ -1199,10 +1527,10 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> No
                          _walk_files(_win_long_path(leaf), should_cancel, local_only=True))
     except OSError as e:
         logger.warning(f"Could not measure the old DataForge cache in {leaf} ({e}); going on")
-        return
+        return True
     if free + credit >= need:
         logger.info(f"The old DataForge cache frees {credit:,} bytes, which makes room")
-        return
+        return True
     # The user reads the box after the finally has deleted this run's
     # working folder, and a retry makes it again. On the cache's volume its
     # allocation therefore counts in both figures: what the drive has once
@@ -1270,10 +1598,26 @@ def _remove_stamps(leaf: Path) -> None:
 # Path of global.ini inside the p4k archive (unp4k preserves directory structure)
 _GLOBAL_INI_RELATIVE = Path("data/Localization/english/global.ini")
 
+# The filter unp4k gets for it (perf proposal). unp4k extracts every entry
+# whose name holds the filter, ignoring case, and names entries with "/"
+# (Data/Localization/english/global.ini). "global.ini" alone matched every
+# language's file, 11 of them: 20 to 26 s and 9 GB of memory on a 150 GB
+# Data.p4k. This one file, byte for byte the same, took 5.4 s and 1.65 GB
+# with the release's unp4k.exe, which reads the whole archive's directory
+# again for each parallel worker, and takes about 2 s and 1 GB with
+# the bundled one, whose workers all extract through the archive it
+# opened for the listing (src/utils/CLAUDE.md names the odw-fast-unp4k
+# commit it is built from). A rebuilt unp4k.exe without that change
+# keeps the filter's gain but not the rest. Only the
+# English file is read from the run; the other languages come from
+# community downloads (languages/sources.json).
+_GLOBAL_INI_FILTER = _GLOBAL_INI_RELATIVE.relative_to("data").as_posix()
+
 
 # Subtrees of unforge's ``libs/foundry/records/`` that the enhancement
 # generator actually reads. Everything else unforge produces is kept nowhere
-# — the working folder is deleted when extract_dataforge finishes.
+# — it goes with the working folder, which extract_dataforge deletes before
+# it returns, or hands to *defer_cleanup* after a success.
 #
 # Keeping this list tight:
 #   * halves the final cache's file count (~62k → ~31k) and cuts its disk
@@ -1351,6 +1695,41 @@ def _move_tree(src: Path, dst: Path) -> Optional[OSError]:
             time.sleep(delay)
 
 
+# The name the old cache takes inside the run's working folder when it is
+# set aside rather than wiped (perf proposal). unforge writes only Data\.
+_SET_ASIDE_CACHE_NAME = "previous-cache"
+
+
+def _set_old_cache_aside(leaf: Path, run_dir: Path) -> Optional[Path]:
+    """Move the old cache *leaf* into the working folder *run_dir* with one
+    rename (perf proposal), so it is deleted with that folder after the run
+    instead of before the new cache is filled. The working folder is beside
+    the cache, in the same folder, so this is a rename on one drive, as the
+    kept subtrees' moves are (#484), with their retries for a held file.
+
+    Returns where the old cache went, or None when it stayed: the rename was
+    refused (another program holds a file under it, past the retries), the
+    drive is full, a stamp is still there (_remove_stamps could not remove
+    it), because nothing may ever read a set-aside cache as fresh, or *leaf*
+    is not a folder, which the wipe never deleted either. The caller then
+    wipes it in place, as before."""
+    if not leaf.is_dir() or any(
+            (leaf / stamp).exists() for stamp in (P4K_MTIME_STAMP, P4K_SIZE_STAMP)):
+        return None
+    target = Path(_win_long_path(run_dir)) / _SET_ASIDE_CACHE_NAME
+    try:
+        refused = _move_tree(leaf, target)
+    except _DiskFullDuringCopy as e:
+        refused = e
+    if refused is not None:
+        logger.info(f"Could not set the old DataForge cache aside ({refused}), "
+                    "so it is deleted where it is")
+        return None
+    logger.info(f"Set the old DataForge cache aside in {win_plain_path(target)}, "
+                "to be deleted with the working folder")
+    return target
+
+
 def _unforge_records(src_libs: Path) -> Path:
     """unforge's records folder under *src_libs* (its ``libs/``), or
     FileNotFoundError when its output does not have the layout the cache
@@ -1370,13 +1749,15 @@ def _unforge_records(src_libs: Path) -> Path:
     return records
 
 
-def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool) -> tuple[int, int, int]:
+def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool,
+                            before_copy=None) -> tuple[int, int, int]:
     """Put the generator's subtrees from *src_libs* into *dst_libs* (#484).
 
     Both point at a ``libs/`` folder (unforge's in the working folder, and
     the cache's) holding ``foundry/records/<subtree>``. Only the
     DATAFORGE_KEEP_SUBPATHS subtrees go. Everything else stays in the working
-    folder, which extract_dataforge deletes when the run ends.
+    folder, which extract_dataforge deletes before it returns, or hands to
+    *defer_cleanup* after a success.
 
     With *move*, each subtree is renamed into place: one rename instead of a
     copy of its files one by one, and the working folder then has half as
@@ -1385,7 +1766,9 @@ def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool) -> tu
     file under it past the retries, or the cache folder leads to another
     drive. Without *move* (the working folder is in %TEMP%) every subtree is
     copied, as before #484. The free-space checks are sized for a full copy,
-    the most this can need (#482).
+    the most this can need (#482). *before_copy*, when given, is called once
+    before the first copy (perf proposal: it deletes an old cache that was
+    set aside rather than wiped, so a copy gets the room the checks counted).
 
     Returns ``(moved, copied, skipped)``. *skipped* counts the subtrees this
     game build does not have (entities/missions and others come and go
@@ -1411,6 +1794,9 @@ def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool) -> tu
                 continue
             logger.info(f"Could not move {rel} into the DataForge cache ({refused}), "
                         "so it is copied instead")
+        if before_copy is not None:
+            before_copy()
+            before_copy = None
         # Long-path prefixed on both sides: the deepest entries under
         # entities/scitem/mission_entities/ pass 260 characters once nested
         # under a user's install folder (#221). _copy_file_checked stops the
@@ -1438,7 +1824,7 @@ _TOOL_POLL_SECONDS = 0.25
 _TOOL_REAP_SECONDS = 30
 _UNP4K_GLOBAL_INI_TIMEOUT_SECONDS = 300
 _UNP4K_DCB_TIMEOUT_SECONDS = 600
-_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~40 s (#370)
+_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~15 s, ~40 s before the perf proposal (#370)
 
 
 def _run_tool(args, *, cwd, timeout, should_cancel=None) -> subprocess.CompletedProcess:
@@ -1520,8 +1906,11 @@ def extract_global_ini(
 ) -> bool:
     """Extract global.ini from Data.p4k and save it to output_path.
 
-    Uses unp4k.exe with the filter "global.ini" to extract only the localization
-    file, then copies it to output_path (overwriting any existing file).
+    Uses unp4k.exe with the filter _GLOBAL_INI_FILTER to extract only the
+    English localization file, then copies it to output_path (overwriting any
+    existing file), removes the old BASE_INI_STAMP once that copy is in place,
+    and records Data.p4k's size and base.ini's own size beside it in
+    BASE_INI_STAMP for base_ini_is_fresh.
 
     Args:
         p4k_path: Path to Star Citizen's Data.p4k file.
@@ -1545,7 +1934,8 @@ def extract_global_ini(
     Raises:
         FileNotFoundError: If unp4k.exe or Data.p4k is missing, or the
             extracted file is not found after extraction.
-        RuntimeError: If unp4k.exe exits with a non-zero return code.
+        RuntimeError: If unp4k.exe exits with a non-zero return code, or
+            says it could not extract the file (perf proposal).
         P4kLockedError: Data.p4k is locked, or is being written (another
             program has it open for writing, or it changed in the last two
             minutes, #516). The latter is found before anything runs.
@@ -1562,9 +1952,13 @@ def extract_global_ini(
     if not p4k_path.exists():
         raise FileNotFoundError(f"Data.p4k not found at: {p4k_path}")
     _refuse_if_p4k_being_written(p4k_path)
+    # Read before unp4k opens it (perf proposal): a Data.p4k that changes
+    # during the run then reads as changed at the next check, rather than
+    # its new size vouching for a global.ini taken from the old one.
+    p4k_size = p4k_path.stat().st_size
 
     TOTAL_PHASES = 2
-    # unp4k writes every language's global.ini here (~31 MB). Like the
+    # unp4k writes the English global.ini here (~10 MB). Like the
     # DataForge run it works beside the DataForge cache, gets an owned name,
     # a stoppable run and the leftover sweep (#471): it used to work in
     # %TEMP%, and a close left this folder and a running unp4k behind.
@@ -1585,16 +1979,15 @@ def extract_global_ini(
             # whole run looked as if the app had hung.
             progress_pct_callback(0, 0, tr("progress.unp4k_launch_short"))
 
-        logger.info(f"Running unp4k: {unp4k_exe} {p4k_path} global.ini (cwd={tmp_dir})")
+        logger.info(f"Running unp4k: {unp4k_exe} {p4k_path} {_GLOBAL_INI_FILTER} "
+                    f"(cwd={tmp_dir})")
         result = _run_tool(
-            [str(unp4k_exe), str(p4k_path), "global.ini"],
+            [str(unp4k_exe), str(p4k_path), _GLOBAL_INI_FILTER],
             cwd=tmp_dir,
             timeout=_UNP4K_GLOBAL_INI_TIMEOUT_SECONDS,
             should_cancel=should_cancel,
         )
-
-        if result.returncode != 0:
-            _raise_unp4k_failure(result.returncode, result.stderr or result.stdout)
+        _check_unp4k(result)
 
         extracted = Path(tmp_dir) / _GLOBAL_INI_RELATIVE
         if not extracted.exists():
@@ -1612,6 +2005,22 @@ def extract_global_ini(
         output_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(extracted), str(output_path))
         logger.info(f"Extracted global.ini → {output_path}")
+        # The old stamp goes once the new base.ini is in place, before the
+        # new stamp is written (perf proposal). It speaks for the old
+        # base.ini, and kept past a new stamp that could not be written it
+        # spoke for a new base.ini of the same size too: after a patch that
+        # left global.ini as it was, base.ini read stale straight after every
+        # extraction. With no stamp the modified times decide, and they read
+        # the new base.ini as fresh. Removed before the copy, a copy that
+        # failed left the old base.ini with no stamp, and the modified times
+        # could then read it fresh against a patched Data.p4k.
+        try:
+            (output_path.parent / BASE_INI_STAMP).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning(f"Could not remove the old {BASE_INI_STAMP} beside {output_path}: {e}")
+        # What base_ini_is_fresh keys off (perf proposal): Data.p4k's size,
+        # not its modified time, which the launcher moves on a game launch.
+        _write_base_ini_stamp(output_path, p4k_size)
     finally:
         _close_scratch(run_dir, marker)
 
@@ -1629,6 +2038,7 @@ def extract_dataforge(
     progress_callback=None,
     progress_pct_callback=None,
     should_cancel=None,
+    defer_cleanup=None,
 ) -> bool:
     """Extract DataForge entity XMLs from Data.p4k and cache them.
 
@@ -1637,10 +2047,12 @@ def extract_dataforge(
          folder, beside the cache or in %TEMP% (see _scratch_location, #471).
       2. unforge.exe converts Game2.dcb → individual XML entity files, next to
          the dcb.
-      3. The generator's subtrees are moved into dataforge_cache_dir (copied
+      3. The old cache is set aside in the working folder (wiped in place in
+         %TEMP%, on a tight drive or when the rename is refused), the
+         generator's subtrees are moved into dataforge_cache_dir (copied
          when the work is in %TEMP% or a move is refused) and stamped, then
-         the working folder is deleted.
-      4. The diff manifest snapshots the new cache.
+         the working folder is deleted, or handed to *defer_cleanup*. No
+         diff manifest follows (perf proposal, #495): nothing read it.
 
     This is slow the first time (~several minutes) but results are cached and
     only need to be re-run when the p4k file changes.
@@ -1654,13 +2066,24 @@ def extract_dataforge(
         progress_pct_callback: Optional callable(completed, total, message)
             for the progress bar. unp4k and unforge report nothing while
             they run, so their phases are sent with a total of 0, the busy
-            bar (#507). Caching the entity files is 2 of 3, the diff
-            snapshot counts its files, and Done is 3 of 3.
+            bar (#507). Caching the entity files is 2 of 3, and Done is 3
+            of 3.
         should_cancel: Optional callable() -> bool (#471). Polled while each
             tool runs, which kills the tool, and checked between steps. The
             check just before the old cache is wiped is the last point a stop
             leaves that cache untouched; past it the run finishes and stamps
-            the new cache, then stops before the manifest.
+            the new cache, then reports the stop.
+        defer_cleanup: Optional callable(WorkingFolder) (perf proposal). A
+            run that saved and stamped the new cache with no stop requested
+            hands it the working folder (what the cache does not keep, and
+            the old cache when it was set aside there) instead of deleting
+            it, so the caller can delete it later with WorkingFolder.delete,
+            in the background. Not on a drive that had room only once the
+            old cache was gone. Every other outcome deletes the folder
+            before returning or raising, as without it. A stop that arrives
+            right after the hand-over still raises ExtractionCancelled, with
+            the folder already handed over: the caller owns it then and must
+            delete it on that path too (DataForgeExtractWorker._finish does).
 
     Returns:
         True on success.
@@ -1670,7 +2093,9 @@ def extract_dataforge(
             or unforge's output lacks `libs/`, the records folder the cache
             keeps, or every one of the subtrees it keeps there, all found
             before the old cache is wiped (#484).
-        RuntimeError: If either subprocess fails.
+        RuntimeError: If either subprocess fails: a non-zero exit, or a file
+            it says it could not extract or convert (perf proposal), found
+            before the old cache is wiped.
         P4kLockedError: Data.p4k is locked, or is being written (another
             program has it open for writing, or it changed in the last two
             minutes, #516). The latter is found before anything runs.
@@ -1695,8 +2120,8 @@ def extract_dataforge(
     _refuse_if_p4k_being_written(p4k_path)
 
     # Wrap once here so every use below (mkdir, exists checks, and whatever
-    # this function hands to _cache_filtered_records/update_manifest) inherits
-    # long-path safety — see win_paths.win_long_path (#221).
+    # this function hands to _cache_filtered_records) inherits long-path
+    # safety — see win_paths.win_long_path (#221).
     dataforge_cache_dir = Path(_win_long_path(dataforge_cache_dir))
 
     # Step 3's wipe deletes nothing through a link (see robust_rmtree), so a
@@ -1715,10 +2140,17 @@ def extract_dataforge(
             tr("extract.no_space_dataforge"), movable=movable),
     )
     logger.info(f"DataForge working folder: {run_dir}")
+    handed_off = False
     try:
         # Work in %TEMP% has not shown that the cache folder can be made again
         # after the wipe in step 3 (#494).
         _require_cache_can_be_remade(run_dir, dataforge_cache_dir)
+
+        # Data.p4k as unp4k is about to read it, for the stamps in step 3
+        # (perf proposal). Read after unforge, a game patch that landed
+        # during the run made a cache of the old build read as current, as
+        # extract_global_ini's base.ini stamp would have.
+        p4k_stat = p4k_path.stat()
 
         # ── Step 1: Extract Game2.dcb ─────────────────────────────────────────
         if progress_callback:
@@ -1735,13 +2167,11 @@ def extract_dataforge(
             timeout=_UNP4K_DCB_TIMEOUT_SECONDS,
             should_cancel=should_cancel,
         )
-        if result.returncode != 0:
-            _raise_unp4k_failure(result.returncode, result.stderr or result.stdout)
-
-        # Explicit cleanup: ensure subprocess is fully released
-        del result
-        gc.collect()
-        time.sleep(0.1)  # Brief pause for file system to release locks
+        _check_unp4k(result)
+        # No pause and no gc.collect() after either tool (perf proposal):
+        # each is a separate process _run_tool has already reaped, and Python
+        # holds none of the files it wrote. A refused move has its own retries
+        # (_MOVE_RETRY_DELAYS), and the wipe has robust_rmtree's backoff.
 
         # unp4k preserves archive structure: Data/Game2.dcb
         dcb_candidates = list(run_dir.glob("Data/Game*.dcb"))
@@ -1785,12 +2215,14 @@ def extract_dataforge(
         if _stderr:
             logger.info(f"unforge stderr ({len(_stderr)} bytes, truncated): {_stderr[:2000]}")
         if result.returncode != 0:
-            raise RuntimeError(f"unforge.exe failed (code {result.returncode}):\n{_stderr or _stdout or '(no output)'}")
-
-        # Explicit cleanup: ensure subprocess is fully released
-        del result
-        gc.collect()
-        time.sleep(0.1)  # Brief pause for file system to release locks
+            raise RuntimeError(f"unforge.exe failed (code {result.returncode}):\n"
+                               f"{_stderr or _stdout or '(no output)'}")
+        # Exit code 0, but a file it could not save fails the run all the
+        # same (_UNFORGE_FILE_FAILED), here, while the old cache is still
+        # there (perf proposal).
+        if _UNFORGE_FILE_FAILED in f"{_stdout}\n{_stderr}":
+            raise RuntimeError(f"unforge.exe failed (code {result.returncode}):\n"
+                               + "\n".join(filter(None, (_stderr, _stdout))))
 
         # unforge writes entity XMLs into a libs/ subdirectory next to the
         # dcb file. When it's missing we surface whatever we captured from
@@ -1840,32 +2272,16 @@ def extract_dataforge(
         if progress_pct_callback:
             progress_pct_callback(2, TOTAL_PHASES, tr("progress.caching_entities"))
 
-        # Ensure all file handles from extraction are released before the
-        # kept files are moved or copied
-        gc.collect()
-        time.sleep(0.1)
-
         # The drive may have filled while unforge ran (#482). Refused here,
-        # the old cache is kept.
-        _require_room_for_new_cache(libs_dir, dataforge_cache_dir, should_cancel)
+        # the old cache is kept. *tight*: it has room only once the old
+        # cache is gone (perf proposal).
+        tight = _require_room_for_new_cache(libs_dir, dataforge_cache_dir, should_cancel)
 
         # The last point a stop leaves the previous cache untouched (#471).
         # Past here the run always finishes and stamps the new cache, so a
         # stop never leaves it half filled.
         _raise_if_cancelled(should_cancel, "stopped before the previous cache was replaced")
 
-        # Blow away any prior cache. Uses a retry loop because on Windows
-        # (particularly under OneDrive) a transient handle from the
-        # just-exited unforge.exe or from the OneDrive/Defender/indexer
-        # stack can reject the first few rmdir attempts with WinError 5.
-        # Its stamps go first (#484): from Python 3.12.4 rmtree deletes the
-        # leaf's own files last, so a wipe that gave up part-way, or a hard
-        # kill during it, would leave a stamped partial cache. That reads as
-        # fresh when the stamps match this Data.p4k, and the next free-space
-        # check counts it as a complete old cache.
-        if dataforge_cache_dir.exists():
-            _remove_stamps(dataforge_cache_dir)
-            robust_rmtree(dataforge_cache_dir)
         # Beside the cache the working folder is on the cache's drive, and
         # the kept subtrees are moved in (#484). In %TEMP% they are copied
         # as before: moved files would keep %TEMP%'s permissions, and a move
@@ -1873,6 +2289,39 @@ def extract_dataforge(
         # with the cache's permissions: the working folder is a plain
         # os.mkdir (#490), so both inherit from the same parent.
         move = run_dir.parent == Path(win_plain_path(dataforge_cache_dir)).parent
+        # Out with the prior cache. Its stamps go first (#484): from Python
+        # 3.12.4 rmtree deletes the leaf's own files last, so a wipe that
+        # gave up part-way, or a hard kill during it, would leave a stamped
+        # partial cache. That reads as fresh when the stamps match this
+        # Data.p4k, and the next free-space check counts it as a complete
+        # old cache. Beside the cache it is then set aside in the working
+        # folder with one rename, and deleted with that folder after the
+        # run (perf proposal). It is wiped in place, as before, in %TEMP%
+        # (another drive), on a drive that has room only once it is gone,
+        # or when the rename is refused. The wipe uses a retry loop because
+        # on Windows (particularly under OneDrive) a transient handle from
+        # the just-exited unforge.exe or from the OneDrive/Defender/indexer
+        # stack can reject the first few rmdir attempts with WinError 5.
+        set_aside = None
+        if dataforge_cache_dir.exists():
+            _remove_stamps(dataforge_cache_dir)
+            if move and not tight:
+                set_aside = _set_old_cache_aside(dataforge_cache_dir, run_dir)
+            if set_aside is None:
+                robust_rmtree(dataforge_cache_dir)
+
+        def free_the_old_cache():
+            # A copy needs the room the wipe would have freed (#482), so a
+            # set-aside old cache goes first (perf proposal). Best effort: a
+            # copy that then finds the drive full is the "cache incomplete"
+            # message, as it would have been.
+            try:
+                robust_rmtree(set_aside)
+                logger.info("Deleted the old DataForge cache before a copy")
+            except OSError as e:
+                logger.warning(f"Could not delete the old DataForge cache in "
+                               f"{win_plain_path(set_aside)} before a copy: {e}")
+
         # A full drive from here to the stamps leaves a cache with no stamp,
         # which the startup check offers to re-extract (#482).
         try:
@@ -1887,7 +2336,8 @@ def extract_dataforge(
             logger.info(f"Saving DataForge extraction to {cache_libs}…")
             filling = time.monotonic()
             moved, copied, skipped = _cache_filtered_records(
-                libs_dir / _UNFORGE_LIBS_DIR, cache_libs, move=move)
+                libs_dir / _UNFORGE_LIBS_DIR, cache_libs, move=move,
+                before_copy=free_the_old_cache if set_aside is not None else None)
             logger.info(
                 f"DataForge cache written: {moved + copied}/{len(DATAFORGE_KEEP_SUBPATHS)} "
                 f"keep-subpaths in {time.monotonic() - filling:.1f} s, {moved} moved and "
@@ -1899,8 +2349,8 @@ def extract_dataforge(
             # see dataforge_cache_is_fresh — because the RSI launcher's file
             # verification bumps Data.p4k's mtime on game launches without changing
             # its content, and a multi-GB re-extract on every such benign touch is
-            # exactly the needless work issue #209 reported.
-            p4k_stat = p4k_path.stat()
+            # exactly the needless work issue #209 reported. Both come from
+            # Data.p4k as it was before unp4k ran (see above).
             (dataforge_cache_dir / P4K_MTIME_STAMP).write_text(str(p4k_stat.st_mtime))
             (dataforge_cache_dir / P4K_SIZE_STAMP).write_text(str(p4k_stat.st_size))
         except (_DiskFullDuringCopy, OSError) as e:
@@ -1912,32 +2362,34 @@ def extract_dataforge(
                 raise
             raise _cache_incomplete_error(dataforge_cache_dir, e) from e
         logger.info(f"DataForge cache written to {dataforge_cache_dir}")
+        # The caller deletes the working folder after the run, in the
+        # background (perf proposal), unless a stop is already pending or
+        # the drive had room only once the old cache was gone.
+        if defer_cleanup is not None and not tight and not (
+                should_cancel is not None and should_cancel()):
+            defer_cleanup(WorkingFolder(run_dir, marker))
+            handed_off = True
     finally:
-        # Success, failure or stop, the working folder goes now (#471), so
-        # its ~2 GB never outlives the run and a stopped run cleans up after
-        # itself. _close_scratch never raises over the real outcome.
-        cleanup = time.monotonic()
-        _close_scratch(run_dir, marker)
-        logger.info(f"Deleting the DataForge working folder took "
-                    f"{time.monotonic() - cleanup:.1f} s")
+        # Failure or stop, the working folder goes now (#471), so its ~2.3 GB
+        # never outlives the run and a stopped run cleans up after itself,
+        # and so does a success nobody took it from. _close_scratch logs
+        # every OSError, never raising it over the real outcome.
+        if not handed_off:
+            cleanup = time.monotonic()
+            _close_scratch(run_dir, marker)
+            logger.info(f"Deleting the DataForge working folder took "
+                        f"{time.monotonic() - cleanup:.1f} s")
 
-    # A stop that arrived while the cache was filled ends here. The cache is
-    # complete and stamped; it only lacks the manifest, which generation does
-    # not read (it runs every enabled category).
+    # A stop that arrived while the cache was filled ends here, as a stop:
+    # the cache is complete and stamped, but the user asked to stop, so
+    # nothing may chain into generation.
     _raise_if_cancelled(should_cancel, "stopped once the new cache was written")
 
-    # Snapshot the new cache so the next run can diff against it.
-    # SHA-256 over ~31k files is multi-minute serial; we surface it
-    # to the progress bar (and parallelize it inside update_manifest)
-    # so the UI doesn't appear frozen.
-    logger.info("Snapshotting DataForge cache for diff manifest…")
-    if progress_callback:
-        progress_callback(tr("progress.snapshot_diff"))
-    update_manifest(cache_libs, progress_callback=progress_pct_callback)
-    logger.info("Diff manifest written")
+    # No diff manifest (perf proposal, #495). Hashing every cached file
+    # took about 4.5 s after each extraction, longer on a hard drive, and
+    # nothing reads the manifest any more: the generator runs every
+    # category it is handed.
 
-    # Ensure all file handles are released before returning
-    gc.collect()
     if progress_pct_callback:
         progress_pct_callback(3, TOTAL_PHASES, "Done")
     return True
@@ -1986,3 +2438,73 @@ def dataforge_cache_is_fresh(p4k_path: Path, dataforge_cache_dir: Path) -> bool:
         return cached_mtime >= p4k_stat.st_mtime
     except (OSError, ValueError):
         return False
+
+
+def _write_base_ini_stamp(base_ini: Path, p4k_size: int) -> None:
+    """Record that *base_ini* came from a Data.p4k of *p4k_size* bytes
+    (perf proposal).
+
+    base.ini's own size goes in too, so the stamp speaks only for the
+    base.ini it was written for. The cache folder holds other files that
+    come and go on their own: Clear Cache deletes base.ini and leaves the
+    stamp, and a data folder change copies each file only where the new
+    folder has none, so a stamp can end up beside another base.ini.
+    A stamp that cannot be written is logged at WARNING and never fails
+    the caller; base_ini_is_fresh then falls back to the modified times,
+    since extract_global_ini removes the old stamp once the new base.ini is
+    in place, before it writes the new one.
+    """
+    stamp = base_ini.parent / BASE_INI_STAMP
+    try:
+        stamp.write_text(f"{p4k_size} {base_ini.stat().st_size}", encoding="utf-8")
+    except OSError as e:
+        logger.warning(f"Could not record Data.p4k's size beside {base_ini}: {e}")
+
+
+def base_ini_is_fresh(p4k_path: Path, base_ini: Path) -> bool:
+    """Return True if *base_ini*, the global.ini extracted from Data.p4k, is
+    still current with *p4k_path* (perf proposal).
+
+    Keyed off Data.p4k's byte size, by #209's rule for the DataForge cache
+    (see dataforge_cache_is_fresh): the RSI launcher's file verification
+    moves Data.p4k's modified time on an ordinary game launch without
+    changing its content. The old rule here (Data.p4k newer than base.ini)
+    then asked to extract global.ini again at the next start, channel switch
+    or data folder change, and lit the Config tab's Extract button, after
+    nothing more than playing.
+
+    A stamp written for another base.ini (its recorded size differs) counts
+    as no stamp. With no usable stamp (a base.ini extracted before the
+    stamp existed) the old rule decides, so an upgrade asks for nothing the
+    old rule would not have asked for, and reads a game patch as the old
+    rule reads it at that check. When it reads fresh, Data.p4k's modified
+    time is no newer than base.ini's, which normally means it has not been
+    touched since base.ini was written, so its size is recorded there and
+    then: the next launcher touch is recognised without an extraction
+    first. A patch the old rule misses (one that left Data.p4k's modified
+    time no newer than base.ini's) is recorded the same way, so it stays
+    missed until the next patch changes the size, where the old rule would
+    have asked after the next game launch. Nothing else tells a launch from
+    such a patch.
+    """
+    try:
+        p4k_stat = p4k_path.stat()
+        base_stat = base_ini.stat()
+    except OSError:
+        return False
+    try:
+        text = (base_ini.parent / BASE_INI_STAMP).read_text(encoding="utf-8")
+        stamped_p4k_size, stamped_base_size = (int(value) for value in text.split())
+    except (OSError, ValueError):
+        # No stamp, or one that is not two numbers (a ValueError, also for
+        # bytes that are not text): fall back to the modified times.
+        pass
+    else:
+        if stamped_base_size == base_stat.st_size:
+            return stamped_p4k_size == p4k_stat.st_size
+    if p4k_stat.st_mtime > base_stat.st_mtime:
+        return False
+    logger.info(f"Recording Data.p4k's size ({p4k_stat.st_size:,} bytes) for {base_ini}, "
+                f"which is not older than Data.p4k")
+    _write_base_ini_stamp(base_ini, p4k_stat.st_size)
+    return True

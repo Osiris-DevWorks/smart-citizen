@@ -293,6 +293,37 @@ class TestWhileSomethingRuns:
         me.statusBar().showMessage.assert_called_once_with(tr("dialogs.clear_cache_busy"))
 
 
+class TestWhileAWorkingFolderIsDeleted:
+    def test_the_cache_in_use_clears_and_the_working_folder_is_left_to_its_delete(
+        self, clear
+    ):
+        """perf proposal: a finished extraction's working folder, holding the
+        old cache it set aside, can still be deleted in the background after
+        generation has ended. Clear Cache does not wait for that: the delete
+        never touches the cache folder, and Clear Cache never touches the
+        working folder. It asks about and clears the cache in use only."""
+        files = _cached_files()
+        leaf = _dataforge_cache(AppSettings.get_dataforge_cache_leaf())
+        run_dir, marker = pe._open_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        set_aside = run_dir / pe._SET_ASIDE_CACHE_NAME / DATAFORGE_RECORDS_SUBPATH / "ship.xml"
+        set_aside.parent.mkdir(parents=True)
+        set_aside.write_text("<ship/>", encoding="utf-8")
+        deleting = MagicMock()
+        deleting.isRunning.return_value = True
+        working_folder = pe.WorkingFolder(run_dir, marker)
+        try:
+            _me, box = clear(True, True, _working_folder_deleters=[deleting])
+            assert _questions(box) == [_FILES_QUESTION, _DATAFORGE_QUESTION]
+            assert box.question.call_args_list[1].args[2] == tr(
+                "dialogs.clear_cache_dataforge_body", folder=str(leaf))
+            assert not any(f.exists() for f in files)
+            assert not leaf.exists()
+            assert set_aside.is_file()
+        finally:
+            working_folder.delete()
+        assert not run_dir.exists()
+
+
 class TestAFailedDelete:
     def test_a_file_is_listed_and_logged_once_at_warning(self, clear, monkeypatch, caplog):
         """It used to be logged at ERROR, which opened the global error box

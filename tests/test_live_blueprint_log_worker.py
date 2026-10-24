@@ -15,6 +15,7 @@ import pytest
 
 from src.gui.workers import LiveBlueprintLogWorker
 from src.utils.blueprint_log_scanner import GameLogTail
+from tests.event_loop import pump_until
 
 pytestmark = pytest.mark.unit
 
@@ -22,16 +23,6 @@ pytestmark = pytest.mark.unit
 def _event(ts_iso: str, name: str) -> str:
     return (f"<{ts_iso}> [Notice] <SHUDEvent_OnNotification> Added notification "
             f'"Received Blueprint: {name}: " [7] to queue. New queue size: 1\n')
-
-
-def _wait_for(qapp, condition, timeout_s: float = 5.0) -> bool:
-    deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        qapp.processEvents()
-        if condition():
-            return True
-        time.sleep(0.01)
-    return False
 
 
 @pytest.fixture
@@ -47,12 +38,12 @@ def test_new_events_arrive_and_a_stop_returns_promptly(qapp, tmp_path, fast_poll
     worker.blueprints_found.connect(lambda names, newest: found.append((names, newest)))
     worker.start()
     try:
-        assert _wait_for(qapp, lambda: len(found) == 1)
+        assert pump_until(lambda: len(found) == 1, 5.0)
         assert found[0] == (["Agni"], datetime(2026, 10, 7, 20, 1, tzinfo=timezone.utc))
         with open(log, "a", encoding="utf-8") as fh:
             fh.write(_event("2026-10-07T20:05:00.000Z", "Norfield")
                      + _event("2026-10-07T20:06:00.000Z", "Bracer"))
-        assert _wait_for(qapp, lambda: len(found) == 2)
+        assert pump_until(lambda: len(found) == 2, 5.0)
         assert found[1] == (["Norfield", "Bracer"],
                             datetime(2026, 10, 7, 20, 6, tzinfo=timezone.utc))
     finally:
@@ -75,7 +66,7 @@ def test_a_failing_poll_keeps_the_thread_and_logs_one_traceback(
     with caplog.at_level(logging.DEBUG, logger="src.gui.workers"):
         worker.start()
         try:
-            assert _wait_for(qapp, lambda: len(calls) >= 3)
+            assert pump_until(lambda: len(calls) >= 3, 5.0)
             assert worker.isRunning()
         finally:
             worker.requestInterruption()

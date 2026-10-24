@@ -9,7 +9,9 @@ tag_builder.apply_mission_title), the arrow and Location/Destination modifier
 come from the mission_titles config, and courier titles are eligible. The 2.1.1
 hotfix (#200) reworked the shapes: |Address is the default modifier, endpoint
 sides render comma lists, bare ``*Token`` vars expand one level against the loc
-table, and per-body intersection guards shared titles. The stale
+table, and per-body intersection guards shared titles. The perf proposal
+sorted the bodies, so their order no longer changes a route, and an endpoint
+some bodies write bare and others with |Address takes |Address. The stale
 `kraken_4.7.ini` fixture is deliberately not used as ground truth.
 """
 from __future__ import annotations
@@ -144,6 +146,79 @@ def test_body_without_side_vars_abstains(gen_module):
 def test_empty_and_none_bodies_safe(gen_module):
     assert gen_module._derive_route_fragment([]) == ""
     assert gen_module._derive_route_fragment([None, "", "no tokens here"]) == ""
+
+
+def test_body_order_does_not_change_the_route(gen_module):
+    """The first body's order and token text win, and the callers build the
+    list from a set, so its order changed with every run's string hashing.
+    Pooled bodies that list their drop-offs in another order, or spell an
+    endpoint differently, gave three courier titles a different route from
+    one generation to the next (perf proposal). The bodies are sorted now
+    ("Hello" before "Hi"), and an endpoint written both bare and with
+    |Address takes |Address."""
+    bodies = [
+        "Hi. Collect from ~mission(Pickup1|Address), deliver to "
+        "~mission(Dropoff2) and ~mission(Dropoff1)",
+        "Hello. Collect from ~mission(Pickup1), deliver to "
+        "~mission(Dropoff1|Address) and ~mission(Dropoff2)",
+        None,
+    ]
+    routes = {gen_module._derive_route_fragment(list(order))
+              for order in (bodies, bodies[::-1], [bodies[1], None, bodies[0]])}
+    assert routes == {
+        "~mission(Pickup1|Address) > ~mission(Dropoff1|Address), ~mission(Dropoff2)"}
+
+
+@pytest.mark.parametrize("first", ["bare", "|Address"])
+def test_an_endpoint_written_both_ways_takes_its_address_form(gen_module, first):
+    """Pooled bodies that write Pickup1 and Dropoff1 bare in one and with
+    |Address in another give the |Address form, whichever body sorts first,
+    so a title follows the tokens rather than which greeting sorts first
+    (perf proposal)."""
+    bare = "collect from ~mission(Pickup1), deliver to ~mission(Dropoff1)"
+    address = "collect from ~mission(Pickup1|Address), deliver to ~mission(Dropoff1|Address)"
+    greetings = ("A. ", "B. ") if first == "bare" else ("B. ", "A. ")
+    bodies = [greetings[0] + bare, greetings[1] + address]
+    assert gen_module._derive_route_fragment(bodies) == (
+        "~mission(Pickup1|Address) > ~mission(Dropoff1|Address)"
+    )
+
+
+@pytest.mark.parametrize("order", ["bare first", "|Address first"])
+def test_the_agreed_tokens_take_the_address_form(gen_module, order):
+    """The same in _agreed_endpoint_tokens itself, for both orders of its
+    per-body list, while the first body still sets the vars' order."""
+    per_body = [{"Pickup2": "~mission(Pickup2)", "Pickup1": "~mission(Pickup1)"},
+                {"Pickup1": "~mission(Pickup1|Address)", "Pickup2": "~mission(Pickup2)"}]
+    if order == "|Address first":
+        per_body.reverse()
+    agreed = gen_module._agreed_endpoint_tokens(per_body)
+    assert agreed == {"Pickup1": "~mission(Pickup1|Address)", "Pickup2": "~mission(Pickup2)"}
+    assert list(agreed) == list(per_body[0])
+
+
+@pytest.mark.parametrize("first, second", [("", "|name"), ("|name", ""),
+                                           ("|Address", "|name"), ("|name", "|Address")],
+                         ids=["bare then name", "name then bare",
+                              "Address then name", "name then Address"])
+def test_a_mix_with_the_name_form_keeps_the_first_bodys_form(gen_module, first, second):
+    """The |Address preference is only for a var written both bare and with
+    |Address: a mix with |name keeps the first sorted body's form, as before
+    the perf proposal (and never makes up a token no body writes)."""
+    bodies = [f"A. collect from ~mission(Pickup1{first}), deliver to ~mission(Dropoff1{first})",
+              f"B. collect from ~mission(Pickup1{second}), deliver to ~mission(Dropoff1{second})"]
+    assert gen_module._derive_route_fragment(bodies) == (
+        f"~mission(Pickup1{first}) > ~mission(Dropoff1{first})"
+    )
+
+
+@pytest.mark.parametrize("form", ["", "|Address", "|name"], ids=["bare", "Address", "name"])
+def test_an_endpoint_written_one_way_keeps_that_form(gen_module, form):
+    bodies = [f"A. collect from ~mission(Pickup1{form}), deliver to ~mission(Dropoff1{form})",
+              f"B. from ~mission(Pickup1{form}) to ~mission(Dropoff1{form}) please"]
+    assert gen_module._derive_route_fragment(bodies) == (
+        f"~mission(Pickup1{form}) > ~mission(Dropoff1{form})"
+    )
 
 
 # ── Nested *Token indirection (#200) ─────────────────────────────────────────

@@ -13,7 +13,7 @@ from PyQt6.QtCore import pyqtSignal, QTimer
 
 from src.gui.theme import AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, get_button_color
 from src.utils.i18n import tr
-from src.utils.pak_extractor import windows_reason
+from src.utils.pak_extractor import base_ini_is_fresh, windows_reason
 from src.utils.settings import (
     AppSettings,
     CACHE_FOLDER_REFUSED,
@@ -1263,7 +1263,9 @@ class ConfigTab(QWidget):
                 self._p4k_status_label.setText(
                     tr("config.p4k_status_found_with_base", date=last_str)
                 )
-                needs_update = p4k_path.stat().st_mtime > base_ini.stat().st_mtime
+                # The same rule as the startup prompt: Data.p4k's size, not
+                # the modified time a game launch moves (perf proposal).
+                needs_update = not base_ini_is_fresh(p4k_path, base_ini)
             else:
                 self._p4k_status_label.setText(tr("config.p4k_status_found_no_base"))
                 needs_update = True
@@ -1278,7 +1280,7 @@ class ConfigTab(QWidget):
 
     def _set_extract_btn_needs_update(self, needs_update: bool) -> None:
         """Red button text when base.ini has never been extracted or Data.p4k
-        is newer than the cached copy — a nudge, not a gate. Unlike Generate
+        has changed since (``base_ini_is_fresh``) — a nudge, not a gate. Unlike Generate
         Enhancements/Apply Enhancements, this button is never disabled: users
         may legitimately want to re-extract even when nothing looks stale
         (e.g. after manually clearing part of the cache)."""

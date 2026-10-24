@@ -290,7 +290,7 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 
 
 # ── Derived-lookup disk cache ─────────────────────────────────────────────────
-# Walking the DataForge tree is expensive (~85s for scitem alone). These
+# Walking the DataForge tree is expensive (scitem most of all). These
 # lookups are pure functions of the DataForge cache contents, so we pickle
 # them under cache/dataforge/.lookups/ keyed on the .p4k_mtime stamp written
 # by pak_extractor.py. When DataForge is re-extracted, the stamp changes and
@@ -426,6 +426,16 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 #     prefixed bp_dir/entity_dir callers compare them against and crashing
 #     scan_crafting_blueprints's xml_file.relative_to(bp_dir) with "not in
 #     the subpath of". Bump flushes any pre-#231 pickle.
+#   scitem_lookups v11 / blueprint_pools v16 (perf proposal) — both pickles
+#     now hold only XML facts, keyed on the DataForge build alone: no loc
+#     text, no Tag Builder config, no annotate toggle and no English-loc
+#     fallback mark (the extra_key is gone). The names and the
+#     [CLASS-Sx-grade] tags are rendered from those facts on every run
+#     (_render_scitem_lookups, and the name loop in
+#     build_blueprint_pool_lookup), so a Tag Builder change no longer
+#     re-parses the ~24k scitem XMLs and the pool/blueprint XMLs, and a run
+#     that fell back to its own language has nothing in them to leave for
+#     the next English run. The value shapes changed, so both bump.
 _LOOKUP_VERSIONS: dict[str, str] = {
     # v13: tags apply regardless of name-resolution tier + loc-derived
     # name_fallback_tags for bare-type items (fuel nozzle [FN] missing
@@ -433,8 +443,9 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # bump, a regen against an unchanged DataForge reuses pools baked
     # before those fixes and the mission text stays untagged/garbled.
     # v15: name_fallback_tags read the English loc (see the history above).
-    "blueprint_pools": "v15",
-    "scitem_lookups": "v10",
+    # v16: XML facts only (perf proposal, see the history above).
+    "blueprint_pools": "v16",
+    "scitem_lookups": "v11",
     "standings": "v3",
     "wearables": "v1",
     "xml_path_index": "v2",
@@ -469,11 +480,12 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
     Any of the three changing invalidates the cache: re-extracting Data.p4k
     changes the fingerprint; updating the builder's collection logic bumps
     the version in _LOOKUP_VERSIONS; passing a different *extra_key* (used
-    by scitem_lookups + blueprint_pools to fold in the user's components
-    Tag Builder config so a config change rebuilds the baked-in tags)
-    bumps the third segment. An unreadable pickle (a truncated one from a
+    by standings for the English-loc fallback mark; scitem_lookups and
+    blueprint_pools used it for the components Tag Builder config until
+    they came to hold XML facts only, perf proposal) bumps the third
+    segment. An unreadable pickle (a truncated one from a
     run cut off before these writes became atomic, say) is rebuilt, with an
-    INFO line, since a rebuild can take a minute and a half. The pickle is
+    INFO line, since a rebuild re-reads its whole subtree. The pickle is
     written in one step, so a run cut off mid-write keeps the old one.
     """
     cache_dir = forge_dir / DATAFORGE_LOOKUPS_SUBPATH
@@ -514,11 +526,22 @@ def _build_xml_path_index(records_dir: Path) -> dict[str, list[str]]:
     Built once per DataForge cache version and pickled via _cached_lookup so
     the OS directory walk only happens on a cold cache. Callers use
     _index_rglob() to get the file list for a given directory subtree.
+
+    The walk stays rglob's, so the folders keep rglob's order, which every
+    reader's file order follows. Only the relative folder key is worked out
+    once per folder (keyed on the path text up to the last separator) rather
+    than with Path.relative_to for each of the ~31k files (perf proposal).
     """
     idx: dict[str, list[str]] = defaultdict(list)  # type: ignore[assignment]
+    key_by_folder: dict[str, str] = {}
     for xml_file in records_dir.rglob("*.xml"):
-        key = xml_file.parent.relative_to(records_dir).as_posix()
-        idx[key].append(str(xml_file))
+        path_str = str(xml_file)
+        folder = path_str[:path_str.rfind(os.sep)]
+        key = key_by_folder.get(folder)
+        if key is None:
+            key = xml_file.parent.relative_to(records_dir).as_posix()
+            key_by_folder[folder] = key
+        idx[key].append(path_str)
     return {k: sorted(v) for k, v in idx.items()}
 
 
@@ -545,8 +568,8 @@ def _indexed_xml_files(
 
     Extracted (#413 review follow-up) after the third identical copy of this
     ternary showed up across the file's three contractgen-XML walkers
-    (scan_contract_generators, the Battaglia RS-tag scan, and
-    _titles_with_calculated_reward) -- root CLAUDE.md's DRY calibration
+    (scan_contract_generators, the Battaglia RS-tag scan, and the
+    calculated-reward scan) -- root CLAUDE.md's DRY calibration
     treats a third repeat as the extraction signal. Named for any folder
     since the #492 wearables scan uses it too. _index_rglob's other ~10
     callers (templates/bp/scitem/ammo/pu_missions dirs, etc.) still spell
@@ -558,6 +581,30 @@ def _indexed_xml_files(
         if xml_path_index is not None and records_dir is not None
         else entity_dir.rglob("*.xml")
     )
+
+
+def _parse_xml_file(xml_file: Path) -> ET.Element:
+    """The root element of *xml_file*, as ``ET.parse(xml_file).getroot()``
+    gives it: the same default parser, so the same tree, and the same
+    ParseError for a file lxml cannot parse. Reading the bytes in one call
+    and handing them to lxml is faster on Windows than letting lxml read the
+    file itself: on a LIVE cache the ~2.6k pu_missions XMLs parse in 0.53 s
+    instead of 0.73 s, the ~8.5k ships scitem XMLs in 2.1 s instead of
+    2.8 s (perf proposal)."""
+    return ET.fromstring(xml_file.read_bytes())
+
+
+def _parse_xml_roots(xml_files):
+    """Yield each file's parsed root in order, one at a time, skipping a
+    file lxml cannot parse: scan_contract_generators' own walk when it is
+    not handed the roots, which only its direct callers in the tests do (a
+    generation hands them over from _contractgen_roots)."""
+    for xml_file in xml_files:
+        try:
+            root = _parse_xml_file(xml_file)
+        except ET.ParseError:
+            continue
+        yield root
 
 
 ENHANCEMENT_SEPARATOR = "\\n\\n--- STATS ---\\n"
@@ -920,16 +967,54 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
 
     Returns ``None`` when Size: itself is missing OR when the fallback's
     minimum-information bar isn't met. Those items pass through bare.
+
+    The XML half is read by :func:`_component_tag_facts`, so the scitem
+    lookup can cache those facts once per DataForge build and render the
+    tags from them with :func:`_component_name_tag_from_facts`, the one
+    implementation both paths share (perf proposal).
     """
-    # AttachDef is shared by the size fallback chain below and the
-    # grade/class fallbacks further down, so resolve it first.
+    return _component_name_tag_from_facts(
+        desc_value, _component_tag_facts(root), config=config, component_type=component_type
+    )
+
+
+# What _component_name_tag reads from an entity root when the description
+# alone does not settle the tag: (root class name, item_Name loc key,
+# AttachDef Size, AttachDef Grade, AttachDef SubType, ItemComponentParams
+# itemType). A plain tuple so the scitem lookup pickle holds only builtins.
+# The AttachDef values are "" when there is no AttachDef, which every reader
+# treats the same as an empty attribute; itemType is None without an
+# ItemComponentParams.
+_NO_COMPONENT_TAG_FACTS = (None, None, "", "", "", None)
+
+
+def _component_tag_facts(root: ET.Element | None) -> tuple:
+    """Read the XML facts :func:`_component_name_tag_from_facts` uses."""
+    if root is None:
+        return _NO_COMPONENT_TAG_FACTS
     attach_def = None
+    attach_el = _find(root, "SAttachableComponentParams")
+    if attach_el is not None:
+        attach_def = attach_el.find("AttachDef")
+    if attach_def is not None:
+        attach = (attach_def.get("Size", ""), attach_def.get("Grade", ""),
+                  attach_def.get("SubType", ""))
+    else:
+        attach = ("", "", "")
+    root_tag = root.tag.split(".")[-1] if "." in root.tag else root.tag
+    icp = _find(root, "ItemComponentParams")
+    item_type = icp.get("itemType", "") if icp is not None else None
+    return (root_tag, _loc_name_key(root)) + attach + (item_type,)
+
+
+def _component_name_tag_from_facts(desc_value: str, facts: tuple,
+                                   config: "TagConfig | None" = None,
+                                   component_type: str = "") -> str | None:
+    """:func:`_component_name_tag` on the facts :func:`_component_tag_facts`
+    read from the entity root (``_NO_COMPONENT_TAG_FACTS`` for no root)."""
+    root_tag, name_key, attach_size, attach_grade, attach_subtype, item_type = facts
     attach_grade_letter = None
     attach_class_name = None
-    if root is not None:
-        attach_el = _find(root, "SAttachableComponentParams")
-        if attach_el is not None:
-            attach_def = attach_el.find("AttachDef")
 
     # _SIZE_LINE_RE tolerates the optional leading 'S' (see its definition).
     # Fallback chain when the loc text doesn't match (translated base.ini,
@@ -943,39 +1028,30 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
     # English output.
     size_m = _SIZE_LINE_RE.search(desc_value)
     size = size_m.group(1) if size_m else None
-    if size is None and root is not None:
-        root_tag = root.tag.split(".")[-1] if "." in root.tag else root.tag
+    if size is None and root_tag is not None:
         xml_size = _extract_item_size(root_tag)
         if xml_size:
             size = xml_size.lstrip("S")
-    if size is None and root is not None:
-        name_key = _loc_name_key(root)
-        if name_key:
-            key_size = _extract_item_size(name_key)
-            if key_size:
-                size = key_size.lstrip("S")
-    if size is None and attach_def is not None:
-        raw_size = attach_def.get("Size", "")
-        if raw_size.isdigit():
-            size = raw_size
+    if size is None and name_key:
+        key_size = _extract_item_size(name_key)
+        if key_size:
+            size = key_size.lstrip("S")
+    if size is None and attach_size.isdigit():
+        size = attach_size
     if size is None:
         return None
 
     grade_m = re.search(r"Grade:\s*([A-D])", desc_value)
     class_m = re.search(r"Class:\s*(\w+)", desc_value)
 
-    if not grade_m and attach_def is not None:
-        num_grade = attach_def.get("Grade", "")
-        if num_grade.isdigit():
-            g_idx = int(num_grade) - 1
-            if 0 <= g_idx <= 3:
-                attach_grade_letter = "ABCD"[g_idx]
+    if not grade_m and attach_grade.isdigit():
+        g_idx = int(attach_grade) - 1
+        if 0 <= g_idx <= 3:
+            attach_grade_letter = "ABCD"[g_idx]
 
-    if not class_m and attach_def is not None:
-        subtype = attach_def.get("SubType", "")
-        if subtype:
-            # CamelCase → space-separated (e.g. "BombRack" → "Bomb Rack")
-            attach_class_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", subtype)
+    if not class_m and attach_subtype:
+        # CamelCase → space-separated (e.g. "BombRack" → "Bomb Rack")
+        attach_class_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", attach_subtype)
 
     # Resolve effective grade and class for downstream paths
     grade_letter = (grade_m.group(1) if grade_m else None) or attach_grade_letter
@@ -983,13 +1059,10 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
 
     # When Class: is missing from text, try to derive from XML ItemComponentParams
     xml_item_type = None
-    if not class_name and root is not None:
-        icp = _find(root, "ItemComponentParams")
-        if icp is not None:
-            raw_type = icp.get("itemType", "")
-            # CamelCase → space-separated, same split as attach_class_name
-            # (e.g. "ShieldGenerator" → "Shield Generator")
-            xml_item_type = re.sub(r"([a-z])([A-Z])", r"\1 \2", raw_type)
+    if not class_name and item_type is not None:
+        # CamelCase → space-separated, same split as attach_class_name
+        # (e.g. "ShieldGenerator" → "Shield Generator")
+        xml_item_type = re.sub(r"([a-z])([A-Z])", r"\1 \2", item_type)
 
     # Strict path: full ship-component trio with a recognised class →
     # render via the Tag Builder pipeline so user customisation applies.
@@ -1153,8 +1226,22 @@ def _mining_laser_component_tag(desc_value: str, root: "ET.Element | None",
         return None
     if _find(root, "SEntityComponentMiningLaserParams") is None:
         return None
+    return _mining_laser_tag_from_name(desc_value, _mining_laser_name_attr(root), mining_tag_cfg)
+
+
+def _mining_laser_name_attr(root: ET.Element) -> str:
+    """The entity class name a mining laser's tag reads its size from."""
+    return root.get("Name") or root.get("name") or ""
+
+
+def _mining_laser_tag_from_name(desc_value: str, name_attr: str,
+                                mining_tag_cfg: "TagConfig | None") -> str | None:
+    """:func:`_mining_laser_component_tag` for a known mining laser, from
+    its entity class name, so the scitem lookup can render the tag from
+    cached facts with the same code (perf proposal)."""
+    if mining_tag_cfg is None or render_tag is None:
+        return None
     size = None
-    name_attr = root.get("Name") or root.get("name") or ""
     m = re.search(r"_S0*(\d+)_", name_attr)
     if m:
         size = str(int(m.group(1)))
@@ -1472,14 +1559,27 @@ def _agreed_endpoint_tokens(per_body: list[dict]) -> dict:
     with no vars on a side don't veto: several CIG haul descs are pure
     ``~mission(Contractor|...)`` indirections whose resolved text carries the
     endpoints, invisible to a static scan; treating them as vetoes would strip
-    routes that demonstrably resolve in-game. First body's order/tokens win.
+    routes that demonstrably resolve in-game. First body's order/tokens win,
+    except that a var some agreeing bodies write bare and others with
+    ``|Address`` takes the ``|Address`` form (perf proposal): the bodies are
+    sorted, and pooled bodies differ in their greetings, so the first one's
+    form was down to which greeting sorts first.
     """
     if not per_body:
         return {}
     common = set(per_body[0])
     for d in per_body[1:]:
         common &= set(d)
-    return {v: t for v, t in per_body[0].items() if v in common}
+    agreed = {}
+    for var, token in per_body[0].items():
+        if var not in common:
+            continue
+        forms = {d[var] for d in per_body}
+        address = f"~mission({var}|Address)"
+        if address in forms and f"~mission({var})" in forms:
+            token = address
+        agreed[var] = token
+    return agreed
 
 
 def _derive_route_fragment(desc_bodies: list[str], cfg=None, loc=None, expand_cache=None) -> str:
@@ -1508,9 +1608,14 @@ def _derive_route_fragment(desc_bodies: list[str], cfg=None, loc=None, expand_ca
     # Per body: var name -> the exact ~mission(...) token string first seen.
     per_body_from: list[dict[str, str]] = []
     per_body_to: list[dict[str, str]] = []
-    for body in desc_bodies:
-        if not body:
-            continue
+    # Sorted, because the first body's order and token text win (see
+    # _agreed_endpoint_tokens) and callers build the list from a set, whose
+    # order changes with every run's string hashing. Unsorted, three courier
+    # titles flipped between the bare and |Address forms of Pickup1 and
+    # Dropoff1 from one generation to the next (perf proposal); a var some
+    # bodies write bare and others with |Address now takes |Address whatever
+    # the order.
+    for body in sorted(b for b in desc_bodies if b):
         frm: dict[str, str] = {}
         to: dict[str, str] = {}
         for m in _ROUTE_TOKEN_RE.finditer(body):
@@ -3515,6 +3620,7 @@ def build_blueprint_pool_lookup(
     entity_name_tags: dict[str, str] | None = None,
     name_tag_placement: str = "prepend",
     name_fallback_tags: dict[str, str] | None = None,
+    forge_dir: Path | None = None,
 ) -> tuple[dict[str, list[str]], dict[str, str]]:
     """Build mapping of blueprint pool UUID → list of craftable item display names.
 
@@ -3562,6 +3668,12 @@ def build_blueprint_pool_lookup(
             default) or "append" (tag after). Mirrors the components
             Tag Builder placement so the blueprint list reads the
             same way as the strings tab.
+        forge_dir: the DataForge cache. When given, the XML walk
+            (:func:`_blueprint_pool_facts`, which takes no names, tags or
+            config) is cached there per DataForge build as the
+            ``blueprint_pools`` pickle, and only the names below are worked
+            out per run, so a Tag Builder change or the annotate toggle no
+            longer re-parses the pool and blueprint XMLs (perf proposal).
 
     Returns:
         Tuple of:
@@ -3580,15 +3692,89 @@ def build_blueprint_pool_lookup(
     if not pool_dir.exists() or not bp_dir.exists():
         return {}, {}
 
+    def _builder() -> list:
+        return _blueprint_pool_facts(pool_dir, bp_dir)
+
+    pools = (
+        _cached_lookup(forge_dir, "blueprint_pools", _builder)
+        if forge_dir is not None
+        else _builder()
+    )
+
+    # Build pool UUID → item names AND pool UUID → filename stem.
+    pool_items: dict[str, list[str]] = {}
+    pool_names: dict[str, str] = {}
+    for pool_uuid, pool_stem, rewards in pools:
+        names = []
+        for entity_ref, entity_stem, filename_fallback in rewards:
+            # Tier 1: UUID match (best — gives the localized
+            # display name from the entity's Localization Name
+            # attribute, e.g. "Norfield" / "Harkin" / "RN-7s").
+            if entity_ref in entity_names:
+                name = _strip_cig_size_prefix(entity_names[entity_ref])
+            # Tier 2: filename-stem match. Recovers real product
+            # names when CIG ships the blueprint ahead of the
+            # entity-UUID linkage (PTU 4.8 fuel-nozzle pattern).
+            elif entity_stem in entity_names_by_filename:
+                name = _strip_cig_size_prefix(entity_names_by_filename[entity_stem])
+            # Tier 3: filename-derived placeholder (falls back to a
+            # known-alias correction for fuel nozzles, #281). Ugly
+            # but ensures the BP tag still surfaces.
+            else:
+                name = filename_fallback
+            # Mirror the components-pipeline annotation: ship
+            # components get an inline [CLASS-Sx-grade] tag (e.g.
+            # "Norfield [MIL-S1-A]"); bare-type components (fuel
+            # nozzles) get a Type-only tag (e.g.
+            # "[FN] Bendix"). Applied regardless of which tier
+            # supplied `name` — entity_name_tags is keyed by the
+            # entity's own __ref, built from its Description alone,
+            # so it can outlive a tier-1/2 name miss.
+            #
+            # name_fallback_tags is the second chance for items
+            # whose entity XML isn't UUID-linked to the blueprint
+            # AT ALL (fuel nozzles — the same broken linkage behind
+            # #281's garbled names): keyed by display name and
+            # derived purely from base.ini Name/Desc pairs (see
+            # bare_type_name_tag_lookup), it's the exact loc-only
+            # derivation that already tags these items in the
+            # String Editor, so the mission text finally matches
+            # what the app shows.
+            tag = entity_name_tags.get(entity_ref) or name_fallback_tags.get(name)
+            if tag:
+                name = join_tag(name, tag, name_tag_placement)
+            if name and name not in names:
+                names.append(name)
+        if names:
+            pool_items[pool_uuid] = sorted(names)
+            pool_names[pool_uuid] = pool_stem
+
+    logger.info(f"Blueprint pool lookup: {len(pool_items)} pools with items")
+    return pool_items, pool_names
+
+
+def _blueprint_pool_facts(pool_dir: Path, bp_dir: Path) -> list:
+    """The XML half of :func:`build_blueprint_pool_lookup`, with no names,
+    tags or config, so it can be cached per DataForge build (perf proposal).
+
+    Returns ``[(pool __ref UUID, pool filename stem, rewards), ...]`` in
+    file order, one entry per pool record with a __ref, where *rewards* is
+    ``[(entityClass UUID, blueprint entity stem, filename fallback name),
+    ...]`` for each BlueprintReward whose blueprintRecord resolves, in
+    document order. Builtins only, so the pickle loads under any module
+    name. The stem drops the ``bp_rewards_`` / ``bp_`` prefix and is
+    lowercased (rank-label parsing is case-insensitive and CIG's filenames
+    already are).
+    """
     # Index all blueprint files by __ref UUID → (entityClass UUID,
     # entity-stem-for-filename-lookup, filename-derived backstop name).
-    # The resolver below tries entity_names[uuid] first, then
+    # The resolver tries entity_names[uuid] first, then
     # entity_names_by_filename[stem-without-bp_craft_], then the
     # filename-derived string as a last resort.
     bp_entity: dict[str, tuple[str, str, str]] = {}
     for xml_file in bp_dir.rglob("*.xml"):
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
             ref = root.get("__ref", "")
             if not ref:
                 continue
@@ -3611,75 +3797,27 @@ def build_blueprint_pool_lookup(
         except ET.ParseError:
             continue
 
-    # Build pool UUID → item names AND pool UUID → filename stem.
-    # The stem is stored in lowercase since downstream rank-label parsing
-    # is case-insensitive and the filename casing is already lowercased
-    # by CIG. Stripping the bp_rewards_ / bp_ prefix keeps the stem
-    # focused on the meaningful part of the name.
-    pool_items: dict[str, list[str]] = {}
-    pool_names: dict[str, str] = {}
+    pools: list[tuple[str, str, list[tuple[str, str, str]]]] = []
     for xml_file in pool_dir.rglob("*.xml"):
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
             pool_uuid = root.get("__ref", "")
             if not pool_uuid:
                 continue
-            names = []
+            rewards = []
             for elem in root.iter("BlueprintReward"):
                 bp_ref = elem.get("blueprintRecord", "")
                 if bp_ref and bp_ref in bp_entity:
-                    entity_ref, entity_stem, filename_fallback = bp_entity[bp_ref]
-                    # Tier 1: UUID match (best — gives the localized
-                    # display name from the entity's Localization Name
-                    # attribute, e.g. "Norfield" / "Harkin" / "RN-7s").
-                    if entity_ref in entity_names:
-                        name = _strip_cig_size_prefix(entity_names[entity_ref])
-                    # Tier 2: filename-stem match. Recovers real product
-                    # names when CIG ships the blueprint ahead of the
-                    # entity-UUID linkage (PTU 4.8 fuel-nozzle pattern).
-                    elif entity_stem in entity_names_by_filename:
-                        name = _strip_cig_size_prefix(entity_names_by_filename[entity_stem])
-                    # Tier 3: filename-derived placeholder (falls back to a
-                    # known-alias correction for fuel nozzles, #281). Ugly
-                    # but ensures the BP tag still surfaces.
-                    else:
-                        name = filename_fallback
-                    # Mirror the components-pipeline annotation: ship
-                    # components get an inline [CLASS-Sx-grade] tag (e.g.
-                    # "Norfield [MIL-S1-A]"); bare-type components (fuel
-                    # nozzles) get a Type-only tag (e.g.
-                    # "[FN] Bendix"). Applied regardless of which tier
-                    # supplied `name` — entity_name_tags is keyed by the
-                    # entity's own __ref, built from its Description alone,
-                    # so it can outlive a tier-1/2 name miss.
-                    #
-                    # name_fallback_tags is the second chance for items
-                    # whose entity XML isn't UUID-linked to the blueprint
-                    # AT ALL (fuel nozzles — the same broken linkage behind
-                    # #281's garbled names): keyed by display name and
-                    # derived purely from base.ini Name/Desc pairs (see
-                    # bare_type_name_tag_lookup), it's the exact loc-only
-                    # derivation that already tags these items in the
-                    # String Editor, so the mission text finally matches
-                    # what the app shows.
-                    tag = entity_name_tags.get(entity_ref) or name_fallback_tags.get(name)
-                    if tag:
-                        name = join_tag(name, tag, name_tag_placement)
-                    if name and name not in names:
-                        names.append(name)
-            if names:
-                pool_items[pool_uuid] = sorted(names)
-                stem = xml_file.stem.lower()
-                for prefix in ("bp_rewards_", "bp_"):
-                    if stem.startswith(prefix):
-                        stem = stem[len(prefix):]
-                        break
-                pool_names[pool_uuid] = stem
+                    rewards.append(bp_entity[bp_ref])
+            stem = xml_file.stem.lower()
+            for prefix in ("bp_rewards_", "bp_"):
+                if stem.startswith(prefix):
+                    stem = stem[len(prefix):]
+                    break
+            pools.append((pool_uuid, stem, rewards))
         except ET.ParseError:
             continue
-
-    logger.info(f"Blueprint pool lookup: {len(pool_items)} pools with items")
-    return pool_items, pool_names
+    return pools
 
 
 def _build_template_lookup(
@@ -3703,7 +3841,7 @@ def _build_template_lookup(
     )
     for xml_file in _files:
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
             ref = root.get("__ref", "")
             if not ref:
                 continue
@@ -3865,15 +4003,17 @@ def _format_rs_tag(ores: list[str]) -> str:
     return f"[RS {'/'.join(values)}]"
 
 
-def _build_battaglia_mineable_rs_tags(
-    contractgen_dir: Path,
-    xml_path_index: dict | None = None,
-    records_dir: Path | None = None,
-) -> tuple[dict[str, str], dict[str, list[str]]]:
-    """Build ``title_key -> "[RS ####[/####...]]"`` for the mission TITLE and
-    ``desc_key -> ["aluminium", "iron", ...]`` (raw ore keys, order-preserved)
-    for the mission DETAILS body, for Recco Battaglia's Scan/ScanMine mission
-    contracts (see :data:`MINEABLE_RS_VALUES`). Every contract variant
+def _battaglia_mineable_rs_in(
+    root: ET.Element,
+    template_lookup: dict[str, tuple[str, str]],
+    title_tags: dict[str, str],
+    desc_ores: dict[str, list[str]],
+) -> None:
+    """Add one contractgen file's Recco Battaglia Scan/ScanMine mission
+    contracts (see :data:`MINEABLE_RS_VALUES`) to *title_tags*
+    (``title_key -> "[RS ####[/####...]]"``, for the mission TITLE) and
+    *desc_ores* (``desc_key -> ["aluminium", "iron", ...]``, raw ore keys,
+    order-preserved, for the mission DETAILS body). Every contract variant
     sharing a title (or a desc) targets the same ore set (confirmed against
     the PTU 4.9 data), so the first variant found for either key wins.
 
@@ -3883,60 +4023,47 @@ def _build_battaglia_mineable_rs_tags(
     title tag -- see ``_format_rs_details_lines``, which turns this raw ore
     list into the actual "Resource Signatures:" block using each ore's full
     value progression from :data:`MINEABLE_RS_VALUE_STEPS` (#331).
+
+    *template_lookup* is :func:`_build_template_lookup` of the sibling
+    contracttemplates folder. _run_gen_missions runs this on each root of
+    the contractgen parse it shares with scan_contract_generators, in file
+    order (perf proposal: it used to be a separate walk of its own).
     """
-    title_tags: dict[str, str] = {}
-    desc_ores: dict[str, list[str]] = {}
-    if not contractgen_dir.exists():
-        return title_tags, desc_ores
-
-    # Mirror scan_contract_generators' desc_key resolution: some Battaglia
-    # scan/mining contracts carry no inline Description ContractStringParam
-    # and inherit it from a shared body template instead (referenced by the
-    # contract's "template" UUID attribute). Skipping this fallback silently
-    # dropped every such contract's desc_key here, so neither the DETAILS
-    # "Resource Signatures:" block nor the inline "(RS ####)" annotation
-    # ever appeared even though the mission-TITLE tag (title_key is always
-    # inline for these contracts) worked fine.
-    templates_dir = contractgen_dir.parent / "contracttemplates"
-    template_lookup = _build_template_lookup(
-        templates_dir, xml_path_index=xml_path_index, records_dir=records_dir
-    )
-
-    _files = _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
-    for xml_file in _files:
-        try:
-            root = ET.parse(xml_file).getroot()
-        except ET.ParseError:
+    for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
+        title_param = contract.find(".//ContractStringParam[@param='Title']")
+        if title_param is None:
             continue
-        for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
-            title_param = contract.find(".//ContractStringParam[@param='Title']")
-            if title_param is None:
-                continue
-            title_key = title_param.get("value", "").lstrip("@")
-            if not title_key.startswith(_BATTAGLIA_SCAN_TITLE_PREFIXES):
-                continue
-            desc_param = contract.find(".//ContractStringParam[@param='Description']")
-            desc_key = desc_param.get("value", "").lstrip("@") if desc_param is not None else ""
-            if not desc_key:
-                tmpl_uuid = contract.get("template", "")
-                if tmpl_uuid and tmpl_uuid in template_lookup:
-                    _tmpl_title, tmpl_desc = template_lookup[tmpl_uuid]
-                    desc_key = tmpl_desc
-            if desc_key in _SENTINEL_LOC_KEYS:
-                desc_key = ""
-            need_title = title_key not in title_tags
-            need_desc = bool(desc_key) and desc_key not in desc_ores
-            if not need_title and not need_desc:
-                continue
-            ores = _battaglia_contract_mineable_ores(contract)
-            if need_title:
-                tag = _format_rs_tag(ores)
-                if tag:
-                    title_tags[title_key] = tag
-            if need_desc and any(_rs_value_steps(o) for o in ores):
-                desc_ores[desc_key] = ores
-
-    return title_tags, desc_ores
+        title_key = title_param.get("value", "").lstrip("@")
+        if not title_key.startswith(_BATTAGLIA_SCAN_TITLE_PREFIXES):
+            continue
+        desc_param = contract.find(".//ContractStringParam[@param='Description']")
+        desc_key = desc_param.get("value", "").lstrip("@") if desc_param is not None else ""
+        # Mirror scan_contract_generators' desc_key resolution: some Battaglia
+        # scan/mining contracts carry no inline Description ContractStringParam
+        # and inherit it from a shared body template instead (referenced by the
+        # contract's "template" UUID attribute). Skipping this fallback silently
+        # dropped every such contract's desc_key here, so neither the DETAILS
+        # "Resource Signatures:" block nor the inline "(RS ####)" annotation
+        # ever appeared even though the mission-TITLE tag (title_key is always
+        # inline for these contracts) worked fine.
+        if not desc_key:
+            tmpl_uuid = contract.get("template", "")
+            if tmpl_uuid and tmpl_uuid in template_lookup:
+                _tmpl_title, tmpl_desc = template_lookup[tmpl_uuid]
+                desc_key = tmpl_desc
+        if desc_key in _SENTINEL_LOC_KEYS:
+            desc_key = ""
+        need_title = title_key not in title_tags
+        need_desc = bool(desc_key) and desc_key not in desc_ores
+        if not need_title and not need_desc:
+            continue
+        ores = _battaglia_contract_mineable_ores(contract)
+        if need_title:
+            tag = _format_rs_tag(ores)
+            if tag:
+                title_tags[title_key] = tag
+        if need_desc and any(_rs_value_steps(o) for o in ores):
+            desc_ores[desc_key] = ores
 
 
 # A standing rank's displayName loc key encodes its reputation TRACK as the
@@ -4007,8 +4134,19 @@ def scan_contract_generators(
     pool_names: dict[str, str] | None = None,
     standings_lookup: dict[str, str] | None = None,
     standing_track_lookup: dict[str, str] | None = None,
+    template_lookup: dict[str, tuple[str, str]] | None = None,
+    roots=None,
 ):
     """Scan contract generator XMLs for mission variants with different systems.
+
+    *template_lookup* (:func:`_build_template_lookup` of the sibling
+    contracttemplates folder) and *roots* (the parsed contractgen XML roots,
+    in file order) let _run_gen_missions hand over the parse it shares with
+    the Battaglia RS-tag and calculated-reward scans (perf proposal); each
+    is worked out here when omitted, as it always was, so a call with the
+    folder alone still works. A generation always hands both over: only
+    the tests that call this directly (test_blueprint_pools.py,
+    test_not_for_release.py) take the defaults.
 
     Returns tuple of:
         - missions: dict mapping title_key → [ContractVariant, ...]
@@ -4060,17 +4198,18 @@ def scan_contract_generators(
     mission_items: dict[str, list[str]] = {}
 
     # Build template lookup for contracts that inherit title/desc from templates
-    templates_dir = contractgen_dir.parent / "contracttemplates"
-    template_lookup = _build_template_lookup(templates_dir, xml_path_index=xml_path_index, records_dir=records_dir)
+    if template_lookup is None:
+        templates_dir = contractgen_dir.parent / "contracttemplates"
+        template_lookup = _build_template_lookup(
+            templates_dir, xml_path_index=xml_path_index, records_dir=records_dir
+        )
 
-    _contractgen_files = _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
+    if roots is None:
+        roots = _parse_xml_roots(
+            _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
+        )
     try:
-        for xml_file in _contractgen_files:
-            try:
-                root = ET.parse(xml_file).getroot()
-            except ET.ParseError:
-                continue
-
+        for root in roots:
             # Process both Career and List handler types
             # Career handlers contain CareerContract children; List handlers contain Contract children
             handler_configs = [
@@ -4423,51 +4562,36 @@ def scan_contract_generators(
     return missions, mission_blueprints, mission_bp_chance, mission_items
 
 
-def _titles_with_calculated_reward(
-    contractgen_dir: Path,
-    xml_path_index: dict | None = None,
-    records_dir: Path | None = None,
-) -> set[str]:
-    """Title keys whose contract uses ContractResult_CalculatedReward (#413
-    investigation). That reward type is computed dynamically in-game rather
-    than stored as a fixed number anywhere in the mission data, so a title
-    using it can never get a static rep tag no matter how the extractor
-    improves -- distinct from a title that simply awards no reputation at
-    all (blueprint-only or item-only rewards), which is a separate, equally
+def _calculated_reward_titles_in(root: ET.Element, titles: set[str]) -> None:
+    """Add the title keys of one contractgen file's contracts that use
+    ContractResult_CalculatedReward to *titles* (#413 investigation). That
+    reward type is computed dynamically in-game rather than stored as a
+    fixed number anywhere in the mission data, so a title using it can
+    never get a static rep tag no matter how the extractor improves --
+    distinct from a title that simply awards no reputation at all
+    (blueprint-only or item-only rewards), which is a separate, equally
     correct "nothing to show" case.
 
-    A second lightweight XML walk rather than widening ContractVariant (its
-    12-field width is locked by tests/test_mission_variant_tuple.py, and
-    several ``for ... in variants:`` sites destructure it positionally) for
-    a value only the end-of-run diagnostic below needs -- called lazily,
-    only when there's actually a zero-XP title to classify.
+    A separate scan rather than widening ContractVariant (its 12-field
+    width is locked by tests/test_mission_variant_tuple.py, and several
+    ``for ... in variants:`` sites destructure it positionally) for a value
+    only the end-of-run diagnostic needs. _run_gen_missions runs it on each
+    root of the contractgen parse scan_contract_generators already makes,
+    rather than walking the files again once a zero-XP title turns up
+    (perf proposal).
     """
-    if not contractgen_dir.exists():
-        return set()
-    _files = _indexed_xml_files(contractgen_dir, xml_path_index, records_dir)
-    titles: set[str] = set()
-    for xml_file in _files:
-        try:
-            root = ET.parse(xml_file).getroot()
-        except ET.ParseError:
+    for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
+        if contract.find(".//ContractResult_CalculatedReward") is None:
             continue
-        for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
-            if contract.find(".//ContractResult_CalculatedReward") is None:
-                continue
-            title_param = contract.find(".//ContractStringParam[@param='Title']")
-            if title_param is not None:
-                titles.add(title_param.get("value", "").lstrip("@"))
-    return titles
+        title_param = contract.find(".//ContractStringParam[@param='Title']")
+        if title_param is not None:
+            titles.add(title_param.get("value", "").lstrip("@"))
 
 
-def _resolve_resource_uuids(
-    bp_dir: Path,
-    xml_path_index: dict | None = None,
-    records_dir: Path | None = None,
-) -> set[str]:
-    """Collect every material UUID a blueprint references — via both
+def _blueprint_material_uids(root: ET.Element) -> list[str]:
+    """Every material UUID a blueprint names, in document order, via both
     ``CraftingCost_Resource resource=...`` and ``CraftingCost_Item
-    entityClass=...``.
+    entityClass=...`` ("" where the attribute is missing).
 
     The two element types serve different blueprint slots:
 
@@ -4488,33 +4612,18 @@ def _resolve_resource_uuids(
       Mining Compendium augmentation.
 
     Both UUID types share the same downstream resolution mechanism
-    (substring search inside carryable XML content), so the caller gets
-    a unified set.
+    (substring search inside carryable XML content), so
+    scan_crafting_blueprints' single blueprint pass collects them into one
+    set, leaving out "" and the zero UUID.
     """
-    uuids: set[str] = set()
-    if not bp_dir.exists():
-        return uuids
-    _files = (
-        _index_rglob(xml_path_index, bp_dir, records_dir)
-        if xml_path_index is not None and records_dir is not None
-        else bp_dir.rglob("*.xml")
-    )
-    for xml_file in _files:
-        try:
-            root = ET.parse(xml_file).getroot()
-            for elem in root.iter():
-                ptype = _poly_type(elem)
-                if ptype == "CraftingCost_Resource":
-                    uid = elem.get("resource", "")
-                elif ptype == "CraftingCost_Item":
-                    uid = elem.get("entityClass", "")
-                else:
-                    continue
-                if uid and uid != "00000000-0000-0000-0000-000000000000":
-                    uuids.add(uid)
-        except ET.ParseError:
-            pass
-    return uuids
+    uids: list[str] = []
+    for elem in root.iter():
+        ptype = _poly_type(elem)
+        if ptype == "CraftingCost_Resource":
+            uids.append(elem.get("resource", ""))
+        elif ptype == "CraftingCost_Item":
+            uids.append(elem.get("entityClass", ""))
+    return uids
 
 
 def _poly_type(elem: ET.Element) -> str:
@@ -4568,10 +4677,6 @@ def _build_uuid_to_commodity(
     )
     for xml_file in _files:
         try:
-            content = xml_file.read_text(encoding="utf-8", errors="ignore")
-            matched_uuids = [u for u in uuids if u in content]
-            if not matched_uuids:
-                continue
             fname = xml_file.stem
             # Two filename schemas cover all carryable variants:
             #   - bulk:       carryable_*_commodity_(metal|mineral|...)_<name>(_a..d)?
@@ -4586,16 +4691,45 @@ def _build_uuid_to_commodity(
                 r"harvestable_(?:mineral|metal|ore)_\dh)_(\w+?)(?:_[a-d])?$",
                 fname,
             )
-            if m:
-                commodity = _normalize_commodity_name(m.group(1))
-                for uid in matched_uuids:
-                    uuid_names[uid] = commodity
+            # A carryable whose filename names no commodity can add nothing,
+            # so only the others are read (perf proposal: 658 of the 2,570
+            # carryables on a LIVE cache).
+            if not m:
+                continue
+            content = xml_file.read_text(encoding="utf-8", errors="ignore")
+            matched_uuids = [u for u in uuids if u in content]
+            if not matched_uuids:
+                continue
+            commodity = _normalize_commodity_name(m.group(1))
+            for uid in matched_uuids:
+                uuid_names[uid] = commodity
         except Exception:
             pass
     return uuid_names
 
 
-def _discover_commodity_loc_pairs(internal_name: str, loc: dict[str, str]) -> list[tuple[str, str]]:
+_COMMODITY_LOC_PREFIX = "items_commodities_"
+
+
+def _commodity_loc_keys(loc: dict[str, str]) -> list[tuple[str, str]]:
+    """``(key, key.lower())`` for every ``items_commodities_*`` key in *loc*
+    (case-insensitive), in loc order: what every
+    :func:`_discover_commodity_loc_pairs` call scans, worked out once
+    instead of lowercasing all ~91k loc keys for each commodity (perf
+    proposal)."""
+    keys = []
+    for key in loc:
+        klow = key.lower()
+        if klow.startswith(_COMMODITY_LOC_PREFIX):
+            keys.append((key, klow))
+    return keys
+
+
+def _discover_commodity_loc_pairs(
+    internal_name: str,
+    loc: dict[str, str],
+    commodity_keys: list[tuple[str, str]] | None = None,
+) -> list[tuple[str, str]]:
     """Find every (name_key, desc_key) pair in *loc* for a given commodity stem.
 
     Scans loc case-insensitively for ``items_commodities_<name>*`` keys and pairs
@@ -4603,13 +4737,17 @@ def _discover_commodity_loc_pairs(internal_name: str, loc: dict[str, str]) -> li
     CIG's loc typos mean descs may end in either ``_desc`` or ``_des`` — both are
     accepted. Returning every matching variant means a refined and a raw form
     both get the [CF] tag + BLUEPRINT DATA block.
+
+    *commodity_keys* is :func:`_commodity_loc_keys` of *loc*, for a caller
+    that asks about many commodities; it is worked out here when omitted.
     """
-    prefix = f"items_commodities_{internal_name.lower()}"
+    prefix = f"{_COMMODITY_LOC_PREFIX}{internal_name.lower()}"
     name_keys: list[str] = []
     desc_by_base: dict[str, str] = {}  # lowercase name stem -> actual desc key
 
-    for key in loc:
-        klow = key.lower()
+    if commodity_keys is None:
+        commodity_keys = _commodity_loc_keys(loc)
+    for key, klow in commodity_keys:
         if not klow.startswith(prefix):
             continue
         if klow.endswith("_desc"):
@@ -4985,16 +5123,11 @@ def scan_crafting_blueprints(
         logger.info("No crafting blueprints directory found")
         return {}, {}
 
-    # Step 1: Collect resource UUIDs from blueprints
-    resource_uuids = _resolve_resource_uuids(bp_dir, xml_path_index=xml_path_index, records_dir=records_dir)
-    logger.info(f"Found {len(resource_uuids)} unique resource UUIDs in blueprints")
-
-    # Step 2: Resolve UUIDs to commodity names via carryables
-    uuid_names = _build_uuid_to_commodity(resource_uuids, carryables_dir, xml_path_index=xml_path_index, records_dir=records_dir)
-    logger.info(f"Resolved {len(uuid_names)} resource UUIDs to commodity names")
-
-    # Step 3: Parse blueprints to build commodity → crafted items map
-    commodity_items: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    # Step 1: Read every blueprint once (perf proposal: steps 1 and 3 each
+    # used to parse them all): its category, its display name and the
+    # material UUIDs it names, collecting those UUIDs as it goes.
+    resource_uuids: set[str] = set()
+    bp_records: list[tuple[str, str, list[str]]] = []
     _bp_files = (
         sorted(_index_rglob(xml_path_index, bp_dir, records_dir))
         if xml_path_index is not None and records_dir is not None
@@ -5002,42 +5135,56 @@ def scan_crafting_blueprints(
     )
     for xml_file in _bp_files:
         try:
-            root = ET.parse(xml_file).getroot()
-            rel = xml_file.relative_to(bp_dir)
-            category = str(rel.parent).replace(os.sep, "/")
-            item_name = xml_file.stem.replace("bp_craft_", "")
-            # Try to resolve display name from entity reference
-            for elem in root.iter():
-                if _poly_type(elem) == "CraftingProcess_Creation":
-                    entity_ref = elem.get("entityClass", "")
-                    if entity_ref in entity_names:
-                        item_name = entity_names[entity_ref]
-                    break
-            materials: set[str] = set()
-            for elem in root.iter():
-                ptype = _poly_type(elem)
-                if ptype == "CraftingCost_Resource":
-                    uid = elem.get("resource", "")
-                elif ptype == "CraftingCost_Item":
-                    uid = elem.get("entityClass", "")
-                else:
-                    continue
-                if uid in uuid_names:
-                    materials.add(uuid_names[uid])
-            for mat in materials:
-                commodity_items[mat].append((category, item_name))
+            root = _parse_xml_file(xml_file)
         except ET.ParseError:
-            pass
+            continue
+        rel = xml_file.relative_to(bp_dir)
+        category = str(rel.parent).replace(os.sep, "/")
+        item_name = xml_file.stem.replace("bp_craft_", "")
+        # Try to resolve display name from entity reference
+        for elem in root.iter():
+            if _poly_type(elem) == "CraftingProcess_Creation":
+                entity_ref = elem.get("entityClass", "")
+                if entity_ref in entity_names:
+                    item_name = entity_names[entity_ref]
+                break
+        material_uids = _blueprint_material_uids(root)
+        for uid in material_uids:
+            if uid and uid != "00000000-0000-0000-0000-000000000000":
+                resource_uuids.add(uid)
+        bp_records.append((category, item_name, material_uids))
+    logger.info(f"Found {len(resource_uuids)} unique resource UUIDs in blueprints")
+
+    # Step 2: Resolve UUIDs to commodity names via carryables
+    uuid_names = _build_uuid_to_commodity(resource_uuids, carryables_dir, xml_path_index=xml_path_index, records_dir=records_dir)
+    logger.info(f"Resolved {len(uuid_names)} resource UUIDs to commodity names")
+
+    # Step 3: Build the commodity → crafted items map from the blueprints
+    # read in step 1, in the same (sorted) order.
+    commodity_items: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for category, item_name, material_uids in bp_records:
+        materials: set[str] = set()
+        for uid in material_uids:
+            if uid in uuid_names:
+                materials.add(uuid_names[uid])
+        # Sorted, so each material is first met in the same place on every
+        # run: crafting_index.json keeps that order, and a set's order changes
+        # with each run's string hashing (perf proposal review).
+        for mat in sorted(materials):
+            commodity_items[mat].append((category, item_name))
 
     # Sanity-check that the localization dict actually carries commodity keys.
     # Hitting 0 here almost always means base.ini is stale (missing modern
     # commodity strings) — surfacing that in the log beats silently writing an
     # empty enhancements file.
+    # The items_commodities_* keys every loc lookup below scans, lowercased
+    # once (perf proposal).
+    commodity_keys = _commodity_loc_keys(loc)
     if crafting_index is not None:
         for commodity, pairs_ in commodity_items.items():
             names = sorted({
                 loc[name_key].strip()
-                for name_key, _desc in _discover_commodity_loc_pairs(commodity, loc)
+                for name_key, _desc in _discover_commodity_loc_pairs(commodity, loc, commodity_keys)
                 if loc.get(name_key, "").strip()
             }, key=lambda n: (len(n), n))   # shortest first; ties by name, not hash order
             crafting_index[commodity] = {
@@ -5046,12 +5193,9 @@ def scan_crafting_blueprints(
                                  if "$templates" not in cat.lower()}),
             }
 
-    loc_commodity_key_count = sum(
-        1 for k in loc if k.lower().startswith("items_commodities_")
-    )
     logger.info(
         f"Crafting: {len(commodity_items)} commodities discovered from blueprints; "
-        f"{loc_commodity_key_count} items_commodities_* keys in loc"
+        f"{len(commodity_keys)} items_commodities_* keys in loc"
     )
 
     # Build commodity output via dynamic loc discovery — no hardcoded key map.
@@ -5067,7 +5211,7 @@ def scan_crafting_blueprints(
     out: dict[str, str] = {}
     skipped_no_loc: list[str] = []
     for commodity in sorted(commodity_items.keys()):
-        pairs = _discover_commodity_loc_pairs(commodity, loc)
+        pairs = _discover_commodity_loc_pairs(commodity, loc, commodity_keys)
         if not pairs:
             skipped_no_loc.append(commodity)
             continue
@@ -5156,7 +5300,8 @@ def scan_crafting_blueprints(
             if not condensed:
                 continue
             lookup_keys: set[str] = {internal_name.lower()}
-            for name_key, _desc_key in _discover_commodity_loc_pairs(internal_name, loc):
+            mineral_pairs = _discover_commodity_loc_pairs(internal_name, loc, commodity_keys)
+            for name_key, _desc_key in mineral_pairs:
                 display = loc.get(name_key, "").strip().lower()
                 if not display:
                     continue
@@ -5536,84 +5681,140 @@ def _loadout_summary(root: ET.Element) -> tuple[str, str]:
     return "  |  ".join(weapon_parts), "  |  ".join(core_parts)
 
 
-def build_controller_lookup(controller_dir: Path) -> dict[str, ET.Element]:
-    """Build lookup: ship_class_lower → flight controller XML root.
+def build_controller_lookup(controller_dir: Path) -> dict[str, tuple]:
+    """Build lookup: ship_class_lower → the flight controller's stats
+    (:func:`_controller_flight_stats`).
 
     Controller files are named 'controller_flight_{ship_class}.xml'.
     Blade/variant controllers (with '_flight_' in the class suffix) are
     included so each spaceship entity can find its exact match.
+
+    The values are the few attributes the ship stats read, not the XML
+    root (perf proposal). The lookup is built on every run, not pickled per
+    DataForge build: DataForge patches are applied again before every
+    generation without a re-extraction, and a pickle would keep a patched
+    controller's old values until the next extraction.
     """
-    lookup: dict[str, ET.Element] = {}
+    lookup: dict[str, tuple] = {}
     if not controller_dir.exists():
         logger.warning(f"Controller dir not found: {controller_dir}")
         return lookup
     for xml_file in controller_dir.glob("controller_flight_*.xml"):
         ship_class = xml_file.stem[len("controller_flight_"):]
         try:
-            root = ET.parse(xml_file).getroot()
-            lookup[ship_class.lower()] = root
+            root = _parse_xml_file(xml_file)
+            lookup[ship_class.lower()] = _controller_flight_stats(root)
         except ET.ParseError:
             pass
     return lookup
 
 
-def build_armor_lookup(armor_dir: Path) -> dict[str, ET.Element]:
-    """Build lookup: armor_class_lower → armor entity XML root.
+def _controller_flight_stats(controller_root: ET.Element) -> tuple:
+    """Read what enhancements_ship_dataforge shows from a flight controller:
+    ``(scmSpeed, maxSpeed, boostSpeedForward, boostSpeedBackward, pitch,
+    roll, yaw)`` as the raw attribute strings, None where absent. The
+    first four come from the first IFCSParams, the rates from the first
+    SIFCSSpeedProfile's angularVelocity x/y/z."""
+    scm = max_spd = boost_fwd = boost_bwd = None
+    pitch = roll = yaw = None
+    ifcs = _find(controller_root, "IFCSParams")
+    if ifcs is not None:
+        scm       = ifcs.get("scmSpeed")
+        max_spd   = ifcs.get("maxSpeed")
+        boost_fwd = ifcs.get("boostSpeedForward")
+        boost_bwd = ifcs.get("boostSpeedBackward")
+    sp = _find_by_type(controller_root, "SIFCSSpeedProfile")
+    if sp is not None:
+        av = sp.find("angularVelocity")
+        if av is not None:
+            pitch = av.get("x")   # pitch rate °/s
+            roll  = av.get("y")   # roll rate  °/s
+            yaw   = av.get("z")   # yaw rate   °/s
+    return scm, max_spd, boost_fwd, boost_bwd, pitch, roll, yaw
+
+
+def build_armor_lookup(armor_dir: Path) -> dict[str, tuple]:
+    """Build lookup: armor_class_lower → the armour's stats
+    (:func:`_armor_stats`).
 
     Armor files live at entities/scitem/ships/armor/*.xml and each has a root
     tag of the form 'EntityClassDefinition.ARMR_<MFR>_<ShipName>'. Ships
     reference them by entityClassName on an SItemPortLoadoutEntryParams with
     itemPortName='hardpoint_armour', so we index by the ClassName part
     lowercased for case-insensitive matching.
+
+    The values are the attributes _armor_stats_block formats, not the XML
+    root (perf proposal). The formatting stays in enhancements_ship_dataforge,
+    so a value it cannot format still fails that one ship, as before. Built
+    on every run, not pickled, for the same reason as build_controller_lookup:
+    DataForge patches are applied again before every generation without a
+    re-extraction.
     """
-    lookup: dict[str, ET.Element] = {}
+    lookup: dict[str, tuple] = {}
     if not armor_dir.exists():
         return lookup
     for xml_file in armor_dir.glob("*.xml"):
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
         except ET.ParseError:
             continue
         tag = root.tag
         class_name = tag.split(".", 1)[1] if "." in tag else xml_file.stem
-        lookup[class_name.lower()] = root
+        lookup[class_name.lower()] = _armor_stats(root)
     return lookup
 
 
-def _armor_stats_block(armor_root: ET.Element) -> str:
-    """Format a ship armor record into stat lines (Health, Dmg Mult, Deflect).
+_ARMOR_DAMAGE_KEYS = ("DamagePhysical", "DamageEnergy", "DamageDistortion", "DamageThermal")
 
-    Returns lines already joined by the escaped '\\n' that the ini output
-    layer uses (same convention as the rest of enhancements_ship_dataforge).
-    """
-    lines: list[str] = []
 
+def _armor_stats(armor_root: ET.Element) -> tuple:
+    """Read what :func:`_armor_stats_block` formats from a ship armor
+    record: ``(Health, damage multipliers, deflection values)``, where each
+    of the last two is a (physical, energy, distortion, thermal) tuple of
+    raw attribute strings, or None when its element is missing."""
     health = _attr(armor_root, "SHealthComponentParams", "Health")
-    if health is not None:
-        lines.append(f"Armor HP: {_fmt(health)}")
-
+    multipliers = None
     dm = _find(armor_root, "damageMultiplier")
     if dm is not None:
         di = dm.find("DamageInfo")
         if di is not None:
-            p, e, d, t = (di.get(k) for k in
-                ("DamagePhysical", "DamageEnergy", "DamageDistortion", "DamageThermal"))
-            if any(v is not None for v in (p, e, d, t)):
-                lines.append(
-                    f"Dmg Mult: P {_fmt(p, 'x', 2)}  |  E {_fmt(e, 'x', 2)}"
-                    f"  |  D {_fmt(d, 'x', 2)}  |  T {_fmt(t, 'x', 2)}"
-                )
-
+            multipliers = tuple(di.get(k) for k in _ARMOR_DAMAGE_KEYS)
+    deflection = None
     ad = _find(armor_root, "armorDeflection")
     if ad is not None:
         dv = ad.find("deflectionValue")
         if dv is not None:
-            p, e, d, t = (dv.get(k) for k in
-                ("DamagePhysical", "DamageEnergy", "DamageDistortion", "DamageThermal"))
-            if any(v is not None for v in (p, e, d, t)):
-                lines.append(
-                    f"Deflect: P {_fmt(p)}  |  E {_fmt(e)}  |  D {_fmt(d)}  |  T {_fmt(t)}"
-                )
+            deflection = tuple(dv.get(k) for k in _ARMOR_DAMAGE_KEYS)
+    return health, multipliers, deflection
+
+
+def _armor_stats_block(armor_stats: tuple) -> str:
+    """Format a ship armor record's stats (:func:`_armor_stats`) into stat
+    lines (Health, Dmg Mult, Deflect).
+
+    Returns lines already joined by the escaped '\\n' that the ini output
+    layer uses (same convention as the rest of enhancements_ship_dataforge).
+    """
+    health, multipliers, deflection = armor_stats
+    lines: list[str] = []
+
+    if health is not None:
+        lines.append(f"Armor HP: {_fmt(health)}")
+
+    if multipliers is not None:
+        p, e, d, t = multipliers
+        if any(v is not None for v in (p, e, d, t)):
+            lines.append(
+                f"Dmg Mult: P {_fmt(p, 'x', 2)}  |  E {_fmt(e, 'x', 2)}"
+                f"  |  D {_fmt(d, 'x', 2)}  |  T {_fmt(t, 'x', 2)}"
+            )
+
+    if deflection is not None:
+        p, e, d, t = deflection
+        if any(v is not None for v in (p, e, d, t)):
+            lines.append(
+                f"Deflect: P {_fmt(p)}  |  E {_fmt(e)}  |  D {_fmt(d)}  |  T {_fmt(t)}"
+            )
 
     return "\\n".join(lines)
 
@@ -5670,11 +5871,15 @@ EARNABLE_SHIP_NAME_OVERRIDES: dict[str, str] = {
 
 def enhancements_ship_dataforge(
     root: ET.Element,
-    controller_root: ET.Element | None,
+    controller_stats: tuple | None,
     loc: dict | None = None,
-    armor_lookup: dict[str, ET.Element] | None = None,
+    armor_lookup: dict[str, tuple] | None = None,
 ) -> str:
-    """Generate stats block for a spaceship from DataForge entity + flight controller."""
+    """Generate stats block for a spaceship from DataForge entity + flight controller.
+
+    *controller_stats* is the ship's build_controller_lookup value
+    (:func:`_controller_flight_stats`), *armor_lookup* build_armor_lookup's
+    (:func:`_armor_stats` values)."""
     vpc = _find(root, "VehicleComponentParams")
     if vpc is None:
         return ""
@@ -5705,28 +5910,16 @@ def enhancements_ship_dataforge(
             if entry.get("itemPortName") in ("hardpoint_armor", "hardpoint_armour"):
                 armor_class = (entry.get("entityClassName") or "").lower()
                 if armor_class:
-                    armor_root = armor_lookup.get(armor_class)
-                    if armor_root is not None:
-                        armor_block = _armor_stats_block(armor_root)
+                    armor_stats = armor_lookup.get(armor_class)
+                    if armor_stats is not None:
+                        armor_block = _armor_stats_block(armor_stats)
                 break
 
     # Flight stats from controller
     scm = max_spd = boost_fwd = boost_bwd = None
     pitch = roll = yaw = None
-    if controller_root is not None:
-        ifcs = _find(controller_root, "IFCSParams")
-        if ifcs is not None:
-            scm       = ifcs.get("scmSpeed")
-            max_spd   = ifcs.get("maxSpeed")
-            boost_fwd = ifcs.get("boostSpeedForward")
-            boost_bwd = ifcs.get("boostSpeedBackward")
-        sp = _find_by_type(controller_root, "SIFCSSpeedProfile")
-        if sp is not None:
-            av = sp.find("angularVelocity")
-            if av is not None:
-                pitch = av.get("x")   # pitch rate °/s
-                roll  = av.get("y")   # roll rate  °/s
-                yaw   = av.get("z")   # yaw rate   °/s
+    if controller_stats is not None:
+        scm, max_spd, boost_fwd, boost_bwd, pitch, roll, yaw = controller_stats
 
     lines = []
 
@@ -5788,7 +5981,7 @@ def scan_spaceships(
             continue
 
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
         except ET.ParseError:
             continue
 
@@ -5812,10 +6005,10 @@ def scan_spaceships(
         # Match ship class to flight controller
         root_tag = root.tag
         ship_class = root_tag.split(".", 1)[1].lower() if "." in root_tag else stem
-        controller_root = controller_lookup.get(ship_class)
+        controller_stats = controller_lookup.get(ship_class)
 
         try:
-            block = enhancements_ship_dataforge(root, controller_root, loc, armor_lookup)
+            block = enhancements_ship_dataforge(root, controller_stats, loc, armor_lookup)
         except Exception as e:
             logger.warning(f"Ship enhancements failed for {xml_file.name}: {e}")
             continue
@@ -5857,7 +6050,7 @@ def build_ammo_lookup(
     )
     for xml_file in xml_files:
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
             # Primary: use __ref attribute (GUID)
             ref = root.get("__ref")
             if ref:
@@ -5899,6 +6092,7 @@ def build_scitem_lookups(
     xml_path_index: dict | None = None,
     records_dir: Path | None = None,
     tag_config: "TagConfig | None" = None,
+    forge_dir: Path | None = None,
 ) -> tuple[dict[str, tuple[str, str]], dict[str, str], dict[str, str], dict[str, str]]:
     """Single-pass scan of scitem XMLs that produces four lookups:
 
@@ -5935,18 +6129,77 @@ def build_scitem_lookups(
 
     Walking the scitem tree once instead of twice (magazines + entity names
     used to iterate independently) cuts ~30s off the run since there are
-    ~20k files under entities/scitem/.
+    ~24k files under entities/scitem/.
+
+    The walk itself (:func:`_scitem_facts`) reads only XML facts, so with
+    *forge_dir* it is cached once per DataForge build in the
+    ``scitem_lookups`` pickle, and the names and tags are rendered from
+    those facts, *loc* and *tag_config* on every run
+    (:func:`_render_scitem_lookups`). A Tag Builder change used to key the
+    whole pickle and re-parse all ~24k scitem files (perf proposal).
+    """
+    if not scitem_dir.exists():
+        return {}, {}, {}, {}
+
+    def _builder() -> tuple:
+        return _scitem_facts(scitem_dir, xml_path_index=xml_path_index, records_dir=records_dir)
+
+    facts = (
+        _cached_lookup(forge_dir, "scitem_lookups", _builder)
+        if forge_dir is not None
+        else _builder()
+    )
+    return _render_scitem_lookups(facts, loc or {}, tag_config)
+
+
+# The magazine component build_scitem_lookups looks for, and the attribute
+# whose absence from a file's bytes lets _scitem_facts find it with lxml's
+# own tag filter (see there).
+_MAGAZINE_TYPE = "SAmmoContainerComponentParams"
+_POLY_TYPE_ATTR_BYTES = b"__polymorphicType"
+
+
+def _holds_no_poly_type_attr(data: bytes) -> bool:
+    """True when the XML document *data* certainly has no
+    ``__polymorphicType`` attribute: its bytes never spell the name, and the
+    document starts with an ASCII ``<`` (after an optional UTF-8 byte-order
+    mark and blanks) with no NUL byte next to it, so it is in an
+    ASCII-compatible encoding (UTF-8, as unforge writes) where an attribute
+    name always appears as its ASCII bytes. UTF-16, UTF-32 and EBCDIC
+    documents answer False and take the full loop."""
+    head = data[3:] if data.startswith(b"\xef\xbb\xbf") else data
+    head = head[:64].lstrip(b" \t\r\n")
+    return head[:1] == b"<" and b"\x00" not in head[:4] and _POLY_TYPE_ATTR_BYTES not in data
+
+
+def _scitem_facts(
+    scitem_dir: Path,
+    xml_path_index: dict | None = None,
+    records_dir: Path | None = None,
+) -> tuple:
+    """The XML half of :func:`build_scitem_lookups`, with no loc or Tag
+    Builder input, so it can be cached per DataForge build (perf proposal).
+
+    Returns ``(mag_lookup, names, tag_candidates)``, all builtins so the
+    pickle loads under any module name:
+
+    * mag_lookup: magazine entity class name -> (ammoParamsRecord,
+      maxAmmoCount), from the first SAmmoContainerComponentParams element.
+    * names: ``(ref, filename stem lowercased, name loc key)`` for each
+      entity with an ``@``-prefixed Name attribute (the first one), in file
+      order.
+    * tag_candidates: ``(ref, desc loc key, component type, component tag
+      facts, mining laser name)`` for each entity with a __ref and a
+      non-sentinel description key that may carry a blueprint-list tag, in
+      file order. A mining laser (under ``weapons``, with
+      SEntityComponentMiningLaserParams) has component tag facts None and
+      its entity class name; anything else under ``weapons`` is left out;
+      every other entity has its :func:`_component_tag_facts` and a mining
+      laser name of None.
     """
     mag_lookup: dict[str, tuple[str, str]] = {}
-    entity_names: dict[str, str] = {}
-    entity_names_by_filename: dict[str, str] = {}
-    entity_name_tags: dict[str, str] = {}
-    loc = loc or {}
-    if not scitem_dir.exists():
-        return mag_lookup, entity_names, entity_names_by_filename, entity_name_tags
-
-    mining_tag_cfg = _build_mining_laser_tag_cfg(tag_config)
-
+    names: list[tuple[str, str, str]] = []
+    tag_candidates: list[tuple] = []
     null_uuid = "00000000-0000-0000-0000-000000000000"
     xml_files = (
         _index_rglob(xml_path_index, scitem_dir, records_dir)
@@ -5954,56 +6207,61 @@ def build_scitem_lookups(
         else scitem_dir.rglob("*.xml")
     )
     for xml_file in xml_files:
+        data = xml_file.read_bytes()
         try:
-            root = ET.parse(xml_file).getroot()
+            root = ET.fromstring(data)
         except ET.ParseError:
             continue
 
         ref = root.get("__ref", "")
         entity_name = root.tag.split(".")[-1] if "." in root.tag else xml_file.stem
         found_mag = False
-        found_name = False
-        found_desc = False
-        resolved_display_name: str | None = None
+        name_loc_key: str | None = None
         desc_loc_key: str | None = None
 
+        # Most files hold no __polymorphicType at all, and then every
+        # element's _poly_type is its tag, so the first magazine element is
+        # simply the first element with that tag: lxml finds it in C instead
+        # of _poly_type running on every element (about 10M calls on a full
+        # cache). Files that do hold the attribute keep the loop below.
+        if _holds_no_poly_type_attr(data):
+            mag = next(root.iter(_MAGAZINE_TYPE), None)
+            if mag is not None:
+                ammo_ref = mag.get("ammoParamsRecord", "")
+                max_ammo = mag.get("maxAmmoCount", "")
+                if ammo_ref and ammo_ref != null_uuid:
+                    mag_lookup[entity_name] = (ammo_ref, max_ammo)
+            found_mag = True
+
         for elem in root.iter():
-            if not found_mag and _poly_type(elem) == "SAmmoContainerComponentParams":
+            if not found_mag and _poly_type(elem) == _MAGAZINE_TYPE:
                 ammo_ref = elem.get("ammoParamsRecord", "")
                 max_ammo = elem.get("maxAmmoCount", "")
                 if ammo_ref and ammo_ref != null_uuid:
                     mag_lookup[entity_name] = (ammo_ref, max_ammo)
                 found_mag = True
-            if not found_name:
+            if name_loc_key is None:
                 name_attr = elem.get("Name", "")
                 if name_attr and name_attr.startswith("@"):
-                    loc_key = name_attr.lstrip("@")
-                    resolved_display_name = loc.get(loc_key, loc_key)
-                    if ref:
-                        entity_names[ref] = resolved_display_name
-                    found_name = True
-            if not found_desc:
+                    name_loc_key = name_attr.lstrip("@")
+            if desc_loc_key is None:
                 desc_attr = elem.get("Description", "")
                 if desc_attr and desc_attr.startswith("@") and not _is_sentinel_loc_ref(desc_attr):
                     desc_loc_key = desc_attr.lstrip("@")
-                    found_desc = True
-            if found_mag and found_name and found_desc:
+            if found_mag and name_loc_key is not None and desc_loc_key is not None:
                 break
 
-        # Index by filename stem regardless of whether the entity has a
-        # __ref — the filename fallback in BP resolution doesn't care
-        # about the UUID, only the display name.
-        if resolved_display_name:
-            entity_names_by_filename[xml_file.stem.lower()] = resolved_display_name
+        # Indexed by filename stem whether or not the entity has a __ref --
+        # the filename fallback in BP resolution doesn't care about the
+        # UUID, only the display name.
+        if name_loc_key is not None:
+            names.append((ref, xml_file.stem.lower(), name_loc_key))
 
-        # Component name-tag derivation. ``_component_name_tag`` returns
-        # None for anything other than a ship component with the Size:/
-        # Grade:/Class: header trio, so non-component entities (FPS gear,
-        # weapons, ships, ammo …) silently fall out here without polluting
-        # the dict. Requires both a __ref to key on and a resolvable
-        # description loc-key — the rendering side looks up by ref.
+        # Blueprint-list tag candidates; the tag itself depends on the
+        # English description text and the Tag Builder config, so it is
+        # rendered per run in _render_scitem_lookups. Requires both a __ref
+        # to key on and a description loc key.
         if ref and desc_loc_key:
-            desc_value = loc.get(desc_loc_key, "")
             _parts = {p.lower() for p in xml_file.parts}
             # Weapons of any kind must never carry a component-style name tag.
             # _component_name_tag keys off Size:/Grade:/Class: data that ship
@@ -6026,41 +6284,76 @@ def build_scitem_lookups(
             # a real component type with a real Size, tagged via the same
             # Type+Size shape _ship_weapon_name_tag_factory already applies
             # to their own item_Name.
-            is_mining_laser = "weapons" in _parts and _find(
-                root, "SEntityComponentMiningLaserParams"
-            ) is not None
-            if desc_value and ("weapons" not in _parts or is_mining_laser):
-                if is_mining_laser:
-                    tag = _mining_laser_component_tag(desc_value, root, mining_tag_cfg)
-                else:
-                    # Derive the component type from the entity's subdir so the
-                    # blueprint-list tag carries the same Type element the
-                    # standalone component path emits (#101). Non-component
-                    # entities won't be under these subdirs (comp_type stays "")
-                    # and _component_name_tag returns None for them regardless.
-                    comp_type = next(
-                        (t for sd, t in _SUBDIR_TO_TYPE.items() if sd in _parts), ""
+            if "weapons" in _parts:
+                if _find(root, "SEntityComponentMiningLaserParams") is not None:
+                    tag_candidates.append(
+                        (ref, desc_loc_key, "", None, _mining_laser_name_attr(root))
                     )
-                    tag = _component_name_tag(
-                        desc_value, root, config=tag_config, component_type=comp_type
-                    )
-                    # #266 follow-up: Fuel Nozzle carries no
-                    # Size:/Grade:/Class: at all, so _component_name_tag above
-                    # always returns None for them -- fall back to the same
-                    # Type-only bare-type tag enhancements_bare_type_tags
-                    # applies to their own item_Name.
-                    if not tag:
-                        tag = _bare_type_tag_from_desc(desc_value, tag_config)
-                # #160: armour, magazines, salvage/mining heads and other FPS
-                # gear expose Size + Grade in their AttachDef but no ship
-                # component CLASS, so _component_name_tag falls back to a
-                # typeless "[S1-A]" (size+grade only). That tag is meaningless
-                # in a POTENTIAL BLUEPRINTS list — users reported it as an
-                # unknown tag. Only weave CLASS/TYPE-qualified tags (e.g.
-                # "[Mil-S1-A]", "[SAL-S2]") into blueprint lists; drop the
-                # typeless fallback so these items show bare.
-                if tag and not _TYPELESS_COMPONENT_TAG_RE.search(tag):
-                    entity_name_tags[ref] = tag
+            else:
+                # Derive the component type from the entity's subdir so the
+                # blueprint-list tag carries the same Type element the
+                # standalone component path emits (#101). Non-component
+                # entities won't be under these subdirs (comp_type stays "")
+                # and _component_name_tag returns None for them regardless.
+                comp_type = next(
+                    (t for sd, t in _SUBDIR_TO_TYPE.items() if sd in _parts), ""
+                )
+                tag_candidates.append(
+                    (ref, desc_loc_key, comp_type, _component_tag_facts(root), None)
+                )
+
+    return mag_lookup, names, tag_candidates
+
+
+def _render_scitem_lookups(
+    facts: tuple,
+    loc: dict[str, str],
+    tag_config: "TagConfig | None" = None,
+) -> tuple[dict[str, tuple[str, str]], dict[str, str], dict[str, str], dict[str, str]]:
+    """Turn :func:`_scitem_facts` into build_scitem_lookups' four lookups:
+    names resolved through *loc* (the English base.ini, #30) and the
+    blueprint-list tags rendered with *tag_config*, in the walk's file order
+    so every dict keeps the insertion order the single walk gave it."""
+    mag_lookup, names, tag_candidates = facts
+    entity_names: dict[str, str] = {}
+    entity_names_by_filename: dict[str, str] = {}
+    entity_name_tags: dict[str, str] = {}
+
+    for ref, stem, name_loc_key in names:
+        resolved_display_name = loc.get(name_loc_key, name_loc_key)
+        if ref:
+            entity_names[ref] = resolved_display_name
+        if resolved_display_name:
+            entity_names_by_filename[stem] = resolved_display_name
+
+    mining_tag_cfg = _build_mining_laser_tag_cfg(tag_config)
+    for ref, desc_loc_key, comp_type, comp_facts, mining_name in tag_candidates:
+        desc_value = loc.get(desc_loc_key, "")
+        if not desc_value:
+            continue
+        if comp_facts is None:
+            tag = _mining_laser_tag_from_name(desc_value, mining_name, mining_tag_cfg)
+        else:
+            tag = _component_name_tag_from_facts(
+                desc_value, comp_facts, config=tag_config, component_type=comp_type
+            )
+            # #266 follow-up: Fuel Nozzle carries no
+            # Size:/Grade:/Class: at all, so _component_name_tag above
+            # always returns None for them -- fall back to the same
+            # Type-only bare-type tag enhancements_bare_type_tags
+            # applies to their own item_Name.
+            if not tag:
+                tag = _bare_type_tag_from_desc(desc_value, tag_config)
+        # #160: armour, magazines, salvage/mining heads and other FPS
+        # gear expose Size + Grade in their AttachDef but no ship
+        # component CLASS, so _component_name_tag falls back to a
+        # typeless "[S1-A]" (size+grade only). That tag is meaningless
+        # in a POTENTIAL BLUEPRINTS list — users reported it as an
+        # unknown tag. Only weave CLASS/TYPE-qualified tags (e.g.
+        # "[Mil-S1-A]", "[SAL-S2]") into blueprint lists; drop the
+        # typeless fallback so these items show bare.
+        if tag and not _TYPELESS_COMPONENT_TAG_RE.search(tag):
+            entity_name_tags[ref] = tag
 
     return mag_lookup, entity_names, entity_names_by_filename, entity_name_tags
 
@@ -6119,7 +6412,7 @@ def scan_entity_dir(
     )
     for xml_file in xml_files:
         try:
-            root = ET.parse(xml_file).getroot()
+            root = _parse_xml_file(xml_file)
         except ET.ParseError:
             continue
 
@@ -6927,6 +7220,136 @@ def _run_gen_ships(ctx: dict) -> dict[str, str]:
     return out
 
 
+class _PuMissionScan(NamedTuple):
+    """What :func:`_scan_pu_missions` reads from the pu_missions XMLs.
+
+    * descs: the description entries, as ``scan_entity_dir`` would write them.
+    * spawn_ambiguous_descs: desc keys whose XMLs disagree on hostiles (#165).
+    * title_to_descs / cargo_delivery_descs: each title's desc keys, and the
+      cargo / delivery haul ones among them (#31, #102).
+    * title_xps: each title's positive XP values, in file order.
+    * xp_records: ``(title key, XP or None when reading it failed)`` for each
+      XML whose title and description are both ``@`` references, for the
+      end-of-run "titles skipped" diagnostic.
+    """
+    descs: dict[str, str]
+    spawn_ambiguous_descs: set[str]
+    title_to_descs: dict[str, set[str]]
+    cargo_delivery_descs: set[str]
+    title_xps: dict[str, list[int]]
+    xp_records: list[tuple[str, "int | None"]]
+
+
+def _scan_pu_missions(
+    pu_missions_dir: Path,
+    pu_files: list[Path],
+    loc: dict[str, str],
+    reputation_lookup: dict[str, int],
+    mission_enhancement,
+    separator: str,
+) -> _PuMissionScan:
+    """Read every pu_missions XML once for all of _run_gen_missions' uses
+    (perf proposal: they were five separate passes, each parsing every
+    file). Each step keeps its own error handling and its file order.
+
+    *mission_enhancement(root, ambiguous_keys)* is enhancements_mission
+    with the run's settings. The description entries need every file's
+    hostiles first (#165: a desc key whose XMLs disagree on hostiles drops
+    its Hostiles line), so each file's enhancement is worked out as it is
+    read, plain and, when the file has hostiles, without them, and the
+    right one is picked once the pass has seen every file. A file with no
+    hostiles reads the same either way.
+    """
+    desc_host_sigs: dict[str, set] = {}
+    entries: list[tuple[str, str, str, "str | None"]] = []
+    title_to_descs: dict[str, set[str]] = {}
+    cargo_delivery_descs: set[str] = set()
+    title_xps: dict[str, list[int]] = {}
+    xp_records: list[tuple[str, "int | None"]] = []
+    skipped = discovered = 0
+    for xml_file in pu_files:
+        try:
+            root = _parse_xml_file(xml_file)
+        except ET.ParseError:
+            continue
+
+        # #165: this file's hostile breakdown, under its desc key.
+        hostiles = None
+        try:
+            hostile_key = _mission_loc_key(root)
+            if hostile_key:
+                hostiles = _extract_spawn_counts(root).get(SPAWN_HOSTILE, {})
+                desc_host_sigs.setdefault(hostile_key, set()).add(tuple(sorted(hostiles.items())))
+        except Exception:
+            pass
+
+        # The description entry, as scan_entity_dir(loc_key_fn=
+        # _mission_loc_key, capture_all=True) makes it.
+        key = _mission_loc_key(root)
+        if not key:
+            skipped += 1
+        else:
+            base_value = loc.get(key)
+            if base_value is None:
+                base_value = _synthesize_description(root, xml_file, key)
+                discovered += 1
+            try:
+                plain = mission_enhancement(root, None)
+                without_hostiles = (
+                    mission_enhancement(root, {key}) if hostiles is None or hostiles else None
+                )
+            except Exception as e:
+                logger.warning(f"Enhancements failed for {xml_file.name}: {e}")
+            else:
+                entries.append((key, base_value, plain, without_hostiles))
+
+        title_attr = root.get("title", "")
+        desc_attr = root.get("description", "")
+        if not title_attr.startswith("@") or not desc_attr.startswith("@"):
+            continue
+        title_key = title_attr.lstrip("@")
+        try:
+            xp = _extract_mission_xp(root, reputation_lookup)
+        except Exception:
+            xp = None
+        xp_records.append((title_key, xp))
+        if _is_sentinel_loc_ref(title_attr) or _is_sentinel_loc_ref(desc_attr):
+            continue
+        desc_key = desc_attr.lstrip("@")
+        title_to_descs.setdefault(title_key, set()).add(desc_key)
+        _parts = xml_file.parts
+        _i = _parts.index("pu_missions") if "pu_missions" in _parts else -1
+        if _i >= 0 and _i + 1 < len(_parts) and _parts[_i + 1] in ("cargo", "delivery"):
+            cargo_delivery_descs.add(desc_key)
+        if xp is not None and xp > 0:
+            title_xps.setdefault(title_key, []).append(xp)
+
+    spawn_ambiguous_descs = {k for k, s in desc_host_sigs.items() if len(s) > 1}
+    if spawn_ambiguous_descs:
+        logger.info(
+            f"#165: suppressing hostiles on {len(spawn_ambiguous_descs)} "
+            f"shared-but-inconsistent mission description(s)"
+        )
+
+    descs: dict[str, str] = {}
+    for key, base_value, plain, without_hostiles in entries:
+        block = (
+            without_hostiles
+            if without_hostiles is not None and key in spawn_ambiguous_descs
+            else plain
+        )
+        if block:
+            descs[key] = append_enhancements(base_value, block, separator)
+        elif key not in descs:
+            descs[key] = base_value
+    logger.info(
+        f"{pu_missions_dir.name}: {len(entries)} matched, {discovered} discovered, "
+        f"0 no enhancements, {skipped} no loc key"
+    )
+    return _PuMissionScan(descs, spawn_ambiguous_descs, title_to_descs,
+                          cargo_delivery_descs, title_xps, xp_records)
+
+
 def _run_gen_missions(ctx: dict) -> dict[str, str]:
     records           = ctx["records"]
     forge_dir         = ctx["forge_dir"]
@@ -7000,9 +7423,10 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # the blueprint-pool weave falls back to this loc-derived dict. Gated on
     # the same annotate toggle as effective_tags. Read from the English loc:
     # the "Item Type: Fuel Nozzle" line it keys on and the bullet names it is
-    # matched against are both English, and the blueprint_pools pickle it
-    # feeds has no language in its key. Reading the run's own language left a
-    # translated run's pools untagged, and a later English run reused them.
+    # matched against are both English. Reading the run's own language left a
+    # translated run's pools untagged, and a later English run reused them
+    # from the blueprint_pools pickle, which held the tagged names until it
+    # came to hold XML facts only (perf proposal).
     name_fallback_tags = (
         bare_type_name_tag_lookup(ctx.get("tag_loc") or loc, _comp_cfg)
         if annotate_descs else {}
@@ -7026,49 +7450,40 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     out: dict[str, str] = {}
     pu_missions_dir = records / "missionbroker" / "pu_missions"
 
-    # #165: pre-pass — a single mission description is often shared by many
-    # pu_missions XMLs with DIFFERENT hostile spawns (every lawful AND unlawful
-    # salvage contract shares `SalvageContractor_Description`, but only the
-    # unlawful ones spawn a hostile wave). The shared body can't honestly show
-    # one count, so flag desc keys whose hostile breakdown is inconsistent
-    # across the XMLs sharing them and suppress their Hostiles line (mirrors the
-    # [BP] -> [BP?] demotion for heterogeneous shared titles).
-    spawn_ambiguous_descs: set[str] = set()
-    if pu_missions_dir.exists():
-        _pu_pre = (
-            _index_rglob(xml_path_index, pu_missions_dir, records)
-            if xml_path_index is not None
-            else list(pu_missions_dir.rglob("*.xml"))
-        )
-        _desc_host_sigs: dict[str, set] = {}
-        for _xf in _pu_pre:
-            try:
-                _r = ET.parse(_xf).getroot()
-                _dk = _mission_loc_key(_r)
-                if not _dk:
-                    continue
-                _host = _extract_spawn_counts(_r).get(SPAWN_HOSTILE, {})
-                _desc_host_sigs.setdefault(_dk, set()).add(tuple(sorted(_host.items())))
-            except (ET.ParseError, Exception):
-                continue
-        spawn_ambiguous_descs = {k for k, s in _desc_host_sigs.items() if len(s) > 1}
-        if spawn_ambiguous_descs:
-            logger.info(
-                f"#165: suppressing hostiles on {len(spawn_ambiguous_descs)} "
-                f"shared-but-inconsistent mission description(s)"
-            )
+    def _mission_enhancement(root: ET.Element, ambiguous_keys) -> str:
+        return enhancements_mission(root, reputation_lookup,
+                                    rep_xp_label=rep_xp_label,
+                                    show_fields=_mdf,
+                                    spawn_ambiguous_keys=ambiguous_keys)
 
+    # One pass over the pu_missions XMLs (perf proposal; see
+    # _scan_pu_missions) gives their description entries plus everything the
+    # title passes below read from them. #165: a single mission description
+    # is often shared by many pu_missions XMLs with DIFFERENT hostile spawns
+    # (every lawful AND unlawful salvage contract shares
+    # `SalvageContractor_Description`, but only the unlawful ones spawn a
+    # hostile wave). The shared body can't honestly show one count, so desc
+    # keys whose hostile breakdown is inconsistent across the XMLs sharing
+    # them have their Hostiles line suppressed (mirrors the [BP] -> [BP?]
+    # demotion for heterogeneous shared titles).
+    #
+    # The title side (#31 Covalex repro): every contractgen variant of
+    # `Covalex_HaulCargo_SingleToMulti_title` carries BP, but the same title
+    # is referenced by 6 pu_missions XMLs whose desc tokens never appear in
+    # any contractgen file, so those spawn paths run without BP; the
+    # title-augment loop demotes [BP] → [BP?] from pu_scan.title_to_descs.
+    _pu_files: list[Path] = (
+        _index_rglob(xml_path_index, pu_missions_dir, records)
+        if xml_path_index is not None and pu_missions_dir.exists()
+        else (list(pu_missions_dir.rglob("*.xml")) if pu_missions_dir.exists() else [])
+    )
     if pu_missions_dir.exists():
-        out.update(scan_entity_dir(
-            pu_missions_dir,
-            lambda root: enhancements_mission(root, reputation_lookup,
-                                              rep_xp_label=rep_xp_label,
-                                              show_fields=_mdf,
-                                              spawn_ambiguous_keys=spawn_ambiguous_descs),
-            loc=loc, loc_key_fn=_mission_loc_key,
-            separator=mission_sep, capture_all=True,
-            xml_path_index=xml_path_index, records_dir=records,
-        ))
+        pu_scan = _scan_pu_missions(pu_missions_dir, _pu_files, loc or {}, reputation_lookup,
+                                    _mission_enhancement, mission_sep)
+        out.update(pu_scan.descs)
+    else:
+        pu_scan = _PuMissionScan({}, set(), {}, set(), {}, [])
+    spawn_ambiguous_descs = pu_scan.spawn_ambiguous_descs
 
     for mission_dir in [
         records / "entities" / "missions",
@@ -7078,10 +7493,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
         if mission_dir.exists():
             out.update(scan_entity_dir(
                 mission_dir,
-                lambda root: enhancements_mission(root, reputation_lookup,
-                                                  rep_xp_label=rep_xp_label,
-                                                  show_fields=_mdf,
-                                                  spawn_ambiguous_keys=spawn_ambiguous_descs),
+                lambda root: _mission_enhancement(root, spawn_ambiguous_descs),
                 loc=loc, separator=mission_sep, capture_all=True,
                 xml_path_index=xml_path_index, records_dir=records,
             ))
@@ -7095,80 +7507,98 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # BlueprintRewards references silently failed UUID resolution.
     pool_dir = records / "crafting" / "blueprintrewards"
     bp_dir   = records / "crafting" / "blueprints" / "crafting"
-    blueprint_pools, pool_names = _cached_lookup(
-        forge_dir, "blueprint_pools",
-        lambda: build_blueprint_pool_lookup(
-            pool_dir, bp_dir, entity_names,
-            entity_names_by_filename=entity_names_by_filename,
-            entity_name_tags=effective_tags,
-            name_tag_placement=comp_placement,
-            name_fallback_tags=name_fallback_tags,
-        ),
-        # blueprint pool names bake in the components tag — fold the
-        # components config key AND the annotate-toggle in so a user edit
-        # (including placement OR turning annotation off entirely)
-        # invalidates this cache alongside scitem_lookups (the source
-        # of entity_name_tags). The full TagConfig.to_json() includes
-        # placement so swapping prepend ↔ append still bursts the cache;
-        # the annotate=0/1 suffix bursts it on the toggle. Armor tags (#492)
-        # are added after this cache, when the bullets are written, so the
-        # armor config is deliberately not part of the key.
-        extra_key=(f"{ctx.get('_components_cfg_key', '')}|annotate={int(annotate_descs)}"
-                   f"{ctx.get('_en_loc_cache_mark', '')}"),
+    # Only the XML walk is cached (per DataForge build): the pool names bake
+    # in the English names, the components tags, placement and the annotate
+    # toggle, so they are worked out from it on every run (perf proposal).
+    # Armor tags (#492) are added later still, when the bullets are written.
+    blueprint_pools, pool_names = build_blueprint_pool_lookup(
+        pool_dir, bp_dir, entity_names,
+        entity_names_by_filename=entity_names_by_filename,
+        entity_name_tags=effective_tags,
+        name_tag_placement=comp_placement,
+        name_fallback_tags=name_fallback_tags,
+        forge_dir=forge_dir,
     )
 
+    # One parse of each contractgen XML (and one template lookup) feeds
+    # scan_contract_generators, the Battaglia RS-tag scan and the
+    # calculated-reward diagnostic, which used to walk the files three times
+    # (perf proposal). The other two run on each root just before
+    # scan_contract_generators sees it. Each keeps its own error handling:
+    # a failure in either is held and raised where that scan's own call
+    # used to raise it, and the walk is finished for them if
+    # scan_contract_generators stops early on an error of its own.
     contractgen_dir = records / "contracts" / "contractgenerator"
+    battaglia_mineable_rs: dict[str, str] = {}
+    battaglia_mineable_rs_desc_ores: dict[str, list[str]] = {}
+    _calc_reward_titles: set[str] = set()
+    # The first error each of the two scans met, raised where that scan's own
+    # call used to raise it. A scan that has failed is not run again.
+    battaglia_error: Exception | None = None
+    calc_reward_error: Exception | None = None
+    _template_lookup: dict[str, tuple[str, str]] = {}
+    if contractgen_dir.exists():
+        _template_lookup = _build_template_lookup(
+            contractgen_dir.parent / "contracttemplates",
+            xml_path_index=xml_path_index, records_dir=records,
+        )
+
+    def _contractgen_roots(xml_files):
+        nonlocal battaglia_error, calc_reward_error
+        try:
+            for xml_file in xml_files:
+                try:
+                    root = _parse_xml_file(xml_file)
+                except ET.ParseError:
+                    continue
+                if battaglia_error is None:
+                    try:
+                        _battaglia_mineable_rs_in(root, _template_lookup, battaglia_mineable_rs,
+                                                  battaglia_mineable_rs_desc_ores)
+                    except Exception as e:
+                        battaglia_error = e
+                if calc_reward_error is None:
+                    try:
+                        _calculated_reward_titles_in(root, _calc_reward_titles)
+                    except Exception as e:
+                        calc_reward_error = e
+                yield root
+        except Exception as e:
+            # Listing the files failed part-way, or lxml could not even read
+            # one: scan_contract_generators logs it and stops, and the
+            # Battaglia walk raised it out of the run.
+            if battaglia_error is None:
+                battaglia_error = e
+            raise
+
+    # The file list is asked for here, not inside the walk, so a listing
+    # that fails outright ends the run before scan_contract_generators runs,
+    # as its own listing did (it sat outside that scan's try).
+    _roots = (
+        _contractgen_roots(_indexed_xml_files(contractgen_dir, xml_path_index, records))
+        if contractgen_dir.exists() else iter(())
+    )
     contractgen_missions, mission_blueprints, mission_bp_chance, mission_items = scan_contract_generators(
         contractgen_dir, reputation_lookup, blueprint_pools, entity_names,
         xml_path_index=xml_path_index, records_dir=records,
         pool_names=pool_names,
         standings_lookup=standings_lookup,
         standing_track_lookup=standing_track_lookup,
+        template_lookup=_template_lookup,
+        roots=_roots,
     )
+    for _root in _roots:
+        pass
     logger.info(f"Processed {len(contractgen_missions)} contract generator mission variants")
+    if battaglia_error is not None:
+        raise battaglia_error
 
-    battaglia_mineable_rs, battaglia_mineable_rs_desc_ores = _build_battaglia_mineable_rs_tags(
-        contractgen_dir, xml_path_index=xml_path_index, records_dir=records
-    )
-
-    # Materialise the pu_missions file list early so the title-augment loop
-    # can demote [BP] → [BP?] for titles whose pu_missions side spawns
-    # descs the contractgenerator never sees (and therefore can't award
-    # blueprints for — issue #31 Covalex repro: every contractgen variant
-    # of `Covalex_HaulCargo_SingleToMulti_title` carries BP, but the same
-    # title is referenced by 6 pu_missions XMLs whose desc tokens never
-    # appear in any contractgen file, so those spawn paths run without BP).
-    # The same file list is reused by the existing XP back-fill pass below.
-    _pu_files: list[Path] = (
-        _index_rglob(xml_path_index, pu_missions_dir, records)
-        if xml_path_index is not None and pu_missions_dir.exists()
-        else (list(pu_missions_dir.rglob("*.xml")) if pu_missions_dir.exists() else [])
-    )
-    pu_title_to_descs: dict[str, set[str]] = {}
+    pu_title_to_descs = pu_scan.title_to_descs
     # #102: desc keys belonging to cargo / delivery hauls. These award no
     # blueprints, so under a [BP]-tagged shared title the orphan-drop below
     # would otherwise delete their body and the haul would show no mission
     # info. Tracked here so the orphan-drop can spare them.
-    pu_cargo_delivery_descs: set[str] = set()
-    if pu_missions_dir.exists():
-        for xml_file in _pu_files:
-            try:
-                root = ET.parse(xml_file).getroot()
-                title_attr = root.get("title", "")
-                desc_attr  = root.get("description", "")
-                if not title_attr.startswith("@") or not desc_attr.startswith("@"):
-                    continue
-                if _is_sentinel_loc_ref(title_attr) or _is_sentinel_loc_ref(desc_attr):
-                    continue
-                title_key = title_attr.lstrip("@")
-                desc_key  = desc_attr.lstrip("@")
-                pu_title_to_descs.setdefault(title_key, set()).add(desc_key)
-                _parts = xml_file.parts
-                _i = _parts.index("pu_missions") if "pu_missions" in _parts else -1
-                if _i >= 0 and _i + 1 < len(_parts) and _parts[_i + 1] in ("cargo", "delivery"):
-                    pu_cargo_delivery_descs.add(desc_key)
-            except (ET.ParseError, Exception):
-                continue
+    pu_cargo_delivery_descs = pu_scan.cargo_delivery_descs
 
     mission_titles_augmented = 0
     # #412 investigation: contractgen-sourced titles (CareerContract/Contract,
@@ -7539,26 +7969,9 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
             "from BP-tagged titles (ContractLegacy spawn paths that don't award BP)"
         )
 
-    # Second pu_missions pass: XP for titles contractgen couldn't cover.
-    # _pu_files is already materialised above (alongside pu_title_to_descs);
-    # the third diagnostic pass below also reuses it.
-    pu_title_xps: dict[str, list[int]] = {}
-    if pu_missions_dir.exists():
-        for xml_file in _pu_files:
-            try:
-                root = ET.parse(xml_file).getroot()
-                title_attr = root.get("title", "")
-                desc_attr  = root.get("description", "")
-                if not title_attr.startswith("@") or not desc_attr.startswith("@"):
-                    continue
-                if _is_sentinel_loc_ref(title_attr) or _is_sentinel_loc_ref(desc_attr):
-                    continue
-                title_key = title_attr.lstrip("@")
-                xp = _extract_mission_xp(root, reputation_lookup)
-                if xp > 0:
-                    pu_title_xps.setdefault(title_key, []).append(xp)
-            except (ET.ParseError, Exception):
-                continue
+    # XP for titles contractgen couldn't cover, from the pu_missions pass
+    # at the top (pu_scan).
+    pu_title_xps = pu_scan.title_xps
 
     # Optional trailing "(Track)" (issue #161's reputation-track suffix)
     # must not break this already-tagged guard, or the pu_missions-only pass
@@ -7624,26 +8037,18 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
         "no_rep_data": [],
         "no_base_title": [],
     }
-    if pu_missions_dir.exists():
-        for xml_file in _pu_files:
-            try:
-                root = ET.parse(xml_file).getroot()
-                title_attr = root.get("title", "")
-                desc_attr = root.get("description", "")
-                if not title_attr.startswith("@") or not desc_attr.startswith("@"):
-                    continue
-                title_key = title_attr.lstrip("@")
-                if title_key in out:
-                    continue
-                if title_key in contractgen_missions:
-                    continue
-                titles_skipped_no_xp += 1
-                if _extract_mission_xp(root, reputation_lookup) <= 0:
-                    titles_skipped_reasons["no_rep_data"].append(title_key)
-                elif not (loc or {}).get(title_key):
-                    titles_skipped_reasons["no_base_title"].append(title_key)
-            except Exception:
-                continue
+    for title_key, xp in pu_scan.xp_records:
+        if title_key in out:
+            continue
+        if title_key in contractgen_missions:
+            continue
+        titles_skipped_no_xp += 1
+        if xp is None:  # reading its XP failed; that file was skipped
+            continue
+        if xp <= 0:
+            titles_skipped_reasons["no_rep_data"].append(title_key)
+        elif not (loc or {}).get(title_key):
+            titles_skipped_reasons["no_base_title"].append(title_key)
 
     logger.info(
         f"Mission XP coverage: {len(titles_with_xp)} titles augmented, "
@@ -7671,9 +8076,9 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # pass only needs to hand-check the (hopefully empty, or much smaller)
     # genuine "no reward" bucket instead of redoing this investigation.
     if contractgen_zero_xp_titles:
-        _calc_reward_titles = _titles_with_calculated_reward(
-            contractgen_dir, xml_path_index=xml_path_index, records_dir=records,
-        )
+        # _calc_reward_titles came from the shared contractgen pass above.
+        if calc_reward_error is not None:
+            raise calc_reward_error
         _dynamic = [t for t in contractgen_zero_xp_titles if t in _calc_reward_titles]
         _no_reward = [t for t in contractgen_zero_xp_titles if t not in _calc_reward_titles]
         if _no_reward:
@@ -7832,6 +8237,9 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # English base.ini was asked for but is missing, so a run that fell back
     # to its own language never leaves those language-blind pickles for the
     # next English run to reuse: that run sees a different key and rebuilds.
+    # Only standings is built from en_loc now: scitem_lookups and
+    # blueprint_pools hold XML facts alone, and their names are resolved
+    # through en_loc on every run (perf proposal).
     en_loc_cache_mark = ""
     if english_base_ini_path is not None:
         english_base_ini_path = Path(english_base_ini_path)
@@ -7929,23 +8337,17 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     wearables: list | None = None
 
     # Components Tag Builder config — drives the [CLASS-Sx-grade] tags that
-    # get baked into both scitem_lookups (entity_name_tags) and the pickle
-    # of blueprint_pools (POTENTIAL BLUEPRINTS list entries). Folding the
-    # JSON form into both caches' extra_key invalidates them on user edit
-    # so mission descriptions don't keep emitting the old style after a
-    # config change. JSON is sort_keys=True so the string is stable.
+    # build_scitem_lookups renders into entity_name_tags (and so into the
+    # POTENTIAL BLUEPRINTS list entries). Only the XML facts behind them are
+    # pickled, per DataForge build, so a config change re-renders the tags
+    # instead of re-parsing every scitem XML (perf proposal).
     _components_cfg = (tag_configs or {}).get("components") or DEFAULT_TAG_CONFIGS.get("components")
-    _components_cfg_key = _components_cfg.to_json() if _components_cfg else ""
 
     def _build_scitem_pair():
-        return _cached_lookup(
-            forge_dir, "scitem_lookups",
-            lambda: build_scitem_lookups(
-                records / "entities" / "scitem", en_loc,
-                xml_path_index=xml_path_index, records_dir=records,
-                tag_config=_components_cfg,
-            ),
-            extra_key=_components_cfg_key + en_loc_cache_mark,
+        return build_scitem_lookups(
+            records / "entities" / "scitem", en_loc,
+            xml_path_index=xml_path_index, records_dir=records,
+            tag_config=_components_cfg, forge_dir=forge_dir,
         )
 
     def _build_reputation():
@@ -8133,8 +8535,6 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "wearables":         wearables,
         "xml_path_index":    xml_path_index,
         "tag_configs":       tag_configs or {},
-        "_components_cfg_key": _components_cfg_key,
-        "_en_loc_cache_mark": en_loc_cache_mark,
         "annotate_mission_descs": bool(annotate_mission_descs),
         "rep_xp_label":      rep_xp_label or _DEFAULT_REP_XP_LABEL,
         "mission_headers":   mission_headers or dict(_DEFAULT_MISSION_HEADERS),
