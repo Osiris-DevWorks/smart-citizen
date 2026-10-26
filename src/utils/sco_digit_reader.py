@@ -12,14 +12,18 @@ height) with a comma before the last three. Steps:
    wider than a glyph are dropped first, so a bright panel edge touching
    the digits can't merge with them.
 2. Find connected blobs, keep digit-sized ones, and chain neighbours that
-   share a top and baseline. A chain only counts if a comma-sized blob
-   sits before its last three digits, which rules out other HUD text.
+   share a top and baseline. A blob as tall as a digit but too wide for one
+   is two or three digits whose strokes touch (a "4"'s crossbar reaching
+   the next digit on a 4K screen), so it is cut where the fewest pixels are
+   lit. A chain only counts if a comma-sized blob sits before its last
+   three digits, which rules out other HUD text.
 3. Match each digit to the nearest reference glyph in
    ``sco_digit_samples.py`` (min-max normalised, coarse grid, correlation).
 4. Prefer the reading that decodes to a known deposit. Where a digit's
    runners-up are close, try them too: valid signatures are sparse, so this
    fixes look-alike misses such as 8 read as 0, 6 or 9. A leading zero is
-   never a reading.
+   never a reading. A threshold whose readings all decode to nothing does
+   not end the search: the next threshold may keep a thin stroke whole.
 """
 from __future__ import annotations
 
@@ -64,6 +68,12 @@ MIN_UNDECODED_SCORE = 0.85
 FRINGE_PX = 2
 WHITE_LEVEL = 0.7
 MIN_WHITE_FRACTION = 0.45
+
+# A digit-tall blob up to this many digit heights wide is taken for touching
+# digits and cut apart; each part must be at least MIN_PART_WIDTH digit
+# heights wide (a "1" is about 0.3).
+MAX_JOINED_WIDTH = 2.6
+MIN_PART_WIDTH = 0.2
 
 
 @dataclass(frozen=True)
@@ -146,11 +156,43 @@ def _mask(width: int, height: int, red: bytes, threshold: int, max_run: int) -> 
     return mask
 
 
+def _is_digit_tall(box, digit_px) -> bool:
+    return 0.75 * digit_px <= box[3] <= 1.35 * digit_px
+
+
+def _split_joined(width, mask, box, digit_px) -> list[tuple[int, int, int, int]]:
+    """Cut a blob too wide for one digit into digit-wide parts.
+
+    Cuts at the column with the fewest lit pixels (that column is the bridge
+    and belongs to neither part), nearest the middle on a tie, and again in
+    a part still too wide. Each part's box is trimmed to its own pixels.
+    Returns ``[box]`` for a blob narrow enough already, and nothing for one
+    too wide to be touching digits.
+    """
+    x0, y0, w, h = box
+    if w <= digit_px:
+        return [box]
+    min_part = max(2, round(MIN_PART_WIDTH * digit_px))
+    if w > MAX_JOINED_WIDTH * digit_px or w < 2 * min_part + 1:
+        return []
+    ink = [sum(mask[y * width + x] for y in range(y0, y0 + h)) for x in range(x0, x0 + w)]
+    cut = min(range(min_part, w - min_part), key=lambda i: (ink[i], abs(2 * i + 1 - w)))
+    parts = []
+    for start, end in ((x0, x0 + cut), (x0 + cut + 1, x0 + w)):
+        rows = [y for y in range(y0, y0 + h)
+                if any(mask[y * width + x] for x in range(start, end))]
+        if rows:
+            part = (start, rows[0], end - start, rows[-1] - rows[0] + 1)
+            parts.extend(_split_joined(width, mask, part, digit_px))
+    return parts
+
+
 def _candidate_rows(width, height, mask, digit_px):
     """Digit chains shaped like ``N,NNN`` or ``NN,NNN``: (boxes, top, base)."""
     boxes = _components(width, height, mask)
-    digits = sorted(b for b in boxes
-                    if 0.75 * digit_px <= b[3] <= 1.35 * digit_px and b[2] <= digit_px)
+    digits = sorted(part for b in boxes if _is_digit_tall(b, digit_px)
+                    for part in _split_joined(width, mask, b, digit_px)
+                    if _is_digit_tall(part, digit_px))
     commas = [b for b in boxes if b[3] <= 0.6 * digit_px and b[2] <= 0.5 * digit_px]
     rows = []
     used = set()
@@ -347,13 +389,18 @@ def read_signature(width: int, height: int, red: bytes,
     if colour and not len(green) == len(blue) == len(red):
         return None
     max_run = int(1.2 * digit_px)
+    undecoded = None
     for threshold in THRESHOLDS:
         mask = _mask(width, height, red, threshold, max_run)
         rows = [row for row in _candidate_rows(width, height, mask, digit_px)
                 if not colour or _is_white(width, red, green, blue, row, threshold)]
         readings = [r for row in rows if (r := _read_row(width, red, row, threshold))]
-        if readings:
-            decoded = [r for r in readings
-                       if decode_signature(int(r.text.replace(",", "")))]
-            return max(decoded or readings, key=lambda r: r.score)
-    return None
+        decoded = [r for r in readings
+                   if decode_signature(int(r.text.replace(",", "")))]
+        if decoded:
+            return max(decoded, key=lambda r: r.score)
+        # A later threshold may keep a thin stroke whole and read a number
+        # that decodes; this one's best stands only if none does.
+        if readings and undecoded is None:
+            undecoded = max(readings, key=lambda r: r.score)
+    return undecoded
