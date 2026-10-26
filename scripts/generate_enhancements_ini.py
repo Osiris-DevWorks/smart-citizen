@@ -1482,6 +1482,20 @@ def _agreed_endpoint_tokens(per_body: list[dict]) -> dict:
     return {v: t for v, t in per_body[0].items() if v in common}
 
 
+def _route_bodies(desc_keys, loc) -> list:
+    """The desc bodies behind *desc_keys*, in key order.
+
+    The callers pool a title's desc keys in a set, and
+    ``_agreed_endpoint_tokens`` keeps the first body's spelling of each
+    endpoint. Pooled courier bodies spell the same endpoint both ways
+    (``~mission(Pickup1)`` in one, ``~mission(Pickup1|Address)`` in another),
+    so iterating the set directly made the title follow whichever key hashed
+    first in that process, and two Generates could disagree. Sorting makes the
+    lowest key win every time.
+    """
+    return [(loc or {}).get(dk) for dk in sorted(desc_keys)]
+
+
 def _derive_route_fragment(desc_bodies: list[str], cfg=None, loc=None, expand_cache=None) -> str:
     """Build the route CORE for a haul/delivery/courier title (no separator,
     no placement; the caller places it via ``apply_mission_title``).
@@ -7286,7 +7300,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                 v.desc_key for v in variants if v.desc_key
             }
             _route = _derive_route_fragment(
-                [loc.get(dk) for dk in _route_descs], _mt_cfg, loc, _route_expand_cache
+                _route_bodies(_route_descs, loc), _mt_cfg, loc, _route_expand_cache
             )
             if _route and apply_mission_title:
                 augmented_title = apply_mission_title(base_title, _route, _mt_cfg)
@@ -7602,7 +7616,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                 and _is_route_title(title_key)
                 and not _title_has_route_token(base_title)):
             _route = _derive_route_fragment(
-                [loc.get(dk) for dk in pu_title_to_descs.get(title_key, set())],
+                _route_bodies(pu_title_to_descs.get(title_key, set()), loc),
                 _mt_cfg2, loc, _route_expand_cache
             )
             if _route and apply_mission_title:
