@@ -275,7 +275,7 @@ class TestFinishQueueSilentMode:
 
 
 class TestTheScansStatusTextGoes:
-    """The scan's progress goes to the status bar, and its last text
+    """#527: the scan's progress goes to the status bar, and its last text
     ("Finishing up…") stayed there for the rest of the session: nothing
     else writes there once the app is idle, and neither a run that found
     nothing nor the summary box replaced it."""
@@ -310,8 +310,8 @@ class TestTheScansStatusTextGoes:
         stub = _FinishStub(silent=True, new_names=["P4-AR"])
         self._scanned(stub, finishing)
         stub.finish()
-        added = stub._status_bar.messages[-1]
-        assert added != finishing and "1" in added
+        added = main_window.tr("blueprint_tracker.auto_scan_status_added", count=1)
+        assert added != finishing
         assert stub._status_bar.currentMessage() == added
 
     def test_another_jobs_message_is_left_alone(self, json_backend):

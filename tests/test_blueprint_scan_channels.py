@@ -367,8 +367,8 @@ class TestTheWorkerStartRefusesTestChannels:
 
     def test_the_progress_goes_to_the_status_bar_through_the_remembering_slot(
             self, fake_worker):
-        """So the run's end can take its last text down again
-        (tests/test_blueprint_auto_scan.py::TestTheScansStatusTextGoes)."""
+        """So the run's end can take its last text down again (#527,
+        tests/test_blueprint_auto_scan.py::TestTheScansStatusTextGoes)."""
         stub = _NextStub(["LIVE"])
         stub._start_next_blueprint_scan()
         [worker] = _FakeWorker.created

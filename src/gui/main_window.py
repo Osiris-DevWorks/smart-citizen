@@ -1019,8 +1019,8 @@ class MainWindow(QMainWindow):
         # launch with new blueprints doesn't interrupt with a modal dialog.
         self._bp_scan_silent = False
         # The scan's last progress text in the status bar, which the run's
-        # end takes down again while it is still showing
-        # (_show_blueprint_scan_status, _finish_blueprint_scan_queue).
+        # end takes down again while it is still showing (#527,
+        # _show_blueprint_scan_status, _finish_blueprint_scan_queue).
         self._bp_scan_status = ""
         # #416: starter blueprints a load added for a deferred seed, waiting
         # to be reported once the load and anything it set off is over (see
@@ -8138,7 +8138,8 @@ class MainWindow(QMainWindow):
 
     def _show_blueprint_scan_status(self, message: str) -> None:
         """The scan's progress in the status bar, with or without its
-        dialog (#386), remembered so the run's end can take it down."""
+        dialog (#386), remembered so the run's end can take it down
+        (#527)."""
         self._bp_scan_status = message
         self.statusBar().showMessage(message)
 
@@ -8262,10 +8263,11 @@ class MainWindow(QMainWindow):
         """
         self.blueprint_tracker_tab.set_scan_logs_enabled(True)
         # The scan's last progress text ("Finishing up…") stayed in the
-        # status bar for the rest of the session: nothing else writes there
-        # once the app is idle, and neither a run that found nothing nor
-        # the summary box replaced it. Taken down only while it is still
-        # the scan's, so a message another job showed since then stays.
+        # status bar for the rest of the session (#527): nothing else
+        # writes there once the app is idle, and neither a run that found
+        # nothing nor the summary box replaced it. Taken down only while it
+        # is still the scan's, so a message another job showed since then
+        # stays.
         if self._bp_scan_status and self.statusBar().currentMessage() == self._bp_scan_status:
             self.statusBar().clearMessage()
         self._bp_scan_status = ""
