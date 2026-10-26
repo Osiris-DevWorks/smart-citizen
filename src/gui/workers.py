@@ -1075,12 +1075,14 @@ class StaleWorkingFolderSweepWorker(WorkingFolderDeleteWorker):
 
     A successful run's working folder, with the old cache set aside in it,
     now lives on while enhancements are generated, so a crash or a kill
-    during its background delete leaves up to about 2.3 GB behind (the
-    dcb, the ~31,000 files the cache does not keep and the old cache). Only
-    the next DataForge extraction beside the same cache folder used to sweep
-    it, and after a cache folder change none ever did. MainWindow runs this
-    once a session at startup beside the active cache folder, and beside a
-    queued old cache folder when it cleans that up.
+    during its background delete leaves up to about 1.6 GB behind (the
+    dcb and the old cache), or about 2.3 GB after an unforge without
+    --exclude-file, whose ~31,000 records the cache does not keep stay
+    there too. Only the next DataForge extraction beside the same cache
+    folder used to sweep it, and after a cache folder change none ever
+    did. MainWindow runs this once a session at startup beside the active
+    cache folder, and beside a queued old cache folder when it cleans that
+    up.
 
     It first waits for the background deletes that were running when it
     was started (*after*, their ``done`` events), so it never works on a
