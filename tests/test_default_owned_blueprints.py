@@ -456,6 +456,7 @@ class _Stub:
         self.recompute_calls = 0
         self.events = []
         self._deferred_starter_report = []
+        self._bp_scan_status = ""
         self._close_committed = False
         self._loader_worker = None
         self._enhancements_worker = None
