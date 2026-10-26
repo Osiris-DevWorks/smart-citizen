@@ -20,15 +20,22 @@ prefix spellings, the junction cases (which fail under CI if no junction can
 be made) and the 8.3 short name cases (which also skip where the volume makes
 no short names).
 
+The perf proposal: a queued folder that is not in use also has the working
+folders a crash left beside it swept, in the background, since after a cache
+folder change no extraction sweeps there.
+
 MainWindow and ConfigTab run on stub selves, with a JsonSettings backend in
 ``tmp_path`` so nothing touches the registry. No widget is built, so the
-session ``qapp`` is not needed.
+session ``qapp`` is only needed by the tests that run the background delete
+of a working folder beside the cleanup and that sweep (perf proposal), for
+their queued finished slots.
 """
 from __future__ import annotations
 
 import logging
 import os
 import sys
+import threading
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -48,6 +55,7 @@ from src.utils.json_settings import JsonSettings
 from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH, P4K_MTIME_STAMP
 from src.utils.settings import AppSettings
 from src.utils.win_paths import win_long_path
+from tests.event_loop import pump_until
 from tests.junction import make_junction
 
 pytestmark = pytest.mark.unit
@@ -119,9 +127,13 @@ def _use_cache_location(folder: Path) -> Path:
     return AppSettings.get_dataforge_cache_leaf()
 
 
-def _run_cleanup(queued) -> None:
+def _run_cleanup(queued) -> MagicMock:
+    """Queue *queued* and run the real cleanup on a stub window. Returns the
+    stub, whose background sweep is a mock."""
     AppSettings.set_pending_cache_cleanup(queued)
-    MainWindow._cleanup_pending_old_cache(MagicMock())
+    me = MagicMock()
+    MainWindow._cleanup_pending_old_cache(me)
+    return me
 
 
 def _skip_messages(caplog) -> list:
@@ -343,6 +355,20 @@ class TestTheResolvedComparison:
         assert _cache_folder_overlapping(tmp_path.joinpath(*queued)) is None
 
 
+def _refusing_realpath(monkeypatch, refused: Path) -> None:
+    """Make the resolved half of the check raise for anything under
+    *refused*: non-strict realpath still raises on an error it does not
+    expect."""
+    realpath = os.path.realpath
+
+    def refuse(path, *args, **kwargs):
+        if os.fspath(path).startswith(str(refused)):
+            raise OSError(f"cannot resolve {path}")
+        return realpath(path, *args, **kwargs)
+
+    monkeypatch.setattr(os.path, "realpath", refuse)
+
+
 class TestAFolderTheCheckCannotResolve:
     def test_it_is_kept_and_the_skip_is_logged_at_warning(self, channel, tmp_path, monkeypatch,
                                                           rmtree_calls, caplog):
@@ -353,14 +379,7 @@ class TestAFolderTheCheckCannotResolve:
         live = _fill(_use_cache_location(tmp_path / "new"))
         old = tmp_path / "old" / "LIVE" / "cache" / "dataforge"
         record = _fill(old)
-        realpath = os.path.realpath
-
-        def refuse_the_old_folder(path, *args, **kwargs):
-            if os.fspath(path).startswith(str(tmp_path / "old")):
-                raise OSError(f"cannot resolve {path}")
-            return realpath(path, *args, **kwargs)
-
-        monkeypatch.setattr(os.path, "realpath", refuse_the_old_folder)
+        _refusing_realpath(monkeypatch, tmp_path / "old")
 
         _run_cleanup(old)
 
@@ -540,3 +559,156 @@ class TestIssueScenario:
         assert record.read_text(encoding="utf-8") == "<ship/>"
         assert rmtree_calls == []
         assert AppSettings.get_pending_cache_cleanup() == ""
+
+
+# ── Beside a working folder's background delete (perf proposal) ─────────────
+
+def _finished_run_window(run_dir: Path, marker) -> tuple[MagicMock, MagicMock]:
+    """A stub window, and the worker of a successful run that kept *run_dir*,
+    with the real cleanup, the real background delete, the real sweep of
+    leftovers and their finished slot."""
+    worker = MagicMock()
+    worker.take_working_folder.return_value = pe.WorkingFolder(run_dir, marker)
+    me = MagicMock()
+    me._forge_worker = worker
+    me._close_committed = False
+    me._working_folder_deleters = []
+    me._cleanup_pending_old_cache = lambda: MainWindow._cleanup_pending_old_cache(me)
+    me._delete_working_folder_in_background = (
+        lambda folder: MainWindow._delete_working_folder_in_background(me, folder))
+    me._sweep_working_folders_in_background = (
+        lambda parent: MainWindow._sweep_working_folders_in_background(me, parent))
+    me._on_working_folder_deleted = (
+        lambda deleter: MainWindow._on_working_folder_deleted(me, deleter))
+    return me, worker
+
+
+class TestBesideTheBackgroundDelete:
+    """A successful extraction's finished slot starts the delete of its
+    working folder, the old cache set aside in it included, on a thread of
+    its own just before it runs the queued cleanup, so the two run side by
+    side. Neither touches the other's folder: the queued folder is an old
+    cache folder, and one that holds the working folder holds the cache
+    folder in use as well, so it is kept (#486)."""
+
+    @pytest.mark.parametrize("queued", ["an old cache elsewhere", "the folder holding both"])
+    def test_each_delete_keeps_to_its_own_folder(self, channel, tmp_path, qapp, queued):
+        leaf = _use_cache_location(tmp_path / "new")
+        record = _fill(leaf)
+        run_dir, marker = pe._open_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        set_aside = run_dir / pe._SET_ASIDE_CACHE_NAME / DATAFORGE_RECORDS_SUBPATH / "ship.xml"
+        set_aside.parent.mkdir(parents=True)
+        set_aside.write_text("<old ship/>", encoding="utf-8")
+        old = tmp_path / "old" / "LIVE" / "cache" / "dataforge"
+        if queued == "an old cache elsewhere":
+            _fill(old)
+            AppSettings.set_pending_cache_cleanup(old)
+        else:
+            AppSettings.set_pending_cache_cleanup(leaf.parent)
+        me, worker = _finished_run_window(run_dir, marker)
+
+        MainWindow._on_dataforge_extract_finished(me, True, worker)
+
+        assert pump_until(lambda: me._working_folder_deleters == [])
+        assert not run_dir.exists()
+        assert record.read_text(encoding="utf-8") == "<ship/>"
+        assert AppSettings.get_pending_cache_cleanup() == ""
+        if queued == "an old cache elsewhere":
+            assert not old.exists()
+        else:
+            assert leaf.parent.is_dir()
+        me._run_enhancements_generation.assert_called_once_with()
+
+
+class TestLeftoverWorkingFoldersBesideIt:
+    """A crash or a kill during a successful run's background delete leaves
+    its working folder beside the cache folder, with the old cache set aside
+    in it (perf proposal). After a cache folder change no extraction sweeps
+    beside the old cache folder any more, so the cleanup sweeps there, in the
+    background: beside a queued folder it deletes or finds gone, never beside
+    a cache in use, where the extraction that just ran swept itself, or a
+    folder it could not compare, whose cleanup is skipped out of caution."""
+
+    @pytest.mark.parametrize("there", [True, False], ids=["deleted", "already gone"])
+    def test_beside_an_old_folder(self, channel, tmp_path, rmtree_calls, there):
+        _fill(_use_cache_location(tmp_path / "new"))
+        old = tmp_path / "old" / "LIVE" / "cache" / "dataforge"
+        if there:
+            _fill(old)
+        me = _run_cleanup(old)
+        me._sweep_working_folders_in_background.assert_called_once_with(old.parent)
+
+    def test_not_beside_a_cache_in_use(self, channel, tmp_path, rmtree_calls):
+        leaf = _use_cache_location(tmp_path / "A")
+        _fill(leaf)
+        me = _run_cleanup(leaf)
+        me._sweep_working_folders_in_background.assert_not_called()
+
+    def test_not_beside_a_folder_the_check_cannot_resolve(self, channel, tmp_path, monkeypatch,
+                                                          rmtree_calls):
+        _fill(_use_cache_location(tmp_path / "new"))
+        old = tmp_path / "old" / "LIVE" / "cache" / "dataforge"
+        _fill(old)
+        _refusing_realpath(monkeypatch, tmp_path / "old")
+        me = _run_cleanup(old)
+        me._sweep_working_folders_in_background.assert_not_called()
+
+    def test_on_real_threads(self, channel, tmp_path, qapp, monkeypatch):
+        """The case the review found, end to end: the cache folder was moved
+        and a crashed run's working folder still sits beside the old one.
+        The real finished slot deletes this run's working folder and the old
+        cache, and the sweep then takes the crashed run's folder on a thread
+        of its own, once this run's delete is over (held up here, so a
+        sweep that did not wait would run first), and leaves one whose
+        marker a live run in another window holds."""
+        leaf = _use_cache_location(tmp_path / "new")
+        record = _fill(leaf)
+        run_dir, marker = pe._open_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        old = tmp_path / "old" / "LIVE" / "cache" / "dataforge"
+        _fill(old)
+        crashed, crashed_marker = pe._open_scratch(old.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        set_aside = crashed / pe._SET_ASIDE_CACHE_NAME / DATAFORGE_RECORDS_SUBPATH / "ship.xml"
+        set_aside.parent.mkdir(parents=True)
+        set_aside.write_text("<old ship/>", encoding="utf-8")
+        crashed_marker.close()
+        held, held_marker = pe._open_scratch(old.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        held_dcb = held / "Data" / "Game2.dcb"
+        held_dcb.parent.mkdir()
+        held_dcb.write_bytes(b"dcb")
+        AppSettings.set_pending_cache_cleanup(old)
+        sweeps = []
+        real_sweep = pe._sweep_stale_scratch
+
+        def record_sweep(parent, prefix, should_cancel=None):
+            sweeps.append((Path(parent), prefix, threading.get_ident(), run_dir.exists()))
+            return real_sweep(parent, prefix, should_cancel=should_cancel)
+
+        monkeypatch.setattr(pe, "_sweep_stale_scratch", record_sweep)
+        me, worker = _finished_run_window(run_dir, marker)
+        gate = threading.Event()
+        folder = worker.take_working_folder.return_value
+        real_delete = folder.delete
+
+        def held_delete():
+            gate.wait(10)
+            real_delete()
+
+        folder.delete = held_delete
+        try:
+            MainWindow._on_dataforge_extract_finished(me, True, worker)
+            pump_until(lambda: False, seconds=0.3)
+            assert sweeps == []   # not while this run's delete is held up
+            gate.set()
+
+            assert pump_until(lambda: me._working_folder_deleters == [])
+            assert not crashed.exists()
+            assert held_dcb.read_bytes() == b"dcb"   # a folder whose marker is held is left whole
+            assert not old.exists() and not run_dir.exists()
+            assert record.read_text(encoding="utf-8") == "<ship/>"
+            assert [(parent, prefix) for parent, prefix, _thread, _run in sweeps] == [
+                (old.parent, pe.DATAFORGE_SCRATCH_PREFIX)]
+            assert sweeps[0][2] != threading.get_ident()   # never on the GUI thread
+            assert sweeps[0][3] is False   # after this run's own delete was over
+        finally:
+            gate.set()
+            held_marker.close()

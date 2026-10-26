@@ -1,18 +1,25 @@
 """
 dataforge_diff.py — Diff-cache for the DataForge XML cache.
 
+Nothing in the app calls this module now (perf proposal, #495): an
+extraction no longer writes the manifest and a generation no longer asks
+it, because hashing every cached file took seconds each time and nothing
+used the answer. It stays, with its tests, until #495 decides whether to
+drop it or use it again.
+
 Usage
 -----
-After unforge writes the cache, pak_extractor calls `update_manifest` to
-snapshot it. `dirty_categories` compares the cache with that snapshot and
-says which enhancement categories' source XMLs changed. Nothing calls it at
-run time: generation runs every enabled category, and has not been narrowed
-by it since ded720a. EnhancementsGeneratorWorker went on calling it anyway,
-hashing the whole cache on every run for an unused answer, until 2.5.0.
+`update_manifest` snapshots a cache, and `dirty_categories` compares the
+cache with that snapshot and says which enhancement categories' source XMLs
+changed. The extraction called `update_manifest` after unforge wrote the
+cache until the perf proposal, and generation has not been narrowed by
+`dirty_categories` since ded720a. EnhancementsGeneratorWorker went on
+calling it anyway, hashing the whole cache on every run for an unused
+answer, until 2.5.0.
 
-    from utils.dataforge_diff import update_manifest, dirty_categories
+    from src.utils.dataforge_diff import update_manifest, dirty_categories
 
-    # In pak_extractor, after extraction:
+    # Snapshot a cache:
     update_manifest(cache_dir)
 
     # To ask what changed since then:

@@ -118,7 +118,6 @@ def _run(gen, tmp_path, loc, forge_dir):
         "entity_names": {},
         "reputation_lookup": {},
         "tag_configs": {"components": cfg},
-        "_components_cfg_key": cfg.to_json(),
         "annotate_mission_descs": True,
     }
     out = gen._run_gen_missions(ctx)
@@ -175,9 +174,11 @@ class TestNozzleNameOnATranslatedRun:
 class TestMissingEnglishBaseIni:
     """A translated run whose English base.ini is missing (Clear Cache deletes
     it, a declined re-extraction leaves it gone) falls back to the run's own
-    loc. Every pickle built from that loc (scitem_lookups, standings,
-    blueprint_pools) is keyed apart, per language, so neither the next
-    English run nor another language's fallback run reuses it."""
+    loc. Every pickle built from that loc (standings) is keyed apart, per
+    language, so neither the next English run nor another language's
+    fallback run reuses it. scitem_lookups and blueprint_pools hold XML
+    facts only and resolve their names through the loc on every run (perf
+    proposal), so one pickle serves every language and needs no mark."""
 
     _LINK_UUID = "77777777-7777-7777-7777-777777777777"
     _LINK_BP_UUID = "88888888-8888-8888-8888-888888888888"
@@ -245,18 +246,22 @@ class TestMissingEnglishBaseIni:
         assert self._bullets(gen, bases["en"]) == {"- [FN] Norfield", "- Link Item"}
         assert warned, "a run without its English base.ini should say so in the log"
 
-    def test_every_pickle_from_the_fallback_loc_is_marked_per_language(self, gen, layout):
+    def test_only_the_pickle_from_the_fallback_loc_is_marked_per_language(self, gen, layout):
         forge_dir, bases = layout
         missing = bases["en"].parent / "missing.ini"
         self._run(gen, forge_dir, bases["fr"], missing)
         fr_keys = self._stored_keys(forge_dir)
-        for name, key in fr_keys.items():
-            assert key.endswith(f"|en_loc=fallback:{bases['fr']}"), name
+        assert fr_keys["standings"].endswith(f"|en_loc=fallback:{bases['fr']}")
         self._run(gen, forge_dir, bases["en"], bases["en"])
-        for name, key in self._stored_keys(forge_dir).items():
+        en_keys = self._stored_keys(forge_dir)
+        for name, key in en_keys.items():
             assert "en_loc=fallback" not in key, name
+        # The XML-facts pickles: no mark, one key for both languages.
+        for name in ("scitem_lookups", "blueprint_pools"):
+            assert fr_keys[name] == en_keys[name], name
+            assert "en_loc=fallback" not in fr_keys[name], name
 
-    def test_two_fallback_languages_do_not_share_pickles(self, gen, layout):
+    def test_two_fallback_languages_each_show_their_own_names(self, gen, layout):
         forge_dir, bases = layout
         missing = bases["en"].parent / "missing.ini"
         self._run(gen, forge_dir, bases["fr"], missing)

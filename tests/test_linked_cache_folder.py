@@ -210,20 +210,89 @@ class TestRobustRmtreeRefusesALink:
         assert pe.linked_folder_target(link) == expected
         assert _unchanged(files)
 
-    def test_a_folder_holding_a_link_is_deleted_and_the_target_kept(self, tmp_path):
+    @pytest.mark.parametrize("make", [
+        pytest.param(make_junction, id="junction"),
+        pytest.param(_make_symlink, id="symbolic-link"),
+    ])
+    def test_a_folder_holding_a_link_is_deleted_and_the_target_kept(self, tmp_path, make):
         """Only the folder handed in counts: a link inside it is removed as
-        a link, as before, and what it leads to stays."""
+        a link, as before, and what it leads to stays. A directory symbolic
+        link too: Windows' DirEntry follows one when its stat is asked to
+        follow, but never a junction, so the junction alone could not show
+        that the threaded pass's stat does not follow (perf proposal).
+        Where Windows refuses this account a symbolic link it skips, and
+        under CI it fails, as the other symbolic link tests do."""
         target = tmp_path / "elsewhere"
         target.mkdir()
         files = _fill(target)
         holder = tmp_path / "holder"
         holder.mkdir()
         (holder / "file.txt").write_text("x", encoding="utf-8")
-        make_junction(holder / "inner", target)
+        make(holder / "inner", target)
 
         pe.robust_rmtree(holder)
 
         assert not os.path.lexists(holder)
+        assert _unchanged(files)
+
+    def test_the_threaded_pass_never_follows_a_symbolic_link(self, tmp_path, monkeypatch):
+        """The same without the privilege a real symbolic link needs: the
+        listing of the folder handed in also holds an entry that reads as
+        os.scandir lists a directory symbolic link on Windows, a link by
+        its own lstat and the folder it leads to when followed (its path
+        leads there too, as listing the link does). The pass deletes the
+        folder's own file and leaves the target's, which a walk that
+        followed it would delete."""
+        target = tmp_path / "elsewhere"
+        target.mkdir()
+        files = _fill(target)
+        holder = tmp_path / "holder"
+        holder.mkdir()
+        (holder / "file.txt").write_text("x", encoding="utf-8")
+        top = win_long_path(holder)
+        real_scandir = os.scandir
+
+        class _SymlinkEntry:
+            name = "inner"
+            path = win_long_path(target)
+
+            def stat(self, *, follow_symlinks=True):
+                if follow_symlinks:
+                    return os.stat(self.path)
+                return os.stat_result((stat.S_IFLNK | 0o777,) + (0,) * 9)
+
+            def is_symlink(self):
+                return True
+
+            def is_junction(self):
+                return False
+
+            def is_dir(self, *, follow_symlinks=True):
+                return follow_symlinks
+
+            def is_file(self, *, follow_symlinks=True):
+                return False
+
+        class _Listing:
+            def __init__(self, folder):
+                self._real = real_scandir(folder)
+                self._extra = [_SymlinkEntry()] if folder == top else []
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                self._real.close()
+
+            def __iter__(self):
+                yield from self._real
+                yield from self._extra
+
+        with monkeypatch.context() as listed:
+            listed.setattr(os, "scandir", _Listing)
+            pe._delete_files_first(top)
+
+        assert not (holder / "file.txt").exists()
         assert _unchanged(files)
 
     def test_a_folder_that_is_not_there_is_still_nothing_to_do(self, tmp_path):
