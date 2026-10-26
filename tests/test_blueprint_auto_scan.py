@@ -12,8 +12,11 @@ stale_worker.py.
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
+from src.gui import main_window
 from src.gui.main_window import MainWindow
 from src.utils.json_settings import JsonSettings
 from src.utils.settings import AppSettings
@@ -189,9 +192,17 @@ class TestMaybeAutoScanGating:
 class _FakeStatusBar:
     def __init__(self):
         self.messages = []
+        self.current = ""
 
     def showMessage(self, message):
         self.messages.append(message)
+        self.current = message
+
+    def currentMessage(self):
+        return self.current
+
+    def clearMessage(self):
+        self.current = ""
 
 
 class _FinishStub:
@@ -206,6 +217,7 @@ class _FinishStub:
     def __init__(self, silent, new_names):
         self._bp_scan_silent = silent
         self._bp_scan_new_names = set(new_names)
+        self._bp_scan_status = ""
         self._status_bar = _FakeStatusBar()
         self.blueprint_tracker_tab = _FakeTrackerTab()
         self.recompute_called = False
@@ -260,6 +272,57 @@ class TestFinishQueueSilentMode:
         stub = _FinishStub(silent=True, new_names=[])
         stub.finish()
         assert stub._bp_scan_silent is False
+
+
+class TestTheScansStatusTextGoes:
+    """The scan's progress goes to the status bar, and its last text
+    ("Finishing up…") stayed there for the rest of the session: nothing
+    else writes there once the app is idle, and neither a run that found
+    nothing nor the summary box replaced it."""
+
+    @staticmethod
+    def _scanned(stub, *texts):
+        for text in texts:
+            MainWindow._show_blueprint_scan_status(stub, text)
+
+    def test_a_silent_run_that_found_nothing_takes_its_text_down(self, json_backend):
+        stub = _FinishStub(silent=True, new_names=[])
+        self._scanned(stub, main_window.tr("enhancements.bp_scan_progress", file="Game.log"),
+                      main_window.tr("enhancements.bp_scan_finishing"))
+        stub.finish()
+        assert stub._status_bar.currentMessage() == ""
+        assert stub._bp_scan_status == ""
+
+    def test_a_manual_run_takes_its_text_down_behind_the_box(self, json_backend, monkeypatch):
+        boxes = []
+        monkeypatch.setattr(main_window, "QMessageBox",
+                            SimpleNamespace(information=lambda *args: boxes.append(args)))
+        stub = _FinishStub(silent=False, new_names=[])
+        self._scanned(stub, main_window.tr("enhancements.bp_scan_finishing"))
+        stub.finish()
+        assert len(boxes) == 1
+        assert stub._status_bar.currentMessage() == ""
+
+    def test_a_silent_run_that_found_some_says_so_instead(self, json_backend):
+        AppSettings.set_owned_items(set())
+        AppSettings.set_auto_scan_show_popup_enabled(False)
+        finishing = main_window.tr("enhancements.bp_scan_finishing")
+        stub = _FinishStub(silent=True, new_names=["P4-AR"])
+        self._scanned(stub, finishing)
+        stub.finish()
+        added = stub._status_bar.messages[-1]
+        assert added != finishing and "1" in added
+        assert stub._status_bar.currentMessage() == added
+
+    def test_another_jobs_message_is_left_alone(self, json_backend):
+        """A background extraction (#483) or anything else that wrote to
+        the status bar after the scan's last text keeps its message."""
+        stub = _FinishStub(silent=True, new_names=[])
+        self._scanned(stub, main_window.tr("enhancements.bp_scan_finishing"))
+        stub._status_bar.showMessage("Extracting DataForge…")
+        stub.finish()
+        assert stub._status_bar.currentMessage() == "Extracting DataForge…"
+        assert stub._bp_scan_status == ""
 
 
 class _FakeMessageBox:
