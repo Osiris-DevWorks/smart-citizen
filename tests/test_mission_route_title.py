@@ -373,8 +373,11 @@ def test_pooled_courier_bodies_render_one_route(gen_module):
     """Regression: two Generates on the same cache rendered
     ``Pickup1|Address > Dropoff1`` in one run and ``Pickup1 > Dropoff1|Address``
     in the next, following whichever desc key hashed first in that process.
-    The lowest key's spelling must win in every ordering."""
-    expected = "~mission(Pickup1|Address) > ~mission(Dropoff1)"
+    The same spelling must win in every ordering."""
+    # Local 2.5 test build: #522's _agreed_endpoint_tokens gives an endpoint
+    # written bare in one body and with |Address in another the |Address form,
+    # so both ends take it; #519 alone kept the lowest key's spelling.
+    expected = "~mission(Pickup1|Address) > ~mission(Dropoff1|Address)"
     keys = list(_COURIER_LOC)
     for ordering in (keys, list(reversed(keys)), set(keys)):
         bodies = gen_module._route_bodies(ordering, _COURIER_LOC)

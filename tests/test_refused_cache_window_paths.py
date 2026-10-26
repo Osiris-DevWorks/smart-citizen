@@ -65,6 +65,11 @@ def _window(tab):
     me._enhancements_progress_dialog = None
     me._forge_progress_dialog = None
     me._simple_run_active = False
+    me._p4k_worker = None
+    # The real one-job-at-a-time test (#483), reading the workers above: a
+    # MagicMock's truthy default would read as a job running.
+    me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
+    me._job_running = lambda: MainWindow._job_running(me)
     return me
 
 
@@ -234,6 +239,7 @@ class TestSwitchesCompleteWithUnusableCache:
 
 class _Worker:
     stopped = False
+    in_background = False
 
     def __init__(self):
         self.calls = []

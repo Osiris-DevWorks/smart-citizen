@@ -617,7 +617,7 @@ class TestBesideTheBackgroundDelete:
             assert not old.exists()
         else:
             assert leaf.parent.is_dir()
-        me._run_enhancements_generation.assert_called_once_with()
+        me._run_enhancements_generation.assert_called_once_with(background=worker.in_background)  # (#483)
 
 
 class TestLeftoverWorkingFoldersBesideIt:
