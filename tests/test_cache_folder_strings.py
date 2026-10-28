@@ -131,6 +131,7 @@ def _start_extraction() -> None:
     me = MagicMock()
     me._close_committed = False
     me._forge_worker = None
+    me._job_running.return_value = False
     assert MainWindow._run_dataforge_extraction(me) is False
 
 

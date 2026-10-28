@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "增強內容生成失敗 — 詳情請檢視日誌標籤頁"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "增強內容生成已停止"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "{channel} 的 user.ini 已重置（已建立備份）"
@@ -2854,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 提取仍在進行中。\n\n現在停止嗎？你可以稍後重新執行。"
+      "at": "DataForge 提取仍在進行中。\n\n現在停止，還是讓它在後臺繼續執行，同時你繼續工作？如果停止，你可以稍後重新執行。"
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "停止"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "在後臺執行"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 提取已完成，但執行期間 DataForge 快取資料夾或頻道已變更，因此沒有生成增強內容，也沒有清除舊快取。"
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "正在執行提取或增強內容生成時已鎖定，完成後會再次解鎖。"
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "增強內容生成正在進行"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "增強內容生成仍在進行中。\n\n現在停止，還是讓它在後臺繼續執行，同時你繼續工作？如果停止，你可以稍後重新執行。"
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "正在停止增強內容生成…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -3370,6 +3398,10 @@
       "ht": "",
       "at": "打撈"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name}（僅地表）"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "搜尋藍圖..."
@@ -3432,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "解碼出此礦物時，掃描標籤會發光"
+      "at": "掃描到此礦物時發出提醒"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "掃描到打撈物時發出提醒"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "礦物或組件..."
+      "at": "輸入可掃描物或物品名稱..."
     },
     "minerals_none": {
       "ht": "",
@@ -3470,6 +3506,10 @@
       "ht": "",
       "at": "掃描訊號：每塊岩石 {base}，最多 {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "掃描訊號：每個 {base}，最多 {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "用於 {count} 個製造物品"
@@ -3490,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "顯示在 Star Citizen 之上的視窗：採礦掃描解碼器和藍圖抽屜。請以無邊框視窗模式執行遊戲。疊加層只讀取螢幕和 Game.log，從不接觸遊戲程序。"
+      "at": "顯示在 Star Citizen 之上的視窗：採礦掃描解碼器和藍圖抽屜。請以無邊框視窗模式執行遊戲。疊加層只讀取螢幕和 Game.log，並在你設定了抽屜快速鍵時只為這一個組合鍵留意按鍵，從不接觸遊戲程序。"
     },
     "start_btn": {
       "ht": "",
@@ -3500,6 +3540,22 @@
       "ht": "",
       "at": "停止疊加層"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "掃描解碼器"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "抽屜"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "來自 Game.log 的藍圖"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "掃描樣本"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "採礦掃描解碼器"
@@ -3507,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "讀取雷達下方的掃描訊號，並在其下方顯示礦藏類型和數量。"
+    },
+    "label_size": {
+      "ht": "",
+      "at": "掃描文字大小："
+    },
+    "size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "特大"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "掃描到關注的礦物或打撈物時："
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "發光"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "標籤顯示時周圍有脈動的光暈。"
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "閃爍"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "首次讀到目標時標籤閃爍三次。"
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "變更文字顏色"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "標籤文字變為亮綠色。"
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "放大文字"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "標籤文字放大到 1.5 倍。"
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "播放提示音"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "首次讀到目標時播放一聲短促的提示音。"
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3558,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "輸入礦物可查看使用它的組件，輸入組件可查看所需礦物。需要先擷取 DataForge。"
+      "at": "輸入礦物可查看使用它的物品，輸入物品可查看所需礦物。需要先擷取 DataForge。"
     },
     "drawer_position": {
       "ht": "",
@@ -3595,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "右下"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "抽屜快速鍵："
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "清除"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "在遊戲中開啟或關閉抽屜，並停在上次使用的分區。在遊戲中仍需按住 F 才能用滑鼠操作它。點選此框，然後同時按下組合鍵，例如 Alt+8。Star Citizen 仍會收到這些按鍵，所以請選一個遊戲中不用的組合鍵。"
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows 拒絕了這個快速鍵。可能已有其他程式在使用它，請換一個。"
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "這個不能用作快速鍵。請按住 Ctrl、Alt 或 Win，再加一個字母、數字、符號、空白鍵、Tab 或導覽鍵（方向鍵、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 鍵或 Pause 也可以單獨使用。"
     }
   }
 }

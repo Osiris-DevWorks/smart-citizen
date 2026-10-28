@@ -5,7 +5,8 @@ patches, and unp4k then reads a half-written archive and crashes inside
 SharpZipLib's ReadEntries. Both extractions check first, before any tool
 runs: another program holding Data.p4k open for writing, or a modified time
 in the last two minutes, raises P4kLockedError with the "wait for the
-launcher" message. Qt-free.
+launcher" message. A modified time a moment ahead of the clock counts as
+now. Qt-free.
 """
 
 import logging
@@ -42,6 +43,11 @@ def _age(path, seconds):
     os.utime(path, (stamp, stamp))
 
 
+def _clock_behind(path, seconds):
+    """A clock reading `seconds` before the file's modified time."""
+    return os.stat(path).st_mtime - seconds
+
+
 def _no_tool(monkeypatch):
     def refuse(*args, **kwargs):
         raise AssertionError("a tool ran on a Data.p4k that is being written")
@@ -64,6 +70,28 @@ class TestChangedRecently:
     def test_a_time_in_the_future_does_not(self, tools):
         _age(tools / "Data.p4k", -3600)
         assert not pe._p4k_changed_recently(tools / "Data.p4k")
+
+    @pytest.mark.parametrize("behind", [1e-6, 0.016, 1.0, pe._P4K_CLOCK_SLACK_SECONDS - 0.1])
+    def test_a_clock_a_moment_behind_the_file_counts(self, tools, behind):
+        """Before Python 3.13 (CI runs 3.11), time.time() on Windows reads
+        the same coarse tick Windows stamps a new file with, so a file
+        written just before comes out 0 s old or a rounding error less,
+        which made this file's tests fail at random. 1e-6 s stands for that
+        rounding error and 0.016 s for one Windows clock tick."""
+        now = _clock_behind(tools / "Data.p4k", behind)
+        assert pe._p4k_changed_recently(tools / "Data.p4k", now=now)
+
+    def test_a_time_past_the_slack_does_not(self, tools):
+        now = _clock_behind(tools / "Data.p4k", pe._P4K_CLOCK_SLACK_SECONDS + 0.1)
+        assert not pe._p4k_changed_recently(tools / "Data.p4k", now=now)
+
+    @pytest.mark.parametrize("behind", [0.0, 0.5])
+    def test_a_window_of_zero_counts_nothing(self, tools, monkeypatch, behind):
+        """conftest's session-wide 0 must keep switching the check off,
+        also for a file a moment ahead of the clock."""
+        monkeypatch.setattr(pe, "_P4K_RECENT_WRITE_SECONDS", 0)
+        now = _clock_behind(tools / "Data.p4k", behind)
+        assert not pe._p4k_changed_recently(tools / "Data.p4k", now=now)
 
     def test_a_missing_file_does_not(self, tmp_path):
         assert not pe._p4k_changed_recently(tmp_path / "Data.p4k")

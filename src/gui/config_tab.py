@@ -11,7 +11,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer
 
-from src.gui.theme import AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, get_button_color
+from src.gui.theme import (
+    AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, needs_apply_style,
+)
 from src.utils.i18n import tr
 from src.utils.pak_extractor import base_ini_is_fresh, windows_reason
 from src.utils.settings import (
@@ -104,6 +106,16 @@ class ConfigTab(QWidget):
         self._instructions_label.setStyleSheet("font-size: 11px;")
         self._instructions_label.setWordWrap(True)
         layout.addWidget(self._instructions_label)
+
+        # Says why the folders, channel and language are greyed out while an
+        # extraction or a generation runs (#483). Hidden otherwise.
+        self._data_locations_locked = False
+        self._update_check_running = False
+        self._job_lock_label = QLabel()
+        self._job_lock_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+        self._job_lock_label.setWordWrap(True)
+        self._job_lock_label.setVisible(False)
+        layout.addWidget(self._job_lock_label)
 
         # ── Tools ────────────────────────────────────────────────────────────
         self._tools_group = QGroupBox(tr("config.tools_group"))
@@ -621,7 +633,13 @@ class ConfigTab(QWidget):
         ``_use_install_root`` is the one caller that needs to know, since it
         would otherwise close its results dialog as if a picked install had
         been applied when it silently was not (#385 review).
+
+        Not while a job runs (#483): the field is locked then, and an install
+        scan that finished meanwhile must not change the game folder through
+        its results dialog either. The Config tab says why.
         """
+        if self._data_locations_locked:
+            return False
         game_path = self.game_path_input.text().strip()
         if game_path:
             # Normalize to native separators (backslashes on Windows). Qt's
@@ -755,7 +773,8 @@ class ConfigTab(QWidget):
             progress.close()
             self._dupe_progress = None
 
-        self._dupe_check_btn.setEnabled(True)
+        # Back on, unless a running job keeps it locked (#483).
+        self._refresh_locked_controls()
         if report is None:
             return  # the error slot already told the user
 
@@ -785,7 +804,19 @@ class ConfigTab(QWidget):
         Goes through the same field-then-``_save_game_path`` path a manual
         Browse does, so channel-combo refresh, P4K status, and the legacy
         GAME_INSTALL_PATH sync all happen exactly once and in one place.
+
+        A scan that finished during a job (#483) says so and leaves the field
+        and the dialog as they are, so the user can pick again once the job
+        ends. _save_game_path would refuse anyway, but its failure box blames
+        a drive that disconnected, and the field kept the unsaved root.
         """
+        if self._data_locations_locked:
+            QMessageBox.warning(
+                self,
+                tr("config.dupe_use_failed_title"),
+                tr("extract.locked_while_job_runs"),
+            )
+            return
         logger.info(f"Switching SC install root to {root!r} from the install check")
         self.game_path_input.setText(os.path.normpath(root))
         if not self._save_game_path():
@@ -807,8 +838,16 @@ class ConfigTab(QWidget):
     # ── Smart Citizen data folder ────────────────────────────────────────────
 
     def _save_data_dir(self):
-        """Persist the Smart Citizen data folder override."""
+        """Persist the Smart Citizen data folder override.
+
+        Not while a job runs (#483), the field put back: the field is locked
+        then, but change_data_dir_to (the startup OneDrive warning's Move)
+        reaches this without it, and a running global.ini extraction would
+        write base.ini into the folder being left."""
         current_dir = AppSettings.get_user_data_dir()
+        if self._data_locations_locked:
+            self.data_dir_input.setText(os.path.normpath(str(current_dir)))
+            return
         raw_path = self.data_dir_input.text().strip()
         if raw_path:
             raw_path = os.path.normpath(raw_path)
@@ -1281,12 +1320,11 @@ class ConfigTab(QWidget):
     def _set_extract_btn_needs_update(self, needs_update: bool) -> None:
         """Red button text when base.ini has never been extracted or Data.p4k
         has changed since (``base_ini_is_fresh``) — a nudge, not a gate. Unlike Generate
-        Enhancements/Apply Enhancements, this button is never disabled: users
-        may legitimately want to re-extract even when nothing looks stale
-        (e.g. after manually clearing part of the cache)."""
-        self._extract_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if needs_update else ""
-        )
+        Enhancements/Apply Enhancements, staleness never disables this button:
+        users may legitimately want to re-extract even when nothing looks
+        stale (e.g. after manually clearing part of the cache). Only a running
+        job locks it (#483), and the red then dims."""
+        self._extract_btn.setStyleSheet(needs_apply_style() if needs_update else "")
 
     # ── Updates ──────────────────────────────────────────────────────────────
 
@@ -1301,8 +1339,46 @@ class ConfigTab(QWidget):
         self._update_status_label.setText(text)
 
     def set_check_updates_enabled(self, enabled: bool) -> None:
-        """Toggle the 'Check for Updates' button — disable while a check runs."""
-        self._check_updates_btn.setEnabled(enabled)
+        """Toggle the 'Check for Updates' button — disable while a check runs.
+        A running job keeps it locked as well (#483)."""
+        self._update_check_running = not enabled
+        self._refresh_locked_controls()
+
+    def _job_locked_controls(self) -> list:
+        """What a running extraction or generation depends on (#483): the
+        game, data and cache folders, the channel and the language it started
+        with, the global.ini extraction (one job at a time), and Import
+        Settings, whose restart would start a new copy beside this one. The
+        install scan's button and Check for Updates are handled with their own
+        busy state in _refresh_locked_controls."""
+        return [
+            self.game_path_input, self._game_browse_btn,
+            self.channel_combo,
+            self.language_combo, self._map_lang_btn,
+            self.data_dir_input, self._data_browse_btn, self._data_reset_btn,
+            self.cache_dir_input, self._cache_browse_btn, self._cache_reset_btn,
+            self._extract_btn,
+            self._import_settings_btn,
+        ]
+
+    def set_data_locations_locked(self, locked: bool, reason: str = "") -> None:
+        """Lock or unlock what a running job depends on, and say why (#483).
+        MainWindow._refresh_job_lock calls this whenever a job starts or ends,
+        whether its progress dialog is shown or not."""
+        self._data_locations_locked = locked
+        self._job_lock_label.setText(reason)
+        self._job_lock_label.setVisible(locked)
+        self._refresh_locked_controls()
+
+    def _refresh_locked_controls(self) -> None:
+        """Apply the job lock and the scan's and update check's own busy states."""
+        locked = self._data_locations_locked
+        for widget in self._job_locked_controls():
+            widget.setEnabled(not locked)
+        self._dupe_check_btn.setEnabled(
+            not locked and getattr(self, "_dupe_worker", None) is None
+        )
+        self._check_updates_btn.setEnabled(not locked and not self._update_check_running)
 
     # ── Preview ──────────────────────────────────────────────────────────────
 

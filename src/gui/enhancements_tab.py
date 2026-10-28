@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 
 from src.gui.combo_box import NoScrollComboBox
 from src.gui.tag_mapping_dialog import TagMappingDialog
-from src.gui.theme import get_button_color
+from src.gui.theme import needs_apply_style
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 from src.utils.tag_builder import (
@@ -92,6 +92,11 @@ class EnhancementsTab(QWidget):
         self._enhancements_dirty = False
         self._tag_dirty = False
         self._prefix_dirty = False
+        # Apply Category Changes and Save Tag Changes are locked while an
+        # extraction or a generation runs (#483), see set_changes_locked.
+        self._changes_locked = False
+        self._changes_lock_reason = ""
+        self._operation_message = ""
         self.setup_ui()
 
     def setup_ui(self):
@@ -361,16 +366,24 @@ class EnhancementsTab(QWidget):
         default look. The two tooltip variants are resolved via tr() here
         (not cached class constants) so they always reflect the active
         language — the disabled-state text is what a user hovering a
-        gone-grey button most wants to know: "why can't I click this?" """
+        gone-grey button most wants to know: "why can't I click this?"
+        A running job keeps it off (#483), with that job's own message as
+        the tooltip when it set one (set_operation_running), otherwise the
+        lock reason: a category tick or a setting changed meanwhile lit it
+        again in full red, and its click saved the Tag Builder pages before
+        the one-job rule refused the run."""
         self._enhancements_dirty = dirty
-        self._generate_enhancements_btn.setEnabled(dirty)
-        self._generate_enhancements_btn.setToolTip(
-            tr("enhancements.generate_enabled_tooltip") if dirty
-            else tr("enhancements.generate_disabled_tooltip")
-        )
-        self._generate_enhancements_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._generate_enhancements_btn.setEnabled(dirty and not self._changes_locked)
+        if self._changes_locked:
+            self._generate_enhancements_btn.setToolTip(
+                self._operation_message or self._changes_lock_reason)
+        else:
+            self._generate_enhancements_btn.setToolTip(
+                tr("enhancements.generate_enabled_tooltip") if dirty
+                else tr("enhancements.generate_disabled_tooltip")
+            )
+        # Dimmed while a running job keeps it disabled (#483).
+        self._generate_enhancements_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _compute_initial_enhancements_dirty(self, keys: "list[str] | None" = None) -> bool:
         """True if Generate Enhancements has work to do right now: the
@@ -569,15 +582,40 @@ class EnhancementsTab(QWidget):
         )
 
     def _on_category_checkbox_changed(self):
-        """Enable Apply button if any checkbox differs from saved settings."""
+        """Enable Apply button if any checkbox differs from saved settings,
+        unless a running job keeps it locked (#483)."""
         has_changes = any(
             cb.isChecked() != AppSettings.get_enhancement_category_enabled(key)
             for key, cb in self._enhancements_checkboxes.items()
         )
-        self._apply_categories_btn.setEnabled(has_changes)
+        self._apply_categories_btn.setEnabled(has_changes and not self._changes_locked)
+
+    def set_changes_locked(self, locked: bool, reason: str = "") -> None:
+        """Lock Apply Category Changes, Save Tag Changes and Generate
+        Enhancements while an extraction or a generation runs (#483), shown
+        or hidden. Generate would start a run one job at a time refuses. Apply
+        Category Changes renames INIs to and from ``.disabled`` in the folder
+        a generation writes, and starts a reload that reads the set mid-run;
+        a category changed then came back beside its ``.disabled`` copy or was
+        restored from an older one, under a stamp that called the folder
+        current. Save Tag Changes asks for a regeneration that one job at a
+        time would refuse, after saving the tags and turning itself off. The
+        checkboxes and the Tag Builder stay free: the change waits for the
+        button. Each button's tooltip gives *reason* while locked, except that
+        Generate keeps the running job's own message when it set one."""
+        self._changes_locked = locked
+        self._changes_lock_reason = reason if locked else ""
+        self._apply_categories_btn.setToolTip(
+            reason if locked else tr("enhancements.apply_categories_tooltip")
+        )
+        self._on_category_checkbox_changed()
+        self._set_tag_btn_dirty(self._tag_dirty)
+        self._set_generate_btn_dirty(self._enhancements_dirty)
 
     def _apply_category_changes(self):
         """Save checkbox states, disable/restore enhancement files, and trigger reload."""
+        if self._changes_locked:
+            return  # a job is running (#483): the button is locked, this is the net
         for key, cb in self._enhancements_checkboxes.items():
             now_enabled = cb.isChecked()
             AppSettings.set_enhancement_category_enabled(key, now_enabled)
@@ -797,9 +835,7 @@ class EnhancementsTab(QWidget):
             tr("enhancements.prefix_enabled_tooltip") if dirty
             else tr("enhancements.prefix_disabled_tooltip")
         )
-        self._apply_prefix_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._apply_prefix_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _mark_prefix_dirty(self, *_args) -> None:
         """Recompute dirty state whenever the prefix combo selection
@@ -847,6 +883,7 @@ class EnhancementsTab(QWidget):
     # ── Operation state ───────────────────────────────────────────────────────
 
     def set_operation_running(self, message: str):
+        self._operation_message = message  # kept while the job lock refreshes the button
         self._generate_enhancements_btn.setEnabled(False)
         self._generate_enhancements_btn.setToolTip(message)
 
@@ -863,6 +900,7 @@ class EnhancementsTab(QWidget):
         run re-enables unconditionally so the user has a way to retry
         without first having to touch an unrelated setting. The re-read
         judges the saved categories, which are what the run generated."""
+        self._operation_message = ""
         if not success or self._compute_initial_enhancements_dirty(self._saved_category_keys()):
             self._enhancements_dirty = True
         self._set_generate_btn_dirty(self._enhancements_dirty)
@@ -1141,16 +1179,19 @@ class EnhancementsTab(QWidget):
         text color so none of the three can drift apart. Same enabled/
         disabled tooltip pattern as Generate Enhancements; resolved via
         tr() here (not cached class constants) so they always reflect
-        the active language."""
+        the active language. A running job locks it, with the reason as the
+        tooltip (#483), and the colour dims but still says the tags are
+        unsaved."""
         self._tag_dirty = dirty
-        self._apply_tag_btn.setEnabled(dirty)
-        self._apply_tag_btn.setToolTip(
-            tr("enhancements.tag_enabled_tooltip") if dirty
-            else tr("enhancements.tag_disabled_tooltip")
-        )
-        self._apply_tag_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._apply_tag_btn.setEnabled(dirty and not self._changes_locked)
+        if self._changes_locked:
+            self._apply_tag_btn.setToolTip(self._changes_lock_reason)
+        else:
+            self._apply_tag_btn.setToolTip(
+                tr("enhancements.tag_enabled_tooltip") if dirty
+                else tr("enhancements.tag_disabled_tooltip")
+            )
+        self._apply_tag_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _mark_tag_dirty(self, *_args):
         """A Tag Builder config changed since the last save — light the
@@ -1159,6 +1200,8 @@ class EnhancementsTab(QWidget):
 
     def _apply_tag_builder(self):
         """Persist every page's TagConfig and kick off enhancement regen."""
+        if self._changes_locked:
+            return  # a job is running (#483): the button is locked, this is the net
         self._persist_tag_builder_state()
         # Re-run the generator so the new tags show up in the output INIs;
         # MainWindow handles the worker lifecycle + progress UI.

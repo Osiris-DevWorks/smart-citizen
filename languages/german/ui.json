@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Erzeugung der Erweiterungen fehlgeschlagen — Details im Log-Tab"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen gestoppt"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini für {channel} zurückgesetzt (Backup erstellt)"
@@ -2854,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "Die DataForge-Extraktion läuft noch.\n\nJetzt stoppen? Du kannst sie später erneut starten."
+      "at": "Die DataForge-Extraktion läuft noch.\n\nJetzt stoppen oder im Hintergrund weiterlaufen lassen, während du weiterarbeitest? Wenn du sie stoppst, kannst du sie später erneut starten."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Stoppen"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Im Hintergrund ausführen"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "Die DataForge-Extraktion ist abgeschlossen, aber der DataForge-Cache-Ordner oder der Kanal hat sich während der Ausführung geändert. Daher wurden keine Erweiterungen erzeugt und kein alter Cache geleert."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Gesperrt, solange eine Extraktion oder eine Erzeugung von Erweiterungen läuft, und wieder freigegeben, sobald sie abgeschlossen ist."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen läuft"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen läuft noch.\n\nJetzt stoppen oder im Hintergrund weiterlaufen lassen, während du weiterarbeitest? Wenn du sie stoppst, kannst du sie später erneut starten."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen wird gestoppt…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -3370,6 +3398,10 @@
       "ht": "",
       "at": "Bergung"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (nur Oberfläche)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Blaupausen suchen..."
@@ -3432,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "Die Scan-Anzeige leuchtet, wenn dieses Mineral erkannt wird"
+      "at": "Alarm, wenn dieses Mineral gescannt wird"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Alarm, wenn Bergungsgut gescannt wird"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "Mineral oder Komponente..."
+      "at": "Scanbares Objekt oder Gegenstand eingeben..."
     },
     "minerals_none": {
       "ht": "",
@@ -3470,6 +3506,10 @@
       "ht": "",
       "at": "Scan-Signatur: {base} pro Gestein, bis zu {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Scan-Signatur: je {base}, bis zu {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "In {count} hergestellten Gegenständen verwendet"
@@ -3490,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log; den Spielprozess berührt es nie."
+      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log und achtet, wenn du ein Tastenkürzel für die Schublade festlegst, auf Tastendrücke für genau diese Kombination; den Spielprozess berührt es nie."
     },
     "start_btn": {
       "ht": "",
@@ -3500,6 +3540,22 @@
       "ht": "",
       "at": "Overlay stoppen"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "Scan-Decoder"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Schublade"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Baupläne aus Game.log"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "Scan-Proben"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Bergbau-Scan-Decoder"
@@ -3507,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "Liest die Scan-Signatur unter dem Radar und zeigt darunter Vorkommenstyp und Anzahl."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Textgröße des Scans:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Klein"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Mittel"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Groß"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Sehr groß"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "Wenn ein beobachtetes Mineral oder Bergungsgut gescannt wird:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Leuchten"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Ein pulsierendes Leuchten um die Anzeige, solange sie sichtbar ist."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Blinken"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "Die Anzeige blinkt dreimal, wenn das Ziel zum ersten Mal gelesen wird."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Textfarbe ändern"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "Der Text der Anzeige wird hellgrün."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Größerer Text"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "Der Text der Anzeige wird anderthalbmal so groß."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Ton abspielen"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Ein kurzer Klang, wenn das Ziel zum ersten Mal gelesen wird."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3558,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "Mineral eingeben, um die Komponenten zu sehen, die es nutzen, oder eine Komponente, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
+      "at": "Mineral eingeben, um die Gegenstände zu sehen, die es nutzen, oder einen Gegenstand, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
     },
     "drawer_position": {
       "ht": "",
@@ -3595,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "Unten rechts"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Tastenkürzel der Schublade:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Löschen"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Öffnet und schließt die Schublade aus dem Spiel heraus, mit dem zuletzt genutzten Bereich. Im Spiel hältst du weiterhin F gedrückt, um die Maus darin zu nutzen. Klicke in das Feld und drücke die Tasten zusammen, etwa Alt+8. Star Citizen bekommt diese Tasten trotzdem, also wähle eine Kombination, die du im Spiel nicht nutzt."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows hat dieses Tastenkürzel abgelehnt. Vielleicht nutzt es schon ein anderes Programm; wähle ein anderes."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Das kann kein Tastenkürzel sein. Halte Strg, Alt oder Win mit einem Buchstaben, einer Ziffer, einem Symbol, der Leertaste, Tab oder einer Navigationstaste (Pfeile, Pos1, Ende, Bild auf/ab, Einfg, Entf), auf Wunsch auch Umschalt. Eine F-Taste oder Pause geht auch allein."
     }
   }
 }
