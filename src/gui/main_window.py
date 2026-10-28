@@ -906,9 +906,9 @@ class MainWindow(QMainWindow):
         # can't be dragged smaller, which is this branch's whole point.
         #
         # This is now a last-resort *chrome* scroller. No tab page contributes
-        # a width floor any more (see _on_tab_changed's history: an explicit
-        # per-page minimumWidth used to), so what's left is the window's own
-        # furniture -- the main toolbar and the Log tab's toolbar row. It
+        # a width floor any more (an explicit per-page minimumWidth, once set
+        # from a tab-change handler, used to), so what's left is the window's
+        # own furniture -- the main toolbar and the Log tab's toolbar row. It
         # therefore only engages below a ~682px window, and when it does it
         # engages identically on all 8 tabs, so scrollbar placement stays
         # consistent even in that regime. Each tab contains its own content
@@ -982,6 +982,10 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.merge_requested.connect(self.perform_merge_and_reload)
         self.enhancements_tab.enhancements_pipeline_requested.connect(self._run_enhancements_pipeline)
         self.enhancements_tab.favorite_prefix_changed.connect(self._on_favorite_prefix_changed)
+        self.enhancements_tab.category_ticks_changed.connect(self._on_category_ticks_changed)
+        self.config_tab.preview_starting.connect(
+            self.enhancements_tab.apply_pending_category_changes
+        )
         self._enhancements_tab_index = self.tabs.addTab(self.enhancements_tab, tr("tabs.enhancements"))
 
         # Blueprint Tracker tab (#222: split out of the Enhancements tab)
@@ -1060,10 +1064,6 @@ class MainWindow(QMainWindow):
         self._error_dialog_handler = ErrorDialogHandler(self._error_dialog_emitter)
         self._error_dialog_emitter.error_emitted.connect(self._show_error_dialog)
         logging.getLogger().addHandler(self._error_dialog_handler)
-
-        # Revert unapplied enhancement checkbox changes when leaving the tab
-        self.tabs.currentChanged.connect(self._on_tab_changed)
-        self._previous_tab_index = self.tabs.currentIndex()
 
         # #180: Simple/Advanced view switch. The tabbed UI (Advanced) and the
         # one-button Simple page are siblings in the content layout, swapped
@@ -1245,12 +1245,6 @@ class MainWindow(QMainWindow):
             content_size.width() + chrome_w + pad,
             content_size.height() + chrome_h + pad,
         )
-
-    def _on_tab_changed(self, new_index: int):
-        """Revert unapplied enhancement checkbox changes when leaving the Enhancements tab."""
-        if self._previous_tab_index == self._enhancements_tab_index and new_index != self._enhancements_tab_index:
-            self.enhancements_tab.revert_category_checkboxes()
-        self._previous_tab_index = new_index
 
     def create_toolbar(self) -> QVBoxLayout:
         """Create toolbar with buttons."""
@@ -2592,10 +2586,12 @@ class MainWindow(QMainWindow):
     def _mark_applied(self) -> None:
         """Apply to Game just wrote the loaded state: the button goes clean,
         and anything an in-flight already-applied check is working from is
-        now stale."""
+        now stale. A category tick still pending stays to be written: a
+        running job (#483) kept Apply from saving it (#532)."""
         self._invalidate_applied_check()
-        self._set_apply_btn_dirty(False)
-        self._session_has_unapplied_edit = False
+        pending = self.enhancements_tab.has_pending_category_changes()
+        self._set_apply_btn_dirty(pending)
+        self._session_has_unapplied_edit = pending
 
     def _apply_merge_inputs(self) -> _ApplyMergeInputs:
         """Capture, on the main thread, what _merge_for_apply reads from the
@@ -2690,9 +2686,31 @@ class MainWindow(QMainWindow):
         self._apply_applied_state_verdict(already_applied)
 
     def _apply_applied_state_verdict(self, already_applied: bool) -> None:
+        # The check merges the saved category set, so it cannot see a tick
+        # still pending on the Enhancements tab, which Apply saves and
+        # writes (#532).
+        if already_applied and self.enhancements_tab.has_pending_category_changes():
+            already_applied = False
         self._set_apply_btn_dirty(not already_applied)
         if already_applied:
             self._session_has_unapplied_edit = False
+
+    def _on_category_ticks_changed(self, pending: bool) -> None:
+        """A category tick changed on the Enhancements tab (#532). Apply
+        Enhancements saves pending ticks first, so a pending one is a change
+        it would write: the button goes red, and closing offers Apply Now
+        unless a revert of the game file has cleared that reminder since.
+        Closing without Generate or Apply Enhancements drops a pending tick,
+        so the next start shows the saved set. Ticks put back to the saved
+        set leave nothing new, so the background check settles the button
+        again. As after a blueprint scan, not while closing (the check is a
+        thread closeEvent would no longer wait for), and not while nothing
+        is loaded or a load is running, which checks after its own reload."""
+        if pending:
+            self._mark_apply_dirty()
+        elif (not self._close_committed and self.entries
+              and self._loader_worker is None):
+            self._refresh_apply_dirty_after_reload()
 
     def _settle_applied_state_check(self, timeout_ms: int = 10000) -> None:
         """Let an in-flight already-applied check finish, and apply its verdict,
@@ -2752,6 +2770,12 @@ class MainWindow(QMainWindow):
         # What save_user_ini wrote, so the next reload counts none of it as
         # unsaved (#531).
         self._remember_saved_overrides(self.entries)
+
+        # Category ticks not yet saved count (#532): saved and the table
+        # reloaded, as the category Apply button does, so the merge below and
+        # the table both use them. The reload is synchronous and reads the
+        # user.ini just saved from the table.
+        self.enhancements_tab.apply_pending_category_changes()
 
         target_path = AppSettings.get_global_ini_path()
 
@@ -3623,9 +3647,6 @@ class MainWindow(QMainWindow):
         # would back up their *previous* config.
         self.enhancements_tab.flush_pending_tag_edits()
 
-        settings_values = AppSettings.export_all_values()
-        overrides = AppSettings.export_channel_overrides()
-
         path, _ = QFileDialog.getSaveFileName(
             self,
             tr("settings_backup.export_dialog_title"),
@@ -3634,6 +3655,13 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
+
+        # And pending category ticks (#532), saved and reloaded as the
+        # category Apply button does, once there is a backup to write them
+        # to: a cancelled export leaves them pending.
+        self.enhancements_tab.apply_pending_category_changes()
+        settings_values = AppSettings.export_all_values()
+        overrides = AppSettings.export_channel_overrides()
 
         try:
             write_profile_zip(
@@ -5969,7 +5997,9 @@ class MainWindow(QMainWindow):
         the stamp before the generator runs and writes it after), or it was
         made from older game data. Only a fresh DataForge cache asks this (see
         _out_of_date_build_key), and the dialog then says "out of date"
-        instead of counting missing categories.
+        instead of counting missing categories. Either way the enabled
+        categories leave out any the Enhancements tab has unticked and not
+        saved (#532).
 
         The answer holds for the rest of the session (_enhancements_prompt_
         answer, reset on a channel or data-folder change): Skip is never
@@ -5988,9 +6018,14 @@ class MainWindow(QMainWindow):
             # global.ini extraction's reload asks again when it ends.
             return
 
-        # Only check enabled categories
+        # Only check enabled categories, less any the Enhancements tab has
+        # unticked and not saved (#532). The question ticks what it offers,
+        # so its Generate built a category the user had just unticked. Left
+        # out, the run's own save turns it off with its files.
         enh_dir = AppSettings.get_enhancements_dir()
-        enabled = AppSettings.get_enabled_enhancement_categories()
+        unticked = self.enhancements_tab.pending_unticked_file_keys()
+        enabled = {key for key in AppSettings.get_enabled_enhancement_categories()
+                   if key not in unticked}
         missing = [key for key in enabled
                    if not (enh_dir / AppSettings.ENHANCEMENTS_FILES[key]).exists()]
         stale_key = self._out_of_date_build_key() if enabled and not missing else ""
@@ -6028,7 +6063,8 @@ class MainWindow(QMainWindow):
 
         Args:
             file_keys: The enabled file keys to offer: the missing ones, or
-                every enabled one when the set is out of date.
+                every enabled one when the set is out of date, less any
+                category the Enhancements tab has unticked and not saved.
             out_of_date: The set is out of date rather than missing files.
                 The body then says so, with no count, and the offered
                 categories are ticked without the "(missing)" suffix.
@@ -6112,8 +6148,10 @@ class MainWindow(QMainWindow):
             for key, cb in checkboxes.items():
                 if key in offered_checkbox_keys:
                     AppSettings.set_enhancement_category_enabled(key, cb.isChecked())
-            # Refresh enhancements tab checkboxes to match
-            self.enhancements_tab.revert_category_checkboxes()
+            # Refresh the offered checkboxes on the Enhancements tab to match.
+            # A tick pending on another category stays (#532), and the
+            # generation that follows saves it.
+            self.enhancements_tab.revert_category_checkboxes(offered_checkbox_keys)
             self.enhancements_tab.refresh_enhancements_status()
             return AppSettings.get_enabled_enhancement_categories()
 
@@ -6336,7 +6374,9 @@ class MainWindow(QMainWindow):
 
         *if_unfinished* is what the caller does when the run fails, as for
         _check_p4k_freshness: a language switch leaves its reload to this
-        run, and the finished slot runs it after a failure too.
+        run, and the finished slot runs it after a failure too. A run that
+        saved pending category ticks and was given none reloads the table
+        after a failure instead (#532).
 
         *background* follows a DataForge extraction the user sent to the
         background (#483): no progress dialog, the status bar reports.
@@ -6359,8 +6399,21 @@ class MainWindow(QMainWindow):
             # generation or the caller's reload.
             return False
 
-        # Use enabled categories from settings if none specified
+        # Use enabled categories from settings if none specified, after
+        # saving the ticks on screen that differ from them (#532). A
+        # successful run reloads the table, so this skips the category
+        # Apply's own reload, and a failed one reloads it here unless its
+        # caller already does (a language switch's if_unfinished). Saved,
+        # the set no longer matches the game, and an already-applied check
+        # that read the old set must not turn Apply green during the run.
         if categories is None:
+            if self.enhancements_tab.apply_pending_category_changes(reload=False):
+                self._mark_apply_dirty()
+                # This run builds the ticks it saved, so one that turned a
+                # category on leaves Generate clean.
+                self.enhancements_tab.mark_enhancements_clean()
+                if if_unfinished is None:
+                    if_unfinished = self.perform_merge_and_reload
             categories = AppSettings.get_enabled_enhancement_categories()
         if language is None:
             language = AppSettings.get_selected_language()
@@ -6537,10 +6590,12 @@ class MainWindow(QMainWindow):
                 else "status_bar.enhancement_generation_failed"))
             if if_unfinished is not None:
                 # A language switch left its reload to this run: load the
-                # language picked anyway, with the stats it has. The run's
-                # error dialog is usually still open (this slot runs inside
-                # its event loop), so the reload waits for it to close rather
-                # than opening the loading dialog on top of it.
+                # language picked anyway, with the stats it has. Or the run
+                # saved pending category ticks (#532): bring the table to
+                # them. The run's error dialog is usually still open (this
+                # slot runs inside its event loop), so the reload waits for
+                # it to close rather than opening the loading dialog on top
+                # of it.
                 if self._error_dialog_showing:
                     self._after_error_dialog = if_unfinished
                 else:

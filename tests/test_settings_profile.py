@@ -518,15 +518,23 @@ class TestExportFlushesTagBuilder:
     Tag configs only reach settings via Save Tag Changes / Generate
     Enhancements (`_persist_tag_builder_state`), so exporting without
     flushing would snapshot the previous config — the same trap #215 fixed
-    for Generate. Driven on a lightweight stand-in ``self`` with the real
-    unbound method, matching tests/test_ui_mode.py (no pytest-qt in dev
-    deps — see tests/CLAUDE.md).
+    for Generate. Category ticks pending on the Enhancements tab are saved
+    too (#532), once a file is picked. Driven on a lightweight stand-in
+    ``self`` with the real unbound method, matching tests/test_ui_mode.py
+    (no pytest-qt in dev deps — see tests/CLAUDE.md), with the zip writer
+    replaced so the test reads what is written.
     """
 
-    def test_export_flushes_pending_tag_edits_before_reading(self, tmp_path, json_backend):
+    @staticmethod
+    def _export(tmp_path, monkeypatch, picked: bool):
+        """Run the real export on a stand-in window whose Enhancements tab
+        records its calls. Returns the calls and the settings written."""
+        import src.gui.main_window as mw
+        import src.utils.settings_profile as settings_profile
         from src.gui.main_window import MainWindow
 
         calls = []
+        written = {}
 
         class FakeTab:
             def flush_pending_tag_edits(self):
@@ -536,11 +544,15 @@ class TestExportFlushesTagBuilder:
                     "tag_builder/components/config", '{"separator": "underscore"}'
                 )
 
+            def apply_pending_category_changes(self):
+                # Mimic a pending untick being saved (#532).
+                calls.append("categories")
+                AppSettings.set_enhancement_category_enabled("commodities", False)
+                return True
+
         class FakeStatusBar:
             def showMessage(self, *a, **k):
                 pass
-
-        captured = {}
 
         class Stub:
             enhancements_tab = FakeTab()
@@ -548,24 +560,49 @@ class TestExportFlushesTagBuilder:
             def statusBar(self):
                 return FakeStatusBar()
 
-        stub = Stub()
+        class Box:
+            @staticmethod
+            def information(*a, **k):
+                calls.append("done")
 
-        # Cancel at the file dialog: we only care that the flush already
-        # happened by the time values are read.
-        import src.gui.main_window as mw
+            critical = information
 
         def fake_save_dialog(*a, **k):
-            captured["at_dialog"] = AppSettings.export_all_values()
-            return ("", "")
+            calls.append("picked" if picked else "cancelled")
+            return (str(tmp_path / "backup.zip") if picked else "", "")
 
-        orig = mw.QFileDialog.getSaveFileName
-        mw.QFileDialog.getSaveFileName = staticmethod(fake_save_dialog)
-        try:
-            MainWindow._handle_export_settings(stub)
-        finally:
-            mw.QFileDialog.getSaveFileName = orig
+        def fake_write(path, **kwargs):
+            calls.append("written")
+            written.update(kwargs["settings"])
 
-        assert calls == ["flushed"], "export must flush Tag Builder edits first"
-        assert captured["at_dialog"].get("tag_builder/components/config") == (
+        monkeypatch.setattr(mw.QFileDialog, "getSaveFileName", staticmethod(fake_save_dialog))
+        monkeypatch.setattr(mw, "QMessageBox", Box)
+        monkeypatch.setattr(settings_profile, "write_profile_zip", fake_write)
+        MainWindow._handle_export_settings(Stub())
+        return calls, written
+
+    def test_export_writes_the_tag_builder_and_ticks_on_screen(
+            self, tmp_path, data_root, monkeypatch):
+        """What reaches the zip, not what the settings say at some point:
+        the flushed Tag Builder config and the saved pending category tick."""
+        calls, written = self._export(tmp_path, monkeypatch, picked=True)
+
+        assert calls == ["flushed", "picked", "categories", "written", "done"], (
+            "export must save Tag Builder edits, and pending category ticks once "
+            "a file is picked, before it reads the values it writes")
+        assert written.get(
+            "enhancements/categories/commodities/enabled") in (False, "false"), (
+            "the saved pending category tick must be in the written values")
+        assert written.get("tag_builder/components/config") == (
             '{"separator": "underscore"}'
-        ), "the flushed on-screen tag config must be in the exported values"
+        ), "the flushed on-screen tag config must be in the written values"
+
+    def test_a_cancelled_export_leaves_category_ticks_pending(
+            self, tmp_path, data_root, monkeypatch):
+        """Saving a tick renames its files and reloads the table, so a
+        cancelled export must not do it (#532)."""
+        calls, written = self._export(tmp_path, monkeypatch, picked=False)
+
+        assert calls == ["flushed", "cancelled"]
+        assert written == {}
+        assert AppSettings.get_enhancement_category_enabled("commodities") is True
