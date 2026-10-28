@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Erzeugung der Erweiterungen fehlgeschlagen — Details im Log-Tab"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen gestoppt"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini für {channel} zurückgesetzt (Backup erstellt)"
@@ -2854,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "Die DataForge-Extraktion läuft noch.\n\nJetzt stoppen? Du kannst sie später erneut starten."
+      "at": "Die DataForge-Extraktion läuft noch.\n\nJetzt stoppen oder im Hintergrund weiterlaufen lassen, während du weiterarbeitest? Wenn du sie stoppst, kannst du sie später erneut starten."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Stoppen"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Im Hintergrund ausführen"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "Die DataForge-Extraktion ist abgeschlossen, aber der DataForge-Cache-Ordner oder der Kanal hat sich während der Ausführung geändert. Daher wurden keine Erweiterungen erzeugt und kein alter Cache geleert."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Gesperrt, solange eine Extraktion oder eine Erzeugung von Erweiterungen läuft, und wieder freigegeben, sobald sie abgeschlossen ist."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen läuft"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen läuft noch.\n\nJetzt stoppen oder im Hintergrund weiterlaufen lassen, während du weiterarbeitest? Wenn du sie stoppst, kannst du sie später erneut starten."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Erzeugung der Erweiterungen wird gestoppt…"
     },
     "dataforge_stopping": {
       "ht": "",

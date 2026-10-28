@@ -280,7 +280,10 @@ class _NextStub:
         self._bp_scan_channel = None
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
+        self._bp_scan_status = ""
         self.finish_calls = 0
+
+    _show_blueprint_scan_status = MainWindow._show_blueprint_scan_status
 
     def _start_next_blueprint_scan(self):
         MainWindow._start_next_blueprint_scan(self)
@@ -361,6 +364,15 @@ class TestTheWorkerStartRefusesTestChannels:
         stub = _NextStub([channel])
         stub._start_next_blueprint_scan()
         assert [w.channel_path for w in _FakeWorker.created] == [str(fake_worker / channel)]
+
+    def test_the_progress_goes_to_the_status_bar_through_the_remembering_slot(
+            self, fake_worker):
+        """So the run's end can take its last text down again (#527,
+        tests/test_blueprint_auto_scan.py::TestTheScansStatusTextGoes)."""
+        stub = _NextStub(["LIVE"])
+        stub._start_next_blueprint_scan()
+        [worker] = _FakeWorker.created
+        assert worker.progress.slots == [stub._show_blueprint_scan_status]
 
     def test_an_unknown_channel_name_is_refused_too(self, fake_worker):
         stub = _NextStub(["SOMETHING-ELSE"])

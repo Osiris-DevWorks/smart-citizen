@@ -107,8 +107,9 @@ class AnimatedProgressDialog(QProgressDialog):
         False to keep it open. None (the default) removes the guard. Only the
         user's own dismissal is asked about: a programmatic ``close()`` or
         ``hide()`` never is, so callers keep closing the dialog exactly as
-        before. The DataForge extraction uses this to ask whether to stop,
-        the global.ini one to stop without asking.
+        before. The DataForge extraction and enhancement generation use this
+        to ask Stop, Run in Background or Cancel (#483), the global.ini
+        extraction to stop without asking.
 
         Only for a dialog built without a cancel button (``cancel_text=None``,
         like those two). With a button, QProgressDialog adds its own Escape
@@ -847,17 +848,34 @@ class DataForgeExtractWorker(QThread):
     finished = pyqtSignal(bool)
     error = pyqtSignal(str)
 
-    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir):
+    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir, *, channel: str,
+                 cache_base):
         super().__init__()
         self._p4k       = p4k_path
         self._unp4k_exe = unp4k_exe
         self._unforge_exe = unforge_exe
         self._cache_dir = cache_dir
+        # The channel and the cache base (AppSettings.get_dataforge_cache_base)
+        # this run was started for, which together name its cache folder
+        # (#483). With Run in Background the window stays usable, so the
+        # finished slot checks the run still matches the settings before it
+        # chains anything.
+        self.channel = channel
+        self.cache_base = cache_base
         # True once a run ended because a stop was requested (#471). Read it
         # rather than isInterruptionRequested() after the thread is done:
         # QThread reports no interruption once the thread has finished, so a
         # finished slot that waits for the thread first would always see False.
         self.stopped = False
+        # Set when the user sends the run to the background from the progress
+        # dialog's question (#483): the generation that follows runs without a
+        # dialog too.
+        self.in_background = False
+
+    @property
+    def cache_dir(self):
+        """The DataForge cache folder this run writes (#483)."""
+        return self._cache_dir
 
     def run(self):
         from src.utils.pak_extractor import (
