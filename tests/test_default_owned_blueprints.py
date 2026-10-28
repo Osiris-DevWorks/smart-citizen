@@ -456,6 +456,7 @@ class _Stub:
         self.recompute_calls = 0
         self.events = []
         self._deferred_starter_report = []
+        self._bp_scan_status = ""
         self._close_committed = False
         self._loader_worker = None
         self._enhancements_worker = None
@@ -782,7 +783,8 @@ class TestDeferredReportWaitsForTheLoad:
     """The re-review finding: the report for a seed a load finished was queued
     from inside the metadata rebuild, so a modal step later in the same load
     (the enhancement categories prompt) ran it inside its own event loop. The
-    load now queues it as its very last step, and it waits out long jobs."""
+    load now queues it as its last step but one (only the questions a job put
+    off, #483, follow), and it waits out long jobs."""
 
     def test_a_modal_step_in_the_load_does_not_run_the_report(
             self, json_backend, fake_boxes, queued_calls):
@@ -833,7 +835,16 @@ class TestDeferredReportWaitsForTheLoad:
 
 class TestLoadPathsQueueTheReportLast:
     """Both real load paths, on a MagicMock self: the report is queued as the
-    very last step, after anything that can open a modal dialog."""
+    very last step but one, after anything that can open a modal dialog, and
+    only the questions a job put off (#483) are queued after it, for the same
+    reason."""
+
+    _LAST = ["_queue_deferred_starter_report", "_queue_asks_after_the_job"]
+
+    def _assert_queued_last(self, names):
+        for name in self._LAST:
+            assert names.count(name) == 1, f"{name} queued once, last"
+        assert names[-2:] == self._LAST
 
     def test_the_async_load(self, json_backend):
         me = MagicMock()
@@ -843,10 +854,9 @@ class TestLoadPathsQueueTheReportLast:
         MainWindow._on_loading_finished(me, [], {}, [])
 
         names = [call[0] for call in me.mock_calls]
-        assert names.count("_queue_deferred_starter_report") == 1, "queued once, last"
-        assert names[-1] == "_queue_deferred_starter_report"
-        assert names.index("_check_enhancements_freshness") < len(names) - 1
-        assert names.index("_refresh_apply_dirty_after_reload") < len(names) - 1
+        self._assert_queued_last(names)
+        assert names.index("_check_enhancements_freshness") < len(names) - 2
+        assert names.index("_refresh_apply_dirty_after_reload") < len(names) - 2
 
     def test_the_synchronous_reload(self, json_backend, monkeypatch):
         monkeypatch.setattr(
@@ -860,9 +870,8 @@ class TestLoadPathsQueueTheReportLast:
         MainWindow.perform_merge_and_reload(me)
 
         names = [call[0] for call in me.mock_calls]
-        assert names.count("_queue_deferred_starter_report") == 1, "queued once, last"
-        assert names[-1] == "_queue_deferred_starter_report"
-        assert names.index("_update_status_bar") < len(names) - 1
+        self._assert_queued_last(names)
+        assert names.index("_update_status_bar") < len(names) - 2
 
 
 class TestApplyIsRechecked:

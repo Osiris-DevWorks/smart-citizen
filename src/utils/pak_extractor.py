@@ -232,6 +232,13 @@ def _raise_if_cancelled(should_cancel, where: str) -> None:
 # The RSI Launcher writes the archive in place for the whole of a patch, so
 # its modified time keeps moving until the patch ends.
 _P4K_RECENT_WRITE_SECONDS = 120
+# A modified time this little ahead of the clock still counts as now. Before
+# Python 3.13, time.time() on Windows reads the same 15.6 ms tick Windows
+# stamps a new file with, so a file written a moment ago comes out 0 seconds
+# old or a rounding error less. That let a just-written Data.p4k through on
+# CI (Python 3.11) and failed #516's tests at random. A time further ahead is
+# a clock that moved, and is not counted.
+_P4K_CLOCK_SLACK_SECONDS = 2
 
 _ERROR_SHARING_VIOLATION = 32
 
@@ -271,13 +278,17 @@ def _p4k_has_writer(p4k_path: Path) -> bool:
 
 def _p4k_changed_recently(p4k_path: Path, now: Optional[float] = None) -> bool:
     """True when Data.p4k was modified in the last _P4K_RECENT_WRITE_SECONDS
-    (#516). A modified time in the future (a clock that moved) is not
-    counted, nor is a file whose time cannot be read."""
+    (#516). A modified time up to _P4K_CLOCK_SLACK_SECONDS ahead of the clock
+    counts as now. One further ahead (a clock that moved) is not counted,
+    nor is a file whose time cannot be read, and a window of 0 (the tests'
+    session-wide setting) counts nothing."""
     try:
         age = (time.time() if now is None else now) - os.stat(_win_long_path(p4k_path)).st_mtime
     except OSError:
         return False
-    return 0 <= age < _P4K_RECENT_WRITE_SECONDS
+    if age < -_P4K_CLOCK_SLACK_SECONDS:
+        return False
+    return max(age, 0.0) < _P4K_RECENT_WRITE_SECONDS
 
 
 def _refuse_if_p4k_being_written(p4k_path: Path) -> None:

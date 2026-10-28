@@ -2500,6 +2500,10 @@
       "ht": "",
       "at": "Falha na geração de aprimoramentos — consulte a aba Log para detalhes"
     },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Geração de aprimoramentos interrompida"
+    },
     "user_ini_reset": {
       "ht": "",
       "at": "user.ini redefinido para {channel} (backup criado)"
@@ -2854,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "A extração do DataForge ainda está em andamento.\n\nParar agora? Você pode executá-la novamente mais tarde."
+      "at": "A extração do DataForge ainda está em andamento.\n\nParar agora ou deixá-la continuar em segundo plano enquanto você continua trabalhando? Se parar, você poderá executá-la novamente mais tarde."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Parar"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Executar em segundo plano"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "A extração do DataForge terminou, mas a pasta cache do DataForge ou o canal mudou enquanto ela era executada, então nenhum aprimoramento foi gerado e nenhum cache antigo foi limpo."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Bloqueado enquanto uma extração ou uma geração de aprimoramentos está em andamento, e desbloqueado novamente quando ela terminar."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Geração de aprimoramentos em andamento"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "A geração de aprimoramentos ainda está em andamento.\n\nParar agora ou deixá-la continuar em segundo plano enquanto você continua trabalhando? Se parar, você poderá executá-la novamente mais tarde."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Parando a geração de aprimoramentos…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -3370,6 +3398,10 @@
       "ht": "",
       "at": "Salvamento"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (só na superfície)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Buscar blueprints..."
@@ -3432,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "Faz a etiqueta do escaneamento brilhar quando este mineral for decodificado"
+      "at": "Alerta quando este mineral for escaneado"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Alerta quando salvamento for escaneado"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "Mineral ou componente..."
+      "at": "Digite um escaneável ou um item..."
     },
     "minerals_none": {
       "ht": "",
@@ -3470,6 +3506,10 @@
       "ht": "",
       "at": "Assinatura de varredura: {base} por rocha, até {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Assinatura de varredura: {base} cada, até {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "Usado em {count} itens fabricados"
@@ -3490,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log; nunca toca no processo do jogo."
+      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log e, se você definir um atalho para a gaveta, observa as teclas pressionadas só para essa combinação; nunca toca no processo do jogo."
     },
     "start_btn": {
       "ht": "",
@@ -3500,6 +3540,22 @@
       "ht": "",
       "at": "Parar sobreposição"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "Decodificador de escaneamento"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Gaveta"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Blueprints do Game.log"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "Amostras de escaneamento"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificador de escaneamento de mineração"
@@ -3507,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "Lê a assinatura de escaneamento abaixo do radar e mostra embaixo o tipo e a quantidade de depósitos."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Tamanho do texto do escaneamento:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Pequeno"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Médio"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Grande"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Muito grande"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "Quando um mineral observado ou salvamento for escaneado:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Brilho"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Um brilho pulsante ao redor da etiqueta enquanto ela aparece."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Piscar"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "A etiqueta pisca três vezes quando o alvo é lido pela primeira vez."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Mudar a cor do texto"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "O texto da etiqueta fica verde brilhante."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Texto maior"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "O texto da etiqueta fica uma vez e meia maior."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Tocar um som"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Um toque curto quando o alvo é lido pela primeira vez."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3558,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "Digite um mineral para ver quais componentes o usam, ou um componente para ver os minerais necessários. Requer uma extração do DataForge."
+      "at": "Digite um mineral para ver quais itens o usam, ou um item para ver os minerais necessários. Requer uma extração do DataForge."
     },
     "drawer_position": {
       "ht": "",
@@ -3595,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "Inferior direita"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Atalho da gaveta:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Limpar"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Abre e fecha a gaveta de dentro do jogo, na última seção usada. No jogo, continue segurando F para usar o mouse nela. Clique na caixa e aperte as teclas juntas, por exemplo Alt+8. O Star Citizen continua recebendo essas teclas, então escolha uma combinação que você não usa no jogo."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "O Windows recusou este atalho. Outro programa talvez já o use; escolha outro."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Isto não pode ser um atalho. Segure Ctrl, Alt ou Win com uma letra, um número, um símbolo, Espaço, Tab ou uma tecla de navegação (setas, Home, End, Page Up/Down, Insert, Delete), e também Shift se quiser. Uma tecla F ou Pause também funciona sozinha."
     }
   }
 }

@@ -2504,6 +2504,10 @@
       "ht": "Enhancement generation failed — check the Log tab for details",
       "at": ""
     },
+    "enhancement_generation_stopped": {
+      "ht": "Enhancement generation stopped",
+      "at": ""
+    },
     "user_ini_reset": {
       "ht": "user.ini reset for {channel} (backup created)",
       "at": ""
@@ -2853,11 +2857,35 @@
       "at": ""
     },
     "dataforge_running_body": {
-      "ht": "The DataForge extraction is still running.\n\nStop it now? You can run it again later.",
+      "ht": "The DataForge extraction is still running.\n\nStop it now, or let it carry on in the background while you keep working? If you stop it, you can run it again later.",
       "at": ""
     },
     "dataforge_stop_btn": {
       "ht": "Stop",
+      "at": ""
+    },
+    "dataforge_background_btn": {
+      "ht": "Run in Background",
+      "at": ""
+    },
+    "dataforge_settings_changed": {
+      "ht": "The DataForge extraction finished, but the DataForge cache folder or the channel changed while it ran, so no enhancements were generated and no old cache was cleared.",
+      "at": ""
+    },
+    "locked_while_job_runs": {
+      "ht": "Locked while an extraction or an enhancement generation is running, and unlocked again when it finishes.",
+      "at": ""
+    },
+    "generation_running_title": {
+      "ht": "Enhancement Generation Running",
+      "at": ""
+    },
+    "generation_running_body": {
+      "ht": "Enhancement generation is still running.\n\nStop it now, or let it carry on in the background while you keep working? If you stop it, you can run it again later.",
+      "at": ""
+    },
+    "generation_stopping": {
+      "ht": "Stopping enhancement generation…",
       "at": ""
     },
     "dataforge_stopping": {
@@ -3168,6 +3196,10 @@
       "ht": "Salvage",
       "at": ""
     },
+    "surface_only": {
+      "ht": "{name} (surface only)",
+      "at": ""
+    },
     "drawer_search_placeholder": {
       "ht": "Search blueprints...",
       "at": ""
@@ -3229,11 +3261,15 @@
       "at": ""
     },
     "watch_mineral_tooltip": {
-      "ht": "Glow the scan label when this mineral is decoded",
+      "ht": "Alert when this mineral is scanned",
+      "at": ""
+    },
+    "watch_salvage_tooltip": {
+      "ht": "Alert when salvage is scanned",
       "at": ""
     },
     "crafting_search_placeholder": {
-      "ht": "Type a mineral or component name...",
+      "ht": "Type a scannable or item name...",
       "at": ""
     },
     "minerals_none": {
@@ -3268,6 +3304,10 @@
       "ht": "Scan signature: {base} per rock, up to {count}",
       "at": ""
     },
+    "tooltip_salvage_signature": {
+      "ht": "Scan signature: {base} each, up to {count}",
+      "at": ""
+    },
     "tooltip_used_in": {
       "ht": "Used in {count} crafted items",
       "at": ""
@@ -3287,7 +3327,7 @@
       "at": ""
     },
     "desc": {
-      "ht": "Windows drawn over Star Citizen: the mining scan decoder and the blueprint drawer. Run the game in borderless windowed mode. The overlay only reads your screen and Game.log; it never touches the game process.",
+      "ht": "Windows drawn over Star Citizen: the mining scan decoder and the blueprint drawer. Run the game in borderless windowed mode. The overlay only reads your screen and Game.log and, if you set a drawer hotkey, watches key presses for that one combination; it never touches the game process.",
       "at": ""
     },
     "start_btn": {
@@ -3298,12 +3338,92 @@
       "ht": "Stop Overlay",
       "at": ""
     },
+    "scan_group": {
+      "ht": "Scan decoder",
+      "at": ""
+    },
+    "drawer_group": {
+      "ht": "Drawer",
+      "at": ""
+    },
+    "blueprint_watch_group": {
+      "ht": "Blueprints from Game.log",
+      "at": ""
+    },
+    "samples_group": {
+      "ht": "Scan samples",
+      "at": ""
+    },
     "scan_decoder": {
       "ht": "Mining scan decoder",
       "at": ""
     },
     "scan_decoder_hint": {
       "ht": "Reads the scan signature under the radar and shows the deposit type and count below it.",
+      "at": ""
+    },
+    "label_size": {
+      "ht": "Scan text size:",
+      "at": ""
+    },
+    "size_small": {
+      "ht": "Small",
+      "at": ""
+    },
+    "size_medium": {
+      "ht": "Medium",
+      "at": ""
+    },
+    "size_large": {
+      "ht": "Large",
+      "at": ""
+    },
+    "size_extra_large": {
+      "ht": "Extra large",
+      "at": ""
+    },
+    "alerts_title": {
+      "ht": "When a watched mineral or salvage is scanned:",
+      "at": ""
+    },
+    "alert_glow": {
+      "ht": "Glow",
+      "at": ""
+    },
+    "alert_glow_hint": {
+      "ht": "A pulsing glow around the label while it shows.",
+      "at": ""
+    },
+    "alert_flash": {
+      "ht": "Flash",
+      "at": ""
+    },
+    "alert_flash_hint": {
+      "ht": "The label flashes three times when the target is first read.",
+      "at": ""
+    },
+    "alert_color": {
+      "ht": "Change text color",
+      "at": ""
+    },
+    "alert_color_hint": {
+      "ht": "The label's text turns bright green.",
+      "at": ""
+    },
+    "alert_bigger": {
+      "ht": "Bigger text",
+      "at": ""
+    },
+    "alert_bigger_hint": {
+      "ht": "The label's text is one and a half times its size.",
+      "at": ""
+    },
+    "alert_sound": {
+      "ht": "Play a sound",
+      "at": ""
+    },
+    "alert_sound_hint": {
+      "ht": "A short chime when the target is first read.",
       "at": ""
     },
     "live_blueprint_watch": {
@@ -3355,7 +3475,7 @@
       "at": ""
     },
     "drawer_crafting_hint": {
-      "ht": "Type a mineral to see which components use it, or a component to see the minerals it needs. Needs a DataForge extraction.",
+      "ht": "Type a mineral to see which items use it, or an item to see the minerals it needs. Needs a DataForge extraction.",
       "at": ""
     },
     "drawer_position": {
@@ -3392,6 +3512,26 @@
     },
     "position_bottom_right": {
       "ht": "Bottom right",
+      "at": ""
+    },
+    "drawer_hotkey": {
+      "ht": "Drawer hotkey:",
+      "at": ""
+    },
+    "drawer_hotkey_clear": {
+      "ht": "Clear",
+      "at": ""
+    },
+    "drawer_hotkey_hint": {
+      "ht": "Opens and closes the drawer from the game, on the section used last. In game you still hold F to use the mouse in it. Click the box, then press the keys together, such as Alt+8. Star Citizen still gets these keys, so pick a combination you do not use in game.",
+      "at": ""
+    },
+    "hotkey_taken": {
+      "ht": "Windows refused this hotkey. Another program may already use it; pick another one.",
+      "at": ""
+    },
+    "hotkey_unsupported": {
+      "ht": "This cannot be a hotkey. Hold Ctrl, Alt or Win with a letter, number, symbol, Space, Tab or navigation key (arrows, Home, End, Page Up/Down, Insert, Delete), and Shift too if you like. An F key or Pause also works on its own.",
       "at": ""
     }
   }

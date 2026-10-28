@@ -12,15 +12,18 @@ Two windows, because they need opposite input behaviour:
   has to take clicks, so using it takes focus from the game; the player
   needs a free cursor.
 
-``ScoOverlay`` owns both, plus the capture timer. The reader that turns a
+``ScoOverlay`` owns both, plus the capture timer and the drawer's hotkey
+(``global_hotkey.py``). The reader that turns a
 capture of the signature panel into text is pluggable (``SignatureReader``);
 the default, ``hud_signature_reader``, matches the HUD's digits against
 reference glyphs (``src/utils/sco_digit_reader.py``). With no reader set, no
 screen capture runs at all.
 
 Overlays only draw over Star Citizen in borderless windowed mode, not
-exclusive fullscreen. SCO only captures the screen; it never reads game
-memory or sends input.
+exclusive fullscreen. SCO only captures the screen and, with a drawer
+hotkey set, registers that one key combination with Windows and watches the
+keyboard's raw input for it while it is held (``global_hotkey.py``); it
+never reads game memory or sends input.
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
@@ -29,8 +32,13 @@ owned set, plus the Mining Compendium minerals and the crafting index
 """
 from __future__ import annotations
 
+import ctypes
+import io
 import logging
 import math
+import sys
+import wave
+from array import array
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -50,6 +58,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
+from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
     CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
@@ -82,6 +91,10 @@ LABEL_HOLD_MS = 1500
 # Gap between the readout's baseline and the label, in screen px. Keeps the
 # label clear of the digits while the readout bobs with head movement.
 LABEL_GAP = 10
+# The scanner's pin icon and the gap after it, left of the digits, in digit
+# heights (2.1 to 2.6 on the 2560x1600 g*/p*/q* screenshots). The label is
+# centred under the pin and the number together (#523).
+READOUT_PIN_WIDTH = 2.2
 # Room around the label for its glow when it decodes a watched mineral. The
 # top stays under LABEL_GAP so the label window (masked out of each capture)
 # never covers the readout's own digits.
@@ -93,7 +106,39 @@ GLOW_BLUR = (6, 22)
 # A new reading must repeat on this many captures in a row before it replaces
 # the label, so a one-frame misread can't flash "Unidentified".
 READINGS_TO_CHANGE = 2
+# How far the readout may wander, in digit heights, before the label follows
+# it. Captures of a still readout put its box up to about a quarter of a
+# digit height apart (which brightness threshold reads it, noise), so the
+# label holds still through that instead of twitching on every capture (#523).
+ANCHOR_DEAD_ZONE = 0.6
 NEW_BLUEPRINT_BANNER_MS = 8000
+
+# The signature label's text size per AppSettings.SCO_LABEL_SIZES name,
+# against the app font (#523).
+LABEL_SIZE_SCALE = {"small": 0.85, "medium": 1.0, "large": 1.4, "extra_large": 1.9}
+# What a decode with a watched mineral or salvage can do (#523), in the
+# Overlay tab's order: each is an AppSettings.SCO_ALERT_PREFIX switch.
+ALERTS = ("glow", "flash", "color", "bigger", "sound")
+# The "color" alert's text and the flash's background: a bright green that
+# reads on the label's navy whatever the theme (the Light theme's accent, the
+# glow's colour, is a dark blue).
+ALERT_COLOR = "#5CFF8A"
+# The flash when a watched target is first read: this many on/off toggles,
+# this far apart (three flashes, as NumberWatcher does), then steady.
+FLASH_TOGGLES = 6
+FLASH_MS = 200
+# The "bigger" alert's text against the chosen size.
+ALERT_TEXT_SCALE = 1.5
+# How long after the hotkey opens the drawer it checks whether Windows gave
+# it focus, for the log.
+FOCUS_CHECK_MS = 250
+# The Minerals section's one row that is not a mineral (#523): the
+# OTHER_SIGNATURES key it watches.
+SALVAGE = "salvage"
+# Kinds that only lie on a planet or moon's surface. A reading that also
+# fits salvage, the one that can be in space, lists salvage first and marks
+# these as surface only (#523).
+SURFACE_ONLY = ("roc", "fps")
 
 # One section tab: thickness off the edge, length along it, and the share
 # of its length each tapered end takes. Neighbouring tabs overlap by the
@@ -200,22 +245,85 @@ def format_matches(matches: list[SignatureMatch]) -> str:
     """One line per reading: "2 x Bexalite", "3 x ROC Mineable", ...
 
     No readings (a deposit missing from the table, or a misread) shows
-    "Unidentified".
+    "Unidentified". The overlay cannot tell space from a planet, so a round
+    number that fits salvage too (12,000 is 3 ROC, 4 FPS or 6 Salvage) lists
+    salvage first and marks the surface-only kinds (#523): in space, salvage
+    is the answer on top.
     """
     if not matches:
         return tr("sco.unidentified")
+    with_salvage = any(m.kind == SALVAGE for m in matches)
+    if with_salvage:
+        matches = sorted(matches, key=lambda m: m.kind in SURFACE_ONLY)
     lines = []
     for m in matches:
         if m.kind in OTHER_SIGNATURES:
             name = tr(f"sco.kind_{m.kind}")
+            if with_salvage and m.kind in SURFACE_ONLY:
+                name = tr("sco.surface_only", name=name)
         else:
             name = m.kind.title()
         lines.append(f"{m.count} × {name}")
     return "\n".join(lines)
 
 
+SND_ASYNC, SND_NODEFAULT, SND_MEMORY = 0x0001, 0x0002, 0x0004
+_CHIME_RATE = 22050
+# The chime, made once and kept: Windows reads it from this memory while it
+# plays.
+_chime: Optional[bytes] = None
+_play_sound = None
+
+
+def alert_chime_wav() -> bytes:
+    """The "sound" alert: a short rising two-note chime as a WAV file in
+    memory, made here so there is no sound file to ship."""
+    samples = array("h")
+    for pitch in (880, 1320):
+        count = int(_CHIME_RATE * 0.09)
+        for i in range(count):
+            fade = min(1.0, i / 200, (count - i) / 400)   # no click at either end
+            samples.append(int(9000 * fade * math.sin(2 * math.pi * pitch * i / _CHIME_RATE)))
+    if sys.byteorder == "big":
+        samples.byteswap()
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(_CHIME_RATE)
+        out.writeframes(samples.tobytes())
+    return buffer.getvalue()
+
+
+def play_alert_sound() -> bool:
+    """Start the chime and return at once (Windows only)."""
+    global _chime, _play_sound
+    if sys.platform != "win32":
+        return False
+    if _play_sound is None:
+        from ctypes import wintypes
+        function = ctypes.WinDLL("winmm").PlaySoundW
+        function.argtypes = [ctypes.c_void_p, wintypes.HMODULE, wintypes.DWORD]
+        function.restype = wintypes.BOOL
+        _play_sound = function
+    if _chime is None:
+        _chime = alert_chime_wav()
+    pointer = ctypes.cast(ctypes.c_char_p(_chime), ctypes.c_void_p)
+    return bool(_play_sound(pointer, None, SND_MEMORY | SND_ASYNC | SND_NODEFAULT))
+
+
+def _default_alerts() -> set[str]:
+    return {name for name in ALERTS
+            if AppSettings.SCO_OPTION_SETTING[AppSettings.SCO_ALERT_PREFIX + name][1]}
+
+
 class ScanLabelWindow(QWidget):
-    """Click-through label that shows the decoded signature."""
+    """Click-through label that shows the decoded signature.
+
+    A decode with a watched mineral or salvage sets off the alerts switched
+    on (``set_alerts``): the glow, a bright text colour and bigger text last
+    while it shows, and ``flash()`` blinks it when it is first read.
+    """
 
     def __init__(self):
         super().__init__(None, _OVERLAY_FLAGS
@@ -226,7 +334,16 @@ class ScanLabelWindow(QWidget):
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._glow_color = DEFAULT_OVERLAY_COLORS.accent
+        self._alerts = _default_alerts()
+        self._size = AppSettings.SCO_LABEL_SIZE_DEFAULT
+        self._anchor: Optional[QPoint] = None
+        self.watched = False
         self.glowing = False
+        self._flash_left = 0
+        self._flash_on = False
+        self._flash_timer = QTimer(self)
+        self._flash_timer.setInterval(FLASH_MS)
+        self._flash_timer.timeout.connect(self._flash_tick)
         self._glow = QGraphicsDropShadowEffect(self._label)
         self._glow.setOffset(0, 0)
         self._glow.setEnabled(False)
@@ -246,23 +363,78 @@ class ScanLabelWindow(QWidget):
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self.hide)
 
-    def show_text(self, text: str, anchor: QPoint, glowing: bool = False) -> None:
+    def show_text(self, text: str, anchor: QPoint, watched: bool = False) -> None:
         """Show *text* centred under *anchor*: the middle of the box's top
-        edge sits on that point (screen coordinates). *glowing* pulses the
-        border in the theme colour (a watched mineral)."""
+        edge sits on that point (screen coordinates). *watched* (a watched
+        mineral or salvage) sets off the lasting alerts."""
         self._label.setText(text)
-        self.set_glowing(glowing)
-        self.adjustSize()
-        self.move(anchor.x() - self.width() // 2, anchor.y() - GLOW_TOP_MARGIN)
+        self._anchor = QPoint(anchor)
+        self.set_watched(watched)
+        self._place()
         self.show()
         self._hide_timer.start(LABEL_HOLD_MS)
+
+    def anchor(self) -> Optional[QPoint]:
+        """The point the label is centred under (its last ``show_text``), or None."""
+        return QPoint(self._anchor) if self._anchor is not None else None
 
     def set_glow_color(self, color: str) -> None:
         """The theme colour the glow pulses in (the label keeps ODW colours)."""
         self._glow_color = color
         self._restyle()
 
-    def set_glowing(self, glowing: bool) -> None:
+    def set_alerts(self, alerts) -> None:
+        """The ``ALERTS`` switched on (the Overlay tab's)."""
+        self._alerts = set(alerts)
+        self._sync_glow()
+        if "flash" not in self._alerts:
+            self._stop_flash()
+        self._restyle()
+        self._place()
+
+    def set_text_size(self, size: str) -> None:
+        """One of ``AppSettings.SCO_LABEL_SIZES``."""
+        self._size = size if size in LABEL_SIZE_SCALE else AppSettings.SCO_LABEL_SIZE_DEFAULT
+        self._restyle()
+        self._place()
+
+    def set_watched(self, watched: bool) -> None:
+        if watched == self.watched:
+            return
+        self.watched = watched
+        if not watched:
+            self._stop_flash()
+        self._sync_glow()
+        self._restyle()
+        self._place()
+
+    def flash(self) -> None:
+        """Blink the label FLASH_TOGGLES times, when the flash alert is on
+        and it shows a watched target."""
+        if not self.watched or "flash" not in self._alerts:
+            return
+        self._flash_left = FLASH_TOGGLES
+        self._flash_on = False
+        self._flash_tick()
+        self._flash_timer.start()
+
+    def _flash_tick(self) -> None:
+        if self._flash_left <= 0:
+            self._stop_flash()
+            return
+        self._flash_left -= 1
+        self._flash_on = not self._flash_on
+        self._restyle()
+
+    def _stop_flash(self) -> None:
+        self._flash_timer.stop()
+        self._flash_left = 0
+        if self._flash_on:
+            self._flash_on = False
+            self._restyle()
+
+    def _sync_glow(self) -> None:
+        glowing = self.watched and "glow" in self._alerts
         if glowing == self.glowing:
             return
         self.glowing = glowing
@@ -271,16 +443,34 @@ class ScanLabelWindow(QWidget):
             self._pulse.start()
         else:
             self._pulse.stop()
-        self._restyle()
+
+    def _font_points(self) -> float:
+        base = QGuiApplication.font().pointSizeF()
+        points = (base if base > 0 else 9.0) * LABEL_SIZE_SCALE[self._size]
+        if self.watched and "bigger" in self._alerts:
+            points *= ALERT_TEXT_SCALE
+        return points
 
     def _restyle(self) -> None:
         c = ODW_OVERLAY_COLORS
         border = self._glow_color if self.glowing else c.accent
+        text = ALERT_COLOR if self.watched and "color" in self._alerts else c.text
+        background = _rgba(c.background)
+        if self._flash_on:
+            # The flash swaps the colours and keeps every size, so nothing moves.
+            text, background = c.background, _rgba(ALERT_COLOR, 235)
         self._label.setStyleSheet(
-            f"QLabel {{ color: {c.text}; background: {_rgba(c.background)};"
+            f"QLabel {{ color: {text}; background: {background};"
             f" border: {2 if self.glowing else 1}px solid {border}; border-radius: 4px;"
-            " padding: 2px 8px; font-weight: bold; }"
+            f" padding: 2px 8px; font-weight: bold; font-size: {self._font_points():.1f}pt; }}"
         )
+
+    def _place(self) -> None:
+        """Size to the text and centre under the anchor again."""
+        if self._anchor is None:
+            return
+        self.adjustSize()
+        self.move(self._anchor.x() - self.width() // 2, self._anchor.y() - GLOW_TOP_MARGIN)
 
     def _on_pulse(self, value: float) -> None:
         low, high = GLOW_BLUR
@@ -291,6 +481,7 @@ class ScanLabelWindow(QWidget):
 
     def hideEvent(self, event):
         self._pulse.stop()
+        self._stop_flash()
         super().hideEvent(event)
 
     def showEvent(self, event):
@@ -524,6 +715,24 @@ def location_tooltip(location: str, minerals: dict[str, MineralInfo]) -> str:
     return "\n".join(lines)
 
 
+class DrawerSearch(QLineEdit):
+    """A drawer search box. In game the player holds F to move the mouse, so
+    F is still down when the drawer gets focus (#523): the box takes focus
+    only when clicked, and a held key's repeats type nothing, while a key
+    pressed while it has focus types as usual (and a held Backspace repeats)."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+
+    def keyPressEvent(self, event):  # noqa: N802 (Qt's name)
+        text = event.text()
+        if event.isAutoRepeat() and text and text.isprintable():
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+
+
 class BlueprintDrawer(QWidget):
     """A stack of section tabs on a screen edge (blueprints, minerals,
     crafting). A tab opens the see-through panel straight to its section;
@@ -532,8 +741,10 @@ class BlueprintDrawer(QWidget):
     owned_toggled = pyqtSignal(str, bool)
     # The Minerals section's scan decoder switch (the Overlay tab's too).
     scan_decoder_toggled = pyqtSignal(bool)
-    # The ores ticked in the Minerals section, after every change.
+    # The ores (and salvage) ticked in the Minerals section, after every change.
     watched_changed = pyqtSignal(object)
+    # The panel opened (True) or closed (False).
+    expanded_changed = pyqtSignal(bool)
 
     def __init__(self, colors: OverlayColors = DEFAULT_OVERLAY_COLORS):
         super().__init__(None, _OVERLAY_FLAGS)
@@ -562,7 +773,7 @@ class BlueprintDrawer(QWidget):
         # Blueprints: owned checkboxes, same set the Blueprint Tracker edits.
         bp_page = QWidget()
         self._summary = QLabel(bp_page)
-        self._search = QLineEdit(bp_page)
+        self._search = DrawerSearch(bp_page)
         self._search.textChanged.connect(self._render)
         self._owned_only = QCheckBox(bp_page)
         self._owned_only.toggled.connect(self._render)
@@ -607,10 +818,19 @@ class BlueprintDrawer(QWidget):
         for page in self._section_pages.values():
             self._sections.addWidget(page)
         self._current: Optional[str] = None
+        # The section the hotkey opens: the one used last.
+        self._last_section: Optional[str] = None
 
         panel_layout = QVBoxLayout(self._panel)
         panel_layout.addWidget(self._banner)
         panel_layout.addWidget(self._sections)
+        # Nothing but a clicked search box takes the keyboard: activated, the
+        # drawer would hand focus to its first widget that takes it, and F,
+        # still held in game, then typed into a search box or jumped a list
+        # to the entries starting with F (#523). Clicks work without focus.
+        for widget in self._panel.findChildren(QWidget):
+            if not isinstance(widget, DrawerSearch):
+                widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self._layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -661,7 +881,7 @@ class BlueprintDrawer(QWidget):
                 color: {colors.text}; background: transparent; border: none;
             }}
             QListWidget::item:selected, QTreeWidget::item:selected {{
-                background: {_rgba(colors.accent, 60)};
+                background: {_rgba(colors.accent, 60)}; color: {colors.text};
             }}
             QPushButton {{
                 color: {colors.text}; background: transparent;
@@ -681,7 +901,7 @@ class BlueprintDrawer(QWidget):
 
     def _search_page(self, render) -> tuple[QLineEdit, QTreeWidget, QWidget]:
         page = QWidget()
-        search = QLineEdit(page)
+        search = DrawerSearch(page)
         search.textChanged.connect(render)
         tree = QTreeWidget(page)
         tree.setHeaderHidden(True)
@@ -710,7 +930,8 @@ class BlueprintDrawer(QWidget):
         self._decoder_check.blockSignals(False)
 
     def set_watched(self, ores) -> None:
-        """Tick these ores (``ORE_SIGNATURES`` keys) without asking for a change."""
+        """Tick these ores (``ORE_SIGNATURES`` keys) and salvage without asking
+        for a change."""
         self._watched = set(ores)
         self._render_minerals()
 
@@ -766,19 +987,32 @@ class BlueprintDrawer(QWidget):
         if self._expanded and self._current == name:
             self.close_drawer()
             return
-        self._current = name
+        self._current = self._last_section = name
         self._sections.setCurrentWidget(self._section_pages[name])
         self._set_expanded(True)
+
+    def open_last_section(self) -> None:
+        """Open on the section used last, or the first one shown (the hotkey)."""
+        shown = self._handle.sections
+        if not shown:
+            return
+        self.open_section(self._last_section if self._last_section in shown else shown[0])
+
+    def is_open(self) -> bool:
+        return self._expanded
 
     def close_drawer(self) -> None:
         self._current = None
         self._set_expanded(False)
 
     def _set_expanded(self, expanded: bool) -> None:
+        was = self._expanded
         self._expanded = expanded
         self._panel.setVisible(expanded)
         self._handle.set_current(self._current)
         self._dock()
+        if expanded != was:
+            self.expanded_changed.emit(expanded)
 
     def show_docked(self) -> None:
         self._dock()
@@ -879,7 +1113,6 @@ class BlueprintDrawer(QWidget):
         self._mineral_tree.clear()
         if not self._minerals:
             self._mineral_tree.addTopLevelItem(QTreeWidgetItem([tr("sco.minerals_none")]))
-            return
         for name in sorted(self._minerals, key=str.lower):
             info = self._minerals[name]
             if needle and needle not in name.lower() and not any(
@@ -887,13 +1120,10 @@ class BlueprintDrawer(QWidget):
                 continue
             node = QTreeWidgetItem([name])
             node.setToolTip(0, mineral_tooltip(info, self._crafting))
-            # Only an ore the scanner has a signature for can glow.
+            # Only an ore the scanner has a signature for can be watched.
             ore = ore_key(name)
             if ore:
-                node.setData(1, Qt.ItemDataRole.UserRole, ore)
-                node.setCheckState(1, Qt.CheckState.Checked if ore in self._watched
-                                   else Qt.CheckState.Unchecked)
-                node.setToolTip(1, tr("sco.watch_mineral_tooltip"))
+                self._add_watch_box(node, ore, tr("sco.watch_mineral_tooltip"))
             for system, locations in locations_by_system(info.locations).items():
                 sys_node = QTreeWidgetItem([system or tr("sco.system_other")])
                 for loc in locations:
@@ -906,6 +1136,23 @@ class BlueprintDrawer(QWidget):
                 node.setExpanded(True)
                 for i in range(node.childCount()):
                     node.child(i).setExpanded(True)
+        # Salvage is no mineral, but it has a signature and can be watched
+        # too (#523). It ends the list, catalog or not.
+        salvage = tr(f"sco.kind_{SALVAGE}")
+        if needle in salvage.lower():
+            node = QTreeWidgetItem([salvage])
+            base, most = OTHER_SIGNATURES[SALVAGE]
+            signature = tr("sco.tooltip_salvage_signature", base=f"{base:,}", count=most)
+            node.setToolTip(0, f"{salvage}\n{signature}")
+            self._add_watch_box(node, SALVAGE, tr("sco.watch_salvage_tooltip"))
+            self._mineral_tree.addTopLevelItem(node)
+
+    def _add_watch_box(self, node: QTreeWidgetItem, kind: str, tooltip: str) -> None:
+        """The watch checkbox in column 1, for *kind* (a ``SignatureMatch.kind``)."""
+        node.setData(1, Qt.ItemDataRole.UserRole, kind)
+        node.setCheckState(1, Qt.CheckState.Checked if kind in self._watched
+                           else Qt.CheckState.Unchecked)
+        node.setToolTip(1, tooltip)
 
     def _render_crafting(self) -> None:
         needle = self._crafting_search.text().strip().lower()
@@ -1043,6 +1290,9 @@ class ScoOverlay(QObject):
     # The reader raised and the capture stopped; a restart (stop + start)
     # tries again. MainWindow tells the player, who would see nothing else.
     decoder_failed = pyqtSignal()
+    # After each try at the drawer hotkey: "" when it is in use or there is
+    # none, else global_hotkey.HOTKEY_TAKEN or HOTKEY_UNSUPPORTED (#523).
+    hotkey_problem = pyqtSignal(str)
 
     def __init__(self, parent=None, sample_dir: Optional[Path] = None):
         super().__init__(parent)
@@ -1051,6 +1301,17 @@ class ScoOverlay(QObject):
         self.drawer.owned_toggled.connect(self.owned_toggled)
         self.drawer.scan_decoder_toggled.connect(self.scan_decoder_toggled)
         self.drawer.watched_changed.connect(self._on_watched_changed)
+        self.drawer.expanded_changed.connect(self._on_drawer_expanded)
+        self._hotkey = GlobalHotkey(self)
+        self._hotkey.activated.connect(self.toggle_drawer)
+        self._hotkey_sequence = ""
+        # A sequence Windows refused is not tried again until it changes or
+        # the overlay restarts, so one start reports it once.
+        self._hotkey_refused = ""
+        # The window that had focus when the hotkey opened the drawer, handed
+        # focus back when it closes (the game, so the mouse goes back to it).
+        self._focus_before_drawer = 0
+        self._sound_alert = False
         self._watched: set[str] = set()
         self._shown_matches: list[SignatureMatch] = []
         self._reader: Optional[SignatureReader] = hud_signature_reader
@@ -1075,10 +1336,16 @@ class ScoOverlay(QObject):
 
     def set_options(self, options: dict[str, bool]) -> None:
         """Apply the Overlay tab's switches (``AppSettings.SCO_OPTION_SETTING``
-        names; missing ones count as on). Takes effect at once if running."""
-        on = lambda name: options.get(name, True)  # noqa: E731
+        names; a missing one takes its default). Takes effect at once if
+        running."""
+        def on(name: str) -> bool:
+            return options.get(name, AppSettings.SCO_OPTION_SETTING[name][1])
+
         self._show_label = on(AppSettings.SCO_SCAN_DECODER)
         self.drawer.set_scan_decoder(self._show_label)
+        alerts = {name for name in ALERTS if on(AppSettings.SCO_ALERT_PREFIX + name)}
+        self.label.set_alerts(alerts)
+        self._sound_alert = "sound" in alerts
         self._show_drawer = on(AppSettings.SCO_DRAWER)
         self._save_samples = on(AppSettings.SCO_SAVE_SAMPLES)
         self.drawer.set_sections(
@@ -1086,18 +1353,33 @@ class ScoOverlay(QObject):
         if self._running:
             self._sync_windows()
 
+    def set_label_size(self, size: str) -> None:
+        """The signature label's text size (``AppSettings.SCO_LABEL_SIZES``)."""
+        self.label.set_text_size(size)
+
+    def set_drawer_hotkey(self, sequence: str) -> None:
+        """The drawer's hotkey (QKeySequence portable text, "" for none). It is
+        registered while the overlay runs with the drawer showing."""
+        sequence = sequence or ""
+        if sequence == self._hotkey_sequence:
+            return
+        self._hotkey_sequence = sequence
+        if self._running:
+            self._sync_hotkey()
+
     def set_watched_minerals(self, ores) -> None:
-        """Ores (``ORE_SIGNATURES`` keys) whose decode makes the label glow."""
+        """Ores (``ORE_SIGNATURES`` keys) and salvage whose decode sets off
+        the label's alerts."""
         self._watched = set(ores)
         self.drawer.set_watched(self._watched)
-        self.label.set_glowing(self._glows(self._shown_matches))
+        self.label.set_watched(self._is_watched(self._shown_matches))
 
     def _on_watched_changed(self, ores: set) -> None:
         self._watched = set(ores)
-        self.label.set_glowing(self._glows(self._shown_matches))
+        self.label.set_watched(self._is_watched(self._shown_matches))
         self.watched_changed.emit(set(ores))
 
-    def _glows(self, matches: list[SignatureMatch]) -> bool:
+    def _is_watched(self, matches: list[SignatureMatch]) -> bool:
         return any(m.kind in self._watched for m in matches)
 
     def set_reader(self, reader: Optional[SignatureReader]) -> None:
@@ -1120,18 +1402,81 @@ class ScoOverlay(QObject):
         self._running = False
         self._timer.stop()
         self._read_token += 1
+        self._focus_before_drawer = 0
         self.label.hide()
         self.drawer.hide()
+        self._sync_hotkey()
 
     def _sync_windows(self) -> None:
         if self._show_drawer and self.drawer.has_sections():
             if not self.drawer.isVisible():
                 self.drawer.show_docked()
         else:
+            # Hidden, it closes nothing the hotkey opened: forget the window
+            # it would have handed focus back to.
+            self._focus_before_drawer = 0
             self.drawer.hide()
         if not self._show_label:
             self.label.hide()
         self._sync_timer()
+        self._sync_hotkey()
+
+    def _sync_hotkey(self) -> None:
+        """Hold the hotkey only while it can open something: overlay running,
+        drawer showing. While it is held, Windows keeps the combination from
+        the program with focus and its raw input is watched, since Star
+        Citizen keeps registered hotkeys away (and still gets the keys)."""
+        drawer_up = self._running and self._show_drawer and self.drawer.has_sections()
+        wanted = self._hotkey_sequence if drawer_up else ""
+        if wanted and wanted == self._hotkey_refused:
+            return
+        if wanted == (self._hotkey.registered or ""):
+            if not wanted and self._hotkey_refused:
+                # Nothing is wanted now (stopped, drawer off, hotkey cleared),
+                # so a refusal no longer stands, and a restart tries again.
+                self._hotkey_refused = ""
+                self.hotkey_problem.emit("")
+            return
+        problem = self._hotkey.register(wanted)
+        self._hotkey_refused = wanted if problem else ""
+        self.hotkey_problem.emit(problem)
+
+    def toggle_drawer(self) -> None:
+        """The hotkey: open the drawer on its last section and bring it to the
+        front, or close it. Over Star Citizen, Windows keeps focus on the
+        game (the press came through raw input), so the player holds F."""
+        drawer = self.drawer
+        if not drawer.isVisible():
+            return
+        if drawer.is_open():
+            drawer.close_drawer()
+            return
+        before = foreground_window()
+        self._focus_before_drawer = before if before != int(drawer.winId()) else 0
+        drawer.open_last_section()
+        drawer.raise_()
+        drawer.activateWindow()
+        QTimer.singleShot(FOCUS_CHECK_MS, self._report_focus)
+
+    def _report_focus(self) -> None:
+        """Say in the log when Windows kept focus on another window (a game
+        that keeps the hotkey from us, so raw input saw it, #523): the drawer
+        then opened on top without focus, and clicking it needs a free mouse."""
+        drawer = self.drawer
+        if not (self._running and drawer.isVisible() and drawer.is_open()):
+            return
+        now = foreground_window()
+        if now and now != int(drawer.winId()):
+            logger.info("SCO: the drawer opened without focus: Windows kept it on window %s", now)
+
+    def _on_drawer_expanded(self, expanded: bool) -> None:
+        # Closed by the hotkey or its own tab while it still has focus: hand
+        # focus back to the window the hotkey took it from.
+        if expanded or not self._focus_before_drawer:
+            return
+        before, self._focus_before_drawer = self._focus_before_drawer, 0
+        if self.drawer.isActiveWindow():
+            give_focus_back(before)
 
     def _sync_timer(self) -> None:
         # No reader, or no label to show, means nothing to do with a capture.
@@ -1179,16 +1524,40 @@ class ScoOverlay(QObject):
         if value is None:
             return
         # The reader works in capture pixels; the screen may be DPI-scaled.
+        # Each edge is rounded outward, so the box covers every digit pixel.
+        # Rounding x, y, width and height down one by one could end it short
+        # of the digits, and the label just below it then covered their bottom
+        # row and was blacked out over it in the next capture, so the reads
+        # failed (1080 px at 125%, #523).
         scale = region.width() / image.width() if image.width() else 1.0
-        where = QRect(int(where.x() * scale), int(where.y() * scale),
-                      int(where.width() * scale), int(where.height() * scale))
-        # Just under the readout, centred on it.
-        anchor = QPoint(region.x() + where.center().x(), region.y() + where.bottom() + LABEL_GAP)
-        self._on_reading(value, anchor)
+        left, top = math.floor(where.x() * scale), math.floor(where.y() * scale)
+        right = math.ceil((where.x() + where.width()) * scale)
+        bottom = math.ceil((where.y() + where.height()) * scale)
+        where = QRect(left, top, right - left, bottom - top)
+        # Just under the readout, centred on the pin icon and the number together.
+        readout = where.adjusted(-round(READOUT_PIN_WIDTH * where.height()), 0, 0, 0)
+        anchor = QPoint(region.x() + readout.center().x(), region.y() + where.bottom() + LABEL_GAP)
+        self._on_reading(value, self._steady_anchor(anchor, where.height()))
+
+    def _steady_anchor(self, anchor: QPoint, digit_height: int) -> QPoint:
+        """*anchor*, or the label's own while it shows and the readout has
+        only wandered within ``ANCHOR_DEAD_ZONE`` digit heights of it."""
+        shown = self.label.anchor()
+        if shown is None or not self.label.isVisible():
+            return anchor
+        moved = anchor - shown
+        if max(abs(moved.x()), abs(moved.y())) > ANCHOR_DEAD_ZONE * digit_height:
+            return anchor                                 # the readout moved: follow it
+        # Only wandering: hold still, except that a readout that sank, even
+        # by a pixel, is followed down at once. Held, the label would sit
+        # over its bottom row and be blacked out over it in the next capture.
+        return QPoint(shown.x(), max(shown.y(), anchor.y()))
 
     def _on_reading(self, value: int, anchor: QPoint) -> None:
         """Show *value*'s decode, once it has held for READINGS_TO_CHANGE captures."""
-        if value != self._shown_value or not self.label.isVisible():
+        # A value that was not showing: a watched one flashes and chimes.
+        fresh = value != self._shown_value or not self.label.isVisible()
+        if fresh:
             if value == self._candidate:
                 self._candidate_count += 1
             else:
@@ -1208,7 +1577,12 @@ class ScoOverlay(QObject):
             logger.debug("SCO: no deposit matches signature %s", value)
         self._last_value = self._shown_value = value
         self._shown_matches = matches
-        self.label.show_text(format_matches(matches), anchor, self._glows(matches))
+        watched = self._is_watched(matches)
+        self.label.show_text(format_matches(matches), anchor, watched)
+        if watched and fresh:
+            self.label.flash()
+            if self._sound_alert:
+                play_alert_sound()
 
     def _mask_own_label(self, image: QImage, region: QRect) -> None:
         """Black out our own label in the capture so its text is never read

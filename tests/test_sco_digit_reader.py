@@ -128,15 +128,11 @@ def test_colour_channels_of_another_length_read_nothing():
     assert read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green[:-1], blue=blue) is None
 
 
-@pytest.mark.parametrize("screen_height", [1080, 1440, 2160])
-def test_reads_at_other_screen_heights(screen_height):
-    """The digit size follows the screen height. Fixtures are 1600 px crops,
-    scaled here to what other screens would capture (until testers send real
-    ones, which the glob picks up)."""
+def _read_scaled(path, screen_height):
+    """Read a 1600 px crop scaled to what a *screen_height* screen captures."""
     from PyQt6.QtCore import Qt
     from PyQt6.QtGui import QImage
 
-    path = next(p for p in READOUTS if p.stem.startswith("live"))
     factor = screen_height / 1600
     img = QImage(str(path))
     img = img.scaled(round(img.width() * factor), round(img.height() * factor),
@@ -144,10 +140,91 @@ def test_reads_at_other_screen_heights(screen_height):
                      Qt.TransformationMode.SmoothTransformation)
     img = img.convertToFormat(QImage.Format.Format_RGB32)
     data = img.constBits().asstring(img.sizeInBytes())
-    reading = read_signature(img.width(), img.height(), data[2::4],
-                             DIGIT_HEIGHT_AT_1600 * factor, green=data[1::4], blue=data[0::4])
-    assert reading is not None
-    assert reading.text.replace(",", "") == path.stem.split("_")[-1]
+    return read_signature(img.width(), img.height(), data[2::4],
+                          DIGIT_HEIGHT_AT_1600 * factor, green=data[1::4], blue=data[0::4])
+
+
+# Readouts that do not read right yet scaled down to a smaller screen (#523
+# review): a comma that touches the next digit, thin strokes on the planet
+# panel that break apart, or small glyphs that look alike (6 read as 0).
+# Reference glyphs cut from real crops at those sizes are what fixes them
+# (scripts/add_sco_sample.py), so this list may only shrink.
+SCALED_DOWN_MISSES = {
+    1080: {"live24_15600", "live42_12900", "live50_40000", "live51_48000", "live52_48000",
+           "p3_15697", "q1_14160", "q2_17080"},
+    1440: {"live24_15600", "live51_48000", "live52_48000", "p3_15697", "q1_14160"},
+}
+
+
+@pytest.mark.parametrize("screen_height", sorted(SCALED_DOWN_MISSES))
+@pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
+def test_reads_at_smaller_screen_heights(path, screen_height):
+    """The digit size follows the screen height. Fixtures are 1600 px crops,
+    scaled here to what other screens would capture (until testers send real
+    ones, which the glob picks up). Every readout reads right but the known
+    misses, and a known miss that starts reading right must leave the list."""
+    reading = _read_scaled(path, screen_height)
+    right = reading is not None and reading.text == _expected(path)
+    if path.stem in SCALED_DOWN_MISSES[screen_height]:
+        assert not right, f"{path.stem} reads right at {screen_height}: take it off the list"
+    else:
+        assert right
+
+
+@pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
+def test_reads_every_readout_on_a_4k_screen(path):
+    """#523: on a 3840x2160 screen 3,400 showed nothing. Scaled to 2160 px, a
+    "4" touches the digit after it and the two read as one blob too wide for
+    a digit (48,000 read as 8,000), or comes apart at the first threshold
+    (14,160 read as 1,160): either way a digit is lost, and 3,400 without
+    its 4 is too short to be a readout at all."""
+    reading = _read_scaled(path, 2160)
+    assert reading is not None and reading.text == _expected(path)
+
+
+def test_touching_digits_are_cut_apart():
+    # Two "0"s joined by one pixel, then three, each 3 wide and 5 tall.
+    w, h, mask = _grid([
+        "###.###...###.###.###",
+        "#.#.#.#...#.#.#.#.#.#",
+        "#.###.#...#.###.#####",
+        "#.#.#.#...#.#.#.#.#.#",
+        "###.###...###.###.###",
+    ])
+    pair, triple = sorted(sco_digit_reader._components(w, h, mask))
+    assert pair == (0, 0, 7, 5) and triple == (10, 0, 11, 5)
+    # The bridge column goes to neither part.
+    assert sco_digit_reader._split_joined(w, mask, pair, 5) == [(0, 0, 3, 5), (4, 0, 3, 5)]
+    assert sco_digit_reader._split_joined(w, mask, triple, 5) == [
+        (10, 0, 3, 5), (14, 0, 3, 5), (18, 0, 3, 5)]
+    # Narrow enough already: kept whole; far too wide for digits: dropped.
+    assert sco_digit_reader._split_joined(w, mask, (0, 0, 3, 5), 5) == [(0, 0, 3, 5)]
+    assert sco_digit_reader._split_joined(w, mask, triple, 4) == []
+
+
+def test_an_undecoded_threshold_does_not_end_the_search(monkeypatch):
+    """A threshold that reads only a number that decodes to nothing hands on
+    to the next; its reading stands only when no threshold decodes."""
+    from src.utils.sco_digit_reader import SignatureReading
+
+    by_threshold = {180: "1,160", 210: None, 150: "14,160"}
+    monkeypatch.setattr(sco_digit_reader, "_candidate_rows",
+                        lambda w, h, mask, digit_px: [((0, 0, 1, 1),), ])
+    seen = []
+
+    def read_row(width, red, row, threshold):
+        seen.append(threshold)
+        text = by_threshold[threshold]
+        return text and SignatureReading(text, (0, 0, 1, 1), 0.9)
+
+    monkeypatch.setattr(sco_digit_reader, "_read_row", read_row)
+    w, h = 4, 4
+    assert read_signature(w, h, bytes(w * h)).text == "14,160"
+    assert seen == [180, 210, 150]
+    by_threshold[150] = None                                   # nothing decodes anywhere
+    assert read_signature(w, h, bytes(w * h)).text == "1,160"
+    by_threshold[210] = "17,080"                               # a decode wins over it
+    assert read_signature(w, h, bytes(w * h)).text == "17,080"
 
 
 def _grid(rows):
