@@ -1010,6 +1010,10 @@ class MainWindow(QMainWindow):
         # queue to swap the completion popups for a status bar message, so a
         # launch with new blueprints doesn't interrupt with a modal dialog.
         self._bp_scan_silent = False
+        # The scan's last progress text in the status bar, which the run's
+        # end takes down again while it is still showing (#527,
+        # _show_blueprint_scan_status, _finish_blueprint_scan_queue).
+        self._bp_scan_status = ""
         # #416: starter blueprints a load added for a deferred seed, waiting
         # to be reported once the load and anything it set off is over (see
         # _flush_deferred_starter_report).
@@ -7955,10 +7959,17 @@ class MainWindow(QMainWindow):
             )
             self._bp_log_scan_worker.progress.connect(self._bp_log_scan_progress.setLabelText)
             self._bp_log_scan_worker.progress_pct.connect(self._bp_log_scan_progress.set_progress)
-        self._bp_log_scan_worker.progress.connect(self.statusBar().showMessage)
+        self._bp_log_scan_worker.progress.connect(self._show_blueprint_scan_status)
         self._bp_log_scan_worker.error.connect(self._on_blueprint_log_scan_error)
         self._bp_log_scan_worker.finished.connect(self._on_blueprint_log_scan_finished)
         self._bp_log_scan_worker.start()
+
+    def _show_blueprint_scan_status(self, message: str) -> None:
+        """The scan's progress in the status bar, with or without its
+        dialog (#386), remembered so the run's end can take it down
+        (#527)."""
+        self._bp_scan_status = message
+        self.statusBar().showMessage(message)
 
     def _on_blueprint_log_scan_error(self, message: str):
         logger.error(f"BP Scan failed: {message}")
@@ -8079,6 +8090,15 @@ class MainWindow(QMainWindow):
         _maybe_auto_scan_blueprints.
         """
         self.blueprint_tracker_tab.set_scan_logs_enabled(True)
+        # The scan's last progress text ("Finishing up…") stayed in the
+        # status bar for the rest of the session (#527): nothing else
+        # writes there once the app is idle, and neither a run that found
+        # nothing nor the summary box replaced it. Taken down only while it
+        # is still the scan's, so a message another job showed since then
+        # stays.
+        if self._bp_scan_status and self.statusBar().currentMessage() == self._bp_scan_status:
+            self.statusBar().clearMessage()
+        self._bp_scan_status = ""
         silent = self._bp_scan_silent
         self._bp_scan_silent = False
         # #416: a scan also adds any starter blueprint every player owns that
