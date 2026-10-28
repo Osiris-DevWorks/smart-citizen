@@ -1710,10 +1710,11 @@ class MainWindow(QMainWindow):
         )
         dlg.exec()
 
-        if dlg.choice == UpdateDialog.CHOICE_UPDATE and self._job_running():
+        if dlg.choice == UpdateDialog.CHOICE_UPDATE and self._closing_would_wait():
             # The installer relaunches the app while this one may still be
-            # finishing the job (#483). Check for Updates is locked while a
-            # job runs; this covers a check that was already under way.
+            # finishing the job, or deleting a working folder (#483). Check
+            # for Updates is locked while a job runs; this covers a check
+            # that was already under way, and the delete, which locks nothing.
             self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
         elif dlg.choice == UpdateDialog.CHOICE_UPDATE:
             # Gate stays closed: the app exits to install. On download or
@@ -3571,14 +3572,16 @@ class MainWindow(QMainWindow):
         backup) → set the post-import flag so the NEXT launch offers to
         regenerate + apply enhancements → offer restart.
 
-        Not while a job runs (#483): the restart starts the new copy before
-        this one closes, and both would write the same files. The button is
-        locked then too; this is the net behind it.
+        Not while a job runs (#483), or while a finished run's working folder
+        is still being deleted in the background: the restart starts the new
+        copy before this one closes, and both would write the same files. The
+        button is locked while a job runs, but not for a delete, so this is
+        the net behind it.
         """
         from src.utils.settings_profile import InvalidProfileError, read_profile_zip
         from src.utils.user_ini_manager import backup_user_ini
 
-        if self._job_running():
+        if self._closing_would_wait():
             self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
             return
         path, _ = QFileDialog.getOpenFileName(
@@ -7028,6 +7031,17 @@ class MainWindow(QMainWindow):
         and cache folders it started with."""
         return any(getattr(self, worker_attr, None) is not None
                    for worker_attr, _dialog_attr in self._WORKERS_STOPPED_ON_CLOSE)
+
+    def _closing_would_wait(self) -> bool:
+        """True while a job runs (#483) or a finished DataForge run's working
+        folder is still being deleted in the background (perf proposal).
+        Import Settings and an update's install start the new copy before
+        this one closes, and closing waits for such a delete with the window
+        hidden (_stop_workers_for_close), so they wait for it as they do for
+        a job. _job_running stays as it is: a new DataForge run waits for a
+        delete on its own thread (wait_for), and a generation is meant to run
+        beside one."""
+        return self._job_running() or bool(self._working_folder_deleters)
 
     def _refresh_job_lock(self) -> None:
         """Lock what a running job depends on, or unlock it once none runs
