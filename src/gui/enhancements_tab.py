@@ -22,6 +22,7 @@ from src.utils.tag_builder import (
     USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
     default_config, enclosings_for, render_route, render_tag, route_enabled,
 )
+from src.utils.user_ini_manager import write_user_ini_text
 
 # All cargo-size words, for the single "Shorten cargo sizes" master toggle.
 _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
@@ -865,7 +866,9 @@ class EnhancementsTab(QWidget):
                             updated.append(f"{key}={value}")
                         else:
                             updated.append(line)
-                    overrides_path.write_text("\n".join(updated), encoding="utf-8")
+                    # In one step, as every user.ini write is, so a failed
+                    # write keeps the old file (#531).
+                    write_user_ini_text(overrides_path, "\n".join(updated))
                     logger.info(f"Migrated {migrated} favorites from '{old_prefix}' to '{new_prefix}'")
                 except Exception as e:
                     logger.exception(f"Failed to migrate favorites: {e}")

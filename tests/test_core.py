@@ -17,7 +17,7 @@ from pathlib import Path
 
 # Import app modules
 from src.models.string_model import StringEntry
-from src.parser.ini_parser import parse_ini_file, load_overrides
+from src.parser.ini_parser import parse_ini_file, parse_ini_text, load_overrides
 from src.merger.ini_merger import merge_sources_by_hierarchy
 from src.utils.user_ini_manager import save_user_ini_dict as save_overrides
 
@@ -117,6 +117,19 @@ class TestIniParsing:
         path.write_text("valid_key=valid_value\ninvalid_line_no_equals\nanother_valid=value\n",
                         encoding="utf-8")
         assert parse_ini_file(path) == {"valid_key": "valid_value", "another_valid": "value"}
+
+    @pytest.mark.parametrize("strip_values", [True, False])
+    def test_parse_text_reads_as_the_file_does(self, tmp_path, strip_values):
+        """parse_ini_text, for text already in memory (Import Settings, #531),
+        gives what parse_ini_file gives for the same text written to a file:
+        a BOM dropped, CRLF line ends, comments, a line with no '=', a key's
+        ',P' suffix and a value's own spaces."""
+        text = "\ufeffk_one=One\r\n; a comment\r\nno equals\r\nk_two,P= two \r\n"
+        path = tmp_path / "user.ini"
+        path.write_text(text, encoding="utf-8", newline="")
+        assert parse_ini_text(text, strip_values=strip_values) == \
+            parse_ini_file(path, strip_values=strip_values)
+        assert parse_ini_text(text, strip_values=False) == {"k_one": "One", "k_two": " two "}
 
 
 class TestMerging:

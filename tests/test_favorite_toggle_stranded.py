@@ -40,6 +40,9 @@ class _Stub:
 
     def __init__(self, entries):
         self.entries = entries
+        # The stock base source the rows come from: a cleared row's status
+        # is read against it (status_without_override).
+        self.default_values = {e.key: e.original_value for e in entries}
         self._model = _ModelStub()
 
     def _entry_index_for_row(self, row):
@@ -94,6 +97,17 @@ def test_name_row_add_and_remove_still_work():
     stub.toggle()
     assert stub.entries[0].custom_value == ""
     assert stub.entries[0].status == "Unmodified"
+
+
+def test_removing_a_favourite_from_an_enhanced_name_reads_enhanced():
+    """The row's value comes from the enhancements, so with the favourite
+    gone it reads as a load would show it, not Unmodified (#531)."""
+    entry = _entry("vehicle_NameANVL_Carrack", original="Carrack [S3]", custom="*Carrack [S3]")
+    entry.source_file = AppSettings.SOURCE_ENHANCEMENTS
+    stub = _Stub([entry])
+    stub.toggle()
+    assert stub.entries[0].custom_value == ""
+    assert stub.entries[0].status == "Enhanced"
 
 
 def test_empty_prefix_never_touches_non_name_rows(monkeypatch):
