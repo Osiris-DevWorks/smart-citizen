@@ -1247,7 +1247,8 @@ class TestTheWindowDeletesItInTheBackground:
         me = _window(_forge_worker=worker)
         me._delete_working_folder_in_background.side_effect = lambda f: order.append(("delete", f))
         me._cleanup_pending_old_cache.side_effect = lambda: order.append("cleanup")
-        me._run_enhancements_generation.side_effect = lambda: order.append("generate")
+        me._run_enhancements_generation.side_effect = (
+            lambda **_kw: order.append("generate"))
         MainWindow._on_dataforge_extract_finished(me, True, worker)
         assert order == [("take", [None]), ("delete", folder), "cleanup", "generate"]
         assert folder.calls == []
@@ -1319,7 +1320,7 @@ class TestTheWindowDeletesItInTheBackground:
         assert seen["extraction_done"] is True
         assert seen["thread"] not in (threading.get_ident(), seen["extraction_thread"])
         assert parsed == []
-        me._run_enhancements_generation.assert_called_once_with()
+        me._run_enhancements_generation.assert_called_once_with(background=False)
 
 
 class _Gated(QThread):
@@ -3194,6 +3195,7 @@ class TestExtractionWiring:
         assert worker.calls == ["start"]
         # What the finished slot's settings check compares against (#483).
         assert worker.kwargs == {
+            "wait_for": [],
             "channel": settings.get_active_channel.return_value,
             "cache_base": settings.get_dataforge_cache_base.return_value,
         }
