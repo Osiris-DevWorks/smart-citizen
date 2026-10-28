@@ -2406,10 +2406,6 @@
       "ht": "",
       "at": "Varlık dosyaları önbelleğe alınıyor…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "Fark için önbellek anlık görüntüsü alınıyor…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "Kaynaklar eşitleniyor..."

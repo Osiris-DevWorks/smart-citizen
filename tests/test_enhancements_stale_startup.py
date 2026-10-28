@@ -63,10 +63,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import src.gui.main_window as main_window  # noqa: E402
 from src.gui.main_window import MainWindow  # noqa: E402
 from src.gui.workers import EnhancementsGeneratorWorker  # noqa: E402
-from src.utils.dataforge_diff import MANIFEST_FILE  # noqa: E402
 from src.utils.i18n import tr  # noqa: E402
 from src.utils.pak_extractor import (  # noqa: E402
-    DATAFORGE_LIBS_SUBPATH, DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH,
+    DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH,
     P4K_MTIME_STAMP, P4K_SIZE_STAMP,
 )
 from src.utils.atomic_io import atomic_write_text  # noqa: E402
@@ -679,27 +678,6 @@ class TestTheWorkerStamps:
         _run_worker()
 
         assert seen == [(False, False, True)]
-
-
-def test_generation_no_longer_hashes_the_cache(disk, generator, monkeypatch):
-    """B4: every run hashed each XML in the DataForge cache against the
-    extraction's diff manifest, and nothing has used the answer since ded720a.
-    It only lengthened the window a close could cut off. With a manifest in
-    place, any hashing now fails the run."""
-    manifest = disk.forge / DATAFORGE_LIBS_SUBPATH / MANIFEST_FILE
-    manifest.write_text("{}", encoding="utf-8")
-
-    def no_hashing(*_args, **_kwargs):
-        raise AssertionError("the generation hashed the DataForge cache")
-
-    monkeypatch.setattr("src.utils.dataforge_diff._build_snapshot", no_hashing)
-
-    finished, errors = _run_worker()
-
-    assert (finished, errors) == ([True], [])
-    assert len(generator.calls) == 1
-    # The manifest is the extraction's. The generation leaves it alone.
-    assert manifest.read_text(encoding="utf-8") == "{}"
 
 
 # ── The worker, stopped by a close ──────────────────────────────────────────

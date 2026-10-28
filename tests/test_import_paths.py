@@ -86,7 +86,7 @@ class TestTheGuard:
         "monkeypatch.setattr('merger.ini_merger.merge_ini_files', None)\n",
         "caplog.at_level(10, logger='utils.pak_extractor')\n",
         "sys.modules.get('utils.settings')\n",
-        "patch(target='utils.dataforge_diff.win_long_path')\n",
+        "patch(target='utils.win_paths.win_long_path')\n",
     ])
     def test_it_sees_each_short_spelling(self, source):
         assert _offenders(source)

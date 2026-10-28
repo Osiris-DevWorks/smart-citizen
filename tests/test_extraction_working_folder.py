@@ -73,7 +73,6 @@ from pathlib import Path
 import pytest
 
 import src.utils.pak_extractor as pe
-from src.utils.dataforge_diff import MANIFEST_FILE
 from src.utils.onedrive import _ONEDRIVE_ENV_VARS
 from src.utils.win_paths import win_long_path
 from tests.unusable_folder import new_folders_denied
@@ -761,18 +760,16 @@ class TestExtractDataforgeWorkingFolder:
         assert (leaf / pe.P4K_MTIME_STAMP).read_text() == str(before.st_mtime)
         assert not pe.dataforge_cache_is_fresh(p4k, leaf)
 
-    def test_a_run_writes_no_diff_manifest(self, setup):
-        """Nothing reads the diff manifest, and hashing every cached file for
-        it took about 4.5 s after each extraction (perf proposal, #495). One
-        an older version left in the old cache goes with that cache, and the
-        run never shows the snapshot's label."""
+    def test_a_manifest_an_older_version_left_goes_with_the_old_cache(self, setup):
+        """Older versions wrote a diff manifest into the cache after every
+        extraction. Nothing reads it any more (#495), so one still in the old
+        cache goes with that cache and the new cache holds none."""
         leaf, run = setup
-        (leaf / "raw" / "libs" / MANIFEST_FILE).write_text("{}", encoding="utf-8")
-        labels = []
-        assert run(_FakeTools(), progress_callback=labels.append) is True
+        old_manifest = "manifest.json"
+        (leaf / "raw" / "libs" / old_manifest).write_text("{}", encoding="utf-8")
+        assert run(_FakeTools()) is True
         assert (leaf / pe.P4K_SIZE_STAMP).exists()
-        assert list(Path(win_long_path(leaf)).rglob(MANIFEST_FILE)) == []
-        assert pe.tr("progress.snapshot_diff") not in labels
+        assert list(Path(win_long_path(leaf)).rglob(old_manifest)) == []
 
     def test_unforge_is_handed_the_dcb_inside_the_working_folder(self, setup):
         leaf, run = setup

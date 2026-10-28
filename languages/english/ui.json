@@ -2406,10 +2406,6 @@
       "ht": "Caching entity files…",
       "at": ""
     },
-    "snapshot_diff": {
-      "ht": "Snapshotting cache for diff…",
-      "at": ""
-    },
     "syncing_sources": {
       "ht": "Syncing sources...",
       "at": ""

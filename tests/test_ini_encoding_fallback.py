@@ -237,14 +237,6 @@ class TestCorruptStateFileGuards:
         s = JsonSettings(p)
         assert s.value("key", "default") == "default"
 
-    def test_dirty_categories_corrupt_manifest_regenerates_all(self, tmp_path):
-        """A corrupt diff manifest previously crashed the enhancements run;
-        it must instead read as 'no manifest' (regenerate everything)."""
-        from src.utils.dataforge_diff import MANIFEST_FILE, dirty_categories
-
-        (tmp_path / MANIFEST_FILE).write_bytes(b"{corrupt\xa0json")
-        assert dirty_categories(tmp_path) is None
-
     def test_enhancements_stamp_corrupt_bytes_reads_empty(self, tmp_path, monkeypatch):
         from src.utils.settings import AppSettings
 
