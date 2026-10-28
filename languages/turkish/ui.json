@@ -3398,6 +3398,10 @@
       "ht": "",
       "at": "Hurda"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (yalnızca yüzeyde)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Plan ara..."
@@ -3460,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "Bu mineral çözüldüğünde tarama etiketi parlar"
+      "at": "Bu mineral tarandığında uyar"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Hurda tarandığında uyar"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "Mineral veya bileşen..."
+      "at": "Taranabilir bir şey veya eşya adı yazın..."
     },
     "minerals_none": {
       "ht": "",
@@ -3498,6 +3506,10 @@
       "ht": "",
       "at": "Tarama imzası: kaya başına {base}, en fazla {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Tarama imzası: her biri {base}, en fazla {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "{count} üretilmiş eşyada kullanılır"
@@ -3518,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur; oyun işlemine asla dokunmaz."
+      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur, bir çekmece kısayolu ayarlarsanız yalnızca o birleşim için tuş basışlarını izler; oyun işlemine asla dokunmaz."
     },
     "start_btn": {
       "ht": "",
@@ -3528,6 +3540,22 @@
       "ht": "",
       "at": "Katmanı Durdur"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "Tarama çözücüsü"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Çekmece"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Game.log'dan planlar"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "Tarama örnekleri"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Maden tarama çözücüsü"
@@ -3535,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "Radarın altındaki tarama imzasını okur ve altında yatak türünü ve sayısını gösterir."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Tarama metni boyutu:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Küçük"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Orta"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Büyük"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Çok büyük"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "İzlenen bir mineral veya hurda tarandığında:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Parlama"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Etiket göründüğü sürece çevresinde atan bir parıltı."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Yanıp sönme"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "Hedef ilk okunduğunda etiket üç kez yanıp söner."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Metin rengini değiştir"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "Etiketin metni parlak yeşile döner."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Daha büyük metin"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "Etiketin metni bir buçuk kat büyür."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Ses çal"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Hedef ilk okunduğunda kısa bir çan sesi."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3586,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "Bir mineral yazın, onu kullanan bileşenleri görün; ya da bir bileşen yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
+      "at": "Bir mineral yazın, onu kullanan eşyaları görün; ya da bir eşya yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
     },
     "drawer_position": {
       "ht": "",
@@ -3623,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "Sağ alt"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Çekmece kısayolu:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Temizle"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Çekmeceyi oyunun içinden, en son kullanılan bölümde açıp kapatır. Oyunda fareyi içinde kullanmak için yine F tuşunu basılı tutun. Kutuya tıklayın, ardından tuşlara birlikte basın, örneğin Alt+8. Star Citizen bu tuşları yine de alır, bu yüzden oyunda kullanmadığınız bir birleşim seçin."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows bu kısayolu reddetti. Başka bir program zaten kullanıyor olabilir; başka bir tane seçin."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Bu bir kısayol olamaz. Bir harf, rakam, sembol, Boşluk, Tab veya gezinme tuşuyla (oklar, Home, End, Page Up/Down, Insert, Delete) birlikte Ctrl, Alt veya Win tuşunu basılı tutun; isterseniz Shift de ekleyin. Bir F tuşu veya Pause tek başına da çalışır."
     }
   }
 }

@@ -28,7 +28,7 @@ from src.gui.error_dialog import ErrorDialogHandler, _ErrorDialogEmitter
 from src.gui.enhancements_tab import EnhancementsTab
 from src.gui.filter_header import FilterHeaderView
 from src.gui.log_tab import LogTab
-from src.gui.overlay_tab import OverlayTab
+from src.gui.overlay_tab import OverlayTab, hotkey_problem_text
 from src.gui.simple_mode_widget import SimpleModeWidget
 from src.gui.markdown_renderer import markdown_to_html as _md_to_html
 from src.gui.string_table_model import (
@@ -7720,6 +7720,7 @@ class MainWindow(QMainWindow):
             self._sco_overlay.watched_changed.connect(AppSettings.set_sco_watched_minerals)
             self._sco_overlay.decoder_failed.connect(
                 lambda: self.statusBar().showMessage(tr("sco.decoder_stopped")))
+            self._sco_overlay.hotkey_problem.connect(self._on_sco_hotkey_problem)
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
         self._sco_overlay.set_watched_minerals(AppSettings.get_sco_watched_minerals())
         self._refresh_sco_catalog()
@@ -7776,6 +7777,8 @@ class MainWindow(QMainWindow):
         self._sco_overlay.set_options(
             {name: AppSettings.get_sco_option(name) for name in AppSettings.SCO_OPTION_SETTING})
         self._sco_overlay.drawer.set_position(AppSettings.get_sco_drawer_position())
+        self._sco_overlay.set_label_size(AppSettings.get_sco_label_size())
+        self._sco_overlay.set_drawer_hotkey(AppSettings.get_sco_drawer_hotkey())
         if not self._sco_overlay.is_running():
             return
         if AppSettings.get_sco_option(AppSettings.SCO_LIVE_BLUEPRINT_WATCH):
@@ -7830,6 +7833,13 @@ class MainWindow(QMainWindow):
         self._recompute_owned()
         if self._sco_overlay is not None:
             self._sco_overlay.drawer.notify_new(new_names)
+
+    def _on_sco_hotkey_problem(self, problem: str):
+        """The drawer hotkey could not be held (#523): say so on the Overlay
+        tab, and in the status bar, since the player may be in game."""
+        self.overlay_tab.set_hotkey_problem(problem)
+        if problem:
+            self.statusBar().showMessage(hotkey_problem_text(problem))
 
     def _on_sco_scan_decoder_toggled(self, on: bool):
         """The drawer's scan decoder switch: same setting as the Overlay tab's."""

@@ -741,16 +741,24 @@ class AppSettings:
 
     # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
-    # its sco_overlay.SECTION_ICONS name.
+    # its sco_overlay.SECTION_ICONS name, and a watched-target alert's is
+    # SCO_ALERT_PREFIX + its sco_overlay.ALERTS name (#523).
     SCO_SCAN_DECODER = "scan_decoder"
+    SCO_ALERT_PREFIX = "alert_"
     SCO_DRAWER = "drawer"
     SCO_DRAWER_SECTION_PREFIX = "drawer_"
     SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
     SCO_SAVE_SAMPLES = "save_samples"
-    # Option name -> (key, default). All on by default, matching how the
-    # overlay behaved before the tab existed.
+    # Option name -> (key, default). On by default, matching how the overlay
+    # behaved before the tab existed, except the alerts #523 added: the glow
+    # (the one alert there was) and the flash are on, the rest off.
     SCO_OPTION_SETTING = {
         SCO_SCAN_DECODER:         ("sco/scan_decoder", True),
+        SCO_ALERT_PREFIX + "glow":   ("sco/alert_glow", True),
+        SCO_ALERT_PREFIX + "flash":  ("sco/alert_flash", True),
+        SCO_ALERT_PREFIX + "color":  ("sco/alert_color", False),
+        SCO_ALERT_PREFIX + "bigger": ("sco/alert_bigger", False),
+        SCO_ALERT_PREFIX + "sound":  ("sco/alert_sound", False),
         SCO_DRAWER:               ("sco/drawer", True),
         SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
@@ -767,8 +775,16 @@ class AppSettings:
         "bottom_left", "bottom_center", "bottom_right",
     )
     SCO_DRAWER_POSITION_DEFAULT = "middle_right"
-    # Ores ticked in the SCO drawer's Minerals section: a decoded scan of one
-    # makes the signature label glow. JSON list of ORE_SIGNATURES keys.
+    # The key combination that opens and closes the SCO drawer from the game
+    # (#523), as QKeySequence portable text ("Ctrl+Shift+O"); empty for none.
+    SCO_DRAWER_HOTKEY = "sco/drawer_hotkey"
+    # How big the signature label's text is (#523).
+    SCO_LABEL_SIZE = "sco/label_size"
+    SCO_LABEL_SIZES = ("small", "medium", "large", "extra_large")
+    SCO_LABEL_SIZE_DEFAULT = "medium"
+    # Ores ticked in the SCO drawer's Minerals section, and salvage (#523): a
+    # decoded scan of one sets off the label's alerts. JSON list of
+    # ORE_SIGNATURES keys and "salvage".
     SCO_WATCHED_MINERALS = "sco/watched_minerals"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
@@ -1672,25 +1688,56 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
-    def get_sco_drawer_position() -> str:
-        """Where the SCO drawer sits (one of ``SCO_DRAWER_POSITIONS``)."""
-        value = str(AppSettings.settings().value(
-            AppSettings.SCO_DRAWER_POSITION, AppSettings.SCO_DRAWER_POSITION_DEFAULT))
-        if value not in AppSettings.SCO_DRAWER_POSITIONS:
-            return AppSettings.SCO_DRAWER_POSITION_DEFAULT
-        return value
+    def _get_choice(key: str, choices: tuple, default: str) -> str:
+        """A setting that holds one of *choices*; anything else reads as *default*."""
+        value = str(AppSettings.settings().value(key, default))
+        return value if value in choices else default
 
     @staticmethod
-    def set_sco_drawer_position(position: str) -> None:
-        if position not in AppSettings.SCO_DRAWER_POSITIONS:
-            position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
-        AppSettings.settings().setValue(AppSettings.SCO_DRAWER_POSITION, position)
+    def _set_choice(key: str, value: str, choices: tuple, default: str) -> None:
+        """Save one of *choices*; anything else saves *default*."""
+        AppSettings.settings().setValue(key, value if value in choices else default)
         AppSettings.settings().sync()
 
     @staticmethod
+    def get_sco_drawer_position() -> str:
+        """Where the SCO drawer sits (one of ``SCO_DRAWER_POSITIONS``)."""
+        return AppSettings._get_choice(AppSettings.SCO_DRAWER_POSITION,
+                                       AppSettings.SCO_DRAWER_POSITIONS,
+                                       AppSettings.SCO_DRAWER_POSITION_DEFAULT)
+
+    @staticmethod
+    def set_sco_drawer_position(position: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_DRAWER_POSITION, position,
+                                AppSettings.SCO_DRAWER_POSITIONS,
+                                AppSettings.SCO_DRAWER_POSITION_DEFAULT)
+
+    @staticmethod
+    def get_sco_drawer_hotkey() -> str:
+        """The SCO drawer's hotkey as QKeySequence portable text, "" for none."""
+        return str(AppSettings.settings().value(AppSettings.SCO_DRAWER_HOTKEY, "") or "")
+
+    @staticmethod
+    def set_sco_drawer_hotkey(sequence: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_DRAWER_HOTKEY, sequence or "")
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_label_size() -> str:
+        """How big the SCO signature label's text is (one of ``SCO_LABEL_SIZES``)."""
+        return AppSettings._get_choice(AppSettings.SCO_LABEL_SIZE, AppSettings.SCO_LABEL_SIZES,
+                                       AppSettings.SCO_LABEL_SIZE_DEFAULT)
+
+    @staticmethod
+    def set_sco_label_size(size: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_LABEL_SIZE, size, AppSettings.SCO_LABEL_SIZES,
+                                AppSettings.SCO_LABEL_SIZE_DEFAULT)
+
+    @staticmethod
     def get_sco_watched_minerals() -> set:
-        """Ores whose decoded scan makes the SCO label glow (lowercase
-        ``ORE_SIGNATURES`` keys). JSON, like ``get_owned_items``."""
+        """Ores and salvage whose decoded scan sets off the SCO label's alerts
+        (lowercase ``ORE_SIGNATURES`` keys and "salvage"). JSON, like
+        ``get_owned_items``."""
         import json
         raw = AppSettings.settings().value(AppSettings.SCO_WATCHED_MINERALS, "", type=str)
         try:
@@ -3814,6 +3861,8 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
             AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
+            AppSettings.SCO_DRAWER_HOTKEY: "",
+            AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
         }
         # Composed from the same maps the getters read, so these can't drift.

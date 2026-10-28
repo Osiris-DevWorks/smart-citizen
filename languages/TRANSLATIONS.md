@@ -82,6 +82,40 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-23, Claude Opus 5.5):** #523, overlay feedback.
+  28 new keys: `overlay.scan_group`, `overlay.drawer_group`,
+  `overlay.blueprint_watch_group` and `overlay.samples_group` (the Overlay
+  tab's four boxes), `sco.surface_only`, `sco.watch_salvage_tooltip` and
+  `sco.tooltip_salvage_signature` (the Minerals section's Salvage row and
+  round numbers that list salvage first), `overlay.label_size` with
+  `overlay.size_small` / `_medium` / `_large` / `_extra_large` (the scan
+  text size), `overlay.alerts_title` with `overlay.alert_glow`, `_flash`,
+  `_color`, `_bigger` and `_sound` and a `_hint` for each (what a watched
+  mineral or salvage sets off), and `overlay.drawer_hotkey`,
+  `overlay.drawer_hotkey_clear` (the Clear button beside the box),
+  `overlay.drawer_hotkey_hint` (with its example, Alt+8, the same in every
+  language: Star Citizen's default bindings never use 8 or Alt on its own,
+  and 8 has one key code on every layout), `overlay.hotkey_taken`
+  and `overlay.hotkey_unsupported` (the drawer hotkey). Four English texts
+  changed: `sco.crafting_search_placeholder` ("Type a scannable or item
+  name...", since more than components can be crafted),
+  `overlay.drawer_crafting_hint` (items, not components),
+  `sco.watch_mineral_tooltip` (the label alerts, not only glows) and
+  `overlay.desc` (with a drawer hotkey set, the overlay watches key presses
+  for that one combination). `overlay.drawer_hotkey_hint` also says that
+  Star Citizen still gets those keys, since the overlay watches the
+  keyboard's raw input while the game keeps registered hotkeys away, and
+  that in game the player still holds F to use the mouse in the drawer
+  (Windows does not let the overlay take focus from the game). AI `at`
+  in all 11 other languages; none had an `ht` on any of these keys, so
+  nothing needs human re-review. The same change updated
+  `docs/HELP.md`'s Overlay Tab section, `docs/FAQ.md`'s overlay paragraph
+  and `docs/ABOUT.md`'s overlay bullet, and the 11 translated copies of
+  each, worded with each `ui.json`'s own names: the text size, the alerts,
+  the Salvage row, round numbers listing salvage first, the drawer hotkey
+  (that it needs Ctrl, Alt or Win unless it is an F key or Pause, and in
+  the FAQ, the raw input it watches and what it never does), and items
+  instead of components.
 - **2.5.0 cycle (2026-10-20, Claude):** New language **russian** added,
   split out of #488 by **h0use** (Den McConan) without that PR's channel
   badge. AI translation of every UI key (`at`-only, `ht` empty), the full

@@ -3398,6 +3398,10 @@
       "ht": "",
       "at": "Récupération"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (surface uniquement)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "Rechercher des plans..."
@@ -3460,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "Fait briller l'étiquette du scan quand ce minéral est décodé"
+      "at": "Alerte quand ce minéral est scanné"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Alerte quand de la récupération est scannée"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "Minéral ou composant..."
+      "at": "Tapez un élément scannable ou un objet..."
     },
     "minerals_none": {
       "ht": "",
@@ -3498,6 +3506,10 @@
       "ht": "",
       "at": "Signature de scan : {base} par roche, jusqu'à {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Signature de scan : {base} chacun, jusqu'à {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "Utilisé dans {count} objets fabriqués"
@@ -3518,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Fenêtres affichées par-dessus Star Citizen : le décodeur de scan minier et le tiroir des plans. Lancez le jeu en mode fenêtré sans bordure. La superposition lit seulement votre écran et Game.log ; elle ne touche jamais au processus du jeu."
+      "at": "Fenêtres affichées par-dessus Star Citizen : le décodeur de scan minier et le tiroir des plans. Lancez le jeu en mode fenêtré sans bordure. La superposition lit seulement votre écran et Game.log et, si vous définissez un raccourci pour le tiroir, surveille les touches pressées pour cette seule combinaison ; elle ne touche jamais au processus du jeu."
     },
     "start_btn": {
       "ht": "",
@@ -3528,6 +3540,22 @@
       "ht": "",
       "at": "Arrêter la superposition"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "Décodeur de scan"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Tiroir"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Plans depuis Game.log"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "Échantillons de scan"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Décodeur de scan minier"
@@ -3535,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "Lit la signature de scan sous le radar et affiche le type et le nombre de gisements en dessous."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Taille du texte du scan :"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Petit"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Moyen"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Grand"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Très grand"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "Quand un minéral surveillé ou de la récupération est scanné :"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Lueur"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Une lueur pulsante autour de l'étiquette tant qu'elle s'affiche."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Clignotement"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "L'étiquette clignote trois fois quand la cible est lue pour la première fois."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Changer la couleur du texte"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "Le texte de l'étiquette devient vert vif."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Texte plus grand"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "Le texte de l'étiquette est une fois et demie plus grand."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Jouer un son"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Un court carillon quand la cible est lue pour la première fois."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3586,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "Tapez un minéral pour voir les composants qui l'utilisent, ou un composant pour voir les minéraux requis. Nécessite une extraction DataForge."
+      "at": "Tapez un minéral pour voir les objets qui l'utilisent, ou un objet pour voir les minéraux requis. Nécessite une extraction DataForge."
     },
     "drawer_position": {
       "ht": "",
@@ -3623,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "En bas à droite"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Raccourci du tiroir :"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Effacer"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Ouvre et ferme le tiroir depuis le jeu, sur la dernière section utilisée. En jeu, maintenez toujours F pour vous servir de la souris dedans. Cliquez dans la case, puis appuyez sur les touches ensemble, par exemple Alt+8. Star Citizen reçoit quand même ces touches : choisissez donc une combinaison que vous n'utilisez pas en jeu."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows a refusé ce raccourci. Un autre programme l'utilise peut-être déjà ; choisissez-en un autre."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Ceci ne peut pas servir de raccourci. Maintenez Ctrl, Alt ou Win avec une lettre, un chiffre, un symbole, Espace, Tab ou une touche de navigation (flèches, Origine, Fin, Page préc./suiv., Inser, Suppr), et Maj aussi si vous voulez. Une touche F ou Pause fonctionne aussi seule."
     }
   }
 }

@@ -3398,6 +3398,10 @@
       "ht": "",
       "at": "인양"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (지표 전용)"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "설계도 검색..."
@@ -3460,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "이 광물이 해독되면 스캔 라벨이 빛납니다"
+      "at": "이 광물이 스캔되면 알림"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "인양물이 스캔되면 알림"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "광물 또는 부품..."
+      "at": "스캔 대상 또는 아이템 이름 입력..."
     },
     "minerals_none": {
       "ht": "",
@@ -3498,6 +3506,10 @@
       "ht": "",
       "at": "스캔 신호: 바위당 {base}, 최대 {count}개"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "스캔 신호: 개당 {base}, 최대 {count}개"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "제작 아이템 {count}개에 사용"
@@ -3518,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Star Citizen 위에 표시되는 창입니다. 채굴 스캔 해독기와 설계도 서랍이 있습니다. 게임은 테두리 없는 창 모드로 실행하세요. 오버레이는 화면과 Game.log만 읽고 게임 프로세스에는 절대 손대지 않습니다."
+      "at": "Star Citizen 위에 표시되는 창입니다. 채굴 스캔 해독기와 설계도 서랍이 있습니다. 게임은 테두리 없는 창 모드로 실행하세요. 오버레이는 화면과 Game.log만 읽고, 서랍 단축키를 설정하면 그 조합 하나만을 위해 키 입력을 살핍니다. 게임 프로세스에는 절대 손대지 않습니다."
     },
     "start_btn": {
       "ht": "",
@@ -3528,6 +3540,22 @@
       "ht": "",
       "at": "오버레이 중지"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "스캔 해독기"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "서랍"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Game.log의 설계도"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "스캔 샘플"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "채굴 스캔 해독기"
@@ -3535,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "레이더 아래의 스캔 신호를 읽고 그 아래에 매장지 종류와 개수를 표시합니다."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "스캔 글자 크기:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "작게"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "보통"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "크게"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "아주 크게"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "관심 광물이나 인양물이 스캔되면:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "빛나기"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "라벨이 보이는 동안 주위가 맥박치듯 빛납니다."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "깜박이기"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "대상을 처음 읽으면 라벨이 세 번 깜박입니다."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "글자 색 바꾸기"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "라벨 글자가 밝은 초록색이 됩니다."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "글자 크게"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "라벨 글자가 1.5배 커집니다."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "소리 재생"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "대상을 처음 읽으면 짧은 차임이 울립니다."
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3586,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "광물을 입력하면 그 광물을 쓰는 부품을, 부품을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
+      "at": "광물을 입력하면 그 광물을 쓰는 아이템을, 아이템을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
     },
     "drawer_position": {
       "ht": "",
@@ -3623,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "오른쪽 아래"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "서랍 단축키:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "지우기"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "게임 중에 서랍을 마지막으로 쓴 섹션으로 열고 닫습니다. 게임 중에 마우스로 쓰려면 지금처럼 F를 누르고 있으세요. 칸을 클릭한 다음 Alt+8처럼 키를 함께 누르세요. Star Citizen도 이 키를 그대로 받으므로 게임에서 쓰지 않는 조합을 고르세요."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows가 이 단축키를 거부했습니다. 다른 프로그램이 이미 쓰고 있을 수 있으니 다른 키를 고르세요."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "이것은 단축키로 쓸 수 없습니다. Ctrl, Alt 또는 Win을 누른 채 영문자, 숫자, 기호, Space, Tab 또는 이동 키(화살표, Home, End, Page Up/Down, Insert, Delete)를 누르세요. Shift를 더해도 됩니다. F 키나 Pause는 단독으로도 쓸 수 있습니다."
     }
   }
 }

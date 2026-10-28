@@ -3398,6 +3398,10 @@
       "ht": "",
       "at": "打捞"
     },
+    "surface_only": {
+      "ht": "",
+      "at": "{name}（仅地表）"
+    },
     "drawer_search_placeholder": {
       "ht": "",
       "at": "搜索蓝图..."
@@ -3460,11 +3464,15 @@
     },
     "watch_mineral_tooltip": {
       "ht": "",
-      "at": "解码出此矿物时，扫描标签会发光"
+      "at": "扫描到此矿物时发出提醒"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "扫描到打捞物时发出提醒"
     },
     "crafting_search_placeholder": {
       "ht": "",
-      "at": "矿物或组件..."
+      "at": "输入可扫描物或物品名称..."
     },
     "minerals_none": {
       "ht": "",
@@ -3498,6 +3506,10 @@
       "ht": "",
       "at": "扫描信号：每块岩石 {base}，最多 {count}"
     },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "扫描信号：每个 {base}，最多 {count}"
+    },
     "tooltip_used_in": {
       "ht": "",
       "at": "用于 {count} 个制造物品"
@@ -3518,7 +3530,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "显示在 Star Citizen 之上的窗口：采矿扫描解码器和蓝图抽屉。请以无边框窗口模式运行游戏。叠加层只读取屏幕和 Game.log，从不接触游戏进程。"
+      "at": "显示在 Star Citizen 之上的窗口：采矿扫描解码器和蓝图抽屉。请以无边框窗口模式运行游戏。叠加层只读取屏幕和 Game.log，并在你设置了抽屉热键时只为这一个组合键留意按键，从不接触游戏进程。"
     },
     "start_btn": {
       "ht": "",
@@ -3528,6 +3540,22 @@
       "ht": "",
       "at": "停止叠加层"
     },
+    "scan_group": {
+      "ht": "",
+      "at": "扫描解码器"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "抽屉"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "来自 Game.log 的蓝图"
+    },
+    "samples_group": {
+      "ht": "",
+      "at": "扫描样本"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "采矿扫描解码器"
@@ -3535,6 +3563,70 @@
     "scan_decoder_hint": {
       "ht": "",
       "at": "读取雷达下方的扫描信号，并在其下方显示矿藏类型和数量。"
+    },
+    "label_size": {
+      "ht": "",
+      "at": "扫描文字大小："
+    },
+    "size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "特大"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "扫描到关注的矿物或打捞物时："
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "发光"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "标签显示时周围有脉动的光晕。"
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "闪烁"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "首次读到目标时标签闪烁三次。"
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "更改文字颜色"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "标签文字变为亮绿色。"
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "放大文字"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "标签文字放大到 1.5 倍。"
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "播放提示音"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "首次读到目标时播放一声短促的提示音。"
     },
     "live_blueprint_watch": {
       "ht": "",
@@ -3586,7 +3678,7 @@
     },
     "drawer_crafting_hint": {
       "ht": "",
-      "at": "输入矿物可查看使用它的组件，输入组件可查看所需矿物。需要先提取 DataForge。"
+      "at": "输入矿物可查看使用它的物品，输入物品可查看所需矿物。需要先提取 DataForge。"
     },
     "drawer_position": {
       "ht": "",
@@ -3623,6 +3715,26 @@
     "position_bottom_right": {
       "ht": "",
       "at": "右下"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "抽屉热键："
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "清除"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "在游戏中打开或关闭抽屉，并停在上次使用的分区。在游戏中仍需按住 F 才能用鼠标操作它。点击此框，然后同时按下组合键，例如 Alt+8。Star Citizen 仍会收到这些按键，所以请选一个游戏中不用的组合键。"
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows 拒绝了这个热键。可能已有其他程序在使用它，请换一个。"
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "这个不能用作热键。请按住 Ctrl、Alt 或 Win，再加一个字母、数字、符号、空格、Tab 或导航键（方向键、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 键或 Pause 也可以单独使用。"
     }
   }
 }
