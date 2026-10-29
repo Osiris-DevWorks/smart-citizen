@@ -116,6 +116,14 @@ from src.gui.main_window import MainWindow  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
 
 
+class _NoTickPending:
+    """The Enhancements tab with no category tick waiting to be saved, which
+    a verdict checks before it turns Apply green (#532)."""
+
+    def has_pending_category_changes(self):
+        return False
+
+
 class _RealWindow:
     _refresh_apply_dirty_after_reload = MainWindow._refresh_apply_dirty_after_reload
     _invalidate_applied_check = MainWindow._invalidate_applied_check
@@ -132,6 +140,7 @@ class _RealWindow:
         self._applied_check_rerun_pending = False
         self._initial_load_done = True
         self._session_has_unapplied_edit = True
+        self.enhancements_tab = _NoTickPending()
         self.dirty_calls = []
         self.dirty_threads = []
 

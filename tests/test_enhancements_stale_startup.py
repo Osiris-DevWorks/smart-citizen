@@ -1038,12 +1038,14 @@ def test_a_successful_run_keeps_a_change_made_while_it_ran(disk, changed_mid_run
 
 
 def test_a_tick_not_yet_saved_does_not_keep_generate_lit_after_a_run(disk):
-    """A run generates the saved categories, not the ticked ones: a tick
-    counts only once the category Apply button saves it. The finished run's
-    re-read judges the saved set, so a ticked but unsaved category, whose
-    file the run never writes, does not leave Generate lit after every run
-    (each click would start another full run that ends the same way). The
-    control shows the live ticks would have called it dirty."""
+    """A run generates the saved categories, not the ticked ones. Every
+    launch saves pending ticks first (#532), so a tick is left unsaved at
+    a launch only when the run is handed its own categories (the
+    ``categories`` parameter, which no caller passes today), and its file is
+    never written. The finished run's re-read judges the saved set, so that
+    tick does not leave Generate lit after the run, while the category Apply
+    button stays lit for it. The control shows the live ticks would have
+    called it dirty."""
     from src.gui.enhancements_tab import EnhancementsTab
 
     key = next(iter(AppSettings.ENHANCEMENT_CATEGORY_FILES))
@@ -1064,6 +1066,7 @@ def test_a_tick_not_yet_saved_does_not_keep_generate_lit_after_a_run(disk):
 
     assert tab._generate_enhancements_btn.isEnabled() is False
     assert tab._enhancements_dirty is False
+    assert tab._apply_categories_btn.isEnabled() is True
 
 
 def test_startup_and_the_language_switch_agree(disk):
@@ -1184,6 +1187,9 @@ def _regenerating_self(monkeypatch, **attrs):
     monkeypatch.setattr(main_window, "EnhancementsGeneratorWorker", make_worker)
     monkeypatch.setattr(main_window, "AnimatedProgressDialog", MagicMock())
     me = _switching_self()
+    # No category tick pending: a run that saved one reloads after a failure
+    # (#532), and a bare MagicMock's answer would read as one saved.
+    me.enhancements_tab.apply_pending_category_changes.return_value = False
     me._close_committed = False
     me._enhancements_worker = None
     me._forge_progress_dialog = None
@@ -1231,6 +1237,29 @@ class TestTheSwitchRegeneration:
         _finish(me, success, made[0])
         assert tab._generate_enhancements_btn.isEnabled() is not success
         assert tab._enhancements_dirty is not success
+
+    def test_the_switch_run_saves_a_pending_untick(self, disk, monkeypatch):
+        """The switch's run is a launch like Generate's, so a category
+        unticked but not saved is saved first and left out of the run
+        (#532). A failure still reloads once, through the switch's own
+        follow-up, not a second time for the saved tick."""
+        from src.gui.enhancements_tab import EnhancementsTab
+
+        _stamp("english", "older")
+        key = "commodities"
+        AppSettings.set_enhancement_category_enabled(key, True)
+        tab = EnhancementsTab()
+        tab._enhancements_checkboxes[key].setChecked(False)    # unticked, not saved
+        me, made = _regenerating_self(monkeypatch, enhancements_tab=tab)
+
+        MainWindow._apply_language_base_source(me, "english")
+
+        assert AppSettings.get_enhancement_category_enabled(key) is False
+        assert not set(AppSettings.ENHANCEMENT_CATEGORY_FILES[key]) & made[0].kwargs["categories"]
+        assert tab._apply_categories_btn.isEnabled() is False
+        _finish(me, False, made[0])
+        me._show_loading_progress.assert_called_once_with(tr("dialogs.merging_sources"))
+        me.perform_merge_and_reload.assert_not_called()
 
     def test_a_successful_run_reloads_once_with_its_enhancements(self, disk, monkeypatch):
         _stamp("english", "older")

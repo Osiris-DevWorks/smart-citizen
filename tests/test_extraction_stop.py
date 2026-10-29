@@ -586,6 +586,9 @@ def _window(**attrs):
     # would read as a generation running.
     me._enhancements_worker = None
     me._enhancements_progress_dialog = None
+    # No category tick pending: a launch that saved one marks Apply dirty and
+    # reloads after a failure, and a MagicMock's answer would read as saved.
+    me.enhancements_tab.apply_pending_category_changes.return_value = False
     me._after_unfinished_p4k_extraction = None
     me._p4k_error_box_open = False
     me._p4k_follow_up_after_error = None

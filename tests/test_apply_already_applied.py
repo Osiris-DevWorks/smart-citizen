@@ -517,6 +517,14 @@ class _FakeWorker:
         self.finished.emit(result)
 
 
+class _NoTickPending:
+    """The Enhancements tab with no category tick waiting to be saved, which
+    a verdict checks before it turns Apply green (#532)."""
+
+    def has_pending_category_changes(self):
+        return False
+
+
 class _Window:
     """Carries just what the already-applied check touches, with the real
     MainWindow methods bound onto it."""
@@ -537,6 +545,7 @@ class _Window:
         self._applied_check_rerun_pending = False
         self._initial_load_done = True
         self._session_has_unapplied_edit = True
+        self.enhancements_tab = _NoTickPending()
         self.dirty_calls: list[bool] = []
         self.snapshots_taken = 0
         self.fail_snapshot = False
