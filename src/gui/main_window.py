@@ -57,7 +57,10 @@ from src.merger.ini_merger import merge_sources_by_hierarchy
 from src.models.string_model import (
     CATEGORY_MISSIONS, StringEntry, is_favoritable_ship,
 )
-from src.parser.ini_parser import load_source_files, load_sources_from_settings, parse_ini_file
+from src.parser.ini_parser import (
+    load_source_files, load_sources_from_settings, parse_ini_file, parse_ini_text,
+    status_without_override,
+)
 # Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
 from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
@@ -217,6 +220,11 @@ def _drop_none_entries(entries: list) -> list:
             dropped, "y" if dropped == 1 else "ies",
         )
     return clean
+
+
+def _overrides_of(entries: list) -> dict:
+    """{key: custom_value} for every entry that has one."""
+    return {e.key: e.custom_value for e in entries if e.custom_value}
 
 
 def _channels_to_scan(present_channels) -> list:
@@ -725,6 +733,11 @@ class MainWindow(QMainWindow):
         self.entries: list[StringEntry] = []
         self.filtered_row_indices: list[int] = []
         self.default_values: dict = {}  # Store default values from cached base source
+        # What user.ini held at the table's last load or save, and the user
+        # source it was read from, so a reload restores only the edits not in
+        # it (_snapshot_pending_user_edits, #531).
+        self._saved_overrides: dict[str, str] = {}
+        self._saved_overrides_source: Optional[str] = None
 
         # File loader worker
         self._loader_worker: Optional[FileLoaderWorker] = None
@@ -2736,6 +2749,9 @@ class MainWindow(QMainWindow):
                    path=user_ini_path, error_type=type(e).__name__, error=e),
             )
             return False
+        # What save_user_ini wrote, so the next reload counts none of it as
+        # unsaved (#531).
+        self._remember_saved_overrides(self.entries)
 
         target_path = AppSettings.get_global_ini_path()
 
@@ -3199,18 +3215,83 @@ class MainWindow(QMainWindow):
         only from user.ini. Edits the user made but hasn't yet Applied live
         only in memory; without snapshotting them here they'd be silently
         wiped by the reload.
+
+        An edit is a value that differs from what user.ini held at the last
+        load or save (``_saved_overrides``), a cleared override ("") included
+        (#531). Taking every non-empty value brought an override the user
+        had reset back from the old user.ini, and the table's old values beat
+        the file Restore user.ini or Import INI had just written. A reload
+        that reads another user.ini (a channel switch or a data-folder change)
+        still takes every non-empty override, so they follow the user there,
+        but not a clear: an override reset and not yet applied comes back from
+        that user.ini, after a Move of the data folder or a switch to another
+        channel and back, until the reset is applied.
         """
+        if self._saved_overrides_source != AppSettings.get_source_path(AppSettings.SOURCE_USER):
+            return _overrides_of(self.entries)
+        saved = self._saved_overrides
         return {
             e.key: e.custom_value
             for e in self.entries
-            if e.custom_value
+            if e.custom_value != saved.get(e.key, "")
         }
 
-    def _restore_pending_user_edits(self, entries: list, snapshot: dict) -> int:
+    def _record_reloaded_overrides(self, entries: list, pending: dict) -> dict:
+        """Record what a reload read from user.ini, the overrides in its fresh
+        *entries* before the restore, and return the edits to restore over
+        them: *pending*, from _snapshot_pending_user_edits.
+
+        A reload that read no override at all from the user.ini the record
+        says held some is not trusted (#531). That file could not be read
+        (another program held it, a share dropped for a moment), and taking
+        it as empty would drop every saved override from the table, and from
+        user.ini at the next Apply or close. Every override in the table is
+        restored instead, as before, and the record is kept.
+        """
+        source = AppSettings.get_source_path(AppSettings.SOURCE_USER)
+        read = _overrides_of(entries)
+        if not read and self._saved_overrides and self._saved_overrides_source == source:
+            logger.warning(
+                f"The reload read no overrides from {source}, which held "
+                f"{len(self._saved_overrides)} at the last load or save: "
+                f"keeping the table's")
+            return _overrides_of(self.entries)
+        self._saved_overrides = read
+        self._saved_overrides_source = source
+        return pending
+
+    def _remember_saved_overrides(self, entries: list) -> None:
+        """Record what save_user_ini just wrote from *entries*, the overrides
+        that differ from their original, as what user.ini now holds (see
+        ``_snapshot_pending_user_edits``)."""
+        self._saved_overrides = {e.key: e.custom_value for e in entries if e.is_modified}
+        self._saved_overrides_source = AppSettings.get_source_path(AppSettings.SOURCE_USER)
+
+    def _take_replaced_user_ini(self, written: dict) -> None:
+        """Put *written*, the overrides of a user.ini replaced outside the
+        table (Restore user.ini, Import Settings with Restart Later), into the
+        table before the reload that follows (#531). Its values win over
+        unapplied changes to the keys it holds, an override the user had not
+        changed goes with the file it came from, and other unapplied changes
+        stay. What was written is recorded, so a file with no override for
+        the table is not taken for one the reload could not read. A reload
+        that fails then leaves the table as the new file says, so the next
+        Apply or close saves that and not the old overrides."""
+        unsaved = self._snapshot_pending_user_edits()
+        for entry in self.entries:
+            if entry.key in written:
+                entry.custom_value = written[entry.key]
+            elif entry.key not in unsaved:
+                entry.custom_value = ""
+        self._remember_saved_overrides([e for e in self.entries if e.key in written])
+
+    def _restore_pending_user_edits(self, entries: list, snapshot: dict, global_keys) -> int:
         """Re-apply *snapshot* on top of freshly-loaded *entries*.
 
-        Mirrors inline-edit setData semantics: status flips Modified if the
-        restored value differs from the new original, Unmodified otherwise.
+        A restored value is Modified when it differs from the new original
+        and Unmodified otherwise. A restored clear ("") gets the status a
+        load gives the row with no override (``status_without_override``),
+        from *global_keys*, the keys of the freshly loaded `global` source.
         Returns the count actually restored.
         """
         if not snapshot:
@@ -3221,7 +3302,10 @@ class MainWindow(QMainWindow):
             if pending is None or pending == e.custom_value:
                 continue
             e.custom_value = pending
-            e.status = "Modified" if pending != e.original_value else "Unmodified"
+            if pending:
+                e.status = "Modified" if pending != e.original_value else "Unmodified"
+            else:
+                e.status = status_without_override(e, global_keys)
             restored += 1
         return restored
 
@@ -3230,12 +3314,12 @@ class MainWindow(QMainWindow):
         """Re-prefix in-memory favourites after the sort prefix changed (#140).
 
         ``_apply_favorite_prefix`` already migrated ``user.ini`` on disk, but
-        ``perform_merge_and_reload`` snapshots the current in-memory
-        ``custom_value``s and restores them over the freshly-loaded entries.
-        Without re-prefixing memory here, that snapshot still holds the old
-        prefix and clobbers the migrated value straight back. Re-prefix in
-        memory first so the snapshot carries the new prefix and the restore is
-        a no-op. Mirrors the user.ini migration's ``startswith`` rule.
+        ``perform_merge_and_reload`` restores the in-memory edits user.ini
+        does not have yet over the freshly-loaded entries (#531). Without
+        re-prefixing memory here, such an edit keeps the old prefix and, where
+        user.ini has the key, clobbers the migrated value straight back.
+        Re-prefix in memory first so the snapshot carries the new prefix.
+        Mirrors the user.ini migration's ``startswith`` rule.
         """
         if old_prefix and old_prefix != new_prefix:
             for e in self.entries:
@@ -3266,7 +3350,10 @@ class MainWindow(QMainWindow):
                 entries = load_source_files(sources_dict, hierarchy, enhancements_key_categories=enhancements_key_categories)
                 entries = _drop_none_entries(entries)
                 logger.info(f"Merge complete: {len(entries)} entries")
-                restored = self._restore_pending_user_edits(entries, pending_edits)
+                # Before the restore, while the entries hold only user.ini's values.
+                pending_edits = self._record_reloaded_overrides(entries, pending_edits)
+                restored = self._restore_pending_user_edits(
+                    entries, pending_edits, sources_dict.get(AppSettings.SOURCE_GLOBAL, {}))
                 if restored:
                     logger.info(f"Restored {restored} in-memory user edits not yet persisted to user.ini")
                 self.entries = entries
@@ -3360,7 +3447,16 @@ class MainWindow(QMainWindow):
         user_ini_path = AppSettings.get_user_ini_path()
         channel = AppSettings.get_active_channel()
 
-        if not user_ini_path.exists():
+        # An empty user.ini holds no override either, so there is nothing to
+        # reset, and nothing a snapshot could bring back (#531). Reset used
+        # to set it aside anyway and report a reset Restore could not undo.
+        try:
+            nothing_to_reset = user_ini_path.stat().st_size == 0
+        except FileNotFoundError:
+            nothing_to_reset = True
+        except OSError:
+            nothing_to_reset = False
+        if nothing_to_reset:
             QMessageBox.information(
                 self,
                 tr("dialogs.nothing_to_reset_title"),
@@ -3409,6 +3505,11 @@ class MainWindow(QMainWindow):
         for entry in self.entries:
             if entry.custom_value:
                 entry.custom_value = ""
+        # user.ini holds nothing now, by the user's choice, so the reload's
+        # empty read is not a file it could not read (#531). With the old
+        # file still recorded, a later Restore user.ini, or the backup renamed
+        # back, came back blank.
+        self._remember_saved_overrides([])
 
         self._show_loading_progress(
             f"Reloading {channel} after user.ini reset..."
@@ -3475,6 +3576,10 @@ class MainWindow(QMainWindow):
         if not ok:
             return
         chosen = backups[labels.index(choice)]
+        # Read before the restore, whose own snapshot of the current file can
+        # rotate the picked one out, and from the snapshot itself rather than
+        # a second read of the user.ini it is copied over.
+        restored = parse_ini_file(chosen, strip_values=False)
 
         try:
             restore_user_ini_backup(chosen, user_ini_path)
@@ -3486,6 +3591,10 @@ class MainWindow(QMainWindow):
             )
             return
 
+        # The snapshot replaced user.ini, so the table takes it before the
+        # reload, and wins over changes not yet applied to the keys it holds
+        # (#531).
+        self._take_replaced_user_ini(restored)
         self._show_loading_progress(tr("progress.reloading_after_user_ini_restore", channel=channel))
         self.statusBar().showMessage(tr("status_bar.user_ini_restored", channel=channel), 5000)
         QMessageBox.information(
@@ -3566,9 +3675,13 @@ class MainWindow(QMainWindow):
         Not while a job runs (#483): the restart starts the new copy before
         this one closes, and both would write the same files. The button is
         locked then too; this is the net behind it.
+
+        Restart Later keeps this window, so its table takes the user.ini the
+        import wrote for its channel. An import that switched channel (every
+        backup carries one) offers only Restart Now (#531).
         """
         from src.utils.settings_profile import InvalidProfileError, read_profile_zip
-        from src.utils.user_ini_manager import backup_user_ini
+        from src.utils.user_ini_manager import backup_user_ini, write_user_ini_text
 
         if self._job_running():
             self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
@@ -3607,6 +3720,13 @@ class MainWindow(QMainWindow):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
+        # This window's channel and its user.ini, which the import can switch
+        # and replace (see Restart Later below). *imported* is what it writes
+        # there, parsed from the backup's text rather than read back.
+        window_channel = AppSettings.get_active_channel()
+        user_ini_path = AppSettings.get_user_ini_path()
+        imported = None
+
         # Write per-channel overrides, snapshotting any existing user.ini
         # into the channel's rotating backups first (#172 machinery) so an
         # accidental import is recoverable.
@@ -3628,7 +3748,9 @@ class MainWindow(QMainWindow):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 if target.exists():
                     backup_user_ini(target)
-                target.write_text(text, encoding="utf-8")
+                write_user_ini_text(target, text)  # in one step (#531)
+                if target == user_ini_path:
+                    imported = parse_ini_text(text, strip_values=False)
                 logger.info(f"Import Settings: wrote {target}")
         except OSError as e:
             logger.exception("Import Settings failed writing overrides")
@@ -3674,6 +3796,13 @@ class MainWindow(QMainWindow):
             body = tr("settings_backup.import_done_body_no_install",
                       applied=applied, channels=channels)
 
+        # Every backup carries its active channel, so an import made on
+        # another channel switches channel under this window, which loaded
+        # its own. Carrying on, the next close or Apply saved this table into
+        # the new channel's user.ini, over the import or that channel's own
+        # overrides (#531), so only a restart is offered then.
+        channel_switched = AppSettings.get_active_channel() != window_channel
+
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Information)
         box.setWindowTitle(tr("settings_backup.import_done_title"))
@@ -3681,14 +3810,24 @@ class MainWindow(QMainWindow):
         restart_btn = box.addButton(
             tr("settings_backup.restart_now_btn"), QMessageBox.ButtonRole.AcceptRole
         )
-        box.addButton(
-            tr("settings_backup.restart_later_btn"), QMessageBox.ButtonRole.RejectRole
-        )
+        if not channel_switched:
+            box.addButton(
+                tr("settings_backup.restart_later_btn"), QMessageBox.ButtonRole.RejectRole
+            )
         box.setDefaultButton(restart_btn)
         box.exec()
 
-        if box.clickedButton() is restart_btn:
+        if channel_switched or box.clickedButton() is restart_btn:
             self._relaunch_app()
+            return
+
+        # Restart Later keeps this window, and its table still held the
+        # overrides from before the import, so the next close or Apply saved
+        # them over the user.ini just imported (#531). The table takes the
+        # imported file instead, as it takes a restored snapshot.
+        if imported is not None:
+            self._take_replaced_user_ini(imported)
+            self._show_loading_progress(tr("import_flow.reload_status"))
 
     def _relaunch_app(self) -> None:
         """Restart Smart Citizen: spawn a detached copy, then close this one.
@@ -3919,7 +4058,16 @@ class MainWindow(QMainWindow):
             # Step 9: Save
             save_user_ini_dict(final, user_ini_path)
 
-            # Step 10: Reload
+            # Step 10: Reload. The table takes the values the import changed
+            # first, so the reload keeps them rather than an unapplied change
+            # to the same key, such as a Reset to Original (#531). A
+            # conflict kept as it is (Keep Current) changed nothing, so the
+            # table's own change of that key stays.
+            imported = {key: value for key, value in {**auto_add, **resolutions}.items()
+                        if current_user.get(key) != value}
+            for entry in self.entries:
+                if entry.key in imported:
+                    entry.custom_value = imported[entry.key]
             self._show_loading_progress(tr("import_flow.reload_status"))
 
             # Step 11: Summary
@@ -4368,7 +4516,12 @@ class MainWindow(QMainWindow):
         if new_value == entry.custom_value:
             return
         entry.custom_value = new_value
-        entry.status = "Modified" if new_value != entry.original_value else "Unmodified"
+        if new_value:
+            entry.status = "Modified" if new_value != entry.original_value else "Unmodified"
+        else:
+            # Emptied, the override is cleared: the row reads as a load would
+            # show it (#531), as an emptied cell does.
+            entry.status = status_without_override(entry, self.default_values)
         self._model.notify_entry_changed(self._editor_dock_entry_idx)
         self.editor_dock_status_label.setText(entry.status)
 
@@ -6035,7 +6188,8 @@ class MainWindow(QMainWindow):
         # loaded entries whose custom_value comes only from user.ini, so
         # any un-saved edits would be silently dropped without this.
         pending_edits = self._snapshot_pending_user_edits()
-        restored = self._restore_pending_user_edits(entries, pending_edits)
+        pending_edits = self._record_reloaded_overrides(entries, pending_edits)
+        restored = self._restore_pending_user_edits(entries, pending_edits, default_values or {})
         if restored:
             logger.info(f"Restored {restored} in-memory user edits not yet persisted to user.ini")
 
@@ -7358,7 +7512,7 @@ class MainWindow(QMainWindow):
         if entry_idx < len(self.entries):
             entry = self.entries[entry_idx]
             entry.custom_value = ""
-            entry.status = "Unmodified"
+            entry.status = status_without_override(entry, self.default_values)
             self._model.notify_entry_changed(entry_idx)
 
     def copy_cell(self, proxy_index: QModelIndex):
@@ -8212,7 +8366,8 @@ class MainWindow(QMainWindow):
             base = entry.custom_value if entry.custom_value else entry.original_value
             entry.custom_value = prefix + base
 
-        entry.status = "Modified" if entry.custom_value else "Unmodified"
+        entry.status = ("Modified" if entry.custom_value
+                        else status_without_override(entry, self.default_values))
 
         # Notify the model — view updates automatically
         self._model.notify_entry_changed(entry_idx)
