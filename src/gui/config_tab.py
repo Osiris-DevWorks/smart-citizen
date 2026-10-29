@@ -81,6 +81,12 @@ class ConfigTab(QWidget):
     # post-import restart flow so this tab stays presentation-only.
     export_settings_requested = pyqtSignal()
     import_settings_requested = pyqtSignal()
+    # Emitted when Preview Apply is clicked, before the preview reads
+    # anything. MainWindow saves the category ticks pending on the
+    # Enhancements tab, as Apply Enhancements does first, so the preview shows
+    # what Apply would write (#532). A direct connection, so it runs before
+    # the preview goes on.
+    preview_starting = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -156,7 +162,7 @@ class ConfigTab(QWidget):
         self._preview_btn = QPushButton(tr("config.preview_apply_btn"))
         self._preview_btn.setMaximumWidth(150)
         self._preview_btn.setToolTip(tr("config.preview_apply_tooltip"))
-        self._preview_btn.clicked.connect(self.preview_merge)
+        self._preview_btn.clicked.connect(self._on_preview_clicked)
         button_layout.addWidget(self._preview_btn)
 
         self._check_updates_btn = QPushButton(tr("config.check_updates_btn"))
@@ -1381,6 +1387,13 @@ class ConfigTab(QWidget):
         self._check_updates_btn.setEnabled(not locked and not self._update_check_running)
 
     # ── Preview ──────────────────────────────────────────────────────────────
+
+    def _on_preview_clicked(self):
+        """Preview Apply: let MainWindow save the category ticks pending on
+        the Enhancements tab first (preview_starting), as Apply Enhancements
+        saves them (#532), so the preview shows what Apply would write."""
+        self.preview_starting.emit()
+        self.preview_merge()
 
     def preview_merge(self):
         """Show a dry-run summary of what Apply Enhancements would write.
