@@ -7160,11 +7160,12 @@ class MainWindow(QMainWindow):
     def _delete_working_folder_in_background(self, working_folder) -> None:
         """Delete a finished DataForge extraction's working folder on a
         thread of its own (perf proposal), which generation no longer waits
-        for: on a re-extract beside the cache about 62,000 files, the ~31,000
-        unforge wrote that the cache does not keep and the ~31,000 of the old
-        cache set aside there, and all of unforge's files when the work was
-        in %TEMP%, where the kept ones are copied. Both deletes took some
-        14 s on the PC this was measured on and far longer on a slow disk.
+        for: on a re-extract beside the cache the ~31,000 files of the old
+        cache set aside there (and ~31,000 more that an unforge without
+        --exclude-file wrote and the cache does not keep), and all of
+        unforge's files when the work was in %TEMP%, where the kept ones are
+        copied. With unforge's whole tree that took some 14 s on the PC this
+        was measured on and far longer on a slow disk.
         Started here on the GUI thread, after the extraction's thread is
         done (see WorkingFolderDeleteWorker for #389), and waited for by
         closing (_stop_workers_for_close) and by a DataForge extraction
@@ -7288,7 +7289,8 @@ class MainWindow(QMainWindow):
         closeEvent has normally asked already (_request_stops_for_close,
         ahead of the loader wait), so unp4k or unforge died within a quarter
         of a second and the worker is deleting its working folder: up to
-        ~62,000 files for DataForge, which takes a while on a slow disk.
+        ~31,000 files for DataForge (~62,000 from an unforge without
+        --exclude-file), which takes a while on a slow disk.
         Generation ends at its next job boundary, or finishes its writes if
         it had begun them. The window is hidden first so it can't sit there
         showing as Not Responding meanwhile. Called last in closeEvent, after
