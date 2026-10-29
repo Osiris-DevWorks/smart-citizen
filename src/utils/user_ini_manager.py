@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Optional
 
 from src.models.string_model import StringEntry
 from src.parser.ini_parser import parse_ini_file
+from src.utils.atomic_io import atomic_write_text, atomic_writer, sweep_stale_temps
 from src.utils.install_scanner import SC_CHANNELS
 from src.utils.perf import timed
 
@@ -203,6 +204,10 @@ def reset_user_ini(user_ini_path: Path, backup: bool = True) -> Optional[Path]:
     two resets inside one second), a numeric suffix ``-2`` / ``-3`` / … is
     appended until a free name is found, so the second click can never
     silently destroy the first backup.
+
+    With ``backup=True`` it also saves a rotating snapshot first
+    (``backup_user_ini``): Restore user.ini lists only those, so without one
+    it had nothing to offer straight after a reset (#531).
     """
     if not user_ini_path.exists():
         return None
@@ -211,6 +216,8 @@ def reset_user_ini(user_ini_path: Path, backup: bool = True) -> Optional[Path]:
         user_ini_path.unlink()
         logger.info(f"Deleted user.ini (no backup) at {user_ini_path}")
         return None
+
+    backup_user_ini(user_ini_path)
 
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     candidate = user_ini_path.with_name(f"{user_ini_path.name}.bak-{timestamp}")
@@ -323,10 +330,18 @@ def list_user_ini_backups(user_ini_path: Path) -> List[Path]:
 def restore_user_ini_backup(backup_path: Path, user_ini_path: Path) -> Path:
     """Restore ``backup_path`` over user.ini, snapshotting the current file
     first so the restore itself is reversible. Returns ``user_ini_path``."""
+    # Read first: the snapshot below rotates out the oldest of a full set,
+    # which can be the one being restored (#531). It used to be deleted
+    # before it was read, and the restore failed.
+    data = backup_path.read_bytes()
     # Snapshot the pre-restore state so an unwanted restore can be undone.
     backup_user_ini(user_ini_path)
     user_ini_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(backup_path, user_ini_path)
+    # The snapshot's bytes, in one step like every save (write_user_ini_text),
+    # so a copy that fails part-way keeps the old file (#531).
+    sweep_stale_temps(user_ini_path.parent)
+    with atomic_writer(user_ini_path, "wb") as f:
+        f.write(data)
     logger.info(f"Restored user.ini from {backup_path}")
     return user_ini_path
 
@@ -398,6 +413,15 @@ def should_autosave_user_ini(entries: List[StringEntry], user_ini_path: Path) ->
     return True
 
 
+def write_user_ini_text(user_ini_path: Path, text: str) -> None:
+    """Write *text* as user.ini in one step (atomic_io), so a write that fails
+    part-way (a full drive, a share that drops) keeps the old file instead of
+    an emptied one (#531). First sweeps the temps a killed write can leave
+    beside it, since nothing else sweeps the channel folder."""
+    sweep_stale_temps(user_ini_path.parent)
+    atomic_write_text(user_ini_path, text)
+
+
 @timed
 def save_user_ini(entries: List[StringEntry], user_ini_path: Path) -> int:
     """Write only user-modified entries to user.ini.
@@ -426,8 +450,7 @@ def save_user_ini(entries: List[StringEntry], user_ini_path: Path) -> int:
     _backup_if_changing(user_ini_path, new_text)
 
     try:
-        with open(user_ini_path, 'w', encoding='utf-8') as f:
-            f.write(new_text)
+        write_user_ini_text(user_ini_path, new_text)
 
         count = len(user_edits)
         logger.info(f"Saved {count} user edits to {user_ini_path}")
@@ -457,8 +480,7 @@ def save_user_ini_dict(data: Dict[str, str], user_ini_path: Path) -> int:
     _backup_if_changing(user_ini_path, new_text)
 
     try:
-        with open(user_ini_path, 'w', encoding='utf-8') as f:
-            f.write(new_text)
+        write_user_ini_text(user_ini_path, new_text)
 
         count = len(data)
         logger.info(f"Saved {count} entries to {user_ini_path}")

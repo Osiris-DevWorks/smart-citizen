@@ -600,6 +600,19 @@ class TestScratchSweep:
 _SIBLINGS = ("entities/other/x.xml", "entities/loose.xml",
              "crafting/blueprints/other/x.xml", "reputation/rewards/other/x.xml")
 
+# Everything _FakeTools' unforge writes beside the kept subtrees, named in the
+# exclude list as the real list names everything beside them on a real game
+# build. The fake writes them whatever it is handed, as an unforge without
+# --exclude-file would, so the cache must leave them out itself.
+_FAKE_EXCLUDED = ("unused", "entities/other", "entities/loose.xml",
+                  "crafting/blueprints/other", "reputation/rewards/other")
+
+
+@pytest.fixture(autouse=True)
+def _fake_records_are_excluded(monkeypatch):
+    monkeypatch.setattr(pe, "DATAFORGE_EXCLUDE_SUBPATHS",
+                        pe.DATAFORGE_EXCLUDE_SUBPATHS + _FAKE_EXCLUDED)
+
 
 def _working_records(run_dir: Path) -> Path:
     """Where _FakeTools' unforge writes the records in the working folder."""
@@ -773,28 +786,108 @@ class TestExtractDataforgeWorkingFolder:
 
     def test_unforge_is_handed_the_dcb_inside_the_working_folder(self, setup):
         leaf, run = setup
-        fake = _FakeTools()
+        handed = {}
+
+        def read_the_list(cwd):
+            handed["lines"] = (Path(cwd) / pe._UNFORGE_EXCLUDE_LIST_NAME).read_bytes(
+            ).decode("utf-8").split("\n")
+
+        fake = _FakeTools(during_unforge=read_the_list)
         run(fake)
         (unp4k, unp4k_args, _), (unforge, unforge_args, unforge_cwd) = fake.calls
         assert (unp4k, unforge) == ("unp4k", "unforge")
         assert unp4k_args[1:] == [str(setup[0].parents[3] / "tools" / "Data.p4k"), ".dcb"]
         assert Path(unforge_args[1]) == Path(unforge_cwd) / "Data" / "Game2.dcb"
-        # The dcb alone: the bundled unforge prints its usage and writes
-        # nothing when handed anything after it.
-        assert len(unforge_args) == 2
+        # Then the exclude list, a file in the working folder that goes
+        # with it: every entry under unforge's records folder, one a line.
+        assert unforge_args[2:] == [
+            "--exclude-file", str(Path(unforge_cwd) / pe._UNFORGE_EXCLUDE_LIST_NAME)]
+        assert handed["lines"] == [
+            f"libs/foundry/records/{rel}" for rel in pe.DATAFORGE_EXCLUDE_SUBPATHS] + [""]
+        assert "libs/foundry/records/entities/restricted areas" in handed["lines"]
         # Plain paths only: whether the tools accept \\?\ was never tested.
-        assert not unforge_args[1].startswith("\\\\?\\") and not unforge_cwd.startswith("\\\\?\\")
+        assert not any(arg.startswith("\\\\?\\") for arg in unforge_args[1:])
+        assert not unforge_cwd.startswith("\\\\?\\")
 
-    def test_the_cache_keeps_the_keep_list_as_it_is_when_the_run_caches(
+    def test_a_record_folder_a_patch_adds_is_cached(self, setup, caplog):
+        """What the exclude list does not name is cached beside the kept
+        subtrees, so a record folder or file a game patch adds reaches the
+        cache with no list to update, the logs name and count it, and the
+        room check before the wipe counts it, but not an excluded loose file
+        written beside it (_SIBLINGS' entities/loose.xml). The same patch
+        drops a kept subtree, as some come and go between builds, so the
+        cache log counts the kept ones and the added ones apart."""
+        leaf, run = setup
+        added = ("newfolder/x.xml", "entities/newfolder/x.xml", "entities/newloose.xml")
+        gone = "ammoparams/fps"
+
+        def a_patch_adds(cwd):
+            for rel in added:
+                fake._write(_working_records(cwd) / rel, b"<new/>")
+            shutil.rmtree(win_long_path(_working_records(cwd) / gone))
+
+        fake = _FakeTools(during_unforge=a_patch_adds, siblings=True)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake) is True
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert sorted(p.relative_to(records).as_posix() for p in records.rglob("*.xml")) == sorted(
+            [rel + "/x.xml" for rel in pe.DATAFORGE_KEEP_SUBPATHS if rel != gone] + list(added))
+        assert ("cached as well (3): entities/newfolder, entities/newloose.xml, newfolder"
+                in caplog.text)
+        listed = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f"The new cache is {listed - 1 + 3} files" in caplog.text
+        assert f"DataForge cache written: {listed - 1}/{listed} keep-subpaths in " in caplog.text
+        assert "(1 not present in this build, 3 added beside them)" in caplog.text
+
+    def test_an_unforge_without_the_flag_is_run_again_with_the_dcb_alone(self, setup, caplog):
+        """One built before odw-fast-unp4k ad7c6a7 prints its usage for
+        --exclude-file and writes nothing. It is run once more with the dcb
+        alone, which writes every record, and the cache still leaves the
+        excluded ones out."""
+        leaf, run = setup
+
+        class OldUnforge(_FakeTools):
+            def __call__(self, args, *, cwd, timeout, should_cancel=None):
+                if Path(args[0]).stem == "unforge" and "--exclude-file" in args:
+                    self.calls.append(("unforge", list(args), cwd))
+                    return subprocess.CompletedProcess(args, 0, "Usage: unforge.exe infile\n", "")
+                return super().__call__(args, cwd=cwd, timeout=timeout,
+                                        should_cancel=should_cancel)
+
+        fake = OldUnforge()
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            assert run(fake) is True
+        unforge = [args for tool, args, _cwd in fake.calls if tool == "unforge"]
+        assert [args[2:] for args in unforge] == [["--exclude-file", unforge[0][3]], []]
+        assert "does not know --exclude-file" in caplog.text
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert (records / "entities" / "scitem" / "x.xml").is_file()
+        assert not (records / "unused").exists()
+
+    def test_an_unforge_that_cannot_read_the_list_fails_the_run(self, setup):
+        """One that knows the flag but cannot read the file says so and
+        exits 1, with no usage text: the run fails there with the old cache
+        kept, and unforge is not run again."""
+        leaf, run = setup
+        fake = _FakeTools(unforge_rc=1, unforge_writes=False,
+                          unforge_out={"stdout": "Error reading the exclude list: denied\n"})
+        with pytest.raises(RuntimeError, match="Error reading the exclude list"):
+            run(fake)
+        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge"]
+        assert (leaf / "old-cache-sentinel").exists()
+
+    def test_the_cache_keeps_all_but_the_exclude_list_as_it_is_when_the_run_caches(
             self, setup, monkeypatch):
-        """DATAFORGE_KEEP_SUBPATHS is read when the run caches, not from a
-        copy made earlier: unforge writes every subtree of the shipped list,
-        and a list patched to two of them leaves exactly those two in the
-        cache."""
+        """Both lists are read when the run caches, not from a copy made
+        earlier. With the keep list patched to two subtrees, the other
+        subtrees unforge wrote are cached all the same, as anything the
+        exclude list does not name is, apart from reputation's two, which
+        the exclude list is patched to name."""
         leaf, run = setup
         shipped = pe.DATAFORGE_KEEP_SUBPATHS
-        two = ("entities/scitem", "ammoparams/fps")
-        monkeypatch.setattr(pe, "DATAFORGE_KEEP_SUBPATHS", two)
+        monkeypatch.setattr(pe, "DATAFORGE_KEEP_SUBPATHS", ("entities/scitem", "ammoparams/fps"))
+        monkeypatch.setattr(pe, "DATAFORGE_EXCLUDE_SUBPATHS",
+                            pe.DATAFORGE_EXCLUDE_SUBPATHS + ("reputation",))
 
         def write_the_shipped_list(cwd):
             for rel in shipped:
@@ -803,9 +896,8 @@ class TestExtractDataforgeWorkingFolder:
         fake = _FakeTools(during_unforge=write_the_shipped_list)
         assert run(fake) is True
         records = leaf / "raw" / "libs" / "foundry" / "records"
-        assert sorted(p.relative_to(records).as_posix() for p in records.rglob("x.xml")) == [
-            "ammoparams/fps/x.xml", "entities/scitem/x.xml",
-        ]
+        assert sorted(p.relative_to(records).as_posix() for p in records.rglob("x.xml")) == sorted(
+            rel + "/x.xml" for rel in shipped if not rel.startswith("reputation/"))
 
     @pytest.mark.parametrize("exe, text", [
         ("unp4k.exe", pe._UNP4K_ENTRY_FAILED),
@@ -821,6 +913,14 @@ class TestExtractDataforgeWorkingFolder:
         string literals in (a single-file build with compression on would
         hide it, and the bundled ones have none). Nothing is run."""
         assert text.encode("utf-16-le") in (_BUNDLED_TOOLS / exe).read_bytes()
+
+    @pytest.mark.parametrize("text", ["--exclude-file", pe._UNFORGE_USAGE])
+    def test_the_bundled_unforge_takes_the_exclude_list(self, text):
+        """The bundled unforge.exe knows --exclude-file (odw-fast-unp4k
+        ad7c6a7), so the run's first call is the one that works, and its
+        usage text starts as the fallback looks for. Read as UTF-16LE, as
+        above. Nothing is run."""
+        assert text.encode("utf-16-le") in (_BUNDLED_TOOLS / "unforge.exe").read_bytes()
 
     def test_a_onedrive_cache_keeps_the_work_in_temp(self, setup, monkeypatch, systemp):
         leaf, run = setup
@@ -1263,7 +1363,8 @@ class TestMovingTheKeptFiles:
         assert _ids(self._cache(leaf)) == {path: written[path] for path in self._kept_files()}
         kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
         assert f"DataForge cache written: {kept}/{kept} keep-subpaths in " in caplog.text
-        assert f" s, {kept} moved and 0 copied (0 not present in this build)" in caplog.text
+        assert (f" s, {kept} moved and 0 copied (0 not present in this build, "
+                "0 added beside them)") in caplog.text
         assert "Deleting the DataForge working folder took " in caplog.text
         assert self._fallbacks(caplog) == []
         assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
@@ -1320,8 +1421,9 @@ class TestMovingTheKeptFiles:
         self, setup, monkeypatch
     ):
         """Only the kept subtrees are renamed, never a parent such as
-        entities: what sits beside them is still in the working folder just
-        before it is deleted, and never reaches the cache."""
+        entities: what sits beside them that the exclude list names is still
+        in the working folder just before it is deleted, and never reaches
+        the cache."""
         leaf, run = setup
         left = []
         real_close = pe._close_scratch
@@ -1688,10 +1790,10 @@ class TestTheOldCacheIsSetAside:
         _disk_space(monkeypatch, lambda folder: _GATE_4K - 1 if filled else _PLENTY)
         real_walk = pe._walk_files
 
-        def walk(folder, should_cancel, keep_prefixes=frozenset(), *, local_only=False):
+        def walk(folder, should_cancel, keep_prefixes=frozenset(), *, local_only=False, **kwargs):
             if local_only:   # the old cache's walk
                 raise PermissionError(errno.EACCES, "Access is denied", str(folder))
-            return real_walk(folder, should_cancel, keep_prefixes, local_only=local_only)
+            return real_walk(folder, should_cancel, keep_prefixes, local_only=local_only, **kwargs)
 
         monkeypatch.setattr(pe, "_walk_files", walk)
         wipes = _wipes(monkeypatch)
@@ -2501,8 +2603,9 @@ class TestGlobalIniTakesTheEnglishFileAlone:
 
 # ── tools that exit 0 after an error (perf proposal) ─────────────────────────
 
-# What the tools print for a file they could not extract or convert. Both
-# catch the error, print it and go on to exit 0.
+# What the tools print for a file they could not extract or convert. unp4k
+# catches the error, prints it and goes on to exit 0, and so does an unforge
+# built before odw-fast-unp4k ad7c6a7 (the bundled one exits 1 after it).
 _UNP4K_DCB_FAILED = ("Exception while extracting Data/Game2.dcb: "
                      "Unable to read beyond the end of the stream.")
 _UNP4K_LOCKED = ("Exception while extracting Data/Game2.dcb: The process cannot access the "
@@ -2516,7 +2619,8 @@ class TestToolsThatExitZeroAfterAnError:
     """unp4k prints "Exception while extracting <entry>: <message>" for an
     entry it could not extract, and unforge "Error converting <file>:
     <message>" when anything in its conversion fails, from reading the dcb
-    to saving a file, and both still exit 0. A dcb or
+    to saving a file, and unp4k still exits 0, as an unforge built before
+    odw-fast-unp4k ad7c6a7 does (the bundled one exits 1). A dcb or
     global.ini cut short, or a partial tree that passes the records check,
     went on to be used, and the tree to be stamped as a complete cache. Each
     now fails the run as a non-zero exit does, before the old cache is
@@ -3399,10 +3503,10 @@ class TestFreeSpaceCheck:
         _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
         real_walk = pe._walk_files
 
-        def walk(folder, should_cancel, keep_prefixes=frozenset(), *, local_only=False):
+        def walk(folder, should_cancel, keep_prefixes=frozenset(), *, local_only=False, **kwargs):
             if local_only:   # the old cache's walk
                 stopped.append(True)
-            return real_walk(folder, should_cancel, keep_prefixes, local_only=local_only)
+            return real_walk(folder, should_cancel, keep_prefixes, local_only=local_only, **kwargs)
 
         monkeypatch.setattr(pe, "_walk_files", walk)
         renames = _record_renames(monkeypatch)

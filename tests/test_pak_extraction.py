@@ -19,6 +19,7 @@ from types import SimpleNamespace
 
 import src.utils.pak_extractor as pe
 from src.utils.onedrive import _ONEDRIVE_ENV_VARS
+from src.utils.dataforge_exclude import DATAFORGE_EXCLUDE_SUBPATHS
 from src.utils.pak_extractor import (
     DATAFORGE_KEEP_SUBPATHS,
     P4kLockedError,
@@ -522,6 +523,41 @@ class TestDataForgeKeepList:
         assert not bad, bad
 
 
+class TestDataForgeExcludeList:
+    """DATAFORGE_EXCLUDE_SUBPATHS (dataforge_exclude.py): what unforge is
+    told to leave out with --exclude-file, and what the cache never keeps."""
+
+    def test_nothing_excluded_is_holds_or_lies_in_a_kept_subtree(self):
+        """An entry at, under or above a kept subtree would keep records
+        the generator reads out of the cache, ignoring case as NTFS and
+        unforge do."""
+        clash = [(entry, kept) for entry in DATAFORGE_EXCLUDE_SUBPATHS
+                 for kept in DATAFORGE_KEEP_SUBPATHS
+                 if _is_subpath_of(entry.casefold(), kept.casefold())
+                 or _is_subpath_of(kept.casefold(), entry.casefold())]
+        assert not clash, clash
+
+    def test_every_entry_is_plain_lower_case_and_named_once(self):
+        bad = [entry for entry in DATAFORGE_EXCLUDE_SUBPATHS
+               if not entry or entry != entry.strip() or entry != entry.lower()
+               or entry.startswith("/") or entry.endswith("/") or "\\" in entry
+               or ":" in entry or any(part in ("", ".", "..") for part in entry.split("/"))]
+        assert not bad, bad
+        assert len(set(DATAFORGE_EXCLUDE_SUBPATHS)) == len(DATAFORGE_EXCLUDE_SUBPATHS)
+        nested = [(entry, other) for entry in DATAFORGE_EXCLUDE_SUBPATHS
+                  for other in DATAFORGE_EXCLUDE_SUBPATHS
+                  if entry != other and _is_subpath_of(entry, other)]
+        assert not nested, nested
+
+    def test_unforge_reads_them_under_its_records_folder_one_a_line(self, tmp_path):
+        target = pe._write_unforge_exclude_list(tmp_path)
+        assert target == tmp_path / pe._UNFORGE_EXCLUDE_LIST_NAME
+        lines = target.read_bytes().decode("utf-8").split("\n")
+        assert lines == [f"libs/foundry/records/{entry}"
+                         for entry in DATAFORGE_EXCLUDE_SUBPATHS] + [""]
+        assert "libs/foundry/records/entities/restricted areas" in lines
+
+
 class TestCacheFilteredRecords:
     """Exercise the caching helper on a synthetic unforge output tree, with
     the kept subtrees copied and moved (#484)."""
@@ -617,6 +653,67 @@ class TestCacheFilteredRecords:
         assert not (records_dst / "entities" / "missions").exists()
         # All other kept paths survived
         assert (records_dst / "entities" / "scitem" / "sample.xml").exists()
+
+    @pytest.mark.parametrize("move", [False, True], ids=["copy", "move"])
+    def test_what_the_exclude_list_does_not_name_is_cached_too(self, tmp_path, move):
+        """A record folder or file a game patch adds, beside a kept subtree,
+        beside a folder above one or at the top, is cached whole, while the
+        excluded folders stay in the source."""
+        src, dst = tmp_path / "src", tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+        records_src = src / "libs" / "foundry" / "records"
+        added = ("newtop/sample.xml", "entities/newfolder/deep/sample.xml",
+                 "crafting/newloose.xml", "rootloose.xml")
+        for rel in added:
+            (records_src / rel).parent.mkdir(parents=True, exist_ok=True)
+            (records_src / rel).write_text("<new/>", encoding="utf-8")
+
+        counts = _cache_filtered_records(src / "libs", dst / "libs", move=move)
+
+        records_dst = dst / "libs" / "foundry" / "records"
+        for rel in added:
+            assert (records_dst / rel).read_text(encoding="utf-8") == "<new/>", rel
+        for dropped in self._DROPPED:
+            assert not (records_dst / dropped).exists(), dropped
+            assert (records_src / dropped / "sample.xml").exists(), dropped
+        done = len(DATAFORGE_KEEP_SUBPATHS) + len(added)
+        assert counts == ((done, 0, 0) if move else (0, done, 0))
+
+    def test_a_folder_holding_an_excluded_entry_is_read_not_taken_whole(
+            self, tmp_path, monkeypatch):
+        """An excluded entry deeper down stays in the source while its
+        siblings are cached."""
+        monkeypatch.setattr(pe, "DATAFORGE_EXCLUDE_SUBPATHS",
+                            DATAFORGE_EXCLUDE_SUBPATHS + ("newtop/skip",))
+        src, dst = tmp_path / "src", tmp_path / "dst"
+        self._make_fake_unforge_output(src)
+        records_src = src / "libs" / "foundry" / "records"
+        for rel in ("newtop/skip/sample.xml", "newtop/take/sample.xml"):
+            (records_src / rel).parent.mkdir(parents=True)
+            (records_src / rel).write_text("<new/>", encoding="utf-8")
+
+        _cache_filtered_records(src / "libs", dst / "libs", move=True)
+
+        records_dst = dst / "libs" / "foundry" / "records"
+        assert (records_dst / "newtop" / "take" / "sample.xml").is_file()
+        assert not (records_dst / "newtop" / "skip").exists()
+        assert (records_src / "newtop" / "skip" / "sample.xml").is_file()
+
+    def test_the_exclude_list_is_matched_ignoring_case(self, tmp_path):
+        """unforge compares the list ignoring case, and so does the cache:
+        an excluded folder written in other capitals stays out."""
+        src, dst = tmp_path / "src", tmp_path / "dst"
+        records_src = src / "libs" / "foundry" / "records"
+        for rel in ("entities/scitem/sample.xml", "UI/sample.xml",
+                    "Entities/Restricted Areas/x.xml"):
+            (records_src / rel).parent.mkdir(parents=True, exist_ok=True)
+            (records_src / rel).write_text("<x/>", encoding="utf-8")
+
+        _cache_filtered_records(src / "libs", dst / "libs", move=True)
+
+        records_dst = dst / "libs" / "foundry" / "records"
+        assert sorted(p.relative_to(records_dst).as_posix()
+                      for p in records_dst.rglob("*.xml")) == ["entities/scitem/sample.xml"]
 
     @pytest.mark.parametrize("move", [False, True], ids=["copy", "move"])
     def test_raises_on_unexpected_layout(self, tmp_path, move):

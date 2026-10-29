@@ -19,6 +19,7 @@ from typing import NamedTuple, Optional
 
 from src.utils.perf import timed
 
+from src.utils.dataforge_exclude import DATAFORGE_EXCLUDE_SUBPATHS
 from src.utils.i18n import tr
 from src.utils.onedrive import is_onedrive_path
 from src.utils.win_paths import win_long_path as _win_long_path
@@ -71,13 +72,16 @@ _P4K_LOCKED_SIGNATURE = "being used by another process"
 
 # unp4k catches an archive entry it cannot extract, prints "Exception while
 # extracting <entry>: <message>" and goes on to exit 0, so a run could pass
-# with its file missing or cut short. unforge does the same with "Error
-# converting <file>: <message>" when anything in its conversion fails, from
-# reading the dcb to saving a file (one catch around it all), which can leave
-# a partial tree that passes _unforge_records and would be stamped as a
-# complete cache. Either one fails the run as a non-zero exit does (perf
-# proposal), so a dcb unforge cannot read fails at this check, before the
-# libs/ one. Nothing is required of their output on success. Both texts are
+# with its file missing or cut short. unforge prints "Error converting
+# <file>: <message>" when anything in its conversion fails, from reading the
+# dcb to saving a file (one catch around it all), which can leave a partial
+# tree that passes _unforge_records and would be stamped as a complete cache.
+# The bundled unforge (odw-fast-unp4k ad7c6a7) then exits 1, but one built
+# before it exits 0, and that is the one the fallback for an unforge without
+# --exclude-file runs. Either text fails the run as a non-zero exit does (perf
+# proposal), so a dcb unforge cannot read fails before the libs/ check: at
+# its exit code with the bundled unforge, at this text with an older one.
+# Nothing is required of their output on success. Both texts are
 # copies of literals in odw-fast-unp4k's src/unp4k/Program.cs and
 # src/unforge.cli/Program.cs, and tests/test_extraction_working_folder.py
 # checks the bundled exes still hold them.
@@ -693,8 +697,10 @@ def robust_rmtree(path: Path, attempts: int = 6) -> None:
 # installer.iss suggests sharing one cache between installs.
 #
 # %TEMP% stays the working place where beside the cache would do harm:
-#   * a network share or drive (~1.8 GB of SMB writes);
-#   * OneDrive (~62k files queued for sync);
+#   * a network share or drive (~1.6 GB of SMB writes, ~2.3 GB from an
+#     unforge without --exclude-file);
+#   * OneDrive (~31k files queued for sync, ~62k from an unforge without
+#     the flag);
 #   * a removable drive (slow flash against unforge's 1800 s budget);
 #   * a cache so deep that unp4k's working folder would pass what
 #     CreateProcess accepts as a current directory.
@@ -947,16 +953,16 @@ def _close_scratch(run_dir: Path, marker) -> None:
 class WorkingFolder:
     """A DataForge run's working folder, handed by extract_dataforge to its
     caller to delete later instead of deleted before it returned (perf
-    proposal). It holds Game2.dcb, what unforge wrote that the cache does
-    not keep, and the old cache when it was set aside there
-    (_set_old_cache_aside). On a re-extract beside the cache that is about
-    62,000 files: the ~31,000 unforge wrote that the cache does not keep,
-    and the ~31,000 of the old cache. In %TEMP% the old cache is wiped in
-    place and the kept files are copied, so the folder holds all of
-    unforge's ~62,000, and on a first extraction beside the cache the
-    ~31,000 it does not keep and the dcb. Enhancement generation used to
-    wait for both halves (6.9 s for unforge's unkept files and about 7 s for
-    the old cache on the PC this was measured on, far longer on a slow disk).
+    proposal). It holds Game2.dcb, the exclude list unforge was handed and
+    the old cache when it was set aside there (_set_old_cache_aside): on a
+    re-extract beside the cache about 31,000 files, nearly all of them the
+    old cache, since unforge writes only what the cache keeps. In %TEMP% the
+    old cache is wiped in place and the kept files are copied, so the folder
+    holds unforge's ~31,000. An unforge without --exclude-file writes every
+    record, ~62,000, and the ~31,000 the cache does not keep stay here too.
+    Enhancement generation used to wait for this delete (about 14 s with
+    unforge's whole tree on the PC this was measured on, far longer on a
+    slow disk).
 
     The run's .in_use marker stays open until delete() has removed
     everything else, so another window's sweep leaves the folder alone the
@@ -1455,12 +1461,14 @@ def _copy_file_checked(src, dst, *, follow_symlinks=True):
 _ONLINE_ONLY_ATTRIBUTES = 0x00001000 | 0x00040000 | 0x00400000
 
 
-def _walk_files(folder: Path, should_cancel, keep_prefixes=frozenset(), *, local_only=False):
+def _walk_files(folder: Path, should_cancel, keep_prefixes=frozenset(), *, local_only=False,
+                drop_prefixes=frozenset()):
     """Yield ``(size, kept)`` for every file under *folder*, with one
     os.scandir per folder (on Windows its stat, attributes included, comes
     from the directory listing, so no file is opened). *kept* is True under
     a subfolder whose path parts, relative to *folder* and case-folded, are
-    in *keep_prefixes*. *local_only* leaves out the files whose data is not
+    in *keep_prefixes*, except at or under a folder or file whose parts are
+    in *drop_prefixes*. *local_only* leaves out the files whose data is not
     on this PC. Checks for a stop once per folder."""
     stack = [(Path(folder), (), False)]
     while stack:
@@ -1470,13 +1478,15 @@ def _walk_files(folder: Path, should_cancel, keep_prefixes=frozenset(), *, local
             for entry in entries:
                 if entry.is_dir(follow_symlinks=False):
                     sub = rel + (entry.name.casefold(),)
-                    stack.append((Path(entry.path), sub, kept or sub in keep_prefixes))
+                    stack.append((Path(entry.path), sub,
+                                  (kept or sub in keep_prefixes) and sub not in drop_prefixes))
                 elif entry.is_file(follow_symlinks=False):
                     info = entry.stat(follow_symlinks=False)
                     attributes = getattr(info, "st_file_attributes", 0)
                     if local_only and attributes & _ONLINE_ONLY_ATTRIBUTES:
                         continue
-                    yield info.st_size, kept
+                    yield info.st_size, kept and (
+                        rel + (entry.name.casefold(),)) not in drop_prefixes
 
 
 def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> bool:
@@ -1498,14 +1508,15 @@ def _require_room_for_new_cache(libs_dir: Path, leaf: Path, should_cancel) -> bo
     working folder deleted before the run returns, as before the perf
     proposal. False when the drive has room for a full copy without it, or
     nothing could be measured."""
-    keep_prefixes = frozenset(
-        tuple(part.casefold() for part in
-              (_UNFORGE_LIBS_DIR, *DATAFORGE_RECORDS_UNDER_LIBS.parts, *rel.split("/")))
-        for rel in DATAFORGE_KEEP_SUBPATHS
-    )
+    # The cache keeps every record unforge wrote less the exclude list
+    # (_cache_filtered_records), so that is what is counted.
+    records = tuple(part.casefold() for part in
+                    (_UNFORGE_LIBS_DIR, *DATAFORGE_RECORDS_UNDER_LIBS.parts))
+    drop_prefixes = frozenset(records + parts for parts in _excluded_parts())
     try:
         work_sizes, kept_sizes = [], []
-        for size, kept in _walk_files(libs_dir, should_cancel, keep_prefixes):
+        for size, kept in _walk_files(libs_dir, should_cancel, frozenset({records}),
+                                      drop_prefixes=drop_prefixes):
             work_sizes.append(size)
             if kept:
                 kept_sizes.append(size)
@@ -1626,11 +1637,16 @@ _GLOBAL_INI_FILTER = _GLOBAL_INI_RELATIVE.relative_to("data").as_posix()
 
 
 # Subtrees of unforge's ``libs/foundry/records/`` that the enhancement
-# generator actually reads. Everything else unforge produces is kept nowhere
-# — it goes with the working folder, which extract_dataforge deletes before
-# it returns, or hands to *defer_cleanup* after a success.
+# generator actually reads. unforge is told to leave out
+# DATAFORGE_EXCLUDE_SUBPATHS (dataforge_exclude.py), every other record on
+# the game build that list was made from, and the cache keeps everything it
+# writes less that list: these subtrees, moved first, and whatever a later
+# game patch adds beside them (_cache_filtered_records). An excluded record
+# an unforge without --exclude-file wrote all the same stays in the working
+# folder, which extract_dataforge deletes before it returns, or hands to
+# *defer_cleanup* after a success.
 #
-# Keeping this list tight:
+# The exclude list keeps the cache to about these subtrees, which:
 #   * halves the final cache's file count (~62k → ~31k) and cuts its disk
 #     footprint by about a third (~1.8 GB → ~1.2 GB);
 #   * cuts the working folder → cache copy step to ~50% of its old wall-clock (OneDrive
@@ -1641,14 +1657,18 @@ _GLOBAL_INI_FILTER = _GLOBAL_INI_RELATIVE.relative_to("data").as_posix()
 #     prone to transient WinError 5 retries, since there are half as many
 #     files for the AV/indexer stack to hold open briefly.
 #
-# unp4k and unforge themselves are unaffected — unforge has no filter flag,
-# so we still produce the full DCB-expansion into the working folder. The savings
-# are on the persistent cache, not on the first-time CPU work.
+# unforge skips the excluded records in the first place (odw-fast-unp4k
+# ad7c6a7's --exclude-file): about 31k of its ~62k, and its run is about a
+# third shorter. The working folder's free-space figures stay sized for
+# the whole tree, which an unforge without the flag still writes.
 #
 # MAINTENANCE CONTRACT: paths here must cover everything ``scripts/
 # generate_enhancements_ini.py`` reads via ``records / ...``. If a future
-# generator feature reads a new subtree, add it here or the cache won't
-# contain it and enhancements for that subtree will silently be empty.
+# generator feature reads a new subtree, add it here, and take it out of
+# DATAFORGE_EXCLUDE_SUBPATHS (split the entry that holds it, when that
+# holds more), or the cache won't contain it and enhancements for that
+# subtree will silently be empty. TestDataForgeExcludeList fails while the
+# two lists overlap.
 # ``tests/test_pak_extraction.py`` has a regression test that diffs this
 # list against a hardcoded copy of the generator's read-paths so drift is
 # caught at test time.
@@ -1760,19 +1780,87 @@ def _unforge_records(src_libs: Path) -> Path:
     return records
 
 
+# The file extract_dataforge hands unforge with --exclude-file, written into
+# the run's working folder and deleted with it.
+_UNFORGE_EXCLUDE_LIST_NAME = "unforge_exclude.txt"
+# The start of the usage text unforge prints when it does not take its
+# arguments. One without --exclude-file (odw-fast-unp4k before ad7c6a7)
+# prints it for any argument after the dcb, writes nothing and exits 0.
+_UNFORGE_USAGE = "Usage: unforge"
+
+
+def _write_unforge_exclude_list(run_dir: Path) -> Path:
+    """Write DATAFORGE_EXCLUDE_SUBPATHS into *run_dir* as unforge's
+    --exclude-file and return its plain path, for unforge.
+
+    One record path per line, in UTF-8, as unforge names its records:
+    under the folder of the dcb (``libs/foundry/records/actor``). unforge
+    leaves out each record at or under one, comparing whole path segments
+    and ignoring case. A file, not ``--exclude`` arguments: 538 of those
+    would take the command line past 20,000 characters."""
+    records = f"{_UNFORGE_LIBS_DIR}/{DATAFORGE_RECORDS_UNDER_LIBS.as_posix()}"
+    target = Path(win_plain_path(run_dir)) / _UNFORGE_EXCLUDE_LIST_NAME
+    Path(_win_long_path(target)).write_text(
+        "".join(f"{records}/{rel}\n" for rel in DATAFORGE_EXCLUDE_SUBPATHS),
+        encoding="utf-8", newline="\n")
+    return target
+
+
+def _excluded_parts() -> frozenset:
+    """DATAFORGE_EXCLUDE_SUBPATHS as case-folded path parts, relative to
+    ``libs/foundry/records/``. Read when called."""
+    return frozenset(tuple(part.casefold() for part in rel.split("/"))
+                     for rel in DATAFORGE_EXCLUDE_SUBPATHS)
+
+
+def _unlisted_records(records: Path) -> list[str]:
+    """What unforge wrote in *records* beside the DATAFORGE_KEEP_SUBPATHS
+    subtrees that DATAFORGE_EXCLUDE_SUBPATHS does not leave out: a record
+    folder or file a game patch added since the exclude list was made.
+
+    Only the folders above the kept subtrees, or above an excluded entry,
+    are read, so each entry found is a whole folder or file that holds
+    neither, never one inside a kept subtree. Relative to *records* with
+    the names as written, sorted. Compared ignoring case, as unforge
+    compares the exclude list."""
+    keep = {tuple(part.casefold() for part in rel.split("/"))
+            for rel in DATAFORGE_KEEP_SUBPATHS}
+    excluded = _excluded_parts()
+    above = {path[:i] for path in keep | excluded for i in range(len(path))}
+    found = []
+    stack = [((), (), records)]
+    while stack:
+        parts, names, folder = stack.pop()
+        with os.scandir(folder) as entries:
+            listed = list(entries)
+        for entry in listed:
+            sub = parts + (entry.name.casefold(),)
+            if sub in keep or sub in excluded:
+                continue
+            if sub in above and entry.is_dir(follow_symlinks=False):
+                stack.append((sub, names + (entry.name,), Path(entry.path)))
+            else:
+                found.append("/".join(names + (entry.name,)))
+    return sorted(found)
+
+
 def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool,
                             before_copy=None) -> tuple[int, int, int]:
-    """Put the generator's subtrees from *src_libs* into *dst_libs* (#484).
+    """Put what unforge wrote in *src_libs* into *dst_libs* (#484).
 
     Both point at a ``libs/`` folder (unforge's in the working folder, and
-    the cache's) holding ``foundry/records/<subtree>``. Only the
-    DATAFORGE_KEEP_SUBPATHS subtrees go. Everything else stays in the working
-    folder, which extract_dataforge deletes before it returns, or hands to
+    the cache's) holding ``foundry/records/<subtree>``. The
+    DATAFORGE_KEEP_SUBPATHS subtrees go first, then every record folder or
+    file beside them that DATAFORGE_EXCLUDE_SUBPATHS does not name, which
+    is what a game patch added since that list was made (_unlisted_records,
+    logged by name). An excluded record that an unforge without
+    --exclude-file wrote all the same stays in the working folder, which
+    extract_dataforge deletes before it returns, or hands to
     *defer_cleanup* after a success.
 
     With *move*, each subtree is renamed into place: one rename instead of a
-    copy of its files one by one, and the working folder then has half as
-    much left to delete. A subtree whose rename is refused is still whole
+    copy of its files one by one, and nothing of it is left in the working
+    folder to delete. A subtree whose rename is refused is still whole
     where unforge wrote it, and is copied instead: another program held a
     file under it past the retries, or the cache folder leads to another
     drive. Without *move* (the working folder is in %TEMP%) every subtree is
@@ -1781,28 +1869,27 @@ def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool,
     before the first copy (perf proposal: it deletes an old cache that was
     set aside rather than wiped, so a copy gets the room the checks counted).
 
-    Returns ``(moved, copied, skipped)``. *skipped* counts the subtrees this
-    game build does not have (entities/missions and others come and go
-    between patches, and the generator checks that each one exists).
+    Returns ``(moved, copied, skipped)``, each folder or file moved or
+    copied counted once. *skipped* counts the kept subtrees this game build
+    does not have (entities/missions and others come and go between
+    patches, and the generator checks that each one exists).
     """
     records_src = _unforge_records(src_libs)
     records_dst = dst_libs / DATAFORGE_RECORDS_UNDER_LIBS
     Path(_win_long_path(records_dst)).mkdir(parents=True, exist_ok=True)
 
     moved = copied = skipped = 0
-    for rel in DATAFORGE_KEEP_SUBPATHS:
+
+    def put(rel: str) -> None:
+        nonlocal moved, copied, before_copy
         src = records_src / rel
         dst = records_dst / rel
-        if not src.exists():
-            logger.debug(f"DataForge keep-path not in this build, skipping: {rel}")
-            skipped += 1
-            continue
         Path(_win_long_path(dst.parent)).mkdir(parents=True, exist_ok=True)
         if move:
             refused = _move_tree(src, dst)
             if refused is None:
                 moved += 1
-                continue
+                return
             logger.info(f"Could not move {rel} into the DataForge cache ({refused}), "
                         "so it is copied instead")
         if before_copy is not None:
@@ -1812,9 +1899,25 @@ def _cache_filtered_records(src_libs: Path, dst_libs: Path, *, move: bool,
         # entities/scitem/mission_entities/ pass 260 characters once nested
         # under a user's install folder (#221). _copy_file_checked stops the
         # copy at a full drive (#482).
-        shutil.copytree(_win_long_path(src), _win_long_path(dst),
-                        copy_function=_copy_file_checked)
+        if src.is_dir():
+            shutil.copytree(_win_long_path(src), _win_long_path(dst),
+                            copy_function=_copy_file_checked)
+        else:
+            _copy_file_checked(_win_long_path(src), _win_long_path(dst))
         copied += 1
+
+    for rel in DATAFORGE_KEEP_SUBPATHS:
+        if not (records_src / rel).exists():
+            logger.debug(f"DataForge keep-path not in this build, skipping: {rel}")
+            skipped += 1
+            continue
+        put(rel)
+    added = _unlisted_records(records_src)
+    if added:
+        logger.info(f"DataForge records this game build adds beside the generator's "
+                    f"subtrees, cached as well ({len(added)}): {', '.join(added)}")
+    for rel in added:
+        put(rel)
     return moved, copied, skipped
 
 
@@ -1835,7 +1938,7 @@ _TOOL_POLL_SECONDS = 0.25
 _TOOL_REAP_SECONDS = 30
 _UNP4K_GLOBAL_INI_TIMEOUT_SECONDS = 300
 _UNP4K_DCB_TIMEOUT_SECONDS = 600
-_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~15 s, ~40 s before the perf proposal (#370)
+_UNFORGE_TIMEOUT_SECONDS = 1800   # a healthy run takes ~10 s, ~40 s before the perf proposal (#370)
 
 
 def _run_tool(args, *, cwd, timeout, should_cancel=None) -> subprocess.CompletedProcess:
@@ -2057,10 +2160,13 @@ def extract_dataforge(
       1. unp4k.exe extracts Game2.dcb from the p4k into this run's working
          folder, beside the cache or in %TEMP% (see _scratch_location, #471).
       2. unforge.exe converts Game2.dcb → individual XML entity files, next to
-         the dcb.
+         the dcb, leaving out DATAFORGE_EXCLUDE_SUBPATHS (--exclude-file). One
+         that prints its usage for the flag instead (an unforge without it)
+         is run again with the dcb alone.
       3. The old cache is set aside in the working folder (wiped in place in
          %TEMP%, on a tight drive or when the rename is refused), the
-         generator's subtrees are moved into dataforge_cache_dir (copied
+         generator's subtrees and anything else unforge wrote that the
+         exclude list does not name are moved into dataforge_cache_dir (copied
          when the work is in %TEMP% or a move is refused) and stamped, then
          the working folder is deleted, or handed to *defer_cleanup*.
 
@@ -2199,19 +2305,42 @@ def extract_dataforge(
         # "Game.dcb (114 MB)" versus a healthy "Game2.dcb (330 MB)" is the
         # entire diagnosis when this stalls (#370).
         dcb_mb = dcb_path.stat().st_size / 1_048_576
-        logger.info(f"Running unforge: {unforge_exe} {dcb_path}")
-        try:
-            # cwd too: unforge writes next to the dcb, and anything else it
-            # might drop in its working folder then stays inside the run's
-            # folder as well.
-            result = _run_tool(
-                [str(unforge_exe), str(dcb_path)],
-                cwd=str(run_dir),
-                timeout=_UNFORGE_TIMEOUT_SECONDS,
-                should_cancel=should_cancel,
-            )
-        except subprocess.TimeoutExpired as e:
-            raise _unforge_timeout_error(e, dcb_path, dcb_mb, p4k_path) from e
+        # Python-side reads under unforge's output get the long-path prefix
+        # (#471). With the working folder near its depth cap the deepest keep
+        # path is ~261 characters, where a plain exists() returns False and
+        # _cache_filtered_records would skip that subtree without a word. The
+        # tools themselves only ever see plain paths.
+        libs_dir = Path(_win_long_path(dcb_path.parent))
+        exclude_list = _write_unforge_exclude_list(run_dir)
+
+        def run_unforge(*extra):
+            logger.info(f"Running unforge: {unforge_exe} {dcb_path}"
+                        + "".join(f" {arg}" for arg in extra))
+            try:
+                # cwd too: unforge writes next to the dcb, and anything else it
+                # might drop in its working folder then stays inside the run's
+                # folder as well.
+                return _run_tool(
+                    [str(unforge_exe), str(dcb_path), *extra],
+                    cwd=str(run_dir),
+                    timeout=_UNFORGE_TIMEOUT_SECONDS,
+                    should_cancel=should_cancel,
+                )
+            except subprocess.TimeoutExpired as e:
+                raise _unforge_timeout_error(e, dcb_path, dcb_mb, p4k_path) from e
+
+        result = run_unforge("--exclude-file", str(exclude_list))
+        # An unforge without --exclude-file printed its usage and wrote
+        # nothing. It is run once more with the dcb alone, which converts
+        # every record, and only that run's output goes through the checks
+        # below; the cache still leaves the excluded records out. A stop
+        # during the first run has already raised in _run_tool.
+        if (_UNFORGE_USAGE in (result.stdout or "")
+                and not (libs_dir / _UNFORGE_LIBS_DIR).exists()):
+            logger.warning(f"The bundled unforge.exe ({unforge_exe}) does not know "
+                           "--exclude-file: it printed its usage and wrote nothing. It is "
+                           "run again for every record, which takes longer.")
+            result = run_unforge()
         # Always log unforge's output at INFO (truncated). A zero-length
         # stdout + sub-second runtime is typically a silent failure — e.g.
         # antivirus blocking unforge.exe or quarantining a file it wrote, or
@@ -2238,13 +2367,6 @@ def extract_dataforge(
         # dcb file. When it's missing we surface whatever we captured from
         # unforge's stdout/stderr in the exception so the user (and the Log
         # Tab) can see what went wrong.
-        #
-        # Python-side reads under unforge's output get the long-path prefix
-        # (#471). With the working folder near its depth cap the deepest keep
-        # path is ~261 characters, where a plain exists() returns False and
-        # _cache_filtered_records would skip that subtree without a word. The
-        # tools themselves only ever see plain paths.
-        libs_dir = Path(_win_long_path(dcb_path.parent))
         if not (libs_dir / _UNFORGE_LIBS_DIR).exists():
             diagnostic = ""
             if _stdout or _stderr:
@@ -2337,8 +2459,9 @@ def extract_dataforge(
         try:
             dataforge_cache_dir.mkdir(parents=True, exist_ok=True)
 
-            # Cache only the subtrees the enhancement generator actually reads.
-            # See DATAFORGE_KEEP_SUBPATHS for the list and rationale — dropping
+            # Cache the subtrees the enhancement generator actually reads, and
+            # whatever a game patch added beside them that the exclude list
+            # does not name. See DATAFORGE_KEEP_SUBPATHS for the list and rationale — dropping
             # the unused ~31k/~0.6 GB worth of entries halves cache file count and
             # makes every re-extract + clear-cache noticeably faster on the
             # OneDrive/Defender/Indexer-burdened Windows paths our users live in.
@@ -2348,10 +2471,12 @@ def extract_dataforge(
             moved, copied, skipped = _cache_filtered_records(
                 libs_dir / _UNFORGE_LIBS_DIR, cache_libs, move=move,
                 before_copy=free_the_old_cache if set_aside is not None else None)
+            kept = len(DATAFORGE_KEEP_SUBPATHS) - skipped
             logger.info(
-                f"DataForge cache written: {moved + copied}/{len(DATAFORGE_KEEP_SUBPATHS)} "
+                f"DataForge cache written: {kept}/{len(DATAFORGE_KEEP_SUBPATHS)} "
                 f"keep-subpaths in {time.monotonic() - filling:.1f} s, {moved} moved and "
-                f"{copied} copied ({skipped} not present in this build)"
+                f"{copied} copied ({skipped} not present in this build, "
+                f"{moved + copied - kept} added beside them)"
             )
 
             # Stamp the source Data.p4k's mtime AND size so a later launch can tell
@@ -2380,7 +2505,8 @@ def extract_dataforge(
             defer_cleanup(WorkingFolder(run_dir, marker))
             handed_off = True
     finally:
-        # Failure or stop, the working folder goes now (#471), so its ~2.3 GB
+        # Failure or stop, the working folder goes now (#471), so its ~1.6 GB
+        # (~2.3 GB from an unforge without --exclude-file)
         # never outlives the run and a stopped run cleans up after itself,
         # and so does a success nobody took it from. _close_scratch logs
         # every OSError, never raising it over the real outcome.

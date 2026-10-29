@@ -82,6 +82,32 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-28, Claude Sonnet 5.5):** a language check of
+  everything added for 2.5 found `HELP.md` and `ABOUT.md` out of date in ten
+  languages (not russian, which was brought current on 2026-10-20), so they
+  are caught up with English. HELP's Tag Builder entry gains #492's armor
+  text: the Armor tab's one Weight element, the `L`, `M`, `H`, `S` and `U`
+  classes and `C` for clothing, **Edit mapping…**, that the tags are written
+  with the Gear enhancements, that the annotate checkbox also puts them on
+  armor in the POTENTIAL BLUEPRINTS lists (which come from Missions, so they
+  show even with Gear off), and why the Armor tab has no None brackets.
+  HELP's Appearance entry gains the Font size choice (Small, Medium or Large,
+  with an offer to restart). ABOUT's Tag Builder entry gains armor and its
+  Weight element. The older Map Language File text from #367 (a local file
+  through Browse, and the warning to copy its `global.ini` out of the
+  Star Citizen install) is added in the eight languages that still described
+  a URL only: german, french, spanish, italian, portuguese_br, japanese,
+  chinese and chinese_traditional (korean and turkish already had it).
+  Armor, Weight, the class names and POTENTIAL BLUEPRINTS stay in English
+  because the app shows them in English, as russian does. The buttons and
+  checkboxes named are each language's own `ui.json` text, and each file's
+  own words for the category names (Gear, Missions) and the Blueprint
+  Tracker. In french, portuguese_br and spanish the annotate checkbox is
+  quoted as the app shows it, and its human `ht` still says components only
+  until a translator re-translates it (see Needs human re-review). AI text
+  throughout, checked against English for length, the `L`, `M`, `H`, `S`, `U`
+  and `C` letters and the Korean sentence-spacing rule, not back-translated.
+  No `ui.json` changed.
 - **2.5.0 cycle (2026-10-23, Claude Opus 5.5):** #523, overlay feedback.
   28 new keys: `overlay.scan_group`, `overlay.drawer_group`,
   `overlay.blueprint_watch_group` and `overlay.samples_group` (the Overlay
