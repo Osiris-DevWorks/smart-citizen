@@ -22,6 +22,7 @@ from src.utils.tag_builder import (
     USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
     default_config, enclosings_for, render_route, render_tag, route_enabled,
 )
+from src.utils.user_ini_manager import write_user_ini_text
 
 # All cargo-size words, for the single "Shorten cargo sizes" master toggle.
 _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
@@ -81,6 +82,10 @@ class EnhancementsTab(QWidget):
     # reloading, so the reload's pending-edit snapshot doesn't clobber the new
     # prefix back to the old one (#140).
     favorite_prefix_changed = pyqtSignal(str, str)
+    # A category tick changed: True while the ticks on screen differ from
+    # the saved set (#532). MainWindow keeps Apply Enhancements red for a
+    # pending tick, since Apply saves it first.
+    category_ticks_changed = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -97,6 +102,10 @@ class EnhancementsTab(QWidget):
         self._changes_locked = False
         self._changes_lock_reason = ""
         self._operation_message = ""
+        # What Generate shows once pending category ticks are put back: its
+        # flag from before the first one, lit by any other change since. None
+        # while the ticks match the saved set (#532).
+        self._generate_dirty_without_ticks = None
         self.setup_ui()
 
     def setup_ui(self):
@@ -190,7 +199,6 @@ class EnhancementsTab(QWidget):
             cb.setChecked(AppSettings.get_enhancement_category_enabled(key))
             cb.setStyleSheet("font-size: 11px;")
             cb.toggled.connect(self._on_category_checkbox_changed)
-            cb.toggled.connect(self._mark_enhancements_dirty)
             row.addWidget(cb)
             self._enhancements_checkboxes[key] = cb
 
@@ -407,10 +415,13 @@ class EnhancementsTab(QWidget):
         stays lit over the stale set instead of going grey.
 
         *keys* are the checkbox keys to check, the ticked ones by default
-        (at startup the ticks are the saved set). A finished run passes the
-        saved set (_saved_category_keys), because a tick not yet saved with
-        the category Apply button was not generated, and judging the run by
-        it would keep Generate lit after every run that never builds it.
+        (at startup the ticks are the saved set). A finished run
+        (set_operation_idle) and a channel or language switch
+        (refresh_enhancements_dirty_state) pass the saved set
+        (_saved_category_keys), which is what a run builds: it saves any
+        pending tick when it starts (#532). A pending tick, such as one
+        changed while a run went on, lights Generate by itself
+        (_on_category_checkbox_changed).
 
         Reads the cache folder without creating it (#494), as
         refresh_forge_status does.
@@ -435,15 +446,19 @@ class EnhancementsTab(QWidget):
 
     def _saved_category_keys(self) -> list[str]:
         """The checkbox keys whose category is saved as enabled: what a
-        Generate run actually builds (it reads the saved set, not the
-        checkboxes, and a tick only counts once the category Apply button
-        saves it)."""
+        Generate run actually builds. A run saves the ticks pending when it
+        starts (apply_pending_category_changes, #532) and then reads the
+        saved set, so a tick changed while it runs is not built."""
         return [key for key in self._enhancements_checkboxes
                 if AppSettings.get_enhancement_category_enabled(key)]
 
     def _mark_enhancements_dirty(self, *_args):
         """A setting that feeds Generate Enhancements changed since the last
-        run — light the button back up."""
+        run — light the button back up. It stays lit when pending category
+        ticks are put back (#532). The ticks themselves light it in
+        _on_category_checkbox_changed."""
+        if self._generate_dirty_without_ticks is not None:
+            self._generate_dirty_without_ticks = True
         self._set_generate_btn_dirty(True)
 
     def mark_enhancements_dirty(self) -> None:
@@ -465,7 +480,11 @@ class EnhancementsTab(QWidget):
         completion: set_operation_idle() only re-enables the button on
         success, it doesn't force it clean, so if a run is triggered while
         already dirty this needs to have cleared the flag first or the
-        button stays red after a successful generation."""
+        button stays red after a successful generation. A category tick
+        still pending then, which generation saves when it starts, puts
+        the button back clean (#532)."""
+        if self._generate_dirty_without_ticks is not None:
+            self._generate_dirty_without_ticks = False
         self._set_generate_btn_dirty(False)
 
     def refresh_enhancements_dirty_state(self) -> None:
@@ -482,8 +501,15 @@ class EnhancementsTab(QWidget):
         to a channel that genuinely needs (re)generation left the button
         disabled (still reflecting the previous channel's now-clean state),
         so clicking it silently did nothing until the user happened to
-        retoggle some checkbox that forces the flag back on."""
-        self._set_generate_btn_dirty(self._compute_initial_enhancements_dirty())
+        retoggle some checkbox that forces the flag back on.
+
+        It judges the saved categories, as a finished run does
+        (set_operation_idle). A category tick still pending keeps the button
+        lit, and putting it back shows this answer (#532)."""
+        dirty = self._compute_initial_enhancements_dirty(self._saved_category_keys())
+        pending = self.has_pending_category_changes()
+        self._generate_dirty_without_ticks = dirty if pending else None
+        self._set_generate_btn_dirty(dirty or pending)
 
     def _live_tag_config_fingerprint(self) -> str:
         """Fingerprint the Tag Builder config as it stands in the pages right
@@ -581,14 +607,45 @@ class EnhancementsTab(QWidget):
             for fn in self._files_for_category(key)
         )
 
-    def _on_category_checkbox_changed(self):
-        """Enable Apply button if any checkbox differs from saved settings,
-        unless a running job keeps it locked (#483)."""
-        has_changes = any(
+    def has_pending_category_changes(self) -> bool:
+        """True when any category checkbox differs from the saved set."""
+        return any(
             cb.isChecked() != AppSettings.get_enhancement_category_enabled(key)
             for key, cb in self._enhancements_checkboxes.items()
         )
-        self._apply_categories_btn.setEnabled(has_changes and not self._changes_locked)
+
+    def pending_unticked_file_keys(self) -> set[str]:
+        """The enhancement file keys of every category saved as enabled but
+        unticked on screen and not saved yet (#532)."""
+        return {
+            file_key
+            for key, cb in self._enhancements_checkboxes.items()
+            if not cb.isChecked() and AppSettings.get_enhancement_category_enabled(key)
+            for file_key in AppSettings.ENHANCEMENT_CATEGORY_FILES.get(key, [key])
+        }
+
+    def _refresh_category_apply_btn(self) -> None:
+        """Enable the category Apply button while any checkbox differs from
+        the saved set, unless a running job keeps it locked (#483)."""
+        self._apply_categories_btn.setEnabled(
+            self.has_pending_category_changes() and not self._changes_locked)
+
+    def _on_category_checkbox_changed(self):
+        """Refresh the category Apply button and tell MainWindow
+        (category_ticks_changed). A tick lights Generate, and ticks put back
+        to the saved set put it back as it was before the first one, unless
+        another change lit it meanwhile (#532). It used to stay lit, as if
+        something had changed, while Apply Enhancements went back to green."""
+        self._refresh_category_apply_btn()
+        pending = self.has_pending_category_changes()
+        if pending:
+            if self._generate_dirty_without_ticks is None:
+                self._generate_dirty_without_ticks = self._enhancements_dirty
+            self._set_generate_btn_dirty(True)
+        elif self._generate_dirty_without_ticks is not None:
+            self._set_generate_btn_dirty(self._generate_dirty_without_ticks)
+            self._generate_dirty_without_ticks = None
+        self.category_ticks_changed.emit(pending)
 
     def set_changes_locked(self, locked: bool, reason: str = "") -> None:
         """Lock Apply Category Changes, Save Tag Changes and Generate
@@ -608,14 +665,54 @@ class EnhancementsTab(QWidget):
         self._apply_categories_btn.setToolTip(
             reason if locked else tr("enhancements.apply_categories_tooltip")
         )
-        self._on_category_checkbox_changed()
+        self._refresh_category_apply_btn()
         self._set_tag_btn_dirty(self._tag_dirty)
         self._set_generate_btn_dirty(self._enhancements_dirty)
+
+    def apply_pending_category_changes(self, *, reload: bool = True) -> bool:
+        """Save the category ticks on screen when they differ from the saved
+        set, as the category Apply button does, and return whether anything
+        was saved (#532). *reload* re-merges the table afterwards, as that
+        button does. Generation passes False and reloads the table itself
+        when its run ends, failed or not.
+
+        Generation, Apply Enhancements, Export Settings and Preview Apply
+        call this first, so they build, write, back up and preview what the
+        checkboxes show, the rule #215 gave Generate for the Tag Builder.
+        While a tick is pending, Apply Enhancements stays red
+        (category_ticks_changed). Only the category Apply button used to
+        save a tick: a user who unticked Commodities and went straight to
+        Generate and Apply Enhancements kept its tags in game, with Apply
+        Enhancements green, and leaving the tab quietly put the tick back.
+
+        While a job runs (#483) it saves nothing and the tick stays pending,
+        as the category Apply button is locked then: the renames would land
+        in the folder a generation writes. A generation's own launch is not
+        a job yet, so it always saves."""
+        if self._changes_locked or not self.has_pending_category_changes():
+            return False
+        self._save_category_state()
+        if reload:
+            self.merge_requested.emit()
+        return True
 
     def _apply_category_changes(self):
         """Save checkbox states, disable/restore enhancement files, and trigger reload."""
         if self._changes_locked:
             return  # a job is running (#483): the button is locked, this is the net
+        self._save_category_state()
+        self.merge_requested.emit()
+
+    def _save_category_state(self):
+        """Save every checkbox state and disable or restore its enhancement
+        files, without the reload. Generate then shows what it showed before
+        the ticks when they only turned categories off, whose files are just
+        set aside, and stays lit when one was turned on, since its files may
+        be missing or set aside from an older run (#532). A generation
+        that saves the ticks builds them, and its launch leaves Generate
+        clean."""
+        turned_on = any(cb.isChecked() and not AppSettings.get_enhancement_category_enabled(key)
+                        for key, cb in self._enhancements_checkboxes.items())
         for key, cb in self._enhancements_checkboxes.items():
             now_enabled = cb.isChecked()
             AppSettings.set_enhancement_category_enabled(key, now_enabled)
@@ -655,8 +752,10 @@ class EnhancementsTab(QWidget):
                         logger.warning(f"Failed to restore {filename}: {e}")
 
         self._apply_categories_btn.setEnabled(False)
+        if self._generate_dirty_without_ticks is not None:
+            self._set_generate_btn_dirty(self._generate_dirty_without_ticks or turned_on)
+            self._generate_dirty_without_ticks = None
         self.refresh_enhancements_status()
-        self.merge_requested.emit()
 
     @staticmethod
     def _files_for_category(key: str) -> list[str]:
@@ -664,13 +763,24 @@ class EnhancementsTab(QWidget):
         file_keys = AppSettings.ENHANCEMENT_CATEGORY_FILES.get(key, [key])
         return [AppSettings.ENHANCEMENTS_FILES[fk] for fk in file_keys]
 
-    def revert_category_checkboxes(self):
-        """Reset checkboxes to match the saved settings (called when leaving tab without applying)."""
+    def revert_category_checkboxes(self, keys=None):
+        """Reset checkboxes to match the saved settings: every one after
+        Import Settings saved new ones, or only *keys*, the categories the
+        enhancement category question offered and saved. A tick pending on
+        any other stays, as it does when the tab is left (#532): the
+        category Apply button stays lit for it, and generation, Apply
+        Enhancements, Export Settings and Preview Apply save it first."""
         for key, cb in self._enhancements_checkboxes.items():
+            if keys is not None and key not in keys:
+                continue
             cb.blockSignals(True)
             cb.setChecked(AppSettings.get_enhancement_category_enabled(key))
             cb.blockSignals(False)
-        self._apply_categories_btn.setEnabled(False)
+        self._refresh_category_apply_btn()
+        if not self.has_pending_category_changes():
+            # The saved set changed under the ticks (Import Settings, or the
+            # question saving its answer), so Generate stays as it is.
+            self._generate_dirty_without_ticks = None
 
     def _on_mission_field_toggled(self, field: str, checked: bool) -> None:
         """Persist a mission-detail field toggle (#121). Baked at generation
@@ -865,7 +975,9 @@ class EnhancementsTab(QWidget):
                             updated.append(f"{key}={value}")
                         else:
                             updated.append(line)
-                    overrides_path.write_text("\n".join(updated), encoding="utf-8")
+                    # In one step, as every user.ini write is, so a failed
+                    # write keeps the old file (#531).
+                    write_user_ini_text(overrides_path, "\n".join(updated))
                     logger.info(f"Migrated {migrated} favorites from '{old_prefix}' to '{new_prefix}'")
                 except Exception as e:
                     logger.exception(f"Failed to migrate favorites: {e}")
@@ -899,11 +1011,14 @@ class EnhancementsTab(QWidget):
         ever lights the button, so a change made mid-run is kept. A failed
         run re-enables unconditionally so the user has a way to retry
         without first having to touch an unrelated setting. The re-read
-        judges the saved categories, which are what the run generated."""
+        judges the saved categories, which are what the run generated.
+        Lighting it is a change like any other, so it stays lit when a
+        category tick pending meanwhile is put back (#532)."""
         self._operation_message = ""
         if not success or self._compute_initial_enhancements_dirty(self._saved_category_keys()):
-            self._enhancements_dirty = True
-        self._set_generate_btn_dirty(self._enhancements_dirty)
+            self._mark_enhancements_dirty()
+        else:
+            self._set_generate_btn_dirty(self._enhancements_dirty)
 
     # ── Status refresh ────────────────────────────────────────────────────────
 

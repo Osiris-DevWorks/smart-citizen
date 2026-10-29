@@ -32,43 +32,54 @@ def parse_ini_file(path: str | Path, *, strip_values: bool = True) -> Dict[str, 
     Returns:
         Dictionary of key-value pairs
     """
-    result = {}
     path = Path(path)
 
     if not path.exists():
-        return result
+        return {}
 
     try:
-        # split('\n') + rstrip('\r'), NOT str.splitlines(): splitlines also
-        # breaks on U+2028/U+0085 etc., which a loc value could legitimately
-        # contain — file iteration never split on those and neither do we.
         # read_ini_text (#251) tolerates non-UTF-8 content; the previous
         # strict streaming decode raised mid-iteration and the except below
         # silently truncated the result at the first bad byte.
-        for line in read_ini_text(path).split('\n'):
-            line = line.rstrip('\r')
-
-            # Skip empty lines and comments
-            if not line.strip() or line.strip().startswith(';'):
-                continue
-
-            # Split on first '=' only
-            if '=' not in line:
-                continue
-
-            key, value = line.split('=', 1)
-            key = key.strip()
-            if strip_values:
-                value = value.strip()
-
-            if key:
-                # Strip comma-based metadata suffix (e.g., "key,P" → "key")
-                # This is used in some source files to track properties
-                clean_key = key.split(',')[0].strip()
-                if clean_key:
-                    result[clean_key] = value
+        return parse_ini_text(read_ini_text(path), strip_values=strip_values)
     except Exception as e:
         logger.warning(f"Error parsing INI file {path}: {e}")
+        return {}
+
+
+def parse_ini_text(text: str, *, strip_values: bool = True) -> Dict[str, str]:
+    """Parse INI *text* as ``parse_ini_file`` parses a file's, for text
+    already in memory, such as the user.ini Import Settings writes (#531).
+    A leading BOM is dropped, as the file reader drops it."""
+    result = {}
+    if text.startswith("\ufeff"):
+        text = text[1:]
+
+    # split('\n') + rstrip('\r'), NOT str.splitlines(): splitlines also
+    # breaks on U+2028/U+0085 etc., which a loc value could legitimately
+    # contain — file iteration never split on those and neither do we.
+    for line in text.split('\n'):
+        line = line.rstrip('\r')
+
+        # Skip empty lines and comments
+        if not line.strip() or line.strip().startswith(';'):
+            continue
+
+        # Split on first '=' only
+        if '=' not in line:
+            continue
+
+        key, value = line.split('=', 1)
+        key = key.strip()
+        if strip_values:
+            value = value.strip()
+
+        if key:
+            # Strip comma-based metadata suffix (e.g., "key,P" → "key")
+            # This is used in some source files to track properties
+            clean_key = key.split(',')[0].strip()
+            if clean_key:
+                result[clean_key] = value
 
     return result
 
@@ -504,3 +515,26 @@ def _determine_status_from_source(
     if source_name == base_source:
         return 'Unmodified'  # From base, not overridden
     return 'Modified'  # Overridden by higher-priority source
+
+
+def status_without_override(entry: StringEntry, global_keys) -> str:
+    """The status a load gives *entry* when it has no user override (#531).
+
+    For an override cleared in the table: Reset to Original, an emptied
+    Custom or Sort Order cell, an emptied editor dock, a removed favourite,
+    and a reload that keeps such a clear. Reset to Original, a removed
+    favourite and a cleared Sort Order used to label the row Unmodified, and
+    an emptied cell or dock Modified, so a cleared enhanced row lost its
+    Enhanced and a cleared discovered one its New, which Apply goes by to
+    leave discovered items out while Include discovered items is off.
+    *global_keys* holds the keys of the stock base source (the `global`
+    source's dict). The entry's ``source_file`` names the base source its
+    value came from, or the user source for a key only user.ini has.
+    """
+    from src.utils.settings import AppSettings
+
+    return _determine_status_from_source(
+        entry.source_file, AppSettings.SOURCE_GLOBAL,
+        key_in_base=entry.source_file != AppSettings.SOURCE_USER,
+        in_global_source=entry.key in global_keys,
+    )
