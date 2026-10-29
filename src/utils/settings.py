@@ -748,7 +748,6 @@ class AppSettings:
     SCO_DRAWER = "drawer"
     SCO_DRAWER_SECTION_PREFIX = "drawer_"
     SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
-    SCO_SAVE_SAMPLES = "save_samples"
     # Option name -> (key, default). On by default, matching how the overlay
     # behaved before the tab existed, except the alerts #523 added: the glow
     # (the one alert there was) and the flash are on, the rest off.
@@ -764,7 +763,6 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
-        SCO_SAVE_SAMPLES:         ("sco/save_samples", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
     # every combination but the screen centre.
@@ -3406,7 +3404,8 @@ class AppSettings:
     @staticmethod
     def get_sco_samples_dir() -> Path:
         r"""Where the Smart Citizen Overlay keeps the readout crops it saves
-        for retraining its digit reader (``{logs_dir}\sco_samples\``)."""
+        for retraining its digit reader (``{logs_dir}\sco_samples\``), only
+        when ``sco_overlay.SAVE_SAMPLES_ENV`` is set."""
         return AppSettings.get_logs_dir() / "sco_samples"
 
     @staticmethod

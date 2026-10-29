@@ -3548,10 +3548,6 @@
       "ht": "",
       "at": "Blueprint da Game.log"
     },
-    "samples_group": {
-      "ht": "",
-      "at": "Campioni di scansione"
-    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificatore scansioni minerarie"
@@ -3631,18 +3627,6 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Mentre l'overlay è attivo, i blueprint ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
-    },
-    "save_samples": {
-      "ht": "",
-      "at": "Salva campioni di scansione"
-    },
-    "save_samples_hint": {
-      "ht": "",
-      "at": "Salva una piccola immagine di ogni nuova firma letta, così le letture errate possono essere inviate per migliorare il decodificatore."
-    },
-    "open_samples_btn": {
-      "ht": "",
-      "at": "Apri cartella campioni"
     },
     "drawer": {
       "ht": "",

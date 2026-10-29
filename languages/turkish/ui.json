@@ -3548,10 +3548,6 @@
       "ht": "",
       "at": "Game.log'dan planlar"
     },
-    "samples_group": {
-      "ht": "",
-      "at": "Tarama örnekleri"
-    },
     "scan_decoder": {
       "ht": "",
       "at": "Maden tarama çözücüsü"
@@ -3631,18 +3627,6 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Katman çalışırken oyunda aldığınız planlar Game.log dosyasından okunur ve sahip olunan olarak işaretlenir."
-    },
-    "save_samples": {
-      "ht": "",
-      "at": "Tarama örneklerini kaydet"
-    },
-    "save_samples_hint": {
-      "ht": "",
-      "at": "Okunan her yeni imzanın küçük bir resmini kaydeder; böylece yanlış okumalar gönderilip çözücü geliştirilebilir."
-    },
-    "open_samples_btn": {
-      "ht": "",
-      "at": "Örnek Klasörünü Aç"
     },
     "drawer": {
       "ht": "",

@@ -38,7 +38,6 @@ Tutto. Le tue modifiche di localizzazione, i backup, le impostazioni dell'applic
 - **Modifiche utente + backup** — `Documents\Smart Citizen\{channel}\` per impostazione predefinita (configurabile nella scheda Config; la build portatile usa invece `<exe-dir>\data\`).
 - **Cache XML DataForge** — `%LOCALAPPDATA%\Smart Citizen\{channel}\cache\dataforge\`.
 - **Dump di arresto anomalo + esportazioni manuali del log** — `Documents\Smart Citizen\logs\` (o equivalente portatile), scritti solo quando l'applicazione si arresta in modo anomalo o quando fai clic su *Export* nella scheda Log.
-- **Campioni di scansione dell'overlay** — `Documents\Smart Citizen\logs\sco_samples\` (o equivalente portatile). Mentre l'Overlay di Smart Citizen è in esecuzione con il decodificatore delle scansioni minerarie attivo, salva una piccola immagine di ogni nuova firma che legge (il numero più qualche pixel intorno, al massimo 200 per sessione; la cartella conserva solo le 1000 più recenti), così che le letture errate possano essere segnalate e corrette. Attivo per impostazione predefinita; disattiva **Salva campioni di scansione** nella scheda Overlay per interromperlo. Non viene caricato nulla: sei tu a inviare un'immagine, se lo desideri.
 
 ### Cosa viene trasmesso in rete
 

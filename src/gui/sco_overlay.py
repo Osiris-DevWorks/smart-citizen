@@ -36,6 +36,7 @@ import ctypes
 import io
 import logging
 import math
+import os
 import sys
 import wave
 from array import array
@@ -79,10 +80,12 @@ logger = logging.getLogger(__name__)
 # padded for head movement (~115 px between the two samples).
 SCAN_REGION = (0.38, 0.28, 0.24, 0.12)
 CAPTURE_INTERVAL_MS = 250
-# A crop of each distinct reading (named after the text read) is kept so
-# misreads can be fixed by adding reference glyphs (scripts/add_sco_sample.py).
-# On by default in every build ("Save scan samples" on the Overlay tab).
+# For tuning the digit reader only: with this environment variable set (any
+# value) when the app starts, a crop of each distinct reading (named after the
+# text read) is kept so misreads can be fixed by adding reference glyphs
+# (scripts/add_sco_sample.py). Off for players, with no switch in the app.
 # Capped per session, and the folder keeps only the newest MAX_SAMPLES_KEPT.
+SAVE_SAMPLES_ENV = "SMART_CITIZEN_SCO_SAMPLES"
 MAX_SAMPLES_PER_SESSION = 200
 MAX_SAMPLES_KEPT = 1000
 SAMPLE_PADDING = 12
@@ -1316,7 +1319,7 @@ class ScoOverlay(QObject):
         self._shown_matches: list[SignatureMatch] = []
         self._reader: Optional[SignatureReader] = hud_signature_reader
         self._sample_dir = sample_dir
-        self._save_samples = True
+        self._save_samples = bool(os.environ.get(SAVE_SAMPLES_ENV))
         self._sampled: set[str] = set()
         self._timer = QTimer(self)
         self._timer.setInterval(CAPTURE_INTERVAL_MS)
@@ -1347,7 +1350,6 @@ class ScoOverlay(QObject):
         self.label.set_alerts(alerts)
         self._sound_alert = "sound" in alerts
         self._show_drawer = on(AppSettings.SCO_DRAWER)
-        self._save_samples = on(AppSettings.SCO_SAVE_SAMPLES)
         self.drawer.set_sections(
             [name for name in SECTION_ICONS if on(AppSettings.SCO_DRAWER_SECTION_PREFIX + name)])
         if self._running:

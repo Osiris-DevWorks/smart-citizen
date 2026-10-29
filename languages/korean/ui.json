@@ -3548,10 +3548,6 @@
       "ht": "",
       "at": "Game.log의 설계도"
     },
-    "samples_group": {
-      "ht": "",
-      "at": "스캔 샘플"
-    },
     "scan_decoder": {
       "ht": "",
       "at": "채굴 스캔 해독기"
@@ -3631,18 +3627,6 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "오버레이가 실행되는 동안 게임에서 받은 설계도를 Game.log에서 읽어 보유로 표시합니다."
-    },
-    "save_samples": {
-      "ht": "",
-      "at": "스캔 샘플 저장"
-    },
-    "save_samples_hint": {
-      "ht": "",
-      "at": "새로 읽은 신호마다 작은 이미지를 저장해, 잘못 읽은 경우를 보내 해독기를 개선할 수 있게 합니다."
-    },
-    "open_samples_btn": {
-      "ht": "",
-      "at": "샘플 폴더 열기"
     },
     "drawer": {
       "ht": "",

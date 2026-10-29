@@ -176,7 +176,6 @@ A **Sobreposição do Smart Citizen** desenha duas pequenas janelas sobre o Star
   - **Fabricação**: digite um mineral para ver quais itens o usam, ou um item para ver os minerais de que ele precisa. É preenchida quando você gera os aprimoramentos com **Commodities** ou **Journal** marcado.
   - Cada seção pode ser ligada e desligada separadamente; desligar a gaveta oculta todas elas.
 - **Marcar novos blueprints como possuídos** acompanha o `Game.log` enquanto a sobreposição roda e marca como adquiridos os blueprints que você recebe. Assim como o escaneamento de logs, só lê o LIVE e o HOTFIX: com PTU, EPTU ou TECH-PREVIEW selecionado na aba Config, a opção fica desligada.
-- **Salvar amostras de escaneamento** guarda uma pequena imagem de cada nova assinatura lida em `logs\sco_samples`, para que leituras erradas possam ser enviadas. **Abrir pasta de amostras** abre essa pasta. Ativado por padrão; nada é enviado automaticamente. No máximo 200 imagens são guardadas por sessão, e a pasta mantém só as 1000 mais recentes.
 
 Se o decodificador de escaneamento encontrar um erro, ele para, e a barra de status avisa. Pare e inicie a sobreposição para tentar de novo; a aba Log tem os detalhes. O tour guiado (botão **Tutorial**) tem um passo para esta aba.
 

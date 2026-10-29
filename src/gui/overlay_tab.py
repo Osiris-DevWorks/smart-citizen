@@ -9,11 +9,9 @@ tab's start button in step.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
-from typing import Optional
 
-from PyQt6.QtCore import QEvent, QKeyCombination, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices, QKeySequence
+from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox, QFrame, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QScrollArea, QVBoxLayout, QWidget,
@@ -167,16 +165,13 @@ class HotkeyEdit(QLineEdit):
 
 class OverlayTab(QWidget):
     """Start/stop button plus one checkbox per SCO option, in a titled box
-    per part: scan decoder, drawer, blueprints from Game.log, scan samples."""
+    per part: scan decoder, drawer, blueprints from Game.log."""
 
     overlay_toggled = pyqtSignal(bool)
     options_changed = pyqtSignal()
 
-    def __init__(self, samples_dir: Optional[Path] = None, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        # None: AppSettings.get_sco_samples_dir() when opened, so a data-folder
-        # move is followed.
-        self._samples_dir = samples_dir
         self._checks: dict[str, QCheckBox] = {}
         self._hints: dict[str, QLabel] = {}
         self.setup_ui()
@@ -235,10 +230,6 @@ class OverlayTab(QWidget):
         self._add_switch(self._group(layout, "blueprint_watch_group"),
                          AppSettings.SCO_LIVE_BLUEPRINT_WATCH)
 
-        samples = self._group(layout, "samples_group")
-        self._open_samples_btn = QPushButton()
-        self._open_samples_btn.clicked.connect(self._open_samples_folder)
-        self._add_switch(samples, AppSettings.SCO_SAVE_SAMPLES, beside=self._open_samples_btn)
         layout.addStretch()
 
         for name in (AppSettings.SCO_SCAN_DECODER, AppSettings.SCO_DRAWER):
@@ -272,7 +263,6 @@ class OverlayTab(QWidget):
                 self._hints[name].setText(hint)
             else:
                 check.setToolTip(hint)                # a switch in a row: no room under it
-        self._open_samples_btn.setText(tr("overlay.open_samples_btn"))
         for label, combo, title, item_prefix in (
                 (self._position_label, self._position_combo, "overlay.drawer_position",
                  "overlay.position_"),
@@ -342,15 +332,9 @@ class OverlayTab(QWidget):
         self._checks[name] = check
         return check
 
-    def _add_switch(self, box: QVBoxLayout, name: str, beside: Optional[QWidget] = None) -> None:
-        """A switch with its hint under it, and *beside* it on the same line."""
-        row = QHBoxLayout()
-        row.addWidget(self._new_switch(name))
-        if beside is not None:
-            row.addSpacing(12)
-            row.addWidget(beside)
-        row.addStretch()
-        box.addLayout(row)
+    def _add_switch(self, box: QVBoxLayout, name: str) -> None:
+        """A switch with its hint under it."""
+        box.addWidget(self._new_switch(name))
         hint = QLabel()
         hint.setProperty("role", "secondary")
         hint.setStyleSheet(f"font-size: 11px; margin-left: {CHECK_TEXT_INDENT}px;")
@@ -449,12 +433,3 @@ class OverlayTab(QWidget):
                        self._hotkey_edit, self._hotkey_hint):
             widget.setEnabled(drawer_on)
         self._hotkey_clear.setEnabled(drawer_on and bool(self._hotkey_edit.sequence()))
-
-    def _open_samples_folder(self) -> None:
-        samples_dir = self._samples_dir or AppSettings.get_sco_samples_dir()
-        try:
-            samples_dir.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            logger.warning("SCO: could not create the samples folder %s", samples_dir)
-            return
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(samples_dir)))

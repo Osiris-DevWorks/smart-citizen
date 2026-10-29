@@ -38,7 +38,6 @@ Alles. Deine Lokalisierungsbearbeitungen, Sicherungen, Anwendungseinstellungen u
 - **Benutzerbearbeitungen + Sicherungen** — standardmäßig `Dokumente\Smart Citizen\{Kanal}\` (konfigurierbar im Konfiguration-Tab; der portable Build verwendet stattdessen `<exe-Verzeichnis>\data\`).
 - **DataForge-XML-Cache** — `%LOCALAPPDATA%\Smart Citizen\{Kanal}\cache\dataforge\`.
 - **Absturzprotokolle + manuelle Protokollexporte** — `Dokumente\Smart Citizen\logs\` (oder das portable Äquivalent), nur geschrieben, wenn die App abstürzt oder du im Protokoll-Tab auf *Exportieren* klickst.
-- **Overlay-Scan-Proben** — `Dokumente\Smart Citizen\logs\sco_samples\` (oder das portable Äquivalent). Während das Smart Citizen Overlay mit eingeschaltetem Bergbau-Scan-Decoder läuft, speichert es ein kleines Bild jeder neuen Signatur, die es liest (die Zahl plus ein paar Pixel drumherum, höchstens 200 pro Sitzung; der Ordner behält nur die neuesten 1000), damit Fehllesungen gemeldet und behoben werden können. Standardmäßig aktiviert; schalte **Scan-Proben speichern** im Overlay-Tab aus, um das zu beenden. Es wird nichts hochgeladen: Wenn du möchtest, schickst du ein Bild selbst ein.
 
 ### Was über das Netzwerk läuft
 

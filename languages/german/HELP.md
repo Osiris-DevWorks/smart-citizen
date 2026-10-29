@@ -174,7 +174,6 @@ Das **Smart Citizen Overlay** zeichnet zwei kleine Fenster über Star Citizen: e
   - **Herstellung**: Gib ein Mineral ein, um zu sehen, welche Gegenstände es verwenden, oder einen Gegenstand, um die benötigten Mineralien zu sehen. Wird gefüllt, wenn du Erweiterungen mit aktiviertem **Commodities** oder **Journal** erstellst.
   - Jeder Bereich hat seinen eigenen Schalter; wenn du die Schublade ausschaltest, werden alle ausgeblendet.
 - **Neue Baupläne als besessen markieren** beobachtet `Game.log`, während das Overlay läuft, und markiert Baupläne, die du erhältst, als besessen. Wie **Protokolle nach besessenen Bauplänen durchsuchen** liest es nur LIVE und HOTFIX: Ist im Konfiguration-Tab PTU, EPTU oder TECH-PREVIEW ausgewählt, bleibt es aus.
-- **Scan-Proben speichern** legt von jeder neu gelesenen Signatur ein kleines Bild in `logs\sco_samples` ab, damit Fehllesungen eingeschickt werden können. **Probenordner öffnen** öffnet diesen Ordner. Standardmäßig aktiviert; es wird nichts hochgeladen. Pro Sitzung werden höchstens 200 Bilder gespeichert, und der Ordner behält nur die neuesten 1000.
 
 Wenn der Scan-Decoder auf einen Fehler stößt, hält er an, und die Statusleiste meldet das. Stoppe das Overlay und starte es erneut, um es noch einmal zu versuchen; Details findest du im Protokoll-Tab. Die geführte Tour (Schaltfläche **Tutorial**) enthält einen Schritt zu diesem Tab.
 
