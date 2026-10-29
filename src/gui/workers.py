@@ -13,6 +13,8 @@ Contents:
 - InstallScanWorker       — finds every Star Citizen install on the machine (2.4)
 - P4kExtractWorker        — unp4k extraction of global.ini
 - DataForgeExtractWorker  — unp4k + unforge + patch pipeline
+- WorkingFolderDeleteWorker — deletes a finished extraction's working folder (perf proposal)
+- StaleWorkingFolderSweepWorker — sweeps working folders a crash or a kill left (perf proposal)
 - SelectAllDelegate       — Custom Value cell delegate (auto-select, EM3/EM4 wrap)
 - OrderSpinBoxDelegate    — Sort Order cell delegate (0-99 spin box, #142)
 - TestPlanSubmitWorker    — POSTs a tester's test-plan report to a Discord webhook
@@ -20,6 +22,7 @@ Contents:
 
 import logging
 import sys
+import threading
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -86,9 +89,10 @@ class AnimatedProgressDialog(QProgressDialog):
         self.setMinimumWidth(400)
         # QProgressDialog defaults to autoClose=True/autoReset=True, which
         # hides the dialog the instant setValue() hits maximum() — e.g. the
-        # DataForge cache-snapshot phase ends with completed == total, so
-        # the dialog vanished right there while later phases (patching,
-        # enhancement generation) kept running and updating the status bar.
+        # DataForge extraction's Done phase ends with completed == total (3
+        # of 3), and the dialog used to vanish at such a point while later
+        # phases (patching, enhancement generation) kept running and
+        # updating the status bar.
         # Callers own the dialog lifecycle explicitly via .close(), so
         # reaching 100% on one phase must not close it out from under them.
         self.setAutoClose(False)
@@ -830,6 +834,22 @@ class P4kExtractWorker(QThread):
             self.finished.emit(False)
 
 
+# How often a wait for a background delete looks for a stop (perf proposal).
+_BACKGROUND_DELETE_POLL_SECONDS = 0.05
+
+
+def _wait_for_background_deletes(done_events, should_stop) -> bool:
+    """Wait on this thread until every background delete in *done_events*
+    is over, each a WorkingFolderDeleteWorker's ``done`` (perf proposal).
+    Returns False as soon as *should_stop()* turns True instead, so a stop
+    or a close is never held up by a delete."""
+    for done in done_events:
+        while not done.wait(_BACKGROUND_DELETE_POLL_SECONDS):
+            if should_stop():
+                return False
+    return True
+
+
 class DataForgeExtractWorker(QThread):
     """Worker thread for extracting DataForge entity XMLs from Data.p4k.
 
@@ -841,6 +861,22 @@ class DataForgeExtractWorker(QThread):
     ends with finished(False), no error signal and nothing logged at ERROR,
     which would fire the global ErrorDialogHandler for something the user
     asked for.
+
+    A successful run keeps its working folder (perf proposal):
+    extract_dataforge hands it over instead of deleting it, and MainWindow
+    takes it with take_working_folder() once this thread is done and has it
+    deleted in the background (WorkingFolderDeleteWorker) while enhancements
+    are generated. Every other outcome deletes it here, before finished, as
+    extract_dataforge did, so a stop or a failure leaves nothing behind and
+    closing waits for it with the thread.
+
+    *wait_for* holds the ``done`` events of the background deletes still
+    going when the run was started (perf proposal). The run waits for them
+    before extract_dataforge, so its sweep does not skip an earlier run's
+    working folder still being deleted and its free-space check does not
+    count that folder as used. It waits here, never on the GUI thread, with
+    the progress dialog's busy bar (nothing is counted yet), and a stop or a
+    close ends the wait at once, as a stop.
     """
 
     progress = pyqtSignal(str)
@@ -848,13 +884,14 @@ class DataForgeExtractWorker(QThread):
     finished = pyqtSignal(bool)
     error = pyqtSignal(str)
 
-    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir, *, channel: str,
-                 cache_base):
+    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir, wait_for=(), *,
+                 channel: str, cache_base):
         super().__init__()
         self._p4k       = p4k_path
         self._unp4k_exe = unp4k_exe
         self._unforge_exe = unforge_exe
         self._cache_dir = cache_dir
+        self._wait_for = tuple(wait_for)
         # The channel and the cache base (AppSettings.get_dataforge_cache_base)
         # this run was started for, which together name its cache folder
         # (#483). With Run in Background the window stays usable, so the
@@ -867,10 +904,49 @@ class DataForgeExtractWorker(QThread):
         # QThread reports no interruption once the thread has finished, so a
         # finished slot that waits for the thread first would always see False.
         self.stopped = False
+        # The working folder extract_dataforge handed over (perf proposal).
+        self._working_folder = None
         # Set when the user sends the run to the background from the progress
         # dialog's question (#483): the generation that follows runs without a
         # dialog too.
         self.in_background = False
+
+    def _keep_working_folder(self, folder) -> None:
+        """extract_dataforge's defer_cleanup: keep *folder* for MainWindow."""
+        self._working_folder = folder
+
+    def take_working_folder(self):
+        """The working folder a successful run kept (a
+        pak_extractor.WorkingFolder), or None, and from then on None. Read
+        after the thread is done, as stopped is."""
+        folder, self._working_folder = self._working_folder, None
+        return folder
+
+    def _finish(self, success: bool) -> None:
+        """Emit finished. A run that did not succeed deletes a working
+        folder it kept first (perf proposal): a stop after the cache was
+        written, during the patches or as a failure on the way out, or a
+        failure after extract_dataforge returned.
+
+        finished is emitted whatever the delete does. A delete that raises
+        (WorkingFolder.delete keeps every OSError to itself, so only
+        something like a MemoryError in a delete thread) is logged at
+        WARNING and the folder left for the next extraction's sweep, as
+        WorkingFolderDeleteWorker does: with no finished, the window would
+        keep the run as its current extraction for the rest of the
+        session."""
+        try:
+            if not success:
+                folder = self.take_working_folder()
+                if folder is not None:
+                    folder.delete()
+        except Exception as e:
+            # The type too: a MemoryError has no text of its own.
+            logger.warning(f"Could not delete the working folder of a DataForge run that did "
+                           f"not succeed ({type(e).__name__}: {e}); the next extraction's "
+                           f"sweep removes it")
+        finally:
+            self.finished.emit(success)
 
     @property
     def cache_dir(self):
@@ -883,6 +959,12 @@ class DataForgeExtractWorker(QThread):
         )
         from src.utils.dataforge_patcher import apply_patches
         try:
+            if not all(done.is_set() for done in self._wait_for):
+                logger.info("DataForge extraction waits for a working folder's background "
+                            "delete to end first")
+            if not _wait_for_background_deletes(self._wait_for, self.isInterruptionRequested):
+                raise ExtractionCancelled(
+                    "stopped while it waited for a working folder's background delete")
             extract_dataforge(
                 self._p4k,
                 self._unp4k_exe,
@@ -891,6 +973,7 @@ class DataForgeExtractWorker(QThread):
                 progress_callback=self.progress.emit,
                 progress_pct_callback=lambda c, t, m: self.progress_pct.emit(c, t, m),
                 should_cancel=self.isInterruptionRequested,
+                defer_cleanup=self._keep_working_folder,
             )
             if self.isInterruptionRequested():
                 # Stopped after the cache was written and stamped (#471). The
@@ -898,7 +981,7 @@ class DataForgeExtractWorker(QThread):
                 # skipping them here loses nothing.
                 logger.info("DataForge extraction stopped before its patches")
                 self.stopped = True
-                self.finished.emit(False)
+                self._finish(False)
                 return
             # Apply declarative patches over known CIG data bugs so downstream
             # consumers (enhancement generator, future tooling) see corrected
@@ -926,14 +1009,14 @@ class DataForgeExtractWorker(QThread):
                 # so nothing may chain into generation or a Simple-mode apply.
                 logger.info("DataForge extraction stopped after its patches")
                 self.stopped = True
-                self.finished.emit(False)
+                self._finish(False)
                 return
-            self.finished.emit(True)
+            self._finish(True)
         except ExtractionCancelled as e:
             # A stop (#471). Not a failure: see the class docstring.
             logger.info(f"DataForge extraction stopped ({e})")
             self.stopped = True
-            self.finished.emit(False)
+            self._finish(False)
         except Exception as e:
             if self.isInterruptionRequested():
                 # A failure on the way out of a stop (a file the killed tool
@@ -941,7 +1024,7 @@ class DataForgeExtractWorker(QThread):
                 # stop (#471). Report it the same quiet way.
                 logger.warning(f"DataForge extraction ended with an error after a stop: {e}")
                 self.stopped = True
-                self.finished.emit(False)
+                self._finish(False)
                 return
             if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
                 # A locked Data.p4k, an unforge timeout, a full drive (#482)
@@ -955,7 +1038,88 @@ class DataForgeExtractWorker(QThread):
             else:
                 logger.exception(f"DataForge extraction failed: {e}")
             self.error.emit(str(e))
-            self.finished.emit(False)
+            self._finish(False)
+
+
+class WorkingFolderDeleteWorker(QThread):
+    """Deletes the working folder a successful DataForge extraction kept
+    (perf proposal), so enhancement generation does not wait for it.
+
+    MainWindow starts it on the GUI thread once the extraction's own thread
+    is done, never from inside another worker, and closing waits for it
+    within the extraction's close deadline (#471). run() only deletes files
+    and folders (pak_extractor.WorkingFolder.delete): it parses no XML, so
+    it is not #389's shape (a thread pool nested in the QThread that parses
+    XML with lxml), and it runs beside the generator's thread, not inside
+    it. It touches only the working folder, which is beside the cache
+    folder, or in %TEMP% when the run worked there, never the cache folder
+    the generator reads.
+
+    ``done`` is set once run() is over. A DataForge extraction started
+    meanwhile waits on it (DataForgeExtractWorker's *wait_for*): a plain
+    event, which outlives this QThread's deleteLater()."""
+
+    def __init__(self, working_folder):
+        super().__init__()
+        self.working_folder = working_folder
+        self.done = threading.Event()
+
+    def run(self):
+        try:
+            self._delete()
+        except Exception as e:
+            # A backstop: an exception out of run() would reach the crash
+            # handler for a housekeeping job the next extraction redoes.
+            logger.warning(f"A background delete or sweep of DataForge working folders "
+                           f"failed ({type(e).__name__}: {e}); a later sweep removes what "
+                           f"is left")
+        finally:
+            # Let go of the folder before done is set: after a delete that
+            # raised something other than an OSError, the WorkingFolder still
+            # holds its open marker, and an extraction waiting on done sweeps
+            # beside it at once, which skips a folder whose marker is held.
+            self.working_folder = None
+            self.done.set()
+
+    def _delete(self) -> None:
+        self.working_folder.delete()   # never raises an OSError (run() catches the rest)
+
+
+class StaleWorkingFolderSweepWorker(WorkingFolderDeleteWorker):
+    """Sweeps the DataForge working folders a crash or a kill left in one
+    folder (perf proposal): pak_extractor's own sweep, which deletes only a
+    folder whose marker it can delete, so it leaves alone a folder a live
+    run or delete in this or another window still holds.
+
+    A successful run's working folder, with the old cache set aside in it,
+    now lives on while enhancements are generated, so a crash or a kill
+    during its background delete leaves up to about 2.3 GB behind (the
+    dcb, the ~31,000 files the cache does not keep and the old cache). Only
+    the next DataForge extraction beside the same cache folder used to sweep
+    it, and after a cache folder change none ever did. MainWindow runs this
+    once a session at startup beside the active cache folder, and beside a
+    queued old cache folder when it cleans that up.
+
+    It first waits for the background deletes that were running when it
+    was started (*after*, their ``done`` events), so it never works on a
+    folder one of them is finishing. Like a delete, it never runs on the
+    GUI thread and sets ``done`` when it is over. Unlike a delete it can be
+    stopped: closing calls requestInterruption(), which ends the wait at
+    once and stops the sweep before its next leftover folder. A folder it
+    has begun is finished, so a single leftover old cache is still waited
+    for, within the close deadline."""
+
+    def __init__(self, parent_folder, after=()):
+        super().__init__(None)   # no folder of its own: it sweeps parent_folder
+        self.parent_folder = Path(parent_folder)
+        self._after = tuple(after)
+
+    def _delete(self) -> None:
+        from src.utils.pak_extractor import DATAFORGE_SCRATCH_PREFIX, _sweep_stale_scratch
+        if _wait_for_background_deletes(self._after, self.isInterruptionRequested):
+            # Never raises an OSError (run() catches the rest).
+            _sweep_stale_scratch(self.parent_folder, DATAFORGE_SCRATCH_PREFIX,
+                                 should_cancel=self.isInterruptionRequested)
 
 
 class SelectAllDelegate(QStyledItemDelegate):

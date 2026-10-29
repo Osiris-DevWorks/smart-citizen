@@ -51,7 +51,9 @@ from src.gui.workers import (
     OrderSpinBoxDelegate,
     P4kExtractWorker,
     SelectAllDelegate,
+    StaleWorkingFolderSweepWorker,
     StartupSyncWorker,
+    WorkingFolderDeleteWorker,
 )
 from src.merger.ini_merger import merge_sources_by_hierarchy
 from src.models.string_model import (
@@ -71,7 +73,7 @@ from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices
 from src.utils.install_scanner import channel_dirs
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
-from src.utils.pak_extractor import linked_cache_folder_error, windows_reason
+from src.utils.pak_extractor import base_ini_is_fresh, linked_cache_folder_error, windows_reason
 from src.utils.settings import (
     AppSettings,
     CACHE_FOLDER_REFUSED,
@@ -795,6 +797,12 @@ class MainWindow(QMainWindow):
 
         # DataForge extraction worker
         self._forge_worker: Optional[DataForgeExtractWorker] = None
+        # Threads deleting a finished extraction's working folder, or
+        # sweeping the ones a crash left, in the background (perf proposal).
+        # Closing waits for them, and so does a new DataForge extraction.
+        self._working_folder_deleters: list[WorkingFolderDeleteWorker] = []
+        # The startup sweep of leftover working folders runs once a session.
+        self._startup_sweep_done = False
         # Set by closeEvent once every prompt that could call the close off
         # has been answered (#471). From then on nothing new may start or
         # prompt: Qt still delivers signals it had already queued after
@@ -1709,10 +1717,11 @@ class MainWindow(QMainWindow):
         )
         dlg.exec()
 
-        if dlg.choice == UpdateDialog.CHOICE_UPDATE and self._job_running():
+        if dlg.choice == UpdateDialog.CHOICE_UPDATE and self._closing_would_wait():
             # The installer relaunches the app while this one may still be
-            # finishing the job (#483). Check for Updates is locked while a
-            # job runs; this covers a check that was already under way.
+            # finishing the job, or deleting a working folder (#483). Check
+            # for Updates is locked while a job runs; this covers a check
+            # that was already under way, and the delete, which locks nothing.
             self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
         elif dlg.choice == UpdateDialog.CHOICE_UPDATE:
             # Gate stays closed: the app exits to install. On download or
@@ -3700,9 +3709,11 @@ class MainWindow(QMainWindow):
         backup) → set the post-import flag so the NEXT launch offers to
         regenerate + apply enhancements → offer restart.
 
-        Not while a job runs (#483): the restart starts the new copy before
-        this one closes, and both would write the same files. The button is
-        locked then too; this is the net behind it.
+        Not while a job runs (#483), or while a finished run's working folder
+        is still being deleted in the background: the restart starts the new
+        copy before this one closes, and both would write the same files. The
+        button is locked while a job runs, but not for a delete, so this is
+        the net behind it.
 
         Restart Later keeps this window, so its table takes the user.ini the
         import wrote for its channel. An import that switched channel (every
@@ -3711,7 +3722,7 @@ class MainWindow(QMainWindow):
         from src.utils.settings_profile import InvalidProfileError, read_profile_zip
         from src.utils.user_ini_manager import backup_user_ini, write_user_ini_text
 
-        if self._job_running():
+        if self._closing_would_wait():
             self.statusBar().showMessage(tr("extract.locked_while_job_runs"))
             return
         path, _ = QFileDialog.getOpenFileName(
@@ -4759,6 +4770,9 @@ class MainWindow(QMainWindow):
         if not getattr(self, "_startup_gate_pending", False):
             return
         self._startup_gate_pending = False
+        # First, so a DataForge extraction the startup prompts start waits
+        # for it rather than sweeping beside it.
+        self._sweep_stale_working_folders_at_startup()
         self._start_startup_sync()
         self._report_installer_data_move()
         self._maybe_warn_onedrive_data_dir()
@@ -5635,6 +5649,10 @@ class MainWindow(QMainWindow):
         to delete is logged but doesn't surface as an error — the user can
         always remove the orphan manually, and partial cleanup is preferable
         to blocking the post-extract reload flow.
+
+        A folder that is not in use also has the working folders a crash or
+        a kill left beside it swept, in the background, whether it is still
+        there or not (perf proposal).
         """
         queued = AppSettings.get_pending_cache_cleanup()
         if not queued:
@@ -5664,6 +5682,11 @@ class MainWindow(QMainWindow):
                 f"or sits inside the DataForge cache in use at {in_use}"
             )
             return
+        # A working folder a crash or a kill left beside the old cache folder
+        # (perf proposal: with the old cache set aside in it, it lives on
+        # while enhancements are generated). The extractions sweep only
+        # beside the cache folder in use, so nothing else ever would.
+        self._sweep_working_folders_in_background(old_path.parent)
         if not old_path.exists():
             logger.info(f"Queued cache cleanup target already absent: {old_path}")
             return
@@ -5868,9 +5891,12 @@ class MainWindow(QMainWindow):
             return False  # silently skip — unp4k not bundled yet or game path not set
 
         base_missing = not base_ini.exists()
-        p4k_newer = (not base_missing) and (p4k_path.stat().st_mtime > base_ini.stat().st_mtime)
+        # Data.p4k's size says whether the game changed, not its modified
+        # time, which the launcher's file check moves on a game launch (perf
+        # proposal, the rule #209 gave the DataForge cache).
+        p4k_changed = (not base_missing) and not base_ini_is_fresh(p4k_path, base_ini)
 
-        if not base_missing and not p4k_newer:
+        if not base_missing and not p4k_changed:
             return False  # cache is present and up to date
 
         if base_missing:
@@ -6450,7 +6476,7 @@ class MainWindow(QMainWindow):
         # Reuse the DataForge extraction dialog if it's still open — keeps
         # the progress UI continuous through the extraction → enhancements
         # chain so the user doesn't see a "where did the progress bar go?"
-        # gap between the snapshot completing and a fresh dialog opening.
+        # gap between the extraction finishing and a fresh dialog opening.
         # Falls back to a new dialog when called standalone (e.g. from
         # the Enhancements tab's Generate button).
         existing = getattr(self, "_forge_progress_dialog", None)
@@ -6469,9 +6495,8 @@ class MainWindow(QMainWindow):
             existing.set_close_guard(lambda w=worker: self._confirm_stop_generation(w))
             existing.setWindowTitle(tr("progress.generating_enhancements_title"))
             # Reset bar to indeterminate (0,0) with the new label so the
-            # stale "Snapshotting cache (28000/28000)" 100% bar from the
-            # extraction phase doesn't sit on screen until the first
-            # enhancement progress emit lands.
+            # extraction phase's last bar and label don't sit on screen
+            # until the first enhancement progress emit lands.
             existing.set_progress(0, 0, enhancements_label)
         else:
             self._enhancements_progress_dialog = AnimatedProgressDialog(
@@ -6656,9 +6681,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, tr("extract.dataforge_extraction_error_title"), message)
             return False
 
-        worker = DataForgeExtractWorker(p4k_path, unp4k_exe, unforge_exe, forge_dir,
-                                        channel=AppSettings.get_active_channel(),
-                                        cache_base=AppSettings.get_dataforge_cache_base())
+        # The run waits on its own thread for any background delete of an
+        # earlier run's working folder, or sweep of leftover ones, still
+        # going (perf proposal): its sweep would skip that folder and its
+        # free-space check count it as used.
+        worker = DataForgeExtractWorker(
+            p4k_path, unp4k_exe, unforge_exe, forge_dir,
+            wait_for=[d.done for d in self._working_folder_deleters],
+            channel=AppSettings.get_active_channel(),
+            cache_base=AppSettings.get_dataforge_cache_base())
         self._forge_worker = worker
         self._refresh_job_lock()
         self.enhancements_tab.set_operation_running(tr("enhancements.extracting_dataforge_tooltip"))
@@ -6872,9 +6903,20 @@ class MainWindow(QMainWindow):
     def _on_dataforge_extract_finished(self, success: bool, worker):
         worker.quit()
         worker.wait()
+        # The working folder a successful run kept (perf proposal), taken
+        # once the thread is done.
+        working_folder = worker.take_working_folder()
         # As _on_applied_state_ready does: frees the thread and the lambda
         # reference cycle the slot connections hold.
         worker.deleteLater()
+        if working_folder is not None and (worker is not self._forge_worker
+                                           or self._close_committed):
+            # A run that succeeded after closing stopped waiting for it
+            # (closing takes the folder of a run it waited for): nobody
+            # deletes the folder now, so its marker is let go and the next
+            # extraction's sweep removes it, as after a crash.
+            working_folder.release()
+            working_folder = None
         if worker is not self._forge_worker:
             return  # stopped and released by closeEvent (#471): nothing may chain on
         self._forge_worker = None
@@ -6888,6 +6930,12 @@ class MainWindow(QMainWindow):
             # during exit).
             self._end_simple_run()
             return
+
+        if working_folder is not None:
+            # Deleted while enhancements are generated, not before (perf
+            # proposal). Started first, so the queued cleanup below runs
+            # beside it; the two never share a folder.
+            self._delete_working_folder_in_background(working_folder)
 
         if success and not self._dataforge_run_matches_settings(worker):
             # The cache folder or the channel changed while the run went on
@@ -6915,7 +6963,7 @@ class MainWindow(QMainWindow):
             self._cleanup_pending_old_cache()
             # Hand the progress dialog off to the enhancements phase rather
             # than closing it here. Closing + re-opening leaves a visible
-            # gap between the snapshot completing and the new dialog
+            # gap between the extraction finishing and the new dialog
             # appearing — long enough for users to wonder what the app is
             # doing. _run_enhancements_generation reuses the existing
             # dialog window if one is present, so the title/label change
@@ -7109,6 +7157,73 @@ class MainWindow(QMainWindow):
                 else:
                     if_unfinished()
 
+    def _delete_working_folder_in_background(self, working_folder) -> None:
+        """Delete a finished DataForge extraction's working folder on a
+        thread of its own (perf proposal), which generation no longer waits
+        for: on a re-extract beside the cache about 62,000 files, the ~31,000
+        unforge wrote that the cache does not keep and the ~31,000 of the old
+        cache set aside there, and all of unforge's files when the work was
+        in %TEMP%, where the kept ones are copied. Both deletes took some
+        14 s on the PC this was measured on and far longer on a slow disk.
+        Started here on the GUI thread, after the extraction's thread is
+        done (see WorkingFolderDeleteWorker for #389), and waited for by
+        closing (_stop_workers_for_close) and by a DataForge extraction
+        started meanwhile (_run_dataforge_extraction). Clear Cache and the
+        queued old-cache cleanup need not wait: it deletes only the working
+        folder, and they never touch one."""
+        deleter = WorkingFolderDeleteWorker(working_folder)
+        self._working_folder_deleters.append(deleter)
+        deleter.finished.connect(lambda d=deleter: self._on_working_folder_deleted(d))
+        deleter.start()
+
+    def _sweep_working_folders_in_background(self, parent) -> None:
+        """Sweep the DataForge working folders a crash or a kill left in
+        *parent* on a thread of its own (perf proposal), never the GUI
+        thread: such a folder can hold an old cache of about 31,000 files.
+        The sweep leaves a folder whose marker is still held. It first waits
+        for the background deletes already running, and is kept with them
+        in _working_folder_deleters, so closing and a new DataForge
+        extraction wait for it too: it never runs beside that extraction's
+        own sweep."""
+        sweeper = StaleWorkingFolderSweepWorker(
+            parent, after=[d.done for d in self._working_folder_deleters])
+        self._working_folder_deleters.append(sweeper)
+        sweeper.finished.connect(lambda d=sweeper: self._on_working_folder_deleted(d))
+        sweeper.start()
+
+    def _sweep_stale_working_folders_at_startup(self) -> None:
+        """Once a session, sweep the DataForge working folders a crash or a
+        kill left beside the active cache folder (perf proposal).
+
+        A successful run's working folder, with the old cache set aside in
+        it, now lives on while enhancements are generated, and a crash
+        during its background delete left it until the next DataForge
+        extraction beside the same cache folder, which with a fresh cache
+        only a game patch brings. Skipped while an extraction runs: it
+        sweeps there itself. Reads the cache folder without creating it
+        (#494); a folder that is not there has nothing to sweep, and one
+        that cannot even be named is logged and skipped, never in the way
+        of startup."""
+        if self._startup_sweep_done:
+            return
+        self._startup_sweep_done = True
+        if self._forge_worker is not None or self._close_committed:
+            return
+        try:
+            parent = AppSettings.get_dataforge_cache_leaf().parent
+        except (OSError, ValueError) as e:
+            logger.warning(f"Skipped the startup sweep of leftover DataForge working "
+                           f"folders: {e}")
+            return
+        self._sweep_working_folders_in_background(parent)
+
+    def _on_working_folder_deleted(self, deleter) -> None:
+        deleter.quit()
+        deleter.wait()
+        if deleter in self._working_folder_deleters:
+            self._working_folder_deleters.remove(deleter)
+        deleter.deleteLater()
+
     # The workers closeEvent stops, each with the attribute that holds its
     # progress dialog: the two extractions (#471) and enhancement generation,
     # which stops at its next job boundary and never during its writes.
@@ -7125,6 +7240,17 @@ class MainWindow(QMainWindow):
         and cache folders it started with."""
         return any(getattr(self, worker_attr, None) is not None
                    for worker_attr, _dialog_attr in self._WORKERS_STOPPED_ON_CLOSE)
+
+    def _closing_would_wait(self) -> bool:
+        """True while a job runs (#483) or a finished DataForge run's working
+        folder is still being deleted in the background (perf proposal).
+        Import Settings and an update's install start the new copy before
+        this one closes, and closing waits for such a delete with the window
+        hidden (_stop_workers_for_close), so they wait for it as they do for
+        a job. _job_running stays as it is: a new DataForge run waits for a
+        delete on its own thread (wait_for), and a generation is meant to run
+        beside one."""
+        return self._job_running() or bool(self._working_folder_deleters)
 
     def _refresh_job_lock(self) -> None:
         """Lock what a running job depends on, or unlock it once none runs
@@ -7178,6 +7304,18 @@ class MainWindow(QMainWindow):
         it the reference is released, and the identity check in the worker's
         slots ignores the finished and error deliveries Qt may still have
         queued.
+
+        The background deletes of finished extractions' working folders
+        (perf proposal) are waited for too, within the same deadline, with a
+        DataForge run's own folder when it finished before its finished slot
+        ran. Each holds its folder's marker, so past the deadline another
+        window's sweep still leaves it alone until the process ends, and
+        the next extraction's sweep removes what is left. A sweep of the
+        working folders a crash left (_sweep_working_folders_in_background)
+        is in the same list, but it is asked to stop first: it ends at once
+        while it still waits for a delete, and otherwise finishes the folder
+        in hand within the same deadline and leaves the rest for a later
+        sweep.
         """
         import time
 
@@ -7210,6 +7348,33 @@ class MainWindow(QMainWindow):
                     worker_attr, _CLOSE_STILL_RUNNING_DEFAULT))
                 continue  # keep the reference so Qt doesn't destroy a live thread
             setattr(self, worker_attr, None)
+            if worker_attr == "_forge_worker":
+                # Only a DataForge run keeps its working folder (perf
+                # proposal): one that succeeded just before the close.
+                working_folder = worker.take_working_folder()
+                if working_folder is not None:
+                    self._delete_working_folder_in_background(working_folder)
+
+        deleting = [d for d in self._working_folder_deleters if d.isRunning()]
+        if deleting:
+            logger.info("Closing while an extraction's working folder is deleted: "
+                        "waiting for it")
+            self.hide()
+        for deleter in deleting:
+            # Only a sweep of leftovers stops here, before its next folder
+            # (perf proposal): the folder in hand is finished. A working
+            # folder's own delete has no stop and finishes, or its marker
+            # stays held for the next sweep.
+            deleter.requestInterruption()
+        for deleter in deleting:
+            remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
+            if deleter.isRunning() and not deleter.wait(remaining_ms):
+                logger.warning(
+                    "An extraction's working folder was still being deleted when "
+                    "Smart Citizen closed; the next extraction removes what is left"
+                )
+                continue  # keep the reference so Qt doesn't destroy a live thread
+            self._working_folder_deleters.remove(deleter)
 
     def closeEvent(self, event):
         """Save state and overrides, and stop a running extraction (#471)

@@ -533,7 +533,9 @@ def _stub(**attrs):
     me._simple_run_active = False
     me._after_unfinished_generation = None
     me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
+    me._working_folder_deleters = []
     me._job_running = lambda: MainWindow._job_running(me)
+    me._closing_would_wait = lambda: MainWindow._closing_would_wait(me)
     for name, value in attrs.items():
         setattr(me, name, value)
     return me
@@ -751,6 +753,53 @@ class TestRelaunchesWaitForTheJob:
             me._continue_startup_after_update_gate.assert_called_once_with()
         else:
             me._start_update_download.assert_called_once()
+
+    def test_import_settings_waits_for_a_background_delete(self, monkeypatch):
+        """A finished DataForge run's working folder is deleted in the
+        background and locks nothing, but closing waits for that delete with
+        the window hidden, so the restart waits for it as it does for a job."""
+        dialogs = MagicMock()
+        monkeypatch.setattr(main_window, "QFileDialog", dialogs)
+        me = _stub(_working_folder_deleters=[object()])
+        MainWindow._handle_import_settings(me)
+        dialogs.getOpenFileName.assert_not_called()
+        me.statusBar().showMessage.assert_called_once_with(REASON)
+
+    def test_an_update_waits_for_a_background_delete(self, monkeypatch):
+        update_dialog = MagicMock()
+        update_dialog.return_value.choice = update_dialog.CHOICE_UPDATE
+        monkeypatch.setattr(main_window, "UpdateDialog", update_dialog)
+        me = _stub(_working_folder_deleters=[object()])
+        MainWindow._on_update_available(me, "9.9.9", "https://example.invalid", "",
+                                        "https://example.invalid/setup.exe", 1)
+        me._start_update_download.assert_not_called()
+        me.statusBar().showMessage.assert_called_once_with(REASON)
+        me._continue_startup_after_update_gate.assert_called_once_with()
+
+    def test_a_delete_is_not_a_job(self):
+        """_job_running stays workers only: a generation is meant to run
+        beside a delete, and a new DataForge run waits for one on its own
+        thread."""
+        me = _stub(_working_folder_deleters=[object()])
+        assert MainWindow._job_running(me) is False
+        assert MainWindow._closing_would_wait(me) is True
+
+    def test_nothing_running_waits_for_nothing(self):
+        assert MainWindow._closing_would_wait(_stub()) is False
+
+    def test_the_two_relaunches_ask_the_one_question(self):
+        """Both sites go through _closing_would_wait: a relaunch added later
+        that asks _job_running alone would let a delete hold the close."""
+        import ast
+        import inspect
+        import textwrap
+
+        for method in (MainWindow._on_update_available, MainWindow._handle_import_settings):
+            tree = ast.parse(textwrap.dedent(inspect.getsource(method)))
+            called = {node.func.attr for node in ast.walk(tree)
+                      if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+            assert "_closing_would_wait" in called, method.__name__
+            assert "_job_running" not in called, method.__name__
 
 
 class TestGenerationInTheBackground:
