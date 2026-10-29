@@ -769,7 +769,7 @@ _BASE_INI_BYTES = 11 * _MIB                  # the English global.ini
 # measured at 10.1 MB, the same file base.ini is a copy of.
 _GLOBAL_INI_WORK_BYTES = _BASE_INI_BYTES
 _GLOBAL_INI_WORK_FILES = 1
-_NEW_CACHE_RESERVE_BYTES = 64 * _MIB         # the gate: folders, stamps (sized with the manifest)
+_NEW_CACHE_RESERVE_BYTES = 64 * _MIB         # the gate: folders and stamps
 _DEFAULT_CLUSTER_BYTES = 4096
 # ERROR_HANDLE_DISK_FULL, ERROR_DISK_FULL, ERROR_DISK_QUOTA_EXCEEDED. Python
 # maps only 112 to ENOSPC (39 and 1295 become EINVAL), so errno alone misses two.
@@ -2168,8 +2168,7 @@ def extract_dataforge(
          generator's subtrees and anything else unforge wrote that the
          exclude list does not name are moved into dataforge_cache_dir (copied
          when the work is in %TEMP% or a move is refused) and stamped, then
-         the working folder is deleted, or handed to *defer_cleanup*. No
-         diff manifest follows (perf proposal, #495): nothing read it.
+         the working folder is deleted, or handed to *defer_cleanup*.
 
     This is slow the first time (~several minutes) but results are cached and
     only need to be re-run when the p4k file changes.
@@ -2521,11 +2520,6 @@ def extract_dataforge(
     # the cache is complete and stamped, but the user asked to stop, so
     # nothing may chain into generation.
     _raise_if_cancelled(should_cancel, "stopped once the new cache was written")
-
-    # No diff manifest (perf proposal, #495). Hashing every cached file
-    # took about 4.5 s after each extraction, longer on a hard drive, and
-    # nothing reads the manifest any more: the generator runs every
-    # category it is handed.
 
     if progress_pct_callback:
         progress_pct_callback(3, TOTAL_PHASES, "Done")

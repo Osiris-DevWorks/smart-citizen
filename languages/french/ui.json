@@ -2406,10 +2406,6 @@
       "ht": "",
       "at": "Mise en cache des fichiers d'entités…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "Capture du cache pour le diff…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "Synchronisation des sources..."

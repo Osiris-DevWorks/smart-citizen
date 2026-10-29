@@ -2406,10 +2406,6 @@
       "ht": "",
       "at": "Armazenando arquivos de entidades em cache…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "Capturando o cache para o diff…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "Sincronizando fontes..."
