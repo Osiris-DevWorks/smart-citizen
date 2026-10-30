@@ -40,7 +40,6 @@ Tout. Vos modifications de localisation, sauvegardes, réglages d'application et
 - **Modifications + sauvegardes** : `Documents\Smart Citizen\{canal}\` par défaut (configurable dans l'onglet Paramètres ; la version portable utilise `<dossier-exe>\data\` à la place).
 - **Cache XML DataForge** : `%LOCALAPPDATA%\Smart Citizen\{canal}\cache\dataforge\`.
 - **Rapports de plantage + exports manuels du journal** : `Documents\Smart Citizen\logs\` (ou équivalent portable), écrits uniquement quand l'application plante ou quand vous cliquez sur *Exporter* dans l'onglet Journal.
-- **Échantillons de scan de la superposition** : `Documents\Smart Citizen\logs\sco_samples\` (ou équivalent portable). Tant que la Superposition Smart Citizen tourne avec son décodeur de scan minier activé, elle enregistre une petite image de chaque nouvelle signature qu'elle lit (le nombre plus quelques pixels autour, 200 au maximum par session ; le dossier ne garde que les 1000 plus récentes), afin que les erreurs de lecture puissent être signalées et corrigées. Activé par défaut ; décochez **Enregistrer des échantillons de scan** dans l'onglet Superposition pour l'arrêter. Rien n'est mis en ligne : c'est vous qui envoyez une image si vous le souhaitez.
 
 ### Ce qui passe par le réseau
 

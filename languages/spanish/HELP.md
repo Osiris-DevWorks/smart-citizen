@@ -176,7 +176,6 @@ La **Superposición de Smart Citizen** dibuja dos pequeñas ventanas sobre Star 
   - **Fabricación**: escribe un mineral para ver qué objetos lo usan, o un objeto para ver los minerales que necesita. Se rellena al generar las mejoras con **Commodities** o **Journal** marcados.
   - Cada sección tiene su propio interruptor; desactivar el cajón las oculta todas.
 - **Marcar blueprints nuevos como poseídos** vigila `Game.log` mientras la superposición está en marcha y marca como adquiridos los blueprints que recibes. Como Escanear registros, solo lee LIVE y HOTFIX: con PTU, EPTU o TECH-PREVIEW seleccionado en la pestaña Configuración, permanece desactivado.
-- **Guardar muestras de escaneo** guarda una pequeña imagen de cada nueva firma leída en `logs\sco_samples` para que se puedan enviar las lecturas erróneas. **Abrir carpeta de muestras** abre esa carpeta. Activado por defecto; no se sube nada. Se guardan como máximo 200 imágenes por sesión, y la carpeta conserva solo las 1000 más recientes.
 
 Si el decodificador de escaneo encuentra un error, se detiene y la barra de estado lo indica. Detén e inicia la superposición para volver a intentarlo; la pestaña Registro tiene los detalles. La visita guiada (botón **Tutorial**) tiene un paso para esta pestaña.
 

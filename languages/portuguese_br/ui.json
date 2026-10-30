@@ -3548,10 +3548,6 @@
       "ht": "",
       "at": "Blueprints do Game.log"
     },
-    "samples_group": {
-      "ht": "",
-      "at": "Amostras de escaneamento"
-    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificador de escaneamento de mineração"
@@ -3631,18 +3627,6 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Enquanto a sobreposição roda, os blueprints recebidos no jogo são lidos do Game.log e marcados como possuídos."
-    },
-    "save_samples": {
-      "ht": "",
-      "at": "Salvar amostras de escaneamento"
-    },
-    "save_samples_hint": {
-      "ht": "",
-      "at": "Salva uma pequena imagem de cada nova assinatura lida, para que leituras erradas possam ser enviadas e melhorar o decodificador."
-    },
-    "open_samples_btn": {
-      "ht": "",
-      "at": "Abrir pasta de amostras"
     },
     "drawer": {
       "ht": "",

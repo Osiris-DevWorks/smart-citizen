@@ -3548,10 +3548,6 @@
       "ht": "",
       "at": "Plans depuis Game.log"
     },
-    "samples_group": {
-      "ht": "",
-      "at": "Échantillons de scan"
-    },
     "scan_decoder": {
       "ht": "",
       "at": "Décodeur de scan minier"
@@ -3631,18 +3627,6 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Pendant que la superposition tourne, les plans reçus en jeu sont lus dans Game.log et marqués comme possédés."
-    },
-    "save_samples": {
-      "ht": "",
-      "at": "Enregistrer des échantillons de scan"
-    },
-    "save_samples_hint": {
-      "ht": "",
-      "at": "Enregistre une petite image de chaque nouvelle signature lue, pour pouvoir envoyer les erreurs de lecture et améliorer le décodeur."
-    },
-    "open_samples_btn": {
-      "ht": "",
-      "at": "Ouvrir le dossier des échantillons"
     },
     "drawer": {
       "ht": "",

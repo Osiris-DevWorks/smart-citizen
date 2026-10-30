@@ -15,7 +15,7 @@ from PyQt6.QtGui import QColor
 
 from src.gui.sco_overlay import (
     DEFAULT_OVERLAY_COLORS, DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_OVERLAP, DRAWER_HANDLE_WIDTH,
-    LABEL_GAP,
+    LABEL_GAP, SAVE_SAMPLES_ENV,
     SCAN_REGION, SECTION_ICONS, BlueprintDrawer, OverlayColors, SectionTabBar, drawer_edge,
     ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
 )
@@ -33,6 +33,12 @@ def _hermetic_overlay(monkeypatch, tmp_path):
                         classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     monkeypatch.setattr("src.gui.sco_overlay.AppSettings.get_sco_samples_dir",
                         staticmethod(lambda: tmp_path / "default_samples"))
+
+
+@pytest.fixture
+def samples_on(monkeypatch):
+    """The sample capture is on only with SAVE_SAMPLES_ENV set at startup."""
+    monkeypatch.setenv(SAVE_SAMPLES_ENV, "1")
 
 
 def _meta():
@@ -273,7 +279,7 @@ def test_hud_reader_reads_a_qimage(qapp):
     assert 40 <= where.top() <= 40 + crop.height()
 
 
-def test_sample_saved_once_per_reading(qapp, tmp_path):
+def test_sample_saved_once_per_reading(qapp, tmp_path, samples_on):
     from PyQt6.QtGui import QImage
 
     overlay = ScoOverlay(sample_dir=tmp_path / "samples")
@@ -464,11 +470,12 @@ def test_options_switch_parts_off_while_running(qapp):
     assert not overlay.is_running()
 
 
-def test_save_samples_off_saves_nothing(qapp, tmp_path):
+def test_samples_are_off_without_the_env_var(qapp, tmp_path, monkeypatch):
+    """Players never get the capture: it is for tuning the reader only."""
     from PyQt6.QtGui import QImage
 
+    monkeypatch.delenv(SAVE_SAMPLES_ENV, raising=False)
     overlay = ScoOverlay(sample_dir=tmp_path / "samples")
-    overlay.set_options({"save_samples": False})
     image = QImage(80, 40, QImage.Format.Format_RGB32)
     overlay._save_sample(image, "7,200", QRect(10, 10, 30, 11))
     assert overlay.wait_for_reader(5000)
@@ -756,7 +763,7 @@ def test_a_read_finishing_after_stop_is_dropped(qapp):
     assert not overlay.label.isVisible() and not overlay._reading
 
 
-def test_a_failed_sample_save_is_logged(qapp, tmp_path, caplog, monkeypatch):
+def test_a_failed_sample_save_is_logged(qapp, tmp_path, caplog, monkeypatch, samples_on):
     from PyQt6.QtGui import QImage
 
     overlay = ScoOverlay(sample_dir=tmp_path / "samples")
@@ -770,7 +777,7 @@ def test_a_failed_sample_save_is_logged(qapp, tmp_path, caplog, monkeypatch):
     assert len([r for r in caplog.records if "could not save" in r.getMessage()]) == 1
 
 
-def test_samples_folder_is_resolved_at_save_time(qapp, tmp_path, monkeypatch):
+def test_samples_folder_is_resolved_at_save_time(qapp, tmp_path, monkeypatch, samples_on):
     from PyQt6.QtGui import QImage
 
     overlay = ScoOverlay()
@@ -795,7 +802,7 @@ def test_prune_samples_keeps_the_newest(tmp_path):
     assert prune_samples(tmp_path / "missing") == 0
 
 
-def test_the_first_save_of_a_session_prunes_the_folder(qapp, tmp_path, monkeypatch):
+def test_the_first_save_of_a_session_prunes_the_folder(qapp, tmp_path, monkeypatch, samples_on):
     from PyQt6.QtGui import QImage
 
     monkeypatch.setattr("src.gui.sco_overlay.MAX_SAMPLES_KEPT", 3)
@@ -837,7 +844,6 @@ def test_the_label_centres_under_the_pin_and_the_number(qapp, tmp_path):
     from src.gui.sco_overlay import READOUT_PIN_WIDTH
 
     overlay = ScoOverlay(sample_dir=tmp_path)
-    overlay.set_options({"save_samples": False})
     region = QRect(1000, 500, 400, 200)
     digits = QRect(100, 40, 34, 12)          # capture pixels, which are screen pixels here
     image = QImage(400, 200, QImage.Format.Format_RGB32)
@@ -863,7 +869,6 @@ def test_the_label_holds_still_while_the_readout_only_jitters(qapp, tmp_path):
     from src.gui.sco_overlay import ANCHOR_DEAD_ZONE
 
     overlay = ScoOverlay(sample_dir=tmp_path)
-    overlay.set_options({"save_samples": False})
     region = QRect(1000, 500, 400, 200)
     image = QImage(400, 200, QImage.Format.Format_RGB32)
     label = overlay.label
@@ -932,7 +937,6 @@ def test_the_label_never_covers_the_readout_on_a_scaled_screen(
     takes them, must keep reading, with the label still."""
     base, region = _fixture_capture(name, screen_h, dpi)
     overlay = ScoOverlay(sample_dir=tmp_path)
-    overlay.set_options({"save_samples": False})
     overlay._running = True
     places = set()
     for _ in range(8):
@@ -956,7 +960,6 @@ def test_a_sinking_readout_keeps_reading(qapp, tmp_path, name, screen_h, dpi):
     followed down at once. Held still, the label covered its bottom rows
     and blacked them out, and the reads failed on every crop."""
     overlay = ScoOverlay(sample_dir=tmp_path)
-    overlay.set_options({"save_samples": False})
     overlay._running = True
     columns = set()
     for drop in range(7):
@@ -985,7 +988,6 @@ def test_a_still_readout_keeps_the_label_still(qapp, tmp_path, name):
     pixels = rgb.constBits().asstring(rgb.sizeInBytes())
     rng = random.Random(name)
     overlay = ScoOverlay(sample_dir=tmp_path)
-    overlay.set_options({"save_samples": False})
     places = []
     for gain in (1.0, 1.0, 0.85, 1.15, 0.92, 1.08):
         varied = bytes(max(0, min(255, int(v * gain + rng.uniform(-8, 8)))) if i % 4 != 3 else v

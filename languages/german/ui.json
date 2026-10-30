@@ -3548,10 +3548,6 @@
       "ht": "",
       "at": "Baupläne aus Game.log"
     },
-    "samples_group": {
-      "ht": "",
-      "at": "Scan-Proben"
-    },
     "scan_decoder": {
       "ht": "",
       "at": "Bergbau-Scan-Decoder"
@@ -3631,18 +3627,6 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Solange das Overlay läuft, werden im Spiel erhaltene Baupläne aus Game.log gelesen und als besessen markiert."
-    },
-    "save_samples": {
-      "ht": "",
-      "at": "Scan-Proben speichern"
-    },
-    "save_samples_hint": {
-      "ht": "",
-      "at": "Speichert ein kleines Bild jeder neu gelesenen Signatur, damit Fehllesungen eingeschickt und der Decoder verbessert werden kann."
-    },
-    "open_samples_btn": {
-      "ht": "",
-      "at": "Probenordner öffnen"
     },
     "drawer": {
       "ht": "",

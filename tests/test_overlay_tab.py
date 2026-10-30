@@ -25,7 +25,7 @@ def test_options_default_on_but_three_alerts(json_backend):
 
 
 def test_a_checkbox_saves_its_option(qapp, json_backend, tmp_path):
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     changed = []
     tab.options_changed.connect(lambda: changed.append(True))
     assert set(tab._checks) == set(AppSettings.SCO_OPTION_SETTING)
@@ -34,11 +34,11 @@ def test_a_checkbox_saves_its_option(qapp, json_backend, tmp_path):
     assert AppSettings.get_sco_option("drawer") is True
     assert changed == [True]
     # A new tab reads the saved state back.
-    assert not OverlayTab(tmp_path / "samples")._checks["scan_decoder"].isChecked()
+    assert not OverlayTab()._checks["scan_decoder"].isChecked()
 
 
 def test_start_button_asks_and_set_running_only_mirrors(qapp, json_backend, tmp_path):
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     asked = []
     tab.overlay_toggled.connect(asked.append)
     tab._start_btn.click()
@@ -48,7 +48,7 @@ def test_start_button_asks_and_set_running_only_mirrors(qapp, json_backend, tmp_
 
 
 def test_refresh_styles_follows_a_theme_swap(qapp, json_backend, tmp_path, monkeypatch):
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     monkeypatch.setattr("src.gui.overlay_tab.get_button_color", lambda role: "#123456")
     assert "#123456" not in tab._start_btn.styleSheet()
     tab.refresh_styles()
@@ -57,7 +57,7 @@ def test_refresh_styles_follows_a_theme_swap(qapp, json_backend, tmp_path, monke
 
 def test_position_picker_is_a_no_scroll_combo(qapp, json_backend, tmp_path):
     from src.gui.combo_box import NoScrollComboBox
-    assert isinstance(OverlayTab(tmp_path / "samples")._position_combo, NoScrollComboBox)
+    assert isinstance(OverlayTab()._position_combo, NoScrollComboBox)
 
 
 def test_option_defaults_reach_settings_backups(json_backend):
@@ -67,7 +67,7 @@ def test_option_defaults_reach_settings_backups(json_backend):
 
 
 def test_drawer_off_greys_out_its_sections(qapp, json_backend, tmp_path):
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     sections = [n for n in tab._checks if n.startswith("drawer_")]
     assert sections and all(tab._checks[n].isEnabled() for n in sections)
     tab._checks["drawer"].setChecked(False)
@@ -125,7 +125,7 @@ def test_tour_has_an_overlay_step_on_the_start_button():
 
 def test_drawer_position_picker(qapp, json_backend, tmp_path):
     assert AppSettings.get_sco_drawer_position() == "middle_right"
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     combo = tab._position_combo
     assert combo.count() == len(AppSettings.SCO_DRAWER_POSITIONS) == 8
     assert combo.currentData() == "middle_right"
@@ -134,7 +134,7 @@ def test_drawer_position_picker(qapp, json_backend, tmp_path):
     tab.options_changed.connect(lambda: changed.append(True))
     combo.setCurrentIndex(AppSettings.SCO_DRAWER_POSITIONS.index("bottom_center"))
     assert AppSettings.get_sco_drawer_position() == "bottom_center" and changed == [True]
-    assert OverlayTab(tmp_path / "samples")._position_combo.currentData() == "bottom_center"
+    assert OverlayTab()._position_combo.currentData() == "bottom_center"
     tab._checks["drawer"].setChecked(False)
     assert not combo.isEnabled()
 
@@ -145,7 +145,7 @@ def test_bad_stored_position_reads_as_default(json_backend):
 
 
 def test_set_option_mirrors_without_saving_or_emitting(qapp, json_backend, tmp_path):
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     changed = []
     tab.options_changed.connect(lambda: changed.append(True))
     tab.set_option("scan_decoder", False)   # the drawer's switch already saved it
@@ -167,7 +167,7 @@ def test_drawer_scan_decoder_switch_saves_and_mirrors(qapp, json_backend, tmp_pa
 
     from src.gui.main_window import MainWindow
 
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     applied = []
     stub = SimpleNamespace(overlay_tab=tab, _apply_sco_options=lambda: applied.append(True))
     MainWindow._on_sco_scan_decoder_toggled(stub, False)
@@ -246,7 +246,7 @@ def test_live_watch_leaves_the_scan_watermark_alone(json_backend, monkeypatch):
 def test_alerts_and_text_size_hang_under_the_scan_decoder(qapp, json_backend, tmp_path):
     """#523: the alerts and the text size are the scan label's, so they sit
     indented under its switch and grey out with it, kept as they were."""
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     alerts = [n for n in tab._checks if n.startswith("alert_")]
     assert alerts == ["alert_glow", "alert_flash", "alert_color", "alert_bigger", "alert_sound"]
     assert tab._checks["alert_glow"].text() == "Glow"
@@ -265,7 +265,7 @@ def test_scan_text_size_picker(qapp, json_backend, tmp_path):
     from src.gui.combo_box import NoScrollComboBox
 
     assert AppSettings.get_sco_label_size() == "medium"
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     combo = tab._size_combo
     assert isinstance(combo, NoScrollComboBox)
     assert [combo.itemText(i) for i in range(combo.count())] == [
@@ -275,7 +275,7 @@ def test_scan_text_size_picker(qapp, json_backend, tmp_path):
     tab.options_changed.connect(lambda: changed.append(True))
     combo.setCurrentIndex(AppSettings.SCO_LABEL_SIZES.index("large"))
     assert AppSettings.get_sco_label_size() == "large" and changed == [True]
-    assert OverlayTab(tmp_path / "samples")._size_combo.currentData() == "large"
+    assert OverlayTab()._size_combo.currentData() == "large"
     json_backend.setValue(AppSettings.SCO_LABEL_SIZE, "huge")
     assert AppSettings.get_sco_label_size() == "medium"
 
@@ -303,7 +303,7 @@ def _press(widget, key, modifiers=Qt.KeyboardModifier.NoModifier, virtual_key=0,
 
 
 def test_hotkey_box_takes_combinations_and_refuses_others(qapp, json_backend, tmp_path):
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     edit = tab._hotkey_edit
     assert edit.sequence() == "" and AppSettings.get_sco_drawer_hotkey() == ""
     changed = []
@@ -323,9 +323,9 @@ def test_hotkey_box_takes_combinations_and_refuses_others(qapp, json_backend, tm
     tab._hotkey_clear.click()                                  # the Clear button
     assert AppSettings.get_sco_drawer_hotkey() == "" and len(changed) == 3
     assert edit.text() == "" and tab._hotkey_problem.isHidden()
-    assert OverlayTab(tmp_path / "samples")._hotkey_edit.sequence() == ""
+    assert OverlayTab()._hotkey_edit.sequence() == ""
     _press(edit, Qt.Key.Key_F9, virtual_key=0x78)
-    assert OverlayTab(tmp_path / "samples")._hotkey_edit.text() == "F9"
+    assert OverlayTab()._hotkey_edit.text() == "F9"
 
 
 def test_the_clear_button_sits_beside_the_box_and_only_when_there_is_a_hotkey(
@@ -333,7 +333,7 @@ def test_the_clear_button_sits_beside_the_box_and_only_when_there_is_a_hotkey(
     """#523: every key pressed in the box is taken as the hotkey, so a Clear
     button to its right is how a hotkey is removed. It is lit only with a
     hotkey saved and the drawer on."""
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     edit, clear = tab._hotkey_edit, tab._hotkey_clear
     assert clear.text() == "Clear" and not edit.isClearButtonEnabled()
     assert not clear.isEnabled()                                # nothing to clear
@@ -351,9 +351,9 @@ def test_the_clear_button_sits_beside_the_box_and_only_when_there_is_a_hotkey(
     tab._checks["drawer"].setChecked(True)
     clear.click()
     assert AppSettings.get_sco_drawer_hotkey() == "" and not clear.isEnabled()
-    assert OverlayTab(tmp_path / "samples")._hotkey_clear.isEnabled() is False
+    assert OverlayTab()._hotkey_clear.isEnabled() is False
     AppSettings.set_sco_drawer_hotkey("F9")
-    assert OverlayTab(tmp_path / "samples")._hotkey_clear.isEnabled()   # a saved one
+    assert OverlayTab()._hotkey_clear.isEnabled()   # a saved one
 
 
 def test_hotkey_box_shows_held_modifiers_and_takes_every_key(qapp, json_backend, tmp_path):
@@ -361,7 +361,7 @@ def test_hotkey_box_shows_held_modifiers_and_takes_every_key(qapp, json_backend,
     from PyQt6.QtGui import QKeyEvent
     from PyQt6.QtWidgets import QApplication
 
-    edit = OverlayTab(tmp_path / "samples")._hotkey_edit
+    edit = OverlayTab()._hotkey_edit
     _press(edit, Qt.Key.Key_Control, CTRL, 0x11, release=False)
     _press(edit, Qt.Key.Key_Alt, CTRL | ALT, 0x12, release=False)
     assert edit.text() == "Ctrl+Alt+" and edit.sequence() == ""   # more keys can follow
@@ -399,7 +399,7 @@ def test_hotkey_box_takes_a_symbol_key(qapp, json_backend, tmp_path, monkeypatch
 
     monkeypatch.setattr(global_hotkey, "layout_symbol", {0xBF: "/"}.get)
     monkeypatch.setattr(global_hotkey, "layout_symbol_key", {"/": 0xBF}.get)
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     _press(tab._hotkey_edit, Qt.Key.Key_Slash, CTRL, 0xBF)
     assert AppSettings.get_sco_drawer_hotkey() == "Ctrl+/" and tab._hotkey_problem.isHidden()
     _press(tab._hotkey_edit, Qt.Key.Key_Slash, virtual_key=0xBF)   # alone: refused
@@ -409,7 +409,7 @@ def test_hotkey_box_takes_a_symbol_key(qapp, json_backend, tmp_path, monkeypatch
 def test_hotkey_box_without_a_virtual_key_uses_qt_key(qapp, json_backend, tmp_path):
     """A press with no Windows key (another platform, or sent by code) still
     records the keys Qt names."""
-    edit = OverlayTab(tmp_path / "samples")._hotkey_edit
+    edit = OverlayTab()._hotkey_edit
     _press(edit, Qt.Key.Key_O, CTRL | ALT)
     assert edit.sequence() == "Ctrl+Alt+O"
     _press(edit, Qt.Key.Key_Oacute, CTRL | ALT)                # no key to fall back on
@@ -421,18 +421,17 @@ def test_options_sit_in_titled_boxes_with_rows_of_switches(qapp, json_backend, t
     side with their help as tooltips."""
     from PyQt6.QtWidgets import QGroupBox
 
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     boxes = tab.findChildren(QGroupBox)
     assert [b.title() for b in boxes] == [
-        "Scan decoder", "Drawer", "Blueprints from Game.log", "Scan samples"]
-    home = {"scan_decoder": 0, "drawer": 1, "live_blueprint_watch": 2, "save_samples": 3}
+        "Scan decoder", "Drawer", "Blueprints from Game.log"]
+    home = {"scan_decoder": 0, "drawer": 1, "live_blueprint_watch": 2}
     for name, check in tab._checks.items():
         index = home.get(name, 0 if name.startswith("alert_") else 1)
         assert boxes[index].isAncestorOf(check), name
     assert tab._size_combo.parent() is not None and boxes[0].isAncestorOf(tab._size_combo)
     for widget in (tab._position_combo, tab._hotkey_edit):
         assert boxes[1].isAncestorOf(widget)
-    assert boxes[3].isAncestorOf(tab._open_samples_btn)
     for prefix in ("alert_", "drawer_"):
         row = [tab._checks[n] for n in tab._checks if n.startswith(prefix)]
         tab.resize(1000, 900)
@@ -449,7 +448,7 @@ def test_a_refused_hotkey_shows_on_the_tab_and_the_status_bar(qapp, json_backend
 
     from src.gui.main_window import MainWindow
 
-    tab = OverlayTab(tmp_path / "samples")
+    tab = OverlayTab()
     shown = []
     stub = SimpleNamespace(overlay_tab=tab,
                            statusBar=lambda: SimpleNamespace(showMessage=shown.append))

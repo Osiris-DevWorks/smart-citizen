@@ -174,7 +174,6 @@ L'**Overlay di Smart Citizen** disegna due piccole finestre sopra Star Citizen: 
   - **Fabbricazione**: digita un minerale per vedere quali oggetti lo usano, oppure un oggetto per vedere i minerali di cui ha bisogno. Si riempie quando generi i miglioramenti con **Commodities** o **Journal** spuntato.
   - Ogni sezione ha il proprio interruttore; disattivando il cassetto le nascondi tutte.
 - **Segna i nuovi blueprint come posseduti** osserva `Game.log` mentre l'overlay è in esecuzione e contrassegna come posseduti i blueprint che ricevi. Come la scansione dei log, legge solo LIVE e HOTFIX: con PTU, EPTU o TECH-PREVIEW selezionato nella scheda Config, resta disattivato.
-- **Salva campioni di scansione** conserva in `logs\sco_samples` una piccola immagine di ogni nuova firma letta, così le letture errate possono essere segnalate. **Apri cartella campioni** apre quella cartella. Attivo per impostazione predefinita; non viene caricato nulla. Vengono conservate al massimo 200 immagini per sessione, e la cartella tiene solo le 1000 più recenti.
 
 Se il decodificatore delle scansioni incontra un errore si ferma, e la barra di stato lo segnala. Ferma e riavvia l'overlay per riprovare; la scheda Log riporta i dettagli. Il tour guidato (pulsante **Tutorial**) include un passaggio dedicato a questa scheda.
 

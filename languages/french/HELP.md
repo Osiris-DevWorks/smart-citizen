@@ -176,7 +176,6 @@ La **Superposition Smart Citizen** affiche deux petites fenêtres par-dessus Sta
   - **Fabrication** : tapez un minéral pour voir les objets qui l'utilisent, ou un objet pour voir les minéraux qu'il demande. Se remplit quand vous générez les enrichissements avec **Commodities** ou **Journal** coché.
   - Chaque section a son propre interrupteur ; désactiver le tiroir les masque toutes.
 - **Marquer les nouveaux plans comme possédés** : surveille `Game.log` pendant que la superposition tourne et marque comme possédés les plans que vous recevez. Comme la recherche dans les journaux, elle ne lit que LIVE et HOTFIX : avec PTU, EPTU ou TECH-PREVIEW sélectionné dans l'onglet Paramètres, elle reste désactivée.
-- **Enregistrer des échantillons de scan** : conserve dans `logs\sco_samples` une petite image de chaque nouvelle signature lue, pour que les erreurs de lecture puissent nous être envoyées. **Ouvrir le dossier des échantillons** ouvre ce dossier. Activé par défaut ; rien n'est mis en ligne. 200 images au maximum sont conservées par session, et le dossier ne garde que les 1000 plus récentes.
 
 Si le décodeur de scan rencontre une erreur, il s'arrête et la barre d'état l'indique. Arrêtez puis redémarrez la superposition pour réessayer ; l'onglet Journal donne les détails. La visite guidée (bouton **Tutoriel**) comporte une étape consacrée à cet onglet.
 

@@ -174,7 +174,6 @@ Hangi üretim planlarına zaten sahip olduğunuzu takip edin ve bunun oyun için
   - **Üretim**: Onu hangi eşyaların kullandığını görmek için bir mineral, gerektirdiği mineralleri görmek için de bir eşya yazın. **Emtialar** veya **Günce** işaretliyken geliştirmeleri oluşturduğunuzda doldurulur.
   - Her bölümün kendi anahtarı vardır; çekmeceyi kapatmak hepsini gizler.
 - **Yeni planları sahip olunan olarak işaretle**, katman çalışırken `Game.log` dosyasını izler ve aldığınız planları sahip olunan olarak işaretler. Günlükleri Tara gibi yalnızca LIVE ve HOTFIX'i okur: Yapılandırma sekmesinde PTU, EPTU veya TECH-PREVIEW seçiliyse kapalı kalır.
-- **Tarama örneklerini kaydet**, okunan her yeni imzanın küçük bir resmini `logs\sco_samples` klasöründe saklar; böylece yanlış okumalar gönderilebilir. **Örnek Klasörünü Aç** bu klasörü açar. Varsayılan olarak açıktır; hiçbir şey yüklenmez. Oturum başına en fazla 200 resim saklanır ve klasör yalnızca en yeni 1000 resmi tutar.
 
 Tarama çözücüsü bir hatayla karşılaşırsa durur ve durum çubuğu bunu bildirir. Yeniden denemek için katmanı durdurup yeniden başlatın; ayrıntılar Günlük sekmesindedir. Rehberli turda (**Rehberli Tur** düğmesi) bu sekme için bir adım bulunur.
 

@@ -38,7 +38,6 @@ Everything. Your localization edits, backups, application settings, and DataForg
 - **User edits + backups** — `Documents\Smart Citizen\{channel}\` by default (configurable in the Config tab; portable build uses `<exe-dir>\data\` instead).
 - **DataForge XML cache** — `%LOCALAPPDATA%\Smart Citizen\{channel}\cache\dataforge\`.
 - **Crash dumps + manual log exports** — `Documents\Smart Citizen\logs\` (or portable equivalent), only written when the app crashes or you click *Export* in the Log tab.
-- **Overlay scan samples** — `Documents\Smart Citizen\logs\sco_samples\` (or portable equivalent). While the Smart Citizen Overlay runs with its mining scan decoder on, it saves a small picture of each new signature it reads (the number plus a few pixels around it, at most 200 per session; the folder keeps only the newest 1000) so misreads can be reported and fixed. On by default; turn off **Save scan samples** on the Overlay tab to stop it. Nothing is uploaded: you send a picture in yourself if you want to.
 
 ### What goes over the network
 

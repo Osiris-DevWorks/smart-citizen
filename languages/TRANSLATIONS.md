@@ -82,6 +82,13 @@ them against the new source.
 
 ## Backfill log
 
+- **2.5.0 cycle (2026-10-29, Claude Opus 5.5):** the overlay's scan-sample
+  capture left the app (it is now for tuning the digit reader only, behind
+  an environment variable). Removed in every language: `overlay.samples_group`,
+  `overlay.save_samples`, `overlay.save_samples_hint` and
+  `overlay.open_samples_btn` from `ui.json`, HELP's **Save scan samples**
+  bullet and LEGAL's **Overlay scan samples** data-location bullet. Nothing
+  added, so nothing to translate.
 - **2.5.0 cycle (2026-10-28, Claude Sonnet 5.5):** a language check of
   everything added for 2.5 found `HELP.md` and `ABOUT.md` out of date in ten
   languages (not russian, which was brought current on 2026-10-20), so they

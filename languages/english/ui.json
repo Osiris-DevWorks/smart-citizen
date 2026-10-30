@@ -3346,10 +3346,6 @@
       "ht": "Blueprints from Game.log",
       "at": ""
     },
-    "samples_group": {
-      "ht": "Scan samples",
-      "at": ""
-    },
     "scan_decoder": {
       "ht": "Mining scan decoder",
       "at": ""
@@ -3428,18 +3424,6 @@
     },
     "live_blueprint_watch_hint": {
       "ht": "While the overlay runs, blueprints you receive in game are read from Game.log and marked owned.",
-      "at": ""
-    },
-    "save_samples": {
-      "ht": "Save scan samples",
-      "at": ""
-    },
-    "save_samples_hint": {
-      "ht": "Saves a small picture of each new signature read, so misreads can be sent in to improve the decoder.",
-      "at": ""
-    },
-    "open_samples_btn": {
-      "ht": "Open Samples Folder",
       "at": ""
     },
     "drawer": {
