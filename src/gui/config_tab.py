@@ -7,13 +7,22 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLineEdit,
     QPushButton, QLabel, QFileDialog, QMessageBox, QComboBox,
-    QCheckBox, QScrollArea, QFrame, QDialog, QDialogButtonBox, QGridLayout,
+    QCheckBox, QDialog, QDialogButtonBox, QGridLayout,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer
 
-from src.gui.theme import AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, get_button_color
+from src.gui.theme import (
+    AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, host_in_scroll_area,
+    needs_apply_style,
+)
 from src.utils.i18n import tr
-from src.utils.settings import AppSettings
+from src.utils.pak_extractor import base_ini_is_fresh, windows_reason
+from src.utils.settings import (
+    AppSettings,
+    CACHE_FOLDER_REFUSED,
+    CACHE_FOLDER_UNREACHABLE,
+    cache_folder_failure,
+)
 from src.utils.user_ini_manager import migrate_user_data_dir
 
 logger = logging.getLogger(__name__)
@@ -73,6 +82,12 @@ class ConfigTab(QWidget):
     # post-import restart flow so this tab stays presentation-only.
     export_settings_requested = pyqtSignal()
     import_settings_requested = pyqtSignal()
+    # Emitted when Preview Apply is clicked, before the preview reads
+    # anything. MainWindow saves the category ticks pending on the
+    # Enhancements tab, as Apply Enhancements does first, so the preview shows
+    # what Apply would write (#532). A direct connection, so it runs before
+    # the preview goes on.
+    preview_starting = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -98,6 +113,16 @@ class ConfigTab(QWidget):
         self._instructions_label.setStyleSheet("font-size: 11px;")
         self._instructions_label.setWordWrap(True)
         layout.addWidget(self._instructions_label)
+
+        # Says why the folders, channel and language are greyed out while an
+        # extraction or a generation runs (#483). Hidden otherwise.
+        self._data_locations_locked = False
+        self._update_check_running = False
+        self._job_lock_label = QLabel()
+        self._job_lock_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+        self._job_lock_label.setWordWrap(True)
+        self._job_lock_label.setVisible(False)
+        layout.addWidget(self._job_lock_label)
 
         # ── Tools ────────────────────────────────────────────────────────────
         self._tools_group = QGroupBox(tr("config.tools_group"))
@@ -138,7 +163,7 @@ class ConfigTab(QWidget):
         self._preview_btn = QPushButton(tr("config.preview_apply_btn"))
         self._preview_btn.setMaximumWidth(150)
         self._preview_btn.setToolTip(tr("config.preview_apply_tooltip"))
-        self._preview_btn.clicked.connect(self.preview_merge)
+        self._preview_btn.clicked.connect(self._on_preview_clicked)
         button_layout.addWidget(self._preview_btn)
 
         self._check_updates_btn = QPushButton(tr("config.check_updates_btn"))
@@ -178,6 +203,22 @@ class ConfigTab(QWidget):
         self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
         self.theme_combo.setMaximumWidth(150)
         appearance_layout.addWidget(self.theme_combo)
+
+        appearance_layout.addSpacing(20)
+        self._font_size_label = QLabel(tr("config.font_size_label"))
+        appearance_layout.addWidget(self._font_size_label)
+
+        self.font_size_combo = QComboBox()
+        self.font_size_combo.setToolTip(tr("config.font_size_tooltip"))
+        self.font_size_combo.addItem(tr("config.font_size_small"), AppSettings.FONT_SIZE_SMALL)
+        self.font_size_combo.addItem(tr("config.font_size_medium"), AppSettings.FONT_SIZE_MEDIUM)
+        self.font_size_combo.addItem(tr("config.font_size_large"), AppSettings.FONT_SIZE_LARGE)
+        idx = self.font_size_combo.findData(AppSettings.get_font_size())
+        if idx >= 0:
+            self.font_size_combo.setCurrentIndex(idx)
+        self.font_size_combo.currentIndexChanged.connect(self._on_font_size_changed)
+        self.font_size_combo.setMaximumWidth(150)
+        appearance_layout.addWidget(self.font_size_combo)
 
         appearance_layout.addSpacing(20)
         self.disable_tutorial_cb = QCheckBox(tr("config.disable_tutorial_cb"))
@@ -333,7 +374,7 @@ class ConfigTab(QWidget):
 
         # ── DataForge cache row ──────────────────────────────────────────
         # Independent from the app-data folder above so users can route the
-        # ~1.4 GB / ~28k-file DataForge tree to a fast local SSD while
+        # ~1.2 GB / ~31k-file DataForge tree to a fast local SSD while
         # keeping their tiny user.ini / sources where they like. Default
         # base is %LOCALAPPDATA% (registry) or <exe-dir>/data/cache/
         # (portable) — both never OneDrive-synced.
@@ -343,11 +384,9 @@ class ConfigTab(QWidget):
 
         cache_input_layout = QHBoxLayout()
         self.cache_dir_input = QLineEdit()
-        self.cache_dir_input.setText(
-            os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
-        )
+        self._show_saved_cache_dir()
         self.cache_dir_input.setToolTip(tr("config.cache_dir_tooltip"))
-        self.cache_dir_input.editingFinished.connect(self._save_cache_dir)
+        self.cache_dir_input.editingFinished.connect(self._cache_dir_edited)
         cache_input_layout.addWidget(self.cache_dir_input)
 
         self._cache_browse_btn = QPushButton(tr("config.browse_btn"))
@@ -430,22 +469,7 @@ class ConfigTab(QWidget):
 
         layout.addStretch()
 
-        # Host the content in a scroll area. MainWindow adds the tab widget
-        # with stretch=1, so the scroll area fills the tab and this does NOT
-        # reintroduce the tab-switch resize that got the 1.4.x Enhancements
-        # scroll-area attempt reverted (#65). Keep the frame and viewport
-        # background clear so the themed background shows through rather than
-        # the scroll area painting its own Base colour.
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
     # ── Retranslation ─────────────────────────────────────────────────────────
 
@@ -484,6 +508,15 @@ class ConfigTab(QWidget):
             self.theme_combo.setItemText(3, tr("config.theme_odw"))
         finally:
             self.theme_combo.blockSignals(False)
+        self._font_size_label.setText(tr("config.font_size_label"))
+        self.font_size_combo.setToolTip(tr("config.font_size_tooltip"))
+        self.font_size_combo.blockSignals(True)
+        try:
+            self.font_size_combo.setItemText(0, tr("config.font_size_small"))
+            self.font_size_combo.setItemText(1, tr("config.font_size_medium"))
+            self.font_size_combo.setItemText(2, tr("config.font_size_large"))
+        finally:
+            self.font_size_combo.blockSignals(False)
         self.disable_tutorial_cb.setText(tr("config.disable_tutorial_cb"))
         self.disable_tutorial_cb.setToolTip(tr("config.disable_tutorial_tooltip"))
         self._loc_group.setTitle(tr("config.star_citizen_group"))
@@ -545,6 +578,37 @@ class ConfigTab(QWidget):
         if hasattr(mw, "refresh_action_buttons"):
             mw.refresh_action_buttons()
 
+    # ── Font size ────────────────────────────────────────────────────────────
+
+    def _on_font_size_changed(self, _index: int):
+        """Persist the size and offer a restart: it is a Qt scale factor,
+        which only takes effect when the app starts (src/utils/ui_scale.py).
+        Deferred like the theme swap so the prompt opens outside the
+        combo's own event handling."""
+        size = self.font_size_combo.currentData()
+        if size not in AppSettings.FONT_SIZES or size == AppSettings.get_font_size():
+            return
+        AppSettings.set_font_size(size)
+        QTimer.singleShot(0, self._prompt_font_size_restart)
+
+    def _prompt_font_size_restart(self):
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(tr("config.font_size_restart_title"))
+        box.setText(tr("config.font_size_restart_body"))
+        restart_btn = box.addButton(
+            tr("settings_backup.restart_now_btn"), QMessageBox.ButtonRole.AcceptRole
+        )
+        box.addButton(
+            tr("settings_backup.restart_later_btn"), QMessageBox.ButtonRole.RejectRole
+        )
+        box.setDefaultButton(restart_btn)
+        box.exec()
+        if box.clickedButton() is restart_btn:
+            mw = self.window()
+            if hasattr(mw, "restart_app"):
+                mw.restart_app()
+
     def _on_include_new_toggled(self, checked: bool):
         AppSettings.set_include_new_lines(checked)
 
@@ -561,7 +625,13 @@ class ConfigTab(QWidget):
         ``_use_install_root`` is the one caller that needs to know, since it
         would otherwise close its results dialog as if a picked install had
         been applied when it silently was not (#385 review).
+
+        Not while a job runs (#483): the field is locked then, and an install
+        scan that finished meanwhile must not change the game folder through
+        its results dialog either. The Config tab says why.
         """
+        if self._data_locations_locked:
+            return False
         game_path = self.game_path_input.text().strip()
         if game_path:
             # Normalize to native separators (backslashes on Windows). Qt's
@@ -695,7 +765,8 @@ class ConfigTab(QWidget):
             progress.close()
             self._dupe_progress = None
 
-        self._dupe_check_btn.setEnabled(True)
+        # Back on, unless a running job keeps it locked (#483).
+        self._refresh_locked_controls()
         if report is None:
             return  # the error slot already told the user
 
@@ -725,7 +796,19 @@ class ConfigTab(QWidget):
         Goes through the same field-then-``_save_game_path`` path a manual
         Browse does, so channel-combo refresh, P4K status, and the legacy
         GAME_INSTALL_PATH sync all happen exactly once and in one place.
+
+        A scan that finished during a job (#483) says so and leaves the field
+        and the dialog as they are, so the user can pick again once the job
+        ends. _save_game_path would refuse anyway, but its failure box blames
+        a drive that disconnected, and the field kept the unsaved root.
         """
+        if self._data_locations_locked:
+            QMessageBox.warning(
+                self,
+                tr("config.dupe_use_failed_title"),
+                tr("extract.locked_while_job_runs"),
+            )
+            return
         logger.info(f"Switching SC install root to {root!r} from the install check")
         self.game_path_input.setText(os.path.normpath(root))
         if not self._save_game_path():
@@ -747,8 +830,16 @@ class ConfigTab(QWidget):
     # ── Smart Citizen data folder ────────────────────────────────────────────
 
     def _save_data_dir(self):
-        """Persist the Smart Citizen data folder override."""
+        """Persist the Smart Citizen data folder override.
+
+        Not while a job runs (#483), the field put back: the field is locked
+        then, but change_data_dir_to (the startup OneDrive warning's Move)
+        reaches this without it, and a running global.ini extraction would
+        write base.ini into the folder being left."""
         current_dir = AppSettings.get_user_data_dir()
+        if self._data_locations_locked:
+            self.data_dir_input.setText(os.path.normpath(str(current_dir)))
+            return
         raw_path = self.data_dir_input.text().strip()
         if raw_path:
             raw_path = os.path.normpath(raw_path)
@@ -863,12 +954,14 @@ class ConfigTab(QWidget):
 
     # ── DataForge cache folder ───────────────────────────────────────────────
     # The cache path is independent of the app-data path so users can target
-    # a fast local SSD for the 1.4 GB DataForge tree without disturbing their
+    # a fast local SSD for the 1.2 GB DataForge tree without disturbing their
     # user.ini / sources. Changing the path requires a re-extraction (the
-    # old cache contents aren't migrated — moving 28k tiny files is slower
+    # old cache contents aren't migrated — moving ~31k tiny files is slower
     # than letting unforge rebuild from Data.p4k), so the user gets a
     # 3-button prompt: Re-extract + delete old / Re-extract + keep old /
-    # Cancel. Cancel reverts the input to the previous value.
+    # Cancel. Cancel reverts the input to the previous value, and so does a
+    # folder whose cache folder cannot be made, with one box saying why
+    # (#494).
 
     def _maybe_apply_cache_change(self, new_override: "str | None") -> bool:
         """Common path for set/browse/reset.
@@ -876,16 +969,29 @@ class ConfigTab(QWidget):
         Returns ``True`` when the new override was accepted (the caller
         should refresh the input field) and ``False`` when the user
         cancelled the migration dialog (caller should revert the input).
+        Raises ``OSError`` when the new cache folder cannot be made, with
+        the previous override restored (#494).
         """
         old_base = AppSettings.get_dataforge_cache_base()
-        old_leaf = AppSettings.get_dataforge_cache_dir()
+        # Only read, never made (#494): a saved folder Windows refuses, or
+        # one on a drive that is gone, must not stop the user moving off it.
+        old_leaf = AppSettings.get_dataforge_cache_leaf()
         # Stash + temporarily apply the prospective override so the resolved
         # base picks up env-var expansion + resolve() in the same code path
-        # production uses. Revert if the user cancels.
+        # production uses. Revert if the user cancels, or if the new cache
+        # folder cannot be made.
         prev_override = AppSettings.get_cache_dir_override()
         AppSettings.set_cache_dir(new_override)
-        new_base = AppSettings.get_dataforge_cache_base()
-        new_leaf = AppSettings.get_dataforge_cache_dir()
+        try:
+            new_base = AppSettings.get_dataforge_cache_base()
+            # Made here: the user just picked this folder for the re-extract.
+            new_leaf = AppSettings.get_dataforge_cache_dir()
+        except OSError:
+            # Reverted as Cancel reverts it, so a folder Windows refused, or
+            # one on a drive that is gone, is never left saved behind a box
+            # saying the cache folder was not changed (#494).
+            AppSettings.set_cache_dir(prev_override or None)
+            raise
 
         if new_base == old_base:
             # No-op change (e.g. user typed the same path they had). The
@@ -895,7 +1001,7 @@ class ConfigTab(QWidget):
         # Only prompt when the old cache actually has extracted content.
         # The ``.p4k_mtime`` stamp is written by pak_extractor.py once an
         # extraction succeeds, so its presence is the cheapest "is this a
-        # populated cache" probe (avoids walking 28k files).
+        # populated cache" probe (avoids walking ~31k files).
         from src.utils.pak_extractor import P4K_MTIME_STAMP
         old_has_content = (old_leaf / P4K_MTIME_STAMP).exists()
         if not old_has_content:
@@ -906,7 +1012,7 @@ class ConfigTab(QWidget):
             self.cache_dir_changed.emit(str(new_leaf))
             return True
 
-        # The shipped behavior is: never silently move ~1.4 GB. We ask the
+        # The shipped behavior is: never silently move ~1.2 GB. We ask the
         # user up-front whether to also clean up the orphan, and only the
         # cleanup is deferred (after re-extraction completes). The
         # re-extraction itself is triggered immediately via the signal so
@@ -945,47 +1051,88 @@ class ConfigTab(QWidget):
         self.cache_dir_changed.emit(str(new_leaf))
         return True
 
+    def _cache_dir_edited(self) -> None:
+        """The cache folder field's editingFinished: save only a folder the
+        user typed (#494). Qt also sends it when the field loses focus after
+        a setText nobody typed, and the field is filled that way when the
+        tab is built and after every box. Saving then tried the saved folder
+        again, so with a saved folder that cannot be used, a click into the
+        field and out again, or a click away after a failed change, opened a
+        box about a change nobody asked for. setText clears isModified() and
+        typing sets it. Enter with nothing typed does nothing either: there
+        is no change to make, and hasFocus() cannot tell Enter apart, because
+        a menu that opens while the field has the focus sends the same
+        signal with hasFocus() still true. The saved folder typed again is a
+        change and gets its box, and Browse calls _save_cache_dir itself."""
+        if self.cache_dir_input.isModified():
+            self._save_cache_dir()
+
     def _save_cache_dir(self):
         raw_path = self.cache_dir_input.text().strip()
         if raw_path:
             raw_path = os.path.normpath(raw_path)
 
+        # The folder a failure names: the one typed or picked (resolved
+        # below), or the default for a cleared field (#494).
+        folder = raw_path or AppSettings.get_default_dataforge_cache_base()
         try:
             if raw_path:
                 target = Path(os.path.expandvars(raw_path)).expanduser().resolve()
+                folder = target
                 if target.exists() and not target.is_dir():
                     QMessageBox.warning(
                         self,
                         tr("config.invalid_cache_folder_title"),
-                        f"The selected cache folder is a file, not a directory:\n{target}",
+                        tr("config.cache_folder_is_file", folder=os.path.normpath(str(target))),
                     )
-                    self.cache_dir_input.setText(
-                        os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
-                    )
+                    self._show_saved_cache_dir()
                     return
                 target.mkdir(parents=True, exist_ok=True)
                 accepted = self._maybe_apply_cache_change(str(target))
             else:
                 accepted = self._maybe_apply_cache_change(None)
         except OSError as e:
-            logger.warning(f"Could not use DataForge cache folder {raw_path!r}: {e}")
-            QMessageBox.warning(
-                self,
-                tr("config.invalid_cache_folder_title"),
-                f"Smart Citizen could not use that cache folder:\n{e}",
-            )
-            self.cache_dir_input.setText(
-                os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
-            )
+            self._report_cache_folder_error(folder, e)
             return
 
         # Always re-read AppSettings on exit — the user may have cancelled,
         # in which case the override is restored to its previous value.
+        self._show_saved_cache_dir()
+        if accepted:
+            self._refresh_p4k_status()
+
+    def _show_saved_cache_dir(self) -> None:
+        """Show the cache folder that is saved now in the field."""
         self.cache_dir_input.setText(
             os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
         )
-        if accepted:
-            self._refresh_p4k_status()
+
+    def _report_cache_folder_error(self, folder: "Path | str", error: OSError) -> None:
+        """One box saying why a cache folder change did not happen (#494).
+        Windows refused to make the cache folder in *folder* (its
+        permissions, Controlled folder access), could not reach it (a drive
+        that is gone or not ready), or rejected it for another reason (a
+        name it does not take, a path through a file), which the box gives
+        in Windows' own words. The error is read as the start of an
+        extraction reads it (``cache_folder_failure``). The change was
+        undone, so the field goes back to the folder that is saved. The
+        Windows error is logged at WARNING: an ERROR record would open a
+        second box."""
+        folder = os.path.normpath(str(folder))
+        logger.warning(f"Could not use DataForge cache folder {folder}: {error}")
+        failure = cache_folder_failure(error)
+        if failure == CACHE_FOLDER_REFUSED:
+            # Not the advice to choose another cache folder: the user is
+            # doing that right now.
+            message = (tr("config.cache_folder_refused", folder=folder) + "\n\n"
+                       + tr("extract.folder_refused_fix"))
+        elif failure == CACHE_FOLDER_UNREACHABLE:
+            message = tr("config.cache_folder_unreachable", folder=folder)
+        else:
+            message = tr("config.cache_folder_unusable", folder=folder,
+                         reason=windows_reason(error))
+        QMessageBox.warning(self, tr("config.invalid_cache_folder_title"), message)
+        self._show_saved_cache_dir()
 
     def _browse_cache_dir(self):
         start_dir = (
@@ -1000,10 +1147,12 @@ class ConfigTab(QWidget):
             self._save_cache_dir()
 
     def _reset_cache_dir(self):
-        accepted = self._maybe_apply_cache_change(None)
-        self.cache_dir_input.setText(
-            os.path.normpath(str(AppSettings.get_dataforge_cache_base()))
-        )
+        try:
+            accepted = self._maybe_apply_cache_change(None)
+        except OSError as e:
+            self._report_cache_folder_error(AppSettings.get_default_dataforge_cache_base(), e)
+            return
+        self._show_saved_cache_dir()
         if accepted:
             self._refresh_p4k_status()
 
@@ -1145,7 +1294,9 @@ class ConfigTab(QWidget):
                 self._p4k_status_label.setText(
                     tr("config.p4k_status_found_with_base", date=last_str)
                 )
-                needs_update = p4k_path.stat().st_mtime > base_ini.stat().st_mtime
+                # The same rule as the startup prompt: Data.p4k's size, not
+                # the modified time a game launch moves (perf proposal).
+                needs_update = not base_ini_is_fresh(p4k_path, base_ini)
             else:
                 self._p4k_status_label.setText(tr("config.p4k_status_found_no_base"))
                 needs_update = True
@@ -1160,13 +1311,12 @@ class ConfigTab(QWidget):
 
     def _set_extract_btn_needs_update(self, needs_update: bool) -> None:
         """Red button text when base.ini has never been extracted or Data.p4k
-        is newer than the cached copy — a nudge, not a gate. Unlike Generate
-        Enhancements/Apply Enhancements, this button is never disabled: users
-        may legitimately want to re-extract even when nothing looks stale
-        (e.g. after manually clearing part of the cache)."""
-        self._extract_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if needs_update else ""
-        )
+        has changed since (``base_ini_is_fresh``) — a nudge, not a gate. Unlike Generate
+        Enhancements/Apply Enhancements, staleness never disables this button:
+        users may legitimately want to re-extract even when nothing looks
+        stale (e.g. after manually clearing part of the cache). Only a running
+        job locks it (#483), and the red then dims."""
+        self._extract_btn.setStyleSheet(needs_apply_style() if needs_update else "")
 
     # ── Updates ──────────────────────────────────────────────────────────────
 
@@ -1181,10 +1331,55 @@ class ConfigTab(QWidget):
         self._update_status_label.setText(text)
 
     def set_check_updates_enabled(self, enabled: bool) -> None:
-        """Toggle the 'Check for Updates' button — disable while a check runs."""
-        self._check_updates_btn.setEnabled(enabled)
+        """Toggle the 'Check for Updates' button — disable while a check runs.
+        A running job keeps it locked as well (#483)."""
+        self._update_check_running = not enabled
+        self._refresh_locked_controls()
+
+    def _job_locked_controls(self) -> list:
+        """What a running extraction or generation depends on (#483): the
+        game, data and cache folders, the channel and the language it started
+        with, the global.ini extraction (one job at a time), and Import
+        Settings, whose restart would start a new copy beside this one. The
+        install scan's button and Check for Updates are handled with their own
+        busy state in _refresh_locked_controls."""
+        return [
+            self.game_path_input, self._game_browse_btn,
+            self.channel_combo,
+            self.language_combo, self._map_lang_btn,
+            self.data_dir_input, self._data_browse_btn, self._data_reset_btn,
+            self.cache_dir_input, self._cache_browse_btn, self._cache_reset_btn,
+            self._extract_btn,
+            self._import_settings_btn,
+        ]
+
+    def set_data_locations_locked(self, locked: bool, reason: str = "") -> None:
+        """Lock or unlock what a running job depends on, and say why (#483).
+        MainWindow._refresh_job_lock calls this whenever a job starts or ends,
+        whether its progress dialog is shown or not."""
+        self._data_locations_locked = locked
+        self._job_lock_label.setText(reason)
+        self._job_lock_label.setVisible(locked)
+        self._refresh_locked_controls()
+
+    def _refresh_locked_controls(self) -> None:
+        """Apply the job lock and the scan's and update check's own busy states."""
+        locked = self._data_locations_locked
+        for widget in self._job_locked_controls():
+            widget.setEnabled(not locked)
+        self._dupe_check_btn.setEnabled(
+            not locked and getattr(self, "_dupe_worker", None) is None
+        )
+        self._check_updates_btn.setEnabled(not locked and not self._update_check_running)
 
     # ── Preview ──────────────────────────────────────────────────────────────
+
+    def _on_preview_clicked(self):
+        """Preview Apply: let MainWindow save the category ticks pending on
+        the Enhancements tab first (preview_starting), as Apply Enhancements
+        saves them (#532), so the preview shows what Apply would write."""
+        self.preview_starting.emit()
+        self.preview_merge()
 
     def preview_merge(self):
         """Show a dry-run summary of what Apply Enhancements would write.

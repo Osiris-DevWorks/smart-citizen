@@ -12,13 +12,22 @@ and silently truncated the strings table — a full blocker from one bad byte.
 
 Shared by ``src/parser/ini_parser.py`` and ``src/merger/ini_merger.py``.
 ``scripts/generate_enhancements_ini.py`` carries its own mirror so it stays
-stdlib+lxml-only for standalone runs (same tolerated-duplication shape as
-CATEGORY_SUBTREES ↔ DATAFORGE_KEEP_SUBPATHS); keep the two in sync.
+stdlib+lxml-only for standalone runs; keep the two in sync.
+
+One deliberate difference: this copy reads through ``read_bytes_retrying``.
+A generation swaps each enhancement INI in with ``os.replace``, and a reader
+that opens the file during the swap gets PermissionError for a moment;
+``parse_ini_file`` would turn that into a silently empty category, which an
+Apply during a hidden generation would write into global.ini. The mirror
+reads only base.ini, which a generation never replaces, so it keeps a plain
+read.
 """
 from __future__ import annotations
 
 import logging
 from pathlib import Path
+
+from src.utils.atomic_io import read_bytes_retrying
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +55,7 @@ def read_ini_text(path: Path) -> str:
     UTF-8 it's a tiny fraction (most high bytes sit inside valid multi-byte
     sequences). Split at half.
     """
-    raw = Path(path).read_bytes()
+    raw = read_bytes_retrying(path)
     try:
         return raw.decode("utf-8-sig")
     except UnicodeDecodeError:

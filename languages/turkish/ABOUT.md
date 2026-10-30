@@ -25,7 +25,7 @@ Smart Citizen'a kod katkısında bulunanlara teşekkürler:
 - **Ishikudeska**
 - **jonigirl**
 - **Coerwyn**
-- **denis-coach** (h0use)
+- **Den McConan** aka h0use
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
@@ -71,6 +71,7 @@ Smart Citizen ayrıca şu kaynaklardan gelen üst akış araçlarını da paketl
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) — Almanca dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi.
 - **[스타 시티즌 유저 한국어 프로젝트](https://sc.galaxyhub.kr)** (Shatagon, MGM Star Fleet ve Falco Rescue loncaları) — Korece yerelleştirmenin arkasındaki topluluk ekibi. Dosyaları Smart Citizen ile birlikte paketlenmez (lisansları yeniden dağıtıma izin vermez); Korece, kendi dosyanızı getirdiğiniz bir dildir ve *Dil Dosyası Eşle* aracılığıyla doğrudan onlardan aldığınız yerel bir kopyaya eşlenir.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP) — Geleneksel Çince dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi. En son Mayıs 2024'te güncellendi, bu nedenle mevcut oyun içi metinlerin kabaca üçte ikisini kapsar; geri kalanı için İngilizceye geri dönülür.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu) — Rusça dil seçeneğine güç veren, topluluk tarafından sürdürülen `global.ini` çevirisi.
 
 ## Öne Çıkan Özellikler
 
@@ -78,7 +79,7 @@ Smart Citizen ayrıca şu kaynaklardan gelen üst akış araçlarını da paketl
 - **Yükle ve Düzenle**: Star Citizen kurulumunuzdaki `global.ini` dosyasını yükleyin ve metinleri sezgisel bir tablo görünümünde özelleştirin
 - **Çoklu Kanal Desteği**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW kanallarının her biri kendi yalıtılmış `user.ini` dosyasına, önbelleğine, yedeklerine ve DataForge çıkarımına sahiptir — kanallar arasında Yapılandırma sekmesinden yeniden başlatmadan geçiş yapın
 - **Kurulum Konumunu Doğrula**: Bilgisayarınızdaki tüm Star Citizen kurulumlarını bulur ve oyunun gerçekte hangisini başlattığını söylemek için RSI Launcher'ın günlüğünü okur; böylece Uygula, başlatmadığınız bir kopyaya asla yazmaz
-- **Çoklu Dil Desteği**: Uygulama ve oyun metinlerini Yapılandırma sekmesinden İngilizce, Fransızca, İspanyolca, Brezilya Portekizcesi, Japonca, Basitleştirilmiş Çince, İtalyanca, Almanca, Türkçe, Korece (kendi dosyanızı getirin) ve Geleneksel Çince arasında değiştirin. İngilizce dışındaki diller, topluluk tarafından çevrilmiş bir `global.ini` dosyasını İngilizce temelin üzerine katmanlar; çevrilmemiş her şey için İngilizceye geri dönülür. Topluluk çevirileri geldikçe daha fazla dil sunulacaktır (bkz. `languages/TRANSLATIONS.md`)
+- **Çoklu Dil Desteği**: Uygulama ve oyun metinlerini Yapılandırma sekmesinden İngilizce, Fransızca, İspanyolca, Brezilya Portekizcesi, Japonca, Basitleştirilmiş Çince, İtalyanca, Almanca, Türkçe, Korece (kendi dosyanızı getirin), Geleneksel Çince ve Rusça arasında değiştirin. İngilizce dışındaki diller, topluluk tarafından çevrilmiş bir `global.ini` dosyasını İngilizce temelin üzerine katmanlar; çevrilmemiş her şey için İngilizceye geri dönülür. Topluluk çevirileri geldikçe daha fazla dil sunulacaktır (bkz. `languages/TRANSLATIONS.md`)
 - **Görev Sözleşmeleri**: Görev sözleşmesi ve brifing metinlerini özel Görevler kategorisinden düzenleyin
 - **Akıllı Filtreleme**: Metinlerde arama yapın, kategoriye (Gemiler, Gemi Öğeleri, Görevler, Teçhizat, Emtialar, Günce, Diğer) veya değişiklik durumuna göre filtreleyin
 - **Sütun Bazlı Filtreler**: Ayrıntılı arama için her sütun başlığının altındaki filtre kutularına doğrudan yazın
@@ -107,10 +108,11 @@ Smart Citizen ayrıca şu kaynaklardan gelen üst akış araçlarını da paketl
 - **Günce Çapraz Referansları**: Madencilik Derlemesi kayıtları üretim çapraz referansları ve her cevherin temel kaynak imzasını alır; üretimde kullanılan emtialar özelleştirilebilir bir `[CF]` ad etiketi ve onları gerektiren tüm planların listesini alır
 - **Tıbbi Sarf Malzemesi Etkileri**: Temel CureLife kalemleri (MedPen, OxyPen, AdrenaPen ve benzerleri) sade dilde bir etki satırı alır; böylece açıklama yalnızca hikâyesini değil, kalemin ne yaptığını da söyler
 - **Gemi Favorileri**: Bir gemiyi yıldızlayarak başına yapılandırılabilir bir ön ek (varsayılan `*`) ekleyin; böylece favoriler oyun içi ASOP terminalinde en üstte sıralanır
-- **Etiket Oluşturucu**: Bileşenler, füzeler, gemi silahları ve emtialardaki köşeli parantezli etiketleri özelleştirin — öğeleri yeniden sıralayın, kısaltma uzunluğunu değiştirin (M / MIL / Military), ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin. Bileşenlerde isteğe bağlı bir Tür öğesi (Kalkan, Soğutucu vb.) vardır; emtialarda ise üretim malzemelerinin neyi beslediğini gösteren bir Kullanım öğesi bulunur
+- **Etiket Oluşturucu**: Bileşenler, füzeler, gemi silahları, emtialar ve zırhlardaki köşeli parantezli etiketleri özelleştirin — öğeleri yeniden sıralayın, kısaltma uzunluğunu değiştirin (M / MIL / Military), ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin. Bileşenlerde isteğe bağlı bir Tür öğesi (Kalkan, Soğutucu vb.) vardır; emtialarda ise üretim malzemelerinin neyi beslediğini gösteren bir Kullanım öğesi bulunur; zırhlarda ise her parçayı Light, Medium, Heavy, Super Heavy, Utility veya Clothing olarak işaretleyen isteğe bağlı bir Weight öğesi bulunur
 - **Görev Başlıkları**: Nakliye başlıklarını rotalarıyla başlatın (ör. `Area18 > Lorville`) — yapılandırılabilir yerleşim, ok, ayırıcı ve konum ayrıntısı, ayrıca isteğe bağlı orijinal başlık kısaltma, canlı önizleme ile
 - **İstatistikler Üstte veya Altta**: İstatistik bloğunun açıklamanın üstünde mi altında mı yer alacağını seçin
 - **Plan Takipçisi**: Zaten sahip olduğunuz üretim planlarını işaretlemek için özel bir sekme. Öğeleri Mevcut ve Sahip Olunan listeleri arasında taşıyın, Görev / Tür / Sınıf / Boyut / Derece'ye göre filtreleyin; sahip olunan öğeler görev plan listelerinde mavi bir `[Owned]` etiketi alır. **Sahip Olunan Planlar için Günlükleri Tara**, Star Citizen günlük dosyalarınızdan sahiplik bilgisini otomatik olarak doldurur ve yalnızca son taramadan bu yana yeni olanları içe aktarır (veya **Başlangıçta günlükleri otomatik tara** açıksa başlangıçta otomatik olarak); **Sahip Olunan Planları Dışa Aktar / İçe Aktar** ise sahip olunan listesini bilgisayarlar arasında taşır (JSON veya CSV; içe aktarma yalnızca ekleme yapar ve scmdb.net dışa aktarımları da çalışır)
+- **Smart Citizen Katmanı**: Oyunun üzerinde isteğe bağlı pencereler (kenarlıksız pencere modu). Bir maden tarama çözücüsü bir imzanın ardındaki yatağı gösterir (`3 × Lindinium`) ve izlediğiniz mineraller veya hurda için parlayabilir, yanıp sönebilir ya da ses çalabilir; kendi kısayolu olan bir çekmece planlarınızı, minerallerin nerede bulunduğunu ve neyin üretiminde kullanıldıklarını arar; katman çalışırken kazandığınız planlar da `Game.log` üzerinden sahip olunan olarak işaretlenir. Yalnızca ekran pikselleri, `Game.log` ve isteğe bağlı bir kısayol: kod enjeksiyonu, bellek okuma veya girdi yok
 - **Görev Etiketleri**: Bölüm başlıklarını (MISSION DETAILS, POTENTIAL BLUEPRINTS vb.), XP etiketini ve başlıklar için kullanılan vurgu etiketini yeniden adlandırın
 - **Bildirimsel CIG Veri Hatası Yamaları**: Bir yama sistemi, bilinen DataForge hatalarına yönelik düzeltmeleri çıkarma sırasında uygular; böylece oyun içi metin CIG'i beklemeden doğru okunur
 - **Seçmeli Kategoriler**: Her geliştirme kategorisini Geliştirmeler sekmesinden bağımsız olarak etkinleştirin veya devre dışı bırakın

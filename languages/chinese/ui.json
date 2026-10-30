@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "无法加载法律信息。"
+    },
+    "overlay": {
+      "ht": "",
+      "at": "叠加层"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "叠加层"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "启动或停止 Smart Citizen 叠加层 (SCO)：在游戏画面上解码采矿信号并显示蓝图抽屉。需要无边框窗口模式。"
     }
   },
   "filters": {
@@ -522,6 +534,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "字体大小："
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "放大或缩小应用中的文字。控件会随之缩放，避免文字被截断。重启后生效。"
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "重启以更改字体大小"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "新的字体大小将在 Smart Citizen 重启后生效。"
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "重启失败"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen 无法自动重启。请手动重新启动以查看新的字体大小。"
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "星际公民"
@@ -580,7 +628,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "存放 user.ini、源缓存、增强内容 INI 及备份的文件夹。如果清理缓存失败，请将其移出 OneDrive 同步的“文档”文件夹。DataForge XML 缓存有独立的路径设置见下方——它约 1.4 GB，默认路径会自动让它避开 OneDrive。"
+      "at": "存放 user.ini、源缓存、增强内容 INI 及备份的文件夹。如果清理缓存失败，请将其移出 OneDrive 同步的“文档”文件夹。DataForge XML 缓存有独立的路径设置见下方——它约 1.2 GB，默认路径会自动让它避开 OneDrive。"
     },
     "app_data_label": {
       "ht": "",
@@ -669,6 +717,22 @@
     "invalid_cache_folder_title": {
       "ht": "",
       "at": "无效的缓存文件夹"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建缓存的权限：\n{folder}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 无法访问以下位置：\n{folder}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法使用以下位置：\n{folder}\n\n{reason}\n\nDataForge 缓存文件夹未更改。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "所选的缓存文件夹是一个文件，而不是文件夹：\n{folder}"
     },
     "dataforge_cache_changed_title": {
       "ht": "",
@@ -772,7 +836,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "提取出的 DataForge XML 树的基础文件夹（约 1.4 GB）。每个频道会嵌套为 {base}\\{channel}\\cache\\dataforge\\。默认使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影响。更改路径会触发重新提取。"
+      "at": "提取出的 DataForge XML 树的基础文件夹（约 1.2 GB）。每个频道会嵌套为 {base}\\{channel}\\cache\\dataforge\\。提取运行期间，此驱动器最多需要约 4.5 GB 可用空间，如果已有缓存则需要更少。当此文件夹位于 OneDrive、网络驱动器或可移动驱动器上，或嵌套层级很深时，其工作文件会改为放在 %TEMP% 中。默认使用 %LOCALAPPDATA%\\Smart Citizen，使其不受 OneDrive 影响。更改路径会触发重新提取。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -1034,7 +1098,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "扩展基础本地化数据的可选功能：增强内容生成器的分类开关、游戏内飞船列表的收藏前缀，以及用于自定义组件、导弹和飞船武器括号名称标签的标签生成器。"
+      "at": "扩展基础本地化数据的可选功能：增强内容生成器的分类开关、游戏内飞船列表的收藏前缀，以及用于自定义组件、导弹、飞船武器、商品和护甲括号名称标签的标签生成器。"
     },
     "enhancements_group": {
       "ht": "",
@@ -1054,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "FPS 武器的战斗数据"
+      "at": "FPS 武器的战斗数据与护甲重量标签"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1098,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "自定义组件、导弹和飞船武器上括号内的名称标签。更改需在点击“保存标签更改”并重新运行“生成增强内容”后生效。"
+      "at": "自定义组件、导弹、飞船武器、商品和护甲上括号内的名称标签，以及货运任务标题中的路线。更改需在点击“保存标签更改”并重新运行“生成增强内容”后生效。"
     },
     "preview_label": {
       "ht": "",
@@ -1106,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "在任务描述中为组件添加注释"
+      "at": "在任务描述中为组件和护甲添加注释"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1171,6 +1235,10 @@
     "blueprints_tooltip_missions": {
       "ht": "",
       "at": "任务：{missions}"
+    },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "默认蓝图（每位玩家都有）"
     },
     "blueprints_available_label": {
       "ht": "",
@@ -1266,15 +1334,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "勾选后，配置的 [等级-Sx-品级] 标签会被添加到任务描述“潜在蓝图”列表中的组件名称上。取消勾选可让任务正文更简洁，同时在其他地方的实际组件名称上保留标签。"
+      "at": "勾选后，配置的组件标签（以及在开启 Armor > Weight 时的护甲重量标签）会被添加到任务描述“潜在蓝图”列表中的物品名称上。取消勾选可让任务正文更简洁，其他地方的物品名称仍保留标签。"
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "恢复每个分类（组件 / 导弹 / 飞船武器）的默认格式、映射和顺序。在你点击“保存标签更改”或“生成增强内容”之前不会保存或重新生成。"
+      "at": "恢复标签生成器每个选项卡的默认格式、映射和顺序（也会把可选的商品和护甲标签重新关闭）。在你点击“保存标签更改”或“生成增强内容”之前不会保存标签配置或重新生成，但 Mission Titles 选项卡的通用标签一改动就会保存，所以重置会立即把它们恢复为默认值。"
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "保存组件 / 导弹 / 飞船武器的标签配置，并重新运行增强内容生成器。新标签会在下次“应用增强内容”后出现在游戏中。"
+      "at": "保存标签生成器所有选项卡的标签配置，并重新运行增强内容生成器。新标签会在下次“应用增强内容”后出现在游戏中。"
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1323,6 +1391,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "编辑收藏标签的短/中/长文本（例如：Collection → Col / Collect / Collection）。"
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "编辑每种护甲重量等级使用的短/中/长文本（例如：Heavy → H / HV / Heavy）。"
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -1980,6 +2052,46 @@
       "ht": "",
       "at": "缓存已清除"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "正在运行提取或增强内容生成时无法清除缓存。请在其完成后重试。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "这将删除以下缓存文件：\n\n{files}\n\n在加载字符串之前，需要从 Data.p4k 重新提取 base.ini。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "是否同时清除 DataForge 缓存？\n{folder}\n\n它保存着从 Data.p4k 提取、用于舰船和武器属性的实体数据，重新生成需要几分钟。如果只想刷新本地化字符串，请保留它。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "无法访问 DataForge 缓存文件夹，因此未清除它：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "正在清除缓存"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "正在清除缓存文件..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "正在删除 {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "正在清除 DataForge 缓存..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "已从缓存中删除 {count} 项。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "无法删除：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "未找到目录"
@@ -2298,10 +2410,6 @@
       "ht": "",
       "at": "正在缓存实体文件…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "正在为差异对比创建缓存快照…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "正在同步数据源..."
@@ -2325,6 +2433,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "正在恢复 user.ini 后重新加载 {channel}..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "正在使用提取的 base.ini 重新加载..."
     }
   },
   "status_bar": {
@@ -2387,6 +2499,10 @@
     "enhancement_generation_failed": {
       "ht": "",
       "at": "增强内容生成失败 — 详情请查看日志标签页"
+    },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "增强内容生成已停止"
     },
     "user_ini_reset": {
       "ht": "",
@@ -2577,6 +2693,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "不再提醒我"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "已将 {count} 个文件从 OneDrive 移动到新的数据文件夹：{new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "部分文件留在了 OneDrive 中"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "安装程序已将你的数据文件夹切换为本地文件夹，Smart Citizen 已将 {moved} 个文件移动到那里。\n\n原位置：\n{old}\n\n新位置：\n{new}\n\n有 {left} 个文件留在了旧文件夹中，原因是新文件夹中已有同名文件（已保留该文件），或者该文件无法移动。“日志”标签页列出了这些文件。\n\n删除旧文件夹之前请先检查，并将仍需要的内容复制到新文件夹。"
     }
   },
   "user_ini_reset": {
@@ -2680,6 +2808,10 @@
       "ht": "",
       "at": "{label}  （缺失）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "你的增强内容已过期。上次生成未完成，或它们是基于较旧的游戏数据生成的。\n请选择要生成的内容。\n你之后可以在增强内容标签页中更改此设置。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "如果 DataForge 数据尚未缓存，将会自动提取。\n首次运行需要几分钟。"
@@ -2726,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 提取仍在进行中。\n\n现在停止吗？你可以稍后重新运行。"
+      "at": "DataForge 提取仍在进行中。\n\n现在停止，还是让它在后台继续运行，同时你继续工作？如果停止，你可以稍后重新运行。"
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "停止"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "在后台运行"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 提取已完成，但运行期间 DataForge 缓存文件夹或频道已更改，因此没有生成增强内容，也没有清除旧缓存。"
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "正在运行提取或增强内容生成时已锁定，完成后会再次解锁。"
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "增强内容生成正在进行"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "增强内容生成仍在进行中。\n\n现在停止，还是让它在后台继续运行，同时你继续工作？如果停止，你可以稍后重新运行。"
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "正在停止增强内容生成…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2767,6 +2923,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "游戏数据库转换超过 30 分钟已被中止。\n\n找到的数据库：{dcb}（{size} MB），位于：\n{path}\n\n正常安装的转换用时远少于一分钟。这通常表示 Smart Citizen 读取了错误的星际公民文件夹。驱动器上残留的旧安装看起来有效，但包含过时的游戏文件。\n\n请打开 RSI Launcher 查看其显示的安装位置。如果与上面的路径不同，请在 Smart Citizen 的 Config 标签页中更正。如果路径相同，请改为在启动器中运行 Verify Files。"
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "可用空间不足。未保存任何内容，你当前的 DataForge 缓存也未被更改。"
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "可用空间不足，无法从 Data.p4k 提取 global.ini。未做任何更改。"
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "驱动器 {drive} 的可用空间为 {free}，而提取运行期间需要在该驱动器上使用约 {needed}。"
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "请释放驱动器 {drive} 上的空间，或在配置标签页中选择其他驱动器上的 DataForge 缓存文件夹，然后重试。"
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "由于 DataForge 缓存文件夹位于 OneDrive、网络驱动器或可移动驱动器上，或嵌套层级很深，提取会在你的 Windows 临时文件夹（{folder}）中进行。请释放驱动器 {drive} 上的空间，然后重试。"
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "请释放驱动器 {drive} 上的空间，然后重试。"
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "驱动器 {drive} 在保存新的 DataForge 缓存时空间已用尽，保存位置：\n{folder}\n\n该缓存不完整。请释放驱动器 {drive} 上的空间，然后重新提取以重建缓存。"
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建工作文件夹的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "请检查该文件夹的权限，或通过 Windows 安全中心的受控文件夹访问允许 Smart Citizen，然后重试。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法在以下位置使用工作文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows 拒绝了 Smart Citizen 在以下位置创建 DataForge 缓存的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen 无法访问 DataForge 缓存文件夹：\n{folder}\n\n提取未开始。请重新连接该驱动器，或在配置标签页中选择其他 DataForge 缓存文件夹，然后重试。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen 无法使用 DataForge 缓存文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 缓存文件夹是指向另一个文件夹的链接：\n{folder}\n\n它指向：\n{target}\n\nSmart Citizen 不会通过链接删除任何内容，因此提取未开始，未做任何更改。请在配置标签页中将它指向的文件夹选为 DataForge 缓存文件夹，然后重试。"
     }
   },
   "apply": {
@@ -2913,7 +3137,17 @@
       },
       "description": {
         "ht": "",
-        "at": "构建添加到组件、导弹、飞船武器和商品上的括号名称标签。用 ▲/▼ 重新排序元素，取消勾选可排除，更改缩写长度，选择分隔符和括号，或将标签放在名称之后而不是之前。"
+        "at": "构建添加到组件、导弹、飞船武器、商品和护甲上的括号名称标签。用 ▲/▼ 重新排序元素，取消勾选可排除，更改缩写长度，选择分隔符和括号，或将标签放在名称之后而不是之前。"
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen 叠加层"
+      },
+      "description": {
+        "ht": "",
+        "at": "在这里或用工具栏的“叠加层”按钮启动叠加层。它在游戏上方解码采矿扫描信号，打开一个抽屉来搜索你的蓝图、矿物和制作，并把你获得的蓝图标记为已拥有。请在主屏幕上以无边框窗口模式运行游戏。"
       }
     },
     "blueprint_tracker": {
@@ -2929,7 +3163,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. 编辑字符串"
+        "at": "9. 编辑字符串"
       },
       "description": {
         "ht": "",
@@ -2939,7 +3173,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. 按列筛选"
+        "at": "10. 按列筛选"
       },
       "description": {
         "ht": "",
@@ -2949,7 +3183,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. 编辑器面板"
+        "at": "11. 编辑器面板"
       },
       "description": {
         "ht": "",
@@ -2959,7 +3193,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. 预览面板"
+        "at": "12. 预览面板"
       },
       "description": {
         "ht": "",
@@ -2969,7 +3203,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. 应用增强内容"
+        "at": "13. 应用增强内容"
       },
       "description": {
         "ht": "",
@@ -2979,7 +3213,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. 配置：外观"
+        "at": "14. 配置：外观"
       },
       "description": {
         "ht": "",
@@ -2989,7 +3223,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. 配置：星际公民安装"
+        "at": "15. 配置：星际公民安装"
       },
       "description": {
         "ht": "",
@@ -2999,7 +3233,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. 配置：智慧公民数据"
+        "at": "16. 配置：智慧公民数据"
       },
       "description": {
         "ht": "",
@@ -3009,7 +3243,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. 配置：基础本地化"
+        "at": "17. 配置：基础本地化"
       },
       "description": {
         "ht": "",
@@ -3019,7 +3253,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. 配置：工具"
+        "at": "18. 配置：工具"
       },
       "description": {
         "ht": "",
@@ -3029,7 +3263,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. 帮助与反馈"
+        "at": "19. 帮助与反馈"
       },
       "description": {
         "ht": "",
@@ -3149,6 +3383,342 @@
     "zip_filter": {
       "ht": "",
       "at": "设置备份 (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 矿物"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "手采矿物"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "打捞"
+    },
+    "surface_only": {
+      "ht": "",
+      "at": "{name}（仅地表）"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "搜索蓝图..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "仅显示已拥有"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "已拥有 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "由 {count} 个任务奖励："
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "新增：{names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen 叠加层"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "尚未加载蓝图数据。请先加载字符串，然后再启动叠加层。"
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "……以及另外 {count} 个"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "未识别"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "采矿扫描解码器因错误已停止。重新启动叠加层即可重试；详情见“日志”标签页。"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "蓝图"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "矿物"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "制造"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "矿物或地点..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "全部取消"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "扫描到此矿物时发出提醒"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "扫描到打捞物时发出提醒"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "输入可扫描物或物品名称..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "没有匹配的矿物。如果列表一直为空，请先加载字符串。"
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "没有匹配结果。提取 DataForge，然后勾选 Commodities 或 Journal 生成增强内容，即可填充此列表。"
+    },
+    "system_other": {
+      "ht": "",
+      "at": "其他"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "用于（通过 {material}）："
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} 需要："
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "需要：{materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "等级：{tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "扫描信号：每块岩石 {base}，最多 {count}"
+    },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "扫描信号：每个 {base}，最多 {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "用于 {count} 个制造物品"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "星系：{system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "此处矿物：{minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen 叠加层"
+    },
+    "desc": {
+      "ht": "",
+      "at": "显示在 Star Citizen 之上的窗口：采矿扫描解码器和蓝图抽屉。请以无边框窗口模式运行游戏。叠加层只读取屏幕和 Game.log，并在你设置了抽屉热键时只为这一个组合键留意按键，从不接触游戏进程。"
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "启动叠加层"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "停止叠加层"
+    },
+    "scan_group": {
+      "ht": "",
+      "at": "扫描解码器"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "抽屉"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "来自 Game.log 的蓝图"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "采矿扫描解码器"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "读取雷达下方的扫描信号，并在其下方显示矿藏类型和数量。"
+    },
+    "label_size": {
+      "ht": "",
+      "at": "扫描文字大小："
+    },
+    "size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "特大"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "扫描到关注的矿物或打捞物时："
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "发光"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "标签显示时周围有脉动的光晕。"
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "闪烁"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "首次读到目标时标签闪烁三次。"
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "更改文字颜色"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "标签文字变为亮绿色。"
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "放大文字"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "标签文字放大到 1.5 倍。"
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "播放提示音"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "首次读到目标时播放一声短促的提示音。"
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "将新蓝图标记为已拥有"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "叠加层运行时，从 Game.log 读取你在游戏中获得的蓝图并标记为已拥有。"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "叠加层抽屉"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "停靠在屏幕边缘的抽屉，位置由下方选择。关闭后将隐藏抽屉及其各个分区。"
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "蓝图"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "搜索蓝图，查看哪些任务奖励它们，并勾选已拥有的蓝图。"
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "矿物"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "输入矿物名称可按星系查看其产地，输入地点可查看该处的矿物。"
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "制造"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "输入矿物可查看使用它的物品，输入物品可查看所需矿物。需要先提取 DataForge。"
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "抽屉位置："
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "左上"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "顶部居中"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "右上"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "左侧居中"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "右侧居中"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "左下"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "底部居中"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "右下"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "抽屉热键："
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "清除"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "在游戏中打开或关闭抽屉，并停在上次使用的分区。在游戏中仍需按住 F 才能用鼠标操作它。点击此框，然后同时按下组合键，例如 Alt+8。Star Citizen 仍会收到这些按键，所以请选一个游戏中不用的组合键。"
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows 拒绝了这个热键。可能已有其他程序在使用它，请换一个。"
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "这个不能用作热键。请按住 Ctrl、Alt 或 Win，再加一个字母、数字、符号、空格、Tab 或导航键（方向键、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 键或 Pause 也可以单独使用。"
     }
   }
 }

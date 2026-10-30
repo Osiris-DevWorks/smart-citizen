@@ -25,7 +25,7 @@ Danke an alle, die Code zu Smart Citizen beigetragen haben:
 - **Ishikudeska**
 - **jonigirl**
 - **Coerwyn**
-- **denis-coach** (h0use)
+- **Den McConan** aka h0use
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
@@ -71,6 +71,7 @@ Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) — die von der Community gepflegte `global.ini`-Übersetzung, die die deutsche Sprachoption antreibt.
 - **[Star-Citizen-Community-Koreanisch-Projekt](https://sc.galaxyhub.kr)** (die Gilden Shatagon, MGM Star Fleet und Falco Rescue) — das Community-Team hinter der koreanischen Lokalisierung. Ihre Datei ist nicht in Smart Citizen enthalten (ihre Lizenz erlaubt keine Weiterverbreitung); Koreanisch ist eine „eigene Datei mitbringen"-Sprache, die über **Sprachdatei zuordnen** auf eine lokale Kopie verweist, die du direkt von ihnen erhältst.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP): die von der Community gepflegte `global.ini`-Übersetzung, die die traditionell-chinesische Sprachoption antreibt. Zuletzt im Mai 2024 aktualisiert, deckt sie etwa zwei Drittel der aktuellen Spieltexte ab; der Rest fällt auf Englisch zurück.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu): die von der Community gepflegte `global.ini`-Übersetzung, die die russische Sprachoption antreibt.
 
 ## Hauptfunktionen
 
@@ -78,7 +79,7 @@ Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 - **Laden & Bearbeiten**: Lade `global.ini` aus deiner Star-Citizen-Installation und passe Strings in einer intuitiven Tabellenansicht an
 - **Unterstützung mehrerer Kanäle**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW erhalten jeweils eigene isolierte `user.ini`, Cache, Sicherungen und DataForge-Extraktion — Kanäle im Konfiguration-Tab ohne Neustart wechseln
 - **Installationsort überprüfen**: Findet jede Star-Citizen-Installation auf deinem PC und liest das Protokoll des RSI-Launchers, um dir zu sagen, welche das Spiel wirklich startet, damit Anwenden nie in eine Kopie schreibt, die du nicht startest
-- **Unterstützung mehrerer Sprachen**: Wechsle App und Spieltexte zwischen Englisch, Französisch, Spanisch, brasilianischem Portugiesisch, Japanisch, Chinesisch (vereinfacht), Italienisch, Deutsch, Türkisch, Koreanisch (eigene Datei) und traditionellem Chinesisch im Konfiguration-Tab. Nicht-englische Sprachen legen eine von der Community übersetzte `global.ini` über die englische Basis, mit englischem Rückfall für alles Unübersetzte. Weitere Sprachen werden freigeschaltet, sobald Community-Übersetzungen eintreffen (siehe `languages/TRANSLATIONS.md`)
+- **Unterstützung mehrerer Sprachen**: Wechsle App und Spieltexte zwischen Englisch, Französisch, Spanisch, brasilianischem Portugiesisch, Japanisch, Chinesisch (vereinfacht), Italienisch, Deutsch, Türkisch, Koreanisch (eigene Datei), traditionellem Chinesisch und Russisch im Konfiguration-Tab. Nicht-englische Sprachen legen eine von der Community übersetzte `global.ini` über die englische Basis, mit englischem Rückfall für alles Unübersetzte. Weitere Sprachen werden freigeschaltet, sobald Community-Übersetzungen eintreffen (siehe `languages/TRANSLATIONS.md`)
 - **Missionsverträge**: Bearbeite Missionsvertrags- und Briefing-Text aus der eigenen Kategorie Missionen
 - **Intelligente Filterung**: Strings durchsuchen, nach Kategorie (Schiffe, Schiffsgegenstände, Missionen, Ausrüstung, Rohstoffe, Journal, Sonstiges) oder Änderungsstatus filtern
 - **Spaltenfilter**: Direkt in Filterfelder unter jeder Spaltenüberschrift tippen für feingranulare Suche
@@ -107,10 +108,11 @@ Die nicht-englischen Spieltexte sind Community-Übersetzungen:
 - **Journal-Querverweise**: Bergbau-Kompendium-Einträge erhalten Herstellungs-Querverweise und die Basis-Ressourcensignatur jedes Erzes; in der Herstellung verwendete Rohstoffe erhalten ein anpassbares `[CF]`-Namens-Tag und eine Liste aller Baupläne, die sie benötigen
 - **Effekte medizinischer Verbrauchsgüter**: Die Basis-CureLife-Pens (MedPen, OxyPen, AdrenaPen und Verwandte) erhalten eine verständliche Wirkungszeile, sodass die Beschreibung sagt, was der Pen tatsächlich bewirkt, statt nur seine Hintergrundgeschichte
 - **Schiffsfavoriten**: Markiere ein Schiff mit einem Stern, um ein konfigurierbares Präfix (Standard `*`) voranzustellen, damit Favoriten im In-Game-ASOP-Terminal ganz oben einsortiert werden
-- **Tag-Generator**: Passe die eingeklammerten Tags bei Komponenten, Raketen, Schiffswaffen und Rohstoffen an — Elemente neu anordnen, Abkürzungslänge ändern (M / MIL / Military), Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren. Komponenten haben ein optionales Typ-Element (Schild, Kühler usw.); Rohstoffe haben ein Verwendungs-Element, das zeigt, wofür ihre Herstellungsmaterialien verwendet werden
+- **Tag-Generator**: Passe die eingeklammerten Tags bei Komponenten, Raketen, Schiffswaffen, Rohstoffen und Rüstungen an — Elemente neu anordnen, Abkürzungslänge ändern (M / MIL / Military), Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren. Komponenten haben ein optionales Typ-Element (Schild, Kühler usw.); Rohstoffe haben ein Verwendungs-Element, das zeigt, wofür ihre Herstellungsmaterialien verwendet werden; Rüstungen haben ein optionales Weight-Element, das jedes Teil als Light, Medium, Heavy, Super Heavy, Utility oder Clothing kennzeichnet
 - **Missionstitel**: Frachtmissionstitel mit ihrer Route einleiten (z. B. `Area18 > Lorville`) — konfigurierbare Platzierung, Pfeil, Trennzeichen und Ortsdetail, plus optionale Kürzung des Originaltitels, mit Live-Vorschau
 - **Werte oberhalb oder unterhalb**: Wähle, ob ein Statistikblock oben oder unten in der Beschreibung sitzt
 - **Bauplan-Tracker**: Ein eigener Tab zum Markieren der Herstellungs-Baupläne, die du bereits besitzt. Gegenstände zwischen Verfügbar und Besessen verschieben, nach Mission / Typ / Klasse / Größe / Grad filtern, und besessene Gegenstände erhalten ein blaues `[Owned]`-Tag in Missions-Bauplan-Listen. **Protokolle nach besessenen Bauplänen durchsuchen** füllt den Besitz automatisch aus deinen Star-Citizen-Protokolldateien, wobei nur importiert wird, was seit dem letzten Scan neu ist (oder automatisch beim Start, wenn **Protokolle beim Start automatisch durchsuchen** aktiviert ist), und **Eigene Baupläne exportieren / importieren** überträgt die Besessen-Liste zwischen PCs (JSON oder CSV; Importe fügen immer nur hinzu, und auch scmdb.net-Exporte funktionieren)
+- **Smart Citizen Overlay**: Optionale Fenster über dem Spiel (randloser Fenstermodus). Ein Bergbau-Scan-Decoder zeigt das Vorkommen hinter einer Signatur (`3 × Lindinium`) und kann bei beobachteten Mineralien oder Bergungsgut leuchten, blinken oder einen Ton abspielen; eine Schublade mit eigenem Tastenkürzel durchsucht deine Baupläne, die Fundorte von Mineralien und was sich aus ihnen herstellen lässt; und Baupläne, die du verdienst, werden aus `Game.log` als besessen markiert, solange das Overlay läuft. Nur Bildschirmpixel, `Game.log` und ein optionales Tastenkürzel: keine Injektion, kein Auslesen von Speicher, keine Eingaben
 - **Missionsbezeichnungen**: Die Abschnittsüberschriften (MISSIONSDETAILS, MÖGLICHE BAUPLÄNE usw.), die XP-Bezeichnung und das für Überschriften verwendete Hervorhebungs-Tag umbenennen
 - **Deklarative CIG-Datenfehler-Patches**: Ein Patch-System wendet Korrekturen für bekannte DataForge-Fehler zur Extraktionszeit an, sodass der In-Game-Text korrekt angezeigt wird, ohne auf CIG warten zu müssen
 - **Selektive Kategorien**: Jede Erweiterungskategorie unabhängig im Erweiterungen-Tab aktivieren oder deaktivieren

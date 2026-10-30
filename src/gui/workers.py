@@ -13,6 +13,8 @@ Contents:
 - InstallScanWorker       — finds every Star Citizen install on the machine (2.4)
 - P4kExtractWorker        — unp4k extraction of global.ini
 - DataForgeExtractWorker  — unp4k + unforge + patch pipeline
+- WorkingFolderDeleteWorker — deletes a finished extraction's working folder (perf proposal)
+- StaleWorkingFolderSweepWorker — sweeps working folders a crash or a kill left (perf proposal)
 - SelectAllDelegate       — Custom Value cell delegate (auto-select, EM3/EM4 wrap)
 - OrderSpinBoxDelegate    — Sort Order cell delegate (0-99 spin box, #142)
 - TestPlanSubmitWorker    — POSTs a tester's test-plan report to a Discord webhook
@@ -20,6 +22,7 @@ Contents:
 
 import logging
 import sys
+import threading
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -27,10 +30,10 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QProgressBar, QProgressDialog, QStyledItemDelegate
 
 from src.parser.ini_parser import load_source_files, load_sources_from_settings
+from src.utils.atomic_io import sweep_stale_temps
 from src.utils.i18n import tr
 from src.utils.resource_path import resolve_patches_dir
 from src.utils.settings import AppSettings
-from src.utils.dataforge_diff import dirty_categories
 from src.utils.tag_builder import tag_config_fingerprint
 logger = logging.getLogger(__name__)
 
@@ -59,10 +62,12 @@ class AnimatedProgressDialog(QProgressDialog):
 
     Starts indeterminate (range 0-0, auto-animating). Call `set_progress(completed,
     total, message)` to switch to determinate; pass total=0 to drop back to
-    indeterminate for phases with an unknown extent. The phase message shows
-    in the label above the bar. In determinate mode the bar displays the
-    percent-complete (default Qt ``%p%`` format); indeterminate mode hides
-    the bar text since there's no meaningful percentage to show.
+    indeterminate for phases with an unknown extent. Nothing counted yet
+    (completed=0) is indeterminate too, until the first count (#507). The
+    phase message shows in the label above the bar. In determinate mode the
+    bar displays the percent-complete (default Qt ``%p%`` format);
+    indeterminate mode hides the bar text since there's no meaningful
+    percentage to show.
     """
 
     def __init__(
@@ -84,9 +89,10 @@ class AnimatedProgressDialog(QProgressDialog):
         self.setMinimumWidth(400)
         # QProgressDialog defaults to autoClose=True/autoReset=True, which
         # hides the dialog the instant setValue() hits maximum() — e.g. the
-        # DataForge cache-snapshot phase ends with completed == total, so
-        # the dialog vanished right there while later phases (patching,
-        # enhancement generation) kept running and updating the status bar.
+        # DataForge extraction's Done phase ends with completed == total (3
+        # of 3), and the dialog used to vanish at such a point while later
+        # phases (patching, enhancement generation) kept running and
+        # updating the status bar.
         # Callers own the dialog lifecycle explicitly via .close(), so
         # reaching 100% on one phase must not close it out from under them.
         self.setAutoClose(False)
@@ -105,8 +111,9 @@ class AnimatedProgressDialog(QProgressDialog):
         False to keep it open. None (the default) removes the guard. Only the
         user's own dismissal is asked about: a programmatic ``close()`` or
         ``hide()`` never is, so callers keep closing the dialog exactly as
-        before. The DataForge extraction uses this to ask whether to stop,
-        the global.ini one to stop without asking.
+        before. The DataForge extraction and enhancement generation use this
+        to ask Stop, Run in Background or Cancel (#483), the global.ini
+        extraction to stop without asking.
 
         Only for a dialog built without a cancel button (``cancel_text=None``,
         like those two). With a button, QProgressDialog adds its own Escape
@@ -142,12 +149,16 @@ class AnimatedProgressDialog(QProgressDialog):
     def set_progress(self, completed: int, total: int, message: str = "") -> None:
         """Drive the bar from a ProgressSink. total=0 ⇒ indeterminate.
 
+        So is completed=0 (#507): a bar standing at 0% while the first step
+        runs looked as if the app had hung, as the generator's first lookups
+        did for seconds. The moving bar stays until something is counted.
+
         Determinate mode applies a two-tone gradient QSS and shows ``%p%``
         inside the bar. Indeterminate mode clears the QSS so Fusion's
         animated busy indicator still works, and hides the bar text.
         Phase messages go to the label above the bar in both modes.
         """
-        if total <= 0:
+        if total <= 0 or completed <= 0:
             if self.maximum() != 0 or self.minimum() != 0:
                 self.setRange(0, 0)
             if self._bar is not None:
@@ -404,6 +415,57 @@ class BlueprintLogScanWorker(QThread):
             self.finished.emit(None)
 
 
+class LiveBlueprintLogWorker(QThread):
+    """Watch the active channel's live ``Game.log`` for new blueprints while
+    the Smart Citizen Overlay runs.
+
+    Polls ``blueprint_log_scanner.GameLogTail`` every few seconds. The first
+    poll can read a whole (tens of MB) ``Game.log``, so this runs off the main
+    thread. Like ``BlueprintLogScanWorker`` it stays read-only: it emits raw
+    names plus the newest timestamp, and the main-thread slot normalizes them
+    and updates the owned set (the persisted watermark stays the Scan's).
+    Only started for LIVE or HOTFIX (#446). Stop with
+    ``requestInterruption()`` + ``wait()``.
+    """
+
+    POLL_MS = 3000
+
+    blueprints_found = pyqtSignal(object, object)  # (list[str] raw names, datetime newest)
+
+    def __init__(self, log_path, since):
+        super().__init__()
+        self._log_path = log_path
+        self._since = since
+
+    def run(self):
+        from src.utils.blueprint_log_scanner import GameLogTail
+        tail = GameLogTail(self._log_path, since=self._since)
+        failing = False
+        while not self.isInterruptionRequested():
+            try:
+                events = tail.poll()
+                failing = False
+            except Exception:
+                # The first failure in a row with its traceback; repeats at
+                # debug, so a lasting fault doesn't flood the Log tab every
+                # poll.
+                if failing:
+                    logger.debug("Live blueprint log poll failed again", exc_info=True)
+                else:
+                    logger.exception("Live blueprint log poll failed")
+                failing = True
+                events = []
+            if events:
+                self.blueprints_found.emit(
+                    [ev.name for ev in events], max(ev.timestamp for ev in events)
+                )
+            # Sleep in short steps so stop() doesn't wait a full poll interval.
+            for _ in range(self.POLL_MS // 100):
+                if self.isInterruptionRequested():
+                    return
+                self.msleep(100)
+
+
 class InstallScanWorker(QThread):
     """Find every Star Citizen install on this machine (2.4).
 
@@ -491,7 +553,17 @@ class InstallScanWorker(QThread):
 
 
 class EnhancementsGeneratorWorker(QThread):
-    """Worker thread for generating enhancements INI files via generate_enhancements_ini.py."""
+    """Worker thread for generating enhancements INI files via generate_enhancements_ini.py.
+
+    requestInterruption() stops it: MainWindow.closeEvent does this, as it
+    does for the extraction workers (#471). The generator's main() polls
+    isInterruptionRequested between jobs and raises GenerationStopped, never
+    during its write phase, so a stop leaves every INI whole: all old before
+    the writes began, all new once they had. A stop is not a failure, so it
+    ends with finished(False), no error signal and nothing logged at ERROR,
+    which would fire the global ErrorDialogHandler on a window that is
+    closing.
+    """
 
     progress = pyqtSignal(str)
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
@@ -527,11 +599,30 @@ class EnhancementsGeneratorWorker(QThread):
         # channel cache root; other languages use the downloaded per-language
         # base.ini, so output lands beside it in the language dir (#30).
         self.language = language
+        # True once a run ended because a stop was requested. Read it rather
+        # than isInterruptionRequested() after the thread is done: QThread
+        # reports no interruption once the thread has finished, so a finished
+        # slot that waits for the thread first would always see False.
+        self.stopped = False
+
+    def _stopped_before(self, where: str) -> bool:
+        """End the run quietly if a stop was requested before *where*.
+
+        Used ahead of the steps before the generator's main(). Nothing has
+        touched the INIs or the stamp yet, so the set stays as current as it
+        was and the next start asks nothing."""
+        if not self.isInterruptionRequested():
+            return False
+        logger.info(f"Enhancements generation stopped before {where}")
+        self.stopped = True
+        self.finished.emit(False)
+        return True
 
     def run(self):
         import importlib.util
         import sys as sys_module
         from src.utils.dataforge_patcher import apply_patches
+        from src.utils.pak_extractor import DATAFORGE_LOOKUPS_SUBPATH
         try:
             if getattr(sys, 'frozen', False):
                 script_path = Path(sys._MEIPASS) / 'scripts' / 'generate_enhancements_ini.py'
@@ -541,32 +632,32 @@ class EnhancementsGeneratorWorker(QThread):
             if not script_path.exists():
                 raise FileNotFoundError(f"Enhancements generator script not found: {script_path}")
 
-            base_ini  = AppSettings.get_base_ini_path(self.language)
-            enh_dir   = AppSettings.get_enhancements_dir(self.language)
-            forge_dir = AppSettings.get_dataforge_cache_dir()
-            # ── Diff-cache check ──────────────────────────────────────────────
-            # Compare the current DataForge XMLs against the last-run manifest.
-            # None  → no manifest yet, run everything.
-            # set() → nothing changed, skip entirely.
-            # {...} → only re-run the categories whose source XMLs changed.
-            from src.utils.pak_extractor import DATAFORGE_LIBS_SUBPATH
-            libs_dir = forge_dir / DATAFORGE_LIBS_SUBPATH
-            diff = dirty_categories(libs_dir)
-            # If enhancement files are missing, force regeneration even if the
-            # manifest says nothing changed — the manifest may have been written
-            # before enhancements were ever successfully generated.
-            if diff is not None and not diff:
-                missing = [
-                    name for name in AppSettings.ENHANCEMENTS_FILES.values()
-                    if not (enh_dir / name).exists()
-                ]
-                if missing:
-                    logger.info(
-                        f"Diff-cache: manifest clean but {len(missing)} enhancement "
-                        f"file(s) missing ({', '.join(missing[:3])}{'…' if len(missing) > 3 else ''}), forcing regeneration."
-                    )
-                    diff = None  # None = treat as first run, regenerate everything
-            # ─────────────────────────────────────────────────────────────────
+            # Everything the stamps will say is captured once, here. Reading
+            # the folder and the build key when the run ended let a channel,
+            # data-folder or cache-folder change during a hidden run stamp a
+            # set this run never wrote, which then read as current.
+            base_ini     = AppSettings.get_base_ini_path(self.language)
+            enh_dir      = AppSettings.get_enhancements_dir(self.language)
+            # Never makes the cache folder (#494): every launcher checks the
+            # cache is there first, so the creating getter has nothing to
+            # make, and it would raise for a folder Windows refuses. The run
+            # still writes into the cache (the patches, the generator's
+            # lookup pickles).
+            forge_dir    = AppSettings.get_dataforge_cache_leaf()
+            english_base = AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
+            build_key    = AppSettings.get_dataforge_build_key(forge_dir)
+            tag_stamp    = tag_config_fingerprint(self.tag_configs, self.annotate_mission_descs)
+            # Temp files a hard kill left between a write and its swap
+            # (atomic_io): the INI folder and the generator's lookup pickle
+            # folder (_cached_lookup's DATAFORGE_LOOKUPS_SUBPATH). The patcher
+            # sweeps each record folder it patches itself.
+            sweep_stale_temps(enh_dir)
+            sweep_stale_temps(forge_dir / DATAFORGE_LOOKUPS_SUBPATH)
+            # No diff-cache check: every category handed in is generated. The
+            # manifest has not narrowed a run since ded720a, and asking it
+            # still hashed the whole DataForge cache on every generation.
+            if self._stopped_before("its patches"):
+                return
             # Re-apply DataForge patches before generation. apply_patches is
             # idempotent: already-patched files are a cheap no-op, so running
             # this every regen picks up newly-added patches without forcing
@@ -584,6 +675,8 @@ class EnhancementsGeneratorWorker(QThread):
                 for err in patch_report.errors:
                     logger.warning(f"  patch error: {err}")
 
+            if self._stopped_before("loading the generator"):
+                return
             self.progress.emit(tr("progress.loading_generator"))
 
             module_name = "generate_enhancements_ini_worker"
@@ -607,6 +700,20 @@ class EnhancementsGeneratorWorker(QThread):
             def _on_progress(completed: int, total: int, message: str) -> None:
                 self.progress_pct.emit(completed, total, message)
 
+            if self._stopped_before("the generator's main()"):
+                return
+            # From here on the set in enh_dir is in progress: a run cut off
+            # or failed before the stamp below is written reads as out of
+            # date, and the next start offers to generate it again. After the
+            # patches and the module load, so a failure there keeps a good
+            # stamp. Before main() rather than its write phase, so a
+            # same-build regenerate (Generate, Tag Builder, a label change)
+            # cut off before writing still reads as stale.
+            AppSettings.invalidate_enhancements_stamp(enh_dir)
+
+            # should_cancel: main() stops between jobs, never during its
+            # writes. A stop that lands during them is ignored, and the run
+            # goes on to certify the set it wrote.
             mod.main(base_ini, forge_dir, categories=self.categories,
                      progress_callback=_on_progress,
                      patches_dir=resolve_patches_dir(),
@@ -621,31 +728,38 @@ class EnhancementsGeneratorWorker(QThread):
                      stats_prepend=self.stats_prepend,
                      standardize_earnable_ship_names=self.standardize_earnable_ship_names,
                      rs_ore_name_annotations=self.rs_ore_name_annotations,
-                     english_base_ini_path=AppSettings.get_base_ini_path(
-                         AppSettings.DEFAULT_LANGUAGE))
+                     english_base_ini_path=english_base,
+                     should_cancel=self.isInterruptionRequested)
             logger.info("Enhancements generation worker: mod.main() completed successfully")
 
-            # Record which DataForge build these (per-language) enhancements
-            # were generated against, so a later language switch can tell fresh
-            # from stale and skip a redundant regen (#30, Approach 1).
-            AppSettings.set_enhancements_stamp(
-                AppSettings.get_dataforge_build_key(), self.language
-            )
-            # And which Tag Builder config they were generated against, so a
-            # later channel switch can tell whether the Save Tag Changes button
-            # actually needs to light up instead of always lighting it. Uses
-            # the configs captured for THIS run (self.*), not live settings, so
-            # the stamp reflects exactly what was generated. Belongs beside the
-            # DataForge stamp: both mark "what these INIs were built from".
-            AppSettings.set_tag_config_stamp(
-                tag_config_fingerprint(
-                    self.tag_configs, self.annotate_mission_descs
-                ),
-                self.language,
-            )
+            # Record which Tag Builder config these INIs were generated
+            # against, so a later channel switch can tell whether the Save Tag
+            # Changes button actually needs to light up instead of always
+            # lighting it. Uses the configs captured for THIS run (self.*),
+            # not live settings, so the stamp reflects exactly what was
+            # generated.
+            AppSettings.set_tag_config_stamp(tag_stamp, self.language, folder=enh_dir)
+            # And which DataForge build, so the startup check, the Generate
+            # button and a later language switch can tell fresh from stale
+            # (#30, Approach 1). This one is the certificate that the set is
+            # whole, so it is written last.
+            AppSettings.set_enhancements_stamp(build_key, self.language, folder=enh_dir)
 
             self.finished.emit(True)
         except Exception as e:
+            if self.isInterruptionRequested():
+                # A stop (see the class docstring). The generator module is
+                # loaded afresh for every run, so its GenerationStopped is
+                # told apart by name. Any other failure after a stop belongs
+                # to the stop too, and is reported the same quiet way, as
+                # the extraction workers do (#471).
+                if type(e).__name__ == "GenerationStopped":
+                    logger.info(f"Enhancements generation stopped ({e})")
+                else:
+                    logger.warning(f"Enhancements generation ended with an error after a stop: {e}")
+                self.stopped = True
+                self.finished.emit(False)
+                return
             logger.exception(f"Enhancements generation failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
@@ -681,7 +795,7 @@ class P4kExtractWorker(QThread):
 
     def run(self):
         from src.utils.pak_extractor import (
-            ExtractionCancelled, P4kLockedError, extract_global_ini,
+            ANTICIPATED_EXTRACTION_ERRORS, ExtractionCancelled, extract_global_ini,
         )
         try:
             extract_global_ini(
@@ -698,15 +812,6 @@ class P4kExtractWorker(QThread):
             logger.info(f"global.ini extraction stopped ({e})")
             self.stopped = True
             self.finished.emit(False)
-        except P4kLockedError as e:
-            # Anticipated, already logged at WARNING by _raise_unp4k_failure
-            # with full diagnostic detail — logger.exception() here would
-            # independently trigger MainWindow's global ErrorDialogHandler
-            # (any ERROR-level record, app-wide) and duplicate the friendly
-            # dialog the `error` signal below shows.
-            logger.warning(f"P4K extraction: Data.p4k locked, likely updating: {e}")
-            self.error.emit(str(e))
-            self.finished.emit(False)
         except Exception as e:
             if self.isInterruptionRequested():
                 # A failure on the way out of a stop (#471) belongs to the
@@ -715,22 +820,63 @@ class P4kExtractWorker(QThread):
                 self.stopped = True
                 self.finished.emit(False)
                 return
-            logger.exception(f"P4K extraction failed: {e}")
+            if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
+                # A locked Data.p4k, a full drive (#482) or a working folder
+                # Windows refused (#490): it carries its own message and was
+                # logged at WARNING, with the detail, where it was raised.
+                # logger.exception would open the global error dialog (any
+                # ERROR-level record, app-wide) on top of the box the error
+                # signal shows.
+                logger.warning(f"P4K extraction: {type(e).__name__}: {e}")
+            else:
+                logger.exception(f"P4K extraction failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(False)
+
+
+# How often a wait for a background delete looks for a stop (perf proposal).
+_BACKGROUND_DELETE_POLL_SECONDS = 0.05
+
+
+def _wait_for_background_deletes(done_events, should_stop) -> bool:
+    """Wait on this thread until every background delete in *done_events*
+    is over, each a WorkingFolderDeleteWorker's ``done`` (perf proposal).
+    Returns False as soon as *should_stop()* turns True instead, so a stop
+    or a close is never held up by a delete."""
+    for done in done_events:
+        while not done.wait(_BACKGROUND_DELETE_POLL_SECONDS):
+            if should_stop():
+                return False
+    return True
 
 
 class DataForgeExtractWorker(QThread):
     """Worker thread for extracting DataForge entity XMLs from Data.p4k.
 
     requestInterruption() stops it (#471). MainWindow does this when the
-    window closes (_stop_extractions_for_close) and when the user picks Stop
+    window closes (_stop_workers_for_close) and when the user picks Stop
     in the progress dialog's question. extract_dataforge polls
     isInterruptionRequested, kills unp4k or unforge, deletes its working
     folder and raises ExtractionCancelled. A stop is not a failure, so it
     ends with finished(False), no error signal and nothing logged at ERROR,
     which would fire the global ErrorDialogHandler for something the user
     asked for.
+
+    A successful run keeps its working folder (perf proposal):
+    extract_dataforge hands it over instead of deleting it, and MainWindow
+    takes it with take_working_folder() once this thread is done and has it
+    deleted in the background (WorkingFolderDeleteWorker) while enhancements
+    are generated. Every other outcome deletes it here, before finished, as
+    extract_dataforge did, so a stop or a failure leaves nothing behind and
+    closing waits for it with the thread.
+
+    *wait_for* holds the ``done`` events of the background deletes still
+    going when the run was started (perf proposal). The run waits for them
+    before extract_dataforge, so its sweep does not skip an earlier run's
+    working folder still being deleted and its free-space check does not
+    count that folder as used. It waits here, never on the GUI thread, with
+    the progress dialog's busy bar (nothing is counted yet), and a stop or a
+    close ends the wait at once, as a stop.
     """
 
     progress = pyqtSignal(str)
@@ -738,24 +884,87 @@ class DataForgeExtractWorker(QThread):
     finished = pyqtSignal(bool)
     error = pyqtSignal(str)
 
-    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir):
+    def __init__(self, p4k_path, unp4k_exe, unforge_exe, cache_dir, wait_for=(), *,
+                 channel: str, cache_base):
         super().__init__()
         self._p4k       = p4k_path
         self._unp4k_exe = unp4k_exe
         self._unforge_exe = unforge_exe
         self._cache_dir = cache_dir
+        self._wait_for = tuple(wait_for)
+        # The channel and the cache base (AppSettings.get_dataforge_cache_base)
+        # this run was started for, which together name its cache folder
+        # (#483). With Run in Background the window stays usable, so the
+        # finished slot checks the run still matches the settings before it
+        # chains anything.
+        self.channel = channel
+        self.cache_base = cache_base
         # True once a run ended because a stop was requested (#471). Read it
         # rather than isInterruptionRequested() after the thread is done:
         # QThread reports no interruption once the thread has finished, so a
         # finished slot that waits for the thread first would always see False.
         self.stopped = False
+        # The working folder extract_dataforge handed over (perf proposal).
+        self._working_folder = None
+        # Set when the user sends the run to the background from the progress
+        # dialog's question (#483): the generation that follows runs without a
+        # dialog too.
+        self.in_background = False
+
+    def _keep_working_folder(self, folder) -> None:
+        """extract_dataforge's defer_cleanup: keep *folder* for MainWindow."""
+        self._working_folder = folder
+
+    def take_working_folder(self):
+        """The working folder a successful run kept (a
+        pak_extractor.WorkingFolder), or None, and from then on None. Read
+        after the thread is done, as stopped is."""
+        folder, self._working_folder = self._working_folder, None
+        return folder
+
+    def _finish(self, success: bool) -> None:
+        """Emit finished. A run that did not succeed deletes a working
+        folder it kept first (perf proposal): a stop after the cache was
+        written, during the patches or as a failure on the way out, or a
+        failure after extract_dataforge returned.
+
+        finished is emitted whatever the delete does. A delete that raises
+        (WorkingFolder.delete keeps every OSError to itself, so only
+        something like a MemoryError in a delete thread) is logged at
+        WARNING and the folder left for the next extraction's sweep, as
+        WorkingFolderDeleteWorker does: with no finished, the window would
+        keep the run as its current extraction for the rest of the
+        session."""
+        try:
+            if not success:
+                folder = self.take_working_folder()
+                if folder is not None:
+                    folder.delete()
+        except Exception as e:
+            # The type too: a MemoryError has no text of its own.
+            logger.warning(f"Could not delete the working folder of a DataForge run that did "
+                           f"not succeed ({type(e).__name__}: {e}); the next extraction's "
+                           f"sweep removes it")
+        finally:
+            self.finished.emit(success)
+
+    @property
+    def cache_dir(self):
+        """The DataForge cache folder this run writes (#483)."""
+        return self._cache_dir
 
     def run(self):
         from src.utils.pak_extractor import (
-            DataForgeTimeoutError, ExtractionCancelled, P4kLockedError, extract_dataforge,
+            ANTICIPATED_EXTRACTION_ERRORS, ExtractionCancelled, extract_dataforge,
         )
         from src.utils.dataforge_patcher import apply_patches
         try:
+            if not all(done.is_set() for done in self._wait_for):
+                logger.info("DataForge extraction waits for a working folder's background "
+                            "delete to end first")
+            if not _wait_for_background_deletes(self._wait_for, self.isInterruptionRequested):
+                raise ExtractionCancelled(
+                    "stopped while it waited for a working folder's background delete")
             extract_dataforge(
                 self._p4k,
                 self._unp4k_exe,
@@ -764,6 +973,7 @@ class DataForgeExtractWorker(QThread):
                 progress_callback=self.progress.emit,
                 progress_pct_callback=lambda c, t, m: self.progress_pct.emit(c, t, m),
                 should_cancel=self.isInterruptionRequested,
+                defer_cleanup=self._keep_working_folder,
             )
             if self.isInterruptionRequested():
                 # Stopped after the cache was written and stamped (#471). The
@@ -771,7 +981,7 @@ class DataForgeExtractWorker(QThread):
                 # skipping them here loses nothing.
                 logger.info("DataForge extraction stopped before its patches")
                 self.stopped = True
-                self.finished.emit(False)
+                self._finish(False)
                 return
             # Apply declarative patches over known CIG data bugs so downstream
             # consumers (enhancement generator, future tooling) see corrected
@@ -799,31 +1009,14 @@ class DataForgeExtractWorker(QThread):
                 # so nothing may chain into generation or a Simple-mode apply.
                 logger.info("DataForge extraction stopped after its patches")
                 self.stopped = True
-                self.finished.emit(False)
+                self._finish(False)
                 return
-            self.finished.emit(True)
+            self._finish(True)
         except ExtractionCancelled as e:
             # A stop (#471). Not a failure: see the class docstring.
             logger.info(f"DataForge extraction stopped ({e})")
             self.stopped = True
-            self.finished.emit(False)
-        except P4kLockedError as e:
-            # See the matching comment in P4kExtractWorker.run(): already
-            # logged at WARNING by _raise_unp4k_failure; logger.exception()
-            # here would independently trigger the global ErrorDialogHandler
-            # and duplicate the friendly dialog the `error` signal shows.
-            logger.warning(f"DataForge extraction: Data.p4k locked, likely updating: {e}")
-            self.error.emit(str(e))
-            self.finished.emit(False)
-        except DataForgeTimeoutError as e:
-            # Same treatment as P4kLockedError above: _raise_unforge_timeout
-            # has already logged the DCB name, its size and unforge's partial
-            # output at WARNING, and the message is user-ready. Letting this
-            # fall through to the blanket handler would log at ERROR and pop
-            # the global ErrorDialogHandler on top of the friendly dialog.
-            logger.warning(f"DataForge extraction: unforge timed out: {e}")
-            self.error.emit(str(e))
-            self.finished.emit(False)
+            self._finish(False)
         except Exception as e:
             if self.isInterruptionRequested():
                 # A failure on the way out of a stop (a file the killed tool
@@ -831,11 +1024,104 @@ class DataForgeExtractWorker(QThread):
                 # stop (#471). Report it the same quiet way.
                 logger.warning(f"DataForge extraction ended with an error after a stop: {e}")
                 self.stopped = True
-                self.finished.emit(False)
+                self._finish(False)
                 return
-            logger.exception(f"DataForge extraction failed: {e}")
+            if isinstance(e, ANTICIPATED_EXTRACTION_ERRORS):
+                # A locked Data.p4k, an unforge timeout, a full drive (#482)
+                # or a working folder Windows refused (#490): it carries its
+                # own message and was logged at WARNING, with the detail
+                # (unforge's partial output, the byte counts, the Windows
+                # error), where it was raised. logger.exception would open
+                # the global error dialog on top of the box the error signal
+                # shows.
+                logger.warning(f"DataForge extraction: {type(e).__name__}: {e}")
+            else:
+                logger.exception(f"DataForge extraction failed: {e}")
             self.error.emit(str(e))
-            self.finished.emit(False)
+            self._finish(False)
+
+
+class WorkingFolderDeleteWorker(QThread):
+    """Deletes the working folder a successful DataForge extraction kept
+    (perf proposal), so enhancement generation does not wait for it.
+
+    MainWindow starts it on the GUI thread once the extraction's own thread
+    is done, never from inside another worker, and closing waits for it
+    within the extraction's close deadline (#471). run() only deletes files
+    and folders (pak_extractor.WorkingFolder.delete): it parses no XML, so
+    it is not #389's shape (a thread pool nested in the QThread that parses
+    XML with lxml), and it runs beside the generator's thread, not inside
+    it. It touches only the working folder, which is beside the cache
+    folder, or in %TEMP% when the run worked there, never the cache folder
+    the generator reads.
+
+    ``done`` is set once run() is over. A DataForge extraction started
+    meanwhile waits on it (DataForgeExtractWorker's *wait_for*): a plain
+    event, which outlives this QThread's deleteLater()."""
+
+    def __init__(self, working_folder):
+        super().__init__()
+        self.working_folder = working_folder
+        self.done = threading.Event()
+
+    def run(self):
+        try:
+            self._delete()
+        except Exception as e:
+            # A backstop: an exception out of run() would reach the crash
+            # handler for a housekeeping job the next extraction redoes.
+            logger.warning(f"A background delete or sweep of DataForge working folders "
+                           f"failed ({type(e).__name__}: {e}); a later sweep removes what "
+                           f"is left")
+        finally:
+            # Let go of the folder before done is set: after a delete that
+            # raised something other than an OSError, the WorkingFolder still
+            # holds its open marker, and an extraction waiting on done sweeps
+            # beside it at once, which skips a folder whose marker is held.
+            self.working_folder = None
+            self.done.set()
+
+    def _delete(self) -> None:
+        self.working_folder.delete()   # never raises an OSError (run() catches the rest)
+
+
+class StaleWorkingFolderSweepWorker(WorkingFolderDeleteWorker):
+    """Sweeps the DataForge working folders a crash or a kill left in one
+    folder (perf proposal): pak_extractor's own sweep, which deletes only a
+    folder whose marker it can delete, so it leaves alone a folder a live
+    run or delete in this or another window still holds.
+
+    A successful run's working folder, with the old cache set aside in it,
+    now lives on while enhancements are generated, so a crash or a kill
+    during its background delete leaves up to about 1.6 GB behind (the
+    dcb and the old cache), or about 2.3 GB after an unforge without
+    --exclude-file, whose ~31,000 records the cache does not keep stay
+    there too. Only the next DataForge extraction beside the same cache
+    folder used to sweep it, and after a cache folder change none ever
+    did. MainWindow runs this once a session at startup beside the active
+    cache folder, and beside a queued old cache folder when it cleans that
+    up.
+
+    It first waits for the background deletes that were running when it
+    was started (*after*, their ``done`` events), so it never works on a
+    folder one of them is finishing. Like a delete, it never runs on the
+    GUI thread and sets ``done`` when it is over. Unlike a delete it can be
+    stopped: closing calls requestInterruption(), which ends the wait at
+    once and stops the sweep before its next leftover folder. A folder it
+    has begun is finished, so a single leftover old cache is still waited
+    for, within the close deadline."""
+
+    def __init__(self, parent_folder, after=()):
+        super().__init__(None)   # no folder of its own: it sweeps parent_folder
+        self.parent_folder = Path(parent_folder)
+        self._after = tuple(after)
+
+    def _delete(self) -> None:
+        from src.utils.pak_extractor import DATAFORGE_SCRATCH_PREFIX, _sweep_stale_scratch
+        if _wait_for_background_deletes(self._after, self.isInterruptionRequested):
+            # Never raises an OSError (run() catches the rest).
+            _sweep_stale_scratch(self.parent_folder, DATAFORGE_SCRATCH_PREFIX,
+                                 should_cancel=self.isInterruptionRequested)
 
 
 class SelectAllDelegate(QStyledItemDelegate):

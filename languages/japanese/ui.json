@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "法的情報を読み込めませんでした。"
+    },
+    "overlay": {
+      "ht": "",
+      "at": "オーバーレイ"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "オーバーレイ"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen オーバーレイ (SCO) を開始または停止します：ゲーム画面上で採掘シグネチャを解読し、ブループリントドロワーを表示します。ボーダーレスウィンドウモードが必要です。"
     }
   },
   "filters": {
@@ -522,6 +534,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "文字サイズ："
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "アプリの文字を大きく、または小さくします。文字が切れないようにコントロールも合わせて拡大・縮小されます。再起動後に反映されます。"
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "文字サイズ変更のための再起動"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "新しい文字サイズは Smart Citizen の再起動後に反映されます。"
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "再起動に失敗しました"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen を自動で再起動できませんでした。新しい文字サイズを反映するには、手動で起動し直してください。"
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "Star Citizen"
@@ -580,7 +628,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "user.ini、ソースキャッシュ、拡張 INI、バックアップを保存するフォルダーです。キャッシュのクリーンアップに失敗する場合は、OneDrive と同期される Documents の外に移動してください。DataForge XML キャッシュには下に独自のパスがあります。約 1.4 GB あるため、デフォルトでは自動的に OneDrive の外に保持されます。"
+      "at": "user.ini、ソースキャッシュ、拡張 INI、バックアップを保存するフォルダーです。キャッシュのクリーンアップに失敗する場合は、OneDrive と同期される Documents の外に移動してください。DataForge XML キャッシュには下に独自のパスがあります。約 1.2 GB あるため、デフォルトでは自動的に OneDrive の外に保持されます。"
     },
     "app_data_label": {
       "ht": "",
@@ -669,6 +717,22 @@
     "invalid_cache_folder_title": {
       "ht": "",
       "at": "無効なキャッシュフォルダー"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所にキャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所にアクセスできませんでした：\n{folder}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所を使用できませんでした：\n{folder}\n\n{reason}\n\nDataForge キャッシュフォルダーは変更されていません。"
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "選択したキャッシュフォルダーはフォルダーではなくファイルです：\n{folder}"
     },
     "dataforge_cache_changed_title": {
       "ht": "",
@@ -772,7 +836,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "抽出された DataForge XML ツリー（約 1.4 GB）のベースフォルダーです。各チャンネルはこの下に {base}\\{channel}\\cache\\dataforge\\ としてネストされます。OneDrive の外に保つため、既定では %LOCALAPPDATA%\\Smart Citizen になります。パスを変更すると再抽出が実行されます。"
+      "at": "抽出された DataForge XML ツリー（約 1.2 GB）のベースフォルダーです。各チャンネルはこの下に {base}\\{channel}\\cache\\dataforge\\ としてネストされます。抽出の実行中は、このドライブに最大で約 4.5 GB の空き容量が必要です（キャッシュがすでにある場合はより少なくて済みます）。このフォルダーが OneDrive、ネットワークドライブまたはリムーバブルドライブ上にあるか、非常に深くネストされている場合、作業ファイルは代わりに %TEMP% に置かれます。OneDrive の外に保つため、既定では %LOCALAPPDATA%\\Smart Citizen になります。パスを変更すると再抽出が実行されます。"
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -1034,7 +1098,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "ベースのローカライズデータを拡張するオプション機能です。拡張ジェネレーターのカテゴリー切り替え、ゲーム内艦船リスト用のお気に入りプレフィックス、そしてコンポーネント・ミサイル・艦船武器の角括弧付き名称タグをカスタマイズするタグビルダーが含まれます。"
+      "at": "ベースのローカライズデータを拡張するオプション機能です。拡張ジェネレーターのカテゴリー切り替え、ゲーム内艦船リスト用のお気に入りプレフィックス、そしてコンポーネント・ミサイル・艦船武器・商品・アーマーの角括弧付き名称タグをカスタマイズするタグビルダーが含まれます。"
     },
     "enhancements_group": {
       "ht": "",
@@ -1054,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "FPS 武器の戦闘ステータス"
+      "at": "FPS 武器の戦闘ステータスとアーマーの重量タグ"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1098,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "コンポーネント、ミサイル、艦船武器の角括弧付き名称タグをカスタマイズします。変更は「タグの変更を保存」をクリックし、「拡張を生成」を再実行した後に反映されます。"
+      "at": "コンポーネント、ミサイル、艦船武器、商品、アーマーの角括弧付き名称タグと、輸送ミッションのタイトルに表示するルートをカスタマイズします。変更は「タグの変更を保存」をクリックし、「拡張を生成」を再実行した後に反映されます。"
     },
     "preview_label": {
       "ht": "",
@@ -1106,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "ミッション説明内のコンポーネントに注釈を付ける"
+      "at": "ミッション説明内のコンポーネントとアーマーに注釈を付ける"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1171,6 +1235,10 @@
     "blueprints_tooltip_missions": {
       "ht": "",
       "at": "ミッション：{missions}"
+    },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "初期ブループリント（全プレイヤーが所持）"
     },
     "blueprints_available_label": {
       "ht": "",
@@ -1266,15 +1334,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "チェックすると、ミッション説明の POTENTIAL BLUEPRINTS リスト内のコンポーネント名に、設定した [CLASS-Sx-grade] タグが追加されます。ミッション本文をすっきりさせつつ、他の場所の実際のコンポーネント名にはタグを残したい場合はチェックを外してください。"
+      "at": "チェックすると、設定したコンポーネントタグと、Armor > Weight がオンの場合はアーマー重量タグが、ミッション説明の POTENTIAL BLUEPRINTS リスト内のアイテム名に追加されます。ミッション本文をすっきりさせたい場合はチェックを外してください。他の場所のアイテム名にはタグが残ります。"
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "すべてのカテゴリー（コンポーネント／ミサイル／艦船武器）について、デフォルトのパターン、マッピング、並び順を復元します。「タグの変更を保存」または「拡張を生成」をクリックするまで、保存も再生成もされません。"
+      "at": "タグビルダーのすべてのタブについて、デフォルトのパターン、マッピング、並び順を復元します（オプションの商品タグとアーマータグもオフに戻ります）。タグ設定は「タグの変更を保存」または「拡張を生成」をクリックするまで保存も再生成もされませんが、「Mission Titles」タブの汎用タグは変更するとすぐに保存されるため、リセットするとすぐにデフォルトに戻ります。"
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "コンポーネント／ミサイル／艦船武器のタグ設定を保存し、拡張ジェネレーターを再実行します。新しいタグは次回の「拡張を適用」後にゲーム内に表示されます。"
+      "at": "タグビルダーのすべてのタブのタグ設定を保存し、拡張ジェネレーターを再実行します。新しいタグは次回の「拡張を適用」後にゲーム内に表示されます。"
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1323,6 +1391,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "コレクションラベルの短縮/中間/長い表記を編集します（例：Collection → Col / Collect / Collection）。"
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "各アーマー重量クラスに使用する短縮/中間/長い表記を編集します（例：Heavy → H / HV / Heavy）。"
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -1980,6 +2052,46 @@
       "ht": "",
       "at": "キャッシュをクリアしました"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "抽出または拡張生成の実行中はキャッシュをクリアできません。完了してからもう一度お試しください。"
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "次のキャッシュファイルを削除します：\n\n{files}\n\n文字列を読み込む前に、Data.p4k から base.ini を再抽出する必要があります。"
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge キャッシュもクリアしますか？\n{folder}\n\nこれには艦船と武器のステータス用に Data.p4k から抽出したエンティティデータが入っており、作り直すには数分かかります。ローカライズ文字列を更新するだけなら残しておいてください。"
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーにアクセスできなかったため、クリアしていません：\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "キャッシュをクリアしています"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "キャッシュファイルをクリアしています..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} を削除しています..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge キャッシュをクリアしています..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "キャッシュから {count} 件を削除しました。"
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "削除できませんでした：\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "ディレクトリが見つかりません"
@@ -2298,10 +2410,6 @@
       "ht": "",
       "at": "エンティティファイルをキャッシュしています…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "差分用にキャッシュのスナップショットを作成しています…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "ソースを同期しています..."
@@ -2325,6 +2433,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "user.ini の復元後、{channel} を再読み込みしています..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "抽出した base.ini で再読み込みしています..."
     }
   },
   "status_bar": {
@@ -2387,6 +2499,10 @@
     "enhancement_generation_failed": {
       "ht": "",
       "at": "拡張の生成に失敗しました — 詳細はログタブを参照してください"
+    },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "拡張の生成を停止しました"
     },
     "user_ini_reset": {
       "ht": "",
@@ -2577,6 +2693,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "今後表示しない"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count} 個のファイルを OneDrive から新しいデータフォルダーに移動しました：{new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "一部のファイルが OneDrive に残りました"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "セットアップでデータフォルダーがローカルフォルダーに切り替えられ、Smart Citizen は {moved} 個のファイルをそこへ移動しました。\n\n移動元：\n{old}\n\n移動先：\n{new}\n\n{left} 個のファイルは古いフォルダーに残りました。新しいフォルダーに同じ名前のファイルが既にあった（そちらを残しました）か、ファイルを移動できなかったためです。「ログ」タブに一覧があります。\n\n古いフォルダーを削除する前に中身を確認し、まだ必要なものは新しいフォルダーにコピーしてください。"
     }
   },
   "user_ini_reset": {
@@ -2680,6 +2808,10 @@
       "ht": "",
       "at": "{label}  （不足）"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "拡張が古くなっています。前回の生成が完了しなかったか、古いゲームデータから生成されたものです。\n生成するものを選択してください。\nこれは後で拡張タブから変更できます。"
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge データはまだキャッシュされていない場合、自動的に抽出されます。\n初回実行には数分かかります。"
@@ -2726,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？後でもう一度実行できます。"
+      "at": "DataForge の抽出はまだ実行中です。\n\n今すぐ停止しますか？それとも、作業を続けながらバックグラウンドで実行を続けますか？停止した場合は、後でもう一度実行できます。"
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "停止"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "バックグラウンドで実行"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge の抽出は完了しましたが、実行中に DataForge キャッシュフォルダーまたはチャンネルが変更されたため、拡張は生成されず、古いキャッシュもクリアされていません。"
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "抽出または拡張の生成の実行中はロックされ、完了すると再びロックが解除されます。"
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "拡張の生成を実行中"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "拡張の生成はまだ実行中です。\n\n今すぐ停止しますか？それとも、作業を続けながらバックグラウンドで実行を続けますか？停止した場合は、後でもう一度実行できます。"
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "拡張の生成を停止しています…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2767,6 +2923,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "ゲームデータベースの変換に30分以上かかったため中止されました。\n\n検出されたデータベース: {dcb} ({size} MB)\n場所: {path}\n\n正常なインストールなら1分もかかりません。多くの場合、Smart Citizen が誤った Star Citizen フォルダーを読み込んでいることを意味します。ドライブに残った古いインストールは有効に見えても、古いゲームファイルを含んでいます。\n\nRSI Launcher を開き、表示されているインストール先を確認してください。上記のパスと異なる場合は、Smart Citizen の Config タブで修正してください。同じパスの場合は、代わりに Verify Files を実行してください。"
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "空き容量が不足しています。何も保存されておらず、現在の DataForge キャッシュは変更されていません。"
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Data.p4k から global.ini を抽出するための空き容量が不足しています。何も変更されていません。"
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "ドライブ {drive} の空き容量は {free} で、抽出の実行中はこのドライブに約 {needed} が必要です。"
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "ドライブ {drive} の空き容量を確保するか、設定タブで別のドライブにある DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーが OneDrive、ネットワークドライブまたはリムーバブルドライブ上にあるか、非常に深くネストされているため、抽出は Windows の一時フォルダー（{folder}）で行われます。ドライブ {drive} の空き容量を確保してから、もう一度お試しください。"
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "ドライブ {drive} の空き容量を確保してから、もう一度お試しください。"
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "新しい DataForge キャッシュを次の場所に保存している間に、ドライブ {drive} の空き容量がなくなりました：\n{folder}\n\nこのキャッシュは不完全です。ドライブ {drive} の空き容量を確保してから、もう一度抽出してキャッシュを再構築してください。"
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所に作業フォルダーを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "このフォルダーのアクセス許可を確認するか、Windows セキュリティのコントロールされたフォルダーアクセスで Smart Citizen を許可するか、設定タブで別の DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "このフォルダーのアクセス許可を確認するか、Windows セキュリティのコントロールされたフォルダーアクセスで Smart Citizen を許可してから、もう一度お試しください。"
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が次の場所で作業フォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows によって、次の場所に DataForge キャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen が DataForge キャッシュフォルダーにアクセスできませんでした：\n{folder}\n\n抽出は開始されていません。ドライブを再接続するか、設定タブで別の DataForge キャッシュフォルダーを選択してから、もう一度お試しください。"
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen が DataForge キャッシュフォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge キャッシュフォルダーは別のフォルダーへのリンクです：\n{folder}\n\nリンク先：\n{target}\n\nSmart Citizen はリンクを通して何も削除しないため、抽出は開始されず、何も変更されていません。設定タブでリンク先のフォルダーを DataForge キャッシュフォルダーとして選択してから、もう一度お試しください。"
     }
   },
   "apply": {
@@ -2913,7 +3137,17 @@
       },
       "description": {
         "ht": "",
-        "at": "コンポーネント、ミサイル、艦船武器、商品に追加される角括弧付きの名称タグを組み立てます。▲/▼ で要素を並べ替え、チェックを外して除外し、省略の長さを変更し、区切り文字と括弧を選び、あるいはタグを名前の前ではなく後ろに配置できます。"
+        "at": "コンポーネント、ミサイル、艦船武器、商品、アーマーに追加される角括弧付きの名称タグを組み立てます。▲/▼ で要素を並べ替え、チェックを外して除外し、省略の長さを変更し、区切り文字と括弧を選び、あるいはタグを名前の前ではなく後ろに配置できます。"
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen オーバーレイ"
+      },
+      "description": {
+        "ht": "",
+        "at": "ここかツールバーのオーバーレイボタンでオーバーレイを開始します。ゲームの上で採掘スキャンのシグネチャーを解読し、ブループリント・鉱物・クラフトを検索するドロワーを開き、入手したブループリントを所有済みにします。ゲームはメイン画面のボーダーレスウィンドウモードで実行してください。"
       }
     },
     "blueprint_tracker": {
@@ -2929,7 +3163,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. 文字列を編集"
+        "at": "9. 文字列を編集"
       },
       "description": {
         "ht": "",
@@ -2939,7 +3173,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. 列でフィルター"
+        "at": "10. 列でフィルター"
       },
       "description": {
         "ht": "",
@@ -2949,7 +3183,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. エディターペイン"
+        "at": "11. エディターペイン"
       },
       "description": {
         "ht": "",
@@ -2959,7 +3193,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. プレビューペイン"
+        "at": "12. プレビューペイン"
       },
       "description": {
         "ht": "",
@@ -2969,7 +3203,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. 拡張を適用"
+        "at": "13. 拡張を適用"
       },
       "description": {
         "ht": "",
@@ -2979,7 +3213,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Config：外観"
+        "at": "14. Config：外観"
       },
       "description": {
         "ht": "",
@@ -2989,7 +3223,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Config：Star Citizen のインストール"
+        "at": "15. Config：Star Citizen のインストール"
       },
       "description": {
         "ht": "",
@@ -2999,7 +3233,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Config：Smart Citizen データ"
+        "at": "16. Config：Smart Citizen データ"
       },
       "description": {
         "ht": "",
@@ -3009,7 +3243,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Config：ベースローカライズ"
+        "at": "17. Config：ベースローカライズ"
       },
       "description": {
         "ht": "",
@@ -3019,7 +3253,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Config：ツール"
+        "at": "18. Config：ツール"
       },
       "description": {
         "ht": "",
@@ -3029,7 +3263,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. ヘルプとフィードバック"
+        "at": "19. ヘルプとフィードバック"
       },
       "description": {
         "ht": "",
@@ -3149,6 +3383,342 @@
     "zip_filter": {
       "ht": "",
       "at": "設定バックアップ (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 鉱物"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS 鉱物"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "サルベージ"
+    },
+    "surface_only": {
+      "ht": "",
+      "at": "{name}（地表のみ）"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "ブループリントを検索..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "所持のみ"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "所持 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "{count} 件のミッションの報酬："
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "新規：{names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen オーバーレイ"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "ブループリントデータがまだ読み込まれていません。先に文字列を読み込んでから、オーバーレイを開始してください。"
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...他 {count} 件"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "不明"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "採掘スキャンデコーダーがエラーで停止しました。オーバーレイを再起動すると再試行できます。詳細はログタブにあります。"
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "ブループリント"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "鉱物"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "クラフト"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "鉱物または場所..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "すべて解除"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "この鉱物をスキャンしたときに知らせます"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "サルベージをスキャンしたときに知らせます"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "スキャン対象またはアイテム名を入力..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "一致する鉱物がありません。空のままなら先に文字列を読み込んでください。"
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "一致するものがありません。DataForge を抽出し、Commodities または Journal にチェックを入れて拡張を生成すると、この一覧が埋まります。"
+    },
+    "system_other": {
+      "ht": "",
+      "at": "その他"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "使用先（{material}）："
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} に必要なもの："
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "必要な素材：{materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "ティア：{tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "スキャン信号：岩1つあたり {base}、最大 {count}"
+    },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "スキャン信号：1つあたり {base}、最大 {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "{count} 個のクラフトアイテムで使用"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "星系：{system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "ここの鉱物：{minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen オーバーレイ"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Star Citizen の上に表示するウィンドウです。採掘スキャンのデコーダーとブループリントドロワーを含みます。ゲームはボーダーレスウィンドウモードで起動してください。オーバーレイは画面と Game.log を読むだけで、ドロワーのホットキーを設定した場合は、その組み合わせのためだけにキー入力を確認します。ゲームのプロセスには一切触れません。"
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "オーバーレイを開始"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "オーバーレイを停止"
+    },
+    "scan_group": {
+      "ht": "",
+      "at": "スキャンデコーダー"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "ドロワー"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Game.log からのブループリント"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "採掘スキャンデコーダー"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "レーダーの下にあるスキャン署名を読み取り、その下に鉱床の種類と数を表示します。"
+    },
+    "label_size": {
+      "ht": "",
+      "at": "スキャン文字の大きさ："
+    },
+    "size_small": {
+      "ht": "",
+      "at": "小"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "中"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "大"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "特大"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "注目中の鉱物またはサルベージをスキャンしたとき："
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "光らせる"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "表示中はラベルの周りが脈打つように光ります。"
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "点滅"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "対象を最初に読み取ったとき、ラベルが3回点滅します。"
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "文字色を変える"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "ラベルの文字が明るい緑色になります。"
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "文字を大きく"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "ラベルの文字が1.5倍の大きさになります。"
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "音を鳴らす"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "対象を最初に読み取ったとき、短いチャイムが鳴ります。"
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "新しいブループリントを所持済みにする"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "オーバーレイの実行中、ゲーム内で受け取ったブループリントを Game.log から読み取り、所持済みにします。"
+    },
+    "drawer": {
+      "ht": "",
+      "at": "オーバーレイのドロワー"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "画面端に固定されるドロワーです。位置は下で選びます。オフにするとドロワーと各セクションを隠します。"
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "ブループリント"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "ブループリントを検索し、報酬として得られるミッションを確認して、所有しているものにチェックを入れます。"
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "鉱物"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "鉱物名を入力すると産出場所を星系ごとに表示します。場所を入力するとその場所の鉱物を表示します。"
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "クラフト"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "鉱物名を入力するとそれを使うアイテムを、アイテム名を入力すると必要な鉱物を表示します。DataForge の抽出が必要です。"
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "ドロワーの位置："
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "左上"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "上中央"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "右上"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "左中央"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "右中央"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "左下"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "下中央"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "右下"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "ドロワーのホットキー："
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "クリア"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "ゲーム中にドロワーを最後に使ったセクションで開閉します。ゲーム中にマウスで操作するには、これまでどおり F を押し続けてください。ボックスをクリックしてから、Alt+8 のようにキーを同時に押してください。これらのキーは Star Citizen にも届くので、ゲームで使わない組み合わせを選んでください。"
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows がこのホットキーを拒否しました。別のプログラムがすでに使っている可能性があります。別のキーを選んでください。"
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "これはホットキーにできません。Ctrl、Alt、Win のいずれかを押しながら、英字、数字、記号、Space、Tab、または移動キー（矢印、Home、End、Page Up/Down、Insert、Delete）を押してください。Shift を加えてもかまいません。F キーや Pause は単独でも使えます。"
     }
   }
 }

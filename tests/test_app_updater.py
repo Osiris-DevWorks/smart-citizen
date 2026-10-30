@@ -8,7 +8,7 @@ we should, start nagging on valid data, or download the wrong asset).
 """
 import pytest
 
-from utils.app_updater import parse_version, is_newer, pick_installer_asset
+from src.utils.app_updater import parse_version, is_newer, pick_installer_asset
 
 
 class TestParseVersion:

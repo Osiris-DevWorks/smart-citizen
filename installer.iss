@@ -86,7 +86,14 @@ Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citize
 var
   SCDirectoryPage: TInputDirWizardPage;
   DataDirPage: TInputDirWizardPage;
-  { 1.4.1: cache lives on a separate page so users can split the ~1.4 GB
+  { #455: a YES on the OneDrive warning (NextButtonClick) moves the data. This
+    is the data folder it was in, kept until a NO; PendingDataMoveFrom is what
+    WriteInstallerChoicesToRegistry saves as pending_data_move_from, worked
+    out each time the page is left. The app moves Smart Citizen's own folders
+    out of it at its next start (AppSettings.migrate_installer_data_move). }
+  OneDriveMoveFrom: String;
+  PendingDataMoveFrom: String;
+  { 1.4.1: cache lives on a separate page so users can split the ~1.2 GB
     DataForge tree off the user-data folder (e.g. SSD for cache,
     OneDrive Documents for user.ini). Saved to HKCU\...\cache_dir;
     cleared on Reset so the app's default (%LOCALAPPDATA%\Smart Citizen)
@@ -848,6 +855,15 @@ begin
     Log('Saved user_data_dir to registry: ' + DataDir);
   end;
 
+  { #455: the YES on the OneDrive warning moves the data. Setup only names the
+    folder; the app moves Smart Citizen's own folders out of it at its next
+    start and deletes this value. }
+  if PendingDataMoveFrom <> '' then
+  begin
+    RegWriteStringValue(HKCU, SCRegNode, 'pending_data_move_from', PendingDataMoveFrom);
+    Log('Saved pending_data_move_from to registry: ' + PendingDataMoveFrom);
+  end;
+
   { 1.4.1+: persist the cache folder choice. Same comparison rule as
     user_data_dir — clear the override when the user accepted the
     %LOCALAPPDATA%\Smart Citizen default so the app's runtime resolver
@@ -927,6 +943,8 @@ begin
            SCRegNode, 'selected_language', 'korean');
       10: RegWriteStringValue(HKCU,
            SCRegNode, 'selected_language', 'chinese_traditional');
+      11: RegWriteStringValue(HKCU,
+           SCRegNode, 'selected_language', 'russian');
     else
       RegWriteStringValue(HKCU,
         SCRegNode, 'selected_language', 'english');
@@ -1757,6 +1775,7 @@ begin
   LanguageChoicePage.Add('Turkish');
   LanguageChoicePage.Add('Korean');
   LanguageChoicePage.Add('Traditional Chinese');
+  LanguageChoicePage.Add('Russian');
 
   { Pre-select the prior choice on a reinstall so an upgrade doesn't
     silently reset a non-English user back to English. Defaults to
@@ -1787,6 +1806,8 @@ begin
       LanguageIndex := 9
     else if CompareText(SavedLanguage, 'chinese_traditional') = 0 then
       LanguageIndex := 10
+    else if CompareText(SavedLanguage, 'russian') = 0 then
+      LanguageIndex := 11
     else if CompareText(SavedLanguage, 'english') <> 0 then
       { A saved value that matches none of this page's options — e.g. a
         newer app version shipped a 5th language before this installer's
@@ -1911,7 +1932,7 @@ begin
     + 'generated enhancement INIs, and rolling backups under this folder. The default is your '
     + 'Documents folder.'
     + #13#10 + #13#10 +
-    'The ~1.4 GB DataForge XML cache lives on its own page next — splitting them lets you keep '
+    'The ~1.2 GB DataForge XML cache lives on its own page next — splitting them lets you keep '
     + 'your tiny user data wherever you like while sending the cache to a fast SSD.'
     + #13#10 + #13#10 +
     'Consider a custom location if:'
@@ -1961,8 +1982,8 @@ begin
   CacheDirPage := CreateInputDirPage(
     DataDirPage.ID,
     'DataForge Cache Location',
-    'Choose where Smart Citizen stores the ~1.4 GB DataForge XML cache.',
-    'The DataForge cache contains ~28,000 entity XMLs extracted from Star Citizen''s '
+    'Choose where Smart Citizen stores the ~1.2 GB DataForge XML cache.',
+    'The DataForge cache contains ~31,000 entity XMLs extracted from Star Citizen''s '
     + 'Data.p4k file. It''s used to generate the in-game item descriptions you see in the '
     + 'Enhancements tab.'
     + #13#10 + #13#10 +
@@ -1971,7 +1992,7 @@ begin
     + #13#10 + #13#10 +
     'Pick a custom location if you want to:'
     + #13#10 +
-    '  - Move the 1.4 GB tree to a different drive (faster SSD, or to free C: space)'
+    '  - Move the 1.2 GB tree to a different drive (faster SSD, or to free C: space)'
     + #13#10 +
     '  - Share the cache between multiple Smart Citizen installs on this PC'
     + #13#10 + #13#10 +
@@ -2268,44 +2289,57 @@ begin
     returns False, and a silent Setup that gets False here exits without
     installing. So keep the folder as it is (the NO answer). After the
     relaunch the app shows its own OneDrive warning (#174,
-    _maybe_warn_onedrive_data_dir in src/gui/main_window.py). }
+    _maybe_warn_onedrive_data_dir in src/gui/main_window.py). A silent Setup
+    therefore never asks the app to move data either (#455). }
   if WizardSilent() then
     Exit;
 
   Chosen := Trim(DataDirPage.Values[0]);
-  if not IsPathOnOneDrive(Chosen) then
-    Exit;
-
-  Suggested := SuggestLocalDataDir();
-  Response := MsgBox(
-    'The data folder you chose is inside OneDrive:' + #13#10 + #13#10 +
-    '  ' + Chosen + #13#10 + #13#10 +
-    'OneDrive syncs and can dehydrate or empty files under its tree. Smart Citizen '
-    + 'has lost user.ini data this way (your favorited ships and custom edits live there). '
-    + 'A local folder outside OneDrive is strongly recommended.' + #13#10 + #13#10 +
-    'Switching does not move your existing data. If you already have data in that '
-    + 'OneDrive folder (user.ini, backups), it stays there and Smart Citizen will use '
-    + 'the new folder instead, so your saved edits will not show up. To keep them, '
-    + 'click NO. Smart Citizen then offers to move your data to a local folder the '
-    + 'next time it starts, and the data folder setting on the Config tab (Advanced '
-    + 'view) can do it too.' + #13#10 + #13#10 +
-    'Switch to a local folder?' + #13#10 +
-    '  - Click YES to use ' + Suggested + #13#10 +
-    '  - Click NO to keep the OneDrive folder anyway',
-    mbError, MB_YESNO);
-
-  if Response = IDYES then
+  if IsPathOnOneDrive(Chosen) then
   begin
-    { Only the folder name changes. WriteInstallerChoicesToRegistry saves it as
-      user_data_dir (it clears the override instead when the folder equals the
-      natural default), and nothing copies the old data across (the box says
-      so). }
-    DataDirPage.Values[0] := Suggested;
-    { Stay on the page so the user sees the swapped-in local path before
-      committing. Mirrors #174 keeping the user on the data-dir surface. }
-    Result := False;
+    Suggested := SuggestLocalDataDir();
+    Response := MsgBox(
+      'The data folder you chose is inside OneDrive:' + #13#10 + #13#10 +
+      '  ' + Chosen + #13#10 + #13#10 +
+      'OneDrive syncs and can dehydrate or empty files under its tree. Smart Citizen '
+      + 'has lost user.ini data this way (your favorited ships and custom edits live there). '
+      + 'A local folder outside OneDrive is strongly recommended.' + #13#10 + #13#10 +
+      'If you switch, Smart Citizen moves your existing data (user.ini, backups and the '
+      + 'rest of its own folders) out of that OneDrive folder the next time it starts. '
+      + 'A file that is already in the new folder is kept, and Smart Citizen tells you '
+      + 'about anything that stays behind.' + #13#10 + #13#10 +
+      'Switch to a local folder?' + #13#10 +
+      '  - Click YES to use ' + Suggested + ' and move your data there' + #13#10 +
+      '  - Click NO to keep the OneDrive folder anyway',
+      mbError, MB_YESNO);
+
+    if Response = IDYES then
+    begin
+      { #455: the data moves with the folder. Setup only remembers where it was,
+        and only when the folder the user is leaving holds it: the data folder
+        the app uses now (GetDocumentsDir, from before this install's writes).
+        A OneDrive folder typed in for the first time holds none of it. }
+      if CompareText(CanonDir(Chosen), CanonDir(GetDocumentsDir())) = 0 then
+        OneDriveMoveFrom := CanonDir(GetDocumentsDir());
+      DataDirPage.Values[0] := Suggested;
+      { Stay on the page so the user sees the swapped-in local path before
+        committing. Mirrors #174 keeping the user on the data-dir surface. }
+      Result := False;
+      Exit;
+    end;
+    { Response = IDNO: proceed with the OneDrive folder; the user was warned.
+      Keeping a OneDrive folder moves nothing, even after an earlier YES. }
+    OneDriveMoveFrom := '';
   end;
-  { Response = IDNO: proceed with the OneDrive folder; the user was warned. }
+
+  { Leaving the page. The data moves unless the folder chosen in the end is the
+    one it is already in (an empty field is the Documents default). }
+  if Chosen = '' then
+    Chosen := GetDefaultDocumentsDir();
+  if (OneDriveMoveFrom <> '') and (CompareText(CanonDir(Chosen), OneDriveMoveFrom) <> 0) then
+    PendingDataMoveFrom := OneDriveMoveFrom
+  else
+    PendingDataMoveFrom := '';
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;

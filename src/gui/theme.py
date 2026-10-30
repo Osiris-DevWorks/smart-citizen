@@ -11,7 +11,9 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtGui import QColor, QFontDatabase, QPalette
-from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyle
+from PyQt6.QtWidgets import (
+    QApplication, QFrame, QProxyStyle, QScrollArea, QStyle, QVBoxLayout, QWidget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +116,58 @@ def get_button_color(role: str) -> str:
     theme = AppSettings.get_theme()
     palette = _BUTTON_COLORS.get(theme, _BUTTON_COLORS[DEFAULT_THEME])
     return palette[role]
+
+
+# How opaque a stylesheet colour is drawn on a disabled button (#483).
+DISABLED_ALPHA = 110
+
+
+def dimmed_color(color: str) -> str:
+    """*color* as a stylesheet rgba() at DISABLED_ALPHA, for a button's
+    ``:disabled`` rule. A stylesheet colour outlives setEnabled(False), so a
+    button coloured by one has to dim itself to stop looking clickable."""
+    c = QColor(color)
+    return f"rgba({c.red()}, {c.green()}, {c.blue()}, {DISABLED_ALPHA})"
+
+
+def host_in_scroll_area(tab: QWidget, content: QWidget) -> None:
+    """Fill *tab* with a frameless scroll area showing *content*.
+
+    The Config, Enhancements, Blueprint Tracker and Overlay tabs build into a
+    content widget and host it this way, so each scrolls instead of squeezing
+    its controls. MainWindow adds the tab widget with stretch=1, so the
+    scroll area fills the tab and this does NOT reintroduce the tab-switch
+    resize that got the 1.4.x Enhancements scroll-area attempt reverted
+    (#65). The frame and viewport background stay clear so the themed
+    background shows through rather than the scroll area painting its own
+    Base colour.
+    """
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.viewport().setAutoFillBackground(False)
+    content.setAutoFillBackground(False)
+    scroll.setWidget(content)
+
+    outer = QVBoxLayout(tab)
+    outer.setContentsMargins(0, 0, 0, 0)
+    outer.addWidget(scroll)
+
+
+def needs_apply_style() -> str:
+    """Stylesheet for a button the dirty-tracking system lights up: the
+    needs_apply red, dimmed while the button is disabled (#483).
+
+    A running job locks some of these buttons while their change is still
+    pending (Generate Enhancements, Save Tag Changes, the Config tab's
+    Extract), and a stylesheet colour outlives setEnabled(False), so a
+    locked button looked ready to click. Dimmed, it still says a change is
+    waiting without looking clickable, and its tooltip or the Config tab's
+    lock label says why.
+    """
+    red = get_button_color("needs_apply")
+    return (f"QPushButton {{ color: {red}; }} "
+            f"QPushButton:disabled {{ color: {dimmed_color(red)}; }}")
 
 
 def get_button_text_color() -> str:

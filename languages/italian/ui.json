@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "Impossibile caricare le informazioni legali."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "Overlay"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "Overlay"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Avvia o ferma l'Overlay di Smart Citizen (SCO): decodifica delle firme minerarie e un cassetto dei blueprint sopra il gioco. Richiede la modalità finestra senza bordi."
     }
   },
   "filters": {
@@ -522,6 +534,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "Dimensione testo:"
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "Piccola"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "Media"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "Grande"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "Ingrandisce o riduce il testo dell'app. I controlli si adattano così nulla viene tagliato. Ha effetto dopo il riavvio."
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "Riavvia per Cambiare la Dimensione del Testo"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "La nuova dimensione del testo avrà effetto al riavvio di Smart Citizen."
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "Riavvio Non Riuscito"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a riavviarsi. Avvialo di nuovo manualmente per vedere la nuova dimensione del testo."
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "Star Citizen"
@@ -580,7 +628,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "Cartella per user.ini, cache delle sorgenti, INI degli enhancement e backup. Spostala fuori dalla cartella Documenti sincronizzata con OneDrive se la pulizia della cache fallisce. La cache XML di DataForge ha un proprio percorso qui sotto — è di circa 1,4 GB, quindi il percorso predefinito la tiene automaticamente fuori da OneDrive."
+      "at": "Cartella per user.ini, cache delle sorgenti, INI degli enhancement e backup. Spostala fuori dalla cartella Documenti sincronizzata con OneDrive se la pulizia della cache fallisce. La cache XML di DataForge ha un proprio percorso qui sotto — è di circa 1,2 GB, quindi il percorso predefinito la tiene automaticamente fuori da OneDrive."
     },
     "app_data_label": {
       "ht": "",
@@ -669,6 +717,22 @@
     "invalid_cache_folder_title": {
       "ht": "",
       "at": "Cartella cache non valida"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la sua cache in:\n{folder}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a raggiungere questa cartella:\n{folder}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare questa cartella:\n{folder}\n\n{reason}\n\nLa cartella cache DataForge non è stata modificata."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "La cartella cache selezionata è un file, non una cartella:\n{folder}"
     },
     "dataforge_cache_changed_title": {
       "ht": "",
@@ -772,7 +836,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "Cartella base per l'albero XML estratto di DataForge (~1,4 GB). Ogni canale viene annidato al suo interno come {base}\\{channel}\\cache\\dataforge\\. Il valore predefinito è %LOCALAPPDATA%\\Smart Citizen, così resta fuori da OneDrive. Cambiare il percorso avvia una nuova estrazione."
+      "at": "Cartella base per l'albero XML estratto di DataForge (circa 1,2 GB). Ogni canale viene annidato al suo interno come {base}\\{channel}\\cache\\dataforge\\. Un'estrazione richiede fino a circa 4,5 GB liberi su quest'unità mentre è in esecuzione, meno se è già presente una cache. I suoi file di lavoro vanno invece in %TEMP% quando questa cartella si trova su OneDrive, su un'unità di rete o rimovibile, oppure è annidata molto in profondità. Il valore predefinito è %LOCALAPPDATA%\\Smart Citizen, così resta fuori da OneDrive. Cambiare il percorso avvia una nuova estrazione."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -1034,7 +1098,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Funzionalità opzionali che estendono i dati di localizzazione di base: interruttori per categoria per il generatore di miglioramenti, un prefisso per i preferiti nella lista navi di gioco, e un Generatore di Tag che personalizza i tag tra parentesi sui nomi di componenti, missili e armi navali."
+      "at": "Funzionalità opzionali che estendono i dati di localizzazione di base: interruttori per categoria per il generatore di miglioramenti, un prefisso per i preferiti nella lista navi di gioco, e un Generatore di Tag che personalizza i tag tra parentesi sui nomi di componenti, missili, armi navali, merci e armature."
     },
     "enhancements_group": {
       "ht": "",
@@ -1054,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "Statistiche di combattimento per le armi FPS"
+      "at": "Statistiche di combattimento per le armi FPS e tag del peso delle armature"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1098,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "Personalizza i tag tra parentesi sui nomi di componenti, missili e armi navali. Le modifiche hanno effetto dopo aver cliccato su Salva Modifiche Tag e rieseguito Genera Miglioramenti."
+      "at": "Personalizza i tag tra parentesi sui nomi di componenti, missili, armi navali, merci e armature, oltre al percorso nei titoli delle missioni di trasporto. Le modifiche hanno effetto dopo aver cliccato su Salva Modifiche Tag e rieseguito Genera Miglioramenti."
     },
     "preview_label": {
       "ht": "",
@@ -1106,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "Annota i componenti nelle descrizioni delle missioni"
+      "at": "Annota componenti e armature nelle descrizioni delle missioni"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1171,6 +1235,10 @@
     "blueprints_tooltip_missions": {
       "ht": "",
       "at": "Missioni: {missions}"
+    },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "Blueprint predefinito (ogni giocatore lo possiede)"
     },
     "blueprints_available_label": {
       "ht": "",
@@ -1266,15 +1334,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "Se selezionato, il tag [CLASS-Sx-grade] configurato viene aggiunto ai nomi dei componenti all'interno della lista POTENTIAL BLUEPRINTS delle descrizioni missione. Deseleziona per un corpo missione più pulito, mantenendo comunque il tag sui nomi dei componenti altrove."
+      "at": "Se selezionato, il tag del componente configurato e, con Armor > Weight attivo, il tag del peso dell'armatura vengono aggiunti ai nomi degli oggetti nella lista POTENTIAL BLUEPRINTS delle descrizioni missione. Deseleziona per un corpo missione più pulito. I tag restano sui nomi degli oggetti altrove."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "Ripristina il pattern, la mappatura e l'ordinamento predefiniti per ogni categoria (Componenti / Missili / Armi Navali). Non salva né rigenera finché non clicchi su Salva Modifiche Tag o Genera Miglioramenti."
+      "at": "Ripristina il pattern, la mappatura e l'ordinamento predefiniti in ogni scheda del Generatore di Tag (disattiva di nuovo anche i tag opzionali di merci e armature). Le configurazioni dei tag non vengono salvate né rigenerate finché non clicchi su Salva Modifiche Tag o Genera Miglioramenti, ma i Tag Generali della scheda Mission Titles si salvano appena cambiano, quindi il ripristino li riporta subito ai valori predefiniti."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "Salva le configurazioni tag di Componenti / Missili / Armi Navali e riesegui il generatore di miglioramenti. I nuovi tag appariranno in gioco dopo il prossimo Applica Miglioramenti."
+      "at": "Salva le configurazioni tag di tutte le schede del Generatore di Tag e riesegui il generatore di miglioramenti. I nuovi tag appariranno in gioco dopo il prossimo Applica Miglioramenti."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1323,6 +1391,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "Modifica il testo Breve / Medio / Lungo per l'etichetta collezione (es. Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "Modifica il testo Breve / Medio / Lungo usato per ogni classe di peso dell'armatura (es. Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -1980,6 +2052,46 @@
       "ht": "",
       "at": "Cache svuotata"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "Cancella Cache non è disponibile mentre è in corso un'estrazione o una generazione dei miglioramenti. Riprova quando è terminata."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "Verranno eliminati i seguenti file in cache:\n\n{files}\n\nbase.ini dovrà essere estratto di nuovo da Data.p4k prima di poter caricare le stringhe."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "Svuotare anche la cache DataForge?\n{folder}\n\nContiene i dati delle entità estratti da Data.p4k per le statistiche di navi e armi, e ricrearla richiede qualche minuto. Mantienila se vuoi solo aggiornare le stringhe di localizzazione."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "Non è stato possibile raggiungere la cartella cache DataForge, quindi non è stata svuotata:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "Svuotamento della cache"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "Svuotamento dei file in cache..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "Eliminazione di {name}..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "Svuotamento della cache DataForge..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "Elementi eliminati dalla cache: {count}."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "Impossibile eliminare:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "Cartella non trovata"
@@ -2298,10 +2410,6 @@
       "ht": "",
       "at": "Memorizzazione nella cache dei file entità…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "Creazione di uno snapshot della cache per il confronto…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "Sincronizzazione fonti in corso..."
@@ -2325,6 +2433,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "Ricaricamento di {channel} dopo il ripristino di user.ini..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "Ricaricamento con il base.ini estratto..."
     }
   },
   "status_bar": {
@@ -2387,6 +2499,10 @@
     "enhancement_generation_failed": {
       "ht": "",
       "at": "Generazione dei miglioramenti fallita — controlla la scheda Log per i dettagli"
+    },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "Generazione dei miglioramenti interrotta"
     },
     "user_ini_reset": {
       "ht": "",
@@ -2577,6 +2693,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "Non avvisarmi più"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "Spostati {count} file da OneDrive nella nuova cartella dati: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "Alcuni File Sono Rimasti in OneDrive"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "L'installazione ha sostituito la tua cartella dati con una cartella locale, e Smart Citizen vi ha spostato {moved} file.\n\nDa:\n{old}\n\nA:\n{new}\n\n{left} file sono rimasti nella vecchia cartella, perché nella nuova c'era già un file con lo stesso nome (che è stato mantenuto) oppure perché non è stato possibile spostarli. La scheda Log li elenca.\n\nControlla la vecchia cartella prima di eliminarla e copia nella nuova tutto ciò che ti serve ancora."
     }
   },
   "user_ini_reset": {
@@ -2680,6 +2808,10 @@
       "ht": "",
       "at": "{label}  (mancante)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "I tuoi miglioramenti non sono aggiornati. L'ultima generazione non è terminata oppure sono stati generati da dati di gioco più vecchi.\nSeleziona quali generare.\nPuoi cambiare questo in seguito nella scheda Miglioramenti."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "I dati DataForge verranno estratti automaticamente se non già in cache.\nLa prima esecuzione richiede alcuni minuti."
@@ -2726,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora? Puoi eseguirla di nuovo più tardi."
+      "at": "L'estrazione di DataForge è ancora in corso.\n\nInterromperla ora o lasciarla proseguire in background mentre continui a lavorare? Se la interrompi, potrai eseguirla di nuovo più tardi."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "Interrompi"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "Esegui in Background"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "L'estrazione di DataForge è terminata, ma la cartella cache DataForge o il canale sono cambiati durante l'esecuzione, quindi non sono stati generati miglioramenti e nessuna vecchia cache è stata svuotata."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "Bloccato mentre è in corso un'estrazione o una generazione dei miglioramenti, e sbloccato di nuovo quando termina."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "Generazione Miglioramenti in Corso"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "La generazione dei miglioramenti è ancora in corso.\n\nInterromperla ora o lasciarla proseguire in background mentre continui a lavorare? Se la interrompi, potrai eseguirla di nuovo più tardi."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "Interruzione della generazione dei miglioramenti…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2767,6 +2923,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "La conversione del database di gioco ha superato i 30 minuti ed è stata interrotta.\n\nDatabase trovato: {dcb} ({size} MB) in:\n{path}\n\nUn'installazione integra si converte in molto meno di un minuto. Di solito significa che Smart Citizen sta leggendo la cartella di Star Citizen sbagliata. Un'installazione vecchia o residua sul disco sembra valida ma contiene file di gioco obsoleti.\n\nApri l'RSI Launcher e controlla il percorso di installazione mostrato. Se non corrisponde al percorso sopra, correggilo nella scheda Config di Smart Citizen. Se corrisponde, esegui invece \"Verify Files\" nel launcher."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "Lo spazio libero non è sufficiente. Non è stato salvato nulla e la tua cache DataForge attuale non è stata modificata."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Lo spazio libero non è sufficiente per estrarre global.ini da Data.p4k. Non è stato modificato nulla."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "L'unità {drive} ha {free} liberi e l'estrazione richiede circa {needed} su quell'unità mentre è in esecuzione."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "Libera spazio sull'unità {drive} oppure scegli una cartella cache DataForge su un'altra unità nella scheda Config, poi riprova."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "L'estrazione lavora nella tua cartella temporanea di Windows ({folder}) perché la cartella cache DataForge si trova su OneDrive, su un'unità di rete o rimovibile, oppure è annidata molto in profondità. Libera spazio sull'unità {drive}, poi riprova."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "Libera spazio sull'unità {drive}, poi riprova."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "L'unità {drive} ha esaurito lo spazio mentre la nuova cache DataForge veniva salvata in:\n{folder}\n\nQuella cache è incompleta. Libera spazio sull'unità {drive}, poi esegui di nuovo l'estrazione per ricostruirla."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole},{tenth} GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb} MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare una cartella di lavoro in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "Controlla le autorizzazioni di quella cartella, consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows oppure scegli un'altra cartella cache DataForge nella scheda Config, poi riprova."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "Controlla le autorizzazioni di quella cartella oppure consenti Smart Citizen tramite l'accesso controllato alle cartelle in Sicurezza di Windows, poi riprova."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare una cartella di lavoro in:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la cache DataForge in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a raggiungere la cartella cache DataForge:\n{folder}\n\nL'estrazione non è stata avviata. Ricollega l'unità oppure scegli un'altra cartella cache DataForge nella scheda Config, poi riprova."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a usare la cartella cache DataForge:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "La cartella cache DataForge è un collegamento a un'altra cartella:\n{folder}\n\nPorta a:\n{target}\n\nSmart Citizen non elimina nulla attraverso un collegamento, quindi l'estrazione non è stata avviata e non è stato modificato nulla. Scegli la cartella a cui porta come cartella cache DataForge nella scheda Config, poi riprova."
     }
   },
   "apply": {
@@ -2913,7 +3137,17 @@
       },
       "description": {
         "ht": "",
-        "at": "Crea i tag tra parentesi aggiunti ai nomi di componenti, missili, armi delle navi e merci. Riordina gli elementi con ▲/▼, deseleziona per escludere, cambia la lunghezza dell'abbreviazione, scegli il separatore e le parentesi, oppure posiziona il tag dopo il nome invece che prima."
+        "at": "Crea i tag tra parentesi aggiunti ai nomi di componenti, missili, armi delle navi, merci e armature. Riordina gli elementi con ▲/▼, deseleziona per escludere, cambia la lunghezza dell'abbreviazione, scegli il separatore e le parentesi, oppure posiziona il tag dopo il nome invece che prima."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Overlay di Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Avvia l'overlay qui o con il pulsante Overlay della barra degli strumenti. Sopra il gioco decodifica le firme delle scansioni minerarie, apre un cassetto per cercare blueprint, minerali e crafting, e segna come posseduti i blueprint che ottieni. Avvia il gioco in modalità finestra senza bordi sullo schermo principale."
       }
     },
     "blueprint_tracker": {
@@ -2929,7 +3163,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. Modifica le stringhe"
+        "at": "9. Modifica le stringhe"
       },
       "description": {
         "ht": "",
@@ -2939,7 +3173,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. Filtra per colonna"
+        "at": "10. Filtra per colonna"
       },
       "description": {
         "ht": "",
@@ -2949,7 +3183,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. Pannello Editor"
+        "at": "11. Pannello Editor"
       },
       "description": {
         "ht": "",
@@ -2959,7 +3193,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. Pannello Anteprima"
+        "at": "12. Pannello Anteprima"
       },
       "description": {
         "ht": "",
@@ -2969,7 +3203,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. Applica Miglioramenti"
+        "at": "13. Applica Miglioramenti"
       },
       "description": {
         "ht": "",
@@ -2979,7 +3213,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. Configurazione: Aspetto"
+        "at": "14. Configurazione: Aspetto"
       },
       "description": {
         "ht": "",
@@ -2989,7 +3223,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. Configurazione: Installazione di Star Citizen"
+        "at": "15. Configurazione: Installazione di Star Citizen"
       },
       "description": {
         "ht": "",
@@ -2999,7 +3233,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. Configurazione: Dati di Smart Citizen"
+        "at": "16. Configurazione: Dati di Smart Citizen"
       },
       "description": {
         "ht": "",
@@ -3009,7 +3243,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. Configurazione: Localizzazione di Base"
+        "at": "17. Configurazione: Localizzazione di Base"
       },
       "description": {
         "ht": "",
@@ -3019,7 +3253,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. Configurazione: Strumenti"
+        "at": "18. Configurazione: Strumenti"
       },
       "description": {
         "ht": "",
@@ -3029,7 +3263,7 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. Guida e feedback"
+        "at": "19. Guida e feedback"
       },
       "description": {
         "ht": "",
@@ -3149,6 +3383,342 @@
     "zip_filter": {
       "ht": "",
       "at": "Backup impostazioni (*.zip)"
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "Minerale ROC"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "Minerale FPS"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "Recupero"
+    },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (solo in superficie)"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "Cerca blueprint..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "Solo posseduti"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "Posseduti {owned} su {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "Ricompensa di {count} missioni:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "Nuovi: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Overlay di Smart Citizen"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "Nessun dato sui blueprint ancora caricato. Carica prima le stringhe, poi avvia l'overlay."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "...e altre {count}"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "Non identificato"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "Il decodificatore di scansioni minerarie si è fermato dopo un errore. Riavvia l'overlay per riprovare; i dettagli sono nella scheda Log."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "Blueprint"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "Minerali"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "Fabbricazione"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "Minerale o luogo..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "Deseleziona tutto"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "Avvisa quando questo minerale viene scansionato"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "Avvisa quando viene scansionato materiale di recupero"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "Scrivi un elemento scansionabile o un oggetto..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "Nessun minerale trovato. Carica prima le stringhe se la lista resta vuota."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "Nessun risultato. Estrai DataForge, poi genera i miglioramenti con Commodities o Journal spuntato per riempire questa lista."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "Altro"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "Usato in (tramite {material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item} richiede:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "Richiede: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "Livello: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "Firma di scansione: {base} per roccia, fino a {count}"
+    },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "Firma di scansione: {base} ciascuno, fino a {count}"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "Usato in {count} oggetti fabbricati"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "Sistema: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "Minerali qui: {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Overlay di Smart Citizen"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei blueprint. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log e, se imposti una scorciatoia per il cassetto, osserva i tasti premuti solo per quella combinazione; non tocca mai il processo del gioco."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "Avvia overlay"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "Ferma overlay"
+    },
+    "scan_group": {
+      "ht": "",
+      "at": "Decodificatore scansioni"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "Cassetto"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Blueprint da Game.log"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "Decodificatore scansioni minerarie"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "Legge la firma di scansione sotto il radar e mostra sotto il tipo e il numero di giacimenti."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "Dimensione del testo della scansione:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "Piccolo"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "Medio"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "Grande"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "Molto grande"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "Quando viene scansionato un minerale osservato o materiale di recupero:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "Bagliore"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "Un bagliore pulsante attorno all'etichetta finché è visibile."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "Lampeggio"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "L'etichetta lampeggia tre volte quando il bersaglio viene letto per la prima volta."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "Cambia colore del testo"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "Il testo dell'etichetta diventa verde brillante."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "Testo più grande"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "Il testo dell'etichetta diventa una volta e mezza più grande."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "Riproduci un suono"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "Un breve suono quando il bersaglio viene letto per la prima volta."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "Segna i nuovi blueprint come posseduti"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "Mentre l'overlay è attivo, i blueprint ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
+    },
+    "drawer": {
+      "ht": "",
+      "at": "Cassetto dell'overlay"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "Un cassetto agganciato al bordo dello schermo, nella posizione scelta qui sotto. Disattivalo per nasconderlo con le sue sezioni."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "Blueprint"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "Cerca blueprint, vedi quali missioni li premiano e spunta quelli che possiedi."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "Minerali"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "Scrivi un minerale per vedere dove si trova, per sistema stellare, o un luogo per vederne i minerali."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "Fabbricazione"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "Scrivi un minerale per vedere quali oggetti lo usano, o un oggetto per vedere i minerali richiesti. Richiede un'estrazione DataForge."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "Posizione del cassetto:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "In alto a sinistra"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "In alto al centro"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "In alto a destra"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "Al centro a sinistra"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "Al centro a destra"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "In basso a sinistra"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "In basso al centro"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "In basso a destra"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "Scorciatoia del cassetto:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "Cancella"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "Apre e chiude il cassetto dal gioco, sull'ultima sezione usata. In gioco tieni comunque premuto F per usare il mouse al suo interno. Fai clic nella casella, poi premi i tasti insieme, per esempio Alt+8. Star Citizen riceve comunque questi tasti, quindi scegli una combinazione che non usi in gioco."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows ha rifiutato questa scorciatoia. Forse un altro programma la usa già; scegline un'altra."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "Questa non può essere una scorciatoia. Tieni premuto Ctrl, Alt o Win con una lettera, un numero, un simbolo, Spazio, Tab o un tasto di navigazione (frecce, Home, Fine, Pag su/giù, Ins, Canc), e anche Maiusc se vuoi. Un tasto F o Pausa funziona anche da solo."
     }
   }
 }

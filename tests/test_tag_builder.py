@@ -14,14 +14,16 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.tag_builder import (  # noqa: E402
     CATEGORIES,
     DEFAULT_TAG_CONFIGS,
+    ENCLOSINGS,
+    NO_NONE_ENCLOSING_CATEGORIES,
     ElementSpec,
     TagConfig,
     default_config,
+    enclosings_for,
     join_tag,
     render_tag,
     tag_config_fingerprint,
@@ -450,3 +452,17 @@ class TestTagConfigFingerprint:
         cfgs_a["mission_titles"] = a
         cfgs_b["mission_titles"] = b
         assert tag_config_fingerprint(cfgs_a, True) == tag_config_fingerprint(cfgs_b, True)
+
+
+# ── Enclosings offered per category (#492) ───────────────────────────────────
+
+class TestEnclosingsFor:
+    def test_armor_does_not_offer_none(self):
+        keys = [e[0] for e in enclosings_for("armor")]
+        assert "none" not in keys
+        assert keys == [e[0] for e in ENCLOSINGS if e[0] != "none"]
+
+    def test_other_categories_offer_every_enclosing(self):
+        for category in CATEGORIES:
+            if category not in NO_NONE_ENCLOSING_CATEGORIES:
+                assert enclosings_for(category) == ENCLOSINGS

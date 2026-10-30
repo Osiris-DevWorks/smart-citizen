@@ -14,29 +14,30 @@ The available universe is fed in by MainWindow via ``set_blueprint_items``
 """
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QFileDialog, QFrame, QGridLayout,
+    QAbstractItemView, QCheckBox, QFileDialog, QGridLayout,
     QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QMessageBox, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-from src.gui.enhancements_tab import (
-    _NoScrollComboBox, reposition_combo_popup_below_if_it_fits,
+from src.gui.combo_box import (
+    NoScrollComboBox, reposition_combo_popup_below_if_it_fits,
 )
-from src.gui.theme import get_button_color
+from src.gui.theme import get_button_color, host_in_scroll_area
+from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 
 
-class _NoWheelComboBox(_NoScrollComboBox):
+class _NoWheelComboBox(NoScrollComboBox):
     """A combo box that never responds to mouse wheel scroll, focused or not.
 
-    _NoScrollComboBox (#197) only ignores the wheel while unfocused, so a
+    NoScrollComboBox (#197) only ignores the wheel while unfocused, so a
     focused wheel scroll still changes its value — intentional there, but
     wrong for a pure filter dropdown: click Mission/Type/Class/Size/Grade
     once to pick a value, it keeps focus, and later scrolling the page while
     the mouse happens to be over it silently changes the filter instead of
     scrolling (#224). Always ignoring the wheel avoids that trap; still
-    inherits _NoScrollComboBox's popup-placement fix.
+    inherits NoScrollComboBox's popup-placement fix.
     """
 
     _MAX_VISIBLE_ITEMS = 12
@@ -61,7 +62,7 @@ class _NoWheelComboBox(_NoScrollComboBox):
         # so it holds regardless of font/theme, and force a real scrollbar
         # (see the policy line below -- Fusion's combo popup defaults to
         # tiny scroll-arrow buttons instead, confirmed live).
-        super().showPopup()  # _NoScrollComboBox: shows, positions below if it fits
+        super().showPopup()  # NoScrollComboBox: shows, positions below if it fits
         view = self.view()
         popup = view.window()
         # Fusion's combo popup prefers small top/bottom scroll-arrow
@@ -77,7 +78,7 @@ class _NoWheelComboBox(_NoScrollComboBox):
         if popup.height() <= capped_height:
             return
         popup.setFixedHeight(int(capped_height))
-        # _NoScrollComboBox's own "does it fit below" check (inside the
+        # NoScrollComboBox's own "does it fit below" check (inside the
         # super().showPopup() call above) ran against the OLD, uncapped
         # height -- a 100+ row list rarely fits below, so it likely left
         # the popup flipped above the combo instead. Re-run the same check
@@ -447,16 +448,7 @@ class BlueprintTrackerTab(QWidget):
 
         self._render_blueprint_lists()
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
     def _align_mission_and_type_label_widths(self) -> None:
         """#388 follow-up: "Mission:" and "Type:" render at different
@@ -601,7 +593,7 @@ class BlueprintTrackerTab(QWidget):
         combo.clear()
         combo.addItem(tr("enhancements.blueprints_facet_any"), None)
         for v in values:
-            combo.addItem(v, v)
+            combo.addItem(mission_display_name(v), v)
         idx = combo.findData(prior)
         combo.setCurrentIndex(idx if idx >= 0 else 0)
         combo.blockSignals(False)
@@ -635,7 +627,8 @@ class BlueprintTrackerTab(QWidget):
                 # translatable string for the header.
                 label = tr("enhancements.blueprints_tooltip_missions",
                            missions="").rstrip()
-                listed = "\n".join(f"  • {m}" for m in sorted(meta.missions))
+                listed = "\n".join(f"  • {mission_display_name(m)}"
+                                   for m in sorted(meta.missions))
                 bits.append(f"{label}\n{listed}")
             if bits:
                 item.setToolTip("\n".join(bits))

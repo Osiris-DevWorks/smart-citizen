@@ -1,7 +1,7 @@
 """Tests for src.utils.progress_sink.ProgressSink."""
 import threading
 
-from utils.progress_sink import ProgressSink
+from src.utils.progress_sink import ProgressSink
 
 
 def test_advance_accumulates():

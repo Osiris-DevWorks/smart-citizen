@@ -15,6 +15,40 @@ already failing to delete. These tests pin the replacement:
 * ``extract_dataforge`` / ``extract_global_ini``: placement, cleanup on every
   outcome, and the stop points (with fake tools for the branches, and Python
   scripts standing in for unp4k and unforge for the real process handling).
+* The free-space check (#482): every drive a run writes to, before any tool
+  runs and again just before the old cache is wiped, and a drive that fills
+  during the move or a fallback copy. conftest's ``no_real_free_space`` keeps
+  every other test here off the real drive's free space.
+* Moving the kept files into the cache (#484): one rename per kept subtree
+  beside the cache, a copy for a subtree whose rename is refused and for
+  work in %TEMP%, told apart by file IDs (a rename keeps a file's ID).
+* Making the working folder (#490): one ``os.mkdir`` per random name. A
+  folder Windows refuses fails on the first try with
+  ``WorkingFolderRefusedError`` (for global.ini only once %TEMP% refuses
+  too), a name that is taken gets a new name a few times, and any other
+  OSError behaves as before. ``tempfile.mkdtemp``, used before, retried a
+  refusal up to 2**31 - 1 times on Windows on Python 3.11 (the release
+  builds and CI), so every test that refuses a folder counts the calls
+  through ``_counting_mkdir``, whose spin guard fails a retry loop instead
+  of hanging the run.
+* A DataForge run in %TEMP% (#494) makes and removes one test folder where
+  its cache folder is made again after the wipe, so a folder that refuses
+  new ones is the same refusal, before any tool runs and with the old cache
+  still there.
+* What the bar shows while a tool runs (#507): a total of 0, the busy bar,
+  for unp4k and unforge in both extractions, and the counted phases as
+  they were.
+* What the tools are asked for and what they print (perf proposal): the
+  global.ini run takes the English file alone and is sized for it, and a
+  tool that exits 0 after an error it caught fails the run before the old
+  cache is wiped, with no pauses between the steps.
+
+* The perf proposal: beside the cache the old cache is set aside in the
+  working folder with one rename instead of wiped (wiped in place in
+  %TEMP%, on a drive that has room only once it is gone, or when the rename
+  is refused), a copy after a refused move deletes it first, and a run
+  given ``defer_cleanup`` hands its working folder over to be deleted after
+  it, the marker held until the rest is gone.
 
 Qt-free. Child processes run on the base interpreter (``sys._base_executable``)
 because a venv's ``python.exe`` is a launcher that starts a second process,
@@ -23,19 +57,25 @@ under test. Every child exits on its own within 30 s even if a kill fails.
 """
 from __future__ import annotations
 
+import errno
+import json
 import logging
 import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
 import src.utils.pak_extractor as pe
-from src.utils.dataforge_diff import MANIFEST_FILE
+from src.utils.onedrive import _ONEDRIVE_ENV_VARS
 from src.utils.win_paths import win_long_path
+from tests.unusable_folder import new_folders_denied
 
 pytestmark = [
     pytest.mark.unit,
@@ -45,6 +85,20 @@ pytestmark = [
 PY = getattr(sys, "_base_executable", None) or sys.executable
 # Captured before the autouse fixture swaps it out for every test.
 _REAL_DRIVE_PROBE = pe._drive_is_removable_or_network
+# Free bytes on a drive the free-space tests never make short (1 TiB).
+_PLENTY = 1 << 40
+# The cluster size of a 128 KiB-cluster exFAT stick, the large-cluster drive.
+_EXFAT_CLUSTER = 128 << 10
+# The four prefixes a run's working folder name starts with.
+_RUN_PREFIXES = (pe.DATAFORGE_SCRATCH_PREFIX, pe.GLOBAL_INI_SCRATCH_PREFIX,
+                 pe._DATAFORGE_TEMP_PREFIX, pe._GLOBAL_INI_TEMP_PREFIX)
+# More os.mkdir calls than making one working folder may take. A loop that
+# retries a refusal (tempfile.mkdtemp on Python 3.11 retries one up to
+# 2**31 - 1 times on Windows, #490) is stopped here with an error the test
+# reports, instead of hanging the run for a day and a half.
+_SPIN_GUARD_CALLS = 100
+# The unp4k.exe and unforge.exe Smart Citizen ships (perf proposal).
+_BUNDLED_TOOLS = Path(__file__).resolve().parents[1] / "assets" / "unp4k"
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -96,6 +150,68 @@ def _scratch_folders(parent: Path, prefix: str) -> list[Path]:
     return sorted(p for p in Path(parent).glob(prefix + "*") if p.is_dir())
 
 
+class _StillRetrying(Exception):
+    """A fake os.mkdir called more than _SPIN_GUARD_CALLS times. Not an
+    OSError, so no folder creation loop can catch it and carry on."""
+
+
+def _counting_mkdir(monkeypatch, refuse=None) -> list[Path]:
+    """Patch os.mkdir with one that records each run folder it is asked for
+    (a name with one of _RUN_PREFIXES), in order. *refuse(folder)* returns
+    the OSError to raise for that folder, or None to make it for real.
+
+    ``pe.os`` is the os module itself, so this also sees the calls
+    tempfile.mkdtemp makes, should the folder ever be made with it again.
+    Other folders (Path.mkdir making the parent) are made, not recorded."""
+    calls = []
+    real_mkdir = os.mkdir
+
+    def mkdir(path, *args, **kwargs):
+        folder = Path(path)
+        if folder.name.startswith(_RUN_PREFIXES):
+            calls.append(folder)
+            if len(calls) > _SPIN_GUARD_CALLS:
+                raise _StillRetrying(f"os.mkdir asked {len(calls)} times")
+            error = refuse(folder) if refuse is not None else None
+            if error is not None:
+                raise error
+        return real_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(pe.os, "mkdir", mkdir)
+    return calls
+
+
+def _refused_in(*parents):
+    """A *refuse* for _counting_mkdir: Access denied (WinError 5, which
+    Python raises as PermissionError) for a folder in any of *parents*."""
+    refused = {pe.win_plain_path(p) for p in parents}
+
+    def refuse(folder):
+        if pe.win_plain_path(folder.parent) in refused:
+            return PermissionError(errno.EACCES, "Access is denied", str(folder))
+        return None
+
+    return refuse
+
+
+# Windows' own reason for a write-protected drive, WinError 19.
+_WRITE_PROTECTED = "The media is write protected"
+
+
+def _write_protected_in(*parents):
+    """A *refuse* for _counting_mkdir: a write-protected drive (WinError 19,
+    which Python also raises as PermissionError, although nothing was
+    refused) for a folder in any of *parents*."""
+    plain = {pe.win_plain_path(p) for p in parents}
+
+    def refuse(folder):
+        if pe.win_plain_path(folder.parent) in plain:
+            return OSError(None, _WRITE_PROTECTED, str(folder), 19)
+        return None
+
+    return refuse
+
+
 def _pad_to(base: Path, length: int) -> Path:
     """A folder under *base* whose path is exactly *length* characters."""
     path = base
@@ -111,6 +227,77 @@ def _pad_to(base: Path, length: int) -> Path:
     return path
 
 
+def _refuse_moves(monkeypatch, winerror: int, only=(), times=None):
+    """pe._rename_tree fails as Windows fails it (17 another drive, 5 or 32 a
+    held file, 39, 112 or 1295 a full drive) for the keep subtrees in *only*,
+    or for all of them. With *times*, each fails that many times and then
+    goes through (a holder that lets go). Returns the subtrees refused, one
+    entry per refusal."""
+    real, refused = pe._rename_tree, []
+
+    def rename(src, dst):
+        rel = pe.win_plain_path(src).replace(os.sep, "/").partition("/foundry/records/")[2]
+        if (not only or rel in only) and (times is None or refused.count(rel) < times):
+            refused.append(rel)
+            raise OSError(0, "refused by the test", str(src), winerror, str(dst))
+        return real(src, dst)
+
+    monkeypatch.setattr(pe, "_rename_tree", rename)
+    return refused
+
+
+def _refuse_set_aside(monkeypatch, leaf: Path, winerror: int = 17) -> list[str]:
+    """pe._rename_tree refuses to move the cache folder *leaf* itself (the
+    perf proposal's set-aside rename) as Windows refuses it (17 another
+    drive, 5 or 32 a held file, with no retry delays), and passes every
+    other rename through. Returns one entry per refusal."""
+    real, refused = pe._rename_tree, []
+    monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+
+    def rename(src, dst):
+        if pe.win_plain_path(src) == pe.win_plain_path(leaf):
+            refused.append(pe.win_plain_path(src))
+            raise OSError(0, "refused by the test", str(src), winerror, str(dst))
+        return real(src, dst)
+
+    monkeypatch.setattr(pe, "_rename_tree", rename)
+    return refused
+
+
+def _record_renames(monkeypatch) -> list[str]:
+    """Pass every pe._rename_tree call through, and return the plain sources
+    it was called with."""
+    real, calls = pe._rename_tree, []
+
+    def rename(src, dst):
+        calls.append(pe.win_plain_path(src))
+        return real(src, dst)
+
+    monkeypatch.setattr(pe, "_rename_tree", rename)
+    return calls
+
+
+def _never_copy(src, dst, *args, **kwargs):
+    """shutil.copy2 for a test where nothing may be copied."""
+    raise AssertionError(f"{src} was copied")
+
+
+def _ids(records: Path) -> dict[str, int]:
+    """{path under *records*: NTFS file ID}. A rename keeps a file's ID and a
+    copy makes a new one, so this tells a moved cache from a copied one with
+    no mocks."""
+    root = Path(win_long_path(records))
+    return {p.relative_to(root).as_posix(): p.stat().st_ino
+            for p in root.rglob("*") if p.is_file()}
+
+
+def _tree(records: Path) -> dict[str, tuple[bytes, int]]:
+    """{path under *records*: (bytes, mtime_ns)} for comparing two caches."""
+    root = Path(win_long_path(records))
+    return {p.relative_to(root).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns)
+            for p in root.rglob("*") if p.is_file()}
+
+
 @pytest.fixture(autouse=True)
 def _isolated(tmp_path_factory, monkeypatch):
     """A short private root, a private %TEMP%, no OneDrive in the environment
@@ -119,7 +306,7 @@ def _isolated(tmp_path_factory, monkeypatch):
     systemp = root / "systemp"
     systemp.mkdir()
     monkeypatch.setattr(tempfile, "tempdir", str(systemp))
-    for var in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+    for var in _ONEDRIVE_ENV_VARS:
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(pe, "_drive_is_removable_or_network", lambda path: False)
     return root
@@ -373,6 +560,23 @@ class TestScratchSweep:
             pe._open_scratch(root, pe.DATAFORGE_SCRATCH_PREFIX)
         assert _scratch_folders(root, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
+    def test_a_stop_leaves_the_folders_after_it(self, root):
+        """Asked before each folder (perf proposal: closing stops the
+        window's sweep), a stop after the first leaves the rest for a later
+        sweep, and none is touched once it is asked."""
+        names = [pe.DATAFORGE_SCRATCH_PREFIX + f"dead000{n}" for n in range(3)]
+        folders = [self._leftover(root, name) for name in names]
+        asked = []
+
+        def stop_after_one():
+            asked.append(True)
+            return len(asked) > 1
+
+        pe._sweep_stale_scratch(root, pe.DATAFORGE_SCRATCH_PREFIX, should_cancel=stop_after_one)
+        assert len(asked) == 2
+        assert sum(folder.exists() for folder in folders) == 2
+        assert all((f / pe._SCRATCH_MARKER).exists() for f in folders if f.exists())
+
     def test_a_missing_parent_is_fine(self, root):
         pe._sweep_stale_scratch(root / "not-there", pe.DATAFORGE_SCRATCH_PREFIX)
 
@@ -390,37 +594,93 @@ class TestScratchSweep:
 
 # ── extract_dataforge with fake tools (fast branch coverage) ────────────────
 
+# Files _FakeTools(siblings=True) writes beside the kept subtrees, in parents
+# the cache keeps only part of (#484): a folder beside a kept one, a file
+# directly in a partly kept parent, and the same deeper down.
+_SIBLINGS = ("entities/other/x.xml", "entities/loose.xml",
+             "crafting/blueprints/other/x.xml", "reputation/rewards/other/x.xml")
+
+# Everything _FakeTools' unforge writes beside the kept subtrees, named in the
+# exclude list as the real list names everything beside them on a real game
+# build. The fake writes them whatever it is handed, as an unforge without
+# --exclude-file would, so the cache must leave them out itself.
+_FAKE_EXCLUDED = ("unused", "entities/other", "entities/loose.xml",
+                  "crafting/blueprints/other", "reputation/rewards/other")
+
+
+@pytest.fixture(autouse=True)
+def _fake_records_are_excluded(monkeypatch):
+    monkeypatch.setattr(pe, "DATAFORGE_EXCLUDE_SUBPATHS",
+                        pe.DATAFORGE_EXCLUDE_SUBPATHS + _FAKE_EXCLUDED)
+
+
+def _working_records(run_dir: Path) -> Path:
+    """Where _FakeTools' unforge writes the records in the working folder."""
+    return run_dir / "Data" / "libs" / "foundry" / "records"
+
+
 class _FakeTools:
     """Stands in for _run_tool: unp4k writes Data/Game2.dcb into its working
     folder, unforge writes libs/foundry/records next to the dcb (every keep
-    subtree plus one the cache must not copy)."""
+    subtree plus one the cache must not keep). Opt-in (#484): *siblings*
+    adds _SIBLINGS, *fixed_ns* gives every file it writes that mtime (a
+    multiple of 100, NTFS's resolution), and ``records=False`` writes a
+    libs/ folder without foundry/records. *unp4k_out* and *unforge_out*
+    are what each tool prints, as ``{"stdout": ..., "stderr": ...}``, and
+    nothing by default (perf proposal), and ``unforge_writes=False`` makes
+    unforge write nothing at all. *during_unp4k* and *during_unforge* are
+    called with the working folder once that tool has written its output."""
 
-    def __init__(self, *, unforge_rc: int = 0, deep_name: str | None = None, during_unforge=None):
+    def __init__(self, *, unforge_rc: int = 0, deep_name: str | None = None, during_unforge=None,
+                 siblings: bool = False, fixed_ns: int | None = None, records: bool = True,
+                 unp4k_out: dict | None = None, unforge_out: dict | None = None,
+                 unforge_writes: bool = True, during_unp4k=None):
         self.calls: list[tuple[str, list, str]] = []
+        self.unforge_writes = unforge_writes
         self.unforge_rc = unforge_rc
         self.deep_name = deep_name
+        self.during_unp4k = during_unp4k
         self.during_unforge = during_unforge
+        self.siblings = siblings
+        self.fixed_ns = fixed_ns
+        self.records = records
+        self.output = {"unp4k": unp4k_out or {}, "unforge": unforge_out or {}}
+
+    def _write(self, path: Path, data: bytes) -> None:
+        path = Path(win_long_path(path))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        if self.fixed_ns is not None:
+            os.utime(path, ns=(self.fixed_ns, self.fixed_ns))
 
     def __call__(self, args, *, cwd, timeout, should_cancel=None):
         tool = Path(args[0]).stem
         self.calls.append((tool, list(args), cwd))
         if tool == "unp4k":
             (Path(cwd) / "Data").mkdir()
-            (Path(cwd) / "Data" / "Game2.dcb").write_bytes(b"dcb")
-        else:
-            records = Path(args[1]).parent / "libs" / "foundry" / "records"
-            for rel in pe.DATAFORGE_KEEP_SUBPATHS + ("unused/elsewhere",):
-                folder = Path(win_long_path(records / rel))
-                folder.mkdir(parents=True, exist_ok=True)
-                (folder / "x.xml").write_text("<x/>", encoding="utf-8")
-            if self.deep_name:
-                deep = Path(win_long_path(records / "entities" / "scitem" / self.deep_name))
-                deep.mkdir(parents=True, exist_ok=True)
-                (deep / (self.deep_name + ".xml")).write_text("<deep/>", encoding="utf-8")
+            self._write(Path(cwd) / "Data" / "Game2.dcb", b"dcb")
+            if self.during_unp4k:
+                self.during_unp4k(Path(cwd))
+        elif self.unforge_writes:
+            libs = Path(args[1]).parent / "libs"
+            records = libs / "foundry" / "records"
+            if not self.records:
+                self._write(libs / "other" / "x.xml", b"<x/>")
+            else:
+                for rel in pe.DATAFORGE_KEEP_SUBPATHS + ("unused/elsewhere",):
+                    self._write(records / rel / "x.xml", b"<x/>")
+            if self.records and self.siblings:
+                for rel in _SIBLINGS:
+                    self._write(records / rel, b"<sibling/>")
+            if self.records and self.deep_name:
+                deep = records / "entities" / "scitem" / self.deep_name
+                self._write(deep / (self.deep_name + ".xml"), b"<deep/>")
             if self.during_unforge:
                 self.during_unforge(Path(cwd))
         rc = self.unforge_rc if tool == "unforge" else 0
-        return subprocess.CompletedProcess(args, rc, "", "")
+        printed = self.output[tool]
+        return subprocess.CompletedProcess(args, rc, printed.get("stdout", ""),
+                                           printed.get("stderr", ""))
 
 
 @pytest.fixture
@@ -441,6 +701,26 @@ def setup(root, monkeypatch):
         )
 
     return leaf, run
+
+
+def _stamp_old_cache(leaf: Path) -> Path:
+    """Make setup's old cache complete and current: a kept file and both
+    stamps matching the fake Data.p4k, so it reads as fresh. A test that
+    keeps the old cache then shows its stamps stayed too, which an
+    unstamped one cannot. Returns the Data.p4k."""
+    p4k = leaf.parents[3] / "tools" / "Data.p4k"
+    kept = leaf / "raw" / "libs" / "foundry" / "records" / "entities" / "scitem"
+    kept.mkdir(parents=True)
+    (kept / "x.xml").write_text("<x/>", encoding="utf-8")
+    (leaf / pe.P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
+    (leaf / pe.P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
+    assert pe.dataforge_cache_is_fresh(p4k, leaf)
+    return p4k
+
+
+class _Killed(BaseException):
+    """A hard stop (a crash, a kill) between two steps, which no
+    ``except OSError`` catches."""
 
 
 class TestExtractDataforgeWorkingFolder:
@@ -471,19 +751,176 @@ class TestExtractDataforgeWorkingFolder:
         assert (records / "entities" / "scitem" / "x.xml").exists()
         assert not (records / "unused").exists()
         assert (leaf / pe.P4K_MTIME_STAMP).exists() and (leaf / pe.P4K_SIZE_STAMP).exists()
-        assert (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
         assert not (leaf / "old-cache-sentinel").exists()
+
+    @pytest.mark.parametrize("tool", ["unp4k", "unforge"])
+    def test_the_stamps_record_data_p4k_as_unp4k_read_it(self, setup, tool):
+        """A game patch that lands while the run goes on, while unp4k reads
+        Game2.dcb or while unforge converts it, leaves a cache of the build
+        unp4k read. The stamps were read after unforge, so the patched
+        Data.p4k's size made that cache read as current (perf proposal);
+        read before unp4k runs, the next launch asks again."""
+        leaf, run = setup
+        p4k = leaf.parents[3] / "tools" / "Data.p4k"
+        before = p4k.stat()
+
+        def a_patch_lands(_run_dir: Path):
+            p4k.write_bytes(b"a patched Data.p4k, bigger than the one unp4k read")
+
+        assert run(_FakeTools(**{f"during_{tool}": a_patch_lands})) is True
+        assert p4k.stat().st_size != before.st_size
+        assert (leaf / pe.P4K_SIZE_STAMP).read_text() == str(before.st_size)
+        assert (leaf / pe.P4K_MTIME_STAMP).read_text() == str(before.st_mtime)
+        assert not pe.dataforge_cache_is_fresh(p4k, leaf)
+
+    def test_a_manifest_an_older_version_left_goes_with_the_old_cache(self, setup):
+        """Older versions wrote a diff manifest into the cache after every
+        extraction. Nothing reads it any more (#495), so one still in the old
+        cache goes with that cache and the new cache holds none."""
+        leaf, run = setup
+        old_manifest = "manifest.json"
+        (leaf / "raw" / "libs" / old_manifest).write_text("{}", encoding="utf-8")
+        assert run(_FakeTools()) is True
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert list(Path(win_long_path(leaf)).rglob(old_manifest)) == []
 
     def test_unforge_is_handed_the_dcb_inside_the_working_folder(self, setup):
         leaf, run = setup
-        fake = _FakeTools()
+        handed = {}
+
+        def read_the_list(cwd):
+            handed["lines"] = (Path(cwd) / pe._UNFORGE_EXCLUDE_LIST_NAME).read_bytes(
+            ).decode("utf-8").split("\n")
+
+        fake = _FakeTools(during_unforge=read_the_list)
         run(fake)
         (unp4k, unp4k_args, _), (unforge, unforge_args, unforge_cwd) = fake.calls
         assert (unp4k, unforge) == ("unp4k", "unforge")
         assert unp4k_args[1:] == [str(setup[0].parents[3] / "tools" / "Data.p4k"), ".dcb"]
         assert Path(unforge_args[1]) == Path(unforge_cwd) / "Data" / "Game2.dcb"
+        # Then the exclude list, a file in the working folder that goes
+        # with it: every entry under unforge's records folder, one a line.
+        assert unforge_args[2:] == [
+            "--exclude-file", str(Path(unforge_cwd) / pe._UNFORGE_EXCLUDE_LIST_NAME)]
+        assert handed["lines"] == [
+            f"libs/foundry/records/{rel}" for rel in pe.DATAFORGE_EXCLUDE_SUBPATHS] + [""]
+        assert "libs/foundry/records/entities/restricted areas" in handed["lines"]
         # Plain paths only: whether the tools accept \\?\ was never tested.
-        assert not unforge_args[1].startswith("\\\\?\\") and not unforge_cwd.startswith("\\\\?\\")
+        assert not any(arg.startswith("\\\\?\\") for arg in unforge_args[1:])
+        assert not unforge_cwd.startswith("\\\\?\\")
+
+    def test_a_record_folder_a_patch_adds_is_cached(self, setup, caplog):
+        """What the exclude list does not name is cached beside the kept
+        subtrees, so a record folder or file a game patch adds reaches the
+        cache with no list to update, the logs name and count it, and the
+        room check before the wipe counts it, but not an excluded loose file
+        written beside it (_SIBLINGS' entities/loose.xml). The same patch
+        drops a kept subtree, as some come and go between builds, so the
+        cache log counts the kept ones and the added ones apart."""
+        leaf, run = setup
+        added = ("newfolder/x.xml", "entities/newfolder/x.xml", "entities/newloose.xml")
+        gone = "ammoparams/fps"
+
+        def a_patch_adds(cwd):
+            for rel in added:
+                fake._write(_working_records(cwd) / rel, b"<new/>")
+            shutil.rmtree(win_long_path(_working_records(cwd) / gone))
+
+        fake = _FakeTools(during_unforge=a_patch_adds, siblings=True)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake) is True
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert sorted(p.relative_to(records).as_posix() for p in records.rglob("*.xml")) == sorted(
+            [rel + "/x.xml" for rel in pe.DATAFORGE_KEEP_SUBPATHS if rel != gone] + list(added))
+        assert ("cached as well (3): entities/newfolder, entities/newloose.xml, newfolder"
+                in caplog.text)
+        listed = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f"The new cache is {listed - 1 + 3} files" in caplog.text
+        assert f"DataForge cache written: {listed - 1}/{listed} keep-subpaths in " in caplog.text
+        assert "(1 not present in this build, 3 added beside them)" in caplog.text
+
+    def test_an_unforge_without_the_flag_is_run_again_with_the_dcb_alone(self, setup, caplog):
+        """One built before odw-fast-unp4k ad7c6a7 prints its usage for
+        --exclude-file and writes nothing. It is run once more with the dcb
+        alone, which writes every record, and the cache still leaves the
+        excluded ones out."""
+        leaf, run = setup
+
+        class OldUnforge(_FakeTools):
+            def __call__(self, args, *, cwd, timeout, should_cancel=None):
+                if Path(args[0]).stem == "unforge" and "--exclude-file" in args:
+                    self.calls.append(("unforge", list(args), cwd))
+                    return subprocess.CompletedProcess(args, 0, "Usage: unforge.exe infile\n", "")
+                return super().__call__(args, cwd=cwd, timeout=timeout,
+                                        should_cancel=should_cancel)
+
+        fake = OldUnforge()
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            assert run(fake) is True
+        unforge = [args for tool, args, _cwd in fake.calls if tool == "unforge"]
+        assert [args[2:] for args in unforge] == [["--exclude-file", unforge[0][3]], []]
+        assert "does not know --exclude-file" in caplog.text
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert (records / "entities" / "scitem" / "x.xml").is_file()
+        assert not (records / "unused").exists()
+
+    def test_an_unforge_that_cannot_read_the_list_fails_the_run(self, setup):
+        """One that knows the flag but cannot read the file says so and
+        exits 1, with no usage text: the run fails there with the old cache
+        kept, and unforge is not run again."""
+        leaf, run = setup
+        fake = _FakeTools(unforge_rc=1, unforge_writes=False,
+                          unforge_out={"stdout": "Error reading the exclude list: denied\n"})
+        with pytest.raises(RuntimeError, match="Error reading the exclude list"):
+            run(fake)
+        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge"]
+        assert (leaf / "old-cache-sentinel").exists()
+
+    def test_the_cache_keeps_all_but_the_exclude_list_as_it_is_when_the_run_caches(
+            self, setup, monkeypatch):
+        """Both lists are read when the run caches, not from a copy made
+        earlier. With the keep list patched to two subtrees, the other
+        subtrees unforge wrote are cached all the same, as anything the
+        exclude list does not name is, apart from reputation's two, which
+        the exclude list is patched to name."""
+        leaf, run = setup
+        shipped = pe.DATAFORGE_KEEP_SUBPATHS
+        monkeypatch.setattr(pe, "DATAFORGE_KEEP_SUBPATHS", ("entities/scitem", "ammoparams/fps"))
+        monkeypatch.setattr(pe, "DATAFORGE_EXCLUDE_SUBPATHS",
+                            pe.DATAFORGE_EXCLUDE_SUBPATHS + ("reputation",))
+
+        def write_the_shipped_list(cwd):
+            for rel in shipped:
+                fake._write(_working_records(cwd) / rel / "x.xml", b"<x/>")
+
+        fake = _FakeTools(during_unforge=write_the_shipped_list)
+        assert run(fake) is True
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert sorted(p.relative_to(records).as_posix() for p in records.rglob("x.xml")) == sorted(
+            rel + "/x.xml" for rel in shipped if not rel.startswith("reputation/"))
+
+    @pytest.mark.parametrize("exe, text", [
+        ("unp4k.exe", pe._UNP4K_ENTRY_FAILED),
+        ("unforge.exe", pe._UNFORGE_FILE_FAILED),
+    ], ids=["unp4k", "unforge"])
+    def test_the_bundled_tools_hold_their_failure_text(self, exe, text):
+        """The fakes print the constants' own text, so this is what ties
+        them to the tools Smart Citizen ships (perf proposal): each is a
+        copy of a literal in odw-fast-unp4k's Program.cs, and a tool rebuilt
+        with it worded otherwise would pass every other test while the
+        check never fired again, so a run that lost a file would be used,
+        and stamped, as complete. Read as the UTF-16LE text .NET keeps
+        string literals in (a single-file build with compression on would
+        hide it, and the bundled ones have none). Nothing is run."""
+        assert text.encode("utf-16-le") in (_BUNDLED_TOOLS / exe).read_bytes()
+
+    @pytest.mark.parametrize("text", ["--exclude-file", pe._UNFORGE_USAGE])
+    def test_the_bundled_unforge_takes_the_exclude_list(self, text):
+        """The bundled unforge.exe knows --exclude-file (odw-fast-unp4k
+        ad7c6a7), so the run's first call is the one that works, and its
+        usage text starts as the fallback looks for. Read as UTF-16LE, as
+        above. Nothing is run."""
+        assert text.encode("utf-16-le") in (_BUNDLED_TOOLS / "unforge.exe").read_bytes()
 
     def test_a_onedrive_cache_keeps_the_work_in_temp(self, setup, monkeypatch, systemp):
         leaf, run = setup
@@ -497,57 +934,263 @@ class TestExtractDataforgeWorkingFolder:
         assert (leaf / pe.P4K_SIZE_STAMP).exists()
 
     def test_a_failed_run_keeps_the_old_cache_and_cleans_up(self, setup):
+        """The old cache is kept stamped, so it still reads as fresh."""
         leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
         fake = _FakeTools(unforge_rc=1)
         with pytest.raises(RuntimeError, match="unforge.exe failed"):
             run(fake)
         assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
         assert not Path(fake.calls[0][2]).exists()
 
-    def test_a_stop_before_the_wipe_keeps_the_old_cache(self, setup):
+    def test_an_unforge_that_writes_nothing_and_says_nothing(self, setup):
+        """Exit code 0, no libs/ folder and nothing printed: the message
+        points at antivirus or a working folder unforge could not write to,
+        and the old cache is kept stamped, so it still reads as fresh."""
         leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(unforge_writes=False)
+        with pytest.raises(FileNotFoundError, match="No output from unforge") as raised:
+            run(fake)
+        assert "libs/ directory was not created" in str(raised.value)
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_an_unforge_that_writes_nothing_shows_what_it_printed(self, setup):
+        """With anything on either stream, the message shows it instead."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(unforge_writes=False,
+                          unforge_out={"stdout": "what it said", "stderr": "what it warned"})
+        with pytest.raises(FileNotFoundError, match="libs/ directory was not created") as raised:
+            run(fake)
+        message = str(raised.value)
+        assert "unforge stdout:\nwhat it said" in message
+        assert "unforge stderr:\nwhat it warned" in message
+        assert "No output from unforge" not in message
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+
+    def test_a_stop_before_the_wipe_keeps_the_old_cache(self, setup):
+        """The old cache is kept stamped, so it still reads as fresh."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
         stopped = []
         fake = _FakeTools(during_unforge=lambda run_dir: stopped.append(True))
         with pytest.raises(pe.ExtractionCancelled):
             run(fake, should_cancel=lambda: bool(stopped))
         assert (leaf / "old-cache-sentinel").exists()
-        assert not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
         assert not Path(fake.calls[0][2]).exists()
 
-    def test_a_stop_during_the_copy_finishes_the_cache_and_skips_the_manifest(
+    def test_a_stop_after_the_check_before_the_wipe_keeps_the_old_cache(
         self, setup, monkeypatch
     ):
-        """Past the wipe a stop never leaves the cache half-copied: it is
-        written and stamped, and only the manifest is skipped."""
+        """The stop check just before the wipe on its own (#471): a stop that
+        arrives once the free-space check has walked everything still keeps
+        the old cache, stamps and all (they go only after this point), and
+        nothing is moved."""
         leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
         stopped = []
-        real_copy = pe._copy_filtered_records
+        real_check = pe._require_room_for_new_cache
 
-        def copy_then_stop(src, dst):
-            result = real_copy(src, dst)
+        def check_then_stop(*args, **kwargs):
+            real_check(*args, **kwargs)
             stopped.append(True)
-            return result
 
-        monkeypatch.setattr(pe, "_copy_filtered_records", copy_then_stop)
+        monkeypatch.setattr(pe, "_require_room_for_new_cache", check_then_stop)
+        renames = _record_renames(monkeypatch)
         fake = _FakeTools()
-        with pytest.raises(pe.ExtractionCancelled):
+        with pytest.raises(pe.ExtractionCancelled,
+                           match="stopped before the previous cache was replaced"):
             run(fake, should_cancel=lambda: bool(stopped))
-        assert (leaf / pe.P4K_SIZE_STAMP).exists()
-        records = leaf / "raw" / "libs" / "foundry" / "records"
-        assert (records / "entities" / "scitem" / "x.xml").exists()
-        assert not (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert renames == []
         assert not Path(fake.calls[0][2]).exists()
 
-    def test_no_working_folder_means_no_tool_runs_and_the_cache_stays(self, setup, monkeypatch):
+    @pytest.mark.parametrize("how", ["moved", "copied"])
+    def test_a_stop_while_the_cache_is_filled_finishes_it_then_reports_the_stop(
+        self, setup, monkeypatch, how
+    ):
+        """Past the wipe a stop never leaves the cache half filled: nothing
+        checks for one during the renames (#484) or a fallback copy, so the
+        cache is written and stamped, and the stop is reported once it is."""
         leaf, run = setup
+        stopped = []
+        if how == "moved":
+            real_rename = pe._rename_tree
 
-        def refuse(**kwargs):
-            raise PermissionError("access denied")
+            def rename_and_stop(src, dst):
+                stopped.append(True)
+                return real_rename(src, dst)
 
-        monkeypatch.setattr(pe.tempfile, "mkdtemp", refuse)
+            monkeypatch.setattr(pe, "_rename_tree", rename_and_stop)
+        else:
+            _refuse_moves(monkeypatch, 17)
+            real_copy2 = shutil.copy2
+
+            def copy2_and_stop(src, dst, *args, **kwargs):
+                stopped.append(True)
+                return real_copy2(src, dst, *args, **kwargs)
+
+            monkeypatch.setattr(shutil, "copy2", copy2_and_stop)
+        fake = _FakeTools()
+        with pytest.raises(pe.ExtractionCancelled, match="stopped once the new cache was written"):
+            run(fake, should_cancel=lambda: bool(stopped))
+        assert stopped
+        assert (leaf / pe.P4K_MTIME_STAMP).exists() and (leaf / pe.P4K_SIZE_STAMP).exists()
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        assert [rel for rel in pe.DATAFORGE_KEEP_SUBPATHS
+                if not (records / rel / "x.xml").is_file()] == []
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_unforge_output_without_its_records_folder_keeps_the_old_cache(self, setup, caplog):
+        """unforge wrote libs/ but no foundry/records (#484, gap A). That is
+        found before the check before the wipe, so the old cache is kept
+        instead of being wiped for an empty one that reads as never
+        extracted."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(records=False)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(FileNotFoundError, match="foundry/records"):
+                run(fake)
+        assert (leaf / "old-cache-sentinel").exists() and (leaf / "raw" / "libs").is_dir()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert "DataForge run wrote" not in caplog.text
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_unforge_output_with_none_of_the_kept_subtrees_keeps_the_old_cache(
+        self, setup, caplog
+    ):
+        """unforge wrote foundry/records but none of the subtrees the cache
+        keeps (a layout change). The run used to wipe the old cache and
+        stamp an empty one, which never reads as fresh, so startup asked on
+        every launch and each re-extract wiped again. It now fails before
+        the check before the wipe, as a missing records folder does."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+
+        def drop_the_kept_subtrees(run_dir: Path):
+            for rel in pe.DATAFORGE_KEEP_SUBPATHS:
+                shutil.rmtree(win_long_path(_working_records(run_dir) / rel))
+
+        fake = _FakeTools(during_unforge=drop_the_kept_subtrees)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(FileNotFoundError, match="none of the"):
+                run(fake)
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert "DataForge run wrote" not in caplog.text
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_a_records_file_instead_of_a_folder_keeps_the_old_cache(self, setup):
+        """unforge's records must be a folder: a file there is no layout the
+        cache keeps."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+
+        def records_as_file(run_dir: Path):
+            target = _working_records(run_dir)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("not a folder", encoding="utf-8")
+
+        with pytest.raises(FileNotFoundError, match="foundry/records"):
+            run(_FakeTools(records=False, during_unforge=records_as_file))
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+
+    def test_a_wipe_cut_short_leaves_no_stamp(self, setup, monkeypatch):
+        """From Python 3.12.4 rmtree deletes the leaf's own files last, so a
+        wipe that gave up part-way could leave both stamps on a partial
+        cache, which reads as fresh while they match this Data.p4k (#484,
+        gap B). The stamps go before the wipe. The old cache is wiped in
+        place here because its set-aside rename is refused (perf proposal)."""
+        leaf, run = setup
+        _refuse_set_aside(monkeypatch, leaf)
+        p4k = leaf.parents[3] / "tools" / "Data.p4k"
+        records = leaf / "raw" / "libs" / "foundry" / "records"
+        for rel in ("entities/scitem", "contracts/contractgenerator"):
+            (records / rel).mkdir(parents=True)
+            (records / rel / "x.xml").write_text("<x/>", encoding="utf-8")
+        (leaf / pe.P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
+        (leaf / pe.P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        real_rmtree = pe.robust_rmtree
+
+        def rmtree(path, attempts=6):
+            if pe.win_plain_path(path) == pe.win_plain_path(leaf):
+                shutil.rmtree(win_long_path(records / "entities"))
+                raise PermissionError(errno.EACCES, "Access is denied", str(records / "contracts"))
+            return real_rmtree(path, attempts)
+
+        monkeypatch.setattr(pe, "robust_rmtree", rmtree)
         fake = _FakeTools()
         with pytest.raises(PermissionError):
             run(fake)
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists() and not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert (records / "contracts" / "contractgenerator" / "x.xml").exists()
+        assert not pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_any_failure_on_the_stamps_leaves_neither_stamp(self, setup, monkeypatch):
+        """A failure on the size stamp that is not a full drive used to leave
+        the mtime stamp, which alone reads as fresh, behind a raw error
+        (#484, gap E). Neither stays, whatever the failure."""
+        leaf, run = setup
+        real_write = Path.write_text
+
+        def write_text(self, *args, **kwargs):
+            if self.name == pe.P4K_SIZE_STAMP:
+                raise PermissionError(errno.EACCES, "Access is denied", str(self))
+            return real_write(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", write_text)
+        with pytest.raises(PermissionError):
+            run(_FakeTools())
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists() and not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not pe._holds_complete_cache(leaf)
+
+    def test_a_kill_between_the_two_stamp_removals_leaves_no_mtime_stamp(
+        self, setup, monkeypatch
+    ):
+        """.p4k_mtime goes first: a kill after the first removal must never
+        leave the stamp that alone reads as fresh."""
+        leaf, run = setup
+        _stamp_old_cache(leaf)
+        real_unlink = Path.unlink
+        stamps = []
+
+        def unlink(self, *args, **kwargs):
+            if self.name in (pe.P4K_MTIME_STAMP, pe.P4K_SIZE_STAMP):
+                stamps.append(self.name)
+                if len(stamps) == 2:
+                    raise _Killed()
+            return real_unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "unlink", unlink)
+        with pytest.raises(_Killed):
+            run(_FakeTools())
+        assert stamps == [pe.P4K_MTIME_STAMP, pe.P4K_SIZE_STAMP]
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists()
+
+    @pytest.mark.parametrize("error, raised_as", [
+        (PermissionError(errno.EACCES, "Access is denied"), pe.WorkingFolderRefusedError),
+        (FileNotFoundError(errno.ENOENT, "The system cannot find the path specified"),
+         FileNotFoundError),
+    ], ids=["refused", "drive gone"])
+    def test_no_working_folder_means_no_tool_runs_and_the_cache_stays(
+        self, setup, monkeypatch, error, raised_as
+    ):
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch, lambda folder: error)
+        fake = _FakeTools()
+        with pytest.raises(raised_as):
+            run(fake)
+        assert len(calls) == 1
         assert fake.calls == []
         assert (leaf / "old-cache-sentinel").exists()
 
@@ -581,21 +1224,18 @@ class TestExtractDataforgeWorkingFolder:
     ):
         """Unlike the global.ini extraction, DataForge does not fall back to
         %TEMP%: its cache writes go to that same drive and would fail anyway,
-        after a minute of unforge."""
+        after a minute of unforge. A refusal there is the user's box (#490),
+        naming the folder."""
         leaf, run = setup
-        real_open = pe._open_scratch
-
-        def refuse_beside(parent, prefix):
-            if Path(parent) != systemp:
-                raise PermissionError("Controlled Folder Access")
-            return real_open(parent, prefix)
-
-        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
         fake = _FakeTools()
-        with pytest.raises(PermissionError):
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
             run(fake)
+        assert len(calls) == 1
+        assert raised.value.folder == str(leaf.parent)
         assert fake.calls == []
         assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
 
     def test_a_leftover_is_swept_and_a_live_run_is_not(self, setup):
         leaf, run = setup
@@ -609,10 +1249,12 @@ class TestExtractDataforgeWorkingFolder:
             assert live.exists()
         assert not dead.exists()
 
-    def test_a_deep_cache_still_copies_every_keep_path(self, root, monkeypatch):
+    @pytest.mark.parametrize("how", ["moved", "copied"])
+    def test_a_deep_cache_still_fills_every_keep_path(self, root, monkeypatch, how):
         """At the depth cap the deepest keep file passes 260 characters in the
-        working folder. The copy reads through the long-path prefix, so it is
-        not skipped without a word."""
+        working folder. The rename and the fallback copy both reach it
+        through the long-path prefix, so it is not skipped without a word.
+        Moved, the deep file keeps its ID; copied, it gets a new one."""
         extra = 1 + len(pe.DATAFORGE_SCRATCH_PREFIX) + pe._MKDTEMP_RANDOM_CHARS
         beside = _pad_to(root / "deep", pe._MAX_SCRATCH_CHARS - extra)
         leaf = beside / "dataforge"
@@ -620,40 +1262,871 @@ class TestExtractDataforgeWorkingFolder:
         tools.mkdir()
         for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
             (tools / name).write_bytes(b"x")
-        fake = _FakeTools(deep_name="d" * 60)
+        deep_rel = Path("entities") / "scitem" / ("d" * 60) / ("d" * 60 + ".xml")
+        written = []
+        fake = _FakeTools(deep_name="d" * 60, during_unforge=lambda run_dir: written.append(
+            os.stat(win_long_path(_working_records(run_dir) / deep_rel)).st_ino))
         monkeypatch.setattr(pe, "_run_tool", fake)
+        if how == "copied":
+            _refuse_moves(monkeypatch, 17)
 
         pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe", leaf)
 
         run_dir = Path(fake.calls[0][2])
         assert run_dir.parent == beside and len(str(run_dir)) == pe._MAX_SCRATCH_CHARS
-        deep_rel = Path("entities") / "scitem" / ("d" * 60) / ("d" * 60 + ".xml")
-        scratch_deep = run_dir / "Data" / "libs" / "foundry" / "records" / deep_rel
-        assert len(str(scratch_deep)) > 260
+        assert len(str(_working_records(run_dir) / deep_rel)) > 260
         records = leaf / "raw" / "libs" / "foundry" / "records"
-        assert Path(win_long_path(records / deep_rel)).exists()
+        deep_id = os.stat(win_long_path(records / deep_rel)).st_ino
+        assert (deep_id == written[0]) == (how == "moved")
         # Every keep subtree, including the deepest one (~261 characters in
         # the working folder at this depth), reached the cache.
         missing = [rel for rel in pe.DATAFORGE_KEEP_SUBPATHS
                    if not Path(win_long_path(records / rel / "x.xml")).exists()]
         assert missing == []
 
-    def test_the_copy_reads_unforge_output_through_the_long_path_prefix(self, setup, monkeypatch):
+    def test_the_caching_step_reads_unforge_output_through_the_long_path_prefix(
+        self, setup, monkeypatch, root
+    ):
         """A plain exists() on a keep path past 260 characters returns False
         on a PC without Windows long paths turned on (the default), and the
-        copy would skip that subtree without a word. Checked directly, since a
-        developer machine with long paths enabled can't show the failure."""
+        caching step would skip that subtree without a word. Checked
+        directly, since a developer machine with long paths enabled can't
+        show the failure. The rename is checked on its own as well (#484):
+        in a run every path it gets is prefixed already, so only a direct
+        call on plain paths shows _rename_tree adding the prefix itself."""
         leaf, run = setup
-        sources = []
-        real_copy = pe._copy_filtered_records
+        seen = []
+        real_cache = pe._cache_filtered_records
 
-        def spy(src, dst):
-            sources.append(str(src))
-            return real_copy(src, dst)
+        def spy(src, dst, *, move, **kwargs):
+            seen.append((str(src), str(dst)))
+            return real_cache(src, dst, move=move, **kwargs)
 
-        monkeypatch.setattr(pe, "_copy_filtered_records", spy)
+        monkeypatch.setattr(pe, "_cache_filtered_records", spy)
         run(_FakeTools())
-        assert len(sources) == 1 and sources[0].startswith("\\\\?\\")
+        assert len(seen) == 1 and all(path.startswith("\\\\?\\") for path in seen[0])
+
+        renames = []
+        real_rename = os.rename
+
+        def rename(src, dst, *args, **kwargs):
+            renames.append((src, dst))
+            return real_rename(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(pe.os, "rename", rename)
+        source, target = root / "rename-from", root / "rename-to"
+        source.mkdir()
+        pe._rename_tree(source, target)
+        assert renames == [(win_long_path(source), win_long_path(target))]
+        assert target.is_dir() and not source.exists()
+
+
+# ── moving the kept files into the cache (#484) ─────────────────────────────
+
+class TestMovingTheKeptFiles:
+    """Beside the cache each kept subtree is renamed into place instead of
+    copied file by file, and a subtree whose rename is refused is copied.
+    File IDs tell the two apart (a rename keeps a file's ID, a copy makes a
+    new one), read with os.stat on both sides: a DirEntry's st_ino is 0 on
+    Windows, which would make a copy pass for a move."""
+
+    _HELD = "contracts/contracttemplates"
+
+    @staticmethod
+    def _cache(leaf: Path) -> Path:
+        return leaf / "raw" / "libs" / "foundry" / "records"
+
+    @staticmethod
+    def _kept_files() -> set[str]:
+        return {rel + "/x.xml" for rel in pe.DATAFORGE_KEEP_SUBPATHS}
+
+    @staticmethod
+    def _fallbacks(caplog) -> list[str]:
+        return [r.getMessage() for r in caplog.records
+                if r.levelno == logging.INFO and r.getMessage().startswith("Could not move ")]
+
+    def test_beside_the_cache_every_keep_subtree_is_moved_not_copied(
+        self, setup, monkeypatch, caplog
+    ):
+        """Every cached file has the ID unforge's file had, copy2 never runs,
+        and the summary line gives the counts and the fill time, with the
+        cleanup's time on its own line. setup's old cache has no stamps, as
+        on a first run, and their absence is not logged as a failure to
+        remove them."""
+        leaf, run = setup
+        written = {}
+        fake = _FakeTools(during_unforge=lambda run_dir: written.update(
+            _ids(_working_records(run_dir))))
+        monkeypatch.setattr(shutil, "copy2", _never_copy)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake) is True
+        assert _ids(self._cache(leaf)) == {path: written[path] for path in self._kept_files()}
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f"DataForge cache written: {kept}/{kept} keep-subpaths in " in caplog.text
+        assert (f" s, {kept} moved and 0 copied (0 not present in this build, "
+                "0 added beside them)") in caplog.text
+        assert "Deleting the DataForge working folder took " in caplog.text
+        assert self._fallbacks(caplog) == []
+        assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
+        assert (leaf / pe.P4K_MTIME_STAMP).exists() and (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_each_retry_waits_its_delay_then_the_refusal_comes_back(self, tmp_path, monkeypatch):
+        """A held subtree is tried again after each delay, not four times in
+        a row: without the waits the retry never outlasts a scanner's
+        handle."""
+        sleeps, tries = [], []
+
+        def rename(src, dst):
+            tries.append(src)
+            raise OSError(0, "held", str(src), 32, str(dst))
+
+        monkeypatch.setattr(pe, "_rename_tree", rename)
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0.001, 0.002, 0.003))
+        monkeypatch.setattr(pe.time, "sleep", sleeps.append)
+        refused = pe._move_tree(tmp_path / "a", tmp_path / "b")
+        assert refused.winerror == 32
+        assert sleeps == [0.001, 0.002, 0.003]
+        assert len(tries) == 4
+
+    def test_the_shipped_retry_schedule_is_short_but_real(self):
+        """The app does retry a held subtree, and fourteen held subtrees
+        still finish well inside the 180 s close wait."""
+        delays = pe._MOVE_RETRY_DELAYS
+        assert delays and all(delay > 0 for delay in delays)
+        assert sum(delays) * len(pe.DATAFORGE_KEEP_SUBPATHS) <= 30
+
+    def test_the_fill_and_cleanup_times_are_measured(self, setup, monkeypatch, caplog):
+        """The two times in the log are real measurements, not a fixed 0.0."""
+        _leaf, run = setup
+        real_cache, real_close = pe._cache_filtered_records, pe._close_scratch
+
+        def slow_cache(*args, **kwargs):
+            time.sleep(0.25)
+            return real_cache(*args, **kwargs)
+
+        def slow_close(*args, **kwargs):
+            time.sleep(0.25)
+            return real_close(*args, **kwargs)
+
+        monkeypatch.setattr(pe, "_cache_filtered_records", slow_cache)
+        monkeypatch.setattr(pe, "_close_scratch", slow_close)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(_FakeTools()) is True
+        fill = float(re.search(r"keep-subpaths in (\d+\.\d) s,", caplog.text).group(1))
+        cleanup = float(re.search(r"working folder took (\d+\.\d) s", caplog.text).group(1))
+        assert fill >= 0.1 and cleanup >= 0.1
+
+    def test_unkept_siblings_stay_behind_and_go_with_the_working_folder(
+        self, setup, monkeypatch
+    ):
+        """Only the kept subtrees are renamed, never a parent such as
+        entities: what sits beside them that the exclude list names is still
+        in the working folder just before it is deleted, and never reaches
+        the cache."""
+        leaf, run = setup
+        left = []
+        real_close = pe._close_scratch
+
+        def close(run_dir, marker):
+            records = _working_records(Path(run_dir))
+            left.extend(rel for rel in _SIBLINGS
+                        if Path(win_long_path(records / rel)).is_file())
+            return real_close(run_dir, marker)
+
+        monkeypatch.setattr(pe, "_close_scratch", close)
+        fake = _FakeTools(siblings=True)
+        assert run(fake) is True
+        assert left == list(_SIBLINGS)
+        assert set(_ids(self._cache(leaf))) == self._kept_files()
+        assert not Path(fake.calls[0][2]).exists()
+
+    @pytest.mark.parametrize("winerror, refusals", [(17, 1), (5, 4), (32, 4)],
+                             ids=["17 another drive", "5 access denied", "32 sharing violation"])
+    def test_a_subtree_that_will_not_move_is_copied_and_the_rest_moved(
+        self, setup, monkeypatch, caplog, winerror, refusals
+    ):
+        """A refused rename leaves the subtree whole where unforge wrote it,
+        so it is copied, and the rest are still moved. A held file (5 or 32)
+        is tried again after each retry delay first; another drive (17) is
+        not, since waiting cannot help it."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+        refused = _refuse_moves(monkeypatch, winerror, only=(self._HELD,))
+        written = {}
+        fake = _FakeTools(during_unforge=lambda run_dir: written.update(
+            _ids(_working_records(run_dir))))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake) is True
+        cached = _ids(self._cache(leaf))
+        held = self._HELD + "/x.xml"
+        assert set(cached) == self._kept_files()
+        assert cached[held] != written[held]
+        assert (self._cache(leaf) / held).read_bytes() == b"<x/>"
+        assert {path: cached[path] for path in cached if path != held} == {
+            path: written[path] for path in cached if path != held}
+        assert refused == [self._HELD] * refusals
+        fallbacks = self._fallbacks(caplog)
+        assert len(fallbacks) == 1
+        assert fallbacks[0].startswith(f"Could not move {self._HELD} into the DataForge cache (")
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f" s, {kept - 1} moved and 1 copied" in caplog.text
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_a_subtree_held_by_another_program_is_retried_then_copied(
+        self, setup, monkeypatch, caplog
+    ):
+        """No fake refusal: a file under one subtree is held open, as
+        antivirus or the search indexer would hold it, so Windows refuses
+        that folder's rename. After the retries it is copied (a copy reads a
+        file held open for reading) and the rest are moved."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+        written, handles = {}, []
+
+        def write_and_hold(run_dir):
+            records = _working_records(run_dir)
+            written.update(_ids(records))
+            handles.append(open(win_long_path(records / self._HELD / "x.xml"), "rb"))
+
+        real_close = pe._close_scratch
+
+        def let_go_then_close(run_dir, marker):
+            for handle in handles:
+                handle.close()
+            return real_close(run_dir, marker)
+
+        monkeypatch.setattr(pe, "_close_scratch", let_go_then_close)
+        try:
+            with caplog.at_level(logging.INFO, logger=pe.logger.name):
+                assert run(_FakeTools(during_unforge=write_and_hold)) is True
+        finally:
+            for handle in handles:
+                handle.close()
+        cached = _ids(self._cache(leaf))
+        held = self._HELD + "/x.xml"
+        assert set(cached) == self._kept_files()
+        assert cached[held] != written[held]
+        assert (self._cache(leaf) / held).read_bytes() == b"<x/>"
+        assert {path: cached[path] for path in cached if path != held} == {
+            path: written[path] for path in cached if path != held}
+        fallbacks = self._fallbacks(caplog)
+        assert len(fallbacks) == 1 and fallbacks[0].startswith(f"Could not move {self._HELD} ")
+        assert "[WinError 5]" in fallbacks[0]
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f" s, {kept - 1} moved and 1 copied" in caplog.text
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_a_subtree_let_go_during_the_retries_is_moved(self, setup, monkeypatch, caplog):
+        """A holder that lets go within the retries costs nothing: the
+        subtree is still moved, and nothing says it was copied."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+        refused = _refuse_moves(monkeypatch, 32, only=(self._HELD,), times=2)
+        written = {}
+        fake = _FakeTools(during_unforge=lambda run_dir: written.update(
+            _ids(_working_records(run_dir))))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake) is True
+        held = self._HELD + "/x.xml"
+        assert _ids(self._cache(leaf))[held] == written[held]
+        assert refused == [self._HELD] * 2
+        assert self._fallbacks(caplog) == []
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f" s, {kept} moved and 0 copied" in caplog.text
+
+    @pytest.mark.parametrize("winerror", [39, 112, 1295])
+    def test_a_rename_that_finds_the_drive_full_says_the_cache_is_incomplete(
+        self, setup, monkeypatch, english_ui, winerror
+    ):
+        """A copy needs more room than the rename did, so a full drive on a
+        rename is neither retried nor copied: it is the "cache incomplete"
+        message at once, with no stamp left."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+        refused = _refuse_moves(monkeypatch, winerror, only=("entities/scitem",))
+        monkeypatch.setattr(shutil, "copy2", _never_copy)
+        fake = _FakeTools()
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(fake)
+        assert "incomplete" in str(raised.value)
+        assert pe.win_plain_path(leaf) in str(raised.value)
+        assert refused == ["entities/scitem"]
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists() and not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_work_in_temp_is_copied_not_moved(self, setup, monkeypatch, systemp, caplog):
+        """Moved files would keep %TEMP%'s permissions, and a move into
+        OneDrive is untested, so work in %TEMP% is copied as before."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        renames = _record_renames(monkeypatch)
+        written = {}
+        fake = _FakeTools(during_unforge=lambda run_dir: written.update(
+            _ids(_working_records(run_dir))))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake) is True
+        assert Path(fake.calls[0][2]).parent == systemp
+        assert renames == []
+        cached = _ids(self._cache(leaf))
+        assert set(cached) == self._kept_files()
+        assert [path for path in cached if cached[path] == written[path]] == []
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        assert f" s, 0 moved and {kept} copied" in caplog.text
+
+    def test_a_moved_cache_and_a_copied_cache_are_the_same(self, setup, monkeypatch, caplog):
+        """One run moves, a second copies every subtree: the two caches hold
+        the same paths (in the same case), bytes and mtimes."""
+        leaf, run = setup
+        fixed_ns = 1_700_000_000 * 10**9
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(_FakeTools(siblings=True, fixed_ns=fixed_ns)) is True
+        assert f" s, {kept} moved and 0 copied" in caplog.text
+        moved_tree = _tree(self._cache(leaf))
+        assert set(moved_tree) == self._kept_files()
+        caplog.clear()
+        _refuse_moves(monkeypatch, 17)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(_FakeTools(siblings=True, fixed_ns=fixed_ns)) is True
+        assert f" s, 0 moved and {kept} copied" in caplog.text
+        assert _tree(self._cache(leaf)) == moved_tree
+
+
+# ── deleting the working folder after the run (perf proposal) ───────────────
+
+_STAMPS = (pe.P4K_MTIME_STAMP, pe.P4K_SIZE_STAMP)
+
+
+def _wipes(monkeypatch) -> list[str]:
+    """Pass every pe.robust_rmtree call through, and return the plain
+    folders it was called with."""
+    real, calls = pe.robust_rmtree, []
+
+    def rmtree(path, attempts=6):
+        calls.append(pe.win_plain_path(path))
+        return real(path, attempts)
+
+    monkeypatch.setattr(pe, "robust_rmtree", rmtree)
+    return calls
+
+
+def _set_aside_in(run_dir: Path) -> Path:
+    """Where the old cache goes in the working folder *run_dir*."""
+    return Path(run_dir) / pe._SET_ASIDE_CACHE_NAME
+
+
+def _kept_missing(leaf: Path) -> list[str]:
+    """The keep subtrees whose file is not in the cache at *leaf*."""
+    records = leaf / "raw" / "libs" / "foundry" / "records"
+    return [rel for rel in pe.DATAFORGE_KEEP_SUBPATHS if not (records / rel / "x.xml").is_file()]
+
+
+class TestTheOldCacheIsSetAside:
+    """Beside the cache the old cache is no longer wiped before the new one
+    is filled: its stamps go, then one rename puts it in the working folder,
+    which is deleted after the run (perf proposal). It is wiped in place, as
+    before, wherever that rename cannot help or is refused."""
+
+    def test_one_rename_sets_it_aside_and_nothing_wipes_it(self, setup, monkeypatch, caplog):
+        """Its files keep their IDs (renamed, not copied), without its
+        stamps, and nothing deletes the cache folder in place."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        old = {path: file_id for path, file_id in _ids(leaf).items() if path not in _STAMPS}
+        wipes = _wipes(monkeypatch)
+        renames = _record_renames(monkeypatch)
+        handed = []
+        fake = _FakeTools()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake, defer_cleanup=handed.append) is True
+        run_dir = Path(fake.calls[0][2])
+        assert renames[0] == pe.win_plain_path(leaf)
+        assert pe.win_plain_path(leaf) not in wipes
+        assert _ids(_set_aside_in(run_dir)) == old
+        assert "Set the old DataForge cache aside in " in caplog.text
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert _kept_missing(leaf) == [] and not (leaf / "old-cache-sentinel").exists()
+        assert [folder.folder for folder in handed] == [run_dir]
+        handed[0].delete()
+
+    def test_the_stamps_are_gone_before_it_is_renamed(self, setup, monkeypatch):
+        """Nothing may read the set-aside copy as fresh, even after a crash
+        right after the rename: the stamps go first, as before the wipe."""
+        leaf, run = setup
+        _stamp_old_cache(leaf)
+        seen = []
+        real = pe._rename_tree
+
+        def rename(src, dst):
+            if pe.win_plain_path(src) == pe.win_plain_path(leaf):
+                seen.append({p.name for p in Path(win_long_path(src)).iterdir()})
+            return real(src, dst)
+
+        monkeypatch.setattr(pe, "_rename_tree", rename)
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [names] = seen
+        assert "old-cache-sentinel" in names
+        assert names & set(_STAMPS) == set()
+        handed[0].delete()
+
+    def test_a_stamp_that_will_not_go_keeps_it_where_it_is(self, setup, monkeypatch):
+        """It is wiped in place instead, as before, stamp and all."""
+        leaf, run = setup
+        _stamp_old_cache(leaf)
+        real_unlink = Path.unlink
+
+        def unlink(self, *args, **kwargs):
+            if self.name == pe.P4K_MTIME_STAMP:
+                raise PermissionError(errno.EACCES, "Access is denied", str(self))
+            return real_unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "unlink", unlink)
+        renames = _record_renames(monkeypatch)
+        wipes = _wipes(monkeypatch)
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        assert pe.win_plain_path(leaf) not in renames
+        assert pe.win_plain_path(leaf) in wipes
+        assert not _set_aside_in(handed[0].folder).exists()
+        handed[0].delete()
+
+    @pytest.mark.parametrize("winerror, tries", [(17, 1), (5, 4), (32, 4)],
+                             ids=["17 another drive", "5 access denied", "32 sharing violation"])
+    def test_a_refused_rename_wipes_it_in_place(
+        self, setup, monkeypatch, caplog, winerror, tries
+    ):
+        """A held file (5 or 32) is tried again after each retry delay, as
+        for a kept subtree (#484), then, or at once for anything else, the
+        old cache is wiped where it is, as before, and the run goes on."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        refused = _refuse_set_aside(monkeypatch, leaf, winerror)
+        wipes = _wipes(monkeypatch)
+        handed = []
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        assert len(refused) == tries
+        assert pe.win_plain_path(leaf) in wipes
+        assert "Could not set the old DataForge cache aside (" in caplog.text
+        assert not _set_aside_in(handed[0].folder).exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        handed[0].delete()
+
+    def test_a_file_another_program_holds_keeps_it_where_it_is(self, setup, monkeypatch, caplog):
+        """No fake refusal: a file in the old cache is held open, as
+        antivirus or the search indexer would hold it, so Windows refuses
+        the folder's rename. It is wiped in place once the holder lets go."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+        handle = open(leaf / "old-cache-sentinel", "rb")
+        real_rmtree = pe.robust_rmtree
+
+        def let_go_then_wipe(path, attempts=6):
+            if pe.win_plain_path(path) == pe.win_plain_path(leaf):
+                handle.close()
+            return real_rmtree(path, attempts)
+
+        monkeypatch.setattr(pe, "robust_rmtree", let_go_then_wipe)
+        handed = []
+        try:
+            with caplog.at_level(logging.INFO, logger=pe.logger.name):
+                assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        finally:
+            handle.close()
+        line = next(r.getMessage() for r in caplog.records
+                    if r.getMessage().startswith("Could not set the old DataForge cache aside"))
+        assert "[WinError 5]" in line
+        assert not (leaf / "old-cache-sentinel").exists()
+        assert _kept_missing(leaf) == []
+        handed[0].delete()
+
+    def test_work_in_temp_wipes_it_in_place_and_still_hands_the_folder_over(
+        self, setup, monkeypatch, systemp
+    ):
+        """No rename reaches %TEMP%'s drive (#484 copies there), so the old
+        cache is wiped where it is, as before, and only the working folder
+        in %TEMP% is deleted after the run."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        renames = _record_renames(monkeypatch)
+        wipes = _wipes(monkeypatch)
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [folder] = handed
+        assert folder.folder.parent == systemp
+        assert renames == []
+        assert pe.win_plain_path(leaf) in wipes
+        assert not _set_aside_in(folder.folder).exists()
+        folder.delete()
+        assert not folder.folder.exists()
+
+    def test_a_drive_with_room_only_once_it_is_gone_works_as_before(self, setup, monkeypatch):
+        """The check before the wipe counted the old cache as room (#482):
+        it is wiped before the new cache is filled and the working folder
+        deleted before the run returns, as before, so the drive gets that
+        room back when it was counted on."""
+        leaf, run = setup
+        (leaf / "raw" / "libs" / "big.bin").write_bytes(b"\0" * (1 << 20))
+        filled = []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
+        renames = _record_renames(monkeypatch)
+        handed = []
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        assert run(fake, defer_cleanup=handed.append) is True
+        assert handed == []
+        assert pe.win_plain_path(leaf) not in renames
+        assert not Path(fake.calls[0][2]).exists()
+        assert not (leaf / "raw" / "libs" / "big.bin").exists()
+
+    def test_a_short_drive_whose_old_cache_cannot_be_measured_works_as_before(
+        self, setup, monkeypatch
+    ):
+        """Short without the old cache, and its room unknown: the run goes on
+        (best effort), counting on the wipe as before."""
+        leaf, run = setup
+        filled = []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - 1 if filled else _PLENTY)
+        real_walk = pe._walk_files
+
+        def walk(folder, should_cancel, keep_prefixes=frozenset(), *, local_only=False, **kwargs):
+            if local_only:   # the old cache's walk
+                raise PermissionError(errno.EACCES, "Access is denied", str(folder))
+            return real_walk(folder, should_cancel, keep_prefixes, local_only=local_only, **kwargs)
+
+        monkeypatch.setattr(pe, "_walk_files", walk)
+        wipes = _wipes(monkeypatch)
+        handed = []
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        assert run(fake, defer_cleanup=handed.append) is True
+        assert handed == []
+        assert pe.win_plain_path(leaf) in wipes
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_a_drive_with_room_for_a_full_copy_sets_it_aside(self, setup, monkeypatch):
+        """Exactly the room a full copy needs, without the old cache: it is
+        set aside and the working folder handed over."""
+        leaf, run = setup
+        (leaf / "raw" / "libs" / "big.bin").write_bytes(b"\0" * (1 << 20))
+        filled = []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K if filled else _PLENTY)
+        handed = []
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        assert run(fake, defer_cleanup=handed.append) is True
+        [folder] = handed
+        assert (_set_aside_in(folder.folder) / "raw" / "libs" / "big.bin").is_file()
+        folder.delete()
+
+    def test_a_copy_after_a_refused_move_deletes_it_first(self, setup, monkeypatch, caplog):
+        """A copy needs the room the check before the wipe counted (#482),
+        which assumed the old cache gone: the set-aside cache is deleted,
+        once, before the first copy starts, and the rest of the working
+        folder is still handed over."""
+        leaf, run = setup
+        _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "_MOVE_RETRY_DELAYS", (0, 0, 0))
+        _refuse_moves(monkeypatch, 17, only=("entities/scitem", "reputation/standings"))
+        wipes = _wipes(monkeypatch)
+        work, seen = {}, []
+        real_copy2 = shutil.copy2
+
+        def copy2(src, dst, *args, **kwargs):
+            seen.append(_set_aside_in(work["dir"]).exists())
+            return real_copy2(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(shutil, "copy2", copy2)
+        handed = []
+        fake = _FakeTools(during_unforge=lambda run_dir: work.update(dir=run_dir))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake, defer_cleanup=handed.append) is True
+        assert seen == [False, False]
+        assert wipes.count(pe.win_plain_path(_set_aside_in(work["dir"]))) == 1
+        assert pe.win_plain_path(leaf) not in wipes
+        assert "Deleted the old DataForge cache before a copy" in caplog.text
+        assert _kept_missing(leaf) == []
+        [folder] = handed
+        assert (_working_records(folder.folder) / "unused" / "elsewhere" / "x.xml").is_file()
+        folder.delete()
+
+    def test_a_set_aside_cache_that_will_not_go_before_a_copy_is_logged(
+        self, setup, monkeypatch, caplog
+    ):
+        """Best effort: the copy goes on, and a drive that then fills is the
+        "cache incomplete" message (#482), as it would have been."""
+        leaf, run = setup
+        _refuse_moves(monkeypatch, 17, only=("entities/scitem",))
+        real_rmtree = pe.robust_rmtree
+
+        def refuse(path, attempts=6):
+            if Path(pe.win_plain_path(path)).name == pe._SET_ASIDE_CACHE_NAME:
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_rmtree(path, attempts)
+
+        monkeypatch.setattr(pe, "robust_rmtree", refuse)
+        handed = []
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        assert "Could not delete the old DataForge cache in " in caplog.text
+        assert _kept_missing(leaf) == []
+        monkeypatch.setattr(pe, "robust_rmtree", real_rmtree)
+        handed[0].delete()
+
+    def test_a_cache_folder_that_is_a_link_is_still_refused_before_anything_runs(
+        self, root, monkeypatch
+    ):
+        """#491 comes first: nothing is renamed, set aside or handed over
+        through a junction, and the folder it leads to is left alone."""
+        from tests.junction import make_junction
+
+        target = root / "elsewhere" / "dataforge"
+        (target / "raw" / "libs").mkdir(parents=True)
+        (target / "kept.txt").write_text("x", encoding="utf-8")
+        leaf = root / "SC" / "LIVE" / "cache" / "dataforge"
+        leaf.parent.mkdir(parents=True)
+        make_junction(leaf, target)
+        tools = root / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        fake = _FakeTools()
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        renames = _record_renames(monkeypatch)
+        handed = []
+        with pytest.raises(pe.CacheFolderIsLinkError):
+            pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe",
+                                 leaf, defer_cleanup=handed.append)
+        assert (fake.calls, renames, handed) == ([], [], [])
+        assert pe.linked_folder_target(leaf) is not None
+        assert (target / "kept.txt").is_file()
+
+
+class TestTheWorkingFolderGoesAfterTheRun:
+    """A caller that passes defer_cleanup is handed the working folder of a
+    run that saved and stamped the new cache, and deletes it after the run,
+    in the background (perf proposal). Every other outcome still deletes it
+    before the run ends (#471)."""
+
+    def test_it_outlives_the_run_with_its_marker_held_until_deleted(self, setup, caplog):
+        """Everything is still there when the run returns and the marker is
+        held, so another window's sweep leaves it alone. delete() then
+        removes it all and logs its time; a second delete() does nothing."""
+        leaf, run = setup
+        handed = []
+        fake = _FakeTools()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(fake, defer_cleanup=handed.append) is True
+            run_dir = Path(fake.calls[0][2])
+            [folder] = handed
+            assert "Deleting the DataForge working folder took" not in caplog.text
+            assert (run_dir / "Data" / "Game2.dcb").is_file()
+            assert (_working_records(run_dir) / "unused" / "elsewhere" / "x.xml").is_file()
+            assert (_set_aside_in(run_dir) / "old-cache-sentinel").is_file()
+            with pytest.raises(PermissionError):
+                os.unlink(run_dir / pe._SCRATCH_MARKER)
+            pe._sweep_stale_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+            assert (_set_aside_in(run_dir) / "old-cache-sentinel").is_file()
+            folder.delete()
+            assert not run_dir.exists()
+            assert "Deleting the DataForge working folder after the run took" in caplog.text
+            folder.delete()
+        assert _kept_missing(leaf) == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_the_marker_is_held_until_everything_else_is_gone(self, setup, monkeypatch):
+        """On its own thread, as in the app: while delete() works the marker
+        stays held, so a sweep then leaves the folder and all in it alone,
+        and the marker goes last, with the folder."""
+        leaf, run = setup
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [folder] = handed
+        run_dir = folder.folder
+        inside, go_on, order = threading.Event(), threading.Event(), []
+        real_rmtree = pe.robust_rmtree
+
+        def slow(path, attempts=6):
+            name = Path(pe.win_plain_path(path)).name
+            order.append(name)
+            if name == "Data":
+                inside.set()
+                go_on.wait(10)
+            return real_rmtree(path, attempts)
+
+        monkeypatch.setattr(pe, "robust_rmtree", slow)
+        deleting = threading.Thread(target=folder.delete)
+        deleting.start()
+        try:
+            assert inside.wait(10)
+            with pytest.raises(PermissionError):
+                os.unlink(run_dir / pe._SCRATCH_MARKER)
+            pe._sweep_stale_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+            assert (_set_aside_in(run_dir) / "old-cache-sentinel").is_file()
+        finally:
+            go_on.set()
+            deleting.join(10)
+        assert not run_dir.exists()
+        assert order == ["Data", pe._SET_ASIDE_CACHE_NAME, run_dir.name]
+
+    def test_a_crash_part_way_through_leaves_a_folder_the_next_sweep_takes(
+        self, setup, monkeypatch
+    ):
+        """A crash while delete() works closes the marker with the process
+        and leaves the marker file, so the next extraction's sweep removes
+        the folder at once, set-aside cache and all, instead of waiting out
+        the 10-minute grace for a folder with no marker."""
+        leaf, run = setup
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [folder] = handed
+        real_unlink, deleted = os.unlink, []
+
+        def crash_on_the_second_file(path, *args, **kwargs):
+            deleted.append(path)
+            if len(deleted) == 2:
+                raise _Killed()
+            return real_unlink(path, *args, **kwargs)
+
+        with monkeypatch.context() as patched:
+            patched.setattr(os, "unlink", crash_on_the_second_file)
+            with pytest.raises(_Killed):
+                folder.delete()
+        folder._marker.close()   # the process is gone, and Windows closes its handles
+        assert (folder.folder / pe._SCRATCH_MARKER).is_file()
+        assert run(_FakeTools()) is True
+        assert not folder.folder.exists()
+
+    def test_a_folder_that_will_not_go_keeps_its_marker_for_the_next_sweep(
+        self, setup, monkeypatch, caplog
+    ):
+        """Logged once, never raised, with the marker file left closed, so
+        the next sweep takes the folder at once. The entries after the one
+        that would not go are still tried (perf proposal): a file held under
+        Data used to keep the whole set-aside old cache, about 31,000 files,
+        until the next DataForge extraction."""
+        leaf, run = setup
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [folder] = handed
+        assert (_set_aside_in(folder.folder) / "old-cache-sentinel").is_file()
+        real_rmtree = pe.robust_rmtree
+        tried = []
+
+        def refuse(path, attempts=6):
+            tried.append(Path(pe.win_plain_path(path)).name)
+            if tried[-1] == "Data":
+                raise PermissionError(errno.EACCES, "held by antivirus", str(path))
+            return real_rmtree(path, attempts)
+
+        monkeypatch.setattr(pe, "robust_rmtree", refuse)
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            folder.delete()
+        assert tried == ["Data", pe._SET_ASIDE_CACHE_NAME]
+        [warning] = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert "held by antivirus" in warning
+        assert warning.endswith("the next extraction removes it")
+        assert not os.path.lexists(_set_aside_in(folder.folder))
+        assert (folder.folder / "Data").is_dir()
+        assert (folder.folder / pe._SCRATCH_MARKER).is_file()
+        monkeypatch.setattr(pe, "robust_rmtree", real_rmtree)
+        pe._sweep_stale_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert not folder.folder.exists()
+
+    def test_the_delete_never_touches_the_cache_the_generator_reads(self, setup, monkeypatch):
+        """Every delete is inside the working folder, and a cache file held
+        open, as the generator holds one while it reads, changes nothing for
+        either side."""
+        leaf, run = setup
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [folder] = handed
+        wipes = _wipes(monkeypatch)
+        record = leaf / "raw" / "libs" / "foundry" / "records" / "entities" / "scitem" / "x.xml"
+        with open(record, "rb") as reading:
+            folder.delete()
+            assert reading.read() == b"<x/>"
+        run_dir = pe.win_plain_path(folder.folder)
+        assert wipes and all(w == run_dir or w.startswith(run_dir + os.sep) for w in wipes)
+        assert not folder.folder.exists()
+        assert _kept_missing(leaf) == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_release_lets_the_marker_go_and_leaves_the_folder_to_the_next_sweep(self, setup):
+        """For a folder nobody will delete now (the app is closing)."""
+        leaf, run = setup
+        handed = []
+        assert run(_FakeTools(), defer_cleanup=handed.append) is True
+        [folder] = handed
+        folder.release()
+        folder.delete()   # does nothing once released
+        assert (_set_aside_in(folder.folder) / "old-cache-sentinel").is_file()
+        pe._sweep_stale_scratch(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert not folder.folder.exists()
+
+    def test_a_stop_pending_at_the_hand_over_deletes_it_before_the_run_ends(
+        self, setup, monkeypatch
+    ):
+        """A stop that arrived while the cache was filled (#471): nothing is
+        handed over, and the working folder, set-aside cache and all, is
+        gone before ExtractionCancelled is raised."""
+        leaf, run = setup
+        stopped = []
+        real_rename = pe._rename_tree
+
+        def rename_and_stop(src, dst):
+            stopped.append(True)
+            return real_rename(src, dst)
+
+        monkeypatch.setattr(pe, "_rename_tree", rename_and_stop)
+        handed = []
+        fake = _FakeTools()
+        with pytest.raises(pe.ExtractionCancelled, match="stopped once the new cache was written"):
+            run(fake, should_cancel=lambda: bool(stopped), defer_cleanup=handed.append)
+        assert handed == []
+        assert not Path(fake.calls[0][2]).exists()
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_a_stop_right_after_the_hand_over_leaves_it_to_the_taker(self, setup):
+        """The stop check after the hand-over still ends the run as stopped,
+        and the folder is then the taker's to delete (the worker deletes it
+        before it reports the stop)."""
+        _leaf, run = setup
+        handed = []
+        with pytest.raises(pe.ExtractionCancelled, match="stopped once the new cache was written"):
+            run(_FakeTools(), should_cancel=lambda: bool(handed), defer_cleanup=handed.append)
+        [folder] = handed
+        assert folder.folder.is_dir()
+        folder.delete()
+        assert not folder.folder.exists()
+
+    @pytest.mark.parametrize("how", ["unforge fails", "a full drive on a stamp",
+                                     "a stop before the wipe"])
+    def test_a_run_that_does_not_succeed_hands_nothing_over(self, setup, monkeypatch, how):
+        """Its working folder goes before the run ends, as without a taker,
+        with the set-aside cache when it got that far."""
+        leaf, run = setup
+        handed, kwargs = [], {}
+        if how == "unforge fails":
+            fake, raised = _FakeTools(unforge_rc=1), RuntimeError
+        elif how == "a full drive on a stamp":
+            real_write = Path.write_text
+
+            def write_text(self, *args, **kw):
+                if self.name == pe.P4K_SIZE_STAMP:
+                    raise OSError(errno.ENOSPC, "No space left on device", str(self))
+                return real_write(self, *args, **kw)
+
+            monkeypatch.setattr(Path, "write_text", write_text)
+            fake, raised = _FakeTools(), pe.NotEnoughSpaceError
+        else:
+            stopped = []
+            fake = _FakeTools(during_unforge=lambda run_dir: stopped.append(True))
+            kwargs["should_cancel"] = lambda: bool(stopped)
+            raised = pe.ExtractionCancelled
+        with pytest.raises(raised):
+            run(fake, defer_cleanup=handed.append, **kwargs)
+        assert handed == []
+        assert not Path(fake.calls[0][2]).exists()
 
 
 # ── the real process handling, with Python scripts as the tools ─────────────
@@ -683,16 +2156,34 @@ for rel in {keep!r}:
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "x.xml"), "w", encoding="utf-8") as f:
         f.write("<x/>")
+{after}
 print("unforge done")
 """
 
+# _UNFORGE_SCRIPT's {after} for a run that checks the moved files' IDs
+# (#484): each kept x.xml's ID, read with os.stat (a DirEntry's st_ino is 0
+# on Windows), saved outside the working folder before the child exits.
+_SAVE_IDS_SCRIPT = """\
+import json
+ids = {{}}
+for rel in {keep!r}:
+    path = "\\\\\\\\?\\\\" + os.path.join(records, *rel.split("/"), "x.xml")
+    ids[rel] = os.stat(path).st_ino
+with open({ids_file!r}, "w", encoding="utf-8") as f:
+    json.dump(ids, f)
+"""
 
-def _real_tools(root: Path, *, slow_unforge: bool = False, slow_global_ini: bool = False):
+
+def _real_tools(root: Path, *, slow_unforge: bool = False, slow_global_ini: bool = False,
+                ids_file: Path | None = None):
     """A Data.p4k that is really an unp4k-like script, whose Game2.dcb is
-    really an unforge-like script, both run by the base interpreter."""
+    really an unforge-like script, both run by the base interpreter. With
+    *ids_file*, unforge saves the kept files' IDs there."""
     pid_file = root / "tool.pid"
     before = (_write_pid_code(pid_file) + "time.sleep(30)\n") if slow_unforge else ""
-    dcb = _UNFORGE_SCRIPT.format(before=before, keep=list(pe.DATAFORGE_KEEP_SUBPATHS))
+    keep = list(pe.DATAFORGE_KEEP_SUBPATHS)
+    after = _SAVE_IDS_SCRIPT.format(keep=keep, ids_file=str(ids_file)) if ids_file else ""
+    dcb = _UNFORGE_SCRIPT.format(before=before, keep=keep, after=after)
     extra = ("import time\n" + _write_pid_code(pid_file, "    ") + "    time.sleep(30)"
              if slow_global_ini else "pass")
     p4k = _script(root / "Data.p4k", _UNP4K_SCRIPT.format(dcb=dcb, global_ini_extra=extra))
@@ -708,7 +2199,32 @@ class TestExtractDataforgeRealTools:
         assert pe.extract_dataforge(p4k, py, py, leaf) is True
         records = leaf / "raw" / "libs" / "foundry" / "records"
         assert (records / "entities" / "scitem" / "x.xml").exists()
-        assert (leaf / "raw" / "libs" / MANIFEST_FILE).exists()
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_a_full_run_moves_what_the_tool_wrote(self, root, caplog):
+        """The unforge stand-in, a real child process, saves each kept file's
+        ID before it exits. Each cached file keeps that ID, so it was moved
+        after a real process wrote and closed it (#484). An antivirus that
+        holds a just-closed file past the retries (a CI runner's) turns that
+        subtree into a copy, which its INFO line then names."""
+        ids_file = root / "ids.json"
+        p4k, py, _pid = _real_tools(root, ids_file=ids_file)
+        leaf = root / "cache" / "LIVE" / "cache" / "dataforge"
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert pe.extract_dataforge(p4k, py, py, leaf) is True
+        written = json.loads(ids_file.read_text(encoding="utf-8"))
+        assert sorted(written) == sorted(pe.DATAFORGE_KEEP_SUBPATHS)
+        cached = _ids(leaf / "raw" / "libs" / "foundry" / "records")
+        assert set(cached) == {rel + "/x.xml" for rel in written}
+        copied = [rel for rel in written if cached[rel + "/x.xml"] != written[rel]]
+        assert [rel for rel in copied
+                if f"Could not move {rel} into the DataForge cache" not in caplog.text] == []
+        summary = re.search(r" s, (\d+) moved and (\d+) copied", caplog.text)
+        assert summary is not None
+        moved = int(summary.group(1))
+        assert moved >= 1 and (moved, int(summary.group(2))) == (len(written) - len(copied),
+                                                                 len(copied))
         assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
     def test_a_stop_mid_unforge_kills_it_and_cleans_up(self, root):
@@ -734,43 +2250,64 @@ class TestExtractDataforgeRealTools:
         assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
 
-class _FakeGlobalIniTool:
-    """Stands in for _run_tool on the global.ini extraction: writes every
-    language's global.ini under data/Localization in its working folder."""
+# The game's language folders, each with a global.ini in Data.p4k.
+_GAME_LANGUAGES = (
+    "english", "chinese_(simplified)", "chinese_(traditional)", "french_(france)",
+    "german_(germany)", "italian_(italy)", "japanese_(japan)", "korean_(south_korea)",
+    "polish_(poland)", "portuguese_(brazil)", "spanish_(spain)",
+)
 
-    def __init__(self):
+
+class _FakeGlobalIniTool:
+    """Stands in for _run_tool on the global.ini extraction. Like unp4k it
+    writes into its working folder every language's global.ini whose entry
+    name (``Data/Localization/<language>/global.ini``) holds its filter,
+    ignoring case, and records the filters it was handed and the languages
+    it wrote (perf proposal). *stdout* and *stderr* are what it prints."""
+
+    def __init__(self, *, stdout: str = "", stderr: str = ""):
         self.cwds = []
+        self.filters = []
+        self.written = []
+        self.stdout, self.stderr = stdout, stderr
 
     def __call__(self, args, *, cwd, timeout, should_cancel=None):
         self.cwds.append(cwd)
-        for lang in ("english", "german"):
-            folder = Path(cwd) / "data" / "Localization" / lang
-            folder.mkdir(parents=True)
-            (folder / "global.ini").write_text(f"lang={lang}\n", encoding="utf-8")
-        return subprocess.CompletedProcess(args, 0, "", "")
+        self.filters.append(args[2])
+        for lang in _GAME_LANGUAGES:
+            entry = f"Data/Localization/{lang}/global.ini"
+            if args[2].casefold() in entry.casefold():
+                path = Path(cwd) / entry
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(f"lang={lang}\n", encoding="utf-8")
+                self.written.append(lang)
+        return subprocess.CompletedProcess(args, 0, self.stdout, self.stderr)
+
+
+@pytest.fixture
+def env(root, monkeypatch):
+    """A global.ini extraction with a fake unp4k: the DataForge cache leaf it
+    works beside (not made), the base.ini it writes, the fake, and run()."""
+    tools = root / "tools"
+    tools.mkdir()
+    for name in ("unp4k.exe", "Data.p4k"):
+        (tools / name).write_bytes(b"x")
+    leaf = root / "SC" / "LIVE" / "cache" / "dataforge"
+    out = root / "data" / "LIVE" / "cache" / "base.ini"
+    fake = _FakeGlobalIniTool()
+    monkeypatch.setattr(pe, "_run_tool", fake)
+
+    def run(near=leaf):
+        return pe.extract_global_ini(tools / "Data.p4k", out, tools / "unp4k.exe",
+                                     scratch_near=near)
+
+    return leaf, out, fake, run
 
 
 class TestGlobalIniWorkingFolder:
     """The global.ini extraction works beside the DataForge cache too (#471),
     by the same rules, so nothing it extracts lands in %TEMP% unless a
     fallback applies."""
-
-    @pytest.fixture
-    def env(self, root, monkeypatch):
-        tools = root / "tools"
-        tools.mkdir()
-        for name in ("unp4k.exe", "Data.p4k"):
-            (tools / name).write_bytes(b"x")
-        leaf = root / "SC" / "LIVE" / "cache" / "dataforge"
-        out = root / "data" / "LIVE" / "cache" / "base.ini"
-        fake = _FakeGlobalIniTool()
-        monkeypatch.setattr(pe, "_run_tool", fake)
-
-        def run(near=leaf):
-            return pe.extract_global_ini(tools / "Data.p4k", out, tools / "unp4k.exe",
-                                         scratch_near=near)
-
-        return leaf, out, fake, run
 
     def test_it_works_beside_the_dataforge_cache_and_cleans_up(self, env, systemp):
         leaf, out, fake, run = env
@@ -797,16 +2334,11 @@ class TestGlobalIniWorkingFolder:
         """It only ever needed %TEMP% before #471, so a folder beside the
         cache that cannot be made (permissions, Controlled Folder Access, a
         read-only drive) must not stop the base.ini refresh."""
-        _leaf, out, fake, run = env
-        real_open = pe._open_scratch
-
-        def refuse_beside(parent, prefix):
-            if Path(parent) != systemp:
-                raise PermissionError("Controlled Folder Access")
-            return real_open(parent, prefix)
-
-        monkeypatch.setattr(pe, "_open_scratch", refuse_beside)
+        leaf, out, fake, run = env
+        leaf.parent.mkdir(parents=True, exist_ok=True)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
         assert run() is True
+        assert [call.parent for call in calls] == [leaf.parent, systemp]
         run_dir = Path(fake.cwds[0])
         assert run_dir.parent == systemp
         assert run_dir.name.startswith(pe._GLOBAL_INI_TEMP_PREFIX)
@@ -835,6 +2367,390 @@ class TestGlobalIniWorkingFolder:
         (other / pe._SCRATCH_MARKER).write_text("")
         run()
         assert other.exists()
+
+    # ── free space (#482) ──
+
+    def test_a_short_cache_drive_moves_it_to_temp(self, env, systemp, monkeypatch, caplog):
+        """Decision 1: a cache drive too full for the ~11 MB of work sends the
+        run to %TEMP% quietly, as a refused folder does: D:'s shortage and the
+        move are INFO lines, and nothing is logged at WARNING. The user only
+        hears about it when %TEMP%'s drive or the data folder's is short
+        too."""
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        drive = _drive_letters(systemp, data=out.parents[2])
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "D:" else _PLENTY)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run() is True
+        run_dir = Path(fake.cwds[0])
+        assert run_dir.parent == systemp
+        assert run_dir.name.startswith(pe._GLOBAL_INI_TEMP_PREFIX)
+        assert out.read_text(encoding="utf-8") == "lang=english\n"
+        moved = [r for r in caplog.records
+                 if r.levelno == logging.INFO and "not enough free space" in r.getMessage()]
+        assert moved and str(systemp) in moved[0].getMessage()
+        assert any(r.levelno == logging.INFO
+                   and r.getMessage().startswith(f"Not enough free space: D: has {pe._MIB:,}")
+                   for r in caplog.records)
+        assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
+
+    def test_a_short_temp_drive_stops_it_and_keeps_base_ini(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        """No cache folder (its drive offline): %TEMP% is the only place, so a
+        short one refuses with the plain advice, before unp4k runs and
+        without making a folder. Never the temp advice, which ends in the
+        same sentence but blames a cache folder on OneDrive or a network
+        drive, which this run does not have."""
+        _leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        out.write_text("old=1\n", encoding="utf-8")
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else _PLENTY)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(near=None)
+        assert fake.cwds == []
+        assert out.read_text(encoding="utf-8") == "old=1\n"
+        assert list(systemp.iterdir()) == []
+        assert [s[0] for s in raised.value.shortages] == ["C:"]
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="C:")])
+
+    def test_base_ini_is_counted_on_the_data_folder_drive(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        """base.ini goes to the data folder, often another drive than the
+        cache. Short there, %TEMP% cannot help, so the run is refused naming
+        that drive, with the plain advice (choosing another cache folder
+        would not help either), and unp4k never runs."""
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        drive = _drive_letters(systemp, data=out.parents[2])
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "E:" else _PLENTY)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run()
+        assert [s[0] for s in raised.value.shortages] == ["E:"]
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="E:")])
+        assert fake.cwds == []
+        assert not out.exists()
+        assert _scratch_folders(leaf.parent, pe.GLOBAL_INI_SCRATCH_PREFIX) == []
+        assert list(systemp.iterdir()) == []
+
+    def test_the_temp_retry_is_checked_too(self, env, systemp, monkeypatch, english_ui):
+        """A folder beside the cache that cannot be made sends the run to
+        %TEMP%, which gets the same check before anything is made there, and
+        the plain advice when it is short."""
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        leaf.parent.mkdir(parents=True, exist_ok=True)
+        _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: pe._MIB if drive(folder) == "C:" else _PLENTY)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run()
+        assert fake.cwds == []
+        assert list(systemp.iterdir()) == []
+        assert _scratch_folders(leaf.parent, pe.GLOBAL_INI_SCRATCH_PREFIX) == []
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="C:")])
+
+    @pytest.mark.parametrize("temp_free", [10 << 20, _PLENTY], ids=["temp short too", "temp fine"])
+    def test_a_short_data_drive_alone_does_not_move_it_to_temp(
+        self, env, systemp, monkeypatch, caplog, english_ui, temp_free
+    ):
+        """base.ini goes to the data folder wherever the work runs, so moving
+        the work to %TEMP% cannot help a shortage there. With room beside the
+        cache (D:), a short data folder drive (E:) refuses the run at once,
+        at WARNING, naming E: alone with the plain advice. %TEMP%'s drive (C:)
+        is never named, short or not, and there is no move to log."""
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        drive = _drive_letters(systemp, data=out.parents[2])
+        _volumes(monkeypatch, drive)
+        free = {"C:": temp_free, "D:": _PLENTY, "E:": 5 << 20}
+        _disk_space(monkeypatch, lambda folder: free[drive(folder)])
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError) as raised:
+                run()
+        assert [s[0] for s in raised.value.shortages] == ["E:"]
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="E:")])
+        assert "C:" not in str(raised.value)
+        assert fake.cwds == []
+        assert [r.getMessage() for r in caplog.records if "; working in " in r.getMessage()] == []
+        base_ini = pe._space_for(pe._BASE_INI_BYTES, 1, 4096)
+        assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == [
+            f"Not enough free space: E: has {5 << 20:,} bytes free and needs about {base_ini:,}"]
+        assert list(systemp.iterdir()) == []
+        assert _scratch_folders(leaf.parent, pe.GLOBAL_INI_SCRATCH_PREFIX) == []
+
+    def test_a_short_data_folder_on_the_temp_drive_is_asked_for_base_ini_only(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        """The data folder on %TEMP%'s drive (C:) and the cache on D:, which
+        has room. C: is short for base.ini, so the run is refused for base.ini
+        alone, not for the work as well, which never needed C:, and with the
+        plain advice."""
+        _leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        on_c = (pe.win_plain_path(systemp), pe.win_plain_path(out.parents[2]))
+
+        def drive(folder):
+            return "C:" if any(folder == c or folder.startswith(c + os.sep) for c in on_c) else "D:"
+
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: (10 << 20) if drive(folder) == "C:" else _PLENTY)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run()
+        base_ini = pe._space_for(pe._BASE_INI_BYTES, 1, 4096)
+        assert [s[0::3] for s in raised.value.shortages] == [("C:", base_ini)]
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="C:")])
+        assert fake.cwds == []
+
+    def test_a_short_cache_drive_and_a_short_temp_drive_give_one_warning(
+        self, env, systemp, monkeypatch, caplog, english_ui
+    ):
+        """D: beside the cache is short, so the work moves to %TEMP%, and C:
+        there is short too: refused for C: alone, with the plain advice. D:'s
+        shortage was only the reason for the move and stays at INFO, so the
+        refusal's is the one WARNING."""
+        _leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        drive = _drive_letters(systemp, data=out.parents[2])
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch,
+                    lambda folder: pe._MIB if drive(folder) in ("C:", "D:") else _PLENTY)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError) as raised:
+                run()
+        assert [s[0] for s in raised.value.shortages] == ["C:"]
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_global_ini"), [pe.tr("extract.no_space_fix", drive="C:")])
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1 and warnings[0].startswith("Not enough free space: C: has")
+        assert any(r.levelno == logging.INFO
+                   and r.getMessage().startswith("Not enough free space: D: has")
+                   for r in caplog.records)
+        assert fake.cwds == []
+
+    def test_a_cache_drive_that_is_gone_is_skipped_and_the_run_moves_to_temp(
+        self, env, systemp, monkeypatch, caplog
+    ):
+        """The cache folder's drive is gone, so no folder above the work's
+        place beside it exists. The check skips that part with a WARNING
+        rather than call the drive short, and the run moves to %TEMP%
+        because the folder there cannot be made, as it did before the check,
+        and succeeds."""
+        leaf, out, fake, run = env
+        _cache_drive_gone(monkeypatch, leaf.parents[2])
+        _disk_space(monkeypatch)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run() is True
+        assert Path(fake.cwds[0]).parent == systemp
+        assert out.read_text(encoding="utf-8") == "lang=english\n"
+        messages = [(r.levelno, r.getMessage()) for r in caplog.records]
+        assert any(level == logging.WARNING and "no folder above it exists" in message
+                   for level, message in messages)
+        moves = [message for _level, message in messages if "; working in " in message]
+        assert len(moves) == 1 and "cannot find the path" in moves[0]
+        assert not any("not enough free space" in message.lower() for _level, message in messages)
+
+
+class TestGlobalIniTakesTheEnglishFileAlone:
+    """(perf proposal) unp4k takes every entry whose name holds its filter,
+    ignoring case, so the filter "global.ini" took all 11 languages' files
+    (20 to 26 s and 9 GB of memory on a 150 GB Data.p4k), while the run only
+    ever reads the English one. The filter now names that file, and the
+    free-space check asks for that one file."""
+
+    def test_unp4k_is_handed_the_english_file_and_takes_nothing_else(self, env):
+        _leaf, out, fake, run = env
+        assert run() is True
+        assert fake.filters == ["Localization/english/global.ini"]
+        assert fake.written == ["english"]
+        assert out.read_text(encoding="utf-8") == "lang=english\n"
+
+    def test_the_filter_names_the_file_the_run_copies(self):
+        """Derived from _GLOBAL_INI_RELATIVE, with "/" as unp4k names its
+        entries, so the file the filter takes is the one the run reads."""
+        assert pe._GLOBAL_INI_FILTER == "Localization/english/global.ini"
+        assert pe._GLOBAL_INI_RELATIVE.as_posix().endswith("/" + pe._GLOBAL_INI_FILTER)
+
+    def test_the_work_is_asked_for_the_english_file_alone(self, env, systemp, monkeypatch):
+        """Room beside the cache for one English global.ini, the same file
+        base.ini is, keeps the work there, and a byte less moves it to
+        %TEMP%. Sized for every language's files (31 MiB in 16), the work
+        moved with three times the room it needs. On 128 KiB clusters, where
+        each file counted costs a cluster."""
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        drive = _drive_letters(systemp, data=out.parents[2])
+        _volumes(monkeypatch, drive, cluster=_EXFAT_CLUSTER)
+        one_file = pe._space_for(pe._BASE_INI_BYTES, 1, _EXFAT_CLUSTER)
+        for free, place in ((one_file, leaf.parent), (one_file - 1, systemp)):
+            _disk_space(monkeypatch, lambda folder, free=free: free if drive(folder) == "D:"
+                        else _PLENTY)
+            assert run() is True
+            assert Path(fake.cwds[-1]).parent == place
+        assert fake.written == ["english", "english"]
+
+
+# ── tools that exit 0 after an error (perf proposal) ─────────────────────────
+
+# What the tools print for a file they could not extract or convert. unp4k
+# catches the error, prints it and goes on to exit 0, and so does an unforge
+# built before odw-fast-unp4k ad7c6a7 (the bundled one exits 1 after it).
+_UNP4K_DCB_FAILED = ("Exception while extracting Data/Game2.dcb: "
+                     "Unable to read beyond the end of the stream.")
+_UNP4K_LOCKED = ("Exception while extracting Data/Game2.dcb: The process cannot access the "
+                 "file 'D:\\StarCitizen\\LIVE\\Data.p4k' because it is being used by "
+                 "another process.")
+_UNFORGE_FAILED = ("Error converting D:\\SC\\LIVE\\cache\\dataforge.extracting-1a2b3c4d\\Data"
+                   "\\Game2.dcb: Access to the path 'x.xml' is denied.")
+
+
+class TestToolsThatExitZeroAfterAnError:
+    """unp4k prints "Exception while extracting <entry>: <message>" for an
+    entry it could not extract, and unforge "Error converting <file>:
+    <message>" when anything in its conversion fails, from reading the dcb
+    to saving a file, and unp4k still exits 0, as an unforge built before
+    odw-fast-unp4k ad7c6a7 does (the bundled one exits 1). A dcb or
+    global.ini cut short, or a partial tree that passes the records check,
+    went on to be used, and the tree to be stamped as a complete cache. Each
+    now fails the run as a non-zero exit does, before the old cache is
+    wiped. unp4k's stdout ("Found N files to extract.") is logged at INFO."""
+
+    @pytest.mark.parametrize("stream", ["stdout", "stderr"])
+    def test_unp4k_that_could_not_extract_the_dcb_fails_the_run(
+        self, setup, caplog, stream
+    ):
+        """Through _raise_unp4k_failure, at ERROR like any unexpected unp4k
+        failure, with its output. unforge never runs, the old cache stays
+        stamped and fresh, and the working folder goes."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(unp4k_out={stream: _UNP4K_DCB_FAILED})
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(RuntimeError) as raised:
+                run(fake)
+        assert not isinstance(raised.value, pe.P4kLockedError)
+        assert str(raised.value).startswith("unp4k.exe exited with code 0 but could not "
+                                            "extract a file.")
+        assert _UNP4K_DCB_FAILED in str(raised.value)
+        assert [r.getMessage().split(";")[0] for r in caplog.records
+                if r.levelno >= logging.ERROR] == [
+            "unp4k.exe exited with code 0 but could not extract a file"]
+        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k"]
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_an_entry_a_locked_data_p4k_stopped_gets_the_locked_message(
+        self, setup, caplog, english_ui
+    ):
+        """The same path as a non-zero exit, so Data.p4k being in use reads
+        as the game updating, at WARNING with nothing at ERROR. Defence in
+        depth that the bundled unp4k does not reach today: it opens
+        Data.p4k outside its per-entry catch, so a lock kills it with a
+        non-zero exit, which already reads as locked (test_pak_extraction.py).
+        This line is the shape such a failure would take inside the catch."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        fake = _FakeTools(unp4k_out={"stdout": _UNP4K_LOCKED})
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.P4kLockedError) as raised:
+                run(fake)
+        assert str(raised.value) == pe.tr("extract.p4k_locked")
+        assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+        # unp4k ran: #516's up-front refusal raises the same error with the
+        # same text before any tool, so without this the test would pass
+        # on the refusal alone, with the line check deleted.
+        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k"]
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+
+    @pytest.mark.parametrize("stream", ["stdout", "stderr"])
+    def test_unforge_that_could_not_save_a_file_keeps_the_old_cache(
+        self, setup, monkeypatch, stream
+    ):
+        """_FakeTools' unforge writes every kept subtree, so the tree passes
+        the records check: only the line it printed tells the run it is
+        partial. Nothing is moved and the old cache stays stamped and
+        fresh."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        renames = _record_renames(monkeypatch)
+        fake = _FakeTools(unforge_out={stream: _UNFORGE_FAILED})
+        with pytest.raises(RuntimeError) as raised:
+            run(fake)
+        assert str(raised.value).startswith("unforge.exe failed (code 0):\n")
+        assert _UNFORGE_FAILED in str(raised.value)
+        assert renames == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_global_ini_unp4k_that_could_not_extract_it_keeps_base_ini(self, env, monkeypatch):
+        """The file it was cutting short is in the working folder, and is
+        still not copied over base.ini."""
+        leaf, out, _fake, run = env
+        out.parent.mkdir(parents=True)
+        out.write_text("old=1\n", encoding="utf-8")
+        failed = ("Exception while extracting Data/Localization/english/global.ini: "
+                  "Unable to read beyond the end of the stream.")
+        fake = _FakeGlobalIniTool(stdout="Found 1 files to extract.\n" + failed)
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        with pytest.raises(RuntimeError) as raised:
+            run()
+        assert failed in str(raised.value)
+        assert fake.written == ["english"]
+        assert out.read_text(encoding="utf-8") == "old=1\n"
+        assert _scratch_folders(leaf.parent, pe.GLOBAL_INI_SCRATCH_PREFIX) == []
+
+    @pytest.mark.parametrize("extraction", ["dataforge", "global.ini"])
+    @pytest.mark.parametrize("printed", ["Found 1 files to extract.\n",
+                                         "Found 1 files to extract.\n" + "x" * 3000])
+    def test_unp4k_stdout_is_logged_at_info_truncated(
+        self, request, monkeypatch, caplog, extraction, printed
+    ):
+        """Its "Found N files to extract." line says what the filter matched.
+        Only its first 2000 characters are logged, as unforge's are, and a
+        run that prints it and nothing else goes through."""
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            if extraction == "dataforge":
+                _leaf, run = request.getfixturevalue("setup")
+                assert run(_FakeTools(unp4k_out={"stdout": printed})) is True
+            else:
+                _leaf, _out, _fake, run = request.getfixturevalue("env")
+                monkeypatch.setattr(pe, "_run_tool", _FakeGlobalIniTool(stdout=printed))
+                assert run() is True
+        shown = printed.strip()
+        assert [(r.levelno, r.getMessage()) for r in caplog.records
+                if r.getMessage().startswith("unp4k stdout")] == [
+            (logging.INFO, f"unp4k stdout ({len(shown)} bytes, truncated): {shown[:2000]}")]
+
+    def test_nothing_pauses_or_collects_between_the_steps(self, setup, monkeypatch):
+        """The run used to call gc.collect() and sleep 0.1 s after each tool
+        and before caching, and gc.collect() again at the end. Each tool is
+        a separate process _run_tool has already reaped, so only the wipe's
+        and the cleanup's robust_rmtree still collect, and with nothing
+        refused nothing sleeps."""
+        leaf, run = setup
+        _stamp_old_cache(leaf)
+        collected, slept = [], []
+        monkeypatch.setattr(pe.gc, "collect",
+                            lambda *args: collected.append(sys._getframe(1).f_code.co_name))
+        monkeypatch.setattr(pe.time, "sleep",
+                            lambda seconds: slept.append((sys._getframe(1).f_code.co_name,
+                                                          seconds)))
+        assert run(_FakeTools()) is True
+        assert collected and set(collected) == {"robust_rmtree"}
+        assert slept == []
 
 
 class TestExtractGlobalIni:
@@ -874,3 +2790,1550 @@ class TestExtractGlobalIni:
         p4k, py, _pid = _real_tools(root)
         pe.extract_global_ini(p4k, root / "base.ini", py)
         assert not dead.exists()
+
+
+# ── what the bar shows while a tool runs (#507) ─────────────────────────────
+
+class TestToolPhasesShowTheBusyBar:
+    """unp4k and unforge report nothing while they run, so a counted bar stood
+    still the whole time: at 0% while unp4k ran and at 33% for the minutes
+    unforge takes, which looked like a hang (#507). Each tool phase reports a
+    total of 0, the moving busy bar (tests/test_extraction_stop.py pins the
+    dialog's side), and the counted phases stay as they were. Each fake tool
+    records the last progress call made before it started, which is what the
+    bar shows while that tool runs."""
+
+    def test_the_dataforge_tools_run_under_the_busy_bar(self, setup):
+        _leaf, run = setup
+        calls, shown = [], {}
+        tools = _FakeTools()
+
+        def watched(args, **kwargs):
+            shown[Path(args[0]).stem] = calls[-1]
+            return tools(args, **kwargs)
+
+        assert run(watched, progress_pct_callback=lambda *call: calls.append(call)) is True
+        assert shown == {
+            "unp4k": (0, 0, pe.tr("progress.extract_dcb")),
+            "unforge": (0, 0, pe.tr("progress.unforge_short")),
+        }
+        # Caching stays 2 of 3, and the run then ends at 3 of 3: no diff
+        # snapshot counts the cache's files any more (perf proposal, #495).
+        assert calls == [
+            (0, 0, pe.tr("progress.extract_dcb")),
+            (0, 0, pe.tr("progress.unforge_short")),
+            (2, 3, pe.tr("progress.caching_entities")),
+            (3, 3, "Done"),
+        ]
+
+    def test_unp4k_runs_under_the_busy_bar_for_global_ini(self, env, root, monkeypatch):
+        leaf, out, fake, _run = env
+        calls, shown = [], []
+
+        def watched(args, **kwargs):
+            shown.append(calls[-1])
+            return fake(args, **kwargs)
+
+        monkeypatch.setattr(pe, "_run_tool", watched)
+        tools = root / "tools"
+        assert pe.extract_global_ini(
+            tools / "Data.p4k", out, tools / "unp4k.exe", scratch_near=leaf,
+            progress_pct_callback=lambda *call: calls.append(call),
+        ) is True
+        assert shown == [(0, 0, pe.tr("progress.unp4k_launch_short"))]
+        assert calls == [
+            (0, 0, pe.tr("progress.unp4k_launch_short")),
+            (1, 2, pe.tr("progress.copy_global_short")),
+            (2, 2, "Done"),
+        ]
+
+
+# ── the free-space check (#482) ─────────────────────────────────────────────
+
+def _disk_space(monkeypatch, free=None, default=_PLENTY, raises=None):
+    """Patch shutil.disk_usage, over conftest's session stub. *free* gives the
+    free bytes for the folder asked (a dict keyed by folder, or a callable
+    taking the plain folder path), *default* for any other folder, and
+    *raises* makes every call raise it. The stub's real call still runs, so
+    a folder that does not exist still raises. Returns the plain folders
+    asked, in order."""
+    asked = []
+    stub = shutil.disk_usage
+    table = ({pe.win_plain_path(k): v for k, v in free.items()}
+             if isinstance(free, dict) else {})
+
+    def usage(path):
+        plain = pe.win_plain_path(path)
+        asked.append(plain)
+        if raises is not None:
+            raise raises
+        figure = free(plain) if callable(free) else table.get(plain, default)
+        return stub(path)._replace(free=figure)
+
+    monkeypatch.setattr(shutil, "disk_usage", usage)
+    return asked
+
+
+def _volumes(monkeypatch, drive_of, *, cluster=4096, caller_free=None):
+    """Replace the volume probe: *drive_of(plain folder)* names the drive a
+    folder is on, and each name is its own volume."""
+    keys = {}
+
+    def measure(folder):
+        label = drive_of(pe.win_plain_path(folder))
+        return pe._Volume(keys.setdefault(label, len(keys) + 1), label, cluster, caller_free)
+
+    monkeypatch.setattr(pe, "_measure_volume", measure)
+
+
+def _drive_letters(systemp, data=None):
+    """A *drive_of* for _volumes: %TEMP% is on C:, the data folder (when
+    given) on E:, everything else (the cache) on D:."""
+    temp = pe.win_plain_path(systemp)
+    data = pe.win_plain_path(data) if data is not None else None
+
+    def drive_of(folder):
+        if folder == temp or folder.startswith(temp + os.sep):
+            return "C:"
+        if data is not None and (folder == data or folder.startswith(data + os.sep)):
+            return "E:"
+        return "D:"
+
+    return drive_of
+
+
+def _intro_and_advice(raised) -> tuple[str, list[str]]:
+    """A refusal's first paragraph, which names the extraction, and its
+    advice paragraphs. The message is the intro, one line per short drive,
+    then the advice for each drive in the same order."""
+    paragraphs = str(raised.value).split("\n\n")
+    short = len(raised.value.shortages)
+    assert len(paragraphs) == 1 + 2 * short, paragraphs
+    return paragraphs[0], paragraphs[1 + short:]
+
+
+def _cache_drive_gone(monkeypatch, cache_root: Path) -> None:
+    """The drive that holds *cache_root* is gone (a USB stick pulled after
+    the cache folder was resolved): the free-space check finds no folder
+    above anything under it, and making a folder there fails as Windows
+    fails it. The folders under tmp_path are really there, hence the fakes."""
+    gone = pe.win_plain_path(cache_root)
+    real_nearest, real_open = pe._nearest_existing_folder, pe._open_scratch
+
+    def under(path):
+        plain = pe.win_plain_path(path)
+        return plain == gone or plain.startswith(gone + os.sep)
+
+    def nearest(path):
+        return None if under(path) else real_nearest(path)
+
+    def open_scratch(parent, prefix):
+        if under(parent):
+            raise FileNotFoundError(errno.ENOENT, "The system cannot find the path specified",
+                                    str(parent))
+        return real_open(parent, prefix)
+
+    monkeypatch.setattr(pe, "_nearest_existing_folder", nearest)
+    monkeypatch.setattr(pe, "_open_scratch", open_scratch)
+
+
+class _ListedWithAttributes:
+    """A DirEntry whose stat() adds *attributes* to the real ones. A DirEntry
+    cannot be made or changed, so this stands in for one."""
+
+    def __init__(self, entry, attributes: int):
+        self._entry, self._attributes = entry, attributes
+
+    def __getattr__(self, name):
+        return getattr(self._entry, name)
+
+    def stat(self, *, follow_symlinks=True):
+        return _StatWithAttributes(self._entry.stat(follow_symlinks=follow_symlinks),
+                                   self._attributes)
+
+
+class _StatWithAttributes:
+    """A stat result with *attributes* added to st_file_attributes and every
+    other field the real one, so code that reads st_mode still works (Python
+    3.11's shutil.rmtree does, when the run deletes the old cache)."""
+
+    def __init__(self, real, attributes: int):
+        self._real = real
+        self.st_file_attributes = real.st_file_attributes | attributes
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+def _listed_with(monkeypatch, file: Path, attributes: int) -> None:
+    """Make the directory listing report *file* with *attributes* as well,
+    the way Windows lists a OneDrive online-only file: its full size, with a
+    recall or offline attribute because its data is not on this PC. Those
+    are set by the cloud files driver, not by a program, hence the fake.
+    Every other entry is the real one."""
+    real_scandir = os.scandir
+    target = pe.win_plain_path(file)
+
+    class Listing:
+        def __init__(self, path="."):
+            self._entries = real_scandir(path)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            self._entries.close()
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            entry = next(self._entries)
+            if pe.win_plain_path(entry.path) == target:
+                return _ListedWithAttributes(entry, attributes)
+            return entry
+
+        def close(self):
+            self._entries.close()
+
+    monkeypatch.setattr(os, "scandir", Listing)
+
+
+# What a DataForge run asks for at 4096-byte clusters: its working folder, the
+# new cache, and what the check before the wipe asks for _FakeTools' output
+# (one 4-byte file per keep subtree, a cluster each, plus the reserve).
+_WORK_4K = pe._space_for(pe._DATAFORGE_WORK_BYTES, pe._DATAFORGE_WORK_FILES, 4096)
+_CACHE_4K = pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES, 4096)
+_GATE_4K = len(pe.DATAFORGE_KEEP_SUBPATHS) * 4096 + pe._NEW_CACHE_RESERVE_BYTES
+
+
+class TestFreeSpaceCheck:
+    """extract_dataforge refuses a run that would not fit (#482): before any
+    tool runs, per volume, with the old cache counted as room only when it is
+    complete; again just before the old cache is wiped; and a drive that
+    fills during the move or a fallback copy gets the same error instead of
+    a raw OSError."""
+
+    def test_the_real_free_space_is_never_read(self, root):
+        """conftest's no_real_free_space keeps every real extraction in the
+        suite off the free space of the drive it happens to run on."""
+        loaded = [sys.modules[name] for name in ("src.utils.pak_extractor", "utils.pak_extractor")
+                  if name in sys.modules]
+        assert pe in loaded
+        for module in loaded:
+            assert module._measure_volume(root)[2:] == (4096, None)
+            with pytest.raises(OSError):
+                module._measure_volume(root / "missing")   # the real probe still runs
+        assert shutil.disk_usage(str(root)).free == 1 << 40
+        with pytest.raises(FileNotFoundError):
+            shutil.disk_usage(str(root / "missing"))
+
+    def test_the_real_volume_probe_reads_this_volume(self, root, monkeypatch):
+        """The Windows calls themselves, on this machine's drive (CI's 3.11
+        included). A wrong ctypes call would only show as its fallback, so
+        each fallback is made one that no drive has: a 1-byte cluster, and
+        "?:" for the label, whose usual fallback (the drive in the path's
+        text) is exactly what GetVolumePathNameW answers for tmp_path."""
+        monkeypatch.setattr(pe, "_DEFAULT_CLUSTER_BYTES", 1)
+        monkeypatch.setattr(pe, "_drive_label", lambda plain: "?:")
+        volume = pe._measure_volume.__wrapped__(root)
+        assert volume.key == os.stat(root).st_dev != 0
+        assert volume.cluster >= 512 and volume.cluster & (volume.cluster - 1) == 0
+        assert isinstance(volume.caller_free, int) and volume.caller_free > 0
+        assert volume.label == os.path.splitdrive(str(root))[0]
+
+    def test_a_short_drive_beside_the_cache_stops_before_any_tool_runs(
+        self, setup, systemp, monkeypatch, english_ui
+    ):
+        """Refused in a second instead of failing in unforge minutes later,
+        with nothing made and the old cache as it was. The cache's drive (D:)
+        has room for the new cache but not for the work beside it too, and
+        %TEMP%'s (C:) has plenty: DataForge still does not move its work to
+        %TEMP%, unlike the global.ini extraction (decision 1). The message
+        is DataForge's, with the advice to pick a cache folder elsewhere."""
+        leaf, run = setup
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        assert _CACHE_4K < 2 * pe._GIB < _WORK_4K + _CACHE_4K
+        _disk_space(monkeypatch, lambda folder: 2 * pe._GIB if drive(folder) == "D:" else _PLENTY)
+        fake = _FakeTools()
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(fake)
+        assert [s[0] for s in raised.value.shortages] == ["D:"]
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_dataforge"), [pe.tr("extract.no_space_fix_cache", drive="D:")])
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists() and (leaf / "raw" / "libs").is_dir()
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists()
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert list(systemp.iterdir()) == []
+
+    def test_a_first_run_needs_the_working_folder_and_the_new_cache(self, setup, monkeypatch):
+        """setup's leaf has raw/libs but no stamp: a first run, or a run cut
+        off between the wipe and the stamps. Neither makes room, so the
+        working folder and the new cache must both fit. Exactly enough
+        passes."""
+        leaf, run = setup
+        both = _WORK_4K + _CACHE_4K
+        _disk_space(monkeypatch, default=both - 1)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert raised.value.shortages[0][2:] == (both - 1, both)
+        _disk_space(monkeypatch, default=both)
+        assert run(_FakeTools()) is True
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_a_stamped_old_cache_makes_room(self, setup, monkeypatch):
+        """A complete cache is wiped before the new one is written, so it
+        counts as room."""
+        leaf, run = setup
+        (leaf / pe.P4K_MTIME_STAMP).write_text("1")
+        need = _WORK_4K + _CACHE_4K - pe._DATAFORGE_CACHE_BYTES
+        _disk_space(monkeypatch, default=need - 1)
+        with pytest.raises(pe.NotEnoughSpaceError):
+            run(_FakeTools())
+        _disk_space(monkeypatch, default=need)
+        assert run(_FakeTools()) is True
+
+    def test_a_stamped_old_cache_frees_a_cluster_per_file(self, setup, monkeypatch):
+        """On a 128 KiB-cluster exFAT stick each of the old cache's ~31k
+        files takes a whole cluster, so the wipe frees that, not just its
+        1.2 GB of bytes. The new cache is charged a cluster per file, and a
+        credit of bytes alone asked a re-extract there for about 2.5 GB more
+        than it needs. Exactly enough passes."""
+        leaf, run = setup
+        (leaf / pe.P4K_MTIME_STAMP).write_text("1")
+        cluster = _EXFAT_CLUSTER
+        _volumes(monkeypatch, lambda folder: "D:", cluster=cluster)
+        frees = pe._DATAFORGE_CACHE_FILES * cluster
+        assert frees > pe._DATAFORGE_CACHE_BYTES
+        need = (pe._space_for(pe._DATAFORGE_WORK_BYTES, pe._DATAFORGE_WORK_FILES, cluster)
+                + pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES, cluster)
+                - frees)
+        _disk_space(monkeypatch, default=need - 1)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert raised.value.shortages[0][2:] == (need - 1, need)
+        _disk_space(monkeypatch, default=need)
+        assert run(_FakeTools()) is True
+
+    def test_a_stamp_without_raw_libs_makes_no_room(self, setup, monkeypatch):
+        """A stray .p4k_mtime with no raw/libs beside it (removed by hand, or
+        a clean that got part-way) is no cache for the wipe to free, so the
+        free space test_a_stamped_old_cache_makes_room passes with is short."""
+        leaf, run = setup
+        (leaf / pe.P4K_MTIME_STAMP).write_text("1")
+        (leaf / "raw" / "libs").rmdir()
+        _disk_space(monkeypatch, default=_WORK_4K + _CACHE_4K - pe._DATAFORGE_CACHE_BYTES)
+        fake = _FakeTools()
+        with pytest.raises(pe.NotEnoughSpaceError):
+            run(fake)
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+
+    def test_the_figures_cover_the_measured_run(self):
+        """The LIVE 4.10 run the constants come from (#482), with GB read as
+        GiB and MB as MiB, the larger readings. The global.ini run extracts
+        the English global.ini alone (perf proposal), measured at 10.1 MB,
+        and at 11,128,009 bytes before that."""
+        gib, mib = 1 << 30, 1 << 20
+        assert pe._DATAFORGE_WORK_BYTES >= 317 * mib + 1.84 * gib   # Game2.dcb + unforge's tree
+        assert pe._DATAFORGE_WORK_FILES >= 61_950
+        assert pe._DATAFORGE_CACHE_BYTES >= 1.2 * gib
+        assert pe._DATAFORGE_CACHE_FILES >= 30_700
+        assert pe._GLOBAL_INI_WORK_BYTES >= max(10.1 * mib, 11_128_009)
+        assert pe._GLOBAL_INI_WORK_FILES >= 1
+        assert pe._BASE_INI_BYTES >= 11_128_009   # the English global.ini
+        assert _WORK_4K + _CACHE_4K >= 4.2 * gib
+
+    @pytest.mark.parametrize("short", [("C:",), ("D:",), ("C:", "D:")],
+                             ids=["temp", "cache", "both"])
+    def test_with_the_work_in_temp_each_drive_is_checked_for_its_own_part(
+        self, setup, systemp, monkeypatch, english_ui, short
+    ):
+        """A OneDrive cache works in %TEMP% on C: and keeps its cache on D:.
+        Each drive needs only its own part, and the message names each short
+        one with the advice that fits it: the temp advice for the work in
+        %TEMP% (why it is there and where), the cache advice for the cache."""
+        _leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        own_part = {"C:": _WORK_4K, "D:": _CACHE_4K}
+        _disk_space(monkeypatch,
+                    lambda folder: own_part[drive(folder)] - (drive(folder) in short))
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert [s[0] for s in raised.value.shortages] == list(short)
+        advice = {
+            "C:": pe.tr("extract.no_space_fix_temp", drive="C:", folder=str(systemp)),
+            "D:": pe.tr("extract.no_space_fix_cache", drive="D:"),
+        }
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_dataforge"), [advice[label] for label in short])
+
+    def test_with_the_work_in_temp_exactly_enough_on_each_drive_passes(
+        self, setup, systemp, monkeypatch
+    ):
+        """The control for the test above: neither drive a byte short."""
+        _leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        own_part = {"C:": _WORK_4K, "D:": _CACHE_4K}
+        _disk_space(monkeypatch, lambda folder: own_part[drive(folder)])
+        assert run(_FakeTools()) is True
+
+    def test_one_drive_for_both_parts_adds_them(self, setup, systemp, monkeypatch):
+        """%TEMP% and the cache on one volume: both parts land there."""
+        _leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        _volumes(monkeypatch, lambda folder: "C:")
+        both = _WORK_4K + _CACHE_4K
+        _disk_space(monkeypatch, {systemp: both - 1})
+        with pytest.raises(pe.NotEnoughSpaceError):
+            run(_FakeTools())
+        _disk_space(monkeypatch, {systemp: both})
+        assert run(_FakeTools()) is True
+
+    def test_each_drive_gets_one_clean_info_line(self, setup, systemp, monkeypatch, caplog):
+        """The Log tab line per drive gives what it has and what the run needs
+        there. A drive letter label already ends in its colon ("D:"), so the
+        line must not add a second one."""
+        _leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        _volumes(monkeypatch, _drive_letters(systemp))
+        free = 5 * pe._GIB
+        _disk_space(monkeypatch, default=free)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run(_FakeTools()) is True
+        lines = sorted(r.getMessage() for r in caplog.records
+                       if r.getMessage().startswith("Free space on "))
+        assert lines == [
+            f"Free space on C: is {free:,} bytes, about {_WORK_4K:,} needed (4096-byte clusters)",
+            f"Free space on D: is {free:,} bytes, about {_CACHE_4K:,} needed (4096-byte clusters)",
+        ]
+        assert [r.getMessage() for r in caplog.records if "::" in r.getMessage()] == []
+
+    def test_leftovers_are_swept_before_the_space_is_measured(self, setup, monkeypatch):
+        """A crashed run's leftover can be a whole working folder. It goes
+        first, then the space is counted."""
+        leaf, run = setup
+        dead = leaf.parent / (pe.DATAFORGE_SCRATCH_PREFIX + "crashed1")
+        (dead / "Data").mkdir(parents=True)
+        (dead / pe._SCRATCH_MARKER).write_text("")
+        enough = _WORK_4K + _CACHE_4K
+        _disk_space(monkeypatch, lambda folder: 1 if dead.exists() else enough)
+        assert run(_FakeTools()) is True
+        assert not dead.exists()
+
+    def test_a_cache_folder_that_does_not_exist_yet_is_measured_at_its_nearest_parent(
+        self, root, monkeypatch
+    ):
+        """The free-space calls fail on a folder that does not exist, so the
+        check walks up to one that does, and makes nothing on the way."""
+        tools = root / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        leaf = root / "new" / "SC" / "LIVE" / "cache" / "dataforge"
+        asked = _disk_space(monkeypatch, {root: 1})
+        fake = _FakeTools()
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        with pytest.raises(pe.NotEnoughSpaceError):
+            pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe",
+                                 leaf)
+        assert pe.win_plain_path(root) in asked
+        assert not (root / "new").exists()
+        assert fake.calls == []
+
+    def test_a_cache_drive_that_is_gone_is_skipped_not_called_short(
+        self, setup, systemp, monkeypatch, caplog
+    ):
+        """No folder above the cache exists (its drive is gone), so neither
+        part can be measured. Each is skipped with a WARNING, like a probe
+        that fails, and the run fails as it did before the check: the
+        working folder beside the cache cannot be made. Not a free-space
+        refusal, and no move to %TEMP% (DataForge never falls back)."""
+        leaf, run = setup
+        _cache_drive_gone(monkeypatch, leaf.parents[2])
+        asked = _disk_space(monkeypatch, default=1)
+        fake = _FakeTools()
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            with pytest.raises(FileNotFoundError):
+                run(fake)
+        skipped = [r for r in caplog.records if r.getMessage().startswith(
+            "Free-space check skipped for ") and "no folder above it exists" in r.getMessage()]
+        assert len(skipped) == 2 and all(r.levelno == logging.WARNING for r in skipped)
+        assert asked == []
+        assert fake.calls == []
+        assert list(systemp.iterdir()) == []
+
+    def test_a_missing_tool_is_reported_before_the_free_space(self, setup, monkeypatch):
+        leaf, run = setup
+        (leaf.parents[3] / "tools" / "unforge.exe").unlink()
+        _disk_space(monkeypatch, default=1)
+        with pytest.raises(FileNotFoundError, match="unforge.exe"):
+            run(_FakeTools())
+
+    def test_a_drive_that_cannot_be_measured_does_not_stop_the_run(
+        self, setup, monkeypatch, caplog
+    ):
+        """Best effort: a probe that fails is logged and the run goes on."""
+        leaf, run = setup
+        _disk_space(monkeypatch, raises=PermissionError("access denied"))
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            assert run(_FakeTools()) is True
+        assert "Free-space check skipped" in caplog.text
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_the_quota_figure_wins_when_it_is_smaller(self, setup, monkeypatch):
+        """disk_usage reads the volume's free space, which ignores an NTFS
+        per-user quota; the caller's own figure is the one that counts."""
+        _leaf, run = setup
+        _volumes(monkeypatch, lambda folder: "D:", caller_free=pe._GIB)
+        _disk_space(monkeypatch)
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert raised.value.shortages[0][2] == pe._GIB
+
+    def test_large_clusters_ask_for_more(self, setup, monkeypatch):
+        """~62k small files on a 128 KiB-cluster exFAT stick take far more
+        than their size."""
+        _leaf, run = setup
+        _disk_space(monkeypatch, default=_WORK_4K + _CACHE_4K)
+        _volumes(monkeypatch, lambda folder: "D:", cluster=_EXFAT_CLUSTER)
+        with pytest.raises(pe.NotEnoughSpaceError):
+            run(_FakeTools())
+        _volumes(monkeypatch, lambda folder: "D:", cluster=4096)
+        assert run(_FakeTools()) is True
+
+    def test_a_short_drive_is_a_runtimeerror_logged_at_warning(self, setup, monkeypatch, caplog):
+        """Not an OSError (no ``except OSError`` may read it as a folder that
+        cannot be made), not a stop, and one the workers report quietly. The
+        byte counts reach the log, the user gets the rounded figures."""
+        assert issubclass(pe.NotEnoughSpaceError, RuntimeError)
+        assert not issubclass(pe.NotEnoughSpaceError, (OSError, pe.ExtractionCancelled))
+        assert pe.NotEnoughSpaceError in pe.ANTICIPATED_EXTRACTION_ERRORS
+        _leaf, run = setup
+        free, need = pe._GIB, _WORK_4K + _CACHE_4K
+        _disk_space(monkeypatch, default=free)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError):
+                run(_FakeTools())
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(f"{free:,}" in m and f"{need:,}" in m for m in warnings)
+
+    def test_a_drive_that_fills_during_unforge_stops_before_the_wipe(
+        self, setup, monkeypatch, caplog, english_ui
+    ):
+        """Another program (or a second Smart Citizen) can fill the drive
+        while unforge runs. The check just before the wipe refuses, so the
+        old cache is kept rather than lost to a copy that cannot finish,
+        with DataForge's message and the cache advice.
+
+        The user reads the box once the working folder beside the cache is
+        gone, and a retry makes it again, so its allocation is in both
+        figures: what the drive has then, and what a retry needs there."""
+        leaf, run = setup
+        filled = []
+        _disk_space(monkeypatch, lambda folder: pe._MIB if filled else _PLENTY)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError) as raised:
+                run(fake)
+        assert [tool for tool, _args, _cwd in fake.calls] == ["unp4k", "unforge"]
+        assert (leaf / "old-cache-sentinel").exists() and (leaf / "raw" / "libs").is_dir()
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists()
+        assert not Path(fake.calls[0][2]).exists()
+        label, folder, free, need = raised.value.shortages[0]
+        assert folder == pe.win_plain_path(leaf)
+        assert _intro_and_advice(raised) == (
+            pe.tr("extract.no_space_dataforge"), [pe.tr("extract.no_space_fix_cache", drive=label)])
+        # _FakeTools' working folder: the dcb, one file per keep subtree and
+        # one more, a 4096-byte cluster each. The old cache's 3-byte sentinel
+        # frees one cluster.
+        work = (len(pe.DATAFORGE_KEEP_SUBPATHS) + 2) * 4096
+        assert free == pe._MIB + work
+        # The need is never less than what a retry's up-front check asks this
+        # drive for (the old cache here has no stamp, so it frees nothing).
+        retry = (pe._space_for(pe._DATAFORGE_WORK_BYTES, pe._DATAFORGE_WORK_FILES, 4096)
+                 + pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES, 4096))
+        assert retry > _GATE_4K - 4096 + work
+        assert need == retry
+        assert f"{label} has {pe._MIB:,} bytes free" in caplog.text
+        assert f"{label}::" not in caplog.text
+
+    @pytest.mark.parametrize("cluster", [4096, _EXFAT_CLUSTER], ids=["4 KiB", "128 KiB"])
+    def test_a_stamped_old_cache_counts_in_what_the_box_asks_for(self, setup, monkeypatch, cluster):
+        """A re-extract over a complete cache, with the drive filling while
+        unforge runs. The box asks for what a retry's up-front check will:
+        the working folder and the new cache, less what the stamped old cache
+        frees, which is at least a cluster per file. On a 128 KiB-cluster
+        stick a credit of bytes alone named about 2.5 GB too much."""
+        leaf, run = setup
+        (leaf / pe.P4K_MTIME_STAMP).write_text("1")
+        _volumes(monkeypatch, lambda folder: "D:", cluster=cluster)
+        filled = []
+        _disk_space(monkeypatch, lambda folder: pe._MIB if filled else _PLENTY)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(fake)
+        assert (leaf / pe.P4K_MTIME_STAMP).exists() and (leaf / "old-cache-sentinel").exists()
+        _label, _folder, free, need = raised.value.shortages[0]
+        # The working folder is on the cache's drive, so it counts in both.
+        assert free == pe._MIB + (len(pe.DATAFORGE_KEEP_SUBPATHS) + 2) * cluster
+        frees = max(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES * cluster)
+        assert need == (pe._space_for(pe._DATAFORGE_WORK_BYTES, pe._DATAFORGE_WORK_FILES, cluster)
+                        + pe._space_for(pe._DATAFORGE_CACHE_BYTES, pe._DATAFORGE_CACHE_FILES,
+                                        cluster)
+                        - frees)
+
+    @pytest.mark.parametrize("where", ["another drive", "a drive that cannot be measured"])
+    def test_the_gate_leaves_out_a_working_folder_it_cannot_place_on_the_cache_drive(
+        self, setup, systemp, monkeypatch, caplog, where
+    ):
+        """A OneDrive cache works in %TEMP% on C:, so deleting the working
+        folder gives the cache's drive (D:) nothing back, and a working
+        folder whose drive cannot be measured is left out too (best effort).
+        The figures are then the cache drive's own, and the need is what a
+        retry's up-front check asks that drive for: the new cache, not the
+        64 MiB this run measured."""
+        leaf, run = setup
+        filled = []
+        if where == "another drive":
+            monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+            drive = _drive_letters(systemp)
+            _volumes(monkeypatch, drive)
+            _disk_space(monkeypatch,
+                        lambda folder: pe._MIB if filled and drive(folder) == "D:" else _PLENTY)
+        else:
+            _disk_space(monkeypatch, lambda folder: pe._MIB if filled else _PLENTY)
+            stub = pe._measure_volume
+
+            def measure(folder):
+                if filled and pe.DATAFORGE_SCRATCH_PREFIX in pe.win_plain_path(folder):
+                    raise OSError("the device is not ready")
+                return stub(folder)
+
+            monkeypatch.setattr(pe, "_measure_volume", measure)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError) as raised:
+                run(fake)
+        # The old cache here has no stamp, so a retry is asked for the whole cache.
+        assert _CACHE_4K > _GATE_4K - 4096
+        assert raised.value.shortages[0][1:] == (pe.win_plain_path(leaf), pe._MIB, _CACHE_4K)
+        assert (leaf / "old-cache-sentinel").exists()
+        if where == "another drive":
+            assert Path(fake.calls[0][2]).parent == systemp
+            assert raised.value.shortages[0][0] == "D:"
+        else:
+            assert "Could not measure the drive of the working folder" in caplog.text
+
+    @pytest.mark.parametrize("attribute, refused", [
+        (0x00400000, True),    # FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+        (0x00040000, True),    # FILE_ATTRIBUTE_RECALL_ON_OPEN
+        (0x00001000, True),    # FILE_ATTRIBUTE_OFFLINE
+        (0x00080000, False),   # FILE_ATTRIBUTE_PINNED: always kept on this PC
+    ], ids=["recall on data access", "recall on open", "offline", "pinned"])
+    def test_the_gate_counts_no_room_for_online_only_files(
+        self, setup, monkeypatch, attribute, refused
+    ):
+        """A OneDrive online-only file is listed with its full size but takes
+        nothing on this PC, so wiping it frees nothing here. The 1 MiB file
+        that makes room in test_the_gate_counts_the_old_cache_as_room is
+        online-only now: the gate refuses and the old cache is kept, rather
+        than wiped before a copy that runs out of space. A pinned file is on
+        this PC and still counts."""
+        leaf, run = setup
+        big = leaf / "raw" / "libs" / "big.bin"
+        big.write_bytes(b"\0" * (1 << 20))
+        filled = []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
+
+        def fill_and_list(run_dir):
+            filled.append(True)
+            _listed_with(monkeypatch, big, attribute)
+
+        fake = _FakeTools(during_unforge=fill_and_list)
+        if refused:
+            with pytest.raises(pe.NotEnoughSpaceError):
+                run(fake)
+            assert big.exists() and (leaf / "old-cache-sentinel").exists()
+        else:
+            assert run(fake) is True
+            assert not big.exists()
+
+    @pytest.mark.parametrize("old_cache_bytes, passes", [(1 << 20, True), (0, False)],
+                             ids=["old cache makes room", "too small to"])
+    def test_the_gate_counts_the_old_cache_as_room(
+        self, setup, monkeypatch, old_cache_bytes, passes
+    ):
+        """The wipe frees the whole old cache (unstamped too), so the check
+        before it counts that as room. 512 KiB short: the 1 MiB file covers
+        it, the 3-byte sentinel alone does not."""
+        leaf, run = setup
+        if old_cache_bytes:
+            (leaf / "raw" / "libs" / "big.bin").write_bytes(b"\0" * old_cache_bytes)
+        filled = []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        if passes:
+            assert run(fake) is True
+            assert not (leaf / "raw" / "libs" / "big.bin").exists()
+        else:
+            with pytest.raises(pe.NotEnoughSpaceError):
+                run(fake)
+            assert (leaf / "old-cache-sentinel").exists()
+
+    def test_a_stop_during_the_old_caches_walk_keeps_it(self, setup, monkeypatch, caplog):
+        """The check walks the old cache only when the drive is short, and
+        that walk checks for a stop too: the run ends there with the old
+        cache kept, not after the whole walk at the stop check that follows
+        (whose own test is
+        test_a_stop_after_the_check_before_the_wipe_keeps_the_old_cache)."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        big = leaf / "raw" / "libs" / "big.bin"
+        big.write_bytes(b"\0" * (1 << 20))
+        filled, stopped = [], []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - (1 << 19) if filled else _PLENTY)
+        real_walk = pe._walk_files
+
+        def walk(folder, should_cancel, keep_prefixes=frozenset(), *, local_only=False, **kwargs):
+            if local_only:   # the old cache's walk
+                stopped.append(True)
+            return real_walk(folder, should_cancel, keep_prefixes, local_only=local_only, **kwargs)
+
+        monkeypatch.setattr(pe, "_walk_files", walk)
+        renames = _record_renames(monkeypatch)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.ExtractionCancelled,
+                               match="stopped before the previous cache was replaced"):
+                run(fake, should_cancel=lambda: bool(stopped))
+        assert stopped
+        assert big.exists() and (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert "The old DataForge cache frees" not in caplog.text
+        assert renames == []
+        assert not Path(fake.calls[0][2]).exists()
+
+    @pytest.mark.parametrize("short_by, passes", [(4096, True), (4097, False)],
+                             ids=["short_by=4096", "short_by=4097"])
+    def test_the_check_before_the_wipe_still_asks_for_a_full_copy(
+        self, setup, monkeypatch, short_by, passes
+    ):
+        """A refused move is copied after the wipe (#484), so the check still
+        asks for a copy of every kept file, to the byte, and not only the
+        64 MiB a move needs. The old cache's 3-byte sentinel frees one
+        4096-byte cluster: 4096 bytes short passes, 4097 does not. The
+        512 KiB margins of the tests above are larger than all 14 clusters,
+        so they would not notice."""
+        leaf, run = setup
+        filled = []
+        _disk_space(monkeypatch, lambda folder: _GATE_4K - short_by if filled else _PLENTY)
+        renames = _record_renames(monkeypatch)
+        fake = _FakeTools(during_unforge=lambda run_dir: filled.append(True))
+        if passes:
+            assert run(fake) is True
+            assert not (leaf / "old-cache-sentinel").exists()
+            assert len(renames) == len(pe.DATAFORGE_KEEP_SUBPATHS)
+        else:
+            with pytest.raises(pe.NotEnoughSpaceError):
+                run(fake)
+            assert (leaf / "old-cache-sentinel").exists()
+            assert renames == []
+
+    def test_the_gate_logs_what_unforge_really_wrote(self, setup, caplog):
+        """The line that checks the constants against a real run: _FakeTools
+        writes one 4-byte file per keep subtree, one the cache does not take
+        and a 3-byte dcb."""
+        _leaf, run = setup
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            run(_FakeTools())
+        kept = len(pe.DATAFORGE_KEEP_SUBPATHS)
+        line = next(r.getMessage() for r in caplog.records
+                    if r.getMessage().startswith("DataForge run wrote"))
+        assert f"wrote {kept + 2} files, {(kept + 1) * 4 + 3} bytes." in line
+        assert f"The new cache is {kept} files, {kept * 4} bytes, about {_GATE_4K:,} on" in line
+
+    @pytest.mark.parametrize("broken", ["walk", "free space", "volume", "drive gone"])
+    def test_a_gate_that_cannot_measure_lets_the_run_go_on(
+        self, setup, monkeypatch, caplog, broken
+    ):
+        """Best effort before the wipe too: a walk or a probe that fails, or
+        a cache drive with no folder above the cache left to measure, is
+        logged and the run goes on."""
+        leaf, run = setup
+        failing = []
+        if broken == "walk":
+            def walk(*args, **kwargs):
+                raise PermissionError("access denied")
+                yield   # a generator, as the real one is
+
+            fake = _FakeTools(during_unforge=lambda run_dir: monkeypatch.setattr(
+                pe, "_walk_files", walk))
+        elif broken == "drive gone":
+            fake = _FakeTools(during_unforge=lambda run_dir: monkeypatch.setattr(
+                pe, "_nearest_existing_folder", lambda path: None))
+        else:
+            stub_usage, stub_measure = shutil.disk_usage, pe._measure_volume
+
+            def usage(path):
+                if failing and broken == "free space":
+                    raise PermissionError("access denied")
+                return stub_usage(path)
+
+            def measure(folder):
+                if failing and broken == "volume":
+                    raise OSError("the device is not ready")
+                return stub_measure(folder)
+
+            monkeypatch.setattr(shutil, "disk_usage", usage)
+            monkeypatch.setattr(pe, "_measure_volume", measure)
+            fake = _FakeTools(during_unforge=lambda run_dir: failing.append(True))
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            assert run(fake) is True
+        assert "Could not check the space for the new DataForge cache" in caplog.text
+        if broken == "drive gone":
+            assert "no folder above it exists" in caplog.text
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    @pytest.mark.parametrize("where", ["beside", "temp"])
+    @pytest.mark.parametrize("winerror", [39, 112, 1295])
+    def test_a_full_drive_during_a_fallback_copy_says_the_cache_is_incomplete(
+        self, setup, monkeypatch, english_ui, winerror, where
+    ):
+        """ERROR_HANDLE_DISK_FULL, ERROR_DISK_FULL, ERROR_DISK_QUOTA_EXCEEDED.
+        copytree folds a per-file OSError into shutil.Error (errno None) and
+        copies on, and Python maps 39 and 1295 to EINVAL, so the copy has to
+        catch these itself, and stop at the first. Beside the cache the copy
+        is the fallback for refused renames (#484), and with the work in
+        %TEMP% (OneDrive here) it is the only way."""
+        leaf, run = setup
+        if where == "beside":
+            _refuse_moves(monkeypatch, 17)
+        else:
+            monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        real_copy2 = shutil.copy2
+        copies = []
+
+        def copy2(src, dst, *args, **kwargs):
+            copies.append(src)
+            if len(copies) == 2:
+                raise OSError(0, "There is not enough space on the disk", str(dst), winerror)
+            return real_copy2(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(shutil, "copy2", copy2)
+        fake = _FakeTools()
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(fake)
+        assert len(copies) == 2
+        assert pe.win_plain_path(leaf) in str(raised.value)
+        assert "incomplete" in str(raised.value)
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists() and not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not Path(fake.calls[0][2]).exists()
+
+    def test_a_full_drive_while_stamping_says_the_cache_is_incomplete(self, setup, monkeypatch):
+        leaf, run = setup
+        real_write = Path.write_text
+
+        def write_text(self, *args, **kwargs):
+            if self.name == pe.P4K_SIZE_STAMP:
+                raise OSError(errno.ENOSPC, "No space left on device", str(self))
+            return real_write(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", write_text)
+        with pytest.raises(pe.NotEnoughSpaceError):
+            run(_FakeTools())
+        # The mtime stamp alone reads as fresh, so it goes too, and startup
+        # offers the re-extract the message promises.
+        assert not (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists()
+        assert not pe._holds_complete_cache(leaf)
+
+    def test_a_stamp_that_cannot_be_removed_still_says_incomplete(
+        self, setup, monkeypatch, caplog
+    ):
+        """Removing the stamps is best effort: one that cannot go is logged,
+        and the user still gets the "cache incomplete" message. The stamps
+        are removed before the wipe too (#484), so the warning comes twice,
+        and each removal must log rather than raise."""
+        _leaf, run = setup
+        real_write, real_unlink = Path.write_text, Path.unlink
+
+        def write_text(self, *args, **kwargs):
+            if self.name == pe.P4K_SIZE_STAMP:
+                raise OSError(errno.ENOSPC, "No space left on device", str(self))
+            return real_write(self, *args, **kwargs)
+
+        def unlink(self, *args, **kwargs):
+            if self.name == pe.P4K_MTIME_STAMP:
+                raise PermissionError(errno.EACCES, "Access is denied", str(self))
+            return real_unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", write_text)
+        monkeypatch.setattr(Path, "unlink", unlink)
+        with caplog.at_level(logging.WARNING, logger=pe.logger.name):
+            with pytest.raises(pe.NotEnoughSpaceError):
+                run(_FakeTools())
+        assert caplog.text.count(f"Could not remove {pe.P4K_MTIME_STAMP}") == 2
+        assert "that cache is incomplete" in caplog.text
+
+    def test_another_copy_failure_is_not_called_a_full_drive(self, setup, monkeypatch):
+        """A fallback copy that fails for another reason (#484: every rename
+        refused here) is raised as it is, with no stamp left."""
+        leaf, run = setup
+        _refuse_moves(monkeypatch, 17)
+
+        def copy2(src, dst, *args, **kwargs):
+            raise PermissionError(errno.EACCES, "Access is denied", str(dst))
+
+        monkeypatch.setattr(shutil, "copy2", copy2)
+        with pytest.raises(OSError) as raised:
+            run(_FakeTools())
+        assert raised.value.errno is None or raised.value.errno == errno.EACCES
+        assert not (leaf / pe.P4K_MTIME_STAMP).exists() and not (leaf / pe.P4K_SIZE_STAMP).exists()
+
+
+# ── a working folder Windows refuses (#490) ─────────────────────────────────
+
+def _refusal_text(folder, fix_key: str) -> str:
+    """The message a refusal in *folder* gives: the intro naming it, then
+    the advice *fix_key*."""
+    return pe.tr("extract.folder_refused", folder=str(folder)) + "\n\n" + pe.tr(fix_key)
+
+
+def _scripted_names(monkeypatch, *tokens: str) -> list[int]:
+    """Make secrets.token_hex return *tokens* in turn, the last one for
+    every call after them. Returns the byte counts it was asked for."""
+    sizes = []
+    queue = list(tokens)
+
+    def token_hex(nbytes):
+        sizes.append(nbytes)
+        return queue.pop(0) if len(queue) > 1 else queue[0]
+
+    monkeypatch.setattr(pe.secrets, "token_hex", token_hex)
+    return sizes
+
+
+# Other OSErrors making the folder, which keep the handling they had before
+# #490: a drive that is gone, and a path Windows cannot use (WinError 123,
+# which Python raises as a plain OSError with EINVAL). Each test makes its
+# own instance.
+_OTHER_FOLDER_ERRORS = [
+    pytest.param(lambda: FileNotFoundError(errno.ENOENT,
+                                           "The system cannot find the path specified"),
+                 id="drive gone"),
+    pytest.param(lambda: OSError(errno.EINVAL, "The filename, directory name, or volume label "
+                                               "syntax is incorrect"),
+                 id="bad path"),
+]
+
+
+def _failing_in(parent, error):
+    """A *refuse* for _counting_mkdir: *error* for a folder in *parent*."""
+    plain = pe.win_plain_path(parent)
+    return lambda folder: error if pe.win_plain_path(folder.parent) == plain else None
+
+
+class TestMakeRunFolder:
+    """One os.mkdir per random name: only a name that is taken is tried
+    again, and only a few times."""
+
+    def test_the_name_is_the_prefix_and_eight_random_hex_characters(self, root, monkeypatch):
+        sizes = _scripted_names(monkeypatch, "0123abcd")
+        folder = pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert folder == root / (pe.DATAFORGE_SCRATCH_PREFIX + "0123abcd")
+        assert folder.is_dir()
+        assert sizes == [pe._MKDTEMP_RANDOM_CHARS // 2]
+        assert len(folder.name) == len(pe.DATAFORGE_SCRATCH_PREFIX) + pe._MKDTEMP_RANDOM_CHARS
+
+    def test_a_refused_folder_fails_on_the_first_try(self, root, monkeypatch):
+        calls = _counting_mkdir(monkeypatch, _refused_in(root))
+        started = time.monotonic()
+        with pytest.raises(PermissionError) as raised:
+            pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert time.monotonic() - started < 1.0
+        assert len(calls) == 1 and calls[0].parent == root
+        assert raised.value.errno == errno.EACCES
+        assert _scratch_folders(root, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_a_name_that_is_taken_gets_a_new_name(self, root, monkeypatch):
+        """A clash with another run's folder moves on to a fresh name and
+        leaves that folder alone."""
+        taken = root / (pe.DATAFORGE_SCRATCH_PREFIX + "aaaaaaaa")
+        taken.mkdir()
+        (taken / "other-run").write_text("x")
+        _scripted_names(monkeypatch, "aaaaaaaa", "aaaaaaaa", "bbbbbbbb")
+        calls = _counting_mkdir(monkeypatch)
+        folder = pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert [c.name for c in calls] == [taken.name, taken.name,
+                                           pe.DATAFORGE_SCRATCH_PREFIX + "bbbbbbbb"]
+        assert folder == root / (pe.DATAFORGE_SCRATCH_PREFIX + "bbbbbbbb")
+        assert (taken / "other-run").read_text() == "x"
+
+    def test_a_refused_name_that_is_there_gets_a_new_name(self, root, monkeypatch):
+        """Windows can answer Access denied for a name that is there, such as
+        a folder it is still deleting. A refusal for a name that exists is a
+        clash, not a folder that refuses."""
+        pending = root / (pe.DATAFORGE_SCRATCH_PREFIX + "aaaaaaaa")
+        pending.mkdir()
+        _scripted_names(monkeypatch, "aaaaaaaa", "bbbbbbbb")
+        calls = _counting_mkdir(monkeypatch, lambda folder: (
+            PermissionError(errno.EACCES, "Access is denied", str(folder))
+            if folder == pending else None))
+        folder = pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert calls == [pending, folder]
+        assert folder.name == pe.DATAFORGE_SCRATCH_PREFIX + "bbbbbbbb"
+
+    def test_a_name_that_stays_taken_gives_up_after_a_few_tries(self, root, monkeypatch):
+        """The limit is a few names, never Python 3.11 tempfile's 2**31 - 1. Giving up
+        is a FileExistsError, an OSError, so callers handle it as they
+        handle any other folder that cannot be made."""
+        (root / (pe.DATAFORGE_SCRATCH_PREFIX + "aaaaaaaa")).mkdir()
+        _scripted_names(monkeypatch, "aaaaaaaa")
+        calls = _counting_mkdir(monkeypatch)
+        with pytest.raises(FileExistsError) as raised:
+            pe._make_run_folder(root, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert len(calls) == pe._SCRATCH_NAME_ATTEMPTS
+        assert 1 < pe._SCRATCH_NAME_ATTEMPTS <= 20
+        assert raised.value.filename == str(root)
+
+
+class TestRefusedWorkingFolder:
+    """A refusal becomes one translated message that names the folder (#490):
+    for DataForge at once, for global.ini only when %TEMP% refuses too. Any
+    other OSError is handled as before. With DataForge's work in %TEMP%, the
+    folder its cache folder is made again in is checked the same way before
+    any tool runs (#494)."""
+
+    def test_a_refused_parent_of_the_cache_folder_is_the_same_box(
+        self, root, monkeypatch, systemp
+    ):
+        """_open_scratch makes the cache folder's own folder first when it is
+        missing. The app normally makes the cache folder before an
+        extraction, so this is rare, but Windows refusing it is the same box
+        as a refused working folder, not a raw error."""
+        tools = root / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        new = root / "new"
+        leaf = new / "cache" / "dataforge"
+        real_mkdir = os.mkdir
+
+        def mkdir(path, *args, **kwargs):
+            if pe.win_plain_path(str(path)) == pe.win_plain_path(str(new)):
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_mkdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(pe.os, "mkdir", mkdir)
+        calls = _counting_mkdir(monkeypatch)   # counts run folders, then calls the fake above
+        fake = _FakeTools()
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe", tools / "unforge.exe",
+                                 leaf)
+        assert raised.value.folder == str(leaf.parent)
+        assert isinstance(raised.value.__cause__, PermissionError)
+        assert calls == []   # refused before any run folder was asked for
+        assert fake.calls == []
+        assert not new.exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_fails_on_the_first_try_and_names_the_folder(
+        self, setup, monkeypatch, systemp, caplog, english_ui
+    ):
+        """Before #490, tempfile.mkdtemp took each refusal for a name that
+        might be taken and tried the next, so on Python 3.11 this run
+        looked stuck for about 39 hours (the spin guard stops it here)."""
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        fake = _FakeTools()
+        started = time.monotonic()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run(fake)
+        assert time.monotonic() - started < 5
+        assert len(calls) == 1 and calls[0].parent == leaf.parent
+        message = str(raised.value)
+        assert message == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert message.startswith("Windows denied Smart Citizen permission to create a working "
+                                  f"folder in:\n{leaf.parent}\n\n")
+        assert "Controlled folder access" in message
+        assert "choose another DataForge cache folder in the Config tab" in message
+        assert raised.value.folder == str(leaf.parent)
+        assert isinstance(raised.value.__cause__, PermissionError)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{raised.value.__cause__}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_working_in_temp_gets_the_advice_for_temp(
+        self, setup, monkeypatch, systemp, english_ui
+    ):
+        """A OneDrive cache sends the work to %TEMP%. Choosing another cache
+        folder is not the advice there, since it would not always help."""
+        _leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch, _refused_in(systemp))
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run(_FakeTools())
+        assert len(calls) == 1
+        assert raised.value.folder == str(systemp)
+        assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
+        assert "Config tab" not in str(raised.value)
+
+    def test_dataforge_in_temp_is_refused_when_the_cache_folder_could_not_be_made_again(
+        self, setup, monkeypatch, systemp, caplog, english_ui
+    ):
+        """#494. Just before it saves the new cache, the run deletes the
+        cache folder and makes it again in the same folder. Making the
+        working folder in %TEMP% shows nothing about that folder, so one
+        that refuses new folders let the run delete the old cache and then
+        fail to make the new one with a raw PermissionError. One test folder
+        made there before any tool runs finds it first: the folder named
+        with the cache advice, and the old cache kept, stamped and fresh."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        fake = _FakeTools()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run(fake)
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert calls[1].name.startswith(pe.DATAFORGE_SCRATCH_PREFIX)
+        assert str(raised.value) == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert "choose another DataForge cache folder in the Config tab" in str(raised.value)
+        assert raised.value.folder == str(leaf.parent)
+        assert isinstance(raised.value.__cause__, PermissionError)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{raised.value.__cause__}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_in_temp_makes_one_test_folder_and_removes_it(
+        self, setup, monkeypatch, systemp
+    ):
+        """The check on a folder that takes new folders: one test folder
+        beside the cache folder, gone again before the tools run."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch)
+        seen = []
+        fake = _FakeTools(during_unforge=lambda run_dir: seen.append(
+            _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)))
+        assert run(fake) is True
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert seen == [[]]
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_dataforge_in_temp_makes_the_folder_that_holds_the_cache_folder(
+        self, setup, monkeypatch, systemp
+    ):
+        """No cache folder yet, no folder to hold it, and no channel folder
+        above that either. The app makes the cache folder before an
+        extraction, but extract_dataforge does not need it to: the check
+        makes the folder that holds the cache folder, and every missing
+        folder above it, before its test folder, as the working folder does
+        beside the cache, so the run goes through and stamps the new
+        cache."""
+        leaf, run = setup
+        shutil.rmtree(leaf.parents[1])
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch)
+        assert run(_FakeTools()) is True
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_dataforge_in_temp_with_a_refused_parent_is_the_same_box(
+        self, root, monkeypatch, systemp, caplog, english_ui
+    ):
+        """The %TEMP% twin of
+        test_a_refused_parent_of_the_cache_folder_is_the_same_box above.
+        The check makes the folder that holds the cache folder, and the
+        folders above it, when they are missing. Windows refusing one of
+        them is the same box, naming the folder that holds the cache folder
+        with the cache advice, not a raw error, and no tool runs."""
+        tools = root / "tools"
+        tools.mkdir()
+        for name in ("unp4k.exe", "unforge.exe", "Data.p4k"):
+            (tools / name).write_bytes(b"x")
+        new = root / "new"
+        leaf = new / "cache" / "dataforge"
+        real_mkdir = os.mkdir
+
+        def mkdir(path, *args, **kwargs):
+            if pe.win_plain_path(str(path)) == pe.win_plain_path(str(new)):
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_mkdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(pe.os, "mkdir", mkdir)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        calls = _counting_mkdir(monkeypatch)   # counts run folders, then calls the fake above
+        fake = _FakeTools()
+        monkeypatch.setattr(pe, "_run_tool", fake)
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                pe.extract_dataforge(tools / "Data.p4k", tools / "unp4k.exe",
+                                     tools / "unforge.exe", leaf)
+        assert raised.value.folder == str(leaf.parent)
+        assert str(raised.value) == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert isinstance(raised.value.__cause__, PermissionError)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{raised.value.__cause__}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp)]   # no test folder
+        assert fake.calls == []
+        assert not new.exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_beside_the_cache_the_working_folder_is_the_only_check(self, setup, monkeypatch):
+        """Making the working folder beside the cache folder already shows
+        that folder takes a new one, so no test folder is made there."""
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch)
+        assert run(_FakeTools()) is True
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(leaf.parent)]
+
+    def test_a_test_folder_that_will_not_go_is_left_for_a_later_run(
+        self, setup, monkeypatch, caplog
+    ):
+        """A test folder Windows will not remove at once (OneDrive or an
+        antivirus still holding it) is no reason to stop: the run goes on,
+        logs it at WARNING, and a later DataForge run sweeps it as it sweeps
+        a crashed run's leftover, because it has the working folder's
+        prefix."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        real_rmdir = os.rmdir
+
+        def rmdir(path, *args, **kwargs):
+            folder = Path(pe.win_plain_path(path))
+            if folder.parent == leaf.parent and folder.name.startswith(
+                    pe.DATAFORGE_SCRATCH_PREFIX):
+                raise PermissionError(errno.EACCES, "Access is denied", str(path))
+            return real_rmdir(path, *args, **kwargs)
+
+        with monkeypatch.context() as patched:
+            patched.setattr(pe.os, "rmdir", rmdir)
+            with caplog.at_level(logging.INFO, logger=pe.logger.name):
+                assert run(_FakeTools()) is True
+        left = _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX)
+        assert len(left) == 1 and list(left[0].iterdir()) == []
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+        assert warnings[0].startswith(f"Could not remove the test folder {left[0]} (")
+        assert "Access is denied" in warnings[0]
+        assert warnings[0].endswith("); a later DataForge extraction removes it")
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+        old = time.time() - pe._UNMARKED_SCRATCH_GRACE_SECONDS - 60
+        os.utime(left[0], (old, old))
+        assert run(_FakeTools()) is True
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_making_the_test_folder_fails_dataforge_as_before(
+        self, setup, monkeypatch, systemp, make_error
+    ):
+        """A drive that is gone or a bad path is raised as it is, as for the
+        working folder, but now before any tool runs and with the old cache
+        kept."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        error = make_error()
+        calls = _counting_mkdir(monkeypatch, _failing_in(leaf.parent, error))
+        fake = _FakeTools()
+        with pytest.raises(OSError) as raised:
+            run(fake)
+        assert raised.value is error
+        assert len(calls) == 2
+        assert fake.calls == []
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert list(systemp.iterdir()) == []
+
+    def test_a_short_drive_is_reported_before_the_test_folder(self, setup, monkeypatch, systemp):
+        """The free-space check (#482) still runs before any folder is made,
+        so a full cache drive gets its own message, not an error from making
+        the test folder on it."""
+        leaf, run = setup
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        drive = _drive_letters(systemp)
+        _volumes(monkeypatch, drive)
+        _disk_space(monkeypatch, lambda folder: _CACHE_4K - 1 if drive(folder) == "D:" else _PLENTY)
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        with pytest.raises(pe.NotEnoughSpaceError) as raised:
+            run(_FakeTools())
+        assert [s[0] for s in raised.value.shortages] == ["D:"]
+        assert calls == []
+
+    def test_a_marker_refused_in_the_new_folder_is_a_refusal_too(self, setup, monkeypatch):
+        """A folder can allow new folders and refuse new files. The marker is
+        the run's first file, and its folder is removed again."""
+        leaf, run = setup
+
+        def refuse(*args, **kwargs):
+            raise PermissionError(errno.EACCES, "Access is denied")
+
+        # A module-level open shadows the builtin inside pak_extractor only.
+        monkeypatch.setattr(pe, "open", refuse, raising=False)
+        fake = _FakeTools()
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run(fake)
+        assert raised.value.folder == str(leaf.parent)
+        assert fake.calls == []
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_global_ini_moves_to_temp_when_the_folder_beside_the_cache_refuses(
+        self, env, systemp, monkeypatch, caplog
+    ):
+        """#471's fallback still comes first, now on the first refusal: one
+        try beside the cache, an INFO line, and the run in %TEMP%."""
+        leaf, out, fake, run = env
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            assert run() is True
+        assert [c.parent for c in calls] == [leaf.parent, systemp]
+        assert Path(fake.cwds[0]).parent == systemp
+        assert out.read_text(encoding="utf-8") == "lang=english\n"
+        moves = [r.getMessage() for r in caplog.records if "; working in " in r.getMessage()]
+        assert len(moves) == 1
+        assert moves[0].startswith(f"Could not work in {leaf.parent} (")
+        assert "Access is denied" in moves[0] and moves[0].endswith(f"working in {systemp}")
+        assert [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING] == []
+
+    def test_global_ini_shows_the_message_only_when_temp_refuses_too(
+        self, env, systemp, monkeypatch, caplog, english_ui
+    ):
+        leaf, out, fake, run = env
+        out.parent.mkdir(parents=True)
+        out.write_text("old=1\n", encoding="utf-8")
+        calls = _counting_mkdir(monkeypatch, _refused_in(leaf.parent, systemp))
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run()
+        assert [c.parent for c in calls] == [leaf.parent, systemp]
+        assert raised.value.folder == str(systemp)
+        assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
+        assert any(f"Could not work in {leaf.parent}" in r.getMessage()
+                   and r.levelno == logging.INFO for r in caplog.records)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1 and warnings[0].startswith(
+            f"Windows refused an extraction working folder in {systemp}: ")
+        assert fake.cwds == []
+        assert out.read_text(encoding="utf-8") == "old=1\n"
+
+    def test_global_ini_without_a_cache_folder_shows_the_message_when_temp_refuses(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        _leaf, _out, fake, run = env
+        calls = _counting_mkdir(monkeypatch, _refused_in(systemp))
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run(near=None)
+        assert len(calls) == 1
+        assert str(raised.value) == _refusal_text(systemp, "extract.folder_refused_fix")
+        assert fake.cwds == []
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_fails_dataforge_as_before(self, setup, monkeypatch, make_error):
+        leaf, run = setup
+        error = make_error()
+        calls = _counting_mkdir(monkeypatch, _failing_in(leaf.parent, error))
+        fake = _FakeTools()
+        with pytest.raises(OSError) as raised:
+            run(fake)
+        assert raised.value is error
+        assert len(calls) == 1
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_beside_the_cache_moves_global_ini_as_before(
+        self, env, systemp, monkeypatch, make_error
+    ):
+        leaf, _out, fake, run = env
+        _counting_mkdir(monkeypatch, _failing_in(leaf.parent, make_error()))
+        assert run() is True
+        assert Path(fake.cwds[0]).parent == systemp
+
+    @pytest.mark.parametrize("make_error", _OTHER_FOLDER_ERRORS)
+    def test_another_error_in_temp_fails_global_ini_as_before(
+        self, env, systemp, monkeypatch, make_error
+    ):
+        _leaf, _out, fake, run = env
+        error = make_error()
+        _counting_mkdir(monkeypatch, _failing_in(systemp, error))
+        with pytest.raises(OSError) as raised:
+            run(near=None)
+        assert raised.value is error
+        assert fake.cwds == []
+
+    def test_a_refusal_is_an_anticipated_runtimeerror(self):
+        assert issubclass(pe.WorkingFolderRefusedError, RuntimeError)
+        assert not issubclass(pe.WorkingFolderRefusedError, (OSError, pe.ExtractionCancelled))
+        assert pe.WorkingFolderRefusedError in pe.ANTICIPATED_EXTRACTION_ERRORS
+
+    def test_a_write_protected_drive_gives_windows_own_reason(
+        self, setup, monkeypatch, systemp, caplog, english_ui
+    ):
+        """Python raises a write-protected drive (WinError 19) as a
+        PermissionError too, but nothing was refused, so the message gives
+        Windows' own reason and no advice about permissions, still on the
+        first try and with the old cache kept."""
+        leaf, run = setup
+        calls = _counting_mkdir(monkeypatch, _write_protected_in(leaf.parent))
+        fake = _FakeTools()
+        with caplog.at_level(logging.INFO, logger=pe.logger.name):
+            with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                run(fake)
+        assert len(calls) == 1 and calls[0].parent == leaf.parent
+        cause = raised.value.__cause__
+        assert isinstance(cause, PermissionError) and cause.winerror == 19
+        assert str(raised.value) == ("Smart Citizen could not use a working folder in:\n"
+                                     f"{leaf.parent}\n\n{_WRITE_PROTECTED}\n\n"
+                                     "The extraction did not start, so nothing was changed.")
+        assert raised.value.folder == str(leaf.parent)
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert warnings == [f"Windows refused an extraction working folder in {leaf.parent}: "
+                            f"{cause}"]
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
+
+    def test_global_ini_moves_off_a_write_protected_drive_and_names_temp_if_it_fails_too(
+        self, env, systemp, monkeypatch, english_ui
+    ):
+        """global.ini moves to %TEMP% first, as for a refusal, and gives
+        Windows' reason naming %TEMP% only when %TEMP% fails too."""
+        leaf, _out, fake, run = env
+        calls = _counting_mkdir(monkeypatch, _write_protected_in(leaf.parent, systemp))
+        with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+            run()
+        assert [c.parent for c in calls] == [leaf.parent, systemp]
+        assert raised.value.folder == str(systemp)
+        assert str(raised.value) == pe.tr("extract.folder_unusable", folder=str(systemp),
+                                          reason=_WRITE_PROTECTED)
+        assert fake.cwds == []
+
+    @pytest.mark.parametrize("winerror, refused", [
+        (5, True),     # ERROR_ACCESS_DENIED: a folder's permissions, Controlled Folder Access
+        (65, True),    # ERROR_NETWORK_ACCESS_DENIED: a share
+        (19, False),   # ERROR_WRITE_PROTECT
+        (21, False),   # ERROR_NOT_READY: a drive with no media in it
+        (23, False),   # ERROR_CRC: a failing drive
+        (29, False),   # ERROR_WRITE_FAULT
+        (32, False),   # ERROR_SHARING_VIOLATION: a file another program holds
+        (33, False),   # ERROR_LOCK_VIOLATION
+    ])
+    def test_only_a_denied_permission_is_a_refusal(self, winerror, refused):
+        error = OSError(None, "x", None, winerror)
+        assert isinstance(error, PermissionError)   # how Python raises all of these
+        assert pe.windows_refused(error) is refused
+
+    def test_a_permission_error_with_no_windows_code_is_a_refusal_and_no_other_error_is(self):
+        assert pe.windows_refused(PermissionError(errno.EACCES, "Access is denied"))
+        assert not pe.windows_refused(FileNotFoundError(errno.ENOENT, "gone"))
+        assert not pe.windows_refused(OSError(None, "There is not enough space on the disk.",
+                                              None, 112))
+
+    def test_windows_reason_is_the_errors_own_text(self):
+        assert pe.windows_reason(OSError(None, _WRITE_PROTECTED, "Z:\\x", 19)) == _WRITE_PROTECTED
+        bare = PermissionError("no strerror")
+        assert bare.strerror is None and pe.windows_reason(bare) == "no strerror"
+
+
+class TestRealRefusal:
+    """The same against folders that really refuse new folders, through an
+    access control list, as a folder whose permissions deny Smart Citizen
+    does. Controlled Folder Access itself cannot be turned on from a test."""
+
+    def test_dataforge_fails_at_once_and_runs_once_the_folder_allows_it(
+        self, setup, monkeypatch, systemp
+    ):
+        leaf, run = setup
+        with monkeypatch.context() as patched:
+            calls = _counting_mkdir(patched)
+            with new_folders_denied(leaf.parent):
+                with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                    run(_FakeTools())
+        assert len(calls) == 1 and calls[0].parent == leaf.parent
+        assert raised.value.folder == str(leaf.parent)
+        assert getattr(raised.value.__cause__, "winerror", None) == 5   # ERROR_ACCESS_DENIED
+        assert (leaf / "old-cache-sentinel").exists()
+        assert list(systemp.iterdir()) == []
+
+        assert run(_FakeTools()) is True
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+
+    def test_dataforge_in_temp_keeps_the_old_cache_when_it_could_not_be_made_again(
+        self, setup, monkeypatch, systemp, english_ui
+    ):
+        """#494: a OneDrive cache works in %TEMP%, and the folder that holds
+        the cache folder denies new folders. The cache folder is there, so
+        only making it again after the wipe would fail, and before the fix
+        the old cache was gone by then. Refused before any tool runs with the
+        cache advice, the old cache still stamped and fresh, no test folder
+        left, and the run goes through once the deny is gone."""
+        leaf, run = setup
+        p4k = _stamp_old_cache(leaf)
+        monkeypatch.setattr(pe, "is_onedrive_path", lambda path: True)
+        fake = _FakeTools()
+        with monkeypatch.context() as patched:
+            calls = _counting_mkdir(patched)
+            with new_folders_denied(leaf.parent):
+                with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                    run(fake)
+        assert [pe.win_plain_path(c.parent) for c in calls] == [str(systemp), str(leaf.parent)]
+        assert raised.value.folder == str(leaf.parent)
+        assert str(raised.value) == _refusal_text(leaf.parent, "extract.folder_refused_fix_cache")
+        assert getattr(raised.value.__cause__, "winerror", None) == 5   # ERROR_ACCESS_DENIED
+        assert fake.calls == []
+        assert (leaf / "old-cache-sentinel").exists()
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+        assert list(systemp.iterdir()) == []
+
+        assert run(_FakeTools()) is True
+        assert (leaf / pe.P4K_SIZE_STAMP).exists()
+        assert not (leaf / "old-cache-sentinel").exists()
+        assert _scratch_folders(leaf.parent, pe.DATAFORGE_SCRATCH_PREFIX) == []
+
+    def test_global_ini_moves_to_temp_and_stops_when_temp_refuses_too(
+        self, env, systemp, monkeypatch
+    ):
+        leaf, out, fake, run = env
+        leaf.parent.mkdir(parents=True)
+        with monkeypatch.context() as patched:
+            calls = _counting_mkdir(patched)
+            with new_folders_denied(leaf.parent):
+                assert run() is True
+                assert Path(fake.cwds[-1]).parent == systemp
+                with new_folders_denied(systemp):
+                    with pytest.raises(pe.WorkingFolderRefusedError) as raised:
+                        run()
+        assert [c.parent for c in calls] == [leaf.parent, systemp] * 2
+        assert raised.value.folder == str(systemp)
+        assert len(fake.cwds) == 1
+        assert out.read_text(encoding="utf-8") == "lang=english\n"

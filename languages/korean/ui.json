@@ -101,6 +101,10 @@
     "legal_load_failed": {
       "ht": "",
       "at": "법적 고지 정보를 불러올 수 없습니다."
+    },
+    "overlay": {
+      "ht": "",
+      "at": "오버레이"
     }
   },
   "toolbar": {
@@ -227,6 +231,14 @@
     "venmo_fallback_text": {
       "ht": "",
       "at": "Venmo"
+    },
+    "sco_btn": {
+      "ht": "",
+      "at": "오버레이"
+    },
+    "sco_tooltip": {
+      "ht": "",
+      "at": "Smart Citizen 오버레이(SCO)를 시작하거나 중지합니다. 게임 화면 위에 채굴 신호 해독과 설계도 서랍을 표시합니다. 테두리 없는 창 모드가 필요합니다."
     }
   },
   "filters": {
@@ -546,6 +558,42 @@
       "ht": "",
       "at": "ODW"
     },
+    "font_size_label": {
+      "ht": "",
+      "at": "글꼴 크기:"
+    },
+    "font_size_small": {
+      "ht": "",
+      "at": "작게"
+    },
+    "font_size_medium": {
+      "ht": "",
+      "at": "보통"
+    },
+    "font_size_large": {
+      "ht": "",
+      "at": "크게"
+    },
+    "font_size_tooltip": {
+      "ht": "",
+      "at": "앱의 글자를 크게 또는 작게 합니다. 잘리는 부분이 없도록 컨트롤도 함께 커지고 작아집니다. 다시 시작하면 적용됩니다."
+    },
+    "font_size_restart_title": {
+      "ht": "",
+      "at": "글꼴 크기 변경을 위해 다시 시작"
+    },
+    "font_size_restart_body": {
+      "ht": "",
+      "at": "새 글꼴 크기는 Smart Citizen을 다시 시작하면 적용됩니다."
+    },
+    "font_size_restart_failed_title": {
+      "ht": "",
+      "at": "다시 시작 실패"
+    },
+    "font_size_restart_failed_body": {
+      "ht": "",
+      "at": "Smart Citizen을 자동으로 다시 시작하지 못했습니다. 새 글꼴 크기를 보려면 직접 다시 실행하세요."
+    },
     "star_citizen_group": {
       "ht": "",
       "at": "Star Citizen"
@@ -604,7 +652,7 @@
     },
     "data_desc": {
       "ht": "",
-      "at": "user.ini, 소스 캐시, 강화 INI, 백업을 위한 폴더입니다. 캐시 정리가 실패하면 OneDrive와 동기화되는 문서 폴더에서 이동하세요. DataForge XML 캐시는 아래에 별도 경로가 있습니다. 약 1.4GB이므로 기본값은 자동으로 OneDrive 밖에 둡니다."
+      "at": "user.ini, 소스 캐시, 강화 INI, 백업을 위한 폴더입니다. 캐시 정리가 실패하면 OneDrive와 동기화되는 문서 폴더에서 이동하세요. DataForge XML 캐시는 아래에 별도 경로가 있습니다. 약 1.2GB이므로 기본값은 자동으로 OneDrive 밖에 둡니다."
     },
     "app_data_label": {
       "ht": "",
@@ -693,6 +741,22 @@
     "invalid_cache_folder_title": {
       "ht": "",
       "at": "잘못된 캐시 폴더"
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에 접근할 수 없었습니다:\n{folder}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\nDataForge 캐시 폴더는 변경되지 않았습니다."
+    },
+    "cache_folder_is_file": {
+      "ht": "",
+      "at": "선택한 캐시 폴더는 폴더가 아니라 파일입니다:\n{folder}"
     },
     "dataforge_cache_changed_title": {
       "ht": "",
@@ -796,7 +860,7 @@
     },
     "cache_dir_tooltip": {
       "ht": "",
-      "at": "추출된 DataForge XML 트리(약 1.4GB)를 위한 기본 폴더입니다. 각 채널은 이 아래에 {base}\\{channel}\\cache\\dataforge\\로 중첩됩니다. OneDrive 밖에 있도록 기본값은 %LOCALAPPDATA%\\Smart Citizen입니다. 경로를 변경하면 재추출이 트리거됩니다."
+      "at": "추출된 DataForge XML 트리(약 1.2GB)를 위한 기본 폴더입니다. 각 채널은 이 아래에 {base}\\{channel}\\cache\\dataforge\\로 중첩됩니다. 추출이 실행되는 동안 이 드라이브에 최대 약 4.5GB의 여유 공간이 필요하며, 캐시가 이미 있으면 더 적게 필요합니다. 이 폴더가 OneDrive, 네트워크 드라이브 또는 이동식 드라이브에 있거나 매우 깊이 중첩되어 있으면 작업 파일은 대신 %TEMP%에 저장됩니다. OneDrive 밖에 있도록 기본값은 %LOCALAPPDATA%\\Smart Citizen입니다. 경로를 변경하면 재추출이 트리거됩니다."
     },
     "browse_cache_tooltip": {
       "ht": "",
@@ -1034,7 +1098,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "기본 현지화 데이터를 확장하는 선택적 기능입니다: 강화 생성기의 카테고리 선택, 게임 내 함선 목록을 위한 즐겨찾기 접두사, 부품/미사일/함선 무기의 괄호 이름 태그를 사용자 지정하는 태그 빌더."
+      "at": "기본 현지화 데이터를 확장하는 선택적 기능입니다: 강화 생성기의 카테고리 선택, 게임 내 함선 목록을 위한 즐겨찾기 접두사, 부품/미사일/함선 무기/상품/방어구의 괄호 이름 태그를 사용자 지정하는 태그 빌더."
     },
     "enhancements_group": {
       "ht": "",
@@ -1054,7 +1118,7 @@
     },
     "cat_desc_gear": {
       "ht": "",
-      "at": "FPS 무기 전투 통계"
+      "at": "FPS 무기 전투 통계 및 방어구 무게 태그"
     },
     "cat_desc_missions": {
       "ht": "",
@@ -1098,7 +1162,7 @@
     },
     "tag_builder_desc": {
       "ht": "",
-      "at": "부품, 미사일, 함선 무기의 괄호 이름 태그를 사용자 지정합니다. 태그 변경 저장을 클릭하고 강화 생성을 다시 실행해야 변경 사항이 적용됩니다."
+      "at": "부품, 미사일, 함선 무기, 상품, 방어구의 괄호 이름 태그와 화물 운송 임무 제목의 경로를 사용자 지정합니다. 태그 변경 저장을 클릭하고 강화 생성을 다시 실행해야 변경 사항이 적용됩니다."
     },
     "preview_label": {
       "ht": "",
@@ -1106,7 +1170,7 @@
     },
     "annotate_mission_descs_cb": {
       "ht": "",
-      "at": "임무 설명에서 부품 주석 표시"
+      "at": "임무 설명에서 부품과 방어구 주석 표시"
     },
     "apply_tag_changes_btn": {
       "ht": "",
@@ -1171,6 +1235,10 @@
     "blueprints_tooltip_missions": {
       "ht": "",
       "at": "임무: {missions}"
+    },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "기본 설계도 (모든 플레이어 보유)"
     },
     "blueprints_available_label": {
       "ht": "",
@@ -1270,15 +1338,15 @@
     },
     "annotate_mission_descs_tooltip": {
       "ht": "",
-      "at": "선택하면, 임무 설명의 잠재적 설계도 목록 안의 부품 이름에 설정된 [CLASS-Sx-grade] 태그가 추가됩니다. 다른 곳의 실제 부품 이름에는 태그를 유지하면서 더 깔끔한 임무 본문을 원하면 선택을 해제하세요."
+      "at": "선택하면, 설정된 부품 태그와 Armor > Weight가 켜져 있을 때의 방어구 무게 태그가 임무 설명의 잠재적 설계도 목록 안의 아이템 이름에 추가됩니다. 더 깔끔한 임무 본문을 원하면 선택을 해제하세요. 다른 곳의 아이템 이름에는 태그가 유지됩니다."
     },
     "reset_tag_tooltip": {
       "ht": "",
-      "at": "모든 카테고리(부품 / 미사일 / 함선 무기)의 기본 패턴, 매핑, 순서를 복원합니다. 태그 변경 저장 또는 강화 생성을 클릭하기 전까지는 저장되거나 다시 생성되지 않습니다."
+      "at": "태그 빌더의 모든 탭에서 기본 패턴, 매핑, 순서를 복원합니다(선택 사항인 상품 및 방어구 태그도 다시 꺼집니다). 태그 구성은 태그 변경 저장 또는 강화 생성을 클릭하기 전까지 저장되거나 다시 생성되지 않지만, Mission Titles 탭의 일반 태그는 바뀌는 즉시 저장되므로 재설정하면 바로 기본값으로 돌아갑니다."
     },
     "tag_enabled_tooltip": {
       "ht": "",
-      "at": "부품 / 미사일 / 함선 무기 태그 구성을 저장하고 강화 생성기를 다시 실행합니다. 새 태그는 다음번 강화 적용 후 게임에 나타납니다."
+      "at": "태그 빌더의 모든 탭 태그 구성을 저장하고 강화 생성기를 다시 실행합니다. 새 태그는 다음번 강화 적용 후 게임에 나타납니다."
     },
     "tag_disabled_tooltip": {
       "ht": "",
@@ -1327,6 +1395,10 @@
     "tag_mapping_tooltip_collection": {
       "ht": "",
       "at": "컬렉션 레이블에 대한 짧게/보통/길게 텍스트를 편집합니다(예: Collection → Col / Collect / Collection)."
+    },
+    "tag_mapping_tooltip_weight": {
+      "ht": "",
+      "at": "각 방어구 무게 등급에 사용되는 짧게/보통/길게 텍스트를 편집합니다(예: Heavy → H / HV / Heavy)."
     },
     "tag_mapping_tooltip_default": {
       "ht": "",
@@ -1980,6 +2052,46 @@
       "ht": "",
       "at": "캐시 지워짐"
     },
+    "clear_cache_busy": {
+      "ht": "",
+      "at": "추출이나 강화 생성이 실행 중일 때는 캐시를 지울 수 없습니다. 완료된 후 다시 시도하세요."
+    },
+    "clear_cache_files_body": {
+      "ht": "",
+      "at": "다음 캐시 파일을 삭제합니다:\n\n{files}\n\n문자열을 불러오기 전에 Data.p4k에서 base.ini를 다시 추출해야 합니다."
+    },
+    "clear_cache_dataforge_body": {
+      "ht": "",
+      "at": "DataForge 캐시도 지울까요?\n{folder}\n\n이 캐시에는 함선과 무기 능력치에 쓰이는, Data.p4k에서 추출한 엔티티 데이터가 들어 있으며 다시 만드는 데 몇 분이 걸립니다. 현지화 문자열만 새로 고치려면 그대로 두세요."
+    },
+    "clear_cache_dataforge_unreachable": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더에 접근할 수 없어 지우지 않았습니다:\n{folder}"
+    },
+    "clear_cache_progress_title": {
+      "ht": "",
+      "at": "캐시 지우는 중"
+    },
+    "clear_cache_progress_files": {
+      "ht": "",
+      "at": "캐시 파일을 지우는 중..."
+    },
+    "clear_cache_progress_file": {
+      "ht": "",
+      "at": "{name} 삭제 중..."
+    },
+    "clear_cache_progress_dataforge": {
+      "ht": "",
+      "at": "DataForge 캐시를 지우는 중..."
+    },
+    "cache_cleared_body": {
+      "ht": "",
+      "at": "캐시에서 {count}개 항목을 삭제했습니다."
+    },
+    "cache_cleared_failed": {
+      "ht": "",
+      "at": "삭제할 수 없음:\n{failures}"
+    },
     "dir_not_found_title": {
       "ht": "",
       "at": "디렉터리를 찾을 수 없음"
@@ -2298,10 +2410,6 @@
       "ht": "",
       "at": "엔터티 파일 캐싱 중…"
     },
-    "snapshot_diff": {
-      "ht": "",
-      "at": "비교를 위해 캐시 스냅샷 생성 중…"
-    },
     "syncing_sources": {
       "ht": "",
       "at": "소스 동기화 중..."
@@ -2325,6 +2433,10 @@
     "reloading_after_user_ini_restore": {
       "ht": "",
       "at": "user.ini 복원 후 {channel} 다시 불러오는 중..."
+    },
+    "reloading_with_extracted_base": {
+      "ht": "",
+      "at": "추출된 base.ini로 다시 불러오는 중..."
     }
   },
   "status_bar": {
@@ -2391,6 +2503,10 @@
     "enhancement_generation_failed": {
       "ht": "",
       "at": "강화 생성 실패. 자세한 내용은 로그 탭을 확인하세요"
+    },
+    "enhancement_generation_stopped": {
+      "ht": "",
+      "at": "강화 생성이 중지됨"
     },
     "user_ini_reset": {
       "ht": "",
@@ -2577,6 +2693,18 @@
     "dont_warn_again": {
       "ht": "",
       "at": "다시 경고하지 않기"
+    },
+    "installer_move_done": {
+      "ht": "",
+      "at": "{count}개 파일을 OneDrive에서 새 데이터 폴더로 이동했습니다: {new}"
+    },
+    "installer_move_left_title": {
+      "ht": "",
+      "at": "일부 파일이 OneDrive에 남았습니다"
+    },
+    "installer_move_left_body": {
+      "ht": "",
+      "at": "설치 프로그램이 데이터 폴더를 로컬 폴더로 바꿨고, Smart Citizen이 {moved}개 파일을 그곳으로 이동했습니다.\n\n이전 위치:\n{old}\n\n새 위치:\n{new}\n\n{left}개 파일이 이전 폴더에 남았습니다. 새 폴더에 같은 이름의 파일이 이미 있었거나(그 파일을 유지했습니다) 파일을 이동할 수 없었기 때문입니다. 로그 탭에 목록이 있습니다.\n\n이전 폴더를 삭제하기 전에 확인하고, 아직 필요한 것은 새 폴더로 복사하세요."
     }
   },
   "user_ini_reset": {
@@ -2680,6 +2808,10 @@
       "ht": "",
       "at": "{label}  (누락됨)"
     },
+    "outdated_categories_body": {
+      "ht": "",
+      "at": "강화가 최신 상태가 아닙니다. 마지막 생성이 완료되지 않았거나 오래된 게임 데이터로 생성되었습니다.\n생성할 항목을 선택하세요.\n나중에 강화 탭에서 이를 변경할 수 있습니다."
+    },
     "dataforge_auto_extract_note": {
       "ht": "",
       "at": "DataForge 데이터가 아직 캐시되지 않았다면 자동으로 추출됩니다.\n첫 실행은 몇 분 정도 걸립니다."
@@ -2726,11 +2858,35 @@
     },
     "dataforge_running_body": {
       "ht": "",
-      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요? 나중에 다시 실행할 수 있습니다."
+      "at": "DataForge 추출이 아직 실행 중입니다.\n\n지금 중지할까요, 아니면 작업을 계속하는 동안 백그라운드에서 계속 실행할까요? 중지하면 나중에 다시 실행할 수 있습니다."
     },
     "dataforge_stop_btn": {
       "ht": "",
       "at": "중지"
+    },
+    "dataforge_background_btn": {
+      "ht": "",
+      "at": "백그라운드에서 실행"
+    },
+    "dataforge_settings_changed": {
+      "ht": "",
+      "at": "DataForge 추출이 끝났지만 실행 중에 DataForge 캐시 폴더나 채널이 바뀌어 강화를 생성하지 않았고 이전 캐시도 지우지 않았습니다."
+    },
+    "locked_while_job_runs": {
+      "ht": "",
+      "at": "추출이나 강화 생성이 실행 중일 때는 잠기며, 끝나면 다시 잠금이 해제됩니다."
+    },
+    "generation_running_title": {
+      "ht": "",
+      "at": "강화 생성 진행 중"
+    },
+    "generation_running_body": {
+      "ht": "",
+      "at": "강화 생성이 아직 실행 중입니다.\n\n지금 중지할까요, 아니면 작업을 계속하는 동안 백그라운드에서 계속 실행할까요? 중지하면 나중에 다시 실행할 수 있습니다."
+    },
+    "generation_stopping": {
+      "ht": "",
+      "at": "강화 생성을 중지하는 중…"
     },
     "dataforge_stopping": {
       "ht": "",
@@ -2767,6 +2923,74 @@
     "dataforge_timeout": {
       "ht": "",
       "at": "게임 데이터베이스 변환이 30분 넘게 걸려 중단되었습니다.\n\n발견된 데이터베이스는 다음 위치의 {dcb}({size}MB)입니다:\n{path}\n\n정상적인 설치는 1분도 채 안 되어 변환되므로, 이는 보통 Smart Citizen이 잘못된 Star Citizen 폴더를 읽고 있음을 의미합니다. 드라이브에 남아 있는 오래되거나 남은 설치는 유효해 보일 수 있지만 오래된 게임 파일을 담고 있습니다.\n\nRSI Launcher를 열어 Star Citizen에 표시된 설치 위치를 확인하세요. 위 경로와 다르면 Smart Citizen의 설정 탭에서 수정하세요. 같은 경로라면, 대신 런처에서 파일 검증을 실행해 설치를 복구하세요."
+    },
+    "no_space_dataforge": {
+      "ht": "",
+      "at": "여유 공간이 부족합니다. 아무것도 저장되지 않았으며 현재 DataForge 캐시도 변경되지 않았습니다."
+    },
+    "no_space_global_ini": {
+      "ht": "",
+      "at": "Data.p4k에서 global.ini를 추출할 여유 공간이 부족합니다. 아무것도 변경되지 않았습니다."
+    },
+    "no_space_drive": {
+      "ht": "",
+      "at": "드라이브 {drive} 여유 공간은 {free} 남아 있으며, 추출이 실행되는 동안 이 드라이브에 약 {needed} 필요합니다."
+    },
+    "no_space_fix_cache": {
+      "ht": "",
+      "at": "드라이브 {drive} 공간을 확보하거나, 설정 탭에서 다른 드라이브에 있는 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "no_space_fix_temp": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더가 OneDrive, 네트워크 드라이브 또는 이동식 드라이브에 있거나 매우 깊이 중첩되어 있어서, 추출 작업은 Windows 임시 폴더({folder})에서 진행됩니다. 드라이브 {drive} 공간을 확보한 후 다시 시도하세요."
+    },
+    "no_space_fix": {
+      "ht": "",
+      "at": "드라이브 {drive} 공간을 확보한 후 다시 시도하세요."
+    },
+    "no_space_cache_incomplete": {
+      "ht": "",
+      "at": "새 DataForge 캐시를 다음 위치에 저장하는 동안 드라이브 {drive} 공간이 부족해졌습니다:\n{folder}\n\n이 캐시는 불완전합니다. 드라이브 {drive} 공간을 확보한 후 다시 추출하여 캐시를 다시 만드세요."
+    },
+    "size_gb": {
+      "ht": "",
+      "at": "{whole}.{tenth}GB"
+    },
+    "size_mb": {
+      "ht": "",
+      "at": "{mb}MB"
+    },
+    "folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 작업 폴더를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "folder_refused_fix_cache": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "folder_refused_fix": {
+      "ht": "",
+      "at": "해당 폴더의 권한을 확인하거나, Windows 보안에서 제어된 폴더 액세스를 통해 Smart Citizen을 허용한 후 다시 시도하세요."
+    },
+    "folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에서 작업 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_refused": {
+      "ht": "",
+      "at": "Windows가 다음 위치에 DataForge 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_unreachable": {
+      "ht": "",
+      "at": "Smart Citizen이 DataForge 캐시 폴더에 접근할 수 없었습니다:\n{folder}\n\n추출이 시작되지 않았습니다. 드라이브를 다시 연결하거나, 설정 탭에서 다른 DataForge 캐시 폴더를 선택한 후 다시 시도하세요."
+    },
+    "cache_folder_unusable": {
+      "ht": "",
+      "at": "Smart Citizen이 DataForge 캐시 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
+    },
+    "cache_folder_is_link": {
+      "ht": "",
+      "at": "DataForge 캐시 폴더가 다른 폴더로 연결되는 링크입니다:\n{folder}\n\n연결 대상:\n{target}\n\nSmart Citizen은 링크를 통해 아무것도 삭제하지 않으므로 추출이 시작되지 않았고 아무것도 변경되지 않았습니다. 설정 탭에서 링크가 가리키는 폴더를 DataForge 캐시 폴더로 선택한 후 다시 시도하세요."
     }
   },
   "apply": {
@@ -3027,7 +3251,17 @@
       },
       "description": {
         "ht": "",
-        "at": "부품, 미사일, 함선 무기, 상품에 추가되는 괄호 이름 태그를 만드세요. ▲/▼로 요소 순서를 바꾸고, 선택을 해제해 제외하고, 약자 길이를 바꾸고, 구분 기호와 괄호를 선택하고, 태그를 이름 앞이 아니라 뒤에 배치할 수 있습니다."
+        "at": "부품, 미사일, 함선 무기, 상품, 방어구에 추가되는 괄호 이름 태그를 만드세요. ▲/▼로 요소 순서를 바꾸고, 선택을 해제해 제외하고, 약자 길이를 바꾸고, 구분 기호와 괄호를 선택하고, 태그를 이름 앞이 아니라 뒤에 배치할 수 있습니다."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen 오버레이"
+      },
+      "description": {
+        "ht": "",
+        "at": "여기서 또는 도구 모음의 오버레이 버튼으로 오버레이를 시작하세요. 게임 위에서 채굴 스캔 신호를 해독하고, 설계도·광물·제작을 검색하는 서랍을 열며, 획득한 설계도를 보유로 표시합니다. 게임은 주 화면에서 테두리 없는 창 모드로 실행하세요."
       }
     },
     "blueprint_tracker": {
@@ -3043,7 +3277,7 @@
     "edit": {
       "title": {
         "ht": "",
-        "at": "8. 텍스트 편집"
+        "at": "9. 텍스트 편집"
       },
       "description": {
         "ht": "",
@@ -3053,7 +3287,7 @@
     "filter_row": {
       "title": {
         "ht": "",
-        "at": "9. 열별 필터링"
+        "at": "10. 열별 필터링"
       },
       "description": {
         "ht": "",
@@ -3063,7 +3297,7 @@
     "editor": {
       "title": {
         "ht": "",
-        "at": "10. 편집기 패널"
+        "at": "11. 편집기 패널"
       },
       "description": {
         "ht": "",
@@ -3073,7 +3307,7 @@
     "preview": {
       "title": {
         "ht": "",
-        "at": "11. 미리보기 패널"
+        "at": "12. 미리보기 패널"
       },
       "description": {
         "ht": "",
@@ -3083,7 +3317,7 @@
     "apply": {
       "title": {
         "ht": "",
-        "at": "12. 강화 적용"
+        "at": "13. 강화 적용"
       },
       "description": {
         "ht": "",
@@ -3093,7 +3327,7 @@
     "cfg_appearance": {
       "title": {
         "ht": "",
-        "at": "13. 설정: 모양"
+        "at": "14. 설정: 모양"
       },
       "description": {
         "ht": "",
@@ -3103,7 +3337,7 @@
     "cfg_sc_install": {
       "title": {
         "ht": "",
-        "at": "14. 설정: Star Citizen 설치"
+        "at": "15. 설정: Star Citizen 설치"
       },
       "description": {
         "ht": "",
@@ -3113,7 +3347,7 @@
     "cfg_data_folder": {
       "title": {
         "ht": "",
-        "at": "15. 설정: Smart Citizen 데이터"
+        "at": "16. 설정: Smart Citizen 데이터"
       },
       "description": {
         "ht": "",
@@ -3123,7 +3357,7 @@
     "cfg_p4k_extraction": {
       "title": {
         "ht": "",
-        "at": "16. 설정: 기본 현지화"
+        "at": "17. 설정: 기본 현지화"
       },
       "description": {
         "ht": "",
@@ -3133,7 +3367,7 @@
     "cfg_tools": {
       "title": {
         "ht": "",
-        "at": "17. 설정: 도구"
+        "at": "18. 설정: 도구"
       },
       "description": {
         "ht": "",
@@ -3143,12 +3377,348 @@
     "help": {
       "title": {
         "ht": "",
-        "at": "18. 도움말 및 피드백"
+        "at": "19. 도움말 및 피드백"
       },
       "description": {
         "ht": "",
         "at": "도움말 버튼은 전체 가이드, 알려진 문제 목록, Smart Citizen Discord 채널로의 피드백 링크가 담긴 옆 패널을 엽니다. 시작하는 데 필요한 모든 것이 여기 있습니다. 행운을 빕니다, 시민."
       }
+    }
+  },
+  "sco": {
+    "kind_roc": {
+      "ht": "",
+      "at": "ROC 채굴 광물"
+    },
+    "kind_fps": {
+      "ht": "",
+      "at": "FPS 채굴 광물"
+    },
+    "kind_salvage": {
+      "ht": "",
+      "at": "인양"
+    },
+    "surface_only": {
+      "ht": "",
+      "at": "{name} (지표 전용)"
+    },
+    "drawer_search_placeholder": {
+      "ht": "",
+      "at": "설계도 검색..."
+    },
+    "drawer_owned_only": {
+      "ht": "",
+      "at": "보유한 것만"
+    },
+    "drawer_summary": {
+      "ht": "",
+      "at": "보유 {owned} / {total}"
+    },
+    "drawer_missions": {
+      "ht": "",
+      "at": "{count}개 임무의 보상:"
+    },
+    "drawer_new_blueprints": {
+      "ht": "",
+      "at": "새 항목: {names}"
+    },
+    "no_blueprints_title": {
+      "ht": "",
+      "at": "Smart Citizen 오버레이"
+    },
+    "no_blueprints_body": {
+      "ht": "",
+      "at": "아직 설계도 데이터가 로드되지 않았습니다. 먼저 문자열을 로드한 뒤 오버레이를 시작하세요."
+    },
+    "drawer_more_missions": {
+      "ht": "",
+      "at": "외 {count}개 더"
+    },
+    "unidentified": {
+      "ht": "",
+      "at": "식별 불가"
+    },
+    "decoder_stopped": {
+      "ht": "",
+      "at": "채굴 스캔 해독기가 오류로 중지되었습니다. 다시 시도하려면 오버레이를 다시 시작하세요. 자세한 내용은 로그 탭에 있습니다."
+    },
+    "section_blueprints": {
+      "ht": "",
+      "at": "설계도"
+    },
+    "section_minerals": {
+      "ht": "",
+      "at": "광물"
+    },
+    "section_crafting": {
+      "ht": "",
+      "at": "제작"
+    },
+    "minerals_search_placeholder": {
+      "ht": "",
+      "at": "광물 또는 장소..."
+    },
+    "clear_watched": {
+      "ht": "",
+      "at": "모두 해제"
+    },
+    "watch_mineral_tooltip": {
+      "ht": "",
+      "at": "이 광물이 스캔되면 알림"
+    },
+    "watch_salvage_tooltip": {
+      "ht": "",
+      "at": "인양물이 스캔되면 알림"
+    },
+    "crafting_search_placeholder": {
+      "ht": "",
+      "at": "스캔 대상 또는 아이템 이름 입력..."
+    },
+    "minerals_none": {
+      "ht": "",
+      "at": "일치하는 광물이 없습니다. 목록이 계속 비어 있으면 먼저 문자열을 로드하세요."
+    },
+    "crafting_none": {
+      "ht": "",
+      "at": "일치하는 항목이 없습니다. DataForge를 추출한 다음 Commodities 또는 Journal을 체크하고 향상 기능을 생성하면 이 목록이 채워집니다."
+    },
+    "system_other": {
+      "ht": "",
+      "at": "기타"
+    },
+    "crafting_used_in": {
+      "ht": "",
+      "at": "사용처({material}):"
+    },
+    "crafting_needs": {
+      "ht": "",
+      "at": "{item}에 필요한 재료:"
+    },
+    "tooltip_needs": {
+      "ht": "",
+      "at": "필요 재료: {materials}"
+    },
+    "tooltip_tier": {
+      "ht": "",
+      "at": "등급: {tier}"
+    },
+    "tooltip_signature": {
+      "ht": "",
+      "at": "스캔 신호: 바위당 {base}, 최대 {count}개"
+    },
+    "tooltip_salvage_signature": {
+      "ht": "",
+      "at": "스캔 신호: 개당 {base}, 최대 {count}개"
+    },
+    "tooltip_used_in": {
+      "ht": "",
+      "at": "제작 아이템 {count}개에 사용"
+    },
+    "tooltip_system": {
+      "ht": "",
+      "at": "성계: {system}"
+    },
+    "tooltip_minerals_here": {
+      "ht": "",
+      "at": "이곳의 광물: {minerals}"
+    }
+  },
+  "overlay": {
+    "title": {
+      "ht": "",
+      "at": "Smart Citizen 오버레이"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Star Citizen 위에 표시되는 창입니다. 채굴 스캔 해독기와 설계도 서랍이 있습니다. 게임은 테두리 없는 창 모드로 실행하세요. 오버레이는 화면과 Game.log만 읽고, 서랍 단축키를 설정하면 그 조합 하나만을 위해 키 입력을 살핍니다. 게임 프로세스에는 절대 손대지 않습니다."
+    },
+    "start_btn": {
+      "ht": "",
+      "at": "오버레이 시작"
+    },
+    "stop_btn": {
+      "ht": "",
+      "at": "오버레이 중지"
+    },
+    "scan_group": {
+      "ht": "",
+      "at": "스캔 해독기"
+    },
+    "drawer_group": {
+      "ht": "",
+      "at": "서랍"
+    },
+    "blueprint_watch_group": {
+      "ht": "",
+      "at": "Game.log의 설계도"
+    },
+    "scan_decoder": {
+      "ht": "",
+      "at": "채굴 스캔 해독기"
+    },
+    "scan_decoder_hint": {
+      "ht": "",
+      "at": "레이더 아래의 스캔 신호를 읽고 그 아래에 매장지 종류와 개수를 표시합니다."
+    },
+    "label_size": {
+      "ht": "",
+      "at": "스캔 글자 크기:"
+    },
+    "size_small": {
+      "ht": "",
+      "at": "작게"
+    },
+    "size_medium": {
+      "ht": "",
+      "at": "보통"
+    },
+    "size_large": {
+      "ht": "",
+      "at": "크게"
+    },
+    "size_extra_large": {
+      "ht": "",
+      "at": "아주 크게"
+    },
+    "alerts_title": {
+      "ht": "",
+      "at": "관심 광물이나 인양물이 스캔되면:"
+    },
+    "alert_glow": {
+      "ht": "",
+      "at": "빛나기"
+    },
+    "alert_glow_hint": {
+      "ht": "",
+      "at": "라벨이 보이는 동안 주위가 맥박치듯 빛납니다."
+    },
+    "alert_flash": {
+      "ht": "",
+      "at": "깜박이기"
+    },
+    "alert_flash_hint": {
+      "ht": "",
+      "at": "대상을 처음 읽으면 라벨이 세 번 깜박입니다."
+    },
+    "alert_color": {
+      "ht": "",
+      "at": "글자 색 바꾸기"
+    },
+    "alert_color_hint": {
+      "ht": "",
+      "at": "라벨 글자가 밝은 초록색이 됩니다."
+    },
+    "alert_bigger": {
+      "ht": "",
+      "at": "글자 크게"
+    },
+    "alert_bigger_hint": {
+      "ht": "",
+      "at": "라벨 글자가 1.5배 커집니다."
+    },
+    "alert_sound": {
+      "ht": "",
+      "at": "소리 재생"
+    },
+    "alert_sound_hint": {
+      "ht": "",
+      "at": "대상을 처음 읽으면 짧은 차임이 울립니다."
+    },
+    "live_blueprint_watch": {
+      "ht": "",
+      "at": "새 설계도를 보유로 표시"
+    },
+    "live_blueprint_watch_hint": {
+      "ht": "",
+      "at": "오버레이가 실행되는 동안 게임에서 받은 설계도를 Game.log에서 읽어 보유로 표시합니다."
+    },
+    "drawer": {
+      "ht": "",
+      "at": "오버레이 서랍"
+    },
+    "drawer_hint": {
+      "ht": "",
+      "at": "화면 가장자리에 붙는 서랍이며, 위치는 아래에서 고릅니다. 끄면 서랍과 모든 섹션이 숨겨집니다."
+    },
+    "drawer_blueprints": {
+      "ht": "",
+      "at": "설계도"
+    },
+    "drawer_blueprints_hint": {
+      "ht": "",
+      "at": "설계도를 검색하고, 보상으로 주는 임무를 확인하고, 보유한 항목에 체크합니다."
+    },
+    "drawer_minerals": {
+      "ht": "",
+      "at": "광물"
+    },
+    "drawer_minerals_hint": {
+      "ht": "",
+      "at": "광물 이름을 입력하면 산지를 성계별로, 장소를 입력하면 그곳의 광물을 보여 줍니다."
+    },
+    "drawer_crafting": {
+      "ht": "",
+      "at": "제작"
+    },
+    "drawer_crafting_hint": {
+      "ht": "",
+      "at": "광물을 입력하면 그 광물을 쓰는 아이템을, 아이템을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
+    },
+    "drawer_position": {
+      "ht": "",
+      "at": "서랍 위치:"
+    },
+    "position_top_left": {
+      "ht": "",
+      "at": "왼쪽 위"
+    },
+    "position_top_center": {
+      "ht": "",
+      "at": "위쪽 가운데"
+    },
+    "position_top_right": {
+      "ht": "",
+      "at": "오른쪽 위"
+    },
+    "position_middle_left": {
+      "ht": "",
+      "at": "왼쪽 가운데"
+    },
+    "position_middle_right": {
+      "ht": "",
+      "at": "오른쪽 가운데"
+    },
+    "position_bottom_left": {
+      "ht": "",
+      "at": "왼쪽 아래"
+    },
+    "position_bottom_center": {
+      "ht": "",
+      "at": "아래쪽 가운데"
+    },
+    "position_bottom_right": {
+      "ht": "",
+      "at": "오른쪽 아래"
+    },
+    "drawer_hotkey": {
+      "ht": "",
+      "at": "서랍 단축키:"
+    },
+    "drawer_hotkey_clear": {
+      "ht": "",
+      "at": "지우기"
+    },
+    "drawer_hotkey_hint": {
+      "ht": "",
+      "at": "게임 중에 서랍을 마지막으로 쓴 섹션으로 열고 닫습니다. 게임 중에 마우스로 쓰려면 지금처럼 F를 누르고 있으세요. 칸을 클릭한 다음 Alt+8처럼 키를 함께 누르세요. Star Citizen도 이 키를 그대로 받으므로 게임에서 쓰지 않는 조합을 고르세요."
+    },
+    "hotkey_taken": {
+      "ht": "",
+      "at": "Windows가 이 단축키를 거부했습니다. 다른 프로그램이 이미 쓰고 있을 수 있으니 다른 키를 고르세요."
+    },
+    "hotkey_unsupported": {
+      "ht": "",
+      "at": "이것은 단축키로 쓸 수 없습니다. Ctrl, Alt 또는 Win을 누른 채 영문자, 숫자, 기호, Space, Tab 또는 이동 키(화살표, Home, End, Page Up/Down, Insert, Delete)를 누르세요. Shift를 더해도 됩니다. F 키나 Pause는 단독으로도 쓸 수 있습니다."
     }
   }
 }

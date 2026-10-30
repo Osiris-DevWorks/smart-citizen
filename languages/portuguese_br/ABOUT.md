@@ -27,7 +27,7 @@ Obrigado a quem contribuiu com código para o Smart Citizen:
 - **Ishikudeska**
 - **jonigirl**
 - **Coerwyn**
-- **denis-coach** (h0use)
+- **Den McConan** aka h0use
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
@@ -73,6 +73,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 - [**rjcncpt/StarCitizen-Deutsch-INI**](https://github.com/rjcncpt/StarCitizen-Deutsch-INI): a tradução comunitária do `global.ini` que alimenta a opção de idioma alemão.
 - **[Projeto de Localização Coreana de Star Citizen](https://sc.galaxyhub.kr)** (as guildas Shatagon, MGM Star Fleet e Falco Rescue): a equipe da comunidade por trás da localização coreana. O arquivo deles não é incluído no Smart Citizen (a licença deles não permite redistribuição); o coreano é um idioma "traga seu próprio arquivo", mapeado via *Mapear Arquivo de Idioma* para uma cópia local que você obtém diretamente com eles.
 - [**Orbit-Startech/StarCitizen-TCTP**](https://github.com/Orbit-Startech/StarCitizen-TCTP): a tradução comunitária do `global.ini` que alimenta a opção de idioma chinês tradicional. Atualizada pela última vez em maio de 2024, cobre cerca de dois terços das strings atuais do jogo; o restante recorre ao inglês.
+- [**n1ghter/StarCitizenRu**](https://github.com/n1ghter/StarCitizenRu): a tradução comunitária do `global.ini` que alimenta a opção de idioma russo.
 
 ## Principais Recursos
 
@@ -80,7 +81,7 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 - **Carregar e Editar**: carregue o `global.ini` da sua instalação do Star Citizen e personalize strings em uma tabela intuitiva
 - **Suporte Multicanal**: LIVE / PTU / EPTU / HOTFIX / TECH-PREVIEW têm cada um seu próprio `user.ini`, cache, backups e extração do DataForge isolados; troque de canal na aba Config sem reiniciar
 - **Verificar local da instalação**: encontra todas as instalações do Star Citizen no seu PC e lê o log do launcher da RSI para dizer qual delas o jogo realmente inicia, para que aplicar nunca grave em uma cópia que você não abre
-- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês (simplificado), italiano, alemão, turco, coreano (arquivo próprio) e chinês tradicional na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
+- **Suporte a Vários Idiomas**: alterne o app e as strings do jogo entre inglês, francês, espanhol, português do Brasil, japonês, chinês (simplificado), italiano, alemão, turco, coreano (arquivo próprio), chinês tradicional e russo na aba Config. Idiomas diferentes do inglês sobrepõem um `global.ini` traduzido pela comunidade à base em inglês, com fallback para o inglês no que não estiver traduzido. Mais idiomas serão expostos conforme as traduções da comunidade chegarem (veja `languages/TRANSLATIONS.md`)
 - **Contratos de Missão**: edite textos de contratos e briefings na categoria Missions dedicada
 - **Filtragem Inteligente**: busque strings, filtre por categoria (Ships, Ship Items, Missions, Gear, Commodities, Journal, Other) ou por status de modificação
 - **Filtros por Coluna**: digite direto nas caixas de filtro sob cada cabeçalho de coluna para buscas refinadas
@@ -109,10 +110,11 @@ As strings do jogo em idiomas diferentes do inglês são traduções da comunida
 - **Referências Cruzadas no Diário**: entradas do Compêndio de Mineração ganham referências de fabricação e a assinatura de recurso base de cada minério; commodities usadas em fabricação ganham uma tag de nome `[CF]` personalizável e a lista de todos os blueprints que as exigem
 - **Efeitos de Consumíveis Médicos**: as canetas CureLife básicas (MedPen, OxyPen, AdrenaPen e companhia) ganham uma linha de efeito em linguagem clara, para a descrição dizer o que a caneta faz em vez de só contar a história dela
 - **Naves Favoritas**: marque uma nave com estrela para prefixar o nome com um caractere configurável (padrão `*`) e fazê-la subir ao topo do terminal ASOP no jogo
-- **Criador de Tags**: personalize as tags entre colchetes de componentes, mísseis, armas de nave e commodities; reordene elementos, mude o tamanho da abreviação (M / MIL / Military), escolha separadores e colchetes, ou coloque a tag depois do nome. Componentes têm um elemento Type opcional (Escudo, Refrigerador etc.); commodities têm um elemento Usage que mostra para onde vão seus materiais de fabricação
+- **Criador de Tags**: personalize as tags entre colchetes de componentes, mísseis, armas de nave, commodities e armaduras; reordene elementos, mude o tamanho da abreviação (M / MIL / Military), escolha separadores e colchetes, ou coloque a tag depois do nome. Componentes têm um elemento Type opcional (Escudo, Refrigerador etc.); commodities têm um elemento Usage que mostra para onde vão seus materiais de fabricação; armaduras têm um elemento Weight opcional que marca cada peça como Light, Medium, Heavy, Super Heavy, Utility ou Clothing
 - **Títulos de Missão**: comece títulos de transporte pela rota (ex.: `Area18 > Lorville`) — posicionamento, seta, separador e nível de detalhe do local configuráveis, além do encurtamento opcional dos títulos originais, com pré-visualização ao vivo
 - **Estatísticas Acima ou Abaixo**: escolha se o bloco de estatísticas fica no topo ou no final da descrição
 - **Rastreador de Blueprints**: uma aba dedicada para marcar os blueprints de fabricação que você já possui. Mova itens entre Disponíveis e Adquiridos, filtre por Missão / Tipo / Classe / Tamanho / Grau, e itens adquiridos ganham uma tag azul `[Owned]` nas listas de blueprints das missões. **Escanear Logs por Blueprints Adquiridos** preenche a coleção automaticamente a partir dos seus arquivos de log do Star Citizen, importando só o que é novo desde o último escaneamento (ou automaticamente ao iniciar, quando **Escanear logs automaticamente ao iniciar** está ativado), e **Exportar / Importar Blueprints Adquiridos** move a lista de adquiridos entre PCs (JSON ou CSV; a importação só adiciona, e exportações do scmdb.net também funcionam)
+- **Sobreposição do Smart Citizen**: janelas opcionais sobre o jogo (modo janela sem bordas). Um decodificador de escaneamento de mineração mostra o depósito por trás de uma assinatura (`3 × Lindinium`) e pode brilhar, piscar ou tocar um som para os minerais ou o salvamento que você acompanha; uma gaveta, com atalho próprio, pesquisa seus blueprints, onde os minerais são encontrados e o que se fabrica com eles; e os blueprints que você ganha são marcados como adquiridos a partir do `Game.log` enquanto ela roda. Só pixels da tela, o `Game.log` e um atalho opcional: sem injeção, leitura de memória nem envio de entradas
 - **Rótulos de Missão**: renomeie os cabeçalhos de seção (MISSION DETAILS, POTENTIAL BLUEPRINTS etc.), o rótulo de XP e a tag de ênfase dos cabeçalhos
 - **Patches Declarativos para Bugs de Dados da CIG**: um sistema de patches aplica correções a bugs conhecidos do DataForge no momento da extração, para o texto no jogo sair certo sem esperar a CIG
 - **Categorias Seletivas**: ative ou desative cada categoria de aprimoramento de forma independente na aba Aprimoramentos

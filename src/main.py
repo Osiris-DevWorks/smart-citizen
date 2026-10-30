@@ -33,6 +33,7 @@ from src.gui.theme import apply_theme, load_application_fonts
 from src.utils.version import get_version
 from src.utils.settings import AppSettings
 from src.utils import i18n
+from src.utils.ui_scale import apply_font_size_env
 
 # TODO: LOG_LEVEL only honors the value 'DEBUG'; any other level name
 # (WARNING, ERROR, ...) is ignored and falls back to INFO. Consider mapping
@@ -78,6 +79,7 @@ def main():
     # `<exe-dir>/data/` — there's no legacy Documents\Smart Citizen tree
     # to drain.
     from src.utils import build_mode
+    installer_data_move = None
     if not build_mode.IS_PORTABLE:
         # Move HKCU\Software\Osiris DevWorks\SC Localization Editor → Smart Citizen
         # on first launch after 0.9.2 (idempotent via marker). Must run FIRST —
@@ -103,6 +105,11 @@ def main():
 
         # Migrate global source from any remote URL to local P4K cache path (v0.6.0+)
         AppSettings.migrate_global_to_p4k_local()
+
+        # #455: a YES on Setup's OneDrive warning moves the data out of the
+        # OneDrive folder. Before the channel-layout and cache migrators, so
+        # they work on the moved data. The window reports the outcome.
+        installer_data_move = AppSettings.migrate_installer_data_move()
 
         # Split the pre-0.9.3 single-channel layout into channel-aware directories
         # (registry: GAME_INSTALL_PATH → SC_INSTALL_ROOT + ACTIVE_CHANNEL;
@@ -149,26 +156,12 @@ def main():
     # just once post-migration) so channel switches also refresh the
     # path. Skip the rewrite if the current value is a URL — we don't
     # want to clobber a user who's configured a custom remote global
-    # source.
-    _global_stored = AppSettings.get_source_path(AppSettings.SOURCE_GLOBAL)
-    if not (_global_stored.startswith("http://") or _global_stored.startswith("https://")):
-        # Point at the selected language's base.ini (#30). English uses the
-        # P4K extraction; other languages use a downloaded global.ini. If a
-        # non-English language hasn't been downloaded yet, fall back to the
-        # English base so the table still loads — switching language in the
-        # Config tab fetches the language file and repoints the source.
-        _lang = AppSettings.get_selected_language()
-        _lang_base = AppSettings.get_base_ini_path(_lang)
-        if _lang != AppSettings.DEFAULT_LANGUAGE and not _lang_base.exists():
-            _canonical_global = str(AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE))
-        else:
-            _canonical_global = str(_lang_base)
-        if _global_stored != _canonical_global:
-            AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, _canonical_global)
-            logger.info(
-                f"Re-synced SOURCE_GLOBAL path to active channel cache: "
-                f"{_global_stored or '(unset)'} → {_canonical_global}"
-            )
+    # source. Points at the selected language's base.ini (#30): English
+    # uses the P4K extraction, other languages a downloaded global.ini, and
+    # a language not downloaded yet gets the English base so the table
+    # still loads, until a language switch in the Config tab fetches it. A
+    # channel switch and a data-folder change use the same rule (#502).
+    AppSettings.sync_global_source_path("at startup")
 
     # Ensure user.ini exists (create empty if first run)
     AppSettings.ensure_user_ini_file()
@@ -184,10 +177,14 @@ def main():
     # Widgets read tr() at construction time, so this must run before MainWindow().
     i18n.set_language(AppSettings.get_selected_language())
 
+    # Font size is a Qt scale factor, which Qt reads only while building the
+    # QApplication — so this must run first, and a change needs a restart.
+    apply_font_size_env(AppSettings.get_font_size())
+
     app = QApplication(sys.argv)
     load_application_fonts()
     apply_theme(app, AppSettings.get_theme())
-    window = MainWindow()
+    window = MainWindow(installer_data_move=installer_data_move)
     window.show()
 
     logger.info("Application window shown")

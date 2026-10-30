@@ -32,7 +32,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.parser.ini_parser import parse_ini_file  # noqa: E402
 
@@ -238,14 +237,6 @@ class TestCorruptStateFileGuards:
         s = JsonSettings(p)
         assert s.value("key", "default") == "default"
 
-    def test_dirty_categories_corrupt_manifest_regenerates_all(self, tmp_path):
-        """A corrupt diff manifest previously crashed the enhancements run;
-        it must instead read as 'no manifest' (regenerate everything)."""
-        from src.utils.dataforge_diff import MANIFEST_FILE, dirty_categories
-
-        (tmp_path / MANIFEST_FILE).write_bytes(b"{corrupt\xa0json")
-        assert dirty_categories(tmp_path) is None
-
     def test_enhancements_stamp_corrupt_bytes_reads_empty(self, tmp_path, monkeypatch):
         from src.utils.settings import AppSettings
 
@@ -294,3 +285,50 @@ class TestCorruptStateFileGuards:
         )
         out = load_locstring_workarounds(tmp_path)
         assert [w.target for w in out] == ["key_a"]
+
+
+# ── A read during a generation's swap (src/utils/ini_io.py) ───────────────────
+
+def _sharing_violation_twice(monkeypatch) -> list:
+    """Path.read_bytes raises PermissionError twice, then reads, as a reader
+    does that opens an enhancement INI while a generation swaps it in."""
+    from src.utils import atomic_io
+
+    monkeypatch.setattr(atomic_io, "READ_DELAY_S", 0)
+    real_read_bytes = Path.read_bytes
+    calls = []
+
+    def flaky(self):
+        calls.append(self)
+        if len(calls) <= 2:
+            raise PermissionError(13, "The process cannot access the file")
+        return real_read_bytes(self)
+
+    monkeypatch.setattr(Path, "read_bytes", flaky)
+    return calls
+
+
+class TestReadDuringSwap:
+    """A generation swaps each enhancement INI in with os.replace, and a
+    reader that opens it during the swap gets PermissionError for a moment.
+    parse_ini_file turned that into a silently empty category, which an
+    Apply during a hidden generation would write into global.ini."""
+
+    def test_read_ini_text_retries_a_brief_sharing_violation(self, tmp_path, monkeypatch):
+        from src.utils.ini_io import read_ini_text
+
+        path = tmp_path / "ships_desc_enhancements.ini"
+        path.write_text("vehicle_Desc_A=Sebastián\nvehicle_Desc_B=two\n", encoding="utf-8")
+        calls = _sharing_violation_twice(monkeypatch)
+
+        text = read_ini_text(path)
+
+        assert len(calls) == 3
+        assert text.replace("\r\n", "\n") == "vehicle_Desc_A=Sebastián\nvehicle_Desc_B=two\n"
+
+    def test_parse_ini_file_keeps_a_category_read_during_a_swap(self, tmp_path, monkeypatch):
+        path = tmp_path / "ships_desc_enhancements.ini"
+        path.write_text("vehicle_Desc_A=one\nvehicle_Desc_B=two\n", encoding="utf-8")
+        _sharing_violation_twice(monkeypatch)
+
+        assert parse_ini_file(path) == {"vehicle_Desc_A": "one", "vehicle_Desc_B": "two"}
