@@ -180,7 +180,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Manage Enhancements tab UI | `src/gui/enhancements_tab.py` | `setup_ui()`, stats toggle, favorites config |
 | Manage Blueprint Tracker tab UI | `src/gui/blueprint_tracker_tab.py` | `setup_ui()`, `set_blueprint_items()`, `_render_blueprint_lists()` |
 | Change blueprint type/class/size/grade classification | `src/utils/blueprint_meta.py` | `build_blueprint_metadata()`, `blueprint_type_from_key()` |
-| Add a blueprint every player starts with (never logged, never a mission reward) | `src/utils/blueprint_meta.py`, `src/gui/main_window.py` | `DEFAULT_OWNED_BLUEPRINTS` (by loc key, English name as fallback), `_seed_default_owned_blueprints()` (adds each to Owned once, on the first scan after it is declared, recorded by loc key, #416) |
+| Add a blueprint every player starts with (never logged, never a mission reward) | `src/utils/blueprint_meta.py`, `src/gui/main_window.py` | `DEFAULT_OWNED_BLUEPRINTS` (by loc key, English name as fallback), `_seed_default_owned_blueprints()` (adds each to Owned once, on the first scan after it is declared, recorded by loc key, #416); their mission label `DEFAULT_OWNED_MISSION_LABEL` stays English in the metadata and shows translated through `mission_display_name()` |
 | Change the "Scan Logs for Owned Blueprints" log parsing | `src/utils/blueprint_log_scanner.py` | `extract_blueprint_names()`, `find_log_files()` |
 | Change in-app logging | `src/gui/log_tab.py` | `LogTab`, `_QtLogHandler` |
 | Change user.cfg behavior | `src/utils/user_cfg.py` | `ensure_user_cfg_language()` |

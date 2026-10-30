@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "任務：{missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "預設藍圖（每位玩家都有）"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "可用藍圖"

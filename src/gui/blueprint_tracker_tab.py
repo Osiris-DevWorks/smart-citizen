@@ -23,6 +23,7 @@ from src.gui.combo_box import (
     NoScrollComboBox, reposition_combo_popup_below_if_it_fits,
 )
 from src.gui.theme import get_button_color
+from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 
@@ -601,7 +602,7 @@ class BlueprintTrackerTab(QWidget):
         combo.clear()
         combo.addItem(tr("enhancements.blueprints_facet_any"), None)
         for v in values:
-            combo.addItem(v, v)
+            combo.addItem(mission_display_name(v), v)
         idx = combo.findData(prior)
         combo.setCurrentIndex(idx if idx >= 0 else 0)
         combo.blockSignals(False)
@@ -635,7 +636,8 @@ class BlueprintTrackerTab(QWidget):
                 # translatable string for the header.
                 label = tr("enhancements.blueprints_tooltip_missions",
                            missions="").rstrip()
-                listed = "\n".join(f"  • {m}" for m in sorted(meta.missions))
+                listed = "\n".join(f"  • {mission_display_name(m)}"
+                                   for m in sorted(meta.missions))
                 bits.append(f"{label}\n{listed}")
             if bits:
                 item.setToolTip("\n".join(bits))

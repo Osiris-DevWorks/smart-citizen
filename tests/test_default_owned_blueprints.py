@@ -39,6 +39,7 @@ from src.utils.blueprint_meta import (  # noqa: E402
     DEFAULT_OWNED_MISSION_LABEL,
     build_blueprint_metadata,
     default_owned_blueprints,
+    mission_display_name,
 )
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
@@ -1024,3 +1025,21 @@ class TestNeverRaises:
             assert stub._seed_default_owned_blueprints() == set()
         assert "#416" in caplog.text
         assert _seed() == NEVER
+
+
+class TestMissionLabelLanguage:
+    """The starter label stays English in the metadata, where the Mission
+    filter matches on it, and shows in the selected language."""
+
+    def test_english(self, english_ui):
+        assert mission_display_name(DEFAULT_OWNED_MISSION_LABEL) == DEFAULT_OWNED_MISSION_LABEL
+
+    def test_translated(self, english_ui):
+        from src.utils import i18n
+
+        i18n.set_language("german")
+        assert mission_display_name(DEFAULT_OWNED_MISSION_LABEL) == (
+            "Standard-Bauplan (jeder Spieler hat ihn)")
+
+    def test_a_real_mission_name_is_left_alone(self, english_ui):
+        assert mission_display_name("Some Mission") == "Some Mission"

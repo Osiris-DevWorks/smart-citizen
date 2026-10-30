@@ -67,6 +67,7 @@ _ARMOR_EXTRA_WORDS = (
     "backpack", "undersuit", "flightsuit", "torso", "_legs", "_arms", "_core",
     "gys_jacket", "gys_pants",
 )
+from src.utils.i18n import tr
 from src.utils.owned_items import (
     BULLET_NAME_ALIASES,
     NONE_STYLE_ENCLOSING,
@@ -216,6 +217,17 @@ DEFAULT_OWNED_BLUEPRINTS: tuple[tuple[str, str], ...] = (
     ("item_Name_cds_light_helmet_01", "Field Recon Suit Helmet"),
     ("item_Name_cds_light_armor_01_legs", "Field Recon Suit Legs"),
 )
+
+
+def mission_display_name(mission: str) -> str:
+    """*mission* as the UI shows it. DEFAULT_OWNED_MISSION_LABEL stays English
+    in the metadata (it is the filter's value) and shows in the selected
+    language; every other mission name already comes from the loaded strings."""
+    if mission == DEFAULT_OWNED_MISSION_LABEL:
+        return tr("enhancements.blueprints_default_owned_mission")
+    return mission
+
+
 # Lower-cased loc key -> the key as declared above, so a lookup survives CIG
 # changing a key's capitalisation.
 _DEFAULT_OWNED_KEYS = {key.lower(): key for key, _ in DEFAULT_OWNED_BLUEPRINTS}

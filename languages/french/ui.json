@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "Missions : {missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "Plan par défaut (tous les joueurs l'ont)"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "Plans disponibles"

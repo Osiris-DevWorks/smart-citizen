@@ -82,6 +82,15 @@ them against the new source.
 
 ## Backfill log
 
+- **3.0.0 cycle (2026-10-30, Claude Opus 5.5, pre-release language check):**
+  two gaps filled. (1) New key `enhancements.blueprints_default_owned_mission`,
+  the starter blueprints' mission label ("Default blueprint (every player has
+  it)", #416), which was hardcoded English in the Blueprint Tracker's Mission
+  filter and tooltip and the overlay drawer's tooltip: `ht` in english, `at`
+  in the other eleven. (2) HELP section 1 gains the Run in Background
+  paragraph (#483) in all eleven translated `HELP.md` files, AI-translated,
+  using each language's own `ui.json` text for **Run in Background** and
+  **Stop**.
 - **3.0.0 cycle (2026-10-29, Claude Opus 5.5):** the overlay's scan-sample
   capture left the app (it is now for tuning the digit reader only, behind
   an environment variable). Removed in every language: `overlay.samples_group`,

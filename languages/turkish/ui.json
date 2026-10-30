@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "Görevler: {missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "Varsayılan plan (her oyuncuda var)"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "Mevcut planlar"

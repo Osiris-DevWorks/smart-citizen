@@ -21,6 +21,8 @@ Abra a aba **Config** e clique em **Extrair do Data.p4k**. Isso descompacta o `g
 
 Quando a extração termina, o `base.ini` extraído é carregado na tabela automaticamente, mesclado com os arquivos de aprimoramento e com as suas alterações salvas no `user.ini`.
 
+Para continuar trabalhando enquanto ela roda, pressione **Esc** ou feche a janela de progresso e escolha **Executar em segundo plano**: o progresso passa para a barra de status, e as configurações das quais a tarefa depende (pastas do jogo, de dados e de cache, canal, idioma, escolhas de aprimoramentos) ficam bloqueadas até ela terminar. **Parar** encerra a execução; você pode iniciá-la de novo depois. A geração de aprimoramentos oferece a mesma escolha.
+
 ## 2. Editar Strings de Localização
 
 - Dê um duplo clique em qualquer célula de **Valor Personalizado** para editar o texto.

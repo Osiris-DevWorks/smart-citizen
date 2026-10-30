@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "임무: {missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "기본 설계도 (모든 플레이어 보유)"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "사용 가능한 설계도"

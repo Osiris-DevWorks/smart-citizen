@@ -60,6 +60,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
+from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
     CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
@@ -1096,7 +1097,7 @@ class BlueprintDrawer(QWidget):
         lines = [" · ".join(details)] if details else []
         if item_meta.missions:
             lines.append(tr("sco.drawer_missions", count=len(item_meta.missions)))
-            missions = sorted(item_meta.missions)
+            missions = sorted(mission_display_name(m) for m in item_meta.missions)
             lines.extend(missions[:TOOLTIP_MAX_MISSIONS])
             if len(missions) > TOOLTIP_MAX_MISSIONS:
                 lines.append(tr("sco.drawer_more_missions",

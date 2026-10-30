@@ -19,6 +19,8 @@ Wähle deinen Standard bei der Installation, oder wechsle innerhalb der App zwis
 
 Nach Abschluss der Extraktion wird die extrahierte `base.ini` automatisch in die Tabelle geladen — zusammengeführt mit allen Erweiterungsdateien und deinen gespeicherten `user.ini`-Überschreibungen.
 
+Um weiterzuarbeiten, während sie läuft, drücke **Esc** oder schließe das Fortschrittsfenster und wähle **Im Hintergrund ausführen**: Der Fortschritt wandert in die Statusleiste, und die Einstellungen, von denen der Vorgang abhängt (Spiel-, Daten- und Cache-Ordner, Kanal, Sprache, Erweiterungsauswahl), bleiben gesperrt, bis er fertig ist. **Stoppen** bricht den Lauf stattdessen ab; du kannst ihn später erneut starten. Das Generieren der Erweiterungen bietet dieselbe Wahl.
+
 ## 2. Lokalisierungs-Strings bearbeiten
 
 - Doppelklicke eine beliebige Zelle in **Benutzerdefinierter Wert**, um Text zu bearbeiten.

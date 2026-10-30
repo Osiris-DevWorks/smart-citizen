@@ -19,6 +19,8 @@ Varsayılan modunuzu kurulum sırasında seçin veya uygulama içinden istediği
 
 Çıkarma bittiğinde, çıkarılan `base.ini` tabloya otomatik olarak yüklenir — geliştirme dosyalarıyla ve kayıtlı `user.ini` geçersiz kılmalarınızla birleştirilmiş olarak.
 
+Çalışırken işinize devam etmek için **Esc** tuşuna basın veya ilerleme penceresini kapatıp **Arka Planda Çalıştır** seçeneğini seçin: ilerleme durum çubuğuna taşınır ve işin bağlı olduğu ayarlar (oyun, veri ve önbellek klasörleri, kanal, dil, geliştirme seçimleri) iş bitene kadar kilitli kalır. **Durdur** ise çalışmayı sonlandırır; daha sonra yeniden başlatabilirsiniz. Geliştirmeleri oluşturma da aynı seçeneği sunar.
+
 ## 2. Yerelleştirme Metinlerini Düzenleyin
 
 - Metni düzenlemek için herhangi bir **Özel Değer** hücresine çift tıklayın.

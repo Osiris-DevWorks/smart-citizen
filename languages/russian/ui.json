@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "Миссии: {missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "Стандартный чертёж (есть у каждого игрока)"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "Доступные чертежи"

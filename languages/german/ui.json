@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "Missionen: {missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "Standard-Bauplan (jeder Spieler hat ihn)"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "Verfügbare Baupläne"

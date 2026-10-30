@@ -19,6 +19,8 @@ Apri la scheda **Configurazione** e clicca su **Estrai da Data.p4k**. Questo est
 
 Al termine dell'estrazione, il `base.ini` estratto viene caricato automaticamente nella tabella — unito a eventuali file di miglioramenti e alle tue modifiche salvate in `user.ini`.
 
+Per continuare a lavorare mentre è in corso, premi **Esc** o chiudi la finestra di avanzamento e scegli **Esegui in Background**: l'avanzamento passa nella barra di stato e le impostazioni da cui dipende l'operazione (cartelle del gioco, dei dati e della cache, canale, lingua, scelte dei miglioramenti) restano bloccate finché non termina. **Interrompi** invece la ferma; potrai avviarla di nuovo più tardi. La generazione dei miglioramenti offre la stessa scelta.
+
 ## 2. Modificare i testi di localizzazione
 
 - Fai doppio clic su qualsiasi cella **Valore personalizzato** per modificare il testo.

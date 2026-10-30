@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "ミッション：{missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "初期ブループリント（全プレイヤーが所持）"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "利用可能なブループリント"

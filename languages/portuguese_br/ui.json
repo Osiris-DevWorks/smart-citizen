@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "Missões: {missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "Blueprint padrão (todo jogador tem)"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "Blueprints disponíveis"

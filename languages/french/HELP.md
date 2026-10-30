@@ -21,6 +21,8 @@ Ouvrez l'onglet **Paramètres** et cliquez sur **Extraire depuis Data.p4k**. Cel
 
 Une fois l'extraction terminée, le `base.ini` extrait est chargé automatiquement dans le tableau, fusionné avec les fichiers d'enrichissements et vos modifications enregistrées dans `user.ini`.
 
+Pour continuer à travailler pendant l'extraction, appuyez sur **Échap** ou fermez la fenêtre de progression et choisissez **Exécuter en arrière-plan** : la progression passe dans la barre d'état, et les réglages dont la tâche dépend (dossiers du jeu, des données et du cache, canal, langue, choix d'enrichissements) restent verrouillés jusqu'à la fin. **Arrêter** met fin à l'extraction ; vous pourrez la relancer plus tard. La génération des enrichissements propose le même choix.
+
 ## 2. Modifier les textes de localisation
 
 - Double-cliquez sur une cellule **Valeur personnalisée** pour modifier le texte.

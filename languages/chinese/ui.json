@@ -1236,6 +1236,10 @@
       "ht": "",
       "at": "任务：{missions}"
     },
+    "blueprints_default_owned_mission": {
+      "ht": "",
+      "at": "默认蓝图（每位玩家都有）"
+    },
     "blueprints_available_label": {
       "ht": "",
       "at": "可用蓝图"

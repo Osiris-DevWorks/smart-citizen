@@ -21,6 +21,8 @@ Abre la pestaña **Configuración** y haz clic en **Extraer desde Data.p4k**. Es
 
 Cuando la extracción termina, el `base.ini` extraído se carga automáticamente en la tabla, fusionado con los archivos de mejoras y tus cambios guardados en `user.ini`.
 
+Para seguir trabajando mientras se ejecuta, pulsa **Esc** o cierra la ventana de progreso y elige **Ejecutar en segundo plano**: el progreso pasa a la barra de estado, y los ajustes de los que depende la tarea (carpetas del juego, de datos y de caché, canal, idioma, opciones de mejoras) quedan bloqueados hasta que termine. **Detener** finaliza la ejecución; puedes iniciarla de nuevo más tarde. La generación de mejoras ofrece la misma elección.
+
 ## 2. Editar textos de localización
 
 - Haz doble clic en cualquier celda de **Valor personalizado** para editar el texto.
