@@ -25,7 +25,7 @@ Smart Citizen'a kod katkısında bulunanlara teşekkürler:
 - **Ishikudeska**
 - **jonigirl**
 - **Coerwyn**
-- **denis-coach** (h0use)
+- **Den McConan** aka h0use
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**

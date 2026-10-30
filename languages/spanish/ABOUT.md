@@ -27,7 +27,7 @@ Gracias a quienes han contribuido con código a Smart Citizen:
 - **Ishikudeska**
 - **jonigirl**
 - **Coerwyn**
-- **denis-coach** (h0use)
+- **Den McConan** aka h0use
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
