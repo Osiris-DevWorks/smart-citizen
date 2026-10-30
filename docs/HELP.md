@@ -19,6 +19,8 @@ Open the **Config** tab and click **Extract from Data.p4k**. This unpacks stock 
 
 When extraction finishes, the extracted `base.ini` is loaded into the table automatically — merged with any enhancement files and your saved `user.ini` overrides.
 
+To keep working while it runs, press **Esc** or close the progress window and pick **Run in Background**: progress moves to the status bar, and the settings the job depends on (game, data and cache folders, channel, language, enhancement choices) stay locked until it finishes. **Stop** ends the run instead; you can start it again later. Generating enhancements offers the same choice.
+
 ## 2. Edit Localization Strings
 
 - Double-click any **Custom Value** cell to edit text.
