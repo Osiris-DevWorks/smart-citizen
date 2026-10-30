@@ -70,6 +70,7 @@ def _window(tab):
     # MagicMock's truthy default would read as a job running.
     me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
     me._job_running = lambda: MainWindow._job_running(me)
+    me._end_dataforge_run = lambda: MainWindow._end_dataforge_run(me)
     return me
 
 

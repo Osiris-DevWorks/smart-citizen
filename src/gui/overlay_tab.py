@@ -13,13 +13,13 @@ import logging
 from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
-    QCheckBox, QFrame, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QScrollArea, QVBoxLayout, QWidget,
+    QCheckBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QVBoxLayout, QWidget,
 )
 
 from src.gui.combo_box import NoScrollComboBox
 from src.gui.global_hotkey import HOTKEY_UNSUPPORTED, hotkey_text, windows_hotkey
-from src.gui.theme import get_button_color, get_button_text_color
+from src.gui.theme import get_button_color, get_button_text_color, host_in_scroll_area
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 
@@ -236,16 +236,7 @@ class OverlayTab(QWidget):
             self._checks[name].toggled.connect(self._sync_enabled)
         self._sync_enabled()
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
         self.retranslate_ui()
 

@@ -3,15 +3,15 @@ import logging
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QFrame, QGridLayout, QGroupBox,
+    QCheckBox, QComboBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QScrollArea, QSizePolicy, QTabBar, QTabWidget, QVBoxLayout,
+    QPushButton, QSizePolicy, QTabBar, QTabWidget, QVBoxLayout,
     QWidget,
 )
 
 from src.gui.combo_box import NoScrollComboBox
 from src.gui.tag_mapping_dialog import TagMappingDialog
-from src.gui.theme import needs_apply_style
+from src.gui.theme import host_in_scroll_area, needs_apply_style
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 from src.utils.tag_builder import (
@@ -137,16 +137,7 @@ class EnhancementsTab(QWidget):
         layout.addWidget(self._tag_builder_group, 1)
         layout.addStretch()
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
     # ── Enhancements ─────────────────────────────────────────────────────────
 

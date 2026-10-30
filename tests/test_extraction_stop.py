@@ -620,6 +620,7 @@ def _window(**attrs):
         lambda *args: MainWindow._dismiss_progress_dialog(me, *args))
     # The real one-job-at-a-time test (#483), reading the attributes above.
     me._job_running = lambda: MainWindow._job_running(me)
+    me._end_dataforge_run = lambda: MainWindow._end_dataforge_run(me)
     me._send_dataforge_run_to_background = (
         lambda *args: MainWindow._send_dataforge_run_to_background(me, *args))
     # Generation's own Run in Background and Stop (#483), which the

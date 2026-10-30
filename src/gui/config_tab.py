@@ -7,12 +7,13 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLineEdit,
     QPushButton, QLabel, QFileDialog, QMessageBox, QComboBox,
-    QCheckBox, QScrollArea, QFrame, QDialog, QDialogButtonBox, QGridLayout,
+    QCheckBox, QDialog, QDialogButtonBox, QGridLayout,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer
 
 from src.gui.theme import (
-    AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, needs_apply_style,
+    AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, host_in_scroll_area,
+    needs_apply_style,
 )
 from src.utils.i18n import tr
 from src.utils.pak_extractor import base_ini_is_fresh, windows_reason
@@ -468,22 +469,7 @@ class ConfigTab(QWidget):
 
         layout.addStretch()
 
-        # Host the content in a scroll area. MainWindow adds the tab widget
-        # with stretch=1, so the scroll area fills the tab and this does NOT
-        # reintroduce the tab-switch resize that got the 1.4.x Enhancements
-        # scroll-area attempt reverted (#65). Keep the frame and viewport
-        # background clear so the themed background shows through rather than
-        # the scroll area painting its own Base colour.
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
     # ── Retranslation ─────────────────────────────────────────────────────────
 

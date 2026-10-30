@@ -6535,6 +6535,15 @@ class MainWindow(QMainWindow):
         self._simple_run_active = False
         self._refresh_job_lock()
 
+    def _end_dataforge_run(self):
+        """End a DataForge run that goes no further (failed, stopped, or its
+        settings changed): end any Simple run and close the progress dialog,
+        which generation would otherwise have taken over."""
+        self._end_simple_run()
+        if getattr(self, "_forge_progress_dialog", None) is not None:
+            self._forge_progress_dialog.close()
+            self._forge_progress_dialog = None
+
     def _on_enhancements_generation_error(self, message: str, worker):
         if worker is not self._enhancements_worker or self._close_committed:
             # Released, or the window is closing. logger.error would fire the
@@ -6891,10 +6900,7 @@ class MainWindow(QMainWindow):
         # "(+1 suppressed)".
         logger.warning(f"DataForge extraction error: {message}")
         # #180: abandon any in-flight Simple-mode flow so it doesn't apply.
-        self._end_simple_run()
-        if getattr(self, "_forge_progress_dialog", None) is not None:
-            self._forge_progress_dialog.close()
-            self._forge_progress_dialog = None
+        self._end_dataforge_run()
         QMessageBox.warning(
             self, tr("extract.dataforge_extraction_error_title"),
             tr("extract.dataforge_extraction_error_body", message=message),
@@ -6948,10 +6954,7 @@ class MainWindow(QMainWindow):
                 f"{worker.channel or 'the channel it started on'}, but the settings "
                 "changed while it ran: the old-cache cleanup and generation are skipped"
             )
-            self._end_simple_run()
-            if getattr(self, "_forge_progress_dialog", None) is not None:
-                self._forge_progress_dialog.close()
-                self._forge_progress_dialog = None
+            self._end_dataforge_run()
             self.enhancements_tab.set_operation_idle(success=False)
             self.statusBar().showMessage(tr("extract.dataforge_settings_changed"))
             return
@@ -6974,10 +6977,7 @@ class MainWindow(QMainWindow):
         else:
             # #180: extraction failed (or was stopped), so the Simple-mode
             # flow can't continue.
-            self._end_simple_run()
-            if getattr(self, "_forge_progress_dialog", None) is not None:
-                self._forge_progress_dialog.close()
-                self._forge_progress_dialog = None
+            self._end_dataforge_run()
             self.enhancements_tab.set_operation_idle(success=False)
             if getattr(worker, "stopped", False):
                 # The user stopped it from the progress dialog (#471). Not

@@ -11,7 +11,9 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtGui import QColor, QFontDatabase, QPalette
-from PyQt6.QtWidgets import QApplication, QProxyStyle, QStyle
+from PyQt6.QtWidgets import (
+    QApplication, QFrame, QProxyStyle, QScrollArea, QStyle, QVBoxLayout, QWidget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +128,30 @@ def dimmed_color(color: str) -> str:
     button coloured by one has to dim itself to stop looking clickable."""
     c = QColor(color)
     return f"rgba({c.red()}, {c.green()}, {c.blue()}, {DISABLED_ALPHA})"
+
+
+def host_in_scroll_area(tab: QWidget, content: QWidget) -> None:
+    """Fill *tab* with a frameless scroll area showing *content*.
+
+    The Config, Enhancements, Blueprint Tracker and Overlay tabs build into a
+    content widget and host it this way, so each scrolls instead of squeezing
+    its controls. MainWindow adds the tab widget with stretch=1, so the
+    scroll area fills the tab and this does NOT reintroduce the tab-switch
+    resize that got the 1.4.x Enhancements scroll-area attempt reverted
+    (#65). The frame and viewport background stay clear so the themed
+    background shows through rather than the scroll area painting its own
+    Base colour.
+    """
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.viewport().setAutoFillBackground(False)
+    content.setAutoFillBackground(False)
+    scroll.setWidget(content)
+
+    outer = QVBoxLayout(tab)
+    outer.setContentsMargins(0, 0, 0, 0)
+    outer.addWidget(scroll)
 
 
 def needs_apply_style() -> str:

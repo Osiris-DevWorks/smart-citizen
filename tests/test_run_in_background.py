@@ -535,6 +535,7 @@ def _stub(**attrs):
     me._WORKERS_STOPPED_ON_CLOSE = MainWindow._WORKERS_STOPPED_ON_CLOSE
     me._working_folder_deleters = []
     me._job_running = lambda: MainWindow._job_running(me)
+    me._end_dataforge_run = lambda: MainWindow._end_dataforge_run(me)
     me._closing_would_wait = lambda: MainWindow._closing_would_wait(me)
     for name, value in attrs.items():
         setattr(me, name, value)

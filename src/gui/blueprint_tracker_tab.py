@@ -14,15 +14,15 @@ The available universe is fed in by MainWindow via ``set_blueprint_items``
 """
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QFileDialog, QFrame, QGridLayout,
+    QAbstractItemView, QCheckBox, QFileDialog, QGridLayout,
     QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QMessageBox, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QMessageBox, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from src.gui.combo_box import (
     NoScrollComboBox, reposition_combo_popup_below_if_it_fits,
 )
-from src.gui.theme import get_button_color
+from src.gui.theme import get_button_color, host_in_scroll_area
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
@@ -448,16 +448,7 @@ class BlueprintTrackerTab(QWidget):
 
         self._render_blueprint_lists()
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
     def _align_mission_and_type_label_widths(self) -> None:
         """#388 follow-up: "Mission:" and "Type:" render at different
