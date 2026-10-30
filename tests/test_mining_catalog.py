@@ -115,6 +115,20 @@ def test_material_key_for_prefers_an_exact_name():
         "Copper") == "copper_ore"
 
 
+def test_material_names_fall_back_to_the_key():
+    # A material with no display names (or an empty list) is listed by its key.
+    index = CraftingIndex({
+        "copper": {"names": ["Copper", "Kupfer"], "items": []},
+        "pressurized_ice": {"items": []},
+        "tin": {"names": []},
+    })
+    assert index.material_names() == {
+        "copper": ["Copper", "Kupfer"],
+        "pressurized_ice": ["pressurized_ice"],
+        "tin": ["tin"],
+    }
+
+
 def test_a_failed_index_write_keeps_the_old_index(tmp_path, monkeypatch):
     """The index is swapped in like every generated file (atomic_io, #476):
     a write that fails at the swap leaves the old index whole, and no temp."""
