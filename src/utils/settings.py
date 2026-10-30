@@ -735,11 +735,11 @@ class AppSettings:
     # starter the user moves back to Available stays there, and one declared
     # in a later release still reaches Owned on that user's next scan. It
     # describes the owned set, so in a settings backup it travels with
-    # owned_items (see import_values): restoring an owned set from before 2.5
+    # owned_items (see import_values): restoring an owned set from before 3.0
     # resets it, so the next scan adds the starters to that set.
     DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
 
-    # Smart Citizen Overlay (SCO) switch names on the Overlay tab (2.5.0),
+    # Smart Citizen Overlay (SCO) switch names on the Overlay tab (3.0.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
     # its sco_overlay.SECTION_ICONS name, and a watched-target alert's is
     # SCO_ALERT_PREFIX + its sco_overlay.ALERTS name (#523).
@@ -3966,7 +3966,7 @@ class AppSettings:
         One exception to "only the keys the backup holds" (#416): the
         starter-blueprint seed marker describes the owned set, so it follows
         ``owned_items``. A backup that carries an owned set brings its marker
-        too, and one from before 2.5 (no marker) resets it, so the next scan
+        too, and one from before 3.0 (no marker) resets it, so the next scan
         adds the starters to the restored set instead of leaving them out for
         good. A backup with no owned set leaves both alone, so it can't undo
         the one-shot and bring back a starter the user moved out of Owned.

@@ -1006,7 +1006,7 @@ class MainWindow(QMainWindow):
         )
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
-        # Overlay tab (2.5.0): start/stop and options for the Smart Citizen
+        # Overlay tab (3.0.0): start/stop and options for the Smart Citizen
         # Overlay. Its start button drives the toolbar's Overlay button, so
         # both go through _toggle_sco_overlay.
         self.overlay_tab = OverlayTab()

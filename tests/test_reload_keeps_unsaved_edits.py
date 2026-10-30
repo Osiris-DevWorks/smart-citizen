@@ -717,7 +717,7 @@ class TestImportSettingsRestartLater:
     """Import Settings writes user.ini, then offers a restart. Restart Later
     kept the table's overrides from before the import, so the next close or
     Apply saved them over the imported user.ini (found in review, in release
-    2.5 too). The table now takes the imported file. An import that switches
+    3.0 too). The table now takes the imported file. An import that switches
     channel offers only Restart Now: carrying on, the old channel's table was
     saved into the new channel's user.ini."""
 

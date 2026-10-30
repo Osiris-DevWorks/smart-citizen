@@ -74,23 +74,23 @@ them against the new source.
   The AI `at` fallbacks were refreshed where one existed (spanish's are empty
   and stay empty).
 - `config.data_desc` — English's size for the DataForge cache changed from
-  ~1.4 GB to ~1.2 GB (#482, 2.5.0), the size measured on LIVE 4.10. Affects
+  ~1.4 GB to ~1.2 GB (#482, 3.0.0), the size measured on LIVE 4.10. Affects
   french, portuguese_br and spanish, whose human `ht` still says 1,4 Go or
   1,4 GB (in french and portuguese_br the `at` is a copy of that `ht` and
   was left as it is too). The seven other languages had no `ht` there, so
-  their `at` was corrected directly (2.5.0 entry below).
+  their `at` was corrected directly (3.0.0 entry below).
 
 ## Backfill log
 
-- **2.5.0 cycle (2026-10-29, Claude Opus 5.5):** the overlay's scan-sample
+- **3.0.0 cycle (2026-10-29, Claude Opus 5.5):** the overlay's scan-sample
   capture left the app (it is now for tuning the digit reader only, behind
   an environment variable). Removed in every language: `overlay.samples_group`,
   `overlay.save_samples`, `overlay.save_samples_hint` and
   `overlay.open_samples_btn` from `ui.json`, HELP's **Save scan samples**
   bullet and LEGAL's **Overlay scan samples** data-location bullet. Nothing
   added, so nothing to translate.
-- **2.5.0 cycle (2026-10-28, Claude Sonnet 5.5):** a language check of
-  everything added for 2.5 found `HELP.md` and `ABOUT.md` out of date in ten
+- **3.0.0 cycle (2026-10-28, Claude Sonnet 5.5):** a language check of
+  everything added for 3.0 found `HELP.md` and `ABOUT.md` out of date in ten
   languages (not russian, which was brought current on 2026-10-20), so they
   are caught up with English. HELP's Tag Builder entry gains #492's armor
   text: the Armor tab's one Weight element, the `L`, `M`, `H`, `S` and `U`
@@ -115,7 +115,7 @@ them against the new source.
   throughout, checked against English for length, the `L`, `M`, `H`, `S`, `U`
   and `C` letters and the Korean sentence-spacing rule, not back-translated.
   No `ui.json` changed.
-- **2.5.0 cycle (2026-10-23, Claude Opus 5.5):** #523, overlay feedback.
+- **3.0.0 cycle (2026-10-23, Claude Opus 5.5):** #523, overlay feedback.
   28 new keys: `overlay.scan_group`, `overlay.drawer_group`,
   `overlay.blueprint_watch_group` and `overlay.samples_group` (the Overlay
   tab's four boxes), `sco.surface_only`, `sco.watch_salvage_tooltip` and
@@ -149,7 +149,7 @@ them against the new source.
   (that it needs Ctrl, Alt or Win unless it is an F key or Pause, and in
   the FAQ, the raw input it watches and what it never does), and items
   instead of components.
-- **2.5.0 cycle (2026-10-20, Claude):** New language **russian** added,
+- **3.0.0 cycle (2026-10-20, Claude):** New language **russian** added,
   split out of #488 by **h0use** (Den McConan) without that PR's channel
   badge. AI translation of every UI key (`at`-only, `ht` empty), the full
   20-step guided tour (`tutorial.*`, translated from `assets/tutorial.json`
@@ -161,7 +161,7 @@ them against the new source.
   `korean_(south_korea)` slot, shared with Korean on purpose (see the
   per-language note); `HELP.md` in every language now says the two replace
   each other's applied file.
-- **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #479 makes More > Clear
+- **3.0.0 cycle (2026-10-17, Claude Opus 5.5):** #479 makes More > Clear
   Cache clear the DataForge cache in use and moves every text it shows into
   `ui.json`; before, only its four titles and its cache-empty text were
   translated. Ten new keys, after `dialogs.cache_cleared_title`:
@@ -195,7 +195,7 @@ them against the new source.
   errors, and the Korean sentence-spacing rule holds. No human string
   changed. `tests/test_clear_cache.py` checks every language's placeholders,
   the folder on a line of its own, and this `ht`/`at` split.
-- **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #455: a YES on Setup's
+- **3.0.0 cycle (2026-10-17, Claude Opus 5.5):** #455: a YES on Setup's
   OneDrive warning now moves the data at the app's next start, and the app
   says what it did. Three new `onedrive.*` keys after `dont_warn_again`:
   `installer_move_done` (the status bar note: the files moved out of
@@ -210,7 +210,7 @@ them against the new source.
   separate checker: no meaning errors, and the Korean sentence-spacing rule
   holds. `tests/test_installer_data_move.py` checks every language's
   `ht`/`at` split and placeholders.
-- **2.5.0 cycle (2026-10-17, Claude Opus 5.5):** #483 brings back Run in
+- **3.0.0 cycle (2026-10-17, Claude Opus 5.5):** #483 brings back Run in
   Background for the DataForge extraction (the 2.4.0 entry below has the
   button's first pass) and locks what a running job depends on. Four
   `extract.*` keys, the three new ones right after `dataforge_stop_btn`:
@@ -236,7 +236,7 @@ them against the new source.
   no meaning errors, and the Korean sentence-spacing rule holds.
   `tests/test_run_in_background.py` checks the four keys' `ht`/`at` split in
   every language.
-  Russian, added later in 2.5.0 (#514), got the four keys when this was
+  Russian, added later in 3.0.0 (#514), got the four keys when this was
   merged with it (2026-10-21), `at`-only: the two new strings, the button, and
   its two-choice `extract.dataforge_running_body` rewritten as the
   three-choice question. Back-translated with no meaning errors.
@@ -260,7 +260,7 @@ them against the new source.
   pronouns stay. All 44 strings were back-translated and compared with the
   English in the same pass, not by a separate checker: no meaning errors,
   and the Korean sentence-spacing rule holds.
-- **2.5.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
+- **3.0.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
   cache folder that is a link (a junction or a symbolic link made by hand,
   usually to keep the cache on another drive), because an extraction
   deletes nothing through a link and used to fail after unforge. One new
@@ -295,7 +295,7 @@ them against the new source.
   portuguese_br junção, turkish bağlantı noktası with junction in brackets,
   japanese ジャンクション, korean 정션, chinese 目录联接, chinese_traditional
   目錄連接), back-translated the same way.
-- **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #494 keeps a DataForge
+- **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #494 keeps a DataForge
   cache folder that Windows refuses, or one on a drive that is gone, from
   stopping Smart Citizen opening, and says so in one box where the folder
   is about to be made. Seven new keys. After
@@ -362,7 +362,7 @@ them against the new source.
   the Enhancements tab, and back-translated in the same pass. The bullet
   does not cover the two `*_unusable` boxes, which carry Windows' own
   reason, and was left as it was when they were added.
-- **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #416 added a *Starter
+- **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #416 added a *Starter
   blueprints* bullet to the Blueprint Tracker section of each `HELP.md`, just
   before the "which servers the scan reads" bullet: every player owns the
   P4-AR Rifle, the S-38 Pistol, their magazines and the four Field Recon Suit
@@ -381,7 +381,7 @@ them against the new source.
   cihazından" (the pack uses "üretici" for a manufacturer) and "mevcut
   listeye", and italian says "la loro ricezione" instead of "di averli
   ricevuti", which made the game the receiver.
-- **2.5.0 cycle (2026-10-15, Claude Opus 5.5):** #492 added
+- **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #492 added
   `enhancements.tag_mapping_tooltip_weight` (the Edit mapping tooltip on the
   Tag Builder's Armor > Weight row) and reworded `enhancements.cat_desc_gear`.
   AI `at` for the new key in all ten languages, styled on each file's
@@ -409,7 +409,7 @@ them against the new source.
   "General Tags" uses each file's own `mt_general_tags_group`). No human `ht`
   was touched. The translated `HELP.md` and `ABOUT.md` copies do not mention
   the Armor tab yet and are left for the pre-release docs sync.
-- **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
+- **3.0.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
   whose working folder Windows refuses, with a message, instead of retrying
   for hours. Three new keys after `extract.size_mb`:
   `extract.folder_refused` (Windows denied Smart Citizen permission to
@@ -464,7 +464,7 @@ them against the new source.
   working folder from its `extract.folder_refused` and its closing sentence
   from the same string, back-translated in the same pass. No human string
   changed, and no `HELP.md` change: the message carries its own reason.
-- **2.5.0 cycle (2026-10-13, Claude Opus 5.5):** #482 checks free space
+- **3.0.0 cycle (2026-10-13, Claude Opus 5.5):** #482 checks free space
   before a P4K extraction. Ten new keys: the not-enough-space messages
   `extract.no_space_dataforge`, `no_space_global_ini`, `no_space_drive`,
   `no_space_fix_cache`, `no_space_fix_temp`, `no_space_fix` and
@@ -516,7 +516,7 @@ them against the new source.
   is AI-only, so no human text changed and nothing needs human re-review.
   Korean keeps a space after every sentence end. HELP files have no
   `ht`/`at` split, so this log is their only record.
-- **2.5.0 cycle (2026-10-12, Claude Opus 5.5):** #476: a generation cut off by
+- **3.0.0 cycle (2026-10-12, Claude Opus 5.5):** #476: a generation cut off by
   closing the app, a crash or a failed write is now offered again at the next
   start, and that question has its own body, `extract.outdated_categories_body`
   ("out of date", with no count, because the count's noun keys say "missing"
@@ -533,7 +533,7 @@ them against the new source.
   desatualizados, turkish güncel değil). Each string was back-translated and
   compared with the English in the same pass, not by a separate checker: no
   meaning errors, and the Korean sentence-spacing rule holds. No existing
-  string changed. Russian, added later in 2.5.0 (#514), got the same key when
+  string changed. Russian, added later in 3.0.0 (#514), got the same key when
   this was merged with it (2026-10-21), `at`-only, its second and third lines
   taken from its own `extract.missing_categories_body`, back-translated with
   no meaning errors.

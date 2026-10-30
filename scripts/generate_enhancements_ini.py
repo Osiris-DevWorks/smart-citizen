@@ -410,7 +410,7 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 #     "[Mining Laser]" -> "[Mining Laser-S0]"). Both caches bake rendered
 #     tags into their stored names, so both bump or a regen against an
 #     unchanged DataForge keeps serving the size-less text.
-#   blueprint_pools v15 (2.5.0, found in the #492 review) — the loc-derived
+#   blueprint_pools v15 (3.0.0, found in the #492 review) — the loc-derived
 #     name_fallback_tags (fuel nozzle [FN]) were built from the run's own
 #     language, which has no English "Item Type: Fuel Nozzle" line, so a
 #     translated run pickled pools with untagged nozzle bullets and the next
