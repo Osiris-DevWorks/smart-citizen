@@ -3427,10 +3427,30 @@ class MainWindow(QMainWindow):
             f"font-size: 11px; letter-spacing: 2px; color: {get_tagline_color()};"
         )
 
+    def _render_document_browsers(self):
+        """Re-render the About, FAQ and Legal tabs and the Help panel.
+
+        Each bakes the palette's colors into its HTML and reads its
+        per-language doc (get_localized_doc_path), but is otherwise rendered
+        only when it is built. A theme swap (refresh_action_buttons) and a
+        language switch (retranslate_ui) both re-render all four from here:
+        each used to keep its own list, and the language switch's had no Help
+        panel, which then kept its startup language until a restart.
+        """
+        if hasattr(self, "about_browser"):
+            self._render_about_html()
+        if hasattr(self, "help_browser"):
+            self._render_help_html()
+        if hasattr(self, "legal_browser"):
+            self._render_legal_html()
+        if hasattr(self, "faq_browser"):
+            self._render_faq_html()
+
     def refresh_action_buttons(self):
         """Re-apply theme-dependent stylesheets on the toolbar action buttons
-        and re-render the About tab HTML (whose palette-derived colors are
-        baked in at render time). Called after a live theme swap.
+        and re-render the About, FAQ and Legal tabs and the Help panel (whose
+        palette-derived colors are baked in at render time). Called after a
+        live theme swap.
         """
         self._apply_branding_styles()
         base = "font-weight: bold; padding: 6px;"
@@ -3443,14 +3463,7 @@ class MainWindow(QMainWindow):
         self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
         if hasattr(self, "overlay_tab"):
             self.overlay_tab.refresh_styles()
-        if hasattr(self, "about_browser"):
-            self._render_about_html()
-        if hasattr(self, "help_browser"):
-            self._render_help_html()
-        if hasattr(self, "legal_browser"):
-            self._render_legal_html()
-        if hasattr(self, "faq_browser"):
-            self._render_faq_html()
+        self._render_document_browsers()
         self._apply_editor_dock_canvas_tint()
 
     def _handle_reset_user_ini(self):
@@ -4233,7 +4246,7 @@ class MainWindow(QMainWindow):
         if getattr(self, "help_dock", None) is not None:
             return self.help_dock
 
-        dock = QDockWidget("Help", self)
+        dock = QDockWidget(tr("toolbar.help_btn"), self)
         dock.setObjectName("helpDock")
         dock.setAllowedAreas(
             Qt.DockWidgetArea.RightDockWidgetArea
@@ -5367,18 +5380,17 @@ class MainWindow(QMainWindow):
         if self._sco_overlay is not None:
             self._sco_overlay.drawer.retranslate_ui()
 
-        # About / FAQ / Legal tab bodies — loaded from a per-language doc
-        # file (get_localized_doc_path) but only rendered at tab-creation
-        # time and on theme swap (refresh_action_buttons), never on a
+        # About / FAQ / Legal tab bodies and the Help panel — loaded from a
+        # per-language doc file (get_localized_doc_path) but only rendered at
+        # creation time and on theme swap (refresh_action_buttons), never on a
         # language switch. Without this, switching language mid-session
-        # left these three tabs showing whatever language was active at
-        # startup until the app was restarted.
-        if hasattr(self, "about_browser"):
-            self._render_about_html()
-        if hasattr(self, "faq_browser"):
-            self._render_faq_html()
-        if hasattr(self, "legal_browser"):
-            self._render_legal_html()
+        # left them showing whatever language was active at startup until
+        # the app was restarted (#314 for the three tabs, #540 for the Help
+        # panel, which was missed when the tabs were fixed). The panel's
+        # title is set only when it is built, so it is set again here.
+        self._render_document_browsers()
+        if getattr(self, "help_dock", None) is not None:
+            self.help_dock.setWindowTitle(tr("toolbar.help_btn"))
 
         # Status-bar version indicator + Config-tab update status hold the
         # last update-check result; re-render them in the new language
