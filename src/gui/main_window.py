@@ -795,8 +795,12 @@ class MainWindow(QMainWindow):
         self._initial_load_done = False
         self._session_has_unapplied_edit = False
 
-        # DataForge extraction worker
+        # DataForge extraction worker and progress dialog. The dialog is set
+        # here, not only when an extraction starts: Run in Background or Stop
+        # on a generation's dialog reads it (_dismiss_progress_dialog), and
+        # Regenerate runs a generation with no extraction before it.
         self._forge_worker: Optional[DataForgeExtractWorker] = None
+        self._forge_progress_dialog: Optional[AnimatedProgressDialog] = None
         # Threads deleting a finished extraction's working folder, or
         # sweeping the ones a crash left, in the background (perf proposal).
         # Closing waits for them, and so does a new DataForge extraction.
