@@ -1229,7 +1229,7 @@ def test_every_alert_sound_but_the_chime_is_a_windows_sound():
     assert not set(VOICE_ALERT_SOUNDS) & set(WINDOWS_ALERT_SOUNDS)
     assert set(VOICE_ALERT_SOUNDS) | set(WINDOWS_ALERT_SOUNDS) == set(
         AppSettings.SCO_ALERT_SOUNDS[1:])
-    assert len(VOICE_ALERT_SOUNDS) == 9
+    assert len(VOICE_ALERT_SOUNDS) == 10
 
 
 @pytest.mark.parametrize("sound", [s for s in AppSettings.SCO_ALERT_SOUNDS

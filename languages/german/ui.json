@@ -3644,6 +3644,10 @@
       "ht": "",
       "at": "Stimme: UK, weiblich"
     },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Stimme: UK, männlich"
+    },
     "sound_voice_aus_female": {
       "ht": "",
       "at": "Stimme: Australien, weiblich"

@@ -786,7 +786,7 @@ class AppSettings:
     SCO_ALERT_SOUND = "sco/alert_sound_choice"
     SCO_ALERT_SOUNDS = ("default",
                         "voice_us_female", "voice_us_male", "voice_uk_female",
-                        "voice_aus_female", "voice_aus_male", "voice_ire_female",
+                        "voice_uk_male", "voice_aus_female", "voice_aus_male", "voice_ire_female",
                         "voice_ire_male", "voice_nigeria_female", "voice_nigeria_male",
                         "asterisk", "exclamation", "critical_stop",
                         "default_beep", "notification")

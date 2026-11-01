@@ -3644,6 +3644,10 @@
       "ht": "",
       "at": "Voix : Royaume-Uni, féminine"
     },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Voix : Royaume-Uni, masculine"
+    },
     "sound_voice_aus_female": {
       "ht": "",
       "at": "Voix : Australie, féminine"

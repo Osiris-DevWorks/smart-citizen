@@ -3442,6 +3442,10 @@
       "ht": "Voice: UK, female",
       "at": ""
     },
+    "sound_voice_uk_male": {
+      "ht": "Voice: UK, male",
+      "at": ""
+    },
     "sound_voice_aus_female": {
       "ht": "Voice: Australia, female",
       "at": ""

@@ -293,7 +293,7 @@ def test_alert_sound_picker_and_preview(qapp, json_backend, tmp_path, monkeypatc
     assert isinstance(combo, NoScrollComboBox)
     assert [combo.itemText(i) for i in range(combo.count())] == [
         "Smart Citizen Default",
-        "Voice: US, female", "Voice: US, male", "Voice: UK, female",
+        "Voice: US, female", "Voice: US, male", "Voice: UK, female", "Voice: UK, male",
         "Voice: Australia, female", "Voice: Australia, male",
         "Voice: Ireland, female", "Voice: Ireland, male",
         "Voice: Nigeria, female", "Voice: Nigeria, male",
