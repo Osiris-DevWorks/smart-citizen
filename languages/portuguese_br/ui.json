@@ -3632,6 +3632,42 @@
       "ht": "",
       "at": "Padrão do Smart Citizen"
     },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Voz: EUA, feminina"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Voz: EUA, masculina"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Voz: Reino Unido, feminina"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Voz: Austrália, feminina"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Voz: Austrália, masculina"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Voz: Irlanda, feminina"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Voz: Irlanda, masculina"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Voz: Nigéria, feminina"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Voz: Nigéria, masculina"
+    },
     "sound_asterisk": {
       "ht": "",
       "at": "Windows Asterisco"

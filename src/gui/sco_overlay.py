@@ -272,7 +272,7 @@ def format_matches(matches: list[SignatureMatch]) -> str:
 
 
 SND_ASYNC, SND_NODEFAULT, SND_MEMORY = 0x0001, 0x0002, 0x0004
-SND_ALIAS = 0x00010000
+SND_ALIAS, SND_FILENAME = 0x00010000, 0x00020000
 _CHIME_RATE = 22050
 # The chime, made once and kept: Windows reads it from this memory while it
 # plays.
@@ -289,8 +289,23 @@ WINDOWS_ALERT_SOUNDS = {
     "default_beep": ".Default",
     "notification": "SystemNotification",
 }
-# Each alias as the wide string Windows reads, made once and kept.
-_aliases: dict[str, ctypes.c_wchar_p] = {}
+# The recorded voices the alert can play: each ``AppSettings.SCO_ALERT_SOUNDS``
+# name that starts "voice_", and its WAV file, shipped in VOICE_SOUND_DIR.
+VOICE_SOUND_DIR = "assets/sounds"
+VOICE_ALERT_SOUNDS = {
+    name: f"{name}.wav" for name in AppSettings.SCO_ALERT_SOUNDS if name.startswith("voice_")
+}
+# Each alias or file path as the wide string Windows reads, made once and kept.
+_wide_texts: dict[str, ctypes.c_wchar_p] = {}
+
+
+def voice_sound_path(sound: str) -> Optional[str]:
+    """The bundled WAV file for a ``VOICE_ALERT_SOUNDS`` name, or None."""
+    file_name = VOICE_ALERT_SOUNDS.get(sound)
+    if file_name is None:
+        return None
+    from src.utils.resource_path import get_resource_path
+    return get_resource_path(f"{VOICE_SOUND_DIR}/{file_name}")
 
 
 def alert_chime_wav() -> bytes:
@@ -314,8 +329,9 @@ def alert_chime_wav() -> bytes:
 
 
 def play_alert_sound(sound: str = AppSettings.SCO_ALERT_SOUND_DEFAULT) -> bool:
-    """Start the alert sound (an ``AppSettings.SCO_ALERT_SOUNDS`` name; an
-    unknown one plays the chime) and return at once (Windows only)."""
+    """Start the alert sound (an ``AppSettings.SCO_ALERT_SOUNDS`` name: a
+    Windows sound by alias, a recorded voice from its file, and the chime for
+    "default" or an unknown name) and return at once (Windows only)."""
     global _chime, _play_sound
     if sys.platform != "win32":
         return False
@@ -325,11 +341,12 @@ def play_alert_sound(sound: str = AppSettings.SCO_ALERT_SOUND_DEFAULT) -> bool:
         function.argtypes = [ctypes.c_void_p, wintypes.HMODULE, wintypes.DWORD]
         function.restype = wintypes.BOOL
         _play_sound = function
-    alias = WINDOWS_ALERT_SOUNDS.get(sound)
-    if alias is not None:
-        text = _aliases.setdefault(alias, ctypes.c_wchar_p(alias))
-        pointer = ctypes.cast(text, ctypes.c_void_p)
-        return bool(_play_sound(pointer, None, SND_ALIAS | SND_ASYNC | SND_NODEFAULT))
+    for name, kind in ((WINDOWS_ALERT_SOUNDS.get(sound), SND_ALIAS),
+                       (voice_sound_path(sound), SND_FILENAME)):
+        if name is not None:
+            text = _wide_texts.setdefault(name, ctypes.c_wchar_p(name))
+            pointer = ctypes.cast(text, ctypes.c_void_p)
+            return bool(_play_sound(pointer, None, kind | SND_ASYNC | SND_NODEFAULT))
     if _chime is None:
         _chime = alert_chime_wav()
     pointer = ctypes.cast(ctypes.c_char_p(_chime), ctypes.c_void_p)

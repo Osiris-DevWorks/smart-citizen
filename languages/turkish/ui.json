@@ -3632,6 +3632,42 @@
       "ht": "",
       "at": "Smart Citizen Varsayılan"
     },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Ses: ABD, kadın"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Ses: ABD, erkek"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Ses: Birleşik Krallık, kadın"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Ses: Avustralya, kadın"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Ses: Avustralya, erkek"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Ses: İrlanda, kadın"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Ses: İrlanda, erkek"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Ses: Nijerya, kadın"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Ses: Nijerya, erkek"
+    },
     "sound_asterisk": {
       "ht": "",
       "at": "Windows Yıldız İşareti"

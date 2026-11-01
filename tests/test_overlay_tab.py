@@ -292,7 +292,12 @@ def test_alert_sound_picker_and_preview(qapp, json_backend, tmp_path, monkeypatc
     combo = tab._sound_combo
     assert isinstance(combo, NoScrollComboBox)
     assert [combo.itemText(i) for i in range(combo.count())] == [
-        "Smart Citizen Default", "Windows Asterisk", "Windows Exclamation",
+        "Smart Citizen Default",
+        "Voice: US, female", "Voice: US, male", "Voice: UK, female",
+        "Voice: Australia, female", "Voice: Australia, male",
+        "Voice: Ireland, female", "Voice: Ireland, male",
+        "Voice: Nigeria, female", "Voice: Nigeria, male",
+        "Windows Asterisk", "Windows Exclamation",
         "Windows Critical Stop", "Windows Default Beep", "Windows Notification"]
     assert tab._sound_label.text() == "Alert sound:"
     assert tab._sound_preview.text() == "Preview"

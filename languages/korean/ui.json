@@ -3632,6 +3632,42 @@
       "ht": "",
       "at": "Smart Citizen 기본값"
     },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "음성: 미국, 여성"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "음성: 미국, 남성"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "음성: 영국, 여성"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "음성: 호주, 여성"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "음성: 호주, 남성"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "음성: 아일랜드, 여성"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "음성: 아일랜드, 남성"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "음성: 나이지리아, 여성"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "음성: 나이지리아, 남성"
+    },
     "sound_asterisk": {
       "ht": "",
       "at": "Windows 별표"

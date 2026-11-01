@@ -3632,6 +3632,42 @@
       "ht": "",
       "at": "Smart Citizen 預設"
     },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "語音：美國，女聲"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "語音：美國，男聲"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "語音：英國，女聲"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "語音：澳洲，女聲"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "語音：澳洲，男聲"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "語音：愛爾蘭，女聲"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "語音：愛爾蘭，男聲"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "語音：奈及利亞，女聲"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "語音：奈及利亞，男聲"
+    },
     "sound_asterisk": {
       "ht": "",
       "at": "Windows 星號"

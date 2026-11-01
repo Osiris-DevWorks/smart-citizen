@@ -3430,6 +3430,42 @@
       "ht": "",
       "at": "Smart Citizen по умолчанию"
     },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Голос: США, женский"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Голос: США, мужской"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Голос: Великобритания, женский"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Голос: Австралия, женский"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Голос: Австралия, мужской"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Голос: Ирландия, женский"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Голос: Ирландия, мужской"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Голос: Нигерия, женский"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Голос: Нигерия, мужской"
+    },
     "sound_asterisk": {
       "ht": "",
       "at": "Windows: Звездочка"

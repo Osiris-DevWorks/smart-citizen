@@ -41,7 +41,7 @@ TEST_SECTIONS: list[dict] = [
             "Scan a ship wreck: the label shows Salvage. Scan an ROC or hand-mining deposit: it decodes too.",
             "Try each Scan text size (Small to Extra large): the label resizes and stays centred under the scan number.",
             "Drawer Minerals: tick a mineral, then scan it. The label glows and flashes; with Play a sound on, it chimes once, not again while it stays.",
-            "Overlay tab: tick Play a sound, pick each Alert sound and press Preview; each plays (Smart Citizen Default is the chime). Scan a watched mineral: the picked sound plays.",
+            "Overlay tab: tick Play a sound, pick each Alert sound and press Preview; each plays (Smart Citizen Default is the chime, the nine Voice entries speak). Scan a watched mineral: the picked sound plays.",
             "Turn on Change text color and Bigger text: a watched scan shows green and larger. Tick Salvage at the bottom of the list: a wreck alerts too.",
             "Set Font size Large (Config tab) and restart: the scan decoder still reads signatures.",
             "Play 30 minutes with the overlay running: no Easy Anti-Cheat warning or kick.",

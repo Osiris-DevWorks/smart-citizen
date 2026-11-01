@@ -1224,9 +1224,25 @@ def test_the_chime_plays_from_memory_without_waiting(monkeypatch):
 
 def test_every_alert_sound_but_the_chime_is_a_windows_sound():
     """The picker's choices and the sounds play_alert_sound knows stay in step."""
-    from src.gui.sco_overlay import WINDOWS_ALERT_SOUNDS
+    from src.gui.sco_overlay import VOICE_ALERT_SOUNDS, WINDOWS_ALERT_SOUNDS
     assert AppSettings.SCO_ALERT_SOUNDS[0] == AppSettings.SCO_ALERT_SOUND_DEFAULT
-    assert set(WINDOWS_ALERT_SOUNDS) == set(AppSettings.SCO_ALERT_SOUNDS[1:])
+    assert not set(VOICE_ALERT_SOUNDS) & set(WINDOWS_ALERT_SOUNDS)
+    assert set(VOICE_ALERT_SOUNDS) | set(WINDOWS_ALERT_SOUNDS) == set(
+        AppSettings.SCO_ALERT_SOUNDS[1:])
+    assert len(VOICE_ALERT_SOUNDS) == 9
+
+
+@pytest.mark.parametrize("sound", [s for s in AppSettings.SCO_ALERT_SOUNDS
+                                   if s.startswith("voice_")])
+def test_every_voice_ships_as_a_short_wav(sound):
+    """Each voice is a WAV PlaySound can read, in assets/sounds (bundled with
+    the rest of assets/), short enough for an alert."""
+    import wave
+
+    from src.gui.sco_overlay import voice_sound_path
+    with wave.open(voice_sound_path(sound)) as wav:
+        assert wav.getsampwidth() == 2 and wav.getnchannels() in (1, 2)
+        assert 0.5 < wav.getnframes() / wav.getframerate() < 4
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"), reason="PlaySound is Windows only")
@@ -1241,6 +1257,20 @@ def test_a_windows_sound_plays_by_alias_without_waiting(monkeypatch):
     (data, module, flags), = calls
     assert ctypes.wstring_at(data) == "SystemHand" and module is None
     assert flags == sco_overlay.SND_ALIAS | sco_overlay.SND_ASYNC | sco_overlay.SND_NODEFAULT
+
+
+@pytest.mark.skipif(not sys.platform.startswith("win"), reason="PlaySound is Windows only")
+def test_a_voice_plays_from_its_file_without_waiting(monkeypatch):
+    import ctypes
+
+    from src.gui import sco_overlay
+    calls = []
+    monkeypatch.setattr(sco_overlay, "_play_sound",
+                        lambda data, module, flags: calls.append((data, module, flags)) or True)
+    assert sco_overlay.play_alert_sound("voice_uk_female")
+    (data, module, flags), = calls
+    assert ctypes.wstring_at(data) == sco_overlay.voice_sound_path("voice_uk_female")
+    assert flags == sco_overlay.SND_FILENAME | sco_overlay.SND_ASYNC | sco_overlay.SND_NODEFAULT
 
 
 def test_play_alert_sound_is_quiet_off_windows(monkeypatch):

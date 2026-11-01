@@ -781,9 +781,14 @@ class AppSettings:
     SCO_LABEL_SIZES = ("small", "medium", "large", "extra_large")
     SCO_LABEL_SIZE_DEFAULT = "medium"
     # What the "Play a sound" alert plays: Smart Citizen's own chime
-    # ("default") or a Windows sound (sco_overlay.WINDOWS_ALERT_SOUNDS).
+    # ("default"), a voice shipped in assets/sounds (sco_overlay.VOICE_ALERT_SOUNDS)
+    # or a Windows sound (sco_overlay.WINDOWS_ALERT_SOUNDS).
     SCO_ALERT_SOUND = "sco/alert_sound_choice"
-    SCO_ALERT_SOUNDS = ("default", "asterisk", "exclamation", "critical_stop",
+    SCO_ALERT_SOUNDS = ("default",
+                        "voice_us_female", "voice_us_male", "voice_uk_female",
+                        "voice_aus_female", "voice_aus_male", "voice_ire_female",
+                        "voice_ire_male", "voice_nigeria_female", "voice_nigeria_male",
+                        "asterisk", "exclamation", "critical_stop",
                         "default_beep", "notification")
     SCO_ALERT_SOUND_DEFAULT = "default"
     # Ores ticked in the SCO drawer's Minerals section, and salvage (#523): a
