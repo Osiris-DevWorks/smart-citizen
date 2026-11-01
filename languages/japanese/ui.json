@@ -3622,7 +3622,43 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "対象を最初に読み取ったとき、短いチャイムが鳴ります。"
+      "at": "対象を最初に読み取ったときに、選んだサウンドが鳴ります。"
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "アラート音:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen 既定"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows メッセージ (情報)"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows メッセージ (警告)"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows システム エラー"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows 一般の警告音"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows 通知"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "試聴"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "選んだサウンドを再生します。Windows のサウンドは Windows のサウンド設定に従うため、そこで (なし) にしたものは鳴りません。"
     },
     "live_blueprint_watch": {
       "ht": "",

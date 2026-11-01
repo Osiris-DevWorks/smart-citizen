@@ -3622,7 +3622,43 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Un breve tono cuando el objetivo se lee por primera vez."
+      "at": "El sonido elegido cuando el objetivo se lee por primera vez."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Sonido de alerta:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen predeterminado"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Asterisco"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Exclamación"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Detención crítica"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Sonido predeterminado"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Notificación"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Escuchar"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Reproduce el sonido elegido. Los sonidos de Windows siguen tu combinación de sonidos de Windows; uno configurado como (Ninguno) no suena."
     },
     "live_blueprint_watch": {
       "ht": "",

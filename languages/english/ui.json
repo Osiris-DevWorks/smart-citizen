@@ -3419,7 +3419,43 @@
       "at": ""
     },
     "alert_sound_hint": {
-      "ht": "A short chime when the target is first read.",
+      "ht": "The chosen sound when the target is first read.",
+      "at": ""
+    },
+    "alert_sound_choice": {
+      "ht": "Alert sound:",
+      "at": ""
+    },
+    "sound_default": {
+      "ht": "Smart Citizen Default",
+      "at": ""
+    },
+    "sound_asterisk": {
+      "ht": "Windows Asterisk",
+      "at": ""
+    },
+    "sound_exclamation": {
+      "ht": "Windows Exclamation",
+      "at": ""
+    },
+    "sound_critical_stop": {
+      "ht": "Windows Critical Stop",
+      "at": ""
+    },
+    "sound_default_beep": {
+      "ht": "Windows Default Beep",
+      "at": ""
+    },
+    "sound_notification": {
+      "ht": "Windows Notification",
+      "at": ""
+    },
+    "sound_preview": {
+      "ht": "Preview",
+      "at": ""
+    },
+    "sound_preview_hint": {
+      "ht": "Play the chosen sound. Windows sounds follow your Windows sound scheme, so one set to (None) there stays silent.",
       "at": ""
     },
     "live_blueprint_watch": {

@@ -3622,7 +3622,43 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Hedef ilk okunduğunda kısa bir çan sesi."
+      "at": "Hedef ilk okunduğunda seçilen ses."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Uyarı sesi:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen Varsayılan"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Yıldız İşareti"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Ünlem"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Kritik Durma"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Varsayılan Bip"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Bildirim"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Dinle"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Seçilen sesi çalar. Windows sesleri Windows ses düzeninizi izler; orada (Yok) olarak ayarlanan ses çalmaz."
     },
     "live_blueprint_watch": {
       "ht": "",

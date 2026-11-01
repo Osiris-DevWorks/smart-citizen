@@ -3622,7 +3622,43 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Ein kurzer Klang, wenn das Ziel zum ersten Mal gelesen wird."
+      "at": "Der gewählte Ton, wenn das Ziel zum ersten Mal gelesen wird."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Alarmton:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen Standard"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Sternchen"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Hinweis"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Kritischer Abbruch"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Standardsignal"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Benachrichtigung"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Vorhören"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Spielt den gewählten Ton ab. Windows-Töne folgen deinem Windows-Soundschema; ein dort auf (Kein) gesetzter Ton bleibt stumm."
     },
     "live_blueprint_watch": {
       "ht": "",

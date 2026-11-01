@@ -1119,7 +1119,7 @@ def test_the_alerts_follow_the_options(qapp, monkeypatch):
 
     from src.gui.sco_overlay import ALERT_COLOR, ALERT_TEXT_SCALE
     chimes = []
-    monkeypatch.setattr("src.gui.sco_overlay.play_alert_sound", lambda: chimes.append(True))
+    monkeypatch.setattr("src.gui.sco_overlay.play_alert_sound", lambda sound: chimes.append(sound))
     overlay = _running_overlay()
     label = overlay.label
     try:
@@ -1139,9 +1139,13 @@ def test_the_alerts_follow_the_options(qapp, monkeypatch):
         assert f"color: {ALERT_COLOR}" not in label._label.styleSheet()
         assert label._font_points() == pytest.approx(points)
         _shown(overlay, 10200)                                  # watched and new: one chime
-        assert chimes == [True]
+        assert chimes == ["default"]
         overlay._on_reading(10200, QPoint(500, 300))            # still showing: no more
-        assert chimes == [True]
+        assert chimes == ["default"]
+        overlay.set_alert_sound("exclamation")                 # the picked sound plays
+        _shown(overlay, 7200)
+        _shown(overlay, 10200)
+        assert chimes == ["default", "exclamation"]
     finally:
         overlay.stop()
 
@@ -1216,6 +1220,33 @@ def test_the_chime_plays_from_memory_without_waiting(monkeypatch):
     assert data and module is None
     assert flags == sco_overlay.SND_MEMORY | sco_overlay.SND_ASYNC | sco_overlay.SND_NODEFAULT
     assert sco_overlay._chime is not None          # kept alive while Windows reads it
+
+
+def test_every_alert_sound_but_the_chime_is_a_windows_sound():
+    """The picker's choices and the sounds play_alert_sound knows stay in step."""
+    from src.gui.sco_overlay import WINDOWS_ALERT_SOUNDS
+    assert AppSettings.SCO_ALERT_SOUNDS[0] == AppSettings.SCO_ALERT_SOUND_DEFAULT
+    assert set(WINDOWS_ALERT_SOUNDS) == set(AppSettings.SCO_ALERT_SOUNDS[1:])
+
+
+@pytest.mark.skipif(not sys.platform.startswith("win"), reason="PlaySound is Windows only")
+def test_a_windows_sound_plays_by_alias_without_waiting(monkeypatch):
+    import ctypes
+
+    from src.gui import sco_overlay
+    calls = []
+    monkeypatch.setattr(sco_overlay, "_play_sound",
+                        lambda data, module, flags: calls.append((data, module, flags)) or True)
+    assert sco_overlay.play_alert_sound("critical_stop")
+    (data, module, flags), = calls
+    assert ctypes.wstring_at(data) == "SystemHand" and module is None
+    assert flags == sco_overlay.SND_ALIAS | sco_overlay.SND_ASYNC | sco_overlay.SND_NODEFAULT
+
+
+def test_play_alert_sound_is_quiet_off_windows(monkeypatch):
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay.sys, "platform", "linux")
+    assert sco_overlay.play_alert_sound("asterisk") is False
 
 
 class _FakeUser32:

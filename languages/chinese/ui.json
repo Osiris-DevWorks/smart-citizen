@@ -3622,7 +3622,43 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "首次读到目标时播放一声短促的提示音。"
+      "at": "首次读到目标时播放所选的声音。"
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "提醒声音："
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen 默认"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows 星号"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows 感叹号"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows 严重停止"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows 默认响声"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows 通知"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "试听"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "播放所选的声音。Windows 声音跟随你的 Windows 声音方案，在那里设为（无）的声音不会响。"
     },
     "live_blueprint_watch": {
       "ht": "",

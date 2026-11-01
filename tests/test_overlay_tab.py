@@ -280,8 +280,51 @@ def test_scan_text_size_picker(qapp, json_backend, tmp_path):
     assert AppSettings.get_sco_label_size() == "medium"
 
 
+def test_alert_sound_picker_and_preview(qapp, json_backend, tmp_path, monkeypatch):
+    """The "Play a sound" alert's sound: Smart Citizen's chime by default or a
+    Windows sound, saved when picked, and a Preview button that plays it."""
+    from src.gui import sco_overlay
+    from src.gui.combo_box import NoScrollComboBox
+
+    assert AppSettings.get_sco_alert_sound() == "default"
+    AppSettings.set_sco_option("alert_sound", True)
+    tab = OverlayTab()
+    combo = tab._sound_combo
+    assert isinstance(combo, NoScrollComboBox)
+    assert [combo.itemText(i) for i in range(combo.count())] == [
+        "Smart Citizen Default", "Windows Asterisk", "Windows Exclamation",
+        "Windows Critical Stop", "Windows Default Beep", "Windows Notification"]
+    assert tab._sound_label.text() == "Alert sound:"
+    assert tab._sound_preview.text() == "Preview"
+    played = []
+    monkeypatch.setattr(sco_overlay, "play_alert_sound", played.append)
+    tab._sound_preview.click()
+    assert played == ["default"]
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    combo.setCurrentIndex(AppSettings.SCO_ALERT_SOUNDS.index("notification"))
+    assert AppSettings.get_sco_alert_sound() == "notification" and changed == [True]
+    tab._sound_preview.click()
+    assert played == ["default", "notification"]
+    assert OverlayTab()._sound_combo.currentData() == "notification"
+    json_backend.setValue(AppSettings.SCO_ALERT_SOUND, "kazoo")
+    assert AppSettings.get_sco_alert_sound() == "default"
+
+
+def test_the_sound_picker_hangs_under_play_a_sound(qapp, json_backend, tmp_path):
+    tab = OverlayTab()
+    parts = (tab._sound_label, tab._sound_combo, tab._sound_preview)
+    assert AppSettings.get_sco_option("alert_sound") is False
+    assert not any(w.isEnabled() for w in parts)            # sound alert off by default
+    tab._checks["alert_sound"].setChecked(True)
+    assert all(w.isEnabled() for w in parts)
+    tab._checks["scan_decoder"].setChecked(False)
+    assert not any(w.isEnabled() for w in parts)
+
+
 def test_text_size_and_hotkey_reach_settings_backups(json_backend):
     defaults = AppSettings.profile_default_values()
+    assert defaults[AppSettings.SCO_ALERT_SOUND] == "default"
     assert defaults[AppSettings.SCO_LABEL_SIZE] == "medium"
     assert defaults[AppSettings.SCO_DRAWER_HOTKEY] == ""
 
@@ -472,10 +515,11 @@ def test_apply_options_hands_the_overlay_its_size_and_hotkey(json_backend):
         set_options=lambda options: got.setdefault("options", options),
         drawer=SimpleNamespace(set_position=lambda p: got.setdefault("position", p)),
         set_label_size=lambda s: got.setdefault("size", s),
+        set_alert_sound=lambda s: got.setdefault("sound", s),
         set_drawer_hotkey=lambda h: got.setdefault("hotkey", h),
         is_running=lambda: False)
     MainWindow._apply_sco_options(SimpleNamespace(_sco_overlay=overlay))
-    assert (got["size"], got["hotkey"]) == ("large", "Ctrl+Shift+O")
+    assert (got["size"], got["hotkey"], got["sound"]) == ("large", "Ctrl+Shift+O", "default")
     assert set(got["options"]) == set(AppSettings.SCO_OPTION_SETTING)
 
 

@@ -272,16 +272,30 @@ def format_matches(matches: list[SignatureMatch]) -> str:
 
 
 SND_ASYNC, SND_NODEFAULT, SND_MEMORY = 0x0001, 0x0002, 0x0004
+SND_ALIAS = 0x00010000
 _CHIME_RATE = 22050
 # The chime, made once and kept: Windows reads it from this memory while it
 # plays.
 _chime: Optional[bytes] = None
 _play_sound = None
+# The Windows sounds the alert can play instead of the chime: each
+# ``AppSettings.SCO_ALERT_SOUNDS`` name but the default, and its sound alias.
+# They follow the user's Windows sound scheme, so one set to (None) there
+# stays silent.
+WINDOWS_ALERT_SOUNDS = {
+    "asterisk": "SystemAsterisk",
+    "exclamation": "SystemExclamation",
+    "critical_stop": "SystemHand",
+    "default_beep": ".Default",
+    "notification": "SystemNotification",
+}
+# Each alias as the wide string Windows reads, made once and kept.
+_aliases: dict[str, ctypes.c_wchar_p] = {}
 
 
 def alert_chime_wav() -> bytes:
-    """The "sound" alert: a short rising two-note chime as a WAV file in
-    memory, made here so there is no sound file to ship."""
+    """The "Smart Citizen Default" alert sound: a short rising two-note chime
+    as a WAV file in memory, made here so there is no sound file to ship."""
     samples = array("h")
     for pitch in (880, 1320):
         count = int(_CHIME_RATE * 0.09)
@@ -299,8 +313,9 @@ def alert_chime_wav() -> bytes:
     return buffer.getvalue()
 
 
-def play_alert_sound() -> bool:
-    """Start the chime and return at once (Windows only)."""
+def play_alert_sound(sound: str = AppSettings.SCO_ALERT_SOUND_DEFAULT) -> bool:
+    """Start the alert sound (an ``AppSettings.SCO_ALERT_SOUNDS`` name; an
+    unknown one plays the chime) and return at once (Windows only)."""
     global _chime, _play_sound
     if sys.platform != "win32":
         return False
@@ -310,6 +325,11 @@ def play_alert_sound() -> bool:
         function.argtypes = [ctypes.c_void_p, wintypes.HMODULE, wintypes.DWORD]
         function.restype = wintypes.BOOL
         _play_sound = function
+    alias = WINDOWS_ALERT_SOUNDS.get(sound)
+    if alias is not None:
+        text = _aliases.setdefault(alias, ctypes.c_wchar_p(alias))
+        pointer = ctypes.cast(text, ctypes.c_void_p)
+        return bool(_play_sound(pointer, None, SND_ALIAS | SND_ASYNC | SND_NODEFAULT))
     if _chime is None:
         _chime = alert_chime_wav()
     pointer = ctypes.cast(ctypes.c_char_p(_chime), ctypes.c_void_p)
@@ -1316,6 +1336,7 @@ class ScoOverlay(QObject):
         # focus back when it closes (the game, so the mouse goes back to it).
         self._focus_before_drawer = 0
         self._sound_alert = False
+        self._alert_sound = AppSettings.SCO_ALERT_SOUND_DEFAULT
         self._watched: set[str] = set()
         self._shown_matches: list[SignatureMatch] = []
         self._reader: Optional[SignatureReader] = hud_signature_reader
@@ -1359,6 +1380,10 @@ class ScoOverlay(QObject):
     def set_label_size(self, size: str) -> None:
         """The signature label's text size (``AppSettings.SCO_LABEL_SIZES``)."""
         self.label.set_text_size(size)
+
+    def set_alert_sound(self, sound: str) -> None:
+        """The sound the "sound" alert plays (``AppSettings.SCO_ALERT_SOUNDS``)."""
+        self._alert_sound = sound
 
     def set_drawer_hotkey(self, sequence: str) -> None:
         """The drawer's hotkey (QKeySequence portable text, "" for none). It is
@@ -1585,7 +1610,7 @@ class ScoOverlay(QObject):
         if watched and fresh:
             self.label.flash()
             if self._sound_alert:
-                play_alert_sound()
+                play_alert_sound(self._alert_sound)
 
     def _mask_own_label(self, image: QImage, region: QRect) -> None:
         """Black out our own label in the capture so its text is never read

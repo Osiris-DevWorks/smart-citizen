@@ -780,6 +780,12 @@ class AppSettings:
     SCO_LABEL_SIZE = "sco/label_size"
     SCO_LABEL_SIZES = ("small", "medium", "large", "extra_large")
     SCO_LABEL_SIZE_DEFAULT = "medium"
+    # What the "Play a sound" alert plays: Smart Citizen's own chime
+    # ("default") or a Windows sound (sco_overlay.WINDOWS_ALERT_SOUNDS).
+    SCO_ALERT_SOUND = "sco/alert_sound_choice"
+    SCO_ALERT_SOUNDS = ("default", "asterisk", "exclamation", "critical_stop",
+                        "default_beep", "notification")
+    SCO_ALERT_SOUND_DEFAULT = "default"
     # Ores ticked in the SCO drawer's Minerals section, and salvage (#523): a
     # decoded scan of one sets off the label's alerts. JSON list of
     # ORE_SIGNATURES keys and "salvage".
@@ -1730,6 +1736,17 @@ class AppSettings:
     def set_sco_label_size(size: str) -> None:
         AppSettings._set_choice(AppSettings.SCO_LABEL_SIZE, size, AppSettings.SCO_LABEL_SIZES,
                                 AppSettings.SCO_LABEL_SIZE_DEFAULT)
+
+    @staticmethod
+    def get_sco_alert_sound() -> str:
+        """What the SCO "Play a sound" alert plays (one of ``SCO_ALERT_SOUNDS``)."""
+        return AppSettings._get_choice(AppSettings.SCO_ALERT_SOUND, AppSettings.SCO_ALERT_SOUNDS,
+                                       AppSettings.SCO_ALERT_SOUND_DEFAULT)
+
+    @staticmethod
+    def set_sco_alert_sound(sound: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_ALERT_SOUND, sound, AppSettings.SCO_ALERT_SOUNDS,
+                                AppSettings.SCO_ALERT_SOUND_DEFAULT)
 
     @staticmethod
     def get_sco_watched_minerals() -> set:
@@ -3862,6 +3879,7 @@ class AppSettings:
             AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
             AppSettings.SCO_DRAWER_HOTKEY: "",
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
+            AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
         }
         # Composed from the same maps the getters read, so these can't drift.

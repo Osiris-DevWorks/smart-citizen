@@ -3420,7 +3420,43 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Короткий сигнал, когда цель прочитана впервые."
+      "at": "Выбранный звук, когда цель прочитана впервые."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Звук оповещения:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen по умолчанию"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows: Звездочка"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows: Восклицание"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows: Критическая ошибка"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows: Простой звуковой сигнал"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows: Уведомление"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Прослушать"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Воспроизводит выбранный звук. Звуки Windows берутся из звуковой схемы Windows, поэтому звук со значением (Нет) не прозвучит."
     },
     "live_blueprint_watch": {
       "ht": "",
