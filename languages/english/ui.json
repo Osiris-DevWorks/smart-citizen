@@ -3419,7 +3419,83 @@
       "at": ""
     },
     "alert_sound_hint": {
-      "ht": "A short chime when the target is first read.",
+      "ht": "The chosen sound when the target is first read.",
+      "at": ""
+    },
+    "alert_sound_choice": {
+      "ht": "Alert sound:",
+      "at": ""
+    },
+    "sound_default": {
+      "ht": "Smart Citizen Default",
+      "at": ""
+    },
+    "sound_voice_us_female": {
+      "ht": "Voice: US, female",
+      "at": ""
+    },
+    "sound_voice_us_male": {
+      "ht": "Voice: US, male",
+      "at": ""
+    },
+    "sound_voice_uk_female": {
+      "ht": "Voice: UK, female",
+      "at": ""
+    },
+    "sound_voice_uk_male": {
+      "ht": "Voice: UK, male",
+      "at": ""
+    },
+    "sound_voice_aus_female": {
+      "ht": "Voice: Australia, female",
+      "at": ""
+    },
+    "sound_voice_aus_male": {
+      "ht": "Voice: Australia, male",
+      "at": ""
+    },
+    "sound_voice_ire_female": {
+      "ht": "Voice: Ireland, female",
+      "at": ""
+    },
+    "sound_voice_ire_male": {
+      "ht": "Voice: Ireland, male",
+      "at": ""
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "Voice: Nigeria, female",
+      "at": ""
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "Voice: Nigeria, male",
+      "at": ""
+    },
+    "sound_asterisk": {
+      "ht": "Windows Asterisk",
+      "at": ""
+    },
+    "sound_exclamation": {
+      "ht": "Windows Exclamation",
+      "at": ""
+    },
+    "sound_critical_stop": {
+      "ht": "Windows Critical Stop",
+      "at": ""
+    },
+    "sound_default_beep": {
+      "ht": "Windows Default Beep",
+      "at": ""
+    },
+    "sound_notification": {
+      "ht": "Windows Notification",
+      "at": ""
+    },
+    "sound_preview": {
+      "ht": "Preview",
+      "at": ""
+    },
+    "sound_preview_hint": {
+      "ht": "Play the chosen sound. Windows sounds follow your Windows sound scheme, so one set to (None) there stays silent.",
       "at": ""
     },
     "live_blueprint_watch": {

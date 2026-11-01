@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "首次讀到目標時播放一聲短促的提示音。"
+      "at": "首次讀到目標時播放所選的聲音。"
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "提醒聲音："
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen 預設"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "語音：美國，女聲"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "語音：美國，男聲"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "語音：英國，女聲"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "語音：英國，男聲"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "語音：澳洲，女聲"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "語音：澳洲，男聲"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "語音：愛爾蘭，女聲"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "語音：愛爾蘭，男聲"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "語音：奈及利亞，女聲"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "語音：奈及利亞，男聲"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows 星號"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows 驚嘆號"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows 嚴重停止"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows 預設嗶聲"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows 通知"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "試聽"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "播放所選的聲音。Windows 聲音跟隨你的 Windows 音效配置，在那裡設為（無）的聲音不會響。"
     },
     "live_blueprint_watch": {
       "ht": "",

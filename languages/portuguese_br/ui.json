@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Um toque curto quando o alvo é lido pela primeira vez."
+      "at": "O som escolhido quando o alvo é lido pela primeira vez."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Som de alerta:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Padrão do Smart Citizen"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Voz: EUA, feminina"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Voz: EUA, masculina"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Voz: Reino Unido, feminina"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Voz: Reino Unido, masculina"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Voz: Austrália, feminina"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Voz: Austrália, masculina"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Voz: Irlanda, feminina"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Voz: Irlanda, masculina"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Voz: Nigéria, feminina"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Voz: Nigéria, masculina"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Asterisco"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Exclamação"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Parada crítica"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Bipe padrão"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Notificação"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Ouvir"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Toca o som escolhido. Os sons do Windows seguem o seu esquema de sons do Windows; um definido como (Nenhum) fica em silêncio."
     },
     "live_blueprint_watch": {
       "ht": "",

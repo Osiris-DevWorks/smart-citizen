@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 DRAWER_SECTION_PREFIX = AppSettings.SCO_DRAWER_SECTION_PREFIX
 ALERT_PREFIX = AppSettings.SCO_ALERT_PREFIX
+SOUND_ALERT = ALERT_PREFIX + "sound"
 # How far what hangs under a switch sits in, in its box: the scan decoder's
 # text size and alerts, the drawer's sections, position and hotkey.
 DRAWER_SECTION_INDENT = 22
@@ -214,6 +215,13 @@ class OverlayTab(QWidget):
         self._alerts_title = QLabel()
         under.addWidget(self._alerts_title)
         under.addLayout(self._switch_row(ALERT_PREFIX))
+        self._sound_label, self._sound_combo, row = self._picker_row(
+            AppSettings.SCO_ALERT_SOUNDS, AppSettings.get_sco_alert_sound(),
+            AppSettings.set_sco_alert_sound)
+        self._sound_preview = QPushButton()
+        self._sound_preview.clicked.connect(self._preview_sound)
+        row.insertWidget(2, self._sound_preview)
+        under.addLayout(row)
 
         drawer = self._group(layout, "drawer_group")
         self._add_switch(drawer, AppSettings.SCO_DRAWER)
@@ -232,7 +240,7 @@ class OverlayTab(QWidget):
 
         layout.addStretch()
 
-        for name in (AppSettings.SCO_SCAN_DECODER, AppSettings.SCO_DRAWER):
+        for name in (AppSettings.SCO_SCAN_DECODER, AppSettings.SCO_DRAWER, SOUND_ALERT):
             self._checks[name].toggled.connect(self._sync_enabled)
         self._sync_enabled()
 
@@ -257,11 +265,15 @@ class OverlayTab(QWidget):
         for label, combo, title, item_prefix in (
                 (self._position_label, self._position_combo, "overlay.drawer_position",
                  "overlay.position_"),
-                (self._size_label, self._size_combo, "overlay.label_size", "overlay.size_")):
+                (self._size_label, self._size_combo, "overlay.label_size", "overlay.size_"),
+                (self._sound_label, self._sound_combo, "overlay.alert_sound_choice",
+                 "overlay.sound_")):
             label.setText(tr(title))
             for i in range(combo.count()):
                 combo.setItemText(i, tr(f"{item_prefix}{combo.itemData(i)}"))
         self._alerts_title.setText(tr("overlay.alerts_title"))
+        self._sound_preview.setText(tr("overlay.sound_preview"))
+        self._sound_preview.setToolTip(tr("overlay.sound_preview_hint"))
         self._hotkey_label.setText(tr("overlay.drawer_hotkey"))
         self._hotkey_clear.setText(tr("overlay.drawer_hotkey_clear"))
         self._hotkey_hint.setText(tr("overlay.drawer_hotkey_hint"))
@@ -364,6 +376,11 @@ class OverlayTab(QWidget):
         save(value)
         self.options_changed.emit()
 
+    def _preview_sound(self) -> None:
+        """Play the sound picked for the "sound" alert, as a scan would."""
+        from src.gui.sco_overlay import play_alert_sound
+        play_alert_sound(self._sound_combo.currentData())
+
     def _hotkey_row(self) -> QHBoxLayout:
         """Drawer hotkey box (one key combination: a key with Ctrl, Alt or
         Win, and Shift if wanted, or an F key or Pause alone), with its hint
@@ -420,6 +437,10 @@ class OverlayTab(QWidget):
                     check.setEnabled(on)
         for widget in (self._size_label, self._size_combo, self._alerts_title):
             widget.setEnabled(decoder_on)
+        # The sound picker hangs under the "Play a sound" switch.
+        sound_on = decoder_on and self._checks[SOUND_ALERT].isChecked()
+        for widget in (self._sound_label, self._sound_combo, self._sound_preview):
+            widget.setEnabled(sound_on)
         for widget in (self._position_label, self._position_combo, self._hotkey_label,
                        self._hotkey_edit, self._hotkey_hint):
             widget.setEnabled(drawer_on)

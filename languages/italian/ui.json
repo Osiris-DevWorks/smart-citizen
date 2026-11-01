@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Un breve suono quando il bersaglio viene letto per la prima volta."
+      "at": "Il suono scelto quando il bersaglio viene letto per la prima volta."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Suono di avviso:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen predefinito"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Voce: USA, femminile"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Voce: USA, maschile"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Voce: Regno Unito, femminile"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Voce: Regno Unito, maschile"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Voce: Australia, femminile"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Voce: Australia, maschile"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Voce: Irlanda, femminile"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Voce: Irlanda, maschile"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Voce: Nigeria, femminile"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Voce: Nigeria, maschile"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Asterisco"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Esclamazione"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Interruzione critica"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Segnale acustico predefinito"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Notifica"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Ascolta"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Riproduce il suono scelto. I suoni di Windows seguono la combinazione di suoni di Windows: uno impostato su (Nessuno) resta muto."
     },
     "live_blueprint_watch": {
       "ht": "",

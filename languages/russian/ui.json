@@ -3420,7 +3420,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Короткий сигнал, когда цель прочитана впервые."
+      "at": "Выбранный звук, когда цель прочитана впервые."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Звук оповещения:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen по умолчанию"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Голос: США, женский"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Голос: США, мужской"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Голос: Великобритания, женский"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Голос: Великобритания, мужской"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Голос: Австралия, женский"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Голос: Австралия, мужской"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Голос: Ирландия, женский"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Голос: Ирландия, мужской"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Голос: Нигерия, женский"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Голос: Нигерия, мужской"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows: Звездочка"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows: Восклицание"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows: Критическая ошибка"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows: Простой звуковой сигнал"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows: Уведомление"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Прослушать"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Воспроизводит выбранный звук. Звуки Windows берутся из звуковой схемы Windows, поэтому звук со значением (Нет) не прозвучит."
     },
     "live_blueprint_watch": {
       "ht": "",

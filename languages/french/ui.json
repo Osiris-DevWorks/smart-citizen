@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Un court carillon quand la cible est lue pour la première fois."
+      "at": "Le son choisi quand la cible est lue pour la première fois."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Son d'alerte :"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen par défaut"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Voix : États-Unis, féminine"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Voix : États-Unis, masculine"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Voix : Royaume-Uni, féminine"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Voix : Royaume-Uni, masculine"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Voix : Australie, féminine"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Voix : Australie, masculine"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Voix : Irlande, féminine"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Voix : Irlande, masculine"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Voix : Nigeria, féminine"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Voix : Nigeria, masculine"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Astérisque"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Exclamation"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Arrêt critique"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Bip par défaut"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Notification"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Écouter"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Joue le son choisi. Les sons Windows suivent votre modèle de sons Windows : un son réglé sur (Aucun) reste muet."
     },
     "live_blueprint_watch": {
       "ht": "",

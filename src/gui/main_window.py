@@ -8154,6 +8154,7 @@ class MainWindow(QMainWindow):
             {name: AppSettings.get_sco_option(name) for name in AppSettings.SCO_OPTION_SETTING})
         self._sco_overlay.drawer.set_position(AppSettings.get_sco_drawer_position())
         self._sco_overlay.set_label_size(AppSettings.get_sco_label_size())
+        self._sco_overlay.set_alert_sound(AppSettings.get_sco_alert_sound())
         self._sco_overlay.set_drawer_hotkey(AppSettings.get_sco_drawer_hotkey())
         if not self._sco_overlay.is_running():
             return

@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Ein kurzer Klang, wenn das Ziel zum ersten Mal gelesen wird."
+      "at": "Der gewählte Ton, wenn das Ziel zum ersten Mal gelesen wird."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Alarmton:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen Standard"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Stimme: USA, weiblich"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Stimme: USA, männlich"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Stimme: UK, weiblich"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Stimme: UK, männlich"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Stimme: Australien, weiblich"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Stimme: Australien, männlich"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Stimme: Irland, weiblich"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Stimme: Irland, männlich"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Stimme: Nigeria, weiblich"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Stimme: Nigeria, männlich"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Sternchen"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Hinweis"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Kritischer Abbruch"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Standardsignal"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Benachrichtigung"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Vorhören"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Spielt den gewählten Ton ab. Windows-Töne folgen deinem Windows-Soundschema; ein dort auf (Kein) gesetzter Ton bleibt stumm."
     },
     "live_blueprint_watch": {
       "ht": "",

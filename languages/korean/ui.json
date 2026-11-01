@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "대상을 처음 읽으면 짧은 차임이 울립니다."
+      "at": "대상을 처음 읽으면 선택한 소리가 울립니다."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "알림 소리:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen 기본값"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "음성: 미국, 여성"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "음성: 미국, 남성"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "음성: 영국, 여성"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "음성: 영국, 남성"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "음성: 호주, 여성"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "음성: 호주, 남성"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "음성: 아일랜드, 여성"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "음성: 아일랜드, 남성"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "음성: 나이지리아, 여성"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "음성: 나이지리아, 남성"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows 별표"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows 느낌표"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows 심각한 중지"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows 기본 경고음"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows 알림"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "미리 듣기"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "선택한 소리를 재생합니다. Windows 소리는 Windows 소리 구성표를 따르므로 그곳에서 (없음)으로 설정된 소리는 울리지 않습니다."
     },
     "live_blueprint_watch": {
       "ht": "",

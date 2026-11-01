@@ -3622,7 +3622,83 @@
     },
     "alert_sound_hint": {
       "ht": "",
-      "at": "Un breve tono cuando el objetivo se lee por primera vez."
+      "at": "El sonido elegido cuando el objetivo se lee por primera vez."
+    },
+    "alert_sound_choice": {
+      "ht": "",
+      "at": "Sonido de alerta:"
+    },
+    "sound_default": {
+      "ht": "",
+      "at": "Smart Citizen predeterminado"
+    },
+    "sound_voice_us_female": {
+      "ht": "",
+      "at": "Voz: EE. UU., femenina"
+    },
+    "sound_voice_us_male": {
+      "ht": "",
+      "at": "Voz: EE. UU., masculina"
+    },
+    "sound_voice_uk_female": {
+      "ht": "",
+      "at": "Voz: Reino Unido, femenina"
+    },
+    "sound_voice_uk_male": {
+      "ht": "",
+      "at": "Voz: Reino Unido, masculina"
+    },
+    "sound_voice_aus_female": {
+      "ht": "",
+      "at": "Voz: Australia, femenina"
+    },
+    "sound_voice_aus_male": {
+      "ht": "",
+      "at": "Voz: Australia, masculina"
+    },
+    "sound_voice_ire_female": {
+      "ht": "",
+      "at": "Voz: Irlanda, femenina"
+    },
+    "sound_voice_ire_male": {
+      "ht": "",
+      "at": "Voz: Irlanda, masculina"
+    },
+    "sound_voice_nigeria_female": {
+      "ht": "",
+      "at": "Voz: Nigeria, femenina"
+    },
+    "sound_voice_nigeria_male": {
+      "ht": "",
+      "at": "Voz: Nigeria, masculina"
+    },
+    "sound_asterisk": {
+      "ht": "",
+      "at": "Windows Asterisco"
+    },
+    "sound_exclamation": {
+      "ht": "",
+      "at": "Windows Exclamación"
+    },
+    "sound_critical_stop": {
+      "ht": "",
+      "at": "Windows Detención crítica"
+    },
+    "sound_default_beep": {
+      "ht": "",
+      "at": "Windows Sonido predeterminado"
+    },
+    "sound_notification": {
+      "ht": "",
+      "at": "Windows Notificación"
+    },
+    "sound_preview": {
+      "ht": "",
+      "at": "Escuchar"
+    },
+    "sound_preview_hint": {
+      "ht": "",
+      "at": "Reproduce el sonido elegido. Los sonidos de Windows siguen tu combinación de sonidos de Windows; uno configurado como (Ninguno) no suena."
     },
     "live_blueprint_watch": {
       "ht": "",
