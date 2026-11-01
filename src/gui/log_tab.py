@@ -161,6 +161,8 @@ class LogTab(QWidget):
         self._clear_btn.setToolTip(tr("log.clear_tooltip"))
         self._export_btn.setText(tr("log.export_btn"))
         self._export_btn.setToolTip(tr("log.export_tooltip"))
+        # Otherwise rewritten only by the next log line.
+        self._status_label.setText(tr("log.lines_label", count=self._line_count))
 
     # ── Handler lifecycle ─────────────────────────────────────────────────────
 

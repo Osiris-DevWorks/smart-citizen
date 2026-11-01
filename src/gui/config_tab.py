@@ -552,6 +552,12 @@ class ConfigTab(QWidget):
         self._cache_reset_btn.setToolTip(tr("config.reset_cache_tooltip"))
         self._p4k_group.setTitle(tr("config.p4k_group"))
         self._p4k_desc_label.setText(tr("config.p4k_desc"))
+        # These two write the channel list's not-installed tooltips and hint
+        # and the Data.p4k status, when the tab is built and when the path
+        # or channel changes, but a switch never ran them, which left those
+        # texts in the old language until the next change.
+        self._populate_channel_combo()
+        self._refresh_p4k_status()
 
     # ── Theme ────────────────────────────────────────────────────────────────
 

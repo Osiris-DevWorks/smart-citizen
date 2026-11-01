@@ -511,6 +511,11 @@ class BlueprintTrackerTab(QWidget):
         self._blueprints_remove_btn.setToolTip(tr("enhancements.blueprints_remove_tooltip"))
         for label_key, lbl in self._blueprints_facet_labels.items():
             lbl.setText(tr(label_key))
+        # Each filter's first row, "Any" (data None), is otherwise written
+        # only when the combo is built and when a load refills it.
+        for combo in (self._blueprints_mission_combo,
+                      *self._blueprints_facet_combos.values()):
+            combo.setItemText(0, tr("enhancements.blueprints_facet_any"))
         self._align_mission_and_type_label_widths()
 
     @staticmethod
