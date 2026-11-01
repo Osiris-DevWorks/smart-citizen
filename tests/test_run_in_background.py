@@ -850,6 +850,35 @@ class TestGenerationInTheBackground:
         me.hide.assert_called_once_with()
 
 
+class TestGenerationDialogOnAFreshWindow:
+    """Esc then Run in Background (or Stop) on a generation's dialog, in a
+    session that ran no DataForge extraction (Regenerate), crashed with
+    AttributeError: no '_forge_progress_dialog'. That attribute was only set
+    when an extraction started, and _dismiss_progress_dialog reads it. Checked
+    on the real window, since a MagicMock self has every attribute."""
+
+    def test_the_window_starts_with_no_progress_dialogs(self, window):
+        for _worker_attr, dialog_attr in MainWindow._WORKERS_STOPPED_ON_CLOSE:
+            assert getattr(window, dialog_attr) is None, dialog_attr
+
+    @pytest.mark.parametrize("answer", ["background", "stop"])
+    def test_dismissing_a_generation_dialog_does_not_crash(self, window, answer):
+        worker, dialog = MagicMock(name="generation"), MagicMock(name="dialog")
+        window._enhancements_progress_dialog = dialog
+        try:
+            if answer == "background":
+                assert window._send_generation_to_background(worker, dialog) is True
+            else:
+                window._stop_generation_from_dialog(worker, dialog)
+                worker.requestInterruption.assert_called_once_with()
+            assert window._enhancements_progress_dialog is None
+            assert window._forge_progress_dialog is None
+            dialog.deleteLater.assert_called_once_with()
+        finally:
+            window._enhancements_progress_dialog = None
+            window._simple_run_active = False
+
+
 class TestTheLockFollowsEveryJob:
     """_refresh_job_lock runs as each job starts (its worker already set) and
     as it ends (its worker already cleared), so the lock never lags a job."""
