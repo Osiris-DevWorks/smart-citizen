@@ -264,3 +264,94 @@ def test_is_star_citizen_running_false_when_tasklist_fails(monkeypatch):
         raise FileNotFoundError("tasklist")
     monkeypatch.setattr(shader_cache.subprocess, "run", boom)
     assert is_star_citizen_running() is False
+
+
+def test_unreadable_cache_subfolder_is_not_clean(tmp_path, monkeypatch):
+    build = tmp_path / "starcitizen_(sc-alpha-4.10.2)_hg78hb_0"
+    (build / "shaders").mkdir(parents=True)
+    real_iterdir = Path.iterdir
+
+    def iterdir(self):
+        if self.name == "shaders":
+            raise PermissionError("denied")
+        return real_iterdir(self)
+    monkeypatch.setattr(Path, "iterdir", iterdir)
+
+    # Unreadable counts as having content, so Clean stays enabled and the
+    # delete gets to report the real error.
+    assert not find_shader_cache_dirs(tmp_path)[0].is_clean
+
+
+def test_rmtree_raises_when_a_folder_cannot_be_listed(tmp_path, monkeypatch):
+    top = tmp_path / "tree"
+    (top / "sub").mkdir(parents=True)
+    (top / "sub" / "a.bin").write_text("x")
+    real_walk = os.walk
+
+    def walk(path, onerror=None):
+        onerror(PermissionError("cannot list"))
+        yield from real_walk(path)
+    monkeypatch.setattr(shader_cache.os, "walk", walk)
+
+    with pytest.raises(PermissionError):
+        _rmtree(top)
+    assert top.exists()  # folders are only removed when nothing failed
+
+
+def test_rmtree_unlinks_folder_link_when_rmdir_refuses_it(tmp_path, monkeypatch):
+    # rmdir removes a folder link on Windows; where it refuses (POSIX), the
+    # link is unlinked instead. Either way the target is never followed.
+    target = tmp_path / "outside"
+    target.mkdir()
+    (target / "keep.bin").write_text("keep")
+    top = tmp_path / "tree"
+    top.mkdir()
+    try:
+        os.symlink(target, top / "link", target_is_directory=True)
+    except OSError:
+        pytest.skip("creating symlinks needs Developer Mode or admin on Windows")
+    real_rmdir = os.rmdir
+
+    def rmdir(path, *a, **k):
+        if os.path.basename(path) == "link":
+            raise OSError("not a directory")
+        return real_rmdir(path, *a, **k)
+    monkeypatch.setattr(shader_cache.os, "rmdir", rmdir)
+
+    _rmtree(top)
+
+    assert not top.exists()
+    assert (target / "keep.bin").read_text() == "keep"
+
+
+def _lock(monkeypatch, file_name):
+    real_unlink = os.unlink
+
+    def unlink(path, *a, **k):
+        if os.path.basename(path) == file_name:
+            raise PermissionError("locked")
+        return real_unlink(path, *a, **k)
+    monkeypatch.setattr(shader_cache.os, "unlink", unlink)
+    monkeypatch.setattr(shader_cache.os, "chmod", lambda *a, **k: None)
+
+
+def test_clean_returns_false_when_a_file_is_locked(tmp_path, monkeypatch):
+    drop = _make_cache(tmp_path, "starcitizen_(sc-alpha-4.10.2)_hg78hb_0")
+    _lock(monkeypatch, "a.bin")
+
+    assert not clean_shader_cache(drop, tmp_path)
+
+
+def test_remove_returns_false_when_a_file_is_locked(tmp_path, monkeypatch):
+    drop = _make_cache(tmp_path, "starcitizen_(sc-alpha-4.10.2)_hg78hb_0")
+    _lock(monkeypatch, "GraphicsSettings.json")
+
+    assert not remove_build_folder(drop, tmp_path)
+    assert drop.exists()
+
+
+def test_find_defaults_to_localappdata_root(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    _make_cache(tmp_path / "Star Citizen", "starcitizen_(sc-alpha-4.10.2)_hg78hb_0")
+
+    assert [d.label for d in find_shader_cache_dirs()] == ["Star Citizen Alpha 4.10.2 (hg78hb)"]
