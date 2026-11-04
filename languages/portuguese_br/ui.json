@@ -3123,7 +3123,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Escolha quais categorias de aprimoramentos rodam ao Gerar. Naves, componentes, armas de nave, armas FPS, missões, recompensas de missão, fabricação de mercadorias e consumíveis médicos podem ser ativados de forma independente."
+        "at": "Escolha quais categorias de aprimoramentos rodam ao Gerar: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items inclui componentes, armas de nave e mísseis; Gear inclui armas FPS e tags de armadura. Cada categoria pode ser ligada ou desligada separadamente."
       }
     },
     "enh_favorites": {
@@ -3154,6 +3154,26 @@
       "description": {
         "ht": "",
         "at": "Monte as tags entre colchetes adicionadas aos nomes de componentes, mísseis, armas de nave, commodities e armaduras. Reordene os elementos com ▲/▼, desmarque para excluir, mude o tamanho das abreviações, escolha o separador e os colchetes, ou coloque a tag depois do nome em vez de antes."
+      }
+    },
+    "blueprint_tracker": {
+      "title": {
+        "ht": "",
+        "at": "7. Rastreador de Blueprints"
+      },
+      "description": {
+        "ht": "",
+        "at": "Marque os blueprints que você possui. Busque na lista da esquerda por nome ou missão, ou refine por Tipo, Classe, Tamanho e Grau de componente, e então use as setas para mover itens para a sua lista de adquiridos. Blueprints adquiridos recebem uma tag [Owned] onde quer que apareçam nas recompensas potenciais de uma missão, para você ver de relance o que ainda vale caçar."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Sobreposição do Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Inicie a sobreposição aqui ou com o botão Sobreposição da barra de ferramentas. Sobre o jogo, ela decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
       }
     },
     "edit": {
@@ -3213,7 +3233,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Escolha o tema do app (Padrão / Claro / Escuro / ODW) e, se quiser, desative o tour automático a cada nova versão."
+        "at": "Escolha o tema do app (Padrão / Claro / Escuro / ODW) e o tamanho da fonte (Pequeno / Médio / Grande, aplicado após reiniciar) e, se quiser, desative o tour automático em novas versões."
       }
     },
     "cfg_sc_install": {
@@ -3253,37 +3273,37 @@
       },
       "description": {
         "ht": "",
-        "at": "Importe um INI externo para suas personalizações pela caixa de resolução de conflitos, ou redefina seu user.ini do canal ativo (com backup automático antes de limpar)."
+        "at": "Importe um INI externo para suas personalizações pela janela de resolução de conflitos. Redefina o user.ini do canal ativo (com backup antes) ou recupere uma cópia anterior com Restaurar user.ini. A prévia mostra o que Aplicar escreveria, e Verificar atualizações procura uma nova versão."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Config: Backup de Configurações"
+      },
+      "description": {
+        "ht": "",
+        "at": "Exportar Configurações salva suas preferências, ajustes de tags, pasta do Star Citizen e textos personalizados de todos os canais em um só arquivo. Importar Configurações os traz de volta, em um PC novo ou após uma instalação limpa."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Config: Ferramentas do Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Limpar cache de shaders lista as pastas de cache de shaders do jogo, uma por versão. Limpar apaga os shaders e mantém suas configurações gráficas; Remover apaga a pasta inteira. Feche o Star Citizen antes."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Ajuda e feedback"
+        "at": "21. Ajuda e feedback"
       },
       "description": {
         "ht": "",
         "at": "O botão Ajuda abre um painel lateral com o guia completo, a lista de Problemas Conhecidos e um link para o canal do Smart Citizen no Discord. Isso é tudo o que você precisa para começar: boa sorte, cidadão."
-      }
-    },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Sobreposição do Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Inicie a sobreposição aqui ou com o botão Sobreposição da barra de ferramentas. Sobre o jogo, ela decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
-      }
-    },
-    "blueprint_tracker": {
-      "title": {
-        "ht": "",
-        "at": "7. Rastreador de Blueprints"
-      },
-      "description": {
-        "ht": "",
-        "at": "Marque os blueprints que você possui. Busque na lista da esquerda por nome ou missão, ou refine por Tipo, Classe, Tamanho e Grau de componente, e então use as setas para mover itens para a sua lista de adquiridos. Blueprints adquiridos recebem uma tag [Owned] onde quer que apareçam nas recompensas potenciais de uma missão, para você ver de relance o que ainda vale caçar."
       }
     }
   },

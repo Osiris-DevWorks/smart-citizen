@@ -390,6 +390,18 @@ them against the new source.
   cihazından" (the pack uses "üretici" for a manufacturer) and "mevcut
   listeye", and italian says "la loro ricezione" instead of "di averli
   ricevuti", which made the game the receiver.
+- **3.0.1 cycle (2026-11-04, Claude Opus 5.5):** the guided tour caught up
+  with 3.0.0. `tutorial.enh_categories`, `tutorial.cfg_appearance` and
+  `tutorial.cfg_tools` were reworded in `assets/tutorial.json` (the category
+  names as the checkboxes show them, which stay English; the font size; Restore
+  user.ini, Preview Apply and Check for Updates), and two steps were added
+  after Tools: `tutorial.cfg_backup` (Export / Import Settings) and
+  `tutorial.cfg_sc_tools` (Clear Shader Cache). The tour is now 21 steps, so
+  every title from 19 on was renumbered. AI `at` written or refreshed in all
+  eleven languages, none of which has a human `ht` for these keys; each
+  keeps its file's own words for the theme names, the font sizes and
+  overrides, and the new titles are built from its `config.backup_group` and
+  `config.sc_tools_group`.
 - **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #492 added
   `enhancements.tag_mapping_tooltip_weight` (the Edit mapping tooltip on the
   Tag Builder's Armor > Weight row) and reworded `enhancements.cat_desc_gear`.
