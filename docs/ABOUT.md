@@ -89,6 +89,7 @@ The non-English game strings are community translations:
 - **Restore Backups**: Keep up to 5 backup versions per channel — revert changes anytime with one click
 - **Clear Localization**: Revert your game to vanilla text without losing your saved overrides
 - **Import INI**: Import an existing INI file and resolve conflicts key-by-key with the built-in conflict dialog
+- **Clear Shader Cache**: Clean a Star Citizen build's shader cache (graphics settings kept) or remove the whole build folder from the Config tab; the game rebuilds the cache on the next launch
 - **Simple & Advanced Mode**: Open to a two-button Simple screen (one button applies enhancements with your saved settings, the other switches to Advanced), or use the full Advanced UI (table, filters, Enhancements, Config) whenever you want to hand-edit. Pick your default at install and flip between them in-app
 - **FAQ Tab**: The questions we hear most, answered right in the app — what files get touched, ban risk, the Windows unrecognized-app warning, and how to undo changes
 - **Flexible Window & Columns**: Resize the window to any size — each tab scrolls its own content rather than squeezing or clipping controls. String Editor columns are drag-resizable (double-click a divider to fit its content) and your widths and window layout persist between launches, with **More → Reset Window Proportions** to restore the defaults

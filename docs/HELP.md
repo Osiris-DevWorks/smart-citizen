@@ -191,6 +191,7 @@ If the scan decoder hits an error it stops, and the status bar says so. Stop and
 - **Reset user.ini** — wipe all of your personal edits for the active channel. Prompts for confirmation and auto-backs up the current `user.ini` before clearing it.
 - **Restore user.ini** — roll your personal edits back to an earlier snapshot. Smart Citizen keeps rotating backups of `user.ini` (up to 5, taken automatically before each change), so if an import or edit goes wrong you can pick a previous version and get your strings back. The restore itself is reversible: the current file is snapshotted first.
 - **Export Settings… / Import Settings…** — back up your whole setup (settings plus every channel's `user.ini`) into one small zip, or restore it on a new PC. See *Export / Import Settings* above.
+- **Star Citizen Tools → Clear Shader Cache…** — lists the shader cache folder of each Star Citizen build in `%LOCALAPPDATA%\Star Citizen` (e.g. *Star Citizen Alpha 4.10.2*, *Star Citizen Tech Preview*). **Clean** deletes the build's `shaders` and `vulkanshadercache` folders and keeps its graphics settings; a build with nothing to clean is greyed out. **Remove** deletes the whole build folder, graphics settings included, without asking. Neither runs while Star Citizen is open. The game rebuilds the cache on the next launch, so the first start takes longer.
 
 ## Log Tab
 

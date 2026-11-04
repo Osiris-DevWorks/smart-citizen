@@ -191,6 +191,7 @@ Tarama çözücüsü bir hatayla karşılaşırsa durur ve durum çubuğu bunu b
 - **user.ini Dosyasını Sıfırla...** — etkin kanal için tüm kişisel düzenlemelerinizi silin. Onay ister ve temizlemeden önce mevcut `user.ini` dosyasını otomatik olarak yedekler.
 - **user.ini Dosyasını Geri Yükle...** — kişisel düzenlemelerinizi önceki bir anlık görüntüye geri alın. Smart Citizen `user.ini` dosyasının dönüşümlü yedeklerini saklar (en fazla 5; her değişiklikten önce otomatik olarak alınır); böylece bir içe aktarma veya düzenleme ters giderse önceki bir sürümü seçip metinlerinizi geri alabilirsiniz. Geri yüklemenin kendisi de geri alınabilir: önce mevcut dosyanın anlık görüntüsü alınır.
 - **Ayarları Dışa Aktar... / Ayarları İçe Aktar...** — tüm kurulumunuzu (ayarlar ve her kanalın `user.ini` dosyası) tek bir küçük zip'e yedekleyin veya yeni bir bilgisayarda geri yükleyin. Yukarıdaki *Ayarları Dışa / İçe Aktarın* bölümüne bakın.
+- **Star Citizen Araçları → Gölgelendirici Önbelleğini Temizle…** — `%LOCALAPPDATA%\Star Citizen` içindeki her Star Citizen sürümünün gölgelendirici önbellek klasörünü listeler (ör. *Star Citizen Alpha 4.10.2*, *Star Citizen Tech Preview*). **Temizle**, sürümün `shaders` ve `vulkanshadercache` klasörlerini siler ve grafik ayarlarını korur; temizlenecek bir şeyi olmayan sürüm gri görünür. **Kaldır**, sormadan sürüm klasörünün tamamını grafik ayarlarıyla birlikte siler. Star Citizen açıkken ikisi de çalışmaz. Oyun önbelleği bir sonraki açılışta yeniden oluşturur, bu yüzden ilk açılış daha uzun sürer.
 
 ## Günlük Sekmesi
 

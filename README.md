@@ -114,6 +114,7 @@ The Config tab lets you set:
 - **Data sources**: enable/disable, drag-drop merge priority
 - **Import INI**: fold an external `.ini` into your overrides
 - **Reset / Restore user.ini**: wipe your edits for the channel (with an auto-backup), or roll them back to an earlier rotating snapshot
+- **Clear Shader Cache** (Star Citizen Tools): clean a build's shader cache in `%LOCALAPPDATA%\Star Citizen` (graphics settings kept), or remove the whole build folder
 
 The Enhancements tab lets you toggle each enhancement category (ship stats, weapon stats, mission tags, etc.), configure the ship favorite prefix, customize the **Tag Builder** for components, missiles, ship weapons, commodities, and armor (plus **Mission Titles** route tags), mark owned crafting blueprints, and adjust **Mission Labels** (section headers, XP label, emphasis tag).
 
