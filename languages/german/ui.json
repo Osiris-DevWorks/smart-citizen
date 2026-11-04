@@ -3123,7 +3123,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Schalte um, welche Erweiterungskategorien beim Erstellen ausgeführt werden. Schiffe, Komponenten, Schiffswaffen, FPS-Waffen, Missionen, Missionsbelohnungen, Rohstoffherstellung und medizinische Verbrauchsgüter können jeweils unabhängig aktiviert werden."
+        "at": "Schalte um, welche Erweiterungskategorien beim Erstellen laufen: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items umfasst Komponenten, Schiffswaffen und Raketen; Gear umfasst FPS-Waffen und Rüstungs-Tags. Jede Kategorie lässt sich einzeln ein- oder ausschalten."
       }
     },
     "enh_favorites": {
@@ -3156,16 +3156,6 @@
         "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen, Rohstoffe und Rüstungen. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Smart Citizen Overlay"
-      },
-      "description": {
-        "ht": "",
-        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3164,16 @@
       "description": {
         "ht": "",
         "at": "Markiere die Baupläne, die du besitzt. Durchsuche die linke Liste nach Name oder Mission, oder grenze sie nach Komponententyp, Klasse, Größe und Grad ein, und verschiebe dann mit den Pfeilen Gegenstände in deine Besessen-Liste. Besessene Baupläne erhalten ein [Owned]-Tag, wo immer sie in den möglichen Belohnungen einer Mission erscheinen, damit du auf einen Blick siehst, was sich zu verfolgen lohnt."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Overlay"
+      },
+      "description": {
+        "ht": "",
+        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
       }
     },
     "edit": {
@@ -3233,7 +3233,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und deaktiviere optional die automatische Tour bei neuen Versionen."
+        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und die Schriftgröße (Klein / Mittel / Groß, gilt nach einem Neustart) und deaktiviere optional die automatische Tour bei neuen Versionen."
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3273,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Importiere eine externe INI über den Konfliktlösungsdialog in deine Überschreibungen, oder setze deine user.ini für den aktiven Kanal zurück (wird vor dem Leeren automatisch gesichert)."
+        "at": "Importiere eine externe INI über den Konfliktdialog in deine Überschreibungen. Setze die user.ini des aktiven Kanals zurück (vorher gesichert) oder hole mit user.ini wiederherstellen eine frühere Kopie zurück. Die Vorschau zeigt, was Anwenden schreiben würde, und Nach Updates suchen prüft auf eine neue Version."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Konfiguration: Einstellungssicherung"
+      },
+      "description": {
+        "ht": "",
+        "at": "Einstellungen exportieren speichert deine Einstellungen, Tag-Konfigurationen, deinen Star Citizen-Ordner und deine eigenen Texte aller Kanäle in einer Datei. Einstellungen importieren holt sie zurück, auf einem neuen PC oder nach einer Neuinstallation."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Konfiguration: Star Citizen-Werkzeuge"
+      },
+      "description": {
+        "ht": "",
+        "at": "Shader-Cache leeren listet die Shader-Cache-Ordner des Spiels auf, einen pro Spielversion. Bereinigen löscht die Shader und behält deine Grafikeinstellungen; Entfernen löscht den ganzen Ordner. Schließe Star Citizen vorher."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Hilfe & Feedback"
+        "at": "21. Hilfe & Feedback"
       },
       "description": {
         "ht": "",
