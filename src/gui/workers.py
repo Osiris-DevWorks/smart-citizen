@@ -373,6 +373,47 @@ class LanguageBaseDownloadWorker(QThread):
             self.finished.emit(False)
 
 
+class ShaderCacheWorker(QThread):
+    """Clean or remove one Star Citizen shader cache folder.
+
+    A cache folder holds several GB in many small files, so deleting it on
+    the main thread would freeze the window.
+    """
+
+    STATUS_DONE = "done"
+    STATUS_FAILED = "failed"
+    STATUS_GAME_RUNNING = "game_running"  # nothing was touched
+
+    finished = pyqtSignal(str)  # one of the STATUS_* values, always emitted once
+
+    def __init__(self, path, remove: bool, root):
+        super().__init__()
+        self._path = path
+        self._remove = remove
+        self._root = root
+
+    def run(self):
+        from src.utils.shader_cache import (
+            clean_shader_cache, is_star_citizen_running, remove_build_folder,
+        )
+        try:
+            # Checked here, not on the GUI thread: tasklist takes a moment.
+            if is_star_citizen_running():
+                self.finished.emit(self.STATUS_GAME_RUNNING)
+                return
+            action = remove_build_folder if self._remove else clean_shader_cache
+            ok = action(self._path, self._root)
+        except Exception:
+            # WARNING, not ERROR: the dialog shows its own failure box, and
+            # ERROR would raise a second one via ErrorDialogHandler.
+            logger.warning(
+                f"Shader cache {'remove' if self._remove else 'clean'} failed",
+                exc_info=True,
+            )
+            ok = False
+        self.finished.emit(self.STATUS_DONE if ok else self.STATUS_FAILED)
+
+
 class BlueprintLogScanWorker(QThread):
     """Scan a channel's SC logs for received-blueprint events (#222).
 

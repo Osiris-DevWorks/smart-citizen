@@ -1089,6 +1089,22 @@
     "dupe_verdict_unknown": {
       "ht": "",
       "at": "{count}개 설치 항목을 찾았지만, Smart Citizen이 플레이 중인 항목을 판단할 수 없습니다. 최신 빌드 순으로 나열되어 있으니 실행하는 항목을 선택하세요."
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Star Citizen 도구"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "게임 로컬 파일 관리 도구입니다. 사용하기 전에 Star Citizen을 종료하세요."
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "셰이더 캐시 지우기..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "%LOCALAPPDATA%\\Star Citizen에 있는 Star Citizen 셰이더 캐시 폴더를 정리하거나 삭제합니다."
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "이것은 단축키로 쓸 수 없습니다. Ctrl, Alt 또는 Win을 누른 채 영문자, 숫자, 기호, Space, Tab 또는 이동 키(화살표, Home, End, Page Up/Down, Insert, Delete)를 누르세요. Shift를 더해도 됩니다. F 키나 Pause는 단독으로도 쓸 수 있습니다."
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "셰이더 캐시 지우기"
+    },
+    "desc": {
+      "ht": "",
+      "at": "정리는 빌드의 셰이더 캐시를 지우고 그래픽 설정은 유지합니다.\n삭제는 폴더 전체를 지웁니다.\n\n회색으로 표시된 빌드는 이미 비어 있습니다. Star Citizen은 다음 실행 시 캐시를 다시 만들기 때문에 첫 실행이 더 오래 걸립니다. 먼저 게임을 종료하세요."
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "정리"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "shaders 및 vulkanshadercache 폴더를 삭제합니다. 그래픽 설정은 유지됩니다."
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "삭제"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "그래픽 설정을 포함해 폴더 전체를 삭제합니다."
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "닫기"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "다음 위치에서 셰이더 캐시 폴더를 찾을 수 없습니다:\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "셰이더 캐시 정리 중..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "폴더 삭제 중..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "완전히 정리하지 못했습니다:\n{folder}\n\nStar Citizen을 종료한 후 다시 시도하세요."
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "삭제하지 못했습니다:\n{folder}\n\nStar Citizen을 종료한 후 다시 시도하세요."
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen이 실행 중입니다. 먼저 게임을 종료하세요. 게임이 셰이더 캐시를 열어 두고 있어 지금 삭제하면 일부만 지워집니다."
     }
   }
 }

@@ -193,6 +193,7 @@ Se o decodificador de escaneamento encontrar um erro, ele para, e a barra de sta
 - **Resetar user.ini**: apague todas as suas edições pessoais do canal ativo. Pede confirmação e faz backup automático do `user.ini` atual antes de limpar.
 - **Restaurar user.ini**: volte suas edições pessoais para um snapshot anterior. O Smart Citizen mantém backups rotativos do `user.ini` (até 5, tirados automaticamente antes de cada mudança): se uma importação ou edição der errado, escolha uma versão anterior e recupere suas strings. A restauração é reversível: o arquivo atual é salvo primeiro.
 - **Exportar Configurações… / Importar Configurações…**: faça backup de toda a sua configuração (as configurações mais o `user.ini` de todos os canais) em um único zip pequeno, ou restaure em um PC novo. Veja *Exportar / Importar Configurações* acima.
+- **Ferramentas do Star Citizen → Limpar cache de shaders…** — lista a pasta de cache de shaders de cada build do Star Citizen em `%LOCALAPPDATA%\Star Citizen` (ex.: *Star Citizen Alpha 4.10.2*, *Star Citizen Tech Preview*). **Limpar** exclui as pastas `shaders` e `vulkanshadercache` da build e mantém as configurações gráficas; uma build sem nada para limpar aparece em cinza. **Remover** exclui sem perguntar a pasta inteira da build, incluindo as configurações gráficas. Nenhum dos dois roda enquanto o Star Citizen está aberto. O jogo recria o cache na próxima inicialização, então a primeira abertura será mais lenta.
 
 ## Aba Log
 

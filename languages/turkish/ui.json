@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "Buraya yerelleştirme uygulanmamış"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Star Citizen Araçları"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "Oyunun yerel dosyaları için bakım. Bu araçları kullanmadan önce Star Citizen'ı kapatın."
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "Gölgelendirici Önbelleğini Temizle..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "%LOCALAPPDATA%\\Star Citizen içindeki Star Citizen gölgelendirici önbellek klasörlerini temizler veya kaldırır."
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Bu bir kısayol olamaz. Bir harf, rakam, sembol, Boşluk, Tab veya gezinme tuşuyla (oklar, Home, End, Page Up/Down, Insert, Delete) birlikte Ctrl, Alt veya Win tuşunu basılı tutun; isterseniz Shift de ekleyin. Bir F tuşu veya Pause tek başına da çalışır."
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "Gölgelendirici Önbelleğini Temizle"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Temizle, bir sürümün gölgelendirici önbelleğini siler ve grafik ayarlarını korur.\nKaldır, klasörün tamamını siler.\n\nGri görünen sürümler zaten temiz. Star Citizen önbelleği bir sonraki açılışta yeniden oluşturur, bu yüzden ilk açılış daha uzun sürer. Önce oyunu kapatın."
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "Temizle"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "shaders ve vulkanshadercache klasörlerini siler. Grafik ayarları korunur."
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "Kaldır"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "Grafik ayarları dahil klasörün tamamını siler."
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "Kapat"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "Şurada gölgelendirici önbellek klasörü bulunamadı:\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "Gölgelendirici önbelleği temizleniyor..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "Klasör kaldırılıyor..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "Tamamen temizlenemedi:\n{folder}\n\nStar Citizen'ı kapatıp tekrar deneyin."
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "Kaldırılamadı:\n{folder}\n\nStar Citizen'ı kapatıp tekrar deneyin."
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen çalışıyor. Önce oyunu kapatın: oyun gölgelendirici önbelleğini açık tutar, şimdi silmek onu yarım bırakır."
     }
   }
 }

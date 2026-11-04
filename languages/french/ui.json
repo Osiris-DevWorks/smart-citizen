@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "Aucune localisation appliquée ici"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Outils Star Citizen"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "Maintenance des fichiers locaux du jeu. Fermez Star Citizen avant d'utiliser ces outils."
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "Vider le cache des shaders..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "Vider ou supprimer les dossiers de cache des shaders de Star Citizen dans %LOCALAPPDATA%\\Star Citizen."
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Ceci ne peut pas servir de raccourci. Maintenez Ctrl, Alt ou Win avec une lettre, un chiffre, un symbole, Espace, Tab ou une touche de navigation (flèches, Origine, Fin, Page préc./suiv., Inser, Suppr), et Maj aussi si vous voulez. Une touche F ou Pause fonctionne aussi seule."
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "Vider le cache des shaders"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Vider supprime le cache des shaders d'une build et conserve ses paramètres graphiques.\nSupprimer efface tout le dossier.\n\nLes builds grisées sont déjà propres. Star Citizen recrée le cache au prochain lancement, le premier démarrage sera donc plus long. Fermez d'abord le jeu."
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "Vider"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "Supprime les dossiers shaders et vulkanshadercache. Les paramètres graphiques sont conservés."
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "Supprimer"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "Supprime tout le dossier, paramètres graphiques compris."
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "Fermer"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "Aucun dossier de cache des shaders trouvé dans :\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "Vidage du cache des shaders..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "Suppression du dossier..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "Impossible de vider complètement :\n{folder}\n\nFermez Star Citizen et réessayez."
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "Impossible de supprimer :\n{folder}\n\nFermez Star Citizen et réessayez."
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen est en cours d'exécution. Fermez d'abord le jeu : il garde le cache des shaders ouvert, une suppression maintenant le laisserait à moitié effacé."
     }
   }
 }
