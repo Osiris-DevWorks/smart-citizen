@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "Nessuna localizzazione applicata qui"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Strumenti di Star Citizen"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "Manutenzione dei file locali del gioco. Chiudi Star Citizen prima di usare questi strumenti."
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "Svuota cache shader..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "Svuota o rimuovi le cartelle della cache shader di Star Citizen in %LOCALAPPDATA%\\Star Citizen."
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Questa non può essere una scorciatoia. Tieni premuto Ctrl, Alt o Win con una lettera, un numero, un simbolo, Spazio, Tab o un tasto di navigazione (frecce, Home, Fine, Pag su/giù, Ins, Canc), e anche Maiusc se vuoi. Un tasto F o Pausa funziona anche da solo."
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "Svuota cache shader"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Svuota elimina la cache shader di una build e mantiene le impostazioni grafiche.\nRimuovi elimina l'intera cartella.\n\nLe build in grigio sono già pulite. Star Citizen ricrea la cache al prossimo avvio, quindi il primo avvio richiederà più tempo. Chiudi prima il gioco."
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "Svuota"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "Elimina le cartelle shaders e vulkanshadercache. Le impostazioni grafiche vengono mantenute."
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "Rimuovi"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "Elimina l'intera cartella, impostazioni grafiche incluse."
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "Chiudi"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "Nessuna cartella della cache shader trovata in:\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "Svuotamento della cache shader..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "Rimozione della cartella..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "Impossibile svuotare completamente:\n{folder}\n\nChiudi Star Citizen e riprova."
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "Impossibile rimuovere:\n{folder}\n\nChiudi Star Citizen e riprova."
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen è in esecuzione. Chiudi prima il gioco: tiene aperta la cache shader, quindi eliminarla ora la lascerebbe a metà."
     }
   }
 }

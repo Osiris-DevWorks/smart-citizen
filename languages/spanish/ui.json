@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "No hay ninguna localización aplicada aquí"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Herramientas de Star Citizen"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "Mantenimiento de los archivos locales del juego. Cierra Star Citizen antes de usar estas herramientas."
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "Borrar caché de shaders..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "Limpia o elimina las carpetas de caché de shaders de Star Citizen en %LOCALAPPDATA%\\Star Citizen."
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Esto no puede ser un atajo. Mantén pulsada Ctrl, Alt o Win con una letra, un número, un símbolo, Espacio, Tab o una tecla de navegación (flechas, Inicio, Fin, Re Pág/Av Pág, Insert, Supr), y también Mayús si quieres. Una tecla F o Pausa también sirve sola."
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "Borrar caché de shaders"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Limpiar borra la caché de shaders de una build y conserva su configuración gráfica.\nEliminar borra la carpeta completa.\n\nLas builds en gris ya están limpias. Star Citizen vuelve a crear la caché en el siguiente inicio, así que el primer arranque tardará más. Cierra el juego primero."
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "Limpiar"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "Borra las carpetas shaders y vulkanshadercache. La configuración gráfica se conserva."
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "Eliminar"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "Borra la carpeta completa, incluida la configuración gráfica."
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "Cerrar"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "No se encontraron carpetas de caché de shaders en:\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "Limpiando caché de shaders..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "Eliminando carpeta..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "No se pudo limpiar por completo:\n{folder}\n\nCierra Star Citizen e inténtalo de nuevo."
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "No se pudo eliminar:\n{folder}\n\nCierra Star Citizen e inténtalo de nuevo."
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen se está ejecutando. Cierra el juego primero: mantiene abierta la caché de shaders, así que borrarla ahora la dejaría a medias."
     }
   }
 }

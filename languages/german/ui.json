@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "Hier ist keine Lokalisierung angewendet"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Star Citizen-Werkzeuge"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "Wartung der lokalen Spieldateien. Schließe Star Citizen, bevor du diese Werkzeuge verwendest."
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "Shader-Cache leeren..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "Shader-Cache-Ordner von Star Citizen in %LOCALAPPDATA%\\Star Citizen leeren oder entfernen."
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Das kann kein Tastenkürzel sein. Halte Strg, Alt oder Win mit einem Buchstaben, einer Ziffer, einem Symbol, der Leertaste, Tab oder einer Navigationstaste (Pfeile, Pos1, Ende, Bild auf/ab, Einfg, Entf), auf Wunsch auch Umschalt. Eine F-Taste oder Pause geht auch allein."
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "Shader-Cache leeren"
+    },
+    "desc": {
+      "ht": "",
+      "at": "Leeren löscht den Shader-Cache eines Builds und behält die Grafikeinstellungen.\nEntfernen löscht den ganzen Ordner.\n\nAusgegraute Builds sind bereits leer. Star Citizen erstellt den Cache beim nächsten Start neu, daher dauert der erste Start länger. Schließe zuerst das Spiel."
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "Leeren"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "Löscht die Ordner shaders und vulkanshadercache. Grafikeinstellungen bleiben erhalten."
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "Entfernen"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "Löscht den ganzen Ordner, einschließlich der Grafikeinstellungen."
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "Schließen"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "Keine Shader-Cache-Ordner gefunden in:\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "Shader-Cache wird geleert..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "Ordner wird entfernt..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "Konnte nicht vollständig geleert werden:\n{folder}\n\nSchließe Star Citizen und versuche es erneut."
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "Konnte nicht entfernt werden:\n{folder}\n\nSchließe Star Citizen und versuche es erneut."
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen läuft. Schließe zuerst das Spiel: Es hält den Shader-Cache geöffnet, ein Löschen jetzt würde ihn nur halb entfernen."
     }
   }
 }

@@ -179,9 +179,10 @@ class ConfigTab(QWidget):
 
         button_layout.addStretch()
         tools_layout.addLayout(button_layout)
-        # _tools_group is added to the layout last (see the bottom of this
-        # method) so Tools stays at the bottom of the Config tab, where it sat
-        # before the scroll-area wrap reordered it to the top.
+        # _tools_group is added to the layout near the end (see the bottom of
+        # this method) so Tools stays low on the Config tab, where it sat before
+        # the scroll-area wrap reordered it to the top. Only Star Citizen Tools
+        # and Settings Backup come after it.
 
         # ── Appearance ───────────────────────────────────────────────────────
         self._appearance_group = QGroupBox(tr("config.appearance_group"))
@@ -436,8 +437,29 @@ class ConfigTab(QWidget):
 
         self._refresh_p4k_status()
 
-        # Tools last, so it sits at the bottom of the Config tab.
+        # Tools near the bottom of the Config tab, followed only by Star
+        # Citizen Tools and Settings Backup.
         layout.addWidget(self._tools_group)
+
+        # ── Star Citizen Tools ───────────────────────────────────────────────
+        self._sc_tools_group = QGroupBox(tr("config.sc_tools_group"))
+        sc_tools_layout = QVBoxLayout(self._sc_tools_group)
+
+        self._sc_tools_desc_label = QLabel(tr("config.sc_tools_desc"))
+        self._sc_tools_desc_label.setProperty("role", "secondary")
+        self._sc_tools_desc_label.setStyleSheet("font-size: 11px;")
+        self._sc_tools_desc_label.setWordWrap(True)
+        sc_tools_layout.addWidget(self._sc_tools_desc_label)
+
+        sc_tools_btn_layout = QHBoxLayout()
+        self._clear_shader_cache_btn = QPushButton(tr("config.clear_shader_cache_btn"))
+        self._clear_shader_cache_btn.setMaximumWidth(170)
+        self._clear_shader_cache_btn.setToolTip(tr("config.clear_shader_cache_tooltip"))
+        self._clear_shader_cache_btn.clicked.connect(self._clear_shader_cache)
+        sc_tools_btn_layout.addWidget(self._clear_shader_cache_btn)
+        sc_tools_btn_layout.addStretch()
+        sc_tools_layout.addLayout(sc_tools_btn_layout)
+        layout.addWidget(self._sc_tools_group)
 
         # ── Settings Backup (Export / Import Settings) ───────────────────────
         self._backup_group = QGroupBox(tr("config.backup_group"))
@@ -491,6 +513,10 @@ class ConfigTab(QWidget):
         self._preview_btn.setToolTip(tr("config.preview_apply_tooltip"))
         self._check_updates_btn.setText(tr("config.check_updates_btn"))
         self._check_updates_btn.setToolTip(tr("config.check_updates_tooltip"))
+        self._sc_tools_group.setTitle(tr("config.sc_tools_group"))
+        self._sc_tools_desc_label.setText(tr("config.sc_tools_desc"))
+        self._clear_shader_cache_btn.setText(tr("config.clear_shader_cache_btn"))
+        self._clear_shader_cache_btn.setToolTip(tr("config.clear_shader_cache_tooltip"))
         self._backup_group.setTitle(tr("config.backup_group"))
         self._backup_desc_label.setText(tr("config.backup_desc"))
         self._export_settings_btn.setText(tr("config.export_settings_btn"))
@@ -662,6 +688,16 @@ class ConfigTab(QWidget):
         if path:
             self.game_path_input.setText(path)
             self._save_game_path()
+
+    # ── Star Citizen Tools: shader cache ─────────────────────────────────────
+
+    def _clear_shader_cache(self):
+        """Open the list of shader cache folders, each with Clean and Remove."""
+        from src.gui.shader_cache_dialog import ShaderCacheDialog
+        from src.utils.shader_cache import get_shader_cache_root
+
+        # The dialog scans the folders and shows its own "none found" line.
+        ShaderCacheDialog(get_shader_cache_root(), self).exec()
 
     # ── Duplicate-install check (2.4) ────────────────────────────────────────
 

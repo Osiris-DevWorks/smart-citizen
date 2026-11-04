@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "此处未应用本地化"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Star Citizen 工具"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "游戏本地文件维护。使用前请先关闭 Star Citizen。"
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "清除着色器缓存..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "清理或删除 %LOCALAPPDATA%\\Star Citizen 中的 Star Citizen 着色器缓存文件夹。"
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "这个不能用作热键。请按住 Ctrl、Alt 或 Win，再加一个字母、数字、符号、空格、Tab 或导航键（方向键、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 键或 Pause 也可以单独使用。"
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "清除着色器缓存"
+    },
+    "desc": {
+      "ht": "",
+      "at": "“清理”删除某个版本的着色器缓存并保留图形设置。\n“删除”删除整个文件夹。\n\n灰色的版本已经是干净的。Star Citizen 会在下次启动时重新生成缓存，因此首次启动会更慢。请先关闭游戏。"
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "清理"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "删除 shaders 和 vulkanshadercache 文件夹。图形设置会保留。"
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "删除"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "删除整个文件夹，包括图形设置。"
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "关闭"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "未找到着色器缓存文件夹：\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "正在清理着色器缓存..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "正在删除文件夹..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "无法完全清理：\n{folder}\n\n请关闭 Star Citizen 后重试。"
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "无法删除：\n{folder}\n\n请关闭 Star Citizen 后重试。"
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen 正在运行。请先关闭游戏：游戏会占用着色器缓存，现在删除只会删掉一部分。"
     }
   }
 }

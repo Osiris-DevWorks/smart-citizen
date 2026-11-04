@@ -1089,6 +1089,22 @@
     "map_language_overwrite_warning": {
       "ht": "",
       "at": "{languages} 無法對映到此路徑：該路徑是智慧公民為該語言寫入合併輸出的位置。再次應用會將該輸出當作來源重新讀入，導致每項增強內容加倍。請先將社群翻譯檔案複製到其他資料夾，然後對映該副本。"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Star Citizen 工具"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "遊戲本機檔案維護。使用前請先關閉 Star Citizen。"
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "清除著色器快取..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "清理或刪除 %LOCALAPPDATA%\\Star Citizen 中的 Star Citizen 著色器快取資料夾。"
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "這個不能用作快速鍵。請按住 Ctrl、Alt 或 Win，再加一個字母、數字、符號、空白鍵、Tab 或導覽鍵（方向鍵、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 鍵或 Pause 也可以單獨使用。"
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "清除著色器快取"
+    },
+    "desc": {
+      "ht": "",
+      "at": "「清理」刪除某個版本的著色器快取並保留圖形設定。\n「刪除」刪除整個資料夾。\n\n灰色的版本已經是乾淨的。Star Citizen 會在下次啟動時重新產生快取，因此首次啟動會較慢。請先關閉遊戲。"
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "清理"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "刪除 shaders 和 vulkanshadercache 資料夾。圖形設定會保留。"
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "刪除"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "刪除整個資料夾，包括圖形設定。"
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "關閉"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "找不到著色器快取資料夾：\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "正在清理著色器快取..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "正在刪除資料夾..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "無法完全清理：\n{folder}\n\n請關閉 Star Citizen 後再試一次。"
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "無法刪除：\n{folder}\n\n請關閉 Star Citizen 後再試一次。"
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen 正在執行。請先關閉遊戲：遊戲會占用著色器快取，現在刪除只會刪掉一部分。"
     }
   }
 }

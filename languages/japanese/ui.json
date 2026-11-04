@@ -1089,6 +1089,22 @@
     "dupe_not_applied": {
       "ht": "",
       "at": "ここにローカライズは適用されていません"
+    },
+    "sc_tools_group": {
+      "ht": "",
+      "at": "Star Citizen ツール"
+    },
+    "sc_tools_desc": {
+      "ht": "",
+      "at": "ゲームのローカルファイルのメンテナンスです。使用前に Star Citizen を終了してください。"
+    },
+    "clear_shader_cache_btn": {
+      "ht": "",
+      "at": "シェーダーキャッシュを削除..."
+    },
+    "clear_shader_cache_tooltip": {
+      "ht": "",
+      "at": "%LOCALAPPDATA%\\Star Citizen にある Star Citizen のシェーダーキャッシュフォルダーをクリーンまたは削除します。"
     }
   },
   "enhancements": {
@@ -3795,6 +3811,60 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "これはホットキーにできません。Ctrl、Alt、Win のいずれかを押しながら、英字、数字、記号、Space、Tab、または移動キー（矢印、Home、End、Page Up/Down、Insert、Delete）を押してください。Shift を加えてもかまいません。F キーや Pause は単独でも使えます。"
+    }
+  },
+  "shader_cache": {
+    "title": {
+      "ht": "",
+      "at": "シェーダーキャッシュを削除"
+    },
+    "desc": {
+      "ht": "",
+      "at": "クリーンはビルドのシェーダーキャッシュを削除し、グラフィック設定は保持します。\n削除はフォルダー全体を削除します。\n\nグレー表示のビルドはすでにクリーンです。Star Citizen は次回起動時にキャッシュを再作成するため、最初の起動に時間がかかります。先にゲームを終了してください。"
+    },
+    "clean_btn": {
+      "ht": "",
+      "at": "クリーン"
+    },
+    "clean_tooltip": {
+      "ht": "",
+      "at": "shaders と vulkanshadercache フォルダーを削除します。グラフィック設定は保持されます。"
+    },
+    "remove_btn": {
+      "ht": "",
+      "at": "削除"
+    },
+    "remove_tooltip": {
+      "ht": "",
+      "at": "グラフィック設定を含め、フォルダー全体を削除します。"
+    },
+    "close_btn": {
+      "ht": "",
+      "at": "閉じる"
+    },
+    "none_found": {
+      "ht": "",
+      "at": "シェーダーキャッシュフォルダーが見つかりません:\n{path}"
+    },
+    "cleaning": {
+      "ht": "",
+      "at": "シェーダーキャッシュをクリーン中..."
+    },
+    "removing": {
+      "ht": "",
+      "at": "フォルダーを削除中..."
+    },
+    "clean_failed_body": {
+      "ht": "",
+      "at": "完全にクリーンできませんでした:\n{folder}\n\nStar Citizen を終了してからもう一度お試しください。"
+    },
+    "remove_failed_body": {
+      "ht": "",
+      "at": "削除できませんでした:\n{folder}\n\nStar Citizen を終了してからもう一度お試しください。"
+    },
+    "game_running_body": {
+      "ht": "",
+      "at": "Star Citizen が実行中です。先にゲームを終了してください。ゲームがシェーダーキャッシュを開いているため、今削除すると中途半端に残ります。"
     }
   }
 }
