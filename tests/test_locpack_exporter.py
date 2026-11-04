@@ -1,16 +1,12 @@
 """Tests for src.utils.locpack_exporter — zip packaging of applied global.ini."""
 from __future__ import annotations
 
-import sys
 import zipfile
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from utils.locpack_exporter import default_locpack_filename, write_locpack_zip  # noqa: E402
+from src.utils.locpack_exporter import default_locpack_filename, write_locpack_zip
 
 pytestmark = pytest.mark.unit
 

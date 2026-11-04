@@ -117,7 +117,7 @@ Use a HEREDOC to preserve formatting. When updating an existing PR, fetch the cu
 - [ ] New non-exempt code has matching test coverage in `tests/`
 - [ ] Target branch is the active `release/X.Y.Z`, not `main`
 - [ ] No direct `QSettings` calls, no hard-coded column indices, no `QProgressBar.setValue()` from workers
-- [ ] If new enhancement category: `CATEGORY_SUBTREES` and `DATAFORGE_KEEP_SUBPATHS` both updated
+- [ ] If new enhancement category: `DATAFORGE_KEEP_SUBPATHS` updated
 - [ ] `VERSION.TXT` matches the active release branch
 
 ## Testing performed

@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import QDialog  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
 from src.gui.config_tab import LanguageSourceDialog  # noqa: E402
 from src.utils.json_settings import JsonSettings  # noqa: E402

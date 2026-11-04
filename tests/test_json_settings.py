@@ -10,15 +10,11 @@ per-call adapters. These tests pin the QSettings-compatibility surface:
 from __future__ import annotations
 
 import json
-import sys
 import threading
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from utils.json_settings import JsonSettings  # noqa: E402
+from src.utils.json_settings import JsonSettings
 
 pytestmark = pytest.mark.unit
 

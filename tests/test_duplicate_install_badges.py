@@ -37,7 +37,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
 from src.gui.duplicate_install_dialog import DuplicateInstallDialog  # noqa: E402
 from src.utils.install_scanner import (  # noqa: E402

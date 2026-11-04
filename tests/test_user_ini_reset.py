@@ -5,6 +5,8 @@ Locks the contract used by the Config tab's "Reset user.ini" button:
   * Returns ``None`` when the source file doesn't exist (caller treats
     that as a no-op).
   * ``backup=False`` deletes outright and still returns ``None``.
+  * ``backup=True`` also saves a rotating snapshot, which Restore user.ini
+    lists, so a reset can be undone there (#531).
   * Backup naming guards against same-second double invocations — the
     second call must NOT silently overwrite the first backup, even if
     both calls land inside the same wall-clock second (which produces
@@ -14,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.utils.user_ini_manager import reset_user_ini
+from src.utils.user_ini_manager import list_user_ini_backups, reset_user_ini
 
 
 def _write(path: Path, content: str) -> None:
@@ -52,8 +54,19 @@ class TestResetUserIni:
 
         assert result is None
         assert not src.exists()
-        # No sibling backup file was created.
+        # No sibling backup file was created, and no snapshot either.
         assert list(tmp_path.iterdir()) == []
+
+    def test_backup_true_also_saves_a_snapshot_restore_lists(self, tmp_path: Path):
+        """Restore user.ini lists only the rotating snapshots, and it had
+        none to offer straight after a reset (found in testing, #531)."""
+        src = tmp_path / "LIVE" / "user.ini"
+        _write(src, "some_key=Custom Value\n")
+
+        reset_user_ini(src, backup=True)
+
+        [snapshot] = list_user_ini_backups(src)
+        assert snapshot.read_text(encoding="utf-8") == "some_key=Custom Value\n"
 
     def test_double_call_same_second_does_not_clobber_first_backup(
         self, tmp_path: Path, monkeypatch

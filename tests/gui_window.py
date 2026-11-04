@@ -47,7 +47,7 @@ from src.utils.settings import AppSettings
 _LIVE_WINDOWS: list = []
 
 
-def build_main_window(tmp_dir, patch, mode: str):
+def build_main_window(tmp_dir, patch, mode: str, language: str | None = None):
     """Build a real MainWindow redirected entirely into ``tmp_dir``.
 
     ``patch`` is a MonkeyPatch whose undo is guaranteed by the caller (use
@@ -56,12 +56,26 @@ def build_main_window(tmp_dir, patch, mode: str):
     a bare ``pytest.MonkeyPatch()`` with ``undo()`` called after a ``yield``:
     a failure during construction would then skip the undo and leave the
     settings backend redirected for every later test in the session.
+
+    ``language``, when given, is saved as the selected language before the
+    window is built, as a start with that language saved finds it. The
+    caller sets ``i18n`` to the same language first, as ``main()`` does, and
+    puts it back afterwards (the ``english_ui`` fixture restores it).
     """
     shared = QSettings(str(tmp_dir / "reg.ini"), QSettings.Format.IniFormat)
     patch.setattr(AppSettings, "settings", staticmethod(lambda: shared))
     AppSettings.set_user_data_dir(tmp_dir / "data")
     AppSettings.set_cache_dir(tmp_dir / "cache")
+    # The game install too. With nothing saved, get_game_install_path falls
+    # back to the old installer's registry key and a scan of common install
+    # folders, which on a developer's PC find their real game, and
+    # MainWindow.__init__ then runs ensure_user_cfg_language on that
+    # channel's real user.cfg. The temp root has no channel folder, so the
+    # window resolves inside tmp_dir and that call skips.
+    AppSettings.set_sc_install_root(str(tmp_dir / "sc"))
     AppSettings.set_ui_mode(mode)
+    if language is not None:
+        AppSettings.set_selected_language(language)
 
     from src.gui.main_window import MainWindow
 

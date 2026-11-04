@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # ── Category + element vocabulary ─────────────────────────────────────────────
 
-CATEGORIES = ("components", "missiles", "ship_weapons", "commodities", "mission_titles")
+CATEGORIES = ("components", "missiles", "ship_weapons", "commodities", "mission_titles", "armor")
 
 # Which element kinds each category supports — order here is the *default*
 # order shown in the UI before the user reorders. Each kind maps to a value
@@ -39,6 +39,7 @@ CATEGORY_ELEMENT_KINDS: dict[str, tuple[str, ...]] = {
     "ship_weapons": ("damage", "size"),
     "commodities":  ("label", "usage", "collection"),
     "mission_titles": ("route",),
+    "armor":        ("weight",),
 }
 
 
@@ -92,6 +93,11 @@ STYLES_USAGE: tuple[tuple[str, str], ...] = (
     ("med",   "Medium (QD)"),
     ("long",  "Long (QDRV)"),
 )
+STYLES_WEIGHT: tuple[tuple[str, str], ...] = (
+    ("short", "Short (H)"),
+    ("med",   "Medium (HV)"),
+    ("long",  "Long (Heavy)"),
+)
 
 STYLES_BY_KIND: dict[str, tuple[tuple[str, str], ...]] = {
     "class":      STYLES_CLASS,
@@ -103,6 +109,7 @@ STYLES_BY_KIND: dict[str, tuple[tuple[str, str], ...]] = {
     "label":      STYLES_LABEL,
     "collection": STYLES_COLLECTION,
     "usage":      STYLES_USAGE,
+    "weight":     STYLES_WEIGHT,
 }
 
 # Human-friendly element kind labels for the UI.
@@ -116,6 +123,7 @@ ELEMENT_LABELS: dict[str, str] = {
     "label":      "Label",
     "usage":      "Used To Craft",
     "collection": "Collection",
+    "weight":     "Weight",
     "route":      "Route",
 }
 
@@ -144,6 +152,22 @@ ENCLOSINGS: tuple[tuple[str, str, str, str], ...] = (
 
 _SEPARATOR_BY_KEY = {k: s for k, _, s in SEPARATORS}
 _ENCLOSING_BY_KEY = {k: (o, c) for k, _, o, c in ENCLOSINGS}
+
+# Categories that cannot use the "None (space only)" enclosing (#492). An
+# armor tag is a single word ("H Field Recon Suit Arms"), and without brackets
+# the Blueprint Tracker could not strip it back off a blueprint name read from
+# Game.log, so Owned tracking would break. The Armor tab does not offer None,
+# and a stored "none" reads as Square (AppSettings.get_tag_config, and the
+# generator for hand-edited configs). A known limitation, not an oversight.
+NO_NONE_ENCLOSING_CATEGORIES: frozenset[str] = frozenset({"armor"})
+
+
+def enclosings_for(category: str) -> tuple[tuple[str, str, str, str], ...]:
+    """The ENCLOSINGS the Tag Builder offers for *category*: all of them,
+    minus "none" for the categories in NO_NONE_ENCLOSING_CATEGORIES."""
+    if category not in NO_NONE_ENCLOSING_CATEGORIES:
+        return ENCLOSINGS
+    return tuple(e for e in ENCLOSINGS if e[0] != "none")
 
 # ── Mission-title route tables (#166 successor) ──────────────────────────────
 
@@ -506,6 +530,24 @@ DEFAULT_COMMODITY_USAGE_MAPPING: dict[str, tuple[str, str, str]] = {
     name: (short, med, long) for name, short, med, long, _group in CRAFT_USAGE_CATEGORIES
 }
 
+# FPS armor weight class (#492). Keys are the class names the generator's
+# _armor_weight() resolves an item to: Light/Medium/Heavy/Super Heavy come
+# from the stock "Item Type:" line (or the AttachDef SubType when the
+# description has none), Utility is CIG's "Heavy Utility" environment suits
+# (Novikov, Pembroke), and Clothing is anything in a Char_Clothing_* or
+# Char_Accessory_* (eyewear) slot.
+# Short/Medium codes are the ones the issue asked for (L/LT, M/MD, H/HV,
+# U/UT, S/SH, C/CL). A user who would rather see Utility suits as "H" can
+# remap that row in the mapping editor.
+DEFAULT_ARMOR_WEIGHT_MAPPING: dict[str, tuple[str, str, str]] = {
+    "Light":       ("L", "LT", "Light"),
+    "Medium":      ("M", "MD", "Medium"),
+    "Heavy":       ("H", "HV", "Heavy"),
+    "Super Heavy": ("S", "SH", "Super Heavy"),
+    "Utility":     ("U", "UT", "Utility"),
+    "Clothing":    ("C", "CL", "Clothing"),
+}
+
 # The literal separator used INSIDE a values-dict "usage" entry to delimit the
 # category-name list (chosen so it can't collide with a category name). Not the
 # rendered separator — that's TagConfig.usage_separator.
@@ -519,6 +561,7 @@ DEFAULT_KIND_MAPPINGS: dict[str, dict[str, tuple[str, str, str]]] = {
     "label":     DEFAULT_COMMODITY_LABEL_MAPPING,
     "collection": DEFAULT_COMMODITY_COLLECTION_MAPPING,
     "usage":      DEFAULT_COMMODITY_USAGE_MAPPING,
+    "weight":     DEFAULT_ARMOR_WEIGHT_MAPPING,
 }
 
 # Element kinds that render a *list* of mapped values (joined by the config's
@@ -683,10 +726,16 @@ def tag_config_fingerprint(
     selected language) since those pick what/where to generate, not the tag
     content this button governs — folding them in would light the button for
     changes it doesn't otherwise react to.
+
+    The armor config (#492) counts only while its tag is on. Switched off it
+    shapes no output at all, and leaving it out keeps a stamp written before
+    the Armor tab existed matching, so upgrading doesn't light the button for
+    every user. Ticking Armor > Weight still changes the fingerprint.
     """
     payload = {
         "configs": {
             cat: cfg.to_json() for cat, cfg in sorted(tag_configs.items())
+            if cat != "armor" or tag_enabled(cfg)
         },
         "annotate_mission_descs": bool(annotate_mission_descs),
     }
@@ -775,12 +824,33 @@ DEFAULT_TAG_CONFIGS["mission_titles"] = TagConfig(
     location_detail="address",
 )
 
+# FPS armor weight class (#492), e.g. `[H] ADP-mk4 Core`. Off by default, like
+# the commodity flags (#325): it tags well over a thousand armor and clothing
+# names, so a fresh install or an upgrade shows stock names until the user
+# opts in from the Tag Builder. Last in CATEGORIES, so its tab is the
+# rightmost one.
+DEFAULT_TAG_CONFIGS["armor"] = TagConfig(
+    elements=[
+        ElementSpec("weight", False, "short"),  # H
+    ],
+    separator="hyphen",
+    enclosing="square",
+    class_mapping=dict(DEFAULT_ARMOR_WEIGHT_MAPPING),
+)
+
 
 def route_enabled(cfg) -> bool:
     """True when the mission-title route feature is on for *cfg*."""
     if cfg is None:
         return False
     return any(e.kind == "route" and e.enabled for e in cfg.elements)
+
+
+def tag_enabled(cfg) -> bool:
+    """True when *cfg* has at least one element switched on, so it can
+    render a tag at all. Used for the armor tag (#492), which is off by
+    default, by the generator and by owned_items' enclosing set."""
+    return cfg is not None and any(e.enabled for e in cfg.elements)
 
 
 def render_route(from_disp: str, to_disp: str, arrow_key: str,

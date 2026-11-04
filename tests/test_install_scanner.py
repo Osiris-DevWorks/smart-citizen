@@ -54,6 +54,7 @@ from src.utils.install_scanner import (
     scan_installs,
     version_sort_key,
 )
+from tests.junction import make_junction
 
 pytestmark = [pytest.mark.unit]
 
@@ -1366,24 +1367,11 @@ class TestShallowScan:
         lists it like a folder, so a library only the junction reaches (two
         levels down on the other drive) is still found, under the junction's
         path. First-run detection counts it once with the real folder."""
-        import subprocess
-
         drive = tmp_path / "drive"
         drive.mkdir()
         target = tmp_path / "other" / "Stuff" / "Games"
         make_install(target / "StarCitizen")
-        made = subprocess.run(
-            ["cmd", "/c", "mklink", "/J", str(drive / "Games"), str(target)],
-            capture_output=True,
-            text=True,
-        )
-        if made.returncode != 0 or not (drive / "Games").exists():
-            reason = f"cannot make a junction here: {(made.stdout + made.stderr).strip()}"
-            # Any account can make a junction, so on CI this is a broken runner,
-            # not a reason to drop the check without a word.
-            if os.environ.get("CI"):
-                pytest.fail(reason, pytrace=False)
-            pytest.skip(reason)
+        make_junction(drive / "Games", target)
         assert self._found(drive) == [drive / "Games" / "StarCitizen"]
 
 

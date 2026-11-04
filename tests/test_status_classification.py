@@ -13,16 +13,9 @@ at a glance what they changed vs. what the app generated.
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-# Match the existing test_core.py convention — bare imports relying on
-# tests/conftest.py putting src/ on pythonpath.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from parser.ini_parser import _determine_status_from_source  # noqa: E402
+from src.parser.ini_parser import _determine_status_from_source
 
 pytestmark = pytest.mark.unit
 

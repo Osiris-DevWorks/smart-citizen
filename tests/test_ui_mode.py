@@ -30,7 +30,6 @@ from PyQt6.QtWidgets import (  # noqa: E402
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 # Import via the same path src/gui/main_window.py uses (`src.utils.settings`)
 # so monkeypatching AppSettings.settings affects the exact class the window

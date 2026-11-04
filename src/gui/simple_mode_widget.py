@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QLabel,
 )
 
-from src.gui.theme import get_button_color, get_button_text_color
+from src.gui.theme import dimmed_color, get_button_color, get_button_text_color
 from src.utils.i18n import tr
 
 
@@ -37,6 +37,7 @@ class SimpleModeWidget(QWidget):
         # here on, including the #387 startup check.
         self._apply_dirty = True
         self._busy = False
+        self._busy_reason = ""
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -93,9 +94,13 @@ class SimpleModeWidget(QWidget):
 
         self._refresh_apply_button()
 
-    def set_busy(self, busy: bool) -> None:
-        """Disable the action button while a run is in progress."""
+    def set_busy(self, busy: bool, reason: str = "") -> None:
+        """Disable the action button while a run is in progress. *reason*,
+        when given, is the button's tooltip meanwhile: an extraction or a
+        generation can run with its dialog hidden or sent to the background,
+        so the page says why its button is grey (#483)."""
         self._busy = busy
+        self._busy_reason = reason if busy else ""
         self._refresh_apply_button()
 
     def set_apply_dirty(self, dirty: bool) -> None:
@@ -120,17 +125,27 @@ class SimpleModeWidget(QWidget):
         extract/generate/apply entry point and must stay clickable even when
         the state reads as already applied. Tooltips are resolved via tr() on
         every refresh so a language switch picks them up.
+
+        Busy dims the fill and the text (#483): a stylesheet colour outlives
+        setEnabled(False), and with Run in Background a Simple user can sit
+        on this page through a whole run, where a button that still looked
+        ready dropped every click without a word.
         """
         color = get_button_color("needs_apply" if self._apply_dirty else "apply")
+        text = get_button_text_color()
         self.generate_apply_btn.setStyleSheet(
-            f"background-color: {color}; "
-            f"color: {get_button_text_color()}; font-weight: bold; "
-            f"font-size: 14px; padding: 10px 20px;"
+            f"QPushButton {{ background-color: {color}; color: {text}; "
+            f"font-weight: bold; font-size: 14px; padding: 10px 20px; }} "
+            f"QPushButton:disabled {{ background-color: {dimmed_color(color)}; "
+            f"color: {dimmed_color(text)}; }}"
         )
-        self.generate_apply_btn.setToolTip(
-            tr("simple_mode.generate_apply_tip") if self._apply_dirty
-            else tr("simple_mode.generate_apply_tip_disabled")
-        )
+        if self._busy and self._busy_reason:
+            self.generate_apply_btn.setToolTip(self._busy_reason)
+        else:
+            self.generate_apply_btn.setToolTip(
+                tr("simple_mode.generate_apply_tip") if self._apply_dirty
+                else tr("simple_mode.generate_apply_tip_disabled")
+            )
         self.generate_apply_btn.setEnabled(not self._busy)
 
     def retranslate_ui(self) -> None:

@@ -15,6 +15,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
 from src.models.string_model import StringEntry, is_favoritable_ship
+from src.parser.ini_parser import status_without_override
 from src.utils.i18n import tr
 from src.utils.owned_items import normalize_item_name
 from src.utils.ship_sort_prefix import get_order, set_order
@@ -480,7 +481,12 @@ class StringTableModel(QAbstractTableModel):
             if new_text == entry.custom_value:
                 return False
             entry.custom_value = new_text
-            entry.status = "Modified" if new_text != entry.original_value else "Unmodified"
+            if not new_text:
+                # An emptied cell clears the override: the row reads as a
+                # load would show it (#531).
+                entry.status = status_without_override(entry, self._default_values)
+            else:
+                entry.status = "Modified" if new_text != entry.original_value else "Unmodified"
         else:  # COL_ORDER: only ship name rows are editable here (enforced by flags()).
             if not is_favoritable_ship(entry):
                 return False
@@ -495,7 +501,8 @@ class StringTableModel(QAbstractTableModel):
             entry.custom_value = new_custom
             # set_order collapses to "" when nothing distinguishes it from
             # stock, so a non-empty value always means Modified.
-            entry.status = "Modified" if entry.custom_value else "Unmodified"
+            entry.status = ("Modified" if entry.custom_value
+                            else status_without_override(entry, self._default_values))
 
         # Notify view that star, order, custom value, and status columns changed
         left = self.index(index.row(), COL_STAR)

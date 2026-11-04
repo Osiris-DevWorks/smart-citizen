@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from utils.resource_path import get_resource_path, resolve_patches_dir
+from src.utils.resource_path import get_resource_path, resolve_patches_dir
 
 pytestmark = pytest.mark.unit
 

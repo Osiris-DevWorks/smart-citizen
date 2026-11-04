@@ -11,7 +11,7 @@ _LONG_UNC_PREFIX = "\\\\?\\UNC\\"
 def win_long_path(path) -> str:
     """Return *path* as a Windows extended-length path string when needed.
 
-    DataForge's ~28k-file entity tree uses long CIG-authored filenames
+    DataForge's ~31k-file entity tree uses long CIG-authored filenames
     (e.g. ``softlock_terminal_standard_lowtech_commoditykiosk_console_
     transfers_1_straight_a.xml``); once nested under a user's install
     directory plus the per-channel cache layout, the destination path can

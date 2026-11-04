@@ -3,24 +3,26 @@ import logging
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox, QComboBox, QFrame, QGridLayout, QGroupBox,
+    QCheckBox, QComboBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QScrollArea, QSizePolicy, QTabBar, QTabWidget, QVBoxLayout,
+    QPushButton, QSizePolicy, QTabBar, QTabWidget, QVBoxLayout,
     QWidget,
 )
 
+from src.gui.combo_box import NoScrollComboBox
 from src.gui.tag_mapping_dialog import TagMappingDialog
-from src.gui.theme import get_button_color
+from src.gui.theme import host_in_scroll_area, needs_apply_style
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
 from src.utils.tag_builder import (
-    CATEGORIES, ELEMENT_LABELS, ENCLOSINGS, LOCATION_DETAILS,
+    CATEGORIES, ELEMENT_LABELS, LOCATION_DETAILS,
     MAPPED_KIND_NAMES, MISSION_TITLE_PLACEMENTS, PLACEMENTS, RANK_SEPARATORS,
     REMOVE_WORD_OPTIONS, ROUTE_ARROWS, SEPARATORS, SHORTEN_PHRASE_OPTIONS,
     SIZE_ABBREV_BY_WORD, STYLES_BY_KIND, TITLE_SEPARATORS, TagConfig,
     USAGE_INPUT_SEP, abbreviate_title, apply_mission_title,
-    default_config, render_route, render_tag, route_enabled,
+    default_config, enclosings_for, render_route, render_tag, route_enabled,
 )
+from src.utils.user_ini_manager import write_user_ini_text
 
 # All cargo-size words, for the single "Shorten cargo sizes" master toggle.
 _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
@@ -28,60 +30,10 @@ _ALL_SIZE_WORDS: frozenset[str] = frozenset(SIZE_ABBREV_BY_WORD)
 logger = logging.getLogger(__name__)
 
 
-def reposition_combo_popup_below_if_it_fits(combo, popup) -> None:
-    """Move *popup* to align with *combo*'s bottom-left corner, but only if
-    it actually fits on-screen there.
-
-    Qt's default popup placement flips the list above the box when it judges
-    there isn't room below (common in a scroll area, even when there visually
-    is room) — force it below whenever that actually fits, so the option list
-    is where the user expects it. A combo near the bottom of the screen is
-    the case Qt's flip logic exists for; forcing "below" there would run the
-    popup off the bottom of the display, so only override when there's room.
-
-    Shared by _NoScrollComboBox.showPopup below (initial placement) and
-    blueprint_tracker_tab.py's _NoWheelComboBox.showPopup (#388, re-checked
-    a second time there after forcibly shrinking an overlong popup — the
-    first check ran against the original, taller height).
-    """
-    below_point = combo.mapToGlobal(combo.rect().bottomLeft())
-    screen = combo.screen()
-    fits_below = (
-        screen is None
-        or below_point.y() + popup.height() <= screen.availableGeometry().bottom()
-    )
-    if fits_below:
-        popup.move(below_point)
-
-
-class _NoScrollComboBox(QComboBox):
-    """A combo box that ignores the mouse wheel unless it has focus (#197).
-
-    The Enhancements tab lives in a scroll area with many dropdowns; by default
-    a wheel scroll over an unfocused combo changes its selection instead of
-    scrolling the page. StrongFocus stops the wheel from focusing the combo, and
-    wheelEvent passes the scroll through to the page when the combo isn't focused.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
-    def wheelEvent(self, event):  # noqa: N802 (Qt override)
-        if self.hasFocus():
-            super().wheelEvent(event)
-        else:
-            event.ignore()
-
-    def showPopup(self):  # noqa: N802 (Qt override)
-        super().showPopup()
-        reposition_combo_popup_below_if_it_fits(self, self.view().window())
-
-
 class _NoScrollTabBar(QTabBar):
     """A tab bar that never switches tabs on mouse wheel scroll.
 
-    Unlike a combo box (_NoScrollComboBox above), there's no legitimate case
+    Unlike a combo box (NoScrollComboBox), there's no legitimate case
     for wheel-scrolling through tabs here — a hover-scroll over the Tag
     Builder's category tabs (Components/Missiles/.../Mission Titles) should
     scroll the page, not silently jump categories. Always ignores the wheel
@@ -101,12 +53,14 @@ _PREVIEW_VALUES: dict[str, dict[str, str]] = {
     "commodities":  {"label": "Crafting",
                      "usage": USAGE_INPUT_SEP.join(["Quantum Drive", "Shield"]),
                      "collection": "Collection"},
+    "armor":        {"weight": "Heavy"},
 }
 _PREVIEW_NAMES: dict[str, str] = {
     "components":   "FR-76",
     "missiles":     "Marksman I Missile",
     "ship_weapons": "MaxOx NN-14",
     "commodities":  "Agricium",
+    "armor":        "ADP-mk4 Core",
 }
 _CATEGORY_LABELS: dict[str, str] = {
     "components":   "Components",
@@ -114,6 +68,7 @@ _CATEGORY_LABELS: dict[str, str] = {
     "ship_weapons": "Ship Weapons",
     "commodities":  "Commodities",
     "mission_titles": "Mission Titles",
+    "armor":        "Armor",
 }
 
 
@@ -127,6 +82,10 @@ class EnhancementsTab(QWidget):
     # reloading, so the reload's pending-edit snapshot doesn't clobber the new
     # prefix back to the old one (#140).
     favorite_prefix_changed = pyqtSignal(str, str)
+    # A category tick changed: True while the ticks on screen differ from
+    # the saved set (#532). MainWindow keeps Apply Enhancements red for a
+    # pending tick, since Apply saves it first.
+    category_ticks_changed = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -138,6 +97,15 @@ class EnhancementsTab(QWidget):
         self._enhancements_dirty = False
         self._tag_dirty = False
         self._prefix_dirty = False
+        # Apply Category Changes and Save Tag Changes are locked while an
+        # extraction or a generation runs (#483), see set_changes_locked.
+        self._changes_locked = False
+        self._changes_lock_reason = ""
+        self._operation_message = ""
+        # What Generate shows once pending category ticks are put back: its
+        # flag from before the first one, lit by any other change since. None
+        # while the ticks match the saved set (#532).
+        self._generate_dirty_without_ticks = None
         self.setup_ui()
 
     def setup_ui(self):
@@ -169,16 +137,7 @@ class EnhancementsTab(QWidget):
         layout.addWidget(self._tag_builder_group, 1)
         layout.addStretch()
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.viewport().setAutoFillBackground(False)
-        content.setAutoFillBackground(False)
-        scroll.setWidget(content)
-
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll)
+        host_in_scroll_area(self, content)
 
     # ── Enhancements ─────────────────────────────────────────────────────────
 
@@ -231,7 +190,6 @@ class EnhancementsTab(QWidget):
             cb.setChecked(AppSettings.get_enhancement_category_enabled(key))
             cb.setStyleSheet("font-size: 11px;")
             cb.toggled.connect(self._on_category_checkbox_changed)
-            cb.toggled.connect(self._mark_enhancements_dirty)
             row.addWidget(cb)
             self._enhancements_checkboxes[key] = cb
 
@@ -407,18 +365,26 @@ class EnhancementsTab(QWidget):
         default look. The two tooltip variants are resolved via tr() here
         (not cached class constants) so they always reflect the active
         language — the disabled-state text is what a user hovering a
-        gone-grey button most wants to know: "why can't I click this?" """
+        gone-grey button most wants to know: "why can't I click this?"
+        A running job keeps it off (#483), with that job's own message as
+        the tooltip when it set one (set_operation_running), otherwise the
+        lock reason: a category tick or a setting changed meanwhile lit it
+        again in full red, and its click saved the Tag Builder pages before
+        the one-job rule refused the run."""
         self._enhancements_dirty = dirty
-        self._generate_enhancements_btn.setEnabled(dirty)
-        self._generate_enhancements_btn.setToolTip(
-            tr("enhancements.generate_enabled_tooltip") if dirty
-            else tr("enhancements.generate_disabled_tooltip")
-        )
-        self._generate_enhancements_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._generate_enhancements_btn.setEnabled(dirty and not self._changes_locked)
+        if self._changes_locked:
+            self._generate_enhancements_btn.setToolTip(
+                self._operation_message or self._changes_lock_reason)
+        else:
+            self._generate_enhancements_btn.setToolTip(
+                tr("enhancements.generate_enabled_tooltip") if dirty
+                else tr("enhancements.generate_disabled_tooltip")
+            )
+        # Dimmed while a running job keeps it disabled (#483).
+        self._generate_enhancements_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
-    def _compute_initial_enhancements_dirty(self) -> bool:
+    def _compute_initial_enhancements_dirty(self, keys: "list[str] | None" = None) -> bool:
         """True if Generate Enhancements has work to do right now: the
         DataForge cache was never extracted or is stale vs. Data.p4k, or an
         enabled category's output file doesn't exist yet.
@@ -431,25 +397,59 @@ class EnhancementsTab(QWidget):
         selected, so a language with nothing generated could report "nothing
         to do" purely because English had been generated earlier. #363 made
         that reachable on every language switch, which is what surfaced it.
+
+        It also has work when a category is ticked and the selected
+        language's set was not built from the current DataForge build
+        (AppSettings.enhancements_built_from_current_dataforge): its last run
+        was cut off or failed, or it came from older game data. That is what
+        the startup check offers to regenerate, so after a Skip the button
+        stays lit over the stale set instead of going grey.
+
+        *keys* are the checkbox keys to check, the ticked ones by default
+        (at startup the ticks are the saved set). A finished run
+        (set_operation_idle) and a channel or language switch
+        (refresh_enhancements_dirty_state) pass the saved set
+        (_saved_category_keys), which is what a run builds: it saves any
+        pending tick when it starts (#532). A pending tick, such as one
+        changed while a run went on, lights Generate by itself
+        (_on_category_checkbox_changed).
+
+        Reads the cache folder without creating it (#494), as
+        refresh_forge_status does.
         """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path = AppSettings.get_p4k_path()
         if not (forge_dir / P4K_MTIME_STAMP).exists():
             return True
         if p4k_path.exists() and not dataforge_cache_is_fresh(p4k_path, forge_dir):
             return True
+        if keys is None:
+            keys = [key for key, cb in self._enhancements_checkboxes.items()
+                    if cb.isChecked()]
         enh_dir = AppSettings.get_enhancements_dir()
-        for key, cb in self._enhancements_checkboxes.items():
-            if cb.isChecked() and any(
-                not (enh_dir / fn).exists() for fn in self._files_for_category(key)
-            ):
+        for key in keys:
+            if any(not (enh_dir / fn).exists() for fn in self._files_for_category(key)):
                 return True
+        if keys and not AppSettings.enhancements_built_from_current_dataforge():
+            return True
         return False
+
+    def _saved_category_keys(self) -> list[str]:
+        """The checkbox keys whose category is saved as enabled: what a
+        Generate run actually builds. A run saves the ticks pending when it
+        starts (apply_pending_category_changes, #532) and then reads the
+        saved set, so a tick changed while it runs is not built."""
+        return [key for key in self._enhancements_checkboxes
+                if AppSettings.get_enhancement_category_enabled(key)]
 
     def _mark_enhancements_dirty(self, *_args):
         """A setting that feeds Generate Enhancements changed since the last
-        run — light the button back up."""
+        run — light the button back up. It stays lit when pending category
+        ticks are put back (#532). The ticks themselves light it in
+        _on_category_checkbox_changed."""
+        if self._generate_dirty_without_ticks is not None:
+            self._generate_dirty_without_ticks = True
         self._set_generate_btn_dirty(True)
 
     def mark_enhancements_dirty(self) -> None:
@@ -465,12 +465,17 @@ class EnhancementsTab(QWidget):
     def mark_enhancements_clean(self) -> None:
         """Public entrypoint for external callers (MainWindow) to flag that
         a Generate Enhancements run is starting, regardless of how it was
-        triggered — manual click, Tag Builder apply, or the automated
-        freshness check (#292). Call at the point a run is launched, not on
+        triggered — manual click, Tag Builder apply, the automated
+        freshness check (#292), or a language switch's regeneration. Call
+        at the point a run is launched, not on
         completion: set_operation_idle() only re-enables the button on
         success, it doesn't force it clean, so if a run is triggered while
         already dirty this needs to have cleared the flag first or the
-        button stays red after a successful generation."""
+        button stays red after a successful generation. A category tick
+        still pending then, which generation saves when it starts, puts
+        the button back clean (#532)."""
+        if self._generate_dirty_without_ticks is not None:
+            self._generate_dirty_without_ticks = False
         self._set_generate_btn_dirty(False)
 
     def refresh_enhancements_dirty_state(self) -> None:
@@ -487,8 +492,15 @@ class EnhancementsTab(QWidget):
         to a channel that genuinely needs (re)generation left the button
         disabled (still reflecting the previous channel's now-clean state),
         so clicking it silently did nothing until the user happened to
-        retoggle some checkbox that forces the flag back on."""
-        self._set_generate_btn_dirty(self._compute_initial_enhancements_dirty())
+        retoggle some checkbox that forces the flag back on.
+
+        It judges the saved categories, as a finished run does
+        (set_operation_idle). A category tick still pending keeps the button
+        lit, and putting it back shows this answer (#532)."""
+        dirty = self._compute_initial_enhancements_dirty(self._saved_category_keys())
+        pending = self.has_pending_category_changes()
+        self._generate_dirty_without_ticks = dirty if pending else None
+        self._set_generate_btn_dirty(dirty or pending)
 
     def _live_tag_config_fingerprint(self) -> str:
         """Fingerprint the Tag Builder config as it stands in the pages right
@@ -544,7 +556,20 @@ class EnhancementsTab(QWidget):
             return
         stamp = AppSettings.get_tag_config_stamp()
         current = self._live_tag_config_fingerprint()
-        self._set_tag_btn_dirty(not stamp or stamp != current)
+        self._set_tag_btn_dirty(not stamp or stamp != current
+                                or self._pages_differ_from_saved())
+
+    def _pages_differ_from_saved(self) -> bool:
+        """True when a Tag Builder page holds an edit not yet saved.
+
+        The fingerprint leaves the Armor config out while its tag is off
+        (#492), so an Armor-tab edit made in that state (brackets, mapping,
+        Reset) would not change it, and a refresh would grey the button over
+        an edit that is lost on restart. Comparing each page with its saved
+        config keeps the "you have unsaved changes" signal for those too."""
+        pages = getattr(self, "_tag_builder_pages", None) or {}
+        return any(page.config.to_json() != AppSettings.get_tag_config(cat).to_json()
+                   for cat, page in pages.items())
 
     def _enhancements_output_exists(self) -> bool:
         """True if any enabled category has at least one generated INI on disk.
@@ -573,16 +598,112 @@ class EnhancementsTab(QWidget):
             for fn in self._files_for_category(key)
         )
 
-    def _on_category_checkbox_changed(self):
-        """Enable Apply button if any checkbox differs from saved settings."""
-        has_changes = any(
+    def has_pending_category_changes(self) -> bool:
+        """True when any category checkbox differs from the saved set."""
+        return any(
             cb.isChecked() != AppSettings.get_enhancement_category_enabled(key)
             for key, cb in self._enhancements_checkboxes.items()
         )
-        self._apply_categories_btn.setEnabled(has_changes)
+
+    def pending_unticked_file_keys(self) -> set[str]:
+        """The enhancement file keys of every category saved as enabled but
+        unticked on screen and not saved yet (#532)."""
+        return {
+            file_key
+            for key, cb in self._enhancements_checkboxes.items()
+            if not cb.isChecked() and AppSettings.get_enhancement_category_enabled(key)
+            for file_key in AppSettings.ENHANCEMENT_CATEGORY_FILES.get(key, [key])
+        }
+
+    def _refresh_category_apply_btn(self) -> None:
+        """Enable the category Apply button while any checkbox differs from
+        the saved set, unless a running job keeps it locked (#483)."""
+        self._apply_categories_btn.setEnabled(
+            self.has_pending_category_changes() and not self._changes_locked)
+
+    def _on_category_checkbox_changed(self):
+        """Refresh the category Apply button and tell MainWindow
+        (category_ticks_changed). A tick lights Generate, and ticks put back
+        to the saved set put it back as it was before the first one, unless
+        another change lit it meanwhile (#532). It used to stay lit, as if
+        something had changed, while Apply Enhancements went back to green."""
+        self._refresh_category_apply_btn()
+        pending = self.has_pending_category_changes()
+        if pending:
+            if self._generate_dirty_without_ticks is None:
+                self._generate_dirty_without_ticks = self._enhancements_dirty
+            self._set_generate_btn_dirty(True)
+        elif self._generate_dirty_without_ticks is not None:
+            self._set_generate_btn_dirty(self._generate_dirty_without_ticks)
+            self._generate_dirty_without_ticks = None
+        self.category_ticks_changed.emit(pending)
+
+    def set_changes_locked(self, locked: bool, reason: str = "") -> None:
+        """Lock Apply Category Changes, Save Tag Changes and Generate
+        Enhancements while an extraction or a generation runs (#483), shown
+        or hidden. Generate would start a run one job at a time refuses. Apply
+        Category Changes renames INIs to and from ``.disabled`` in the folder
+        a generation writes, and starts a reload that reads the set mid-run;
+        a category changed then came back beside its ``.disabled`` copy or was
+        restored from an older one, under a stamp that called the folder
+        current. Save Tag Changes asks for a regeneration that one job at a
+        time would refuse, after saving the tags and turning itself off. The
+        checkboxes and the Tag Builder stay free: the change waits for the
+        button. Each button's tooltip gives *reason* while locked, except that
+        Generate keeps the running job's own message when it set one."""
+        self._changes_locked = locked
+        self._changes_lock_reason = reason if locked else ""
+        self._apply_categories_btn.setToolTip(
+            reason if locked else tr("enhancements.apply_categories_tooltip")
+        )
+        self._refresh_category_apply_btn()
+        self._set_tag_btn_dirty(self._tag_dirty)
+        self._set_generate_btn_dirty(self._enhancements_dirty)
+
+    def apply_pending_category_changes(self, *, reload: bool = True) -> bool:
+        """Save the category ticks on screen when they differ from the saved
+        set, as the category Apply button does, and return whether anything
+        was saved (#532). *reload* re-merges the table afterwards, as that
+        button does. Generation passes False and reloads the table itself
+        when its run ends, failed or not.
+
+        Generation, Apply Enhancements, Export Settings and Preview Apply
+        call this first, so they build, write, back up and preview what the
+        checkboxes show, the rule #215 gave Generate for the Tag Builder.
+        While a tick is pending, Apply Enhancements stays red
+        (category_ticks_changed). Only the category Apply button used to
+        save a tick: a user who unticked Commodities and went straight to
+        Generate and Apply Enhancements kept its tags in game, with Apply
+        Enhancements green, and leaving the tab quietly put the tick back.
+
+        While a job runs (#483) it saves nothing and the tick stays pending,
+        as the category Apply button is locked then: the renames would land
+        in the folder a generation writes. A generation's own launch is not
+        a job yet, so it always saves."""
+        if self._changes_locked or not self.has_pending_category_changes():
+            return False
+        self._save_category_state()
+        if reload:
+            self.merge_requested.emit()
+        return True
 
     def _apply_category_changes(self):
         """Save checkbox states, disable/restore enhancement files, and trigger reload."""
+        if self._changes_locked:
+            return  # a job is running (#483): the button is locked, this is the net
+        self._save_category_state()
+        self.merge_requested.emit()
+
+    def _save_category_state(self):
+        """Save every checkbox state and disable or restore its enhancement
+        files, without the reload. Generate then shows what it showed before
+        the ticks when they only turned categories off, whose files are just
+        set aside, and stays lit when one was turned on, since its files may
+        be missing or set aside from an older run (#532). A generation
+        that saves the ticks builds them, and its launch leaves Generate
+        clean."""
+        turned_on = any(cb.isChecked() and not AppSettings.get_enhancement_category_enabled(key)
+                        for key, cb in self._enhancements_checkboxes.items())
         for key, cb in self._enhancements_checkboxes.items():
             now_enabled = cb.isChecked()
             AppSettings.set_enhancement_category_enabled(key, now_enabled)
@@ -622,8 +743,10 @@ class EnhancementsTab(QWidget):
                         logger.warning(f"Failed to restore {filename}: {e}")
 
         self._apply_categories_btn.setEnabled(False)
+        if self._generate_dirty_without_ticks is not None:
+            self._set_generate_btn_dirty(self._generate_dirty_without_ticks or turned_on)
+            self._generate_dirty_without_ticks = None
         self.refresh_enhancements_status()
-        self.merge_requested.emit()
 
     @staticmethod
     def _files_for_category(key: str) -> list[str]:
@@ -631,13 +754,24 @@ class EnhancementsTab(QWidget):
         file_keys = AppSettings.ENHANCEMENT_CATEGORY_FILES.get(key, [key])
         return [AppSettings.ENHANCEMENTS_FILES[fk] for fk in file_keys]
 
-    def revert_category_checkboxes(self):
-        """Reset checkboxes to match the saved settings (called when leaving tab without applying)."""
+    def revert_category_checkboxes(self, keys=None):
+        """Reset checkboxes to match the saved settings: every one after
+        Import Settings saved new ones, or only *keys*, the categories the
+        enhancement category question offered and saved. A tick pending on
+        any other stays, as it does when the tab is left (#532): the
+        category Apply button stays lit for it, and generation, Apply
+        Enhancements, Export Settings and Preview Apply save it first."""
         for key, cb in self._enhancements_checkboxes.items():
+            if keys is not None and key not in keys:
+                continue
             cb.blockSignals(True)
             cb.setChecked(AppSettings.get_enhancement_category_enabled(key))
             cb.blockSignals(False)
-        self._apply_categories_btn.setEnabled(False)
+        self._refresh_category_apply_btn()
+        if not self.has_pending_category_changes():
+            # The saved set changed under the ticks (Import Settings, or the
+            # question saving its answer), so Generate stays as it is.
+            self._generate_dirty_without_ticks = None
 
     def _on_mission_field_toggled(self, field: str, checked: bool) -> None:
         """Persist a mission-detail field toggle (#121). Baked at generation
@@ -662,7 +796,7 @@ class EnhancementsTab(QWidget):
         self._sort_prefix_label = QLabel(tr("enhancements.sort_prefix_label"))
         prefix_row.addWidget(self._sort_prefix_label)
 
-        self.favorite_prefix_combo = _NoScrollComboBox()
+        self.favorite_prefix_combo = NoScrollComboBox()
         self.favorite_prefix_combo.setToolTip(tr("enhancements.favorite_prefix_tooltip"))
         self.favorite_prefix_combo.setSizeAdjustPolicy(
             QComboBox.SizeAdjustPolicy.AdjustToContents
@@ -739,7 +873,7 @@ class EnhancementsTab(QWidget):
 
         self._header_style_label_widget = QLabel(tr("enhancements.mission_label_header_style"))
         grid.addWidget(self._header_style_label_widget, 1, 4)
-        self._header_em_combo = _NoScrollComboBox()
+        self._header_em_combo = NoScrollComboBox()
         # #164: show what the tags actually do in-game (EM3 underlines, EM4
         # renders blue) instead of the opaque EM3/EM4 names. The stored value
         # stays the EM tag, so the generator output is unchanged.
@@ -802,9 +936,7 @@ class EnhancementsTab(QWidget):
             tr("enhancements.prefix_enabled_tooltip") if dirty
             else tr("enhancements.prefix_disabled_tooltip")
         )
-        self._apply_prefix_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._apply_prefix_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _mark_prefix_dirty(self, *_args) -> None:
         """Recompute dirty state whenever the prefix combo selection
@@ -834,7 +966,9 @@ class EnhancementsTab(QWidget):
                             updated.append(f"{key}={value}")
                         else:
                             updated.append(line)
-                    overrides_path.write_text("\n".join(updated), encoding="utf-8")
+                    # In one step, as every user.ini write is, so a failed
+                    # write keeps the old file (#531).
+                    write_user_ini_text(overrides_path, "\n".join(updated))
                     logger.info(f"Migrated {migrated} favorites from '{old_prefix}' to '{new_prefix}'")
                 except Exception as e:
                     logger.exception(f"Failed to migrate favorites: {e}")
@@ -852,6 +986,7 @@ class EnhancementsTab(QWidget):
     # ── Operation state ───────────────────────────────────────────────────────
 
     def set_operation_running(self, message: str):
+        self._operation_message = message  # kept while the job lock refreshes the button
         self._generate_enhancements_btn.setEnabled(False)
         self._generate_enhancements_btn.setToolTip(message)
 
@@ -859,11 +994,22 @@ class EnhancementsTab(QWidget):
         """Re-enable after a background run. A successful run means
         mark_enhancements_clean() already cleared the dirty flag when the
         run was launched (#292), so leave it grey unless something changed
-        mid-run; a failed run re-enables unconditionally so the user has a
-        way to retry without first having to touch an unrelated setting."""
-        if not success:
-            self._enhancements_dirty = True
-        self._set_generate_btn_dirty(self._enhancements_dirty)
+        mid-run or the set on disk is still not current. The second is read
+        from disk (_compute_initial_enhancements_dirty, the startup rule): a
+        run whose final .dataforge_stamp write failed still finishes as a
+        success, because set_enhancements_stamp only logs that, and the
+        button must stay lit over that set, as the next start will. It only
+        ever lights the button, so a change made mid-run is kept. A failed
+        run re-enables unconditionally so the user has a way to retry
+        without first having to touch an unrelated setting. The re-read
+        judges the saved categories, which are what the run generated.
+        Lighting it is a change like any other, so it stays lit when a
+        category tick pending meanwhile is put back (#532)."""
+        self._operation_message = ""
+        if not success or self._compute_initial_enhancements_dirty(self._saved_category_keys()):
+            self._mark_enhancements_dirty()
+        else:
+            self._set_generate_btn_dirty(self._enhancements_dirty)
 
     # ── Status refresh ────────────────────────────────────────────────────────
 
@@ -888,9 +1034,15 @@ class EnhancementsTab(QWidget):
         self.refresh_forge_status()
 
     def refresh_forge_status(self):
-        """Update the DataForge cache status label."""
+        """Update the DataForge cache status label.
+
+        Reads the cache folder without creating it (#494). This runs while
+        the tab is built, so a folder Windows refused to create, or one on a
+        drive that is gone, kept Smart Citizen from opening. A missing folder
+        has no stamp, so it reads as not extracted.
+        """
         from src.utils.pak_extractor import P4K_MTIME_STAMP, dataforge_cache_is_fresh
-        forge_dir = AppSettings.get_dataforge_cache_dir()
+        forge_dir = AppSettings.get_dataforge_cache_leaf()
         p4k_path = AppSettings.get_p4k_path()
         if not (forge_dir / P4K_MTIME_STAMP).exists():
             self._forge_status_label.setText(tr("enhancements.forge_status_not_extracted"))
@@ -935,9 +1087,10 @@ class EnhancementsTab(QWidget):
         gl.addWidget(self._tag_builder_tabs)
 
         # Issue #31 follow-up: cross-surface toggle for the inline
-        # component annotation inside mission POTENTIAL BLUEPRINTS lists.
-        # Default ON preserves v1.4.0 behavior. When off, mission bodies
-        # render bare names ("Norfield") even though the same component
+        # component annotation inside mission POTENTIAL BLUEPRINTS lists,
+        # and the armor weight tag there too while Armor > Weight is on
+        # (#492). Default ON preserves v1.4.0 behavior. When off, mission
+        # bodies render bare names ("Norfield") even though the same item
         # on the strings tab still shows the configured tag. The toggle
         # is persisted alongside the per-category configs and applied
         # by the same "Save Tag Changes" button below — no separate
@@ -1132,16 +1285,19 @@ class EnhancementsTab(QWidget):
         text color so none of the three can drift apart. Same enabled/
         disabled tooltip pattern as Generate Enhancements; resolved via
         tr() here (not cached class constants) so they always reflect
-        the active language."""
+        the active language. A running job locks it, with the reason as the
+        tooltip (#483), and the colour dims but still says the tags are
+        unsaved."""
         self._tag_dirty = dirty
-        self._apply_tag_btn.setEnabled(dirty)
-        self._apply_tag_btn.setToolTip(
-            tr("enhancements.tag_enabled_tooltip") if dirty
-            else tr("enhancements.tag_disabled_tooltip")
-        )
-        self._apply_tag_btn.setStyleSheet(
-            f"color: {get_button_color('needs_apply')};" if dirty else ""
-        )
+        self._apply_tag_btn.setEnabled(dirty and not self._changes_locked)
+        if self._changes_locked:
+            self._apply_tag_btn.setToolTip(self._changes_lock_reason)
+        else:
+            self._apply_tag_btn.setToolTip(
+                tr("enhancements.tag_enabled_tooltip") if dirty
+                else tr("enhancements.tag_disabled_tooltip")
+            )
+        self._apply_tag_btn.setStyleSheet(needs_apply_style() if dirty else "")
 
     def _mark_tag_dirty(self, *_args):
         """A Tag Builder config changed since the last save — light the
@@ -1150,6 +1306,8 @@ class EnhancementsTab(QWidget):
 
     def _apply_tag_builder(self):
         """Persist every page's TagConfig and kick off enhancement regen."""
+        if self._changes_locked:
+            return  # a job is running (#483): the button is locked, this is the net
         self._persist_tag_builder_state()
         # Re-run the generator so the new tags show up in the output INIs;
         # MainWindow handles the worker lifecycle + progress UI.
@@ -1219,6 +1377,7 @@ class _ElementRow(QWidget):
         "type":       "Shield Generator",
         "label":      "Crafting",
         "collection": "Collection",
+        "weight":     "Heavy",
     }
 
     def __init__(self, spec, mapping: dict | None = None,
@@ -1260,7 +1419,7 @@ class _ElementRow(QWidget):
         self.label.setMinimumWidth(90)
         row.addWidget(self.label)
 
-        self.style_combo = _NoScrollComboBox()
+        self.style_combo = NoScrollComboBox()
         for style_key, style_label in STYLES_BY_KIND.get(spec.kind, ()):
             self.style_combo.addItem(
                 self._build_style_label(spec.kind, style_key, style_label),
@@ -1297,6 +1456,7 @@ class _ElementRow(QWidget):
             "type": "enhancements.tag_mapping_tooltip_type",
             "label": "enhancements.tag_mapping_tooltip_label",
             "collection": "enhancements.tag_mapping_tooltip_collection",
+            "weight": "enhancements.tag_mapping_tooltip_weight",
         }.get(kind, "enhancements.tag_mapping_tooltip_default")
 
     def retranslate_ui(self) -> None:
@@ -1405,7 +1565,7 @@ class _TagBuilderPage(QWidget):
 
         self._sep_label = QLabel(tr("enhancements.tag_separator_label"))
         ctrl_grid.addWidget(self._sep_label, 0, 0)
-        self.sep_combo = _NoScrollComboBox()
+        self.sep_combo = NoScrollComboBox()
         for key, label, _ in SEPARATORS:
             # "None" is offered for every category, commodities included: a
             # deliberate no-separator commodity tag renders "[CFCollection]".
@@ -1418,8 +1578,8 @@ class _TagBuilderPage(QWidget):
 
         self._enc_label = QLabel(tr("enhancements.tag_enclosing_label"))
         ctrl_grid.addWidget(self._enc_label, 1, 0)
-        self.enc_combo = _NoScrollComboBox()
-        for key, label, _open, _close in ENCLOSINGS:
+        self.enc_combo = NoScrollComboBox()
+        for key, label, _open, _close in enclosings_for(self.category):
             self.enc_combo.addItem(label, userData=key)
         self._select_combo(self.enc_combo, config.enclosing)
         self.enc_combo.currentIndexChanged.connect(self._on_enc_changed)
@@ -1427,7 +1587,7 @@ class _TagBuilderPage(QWidget):
 
         self._placement_label = QLabel(tr("enhancements.tag_placement_label"))
         ctrl_grid.addWidget(self._placement_label, 2, 0)
-        self.placement_combo = _NoScrollComboBox()
+        self.placement_combo = NoScrollComboBox()
         for key, label in PLACEMENTS:
             self.placement_combo.addItem(label, userData=key)
         self._select_combo(self.placement_combo, config.placement)
@@ -1441,7 +1601,7 @@ class _TagBuilderPage(QWidget):
         if self.category == "commodities":
             self._usage_sep_label = QLabel(tr("enhancements.tag_craft_usage_separator_label"))
             ctrl_grid.addWidget(self._usage_sep_label, 3, 0)
-            self.usage_sep_combo = _NoScrollComboBox()
+            self.usage_sep_combo = NoScrollComboBox()
             for key, label, _ in SEPARATORS:
                 self.usage_sep_combo.addItem(label, userData=key)
             self._select_combo(self.usage_sep_combo, config.usage_separator)
@@ -1642,7 +1802,7 @@ class _TagBuilderPage(QWidget):
         col.addWidget(self._mt_hint)
 
         def _combo(items) -> QComboBox:
-            c = _NoScrollComboBox()
+            c = NoScrollComboBox()
             for entry in items:
                 c.addItem(entry[1], userData=entry[0])
             # AdjustToContents (rather than the default

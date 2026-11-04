@@ -18,6 +18,7 @@ import importlib.util
 import sys
 from dataclasses import replace as dc_replace
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -70,7 +71,7 @@ class TestCraftingCostItemPickup:
     pattern matched bulk carryables only).
     """
 
-    def test_resolve_collects_item_entityclass_uuids(self, gen_module, tmp_path):
+    def test_blueprint_material_uids_collect_item_entityclass_uuids(self, gen_module, tmp_path):
         bp_file = tmp_path / "bp_test.xml"
         bp_file.write_text(
             '<CraftingBlueprintRecord __type="CraftingBlueprintRecord">'
@@ -82,7 +83,13 @@ class TestCraftingCostItemPickup:
             '</CraftingBlueprintRecord>',
             encoding="utf-8",
         )
-        uuids = gen_module._resolve_resource_uuids(tmp_path)
+        # The UUIDs scan_crafting_blueprints' blueprint pass hands to the
+        # carryable resolver (perf proposal: it collects them as it reads
+        # each blueprint, so there is no separate UUID scan to call).
+        with mock.patch.object(gen_module, "_build_uuid_to_commodity",
+                               return_value={}) as resolve:
+            gen_module.scan_crafting_blueprints(tmp_path, tmp_path / "carryables", {}, {})
+        uuids = resolve.call_args.args[0]
         assert "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" in uuids, (
             "CraftingCost_Resource UUID must still be collected"
         )
@@ -176,6 +183,111 @@ class TestCraftingCostItemPickup:
         )
         assert "[CF]" in commodities.get("items_commodities_agricium", "")
         assert "[CF]" in commodities.get("items_commodities_hadanite", "")
+
+    def test_fills_the_sco_crafting_index(self, gen_module, tmp_path):
+        """Given a dict, the scan records each material's display names and
+        the (category, item) pairs it goes into, for the SCO drawer."""
+        hadanite_uuid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        item_uuid = "ffff0000-0000-0000-0000-000000000000"
+        carryables = tmp_path / "carryables"
+        carryables.mkdir()
+        (carryables / "harvestable_mineral_1h_hadanite.xml").write_text(
+            f'<Entity __ref="{hadanite_uuid}"/>', encoding="utf-8"
+        )
+        bp_dir = tmp_path / "bp"
+        (bp_dir / "armour").mkdir(parents=True)
+        (bp_dir / "armour" / "bp_craft_test_helmet.xml").write_text(
+            f'<CraftingBlueprintRecord>'
+            f'<CraftingProcess_Creation entityClass="{item_uuid}"/>'
+            f'<CraftingCost_Item entityClass="{hadanite_uuid}" quantity="7"/>'
+            f'</CraftingBlueprintRecord>',
+            encoding="utf-8",
+        )
+        index = {}
+        gen_module.scan_crafting_blueprints(
+            bp_dir=bp_dir,
+            carryables_dir=carryables,
+            entity_names={item_uuid: "Test Helmet"},
+            loc={"items_commodities_hadanite": "Hadanite",
+                 "items_commodities_hadanite_desc": "A crystal oscillator."},
+            tag_config=_enabled_commodities_config(),
+            crafting_index=index,
+        )
+        assert index["hadanite"]["names"] == ["Hadanite"]
+        assert [item for _cat, item in index["hadanite"]["items"]] == ["Test Helmet"]
+
+    def test_the_crafting_index_order_does_not_change_between_runs(self, gen_module, tmp_path):
+        """The materials of one blueprint were read from a set, so their
+        order in crafting_index.json, the order they were first met in,
+        changed with every run's string hashing (found in the perf proposal's
+        review). Now each blueprint's materials are met in name order, so
+        the index keeps them in the order they are first met, blueprint by
+        blueprint, each blueprint's by name. All eight here are in one
+        blueprint, which makes any other order fail."""
+        gems = ["saldynium", "hadanite", "glacosite", "aphorite",
+                "janalite", "dolivine", "feynmaline", "beradom"]
+        carryables = tmp_path / "carryables"
+        carryables.mkdir()
+        costs, loc = [], {}
+        for n, gem in enumerate(gems):
+            uuid = f"{n + 1:08x}-0000-0000-0000-000000000000"   # the all-zero one is skipped
+            (carryables / f"harvestable_mineral_1h_{gem}.xml").write_text(
+                f'<Entity __ref="{uuid}"/>', encoding="utf-8")
+            costs.append(f'<CraftingCost_Item entityClass="{uuid}" quantity="1"/>')
+            loc[f"items_commodities_{gem}"] = gem.title()
+        item_uuid = "ffff0000-0000-0000-0000-000000000000"
+        bp_dir = tmp_path / "bp"
+        (bp_dir / "armour").mkdir(parents=True)
+        (bp_dir / "armour" / "bp_craft_test_helmet.xml").write_text(
+            f'<CraftingBlueprintRecord>'
+            f'<CraftingProcess_Creation entityClass="{item_uuid}"/>'
+            + "".join(costs) + '</CraftingBlueprintRecord>',
+            encoding="utf-8",
+        )
+        index = {}
+        gen_module.scan_crafting_blueprints(
+            bp_dir=bp_dir,
+            carryables_dir=carryables,
+            entity_names={item_uuid: "Test Helmet"},
+            loc=loc,
+            tag_config=_enabled_commodities_config(),
+            crafting_index=index,
+        )
+        assert list(index) == sorted(gems)
+
+    def test_crafting_index_names_follow_the_selected_language(self, gen_module, tmp_path):
+        """The SCO index keeps the selected language's material names (ctx
+        "loc"), not the English annotation loc ("tag_loc"): a German player
+        sees German names in the drawer's Crafting search, and a mineral
+        still finds them through the English key."""
+        hadanite_uuid = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        item_uuid = "ffff0000-0000-0000-0000-000000000000"
+        records = tmp_path / "records"
+        scitem_dir = records / "entities" / "scitem"
+        (scitem_dir / "carryables").mkdir(parents=True)
+        (scitem_dir / "carryables" / "harvestable_mineral_1h_hadanite.xml").write_text(
+            f'<Entity __ref="{hadanite_uuid}"/>', encoding="utf-8")
+        bp_dir = records / "crafting" / "blueprints" / "crafting" / "armour"
+        bp_dir.mkdir(parents=True)
+        (bp_dir / "bp_craft_test_helmet.xml").write_text(
+            f'<CraftingBlueprintRecord>'
+            f'<CraftingProcess_Creation entityClass="{item_uuid}"/>'
+            f'<CraftingCost_Item entityClass="{hadanite_uuid}" quantity="7"/>'
+            f'</CraftingBlueprintRecord>',
+            encoding="utf-8")
+        ctx = {
+            "records": records,
+            "scitem_dir": scitem_dir,
+            "entity_names": {item_uuid: "Test Helmet"},
+            "loc": {"items_commodities_hadanite": "Hadanit",
+                    "items_commodities_hadanite_desc": "Ein Kristalloszillator."},
+            "tag_loc": {"items_commodities_hadanite": "Hadanite",
+                        "items_commodities_hadanite_desc": "A crystal oscillator."},
+            "tag_configs": {"commodities": _enabled_commodities_config()},
+            "crafting_index": {},
+        }
+        gen_module._run_gen_commodity_journal(ctx)
+        assert ctx["crafting_index"]["hadanite"]["names"] == ["Hadanit"]
 
 
 class TestScanCraftingBlueprintsReturnShape:

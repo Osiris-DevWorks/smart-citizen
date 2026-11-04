@@ -16,3 +16,6 @@ exclude =
     ./build,
     ./dist,
     portable_data
+# Generated reference glyph data: one long row of pixels per glyph.
+per-file-ignores =
+    src/utils/sco_digit_samples.py: E501

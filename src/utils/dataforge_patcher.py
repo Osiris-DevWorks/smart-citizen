@@ -52,6 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+from src.utils.atomic_io import atomic_writer, sweep_stale_temps
 from src.utils.pak_extractor import DATAFORGE_RECORDS_SUBPATH
 from src.utils.win_paths import win_long_path
 
@@ -175,6 +176,14 @@ def _apply_single_patch(
         report.errors.append(msg)
         return
 
+    # A hard kill between a rewrite's temp and its swap leaves a .sc-*.tmp
+    # beside the record, which nothing else finds (the generator reads only
+    # *.xml) until a re-extraction replaces the cache. Swept for every
+    # target, rewritten or not: a temp still under STALE_TEMP_AGE_S when the
+    # next run patched the record would otherwise outlive every later run,
+    # since an already patched record is never rewritten.
+    sweep_stale_temps(target_path.parent)
+
     # Keep UI progress short — just the file name, not the description.
     # The full description is logged separately for the Log Tab.
     if description:
@@ -201,7 +210,14 @@ def _apply_single_patch(
     if file_changed:
         # Preserve the original XML declaration Python's ElementTree emits by
         # default (short_empty_elements=True matches how unforge writes files).
-        tree.write(str(target_path), encoding="utf-8", xml_declaration=True)
+        # Written in one step: in place, a run cut off here left a truncated
+        # XML that .p4k_mtime still called fresh, so every later run logged
+        # an ERROR for it and dropped the record until a re-extraction.
+        # tree.write on the file object keeps the bytes tree.write(path)
+        # wrote. ET.tostring would not: it declares encoding='utf-8' where
+        # tree.write declares 'UTF-8'.
+        with atomic_writer(target_path, "wb") as f:
+            tree.write(f, encoding="utf-8", xml_declaration=True)
         report.files_rewritten += 1
 
 

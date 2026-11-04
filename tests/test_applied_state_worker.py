@@ -114,6 +114,15 @@ from PyQt6.QtCore import QCoreApplication  # noqa: E402
 import src.gui.main_window as main_window  # noqa: E402
 from src.gui.main_window import MainWindow  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
+from tests.event_loop import pump_until  # noqa: E402
+
+
+class _NoTickPending:
+    """The Enhancements tab with no category tick waiting to be saved, which
+    a verdict checks before it turns Apply green (#532)."""
+
+    def has_pending_category_changes(self):
+        return False
 
 
 class _RealWindow:
@@ -132,6 +141,7 @@ class _RealWindow:
         self._applied_check_rerun_pending = False
         self._initial_load_done = True
         self._session_has_unapplied_edit = True
+        self.enhancements_tab = _NoTickPending()
         self.dirty_calls = []
         self.dirty_threads = []
 
@@ -154,11 +164,7 @@ def real_window(qapp, monkeypatch):
 def _pump(condition, timeout=5.0):
     """Run the Qt event loop (which delivers queued cross-thread signals)
     until *condition* holds."""
-    deadline = time.monotonic() + timeout
-    while not condition() and time.monotonic() < deadline:
-        QCoreApplication.processEvents()
-        time.sleep(0.005)
-    assert condition(), "timed out waiting for the background check"
+    assert pump_until(condition, timeout), "timed out waiting for the background check"
 
 
 def _idle(window):

@@ -38,7 +38,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.settings import _p4k_mtimes, _pick_live_sc_install  # noqa: E402
 

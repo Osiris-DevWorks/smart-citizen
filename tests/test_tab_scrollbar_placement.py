@@ -35,7 +35,6 @@ from PyQt6.QtWidgets import (  # noqa: E402
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.settings import AppSettings  # noqa: E402
 from tests.gui_window import build_main_window, retire_main_window  # noqa: E402

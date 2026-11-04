@@ -17,7 +17,6 @@ import pytest
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.gui.blueprint_tracker_tab import BlueprintTrackerTab  # noqa: E402
 from src.utils.blueprint_meta import BlueprintItem  # noqa: E402

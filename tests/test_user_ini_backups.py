@@ -15,7 +15,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
 from src.models.string_model import StringEntry  # noqa: E402
 from src.utils import user_ini_manager as uim  # noqa: E402
@@ -117,6 +116,24 @@ class TestListAndRestore:
         after = uim.list_user_ini_backups(p)
         assert len(after) == before + 1
         assert any(b.read_text(encoding="utf-8") == "bad=*Wrong\n" for b in after)
+
+    def test_restoring_the_oldest_of_a_full_set(self, tmp_path):
+        """The pre-restore snapshot rotates out the oldest of a full set,
+        which is the one picked here. It was deleted before it was read, so
+        the restore failed and the snapshot was gone (#531)."""
+        p = _user_ini(tmp_path)
+        for i in range(uim.MAX_USER_INI_BACKUPS):
+            p.write_text(f"k=v{i}\n", encoding="utf-8")
+            uim.backup_user_ini(p)
+        p.write_text("k=current\n", encoding="utf-8")
+        oldest = uim.list_user_ini_backups(p)[-1]
+        assert oldest.read_text(encoding="utf-8") == "k=v0\n"
+
+        uim.restore_user_ini_backup(oldest, p)
+
+        assert p.read_text(encoding="utf-8") == "k=v0\n"
+        assert any(b.read_text(encoding="utf-8") == "k=current\n"
+                   for b in uim.list_user_ini_backups(p))
 
 
 # ── integration with save_user_ini ───────────────────────────────────────────

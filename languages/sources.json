@@ -9,5 +9,6 @@
   "german": "https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini",
   "turkish": "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/turkish_(turkey)/global.ini",
   "korean": "",
-  "chinese_traditional": "https://raw.githubusercontent.com/Orbit-Startech/StarCitizen-TCTP/main/chinese_(traditional)/global.ini"
+  "chinese_traditional": "https://raw.githubusercontent.com/Orbit-Startech/StarCitizen-TCTP/main/chinese_(traditional)/global.ini",
+  "russian": "https://raw.githubusercontent.com/n1ghter/StarCitizenRu/master/data/Localization/korean_(south_korea)/global.ini"
 }

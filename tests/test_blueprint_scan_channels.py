@@ -280,7 +280,10 @@ class _NextStub:
         self._bp_scan_channel = None
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
+        self._bp_scan_status = ""
         self.finish_calls = 0
+
+    _show_blueprint_scan_status = MainWindow._show_blueprint_scan_status
 
     def _start_next_blueprint_scan(self):
         MainWindow._start_next_blueprint_scan(self)
@@ -362,6 +365,15 @@ class TestTheWorkerStartRefusesTestChannels:
         stub._start_next_blueprint_scan()
         assert [w.channel_path for w in _FakeWorker.created] == [str(fake_worker / channel)]
 
+    def test_the_progress_goes_to_the_status_bar_through_the_remembering_slot(
+            self, fake_worker):
+        """So the run's end can take its last text down again (#527,
+        tests/test_blueprint_auto_scan.py::TestTheScansStatusTextGoes)."""
+        stub = _NextStub(["LIVE"])
+        stub._start_next_blueprint_scan()
+        [worker] = _FakeWorker.created
+        assert worker.progress.slots == [stub._show_blueprint_scan_status]
+
     def test_an_unknown_channel_name_is_refused_too(self, fake_worker):
         stub = _NextStub(["SOMETHING-ELSE"])
         stub._start_next_blueprint_scan()
@@ -377,6 +389,15 @@ class TestTheWorkerStartRefusesTestChannels:
         assert _call_sites("scan_channel") == ["gui/workers.py"]
         assert _call_sites("find_log_files") == ["utils/blueprint_log_scanner.py"]
         assert _call_sites("scan_files") == ["utils/blueprint_log_scanner.py"]
+
+    def test_the_live_watch_is_gated_too(self):
+        """The overlay's live Game.log watch reads logs another way
+        (GameLogTail), so it carries the same LIVE/HOTFIX gate where its one
+        worker is started."""
+        assert _call_sites("GameLogTail") == ["gui/workers.py"]
+        assert _call_sites("LiveBlueprintLogWorker") == ["gui/main_window.py"]
+        source = inspect.getsource(MainWindow._start_sco_log_watcher)
+        assert "LiveBlueprintLogWorker(" in source and "_SCANNED_CHANNELS" in source
 
 
 class _RunStub(_NextStub):
@@ -394,6 +415,9 @@ class _RunStub(_NextStub):
 
     def _on_blueprint_log_scan_finished(self, result):
         MainWindow._on_blueprint_log_scan_finished(self, result)
+
+    def _owned_names_from_log(self, raw_names):
+        return MainWindow._owned_names_from_log(self, raw_names)
 
 
 def _result(when, *names):

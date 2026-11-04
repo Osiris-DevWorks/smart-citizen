@@ -430,6 +430,19 @@ class TestComputeAlreadyApplied:
         (env.channel / "user.cfg").write_text("g_language = german_(germany)\n", encoding="utf-8")
         assert _compute_already_applied(self._snapshot(env)) is False
 
+    def test_false_for_korean_while_russian_content_is_applied(self, env):
+        """Russian and Korean share korean_(south_korea), so user.cfg reads
+        the same for both. With Korean selected and Russian strings in the
+        game file, only the content can tell them apart, and it must read
+        "not applied" so Apply stays reachable."""
+        cfg = env.channel / "user.cfg"
+        cfg.write_text("g_language = korean_(south_korea)\n", encoding="utf-8")
+        self._write_applied(env, {"a": "русский a", "b": "русский b"})
+        assert _compute_already_applied(self._snapshot(env, language="korean")) is False
+        # The same file with Russian selected and loaded is applied.
+        self._write_applied(env, self.STOCK)
+        assert _compute_already_applied(self._snapshot(env, language="russian")) is True
+
     def test_false_when_user_cfg_is_missing(self, env):
         self._write_applied(env, self.STOCK)
         (env.channel / "user.cfg").unlink()
@@ -504,6 +517,14 @@ class _FakeWorker:
         self.finished.emit(result)
 
 
+class _NoTickPending:
+    """The Enhancements tab with no category tick waiting to be saved, which
+    a verdict checks before it turns Apply green (#532)."""
+
+    def has_pending_category_changes(self):
+        return False
+
+
 class _Window:
     """Carries just what the already-applied check touches, with the real
     MainWindow methods bound onto it."""
@@ -524,6 +545,7 @@ class _Window:
         self._applied_check_rerun_pending = False
         self._initial_load_done = True
         self._session_has_unapplied_edit = True
+        self.enhancements_tab = _NoTickPending()
         self.dirty_calls: list[bool] = []
         self.snapshots_taken = 0
         self.fail_snapshot = False
@@ -806,6 +828,12 @@ class TestReloadAfterACleanApply:
 def _generation_self(simple: bool, apply_cleans: bool, starts_dirty: bool = True):
     me = MagicMock()
     me._enhancements_progress_dialog = None
+    # A MagicMock attribute reads truthy, and the finished slot returns early
+    # while the window is closing, which would make these pass vacuously.
+    me._close_committed = False
+    # No language switch is waiting on the run, as in a real Simple-mode or
+    # Generate run (a MagicMock here would take the switch's reload instead).
+    me._after_unfinished_generation = None
     me._simple_run_active = simple
     me._apply_dirty = starts_dirty
     me._reload_follows_clean_apply = False
@@ -825,13 +853,13 @@ class TestSimpleFlowFlagsTheCleanReload:
 
     def test_a_successful_simple_apply_flags_the_reload(self):
         me = _generation_self(simple=True, apply_cleans=True)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         me.apply_to_game.assert_called_once_with()
         assert me._reload_follows_clean_apply is True
 
     def test_a_failed_or_cancelled_apply_does_not(self):
         me = _generation_self(simple=True, apply_cleans=False)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         assert me._reload_follows_clean_apply is False
 
     def test_a_failed_apply_does_not_flag_even_when_the_button_was_already_green(self):
@@ -839,7 +867,7 @@ class TestSimpleFlowFlagsTheCleanReload:
         game patch). A run that starts green and then fails to apply must not
         dress the reload up as a refresh of applied state."""
         me = _generation_self(simple=True, apply_cleans=False, starts_dirty=False)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         assert me._reload_follows_clean_apply is False
 
     def test_a_failed_reload_clears_the_one_shot(self):
@@ -852,13 +880,13 @@ class TestSimpleFlowFlagsTheCleanReload:
 
     def test_a_manual_generate_does_not_apply_or_flag(self):
         me = _generation_self(simple=False, apply_cleans=True)
-        MainWindow._on_enhancements_generation_finished(me, True)
+        MainWindow._on_enhancements_generation_finished(me, True, me._enhancements_worker)
         me.apply_to_game.assert_not_called()
         assert me._reload_follows_clean_apply is False
 
     def test_a_failed_generation_does_not_flag(self):
         me = _generation_self(simple=True, apply_cleans=True)
-        MainWindow._on_enhancements_generation_finished(me, False)
+        MainWindow._on_enhancements_generation_finished(me, False, me._enhancements_worker)
         me.apply_to_game.assert_not_called()
         assert me._reload_follows_clean_apply is False
 
@@ -890,7 +918,10 @@ class TestCloseEventSettlesTheCheck:
 
         MainWindow.closeEvent(self._closing_self(order, unapplied=True), MagicMock())
 
-        assert order == ["settle", "warn"]
+        # The fake box's click matches neither Cancel nor Apply Now, so this is
+        # the Exit path, which settles again after the prompt's event loop
+        # (#416 review: a scan finishing there can start a check).
+        assert order == ["settle", "warn", "settle"]
 
     def test_the_check_is_settled_even_when_there_is_nothing_to_warn_about(self, monkeypatch):
         order = []
@@ -992,9 +1023,15 @@ class _RecordingMessageBox:
     def _record(cls, kind):
         cls.calls.append(f"dialog-{kind}")
 
+    # Something to run while the success box is open, standing in for what its
+    # event loop can deliver (a blueprint scan finishing, #416).
+    during_information = None
+
     @classmethod
     def information(cls, *args, **kwargs):
         cls._record("information")
+        if cls.during_information is not None:
+            cls.during_information()
 
     @classmethod
     def warning(cls, *args, **kwargs):
@@ -1020,6 +1057,7 @@ class TestApplyToGameKeepsTheCheckHonest:
 
         calls: list = []
         _RecordingMessageBox.calls = calls
+        _RecordingMessageBox.during_information = None
         base = tmp_path / "base.ini"
         base.write_text("a=stock a\n", encoding="utf-8")
         state = type("State", (), {"merge_raises": False, "sources": None})
@@ -1057,7 +1095,25 @@ class TestApplyToGameKeepsTheCheckHonest:
 
     def test_a_successful_apply_invalidates_before_writing_and_reports_true(self, env):
         assert MainWindow.apply_to_game(env.me) is True
-        assert env.calls == ["invalidate", "write", "dialog-information", "applied"]
+        # Marked applied before the success box (#416 review), like Clear
+        # Localization: the box's event loop can deliver a later change.
+        assert env.calls == ["invalidate", "write", "applied", "dialog-information"]
+
+    def test_a_change_made_while_the_success_box_is_open_keeps_apply_red(self, env):
+        """#416 review: a blueprint scan that finishes while the success box is
+        open adds blueprints and marks Apply red. Marking applied after the box
+        painted that green over a change the written file does not have."""
+        state = {"dirty": None}
+        env.me._mark_applied.side_effect = lambda: (
+            env.calls.append("applied"), state.update(dirty=False))
+        env.me._mark_apply_dirty.side_effect = lambda: (
+            env.calls.append("dirty"), state.update(dirty=True))
+        _RecordingMessageBox.during_information = env.me._mark_apply_dirty
+
+        assert MainWindow.apply_to_game(env.me) is True
+
+        assert env.calls == ["invalidate", "write", "applied", "dialog-information", "dirty"]
+        assert state["dirty"] is True
 
     def test_a_failed_write_is_marked_dirty_before_its_error_dialog(self, env):
         env.state.merge_raises = True

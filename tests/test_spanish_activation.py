@@ -21,9 +21,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
-from utils.settings import AppSettings, SC_LANGUAGE_IDS  # noqa: E402
+from src.utils.settings import AppSettings, SC_LANGUAGE_IDS  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 

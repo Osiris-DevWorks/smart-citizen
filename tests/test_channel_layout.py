@@ -9,16 +9,12 @@ Covers:
 """
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import QSettings
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from utils.settings import AppSettings
+from src.utils.settings import AppSettings
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -142,7 +138,7 @@ class TestChannelScopedPaths:
     ):
         # PR #26 moved the DataForge cache out of user_data_dir (Documents)
         # to LOCALAPPDATA so OneDrive sync / Defender don't churn on the
-        # 1.4 GB extract. The test mirrors that — path must be under
+        # ~1.2 GB extract. The test mirrors that — path must be under
         # %LOCALAPPDATA%\Smart Citizen\<channel>\cache\dataforge.
         fake_local = tmp_path / "LocalAppData"
         fake_local.mkdir()

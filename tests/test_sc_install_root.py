@@ -16,10 +16,10 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
+from tests.junction import make_junction  # noqa: E402
 
 pytestmark = pytest.mark.unit
 
@@ -970,21 +970,10 @@ class TestScanUsesLauncherLog:
         r"""The game moved off C: the usual way: the data sits at D:\StarCitizen
         and a junction at its old Program Files path points to it. Returns
         ``(real, link)``, or skips where a junction cannot be made."""
-        import subprocess
-
         real = _fake_install(tmp_path, "D", "StarCitizen")
         link = tmp_path / "C" / "Program Files" / "Roberts Space Industries" / "StarCitizen"
         link.parent.mkdir(parents=True)
-        made = subprocess.run(
-            ["cmd", "/c", "mklink", "/J", str(link), str(real)], capture_output=True, text=True
-        )
-        if made.returncode != 0 or not link.exists():
-            reason = f"cannot create a junction here: {(made.stdout + made.stderr).strip()}"
-            # Any account can make a junction, so on CI this is a broken runner,
-            # not a reason to drop the check without a word.
-            if os.environ.get("CI"):
-                pytest.fail(reason, pytrace=False)
-            pytest.skip(reason)
+        make_junction(link, real)
         return real, link
 
     def test_a_junction_to_an_install_is_not_a_second_install(self, tmp_path, scan, ranked):
@@ -1124,18 +1113,16 @@ def inputs_a_module_fixture_sees():
 
 class TestRealInstallDetectionInputsAreStubbed:
     """tests/conftest.py keeps every test off the developer's real launcher log
-    and drive listing. These pin its two promises: both module copies of settings
-    are stubbed, and the stubs are in place before module-scoped fixtures run."""
+    and drive listing. These pin its two promises: the settings module is
+    stubbed, and the stubs are in place before module-scoped fixtures run."""
 
-    @pytest.mark.parametrize("module_name", ["src.utils.settings", "utils.settings"])
-    def test_both_settings_module_copies_are_stubbed(self, module_name):
+    def test_the_settings_module_is_stubbed(self):
         import src.utils.install_scanner as scanner
+        import src.utils.settings as settings
 
-        module = sys.modules.get(module_name)
-        if module is None:
-            pytest.skip(f"nothing in this run imported {module_name}")
-        assert module.read_launcher_installs is not scanner.read_launcher_installs
-        assert module.iter_shallow_sc_install_locations is not scanner.iter_shallow_sc_install_locations
+        assert settings.read_launcher_installs is not scanner.read_launcher_installs
+        assert (settings.iter_shallow_sc_install_locations
+                is not scanner.iter_shallow_sc_install_locations)
 
     def test_module_scoped_fixtures_see_the_stubs_too(self, inputs_a_module_fixture_sees):
         import src.utils.install_scanner as scanner

@@ -258,17 +258,27 @@ def _build_tag_patterns(enclosings: tuple[tuple[str, str], ...]):
 
 def enclosings_from_tag_configs(
     tag_configs: dict,
-    categories: tuple[str, ...] = ("components", "missiles", "ship_weapons"),
+    categories: tuple[str, ...] = ("components", "missiles", "ship_weapons", "armor"),
 ) -> tuple[tuple[str, str], ...]:
     """Reduce a ``{category: TagConfig}`` dict (from ``AppSettings.get_all_tag_
     configs()``) to the deduplicated set of (open, close) enclosing pairs
     actually in play, for callers who need to match a tag back off a name.
 
-    Only the 3 categories that ever tag an item/vehicle name appearing in a
-    POTENTIAL BLUEPRINTS bullet are considered by default -- ``commodities``
-    tags non-ownable trade goods and ``mission_titles`` tags mission title
-    text via a separate mechanism (see blueprint_meta._TITLE_TAG_RE); neither
-    is relevant to Blueprint Tracker matching.
+    Only the categories that tag the name of an item a blueprint can make
+    are considered by default (armor since #492: armor pieces are
+    blueprint rewards too, so a Round-bracketed armor tag on an item name or
+    a mission bullet must still strip back to the bare name) --
+    ``commodities`` tags non-ownable trade goods and ``mission_titles`` tags
+    mission title text via a separate mechanism (see
+    blueprint_meta._TITLE_TAG_RE); neither is relevant to Blueprint Tracker
+    matching.
+
+    Armor counts only while its tag is on (it is off by default). It never
+    uses the "None (space only)" style: the Armor tab does not offer it,
+    because the space-only heuristic could not strip a one-word armor tag such
+    as "H" (tag_builder.NO_NONE_ENCLOSING_CATEGORIES), and a stored "none"
+    reads as Square. The guard below drops such a pair anyway, so it can
+    never switch that heuristic's mis-strip risk on for everybody.
 
     Square is always included, regardless of what's actually configured:
     enhancements.ini is a generated artifact that may still carry
@@ -277,7 +287,7 @@ def enclosings_from_tag_configs(
     item name (unlike Round/Curly/Angle, which sometimes do) -- so keeping it
     costs nothing and closes that transition-window gap.
     """
-    from src.utils.tag_builder import _ENCLOSING_BY_KEY
+    from src.utils.tag_builder import _ENCLOSING_BY_KEY, tag_enabled
 
     pairs = {("[", "]")}
     for cat in categories:
@@ -285,6 +295,8 @@ def enclosings_from_tag_configs(
         if cfg is None:
             continue
         o, c = _ENCLOSING_BY_KEY.get(cfg.enclosing, ("[", "]"))
+        if cat == "armor" and (not tag_enabled(cfg) or not (o and c)):
+            continue
         # The "None (space only)" style is ("", "") -- a real configured
         # enclosing with no delimiter, so it's reported like any other rather
         # than dropped. _build_tag_patterns skips it (there's nothing to build

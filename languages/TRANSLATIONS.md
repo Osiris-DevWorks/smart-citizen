@@ -55,9 +55,497 @@ them against the new source.
   descarga configurada..."). The AI `at` fallback for every other non-English
   language had the same staleness (no `ht` to protect there, so the 2026-10-01
   backfill below refreshed all of them directly instead of just flagging it).
+- `enhancements.cat_desc_gear` — English changed from "Combat stats for FPS
+  weapons" to "Combat stats for FPS weapons and armor weight tags" (#492: the
+  Gear checkbox now also governs the Tag Builder's armor tags). Affects
+  french, portuguese_br and spanish, whose human `ht` still describes weapon
+  stats only. The AI `at` fallbacks were refreshed.
+- `enhancements.annotate_mission_descs_cb` — English changed from "Annotate
+  components in mission descriptions" to "Annotate components and armor in
+  mission descriptions" (#492: the checkbox now also covers armor weight tags
+  in POTENTIAL BLUEPRINTS lists). Affects french, portuguese_br and spanish,
+  whose human `ht` still says components only. The AI `at` fallbacks were
+  refreshed where one existed (spanish's was empty and stays empty).
+- `enhancements.desc` and `enhancements.tag_builder_desc` — English now
+  lists every tagged category ("components, missiles, ship weapons,
+  commodities, and armor", and the caption also the route on hauling mission
+  titles) instead of only the first three (#492 review). Affects french,
+  portuguese_br and spanish, whose human `ht` still names three categories.
+  The AI `at` fallbacks were refreshed where one existed (spanish's are empty
+  and stay empty).
+- `config.data_desc` — English's size for the DataForge cache changed from
+  ~1.4 GB to ~1.2 GB (#482, 3.0.0), the size measured on LIVE 4.10. Affects
+  french, portuguese_br and spanish, whose human `ht` still says 1,4 Go or
+  1,4 GB (in french and portuguese_br the `at` is a copy of that `ht` and
+  was left as it is too). The seven other languages had no `ht` there, so
+  their `at` was corrected directly (3.0.0 entry below).
 
 ## Backfill log
 
+- **3.0.0 cycle (2026-10-30, Claude Opus 5.5, pre-release language check):**
+  two gaps filled. (1) New key `enhancements.blueprints_default_owned_mission`,
+  the starter blueprints' mission label ("Default blueprint (every player has
+  it)", #416), which was hardcoded English in the Blueprint Tracker's Mission
+  filter and tooltip and the overlay drawer's tooltip: `ht` in english, `at`
+  in the other eleven. (2) HELP section 1 gains the Run in Background
+  paragraph (#483) in all eleven translated `HELP.md` files, AI-translated,
+  using each language's own `ui.json` text for **Run in Background** and
+  **Stop**.
+- **3.0.0 cycle (2026-10-29, Claude Opus 5.5):** the overlay's scan-sample
+  capture left the app (it is now for tuning the digit reader only, behind
+  an environment variable). Removed in every language: `overlay.samples_group`,
+  `overlay.save_samples`, `overlay.save_samples_hint` and
+  `overlay.open_samples_btn` from `ui.json`, HELP's **Save scan samples**
+  bullet and LEGAL's **Overlay scan samples** data-location bullet. Nothing
+  added, so nothing to translate.
+- **3.0.0 cycle (2026-10-28, Claude Sonnet 5.5):** a language check of
+  everything added for 3.0 found `HELP.md` and `ABOUT.md` out of date in ten
+  languages (not russian, which was brought current on 2026-10-20), so they
+  are caught up with English. HELP's Tag Builder entry gains #492's armor
+  text: the Armor tab's one Weight element, the `L`, `M`, `H`, `S` and `U`
+  classes and `C` for clothing, **Edit mapping…**, that the tags are written
+  with the Gear enhancements, that the annotate checkbox also puts them on
+  armor in the POTENTIAL BLUEPRINTS lists (which come from Missions, so they
+  show even with Gear off), and why the Armor tab has no None brackets.
+  HELP's Appearance entry gains the Font size choice (Small, Medium or Large,
+  with an offer to restart). ABOUT's Tag Builder entry gains armor and its
+  Weight element. The older Map Language File text from #367 (a local file
+  through Browse, and the warning to copy its `global.ini` out of the
+  Star Citizen install) is added in the eight languages that still described
+  a URL only: german, french, spanish, italian, portuguese_br, japanese,
+  chinese and chinese_traditional (korean and turkish already had it).
+  Armor, Weight, the class names and POTENTIAL BLUEPRINTS stay in English
+  because the app shows them in English, as russian does. The buttons and
+  checkboxes named are each language's own `ui.json` text, and each file's
+  own words for the category names (Gear, Missions) and the Blueprint
+  Tracker. In french, portuguese_br and spanish the annotate checkbox is
+  quoted as the app shows it, and its human `ht` still says components only
+  until a translator re-translates it (see Needs human re-review). AI text
+  throughout, checked against English for length, the `L`, `M`, `H`, `S`, `U`
+  and `C` letters and the Korean sentence-spacing rule, not back-translated.
+  No `ui.json` changed.
+- **3.0.0 cycle (2026-10-23, Claude Opus 5.5):** #523, overlay feedback.
+  28 new keys: `overlay.scan_group`, `overlay.drawer_group`,
+  `overlay.blueprint_watch_group` and `overlay.samples_group` (the Overlay
+  tab's four boxes), `sco.surface_only`, `sco.watch_salvage_tooltip` and
+  `sco.tooltip_salvage_signature` (the Minerals section's Salvage row and
+  round numbers that list salvage first), `overlay.label_size` with
+  `overlay.size_small` / `_medium` / `_large` / `_extra_large` (the scan
+  text size), `overlay.alerts_title` with `overlay.alert_glow`, `_flash`,
+  `_color`, `_bigger` and `_sound` and a `_hint` for each (what a watched
+  mineral or salvage sets off), and `overlay.drawer_hotkey`,
+  `overlay.drawer_hotkey_clear` (the Clear button beside the box),
+  `overlay.drawer_hotkey_hint` (with its example, Alt+8, the same in every
+  language: Star Citizen's default bindings never use 8 or Alt on its own,
+  and 8 has one key code on every layout), `overlay.hotkey_taken`
+  and `overlay.hotkey_unsupported` (the drawer hotkey). Four English texts
+  changed: `sco.crafting_search_placeholder` ("Type a scannable or item
+  name...", since more than components can be crafted),
+  `overlay.drawer_crafting_hint` (items, not components),
+  `sco.watch_mineral_tooltip` (the label alerts, not only glows) and
+  `overlay.desc` (with a drawer hotkey set, the overlay watches key presses
+  for that one combination). `overlay.drawer_hotkey_hint` also says that
+  Star Citizen still gets those keys, since the overlay watches the
+  keyboard's raw input while the game keeps registered hotkeys away, and
+  that in game the player still holds F to use the mouse in the drawer
+  (Windows does not let the overlay take focus from the game). AI `at`
+  in all 11 other languages; none had an `ht` on any of these keys, so
+  nothing needs human re-review. The same change updated
+  `docs/HELP.md`'s Overlay Tab section, `docs/FAQ.md`'s overlay paragraph
+  and `docs/ABOUT.md`'s overlay bullet, and the 11 translated copies of
+  each, worded with each `ui.json`'s own names: the text size, the alerts,
+  the Salvage row, round numbers listing salvage first, the drawer hotkey
+  (that it needs Ctrl, Alt or Win unless it is an F key or Pause, and in
+  the FAQ, the raw input it watches and what it never does), and items
+  instead of components.
+- **3.0.0 cycle (2026-10-20, Claude):** New language **russian** added,
+  split out of #488 by **h0use** (Den McConan) without that PR's channel
+  badge. AI translation of every UI key (`at`-only, `ht` empty), the full
+  20-step guided tour (`tutorial.*`, translated from `assets/tutorial.json`
+  and including the Overlay step), and `HELP.md`, `ABOUT.md`, `LEGAL.md` and
+  `FAQ.md`, brought current with English (Overlay tab, armor weight tags,
+  starter blueprints, free-space and cache-folder troubleshooting). Base
+  `global.ini` mapped to **n1ghter/StarCitizenRu**
+  (`data/Localization/korean_(south_korea)/global.ini`). Russian borrows the
+  `korean_(south_korea)` slot, shared with Korean on purpose (see the
+  per-language note); `HELP.md` in every language now says the two replace
+  each other's applied file.
+- **3.0.0 cycle (2026-10-17, Claude Opus 5.5):** #479 makes More > Clear
+  Cache clear the DataForge cache in use and moves every text it shows into
+  `ui.json`; before, only its four titles and its cache-empty text were
+  translated. Ten new keys, after `dialogs.cache_cleared_title`:
+  `dialogs.clear_cache_busy` (Clear
+  Cache is not available while an extraction or an enhancement generation
+  runs, try again once it has finished; shown in the status bar),
+  `dialogs.clear_cache_files_body` (the cached files that will be deleted,
+  `{files}`, and that base.ini will need extracting again from Data.p4k
+  before strings can load; the old English text kept),
+  `dialogs.clear_cache_dataforge_body` (also clear the DataForge cache?,
+  `{folder}`, what it holds and that making it again takes a few minutes,
+  and to keep it to refresh only the localization strings),
+  `dialogs.clear_cache_dataforge_unreachable` (the DataForge cache folder
+  `{folder}` could not be reached, so it was not cleared),
+  `dialogs.clear_cache_progress_title`, `dialogs.clear_cache_progress_files`,
+  `dialogs.clear_cache_progress_file` (`{name}`) and
+  `dialogs.clear_cache_progress_dataforge` (the progress dialog's title and
+  labels), `dialogs.cache_cleared_body` (`{count}` items deleted) and
+  `dialogs.cache_cleared_failed` (could not delete, then `{failures}`, one
+  per line, each Windows' own error text, not translated). `{folder}` stands
+  on a line of its own. In all 10 languages, `at`-only (`ht` empty), with
+  each file's own words for Clear Cache (the menu item's), the cache, the
+  DataForge cache folder (as in the #494 entry below) and the enhancements
+  (the Enhancements tab's name: enrichissements, Erweiterungen,
+  miglioramenti, mejoras, aprimoramentos, geliştirme, 拡張, 강화, 增强内容,
+  增強內容). The DataForge question's old warning sign and its closing
+  "Clear DataForge cache?" line are gone: the title already asks.
+  chinese_traditional follows the chinese strings in Taiwan terms (快取,
+  資料夾, 檔案, 存取, 重新整理). Each string was back-translated and compared
+  with the English in the same pass, not by a separate checker: no meaning
+  errors, and the Korean sentence-spacing rule holds. No human string
+  changed. `tests/test_clear_cache.py` checks every language's placeholders,
+  the folder on a line of its own, and this `ht`/`at` split.
+- **3.0.0 cycle (2026-10-17, Claude Opus 5.5):** #455: a YES on Setup's
+  OneDrive warning now moves the data at the app's next start, and the app
+  says what it did. Three new `onedrive.*` keys after `dont_warn_again`:
+  `installer_move_done` (the status bar note: the files moved out of
+  OneDrive into the new data folder), `installer_move_left_title` and
+  `installer_move_left_body` (the box when some files stayed in the old
+  folder: why, that the Log tab lists them, and to check the old folder
+  before deleting it). In all 10 languages, `at`-only (`ht` empty), worded
+  with each file's own words from `onedrive.warning_*` and
+  `config.migrate_data_done_body` (the "file(s)" form, the data folder, the
+  reader's form of address) and its own name for the Log tab. Each string was
+  back-translated and compared with the English in the same pass, not by a
+  separate checker: no meaning errors, and the Korean sentence-spacing rule
+  holds. `tests/test_installer_data_move.py` checks every language's
+  `ht`/`at` split and placeholders.
+- **3.0.0 cycle (2026-10-17, Claude Opus 5.5):** #483 brings back Run in
+  Background for the DataForge extraction (the 2.4.0 entry below has the
+  button's first pass) and locks what a running job depends on. Four
+  `extract.*` keys, the three new ones right after `dataforge_stop_btn`:
+  `dataforge_background_btn` ("Run in Background") and the three-choice
+  `dataforge_running_body` (stop it now, or let it carry on in the background
+  while you keep working; if you stop it, you can run it again later), both
+  with the text each file had when the button was dropped in 2.4.0, and two
+  new keys. `dataforge_settings_changed`: the DataForge extraction finished,
+  but the DataForge cache folder or the channel changed while it ran, so no
+  enhancements were generated and no old cache was cleared, with each file's
+  word for the DataForge cache folder from `config.dataforge_cache_label`.
+  `locked_while_job_runs`: locked while an extraction or an enhancement
+  generation is running, and unlocked again when it finishes (shown on the
+  Config tab, as the Apply Category Changes, Save Tag Changes, Generate
+  Enhancements and Simple-mode tooltips, in a box when an install the scan
+  found is picked during a job, and in the status bar), with each file's
+  words for the extraction and for
+  generating enhancements from `extract.dataforge_extraction_title` and
+  `status_bar.generating_enhancements_background`. In all 11 languages,
+  `at`-only (`ht` empty). No language had a human `dataforge_running_body`,
+  so nothing needs human re-review. The two new strings were back-translated
+  and compared with the English in the same pass, not by a separate checker:
+  no meaning errors, and the Korean sentence-spacing rule holds.
+  `tests/test_run_in_background.py` checks the four keys' `ht`/`at` split in
+  every language.
+  Russian, added later in 3.0.0 (#514), got the four keys when this was
+  merged with it (2026-10-21), `at`-only: the two new strings, the button, and
+  its two-choice `extract.dataforge_running_body` rewritten as the
+  three-choice question. Back-translated with no meaning errors.
+  The enhancement generation dialog asks the same question since 2026-10-23
+  (it used to hide, and showed itself again as soon as more progress
+  arrived). Three new `extract.*` keys after `locked_while_job_runs`:
+  `generation_running_title` (enhancement generation running),
+  `generation_running_body` (enhancement generation is still running, then
+  the same second paragraph as `dataforge_running_body`) and
+  `generation_stopping` (stopping enhancement generation), and one
+  `status_bar.*` key after `enhancement_generation_failed`:
+  `enhancement_generation_stopped` (enhancement generation stopped). Its
+  buttons reuse `dataforge_stop_btn` and `dataforge_background_btn`. In all
+  11 languages, `at`-only (`ht` empty). Each takes its second paragraph word
+  for word from its own `dataforge_running_body`, and its words for
+  generating enhancements from `progress.generating_enhancements_title` and
+  `status_bar.enhancement_generation_failed`. The pronoun follows the noun:
+  Russian's "его" for the neuter "Извлечение" becomes "её" for the feminine
+  "Генерация", while the French, Italian, Spanish, Portuguese and German
+  nouns for the extraction and the generation are both feminine, so their
+  pronouns stay. All 44 strings were back-translated and compared with the
+  English in the same pass, not by a separate checker: no meaning errors,
+  and the Korean sentence-spacing rule holds.
+- **3.0.0 cycle (2026-10-16, Claude Opus 5.5):** #491 refuses a DataForge
+  cache folder that is a link (a junction or a symbolic link made by hand,
+  usually to keep the cache on another drive), because an extraction
+  deletes nothing through a link and used to fail after unforge. One new
+  key, after `extract.cache_folder_unusable`:
+  `extract.cache_folder_is_link` (the DataForge cache folder `{folder}` is
+  a link to another folder, it leads to `{target}`, Smart Citizen does not
+  delete anything through a link, so the extraction did not start and
+  nothing was changed, and the user can choose the folder it leads to as
+  the DataForge cache folder in the Config tab and try again). `{folder}`
+  and `{target}` each stand on a line of their own. In all 10 languages,
+  `at`-only (`ht` empty), with each file's own names from the #494 entry
+  below: the Config tab, the DataForge cache folder and the extraction. A
+  link is each language's plain word for one (french lien, german Link,
+  italian collegamento, spanish enlace, portuguese_br link, turkish
+  bağlantı, japanese リンク, korean 링크, chinese 链接, chinese_traditional
+  連結); german says Link, not Verknüpfung, which reads as a desktop
+  shortcut. "It leads to" became the language's own way of naming where
+  a link goes (japanese リンク先, korean 연결 대상, turkish Gittiği yer).
+  chinese_traditional follows the chinese strings in Taiwan terms (透過 as
+  in #490, and 連結 for a link). Each string was back-translated and compared with the
+  English in the same pass, not by a separate checker: no meaning errors,
+  and the Korean sentence-spacing rule holds. No human string changed.
+  `tests/test_linked_cache_folder.py` checks every language's
+  placeholders, the folder and the folder it leads to each on a line of
+  their own, and this `ht`/`at` split.
+  The same change adds an "Extraction says the DataForge cache folder is a
+  link to another folder" line to Troubleshooting in `docs/HELP.md` and the
+  10 translated `HELP.md` files, after #494's line, with each file's own
+  names for the Config tab and the DataForge cache folder. It names a
+  junction or a symbolic link in each language's Windows words (french
+  jonction, german Verzeichnisverbindung, italian giunzione, spanish unión,
+  portuguese_br junção, turkish bağlantı noktası with junction in brackets,
+  japanese ジャンクション, korean 정션, chinese 目录联接, chinese_traditional
+  目錄連接), back-translated the same way.
+- **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #494 keeps a DataForge
+  cache folder that Windows refuses, or one on a drive that is gone, from
+  stopping Smart Citizen opening, and says so in one box where the folder
+  is about to be made. Seven new keys. After
+  `config.invalid_cache_folder_title`: `config.cache_folder_refused`
+  (Windows denied Smart Citizen permission to create its cache in
+  `{folder}`, and the DataForge cache folder was not changed),
+  `config.cache_folder_unreachable` (Smart Citizen could not reach
+  `{folder}`, and the folder was not changed),
+  `config.cache_folder_unusable` (Smart Citizen could not use `{folder}`,
+  then `{reason}`, and the folder was not changed) and
+  `config.cache_folder_is_file` (the selected cache folder is a file, not a
+  folder, which replaces English the Config tab had hard-coded). After
+  `extract.folder_refused_fix`: `extract.cache_folder_refused` (Windows
+  denied Smart Citizen permission to create the DataForge cache in
+  `{folder}`, so the extraction did not start and nothing was changed),
+  `extract.cache_folder_unreachable` (Smart Citizen could not reach the
+  DataForge cache folder `{folder}`, the extraction did not start, and the
+  user can reconnect the drive or choose another DataForge cache folder in
+  the Config tab) and `extract.cache_folder_unusable` (Smart Citizen could
+  not use the DataForge cache folder `{folder}`, then `{reason}`, so the
+  extraction did not start and nothing was changed). The two `*_unusable`
+  keys are for an error that is neither a refusal nor a folder that cannot
+  be reached, such as a folder name Windows does not take or a path that
+  runs through a file. `{reason}` is Windows' own reason (the error's
+  `strerror`), which is already in the user's Windows language, so it is
+  passed in as it is and never translated. `{folder}`, and `{reason}`
+  where there is one, stand on a line of their own in each. The
+  Config tab's refusal is followed by #490's `extract.folder_refused_fix`
+  and the extraction's by `extract.folder_refused_fix_cache`, so no new
+  advice was needed. In all 10 languages, `at`-only (`ht` empty), in each
+  file's own register and its own names, as in the #490 entry below: the
+  Config tab (`tabs.config`), the DataForge cache folder
+  (`config.dataforge_cache_label`), a drive (as in the #482 strings:
+  disque, Laufwerk, unità, unidad, unidade, sürücü, ドライブ, 드라이브,
+  驱动器, 驅動器) and the extraction. "Could not reach" became "could not
+  access" where that reads more naturally (french accéder, spanish acceder,
+  portuguese_br acessar, japanese アクセス, korean 접근, chinese 访问,
+  chinese_traditional 存取), and the Config tab's short version names what
+  could not be reached (this folder, the following location) where the
+  language needs an object. "Could not use" is each language's plain verb
+  for using something (french utiliser, german verwenden, italian usare,
+  spanish and portuguese_br usar, turkish kullanmak, japanese 使用, korean
+  사용, chinese and chinese_traditional 使用). The Config tab's short
+  version names what could not be used as its could-not-reach one does,
+  and each `*_unusable` value ends with its file's own last sentence from
+  `config.cache_folder_unreachable` or `extract.cache_folder_refused`. The
+  "is a file" text follows each file's `config.invalid_data_folder_body`,
+  saying folder where that one says directory, as the new English does.
+  chinese_traditional was converted from the chinese strings with OpenCC
+  `s2twp`, then given #490's Taiwan terms by hand: 權限, 安全性 and 存取
+  (OpenCC gives 許可權, 安全中心 and 訪問); the two `*_unusable` values
+  needed no hand fix. Each string was back-translated and compared with
+  the English in the same pass, not by a separate checker: no meaning
+  errors, and the Korean sentence-spacing rule holds. No human string
+  changed. `tests/test_cache_folder_strings.py` checks every language's
+  placeholders, the folder and the reason each on a line of its own, and
+  this `ht`/`at` split.
+  The same change adds a "Windows denied permission to create the
+  DataForge cache, or Smart Citizen could not reach it" bullet to the
+  Troubleshooting section of `docs/HELP.md` and the 10 translated
+  `HELP.md` files, after #490's working folder one, worded from each
+  language's own `*.cache_folder_*` strings and #490's bullet, with its
+  `HELP.md`'s own names for the Config tab, the DataForge cache folder and
+  the Enhancements tab, and back-translated in the same pass. The bullet
+  does not cover the two `*_unusable` boxes, which carry Windows' own
+  reason, and was left as it was when they were added.
+- **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #416 added a *Starter
+  blueprints* bullet to the Blueprint Tracker section of each `HELP.md`, just
+  before the "which servers the scan reads" bullet: every player owns the
+  P4-AR Rifle, the S-38 Pistol, their magazines and the four Field Recon Suit
+  pieces, the tracker lists them under the mission label *Default blueprint
+  (every player has it)*, and the first scan after updating adds them to the
+  owned list once. In all 10 languages, AI translation, using each file's own
+  words for the two lists and the scan. The label stays in English because
+  the app shows it untranslated (like *Limited time event reward*), and the
+  item names stay as the game data writes them. No `ui.json` key changed. A
+  separate checker back-translated every bullet and compared it with the
+  English and with each file's own terms: chinese, chinese_traditional,
+  french, german, portuguese_br and spanish needed nothing. Five wording fixes
+  followed: korean and japanese read as "the game offers no mission", so the
+  mission is now the subject ("이를 제공하는 임무도 없으므로", "これらを提供するミッションもないため"),
+  korean uses the file's usual 레이블 for "label", turkish says "üretim
+  cihazından" (the pack uses "üretici" for a manufacturer) and "mevcut
+  listeye", and italian says "la loro ricezione" instead of "di averli
+  ricevuti", which made the game the receiver.
+- **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #492 added
+  `enhancements.tag_mapping_tooltip_weight` (the Edit mapping tooltip on the
+  Tag Builder's Armor > Weight row) and reworded `enhancements.cat_desc_gear`.
+  AI `at` for the new key in all ten languages, styled on each file's
+  `tag_mapping_tooltip_type`. `cat_desc_gear`'s `at` refreshed in the seven
+  AI-only languages and in french and portuguese_br; spanish's `at` was
+  empty and stays empty. The guided tour's Tag Builder step
+  (`tutorial.enh_tag_builder.description`, English in
+  `assets/tutorial.json`) now lists armor too; its `at` was updated in all
+  ten languages, none of which has a human `ht` for it. Armor tags in mission
+  POTENTIAL BLUEPRINTS lists reworded `enhancements.annotate_mission_descs_cb`
+  and `enhancements.annotate_mission_descs_tooltip`: AI `at` refreshed for
+  both in all ten languages, except spanish's empty checkbox `at` beside its
+  human `ht`. The #492 review then reworded `enhancements.desc`,
+  `enhancements.tag_builder_desc`, `enhancements.reset_tag_tooltip` and
+  `enhancements.tag_enabled_tooltip` (they listed only components, missiles
+  and ship weapons) and shortened `annotate_mission_descs_tooltip`: AI `at`
+  refreshed in all ten languages except the empty spanish `at` beside its
+  human `desc` and `tag_builder_desc`. The #492 re-review then made
+  `reset_tag_tooltip` name the one exception (the Mission Titles tab's
+  General Tags save at once, so Reset restores them straight away) and
+  dropped the "not with None brackets" clause from
+  `annotate_mission_descs_tooltip`, since the Armor tab no longer offers None
+  brackets: AI `at` refreshed for both in all ten languages (neither has a
+  human `ht` anywhere; "Mission Titles" stays English as the tab label does,
+  "General Tags" uses each file's own `mt_general_tags_group`). No human `ht`
+  was touched. The translated `HELP.md` and `ABOUT.md` copies do not mention
+  the Armor tab yet and are left for the pre-release docs sync.
+- **3.0.0 cycle (2026-10-13, Claude Opus 5.5):** #490 stops an extraction
+  whose working folder Windows refuses, with a message, instead of retrying
+  for hours. Three new keys after `extract.size_mb`:
+  `extract.folder_refused` (Windows denied Smart Citizen permission to
+  create a working folder in `{folder}`, which stands on a line of its own,
+  and nothing was changed), `extract.folder_refused_fix_cache` (check that
+  folder's permissions, allow Smart Citizen through Controlled folder
+  access in Windows Security, or choose another DataForge cache folder in
+  the Config tab, then try again) and `extract.folder_refused_fix` (the
+  same without the cache folder, for `%TEMP%`). In all 10 languages,
+  `at`-only (`ht` empty), in each file's own register (as its #482 strings:
+  du in german, tu in italian and spanish, vous in french, the polite forms
+  elsewhere) and its own names for the Config tab (`tabs.config`), the
+  DataForge cache folder and the extraction. Windows Security, Controlled
+  folder access and a folder's permissions use Microsoft's names in each
+  language, so the user can find them in Windows: french Sécurité Windows,
+  Accès contrôlé aux dossiers, autorisations; german Windows-Sicherheit,
+  überwachter Ordnerzugriff, Berechtigungen (the older AI text in
+  `apply.cannot_save_edits_body` says Ordnerzugriffssteuerung and was left
+  as it is); italian Sicurezza di Windows, accesso controllato alle
+  cartelle, autorizzazioni; spanish Seguridad de Windows, acceso controlado
+  a carpetas, permisos; portuguese_br Segurança do Windows, Acesso
+  controlado a pastas, permissões; turkish Windows Güvenliği, Denetimli
+  klasör erişimi, izinler; japanese Windows セキュリティ, アクセス許可;
+  korean Windows 보안, 제어된 폴더 액세스, 권한; chinese Windows 安全中心,
+  权限. japanese コントロールされたフォルダーアクセス and chinese
+  受控文件夹访问 are spelt as in each file's `apply.cannot_save_edits_body`.
+  chinese_traditional was converted from the chinese strings with OpenCC
+  `s2twp`, as in #403 and #482, then given Taiwan's terms by hand:
+  Windows 安全性, 受控資料夾存取 and 權限 (OpenCC gives 安全中心, 受控資料夾訪問
+  and 許可權). The italian and chinese_traditional names for Controlled
+  folder access follow Microsoft's documentation and were not checked
+  against a Windows in that language. Each string was back-translated and
+  compared with the English in the same pass, not by a separate checker: no
+  meaning errors, and the Korean sentence-spacing rule holds. No human
+  string changed. `tests/test_folder_refused_strings.py` checks every
+  language's placeholders and this `ht`/`at` split.
+  The same change adds an "Extraction says Windows denied permission to
+  create a working folder" bullet to the Troubleshooting section of
+  `docs/HELP.md` and the 10 translated `HELP.md` files, after the
+  not-enough-free-space one, worded from each language's own
+  `extract.folder_refused*` strings and its `HELP.md`'s own names for the
+  Config tab and the DataForge cache folder, and back-translated in the
+  same pass.
+  A fourth key followed on 2026-10-16, after `extract.folder_refused_fix`:
+  `extract.folder_unusable` (Smart Citizen could not use a working folder in
+  `{folder}`, then Windows' own reason as `{reason}`, each on a line of its
+  own, and nothing was changed), for a drive Windows will not write to
+  (write-protected, failing, or a file in the way held by another program),
+  which is not a matter of permissions. `{reason}` is Windows' own text,
+  already in the user's Windows language, and is never translated. In all
+  10 languages, `at`-only (`ht` empty), with each file's own words for a
+  working folder from its `extract.folder_refused` and its closing sentence
+  from the same string, back-translated in the same pass. No human string
+  changed, and no `HELP.md` change: the message carries its own reason.
+- **3.0.0 cycle (2026-10-13, Claude Opus 5.5):** #482 checks free space
+  before a P4K extraction. Ten new keys: the not-enough-space messages
+  `extract.no_space_dataforge`, `no_space_global_ini`, `no_space_drive`,
+  `no_space_fix_cache`, `no_space_fix_temp`, `no_space_fix` and
+  `no_space_cache_incomplete`, the size templates `extract.size_gb` and
+  `size_mb` (all nine after `extract.dataforge_timeout`), and
+  `progress.reloading_with_extracted_base` (the progress text after a
+  global.ini extraction, English-only in the code until now), after
+  `progress.reloading_after_user_ini_restore`. In all 10 languages,
+  `at`-only (`ht` empty), in each file's own register and terms, with every
+  placeholder kept and the line breaks where the English has them. The
+  Config tab is named with each file's own `tabs.config` (french
+  Paramètres, german Konfiguration, italian and portuguese_br Config,
+  spanish Configuración, turkish Yapılandırma, japanese 設定, korean 설정,
+  chinese and chinese_traditional 配置) and the folder with its
+  `config.dataforge_cache_label`. `{drive}` is a label such as `D:` or a
+  network share, so it carries no particle in korean and no case suffix in
+  turkish. The size templates own the decimal mark and the unit: a decimal
+  comma in french (`Go`, `Mo`), german, italian, portuguese_br, spanish and
+  turkish, and no space before the unit in korean.
+  Also reworded `config.cache_dir_tooltip` in all 10 languages to match the
+  new English: the cache is about 1.2 GB (it said ~1.4 GB), and two new
+  sentences say an extraction needs up to about 4.5 GB free on that drive
+  while it runs and when its working files go to `%TEMP%` instead. No
+  language had an `ht` there. The figure in `config.data_desc` went from
+  1.4 to 1.2 GB in the seven AI-only languages. french, portuguese_br and
+  spanish have a human `ht` there, which was left alone (see *Needs human
+  re-review*). chinese_traditional was converted from the chinese strings
+  with OpenCC `s2twp`, as in #403, and checked by hand. Each string was
+  back-translated and compared with the English in the same pass, not by a
+  separate checker: no meaning errors, and the Korean sentence-spacing rule
+  holds. No human string changed.
+  The same change updated `docs/HELP.md` and the 10 translated `HELP.md`
+  files. In the Config Tab's *DataForge cache folder* bullet, the "about
+  2 GB of working space" sentence now says an extraction needs up to about
+  4.5 GB free while it runs (less when a cache is already there), keeps the
+  `%TEMP%` fallback cases, and says it stops before it starts when there is
+  not enough room. Troubleshooting gained an "Extraction says there is not
+  enough free space" bullet after the locked Data.p4k one. Each file writes
+  the figure its own way (french 4,5 Go, german, italian, portuguese_br,
+  spanish and turkish 4,5 GB, and korean "4.5 GB" with a space, as its HELP
+  already wrote "2 GB"). Bold labels reuse each file's own *DataForge cache
+  folder* label and the Config Tab name its other Troubleshooting bullets
+  use, which for italian ("scheda Configurazione") and japanese ("Config
+  タブ") is the section heading rather than `tabs.config`. The new bullet
+  uses the separator the rest of each list uses. In chinese,
+  chinese_traditional, german, italian and japanese the older locked
+  Data.p4k bullet uses a colon instead (left as it was). The cache bullet
+  was AI text from the 2026-10-06 docs sync and every translated `HELP.md`
+  is AI-only, so no human text changed and nothing needs human re-review.
+  Korean keeps a space after every sentence end. HELP files have no
+  `ht`/`at` split, so this log is their only record.
+- **3.0.0 cycle (2026-10-12, Claude Opus 5.5):** #476: a generation cut off by
+  closing the app, a crash or a failed write is now offered again at the next
+  start, and that question has its own body, `extract.outdated_categories_body`
+  ("out of date", with no count, because the count's noun keys say "missing"
+  in several languages). It sits right after `extract.missing_category_label`.
+  In all 10 languages, `at`-only (`ht` empty), worded in that file's own
+  register and with its existing words for enhancements and for generating
+  them (german "erzeugen", like the rest of its `extract.*` block). The
+  newlines sit where the English has them. The second and third lines are
+  that file's own from `extract.missing_categories_body`, word for word,
+  except french: "Sélectionnez ceux à générer" (the enhancements) where the
+  missing body's "celles" stands for the categories it names. "Out of date"
+  follows the file's word for an outdated DataForge cache where one fits
+  (chinese 已过期, german veraltet, japanese 古くなっています, portuguese_br
+  desatualizados, turkish güncel değil). Each string was back-translated and
+  compared with the English in the same pass, not by a separate checker: no
+  meaning errors, and the Korean sentence-spacing rule holds. No existing
+  string changed. Russian, added later in 3.0.0 (#514), got the same key when
+  this was merged with it (2026-10-21), `at`-only, its second and third lines
+  taken from its own `extract.missing_categories_body`, back-translated with
+  no meaning errors.
 - **2.4.0 pre-release (2026-10-06, Claude Opus 5.5):** in-app docs brought
   current with English after the pre-release docs sync. In all 10 languages:
   `HELP.md`'s Config Tab data-folder bullet no longer claims the DataForge
@@ -545,3 +1033,17 @@ them against the new source.
   reviewer replacing the `at`
   strings with `ht` is the next step to promote it from AI-only to
   human-reviewed.
+- **russian** — AI-translated by **Claude**. No human translator yet, so
+  **every** key is `at`-only (`ht` empty): the whole UI, the guided tour
+  (`tutorial.*`), and the `HELP.md` / `ABOUT.md` / `LEGAL.md` / `FAQ.md`
+  documents are awaiting human review. The base `global.ini` is sourced from
+  **n1ghter/StarCitizenRu** (`data/Localization/korean_(south_korea)/global.ini`),
+  the main Russian community translation project. Russian writes to the
+  game's `korean_(south_korea)` Localization folder with
+  `g_language = korean_(south_korea)` (`SC_LANGUAGE_IDS`): a borrowed slot,
+  shared with Korean on purpose. `russian_(russia)` is not a value the game
+  accepts, and the Korean font is the only in-game font that covers
+  Cyrillic. Only one of Russian or Korean can be applied at a time: applying
+  one overwrites the other's `global.ini` in that folder. A Russian-speaking
+  reviewer replacing the `at` strings with `ht` is the next step to promote
+  it from AI-only to human-reviewed.

@@ -85,7 +85,7 @@ For each file in that order:
 2. Read the **relevant per-directory `CLAUDE.md`** for the file's layer (root `CLAUDE.md` → *Per-directory guides*). That guide is the convention contract for the layer.
 3. Review for:
    - **Correctness and logic** — does the change do what the PR description claims?
-   - **Project standards** (full list in `.claude/commands/standards_check.md`): direct `QSettings(...)`, hard-coded column indices vs `COL_*` constants, `self.entries[row]` vs `_entry_index_for_row()`, `QProgressBar.setValue()` from worker threads, DataForge subtree coverage (`DATAFORGE_KEEP_SUBPATHS` ↔ `CATEGORY_SUBTREES`), `Frontend_PU_Version` stamp bypass, `base.ini` vs `global.ini` naming.
+   - **Project standards** (full list in `.claude/commands/standards_check.md`): direct `QSettings(...)`, hard-coded column indices vs `COL_*` constants, `self.entries[row]` vs `_entry_index_for_row()`, `QProgressBar.setValue()` from worker threads, DataForge subtree coverage (`DATAFORGE_KEEP_SUBPATHS`), `Frontend_PU_Version` stamp bypass, `base.ini` vs `global.ini` naming.
    - **Threading** — workers cleaned up with `quit()` + `wait()`; settings pre-fetched on the main thread; progress through `ProgressSink`; bulk table updates wrapped in `setUpdatesEnabled(False)`.
    - **DRY** (root `CLAUDE.md` → *Code deduplication (DRY)*) — copy-paste blocks ≥5 lines, magic literals in 2+ places, near-duplicate functions.
    - **Test coverage** — non-exempt logic changes need matching tests in `tests/` (exemption table in `.claude/commands/test_coverage_check.md`).

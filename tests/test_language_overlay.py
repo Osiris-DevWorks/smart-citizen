@@ -18,7 +18,6 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from src.parser.ini_parser import load_sources_from_settings  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402

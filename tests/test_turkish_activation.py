@@ -30,9 +30,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "src"))
 
-from utils.settings import AppSettings, SC_LANGUAGE_IDS  # noqa: E402
+from src.utils.settings import AppSettings, SC_LANGUAGE_IDS  # noqa: E402
 
 pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
@@ -142,6 +141,9 @@ def test_turkish_borrows_the_polish_localization_slot():
     assert SC_LANGUAGE_IDS["turkish"] == "polish_(poland)"
     assert AppSettings.get_sc_language_id("turkish") == "polish_(poland)"
     # The borrowed slot must not be shared with any other shipped language.
+    # The one deliberate exception is Russian riding Korean's
+    # korean_(south_korea) (the only in-game font with Cyrillic, approved by
+    # the owner); test_russian_activation.py locks that pair, not this one.
     owners = [lang for lang, sc_id in SC_LANGUAGE_IDS.items() if sc_id == "polish_(poland)"]
     assert owners == ["turkish"], f"polish_(poland) slot is shared: {owners}"
     # Regression: the game does not recognise russian_(russia) (#404).
