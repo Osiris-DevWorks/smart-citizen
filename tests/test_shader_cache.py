@@ -82,7 +82,7 @@ def test_root_follows_localappdata(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     assert get_shader_cache_root() == tmp_path / "Star Citizen"
     monkeypatch.delenv("LOCALAPPDATA")
-    assert get_shader_cache_root() is None
+    assert get_shader_cache_root() == Path.home() / "AppData" / "Local" / "Star Citizen"
 
 
 def test_clean_removes_only_cache_subfolders(tmp_path):

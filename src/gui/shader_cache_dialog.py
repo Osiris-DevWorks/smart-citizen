@@ -19,7 +19,7 @@ class ShaderCacheDialog(QDialog):
     ``ShaderCacheWorker`` and the rows are re-scanned when it finishes.
     """
 
-    def __init__(self, root: Path | None, parent=None):
+    def __init__(self, root: Path, parent=None):
         super().__init__(parent)
         self._root = root
         self._worker = None
@@ -58,7 +58,7 @@ class ShaderCacheDialog(QDialog):
 
         cache_dirs = find_shader_cache_dirs(self._root)
         if not cache_dirs:
-            grid.addWidget(QLabel(tr("shader_cache.none_found", path=str(self._root or ""))), 0, 0)
+            grid.addWidget(QLabel(tr("shader_cache.none_found", path=str(self._root))), 0, 0)
         for row, cache_dir in enumerate(cache_dirs):
             label = QLabel(cache_dir.label)
             label.setToolTip(str(cache_dir.path))

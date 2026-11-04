@@ -20,6 +20,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.utils.pak_extractor import is_link_stat
+
 logger = logging.getLogger(__name__)
 
 SC_LOCAL_DIR_NAME = "Star Citizen"
@@ -44,14 +46,16 @@ class ShaderCacheDir:
 
 
 def _is_link(path: Path) -> bool:
-    """Symlink or NTFS junction. ``Path.is_symlink()`` misses junctions."""
+    """Symlink or NTFS junction (``Path.is_symlink()`` misses junctions).
+
+    Same rule as the DataForge cache cleanup: other reparse points, such as
+    OneDrive placeholders or deduplicated files, are ordinary entries.
+    """
     try:
         st = os.lstat(path)
     except OSError:
         return False
-    return stat.S_ISLNK(st.st_mode) or bool(
-        getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
-    )
+    return is_link_stat(st)
 
 
 def _has_content(path: Path) -> bool:
@@ -63,10 +67,14 @@ def _has_content(path: Path) -> bool:
         return True  # unreadable: let the delete try and report it
 
 
-def get_shader_cache_root() -> Path | None:
-    """``%LOCALAPPDATA%\\Star Citizen``, or None when LOCALAPPDATA is unset."""
-    local = os.environ.get("LOCALAPPDATA")
-    return Path(local) / SC_LOCAL_DIR_NAME if local else None
+def get_shader_cache_root() -> Path:
+    """``%LOCALAPPDATA%\\Star Citizen``.
+
+    Falls back to ``~\\AppData\\Local`` when LOCALAPPDATA is unset, the same
+    default ``AppSettings`` uses.
+    """
+    local = os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+    return Path(local) / SC_LOCAL_DIR_NAME
 
 
 def humanize_cache_name(name: str) -> str:
@@ -91,7 +99,7 @@ def find_shader_cache_dirs(root: Path | None = None) -> list[ShaderCacheDir]:
     """List the build folders under *root*, sorted by folder name."""
     if root is None:
         root = get_shader_cache_root()
-    if root is None or not root.is_dir():
+    if not root.is_dir():
         return []
     found = [
         ShaderCacheDir(
@@ -189,7 +197,7 @@ def _is_build_folder(path: Path, root: Path | None) -> bool:
     # folder directly under the cache root is ever touched.
     if root is None:
         root = get_shader_cache_root()
-    in_root = root is not None and (
+    in_root = (
         os.path.normcase(os.path.abspath(path.parent))
         == os.path.normcase(os.path.abspath(root))
     )

@@ -402,7 +402,7 @@ def _unforge_timeout_error(exc, dcb_path: Path, dcb_mb: float,
     )
 
 
-def _is_link(st) -> bool:
+def is_link_stat(st) -> bool:
     """True when the ``lstat`` result *st* is a link by shutil.rmtree's own
     rule (#491): a symbolic link, or a junction (which is also how a drive
     mounted in a folder looks). rmtree never goes through one."""
@@ -426,7 +426,7 @@ def linked_folder_target(path) -> Optional[str]:
         st = os.lstat(path)
     except OSError:
         return None
-    if not _is_link(st):
+    if not is_link_stat(st):
         return None
     for read in (os.path.realpath, os.readlink):
         try:
@@ -535,7 +535,7 @@ def _delete_files_first(top: str) -> None:
         st = os.lstat(top)
     except OSError:
         return
-    if not stat.S_ISDIR(st.st_mode) or _is_link(st):
+    if not stat.S_ISDIR(st.st_mode) or is_link_stat(st):
         return
     # Twice as many batches as threads: enough that no thread waits for the
     # walk, few enough that dropping them at exit costs nothing.
@@ -555,7 +555,7 @@ def _delete_files_first(top: str) -> None:
                             st = entry.stat(follow_symlinks=False)
                         except OSError:
                             continue
-                        if stat.S_ISDIR(st.st_mode) and not _is_link(st):
+                        if stat.S_ISDIR(st.st_mode) and not is_link_stat(st):
                             folders.append(entry.path)
                         elif stat.S_ISREG(st.st_mode):
                             files.append(entry.path)
