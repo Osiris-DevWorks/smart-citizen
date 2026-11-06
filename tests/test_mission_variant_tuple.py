@@ -7,10 +7,9 @@ the tuple from 10 → 11 elements (adding ``rank_name`` at position 10). The
 ``rep_track`` at position 11) so a mission's body/title can show which
 reputation track (e.g. "Security" vs the generic Contractor/Standing track)
 its XP feeds. ``_run_gen_missions`` reads a variant by field name since #240,
-but ``scan_contract_generators`` still builds it by position, so a field that
-moves puts values in the wrong fields with no error. These tests lock the real
-``ContractVariant`` and both calls that build it, so the next refactor can't
-slip a similar drift through.
+and ``scan_contract_generators`` builds it by keyword, a sub-contract's from its
+contract's with ``_replace``. These tests lock the real ``ContractVariant`` and
+both of those variants, so the next refactor can't slip a similar drift through.
 """
 from __future__ import annotations
 
@@ -95,8 +94,8 @@ class TestMissionVariantTupleShape:
         fields = gen_module.ContractVariant._fields
         assert len(values) == len(fields), (
             f"ContractVariant has {len(fields)} fields, _make_variant gives {len(values)}. "
-            "Change both, and both ContractVariant(...) calls in scan_contract_generators, "
-            "which pass every field by position."
+            "Change both, and the keywords of the ContractVariant(...) call in "
+            "scan_contract_generators."
         )
         assert gen_module.ContractVariant(*values)._asdict() == {
             "system_name": "Pyro",
@@ -150,10 +149,10 @@ _CONTRACT_GEN_XML = """\
 
 
 class TestScanContractGeneratorsFillsEachField:
-    """Both ``ContractVariant(...)`` calls in ``scan_contract_generators`` pass
-    every field by position. Two values swapped there raise nothing. Nor does a
-    wrong count: the scan logs the ``TypeError`` at DEBUG and goes on to the next
-    contract, losing that variant and the contract's remaining sub-contracts."""
+    """``scan_contract_generators`` builds a contract's variant by keyword and a
+    sub-contract's from it with ``_replace``. Two values swapped in that call raise
+    nothing. A missing keyword raises a ``TypeError`` for each contract, and the
+    scan then fails the run (see ``test_contract_scan.py``)."""
 
     def test_each_value_lands_in_its_field(self, gen_module, tmp_path):
         contractgen_dir = tmp_path / "contractgenerators"

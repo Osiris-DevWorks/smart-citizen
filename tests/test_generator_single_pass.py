@@ -979,6 +979,21 @@ class TestMissionsSinglePass:
         assert sum("Error scanning contract generators" in r.getMessage()
                    for r in caplog.records) == 1
 
+    def test_a_listing_that_fails_before_any_variant_ends_the_run_as_itself(
+            self, gen_module, tmp_path, monkeypatch):
+        """The scan has no variant then, so it raises ContractScanFailed. The run still
+        ends with the listing's own error, which is what went wrong."""
+        real = gen_module._indexed_xml_files
+
+        def fails_at_once(entity_dir, xml_path_index=None, records_dir=None):
+            if entity_dir.name == "contractgenerator":
+                raise OSError("listing failed at once")
+            yield from real(entity_dir, xml_path_index, records_dir)
+
+        monkeypatch.setattr(gen_module, "_indexed_xml_files", fails_at_once)
+        with pytest.raises(OSError, match="at once"):
+            gen_module._run_gen_missions(_missions_ctx(_missions_tree(tmp_path), tmp_path))
+
     def test_a_listing_that_fails_outright_ends_the_run_before_the_scan(
             self, gen_module, tmp_path, monkeypatch, caplog):
         """scan_contract_generators asked for its file list outside its try,

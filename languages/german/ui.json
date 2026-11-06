@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen konnte in diesem Ordner keinen Arbeitsordner verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen wurde gestoppt, weil {skipped} von {total} Aufträgen nicht gelesen werden konnten. Deine vorhandenen Erweiterungen bleiben unverändert. Bitte melde das, denn meist liegt es an einem Fehler in Smart Citizen.\n\nDer erste Auftrag:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen wurde gestoppt, weil das Lesen der Aufträge mit einem Fehler abgebrochen ist. Deine vorhandenen Erweiterungen bleiben unverändert. Bitte melde das, denn meist liegt es an einem Fehler in Smart Citizen.\n\nDer Fehler:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows hat Smart Citizen die Berechtigung verweigert, den DataForge-Cache in diesem Ordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."

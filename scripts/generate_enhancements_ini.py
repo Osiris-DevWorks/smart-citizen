@@ -2881,6 +2881,27 @@ def _within_excluded_subtree(node: ET.Element, scope: ET.Element,
     return False
 
 
+def _spawn_count(value: str, group: str, attribute: str) -> int:
+    """*value* as a whole number, also when it is written as "4.0". Anything else
+    counts as 0 with a WARNING, so a mission loses that spawn line and keeps its
+    variant: over half of LIVE's contracts read a count, and one change to how counts
+    are written would otherwise fail every generation (see ContractScanFailed).
+    """
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        if float(value).is_integer():
+            return int(float(value))
+    except ValueError:
+        pass
+    logger.warning(
+        f"Spawn count is not a whole number, counted as 0: {group} {attribute}={value!r}"
+    )
+    return 0
+
+
 def _extract_spawn_counts(element: ET.Element,
                           exclude_within: str | tuple[str, ...] | None = None) -> SpawnBreakdown:
     """Extract a per-bucket per-label breakdown of spawn descriptions.
@@ -2916,7 +2937,10 @@ def _extract_spawn_counts(element: ET.Element,
             continue
         name = sg.get("Name", "")
         ships = sg.findall(".//SpawnDescription_Ship")
-        total = sum(int(s.get("concurrentAmount", "0")) for s in ships)
+        total = sum(
+            _spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount")
+            for s in ships
+        )
         if total <= 0:
             continue
         # Turret ship-groups are reported separately by _extract_turret_info;
@@ -2941,11 +2965,13 @@ def _extract_spawn_counts(element: ET.Element,
         for auto in auto_settings:
             max_spawns = auto.get("maxSpawns", "0")
             if max_spawns != "-1":
-                total_npcs += max(int(max_spawns), 0)
+                total_npcs += max(_spawn_count(max_spawns, name, "maxSpawns"), 0)
             else:
                 max_concurrent = auto.get("maxConcurrentSpawns", "0")
                 if max_concurrent != "-1":
-                    total_npcs += max(int(max_concurrent), 0)
+                    total_npcs += max(
+                        _spawn_count(max_concurrent, name, "maxConcurrentSpawns"), 0
+                    )
 
         if total_npcs <= 0:
             m = re.search(r"x\s*(\d+)", name)
@@ -4103,12 +4129,12 @@ class ContractVariant(NamedTuple):
 
     Was a bare positional tuple that grew to 12 fields (10 -> 11 for
     rank_name in 1.4.2, 11 -> 12 for rep_track in 2.2.0's reputation-track
-    change, #161); every growth risked an off-by-one at one of the many
-    ``v[N]`` reads and destructures below. A NamedTuple is still a plain
-    tuple — positional unpacking, indexing, and ``len()`` all still work
-    exactly as before (see tests/test_mission_variant_tuple.py, which locks
-    that contract) — so this is purely a self-documenting rename at the call
-    sites that read fields by name instead of by position.
+    change, #161); every growth risked an off-by-one at one of the ``v[N]``
+    reads and destructures it had then. Now scan_contract_generators builds
+    it by keyword and _run_gen_missions reads it by field name, so a field
+    that moves or a new one cannot put a value in the wrong field. A
+    NamedTuple is still a plain tuple, and tests/test_mission_variant_tuple.py
+    locks its fields and their order.
     """
     system_name: str
     success_xp: int
@@ -4171,6 +4197,13 @@ def scan_contract_generators(
           reward pools sharing the same title/system.
         - mission_items: dict mapping title_key → list of reward item display names
     Sorted by system name for consistent output.
+
+    A contract that raises is skipped with a WARNING and leaves nothing behind.
+    Raises ContractScanFailed when more contracts were skipped than gave a variant,
+    or when the walk stopped on an error before any gave one. Each is meant to take
+    a bug here, and game data should not be able to do it (see _spawn_count). Failing
+    every category of the run is the deliberate trade: a set without most of its
+    contracts must not be certified.
     """
     if not contractgen_dir.exists():
         return {}, {}, {}, {}
@@ -4196,6 +4229,10 @@ def scan_contract_generators(
     mission_blueprints: dict[str, dict[str, dict]] = {}
     mission_bp_chance: dict[str, float] = {}
     mission_items: dict[str, list[str]] = {}
+    walk_error = ""
+    skipped_contracts = 0
+    built_contracts = 0
+    first_skip = ""
 
     # Build template lookup for contracts that inherit title/desc from templates
     if template_lookup is None:
@@ -4275,9 +4312,18 @@ def scan_contract_generators(
                     # not a union of every sibling contract's roster (#186) —
                     # including the one-time intro mission's own roster, which
                     # uses the plain <Contract> tag, not <CareerContract>.
-                    handler_spawns = _extract_spawn_counts(
-                        handler, exclude_within=("CareerContract", "Contract")
-                    )
+                    try:
+                        handler_spawns = _extract_spawn_counts(
+                            handler, exclude_within=("CareerContract", "Contract")
+                        )
+                    except Exception as e:
+                        # Outside the per-contract try, so a failure here used to end
+                        # the whole scan. The contracts' own spawns still count.
+                        logger.warning(
+                            f"Skipped the shared spawns of handler {debug_name or '?'}: "
+                            f"{type(e).__name__}: {e}"
+                        )
+                        handler_spawns = _empty_spawn_breakdown()
 
                     contracts = handler.findall(contract_xpath)
 
@@ -4372,6 +4418,7 @@ def scan_contract_generators(
                             # the identical pool set.
                             contract_has_bp = False
                             contract_bp_chance = 0.0
+                            first_bp_chance = None
                             contract_bp_variant = contract.get("debugName", "")
                             # Accumulate this contract's own BlueprintRewards
                             # locally, grouped by pool_label, before merging
@@ -4417,18 +4464,13 @@ def scan_contract_generators(
                                         contract_bp_chance = float(bp_elem.get("chance", "1"))
                                     except (ValueError, TypeError):
                                         contract_bp_chance = 1.0
-                                    if title_key not in mission_bp_chance:
-                                        mission_bp_chance[title_key] = contract_bp_chance
-                            for pool_label, (label_uuids, label_items) in contract_pools_by_label.items():
-                                _merge_blueprint_pool(
-                                    mission_blueprints, title_key, system_name,
-                                    tuple(sorted(label_uuids)), label_items, pool_label,
-                                )
+                                    if first_bp_chance is None:
+                                        first_bp_chance = contract_bp_chance
 
                             # Extract item rewards
                             null_uuid = "00000000-0000-0000-0000-000000000000"
+                            item_names = []
                             if entity_names:
-                                item_names = []
                                 for item_elem in contract.findall(".//ContractResult_Item"):
                                     ec = item_elem.get("entityClass", "")
                                     if ec and ec != null_uuid and ec in entity_names:
@@ -4441,8 +4483,6 @@ def scan_contract_generators(
                                         name = entity_names[ec]
                                         if name not in item_names:
                                             item_names.append(name)
-                                if item_names and title_key not in mission_items:
-                                    mission_items[title_key] = item_names
 
                             # Extract XP from ContractResult_LegacyReputation blocks
                             # First block with positive XP = success, first with negative = failure
@@ -4476,7 +4516,7 @@ def scan_contract_generators(
                                         continue
                                     try:
                                         val = int(float(points))
-                                    except (ValueError, TypeError):
+                                    except (ValueError, TypeError, OverflowError):
                                         continue
                                     if val > 0:
                                         success_xp = val
@@ -4515,9 +4555,40 @@ def scan_contract_generators(
                             rep_track = standing_track_lookup.get(min_standing, "") if min_standing else ""
 
                             # Add all missions (not just those with XP/blueprint data)
+                            variant = ContractVariant(
+                                system_name=system_name,
+                                success_xp=success_xp,
+                                failure_xp=failure_xp,
+                                desc_key=desc_key,
+                                flags=contract_flags,
+                                spawns=spawns,
+                                difficulty=contract_difficulty,
+                                has_bp=contract_has_bp,
+                                bp_chance=contract_bp_chance,
+                                bp_variant=contract_bp_variant,
+                                rank_name=rank_name,
+                                rep_track=rep_track,
+                            )
+                            # After the call: a title with no variants would read
+                            # as every variant having a blueprint (all([]) is True).
                             if title_key not in missions:
                                 missions[title_key] = []
-                            missions[title_key].append(ContractVariant(system_name, success_xp, failure_xp, desc_key, contract_flags, spawns, contract_difficulty, contract_has_bp, contract_bp_chance, contract_bp_variant, rank_name, rep_track))
+                            missions[title_key].append(variant)
+                            built_contracts += 1
+
+                            # Only now, so a contract that raised above leaves no
+                            # blueprints or items under its title.
+                            for pool_label, (label_uuids, label_items) in (
+                                contract_pools_by_label.items()
+                            ):
+                                _merge_blueprint_pool(
+                                    mission_blueprints, title_key, system_name,
+                                    tuple(sorted(label_uuids)), label_items, pool_label,
+                                )
+                            if first_bp_chance is not None and title_key not in mission_bp_chance:
+                                mission_bp_chance[title_key] = first_bp_chance
+                            if item_names and title_key not in mission_items:
+                                mission_items[title_key] = item_names
 
                             # Sub-contracts override title/desc but inherit
                             # everything else from the parent contract.
@@ -4532,7 +4603,9 @@ def scan_contract_generators(
                                     sub_desc = ""
                                 if sub_title not in missions:
                                     missions[sub_title] = []
-                                missions[sub_title].append(ContractVariant(system_name, success_xp, failure_xp, sub_desc or desc_key, contract_flags, spawns, contract_difficulty, contract_has_bp, contract_bp_chance, contract_bp_variant, rank_name, rep_track))
+                                missions[sub_title].append(
+                                    variant._replace(desc_key=sub_desc or desc_key)
+                                )
                                 if contract_has_bp and sub_title != title_key:
                                     # Reuse contract_pools_by_label (already
                                     # scanned above) instead of re-iterating
@@ -4549,7 +4622,13 @@ def scan_contract_generators(
                                         mission_bp_chance[sub_title] = contract_bp_chance
 
                         except Exception as e:
-                            logger.debug(f"Skipped contract {contract.get('debugName', '?')}: {e}")
+                            # WARNING, as the ship and component generators log a bad
+                            # file. A normal run does not show DEBUG, and a bug in this
+                            # block loses every contract's variants, not just one's.
+                            skip = f"{contract.get('debugName', '?')}: {type(e).__name__}: {e}"
+                            logger.warning(f"Skipped contract {skip}")
+                            skipped_contracts += 1
+                            first_skip = first_skip or skip
 
         # Sort variants by system name for consistent output (Stanton first, then others alphabetically)
         for title_key in missions:
@@ -4557,6 +4636,16 @@ def scan_contract_generators(
 
     except Exception as e:
         logger.warning(f"Error scanning contract generators: {e}")
+        walk_error = f"{type(e).__name__}: {e}"
+
+    # Outside the try above, which would only log it. main() has written no INI yet,
+    # so the old set stays whole and the worker leaves its stamp empty.
+    if skipped_contracts > built_contracts:
+        raise ContractScanFailed(
+            skipped_contracts, skipped_contracts + built_contracts, first_skip
+        )
+    if walk_error and not built_contracts:
+        raise ContractScanFailed(0, 0, walk_error)
 
     logger.info(f"Contract generators: {len(missions)} missions, {len(mission_blueprints)} with blueprints, {len(mission_items)} with items")
     return missions, mission_blueprints, mission_bp_chance, mission_items
@@ -4572,8 +4661,7 @@ def _calculated_reward_titles_in(root: ET.Element, titles: set[str]) -> None:
     (blueprint-only or item-only rewards), which is a separate, equally
     correct "nothing to show" case.
 
-    A separate scan rather than widening ContractVariant (its 12-field
-    width is locked by tests/test_mission_variant_tuple.py) for a value
+    A separate scan rather than a 13th ContractVariant field for a value
     only the end-of-run diagnostic needs. _run_gen_missions runs it on each
     root of the contractgen parse scan_contract_generators already makes,
     rather than walking the files again once a zero-XP title turns up
@@ -7574,15 +7662,23 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
         _contractgen_roots(_indexed_xml_files(contractgen_dir, xml_path_index, records))
         if contractgen_dir.exists() else iter(())
     )
-    contractgen_missions, mission_blueprints, mission_bp_chance, mission_items = scan_contract_generators(
-        contractgen_dir, reputation_lookup, blueprint_pools, entity_names,
-        xml_path_index=xml_path_index, records_dir=records,
-        pool_names=pool_names,
-        standings_lookup=standings_lookup,
-        standing_track_lookup=standing_track_lookup,
-        template_lookup=_template_lookup,
-        roots=_roots,
-    )
+    try:
+        contractgen_missions, mission_blueprints, mission_bp_chance, mission_items = (
+            scan_contract_generators(
+                contractgen_dir, reputation_lookup, blueprint_pools, entity_names,
+                xml_path_index=xml_path_index, records_dir=records,
+                pool_names=pool_names,
+                standings_lookup=standings_lookup,
+                standing_track_lookup=standing_track_lookup,
+                template_lookup=_template_lookup,
+                roots=_roots,
+            )
+        )
+    except ContractScanFailed:
+        # A listing that failed part-way stops the scan too, and ends the run as itself.
+        if battaglia_error is not None:
+            raise battaglia_error
+        raise
     for _root in _roots:
         pass
     logger.info(f"Processed {len(contractgen_missions)} contract generator mission variants")
@@ -8128,6 +8224,25 @@ class GenerationStopped(Exception):
     ErrorDialogHandler on a window that is closing. No INI has been written
     when it is raised (lookup pickles may have been, each one whole): main()
     never checks for a stop once its write phase has begun."""
+
+
+class ContractScanFailed(Exception):
+    """More contracts were skipped than gave a variant, or the walk stopped on an
+    error before any gave one (a total of 0), so the run fails.
+
+    EnhancementsGeneratorWorker matches it by class name, as it does
+    GenerationStopped, and words its own box from these fields in the selected
+    language, so keep the name and the fields.
+    """
+
+    def __init__(self, skipped: int, total: int, first: str):
+        super().__init__(
+            f"{skipped} of {total} contracts could not be read. The first: {first}"
+            if total else f"The contract scan stopped: {first}"
+        )
+        self.skipped = skipped
+        self.total = total
+        self.first = first
 
 
 def main(base_ini_path: Path, forge_dir: Path | None = None,

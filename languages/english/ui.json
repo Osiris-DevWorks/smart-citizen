@@ -2992,6 +2992,14 @@
       "ht": "Smart Citizen could not use a working folder in:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
       "at": ""
     },
+    "contract_scan_failed": {
+      "ht": "Enhancement generation stopped because {skipped} of {total} contracts could not be read. Your existing enhancements are unchanged. Please report this, as it is usually a fault in Smart Citizen.\n\nThe first contract:\n{first}",
+      "at": ""
+    },
+    "contract_scan_stopped": {
+      "ht": "Enhancement generation stopped because the contract scan ended with an error. Your existing enhancements are unchanged. Please report this, as it is usually a fault in Smart Citizen.\n\nThe error:\n{first}",
+      "at": ""
+    },
     "cache_folder_refused": {
       "ht": "Windows denied Smart Citizen permission to create the DataForge cache in:\n{folder}\n\nThe extraction did not start, so nothing was changed.",
       "at": ""

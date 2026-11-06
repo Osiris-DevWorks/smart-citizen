@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen が次の場所で作業フォルダーを使用できませんでした：\n{folder}\n\n{reason}\n\n抽出は開始されなかったため、何も変更されていません。"
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "{total} 件の契約のうち {skipped} 件を読み取れなかったため、拡張の生成を停止しました。既存の拡張は変更されていません。通常は Smart Citizen の不具合ですので、報告してください。\n\n最初の契約:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "契約の読み取りがエラーで止まったため、拡張の生成を停止しました。既存の拡張は変更されていません。通常は Smart Citizen の不具合ですので、報告してください。\n\nエラー:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows によって、次の場所に DataForge キャッシュを作成するアクセス許可が Smart Citizen に対して拒否されました：\n{folder}\n\n抽出は開始されなかったため、何も変更されていません。"
