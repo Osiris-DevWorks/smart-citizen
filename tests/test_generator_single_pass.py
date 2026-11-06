@@ -1,4 +1,4 @@
-"""Perf proposal: the enhancement generator reads the DataForge XMLs as few
+"""#522: the enhancement generator reads the DataForge XMLs as few
 times as it can (each pu_missions and contractgen XML once, where it used to
 read them up to five times), and its lookup pickles hold XML
 facts rather than text rendered from the loc file and the Tag Builder

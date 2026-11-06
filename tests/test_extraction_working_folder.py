@@ -38,12 +38,12 @@ already failing to delete. These tests pin the replacement:
 * What the bar shows while a tool runs (#507): a total of 0, the busy bar,
   for unp4k and unforge in both extractions, and the counted phases as
   they were.
-* What the tools are asked for and what they print (perf proposal): the
+* What the tools are asked for and what they print (#522): the
   global.ini run takes the English file alone and is sized for it, and a
   tool that exits 0 after an error it caught fails the run before the old
   cache is wiped, with no pauses between the steps.
 
-* The perf proposal: beside the cache the old cache is set aside in the
+* #522: beside the cache the old cache is set aside in the
   working folder with one rename instead of wiped (wiped in place in
   %TEMP%, on a drive that has room only once it is gone, or when the rename
   is refused), a copy after a refused move deletes it first, and a run
@@ -97,7 +97,7 @@ _RUN_PREFIXES = (pe.DATAFORGE_SCRATCH_PREFIX, pe.GLOBAL_INI_SCRATCH_PREFIX,
 # 2**31 - 1 times on Windows, #490) is stopped here with an error the test
 # reports, instead of hanging the run for a day and a half.
 _SPIN_GUARD_CALLS = 100
-# The unp4k.exe and unforge.exe Smart Citizen ships (perf proposal).
+# The unp4k.exe and unforge.exe Smart Citizen ships (#522 and #529).
 _BUNDLED_TOOLS = Path(__file__).resolve().parents[1] / "assets" / "unp4k"
 
 
@@ -247,8 +247,8 @@ def _refuse_moves(monkeypatch, winerror: int, only=(), times=None):
 
 
 def _refuse_set_aside(monkeypatch, leaf: Path, winerror: int = 17) -> list[str]:
-    """pe._rename_tree refuses to move the cache folder *leaf* itself (the
-    perf proposal's set-aside rename) as Windows refuses it (17 another
+    """pe._rename_tree refuses to move the cache folder *leaf* itself
+    (#522's set-aside rename) as Windows refuses it (17 another
     drive, 5 or 32 a held file, with no retry delays), and passes every
     other rename through. Returns one entry per refusal."""
     real, refused = pe._rename_tree, []
@@ -561,7 +561,7 @@ class TestScratchSweep:
         assert _scratch_folders(root, pe.DATAFORGE_SCRATCH_PREFIX) == []
 
     def test_a_stop_leaves_the_folders_after_it(self, root):
-        """Asked before each folder (perf proposal: closing stops the
+        """Asked before each folder (#522: closing stops the
         window's sweep), a stop after the first leaves the rest for a later
         sweep, and none is touched once it is asked."""
         names = [pe.DATAFORGE_SCRATCH_PREFIX + f"dead000{n}" for n in range(3)]
@@ -627,7 +627,7 @@ class _FakeTools:
     multiple of 100, NTFS's resolution), and ``records=False`` writes a
     libs/ folder without foundry/records. *unp4k_out* and *unforge_out*
     are what each tool prints, as ``{"stdout": ..., "stderr": ...}``, and
-    nothing by default (perf proposal), and ``unforge_writes=False`` makes
+    nothing by default (#522), and ``unforge_writes=False`` makes
     unforge write nothing at all. *during_unp4k* and *during_unforge* are
     called with the working folder once that tool has written its output."""
 
@@ -758,7 +758,7 @@ class TestExtractDataforgeWorkingFolder:
         """A game patch that lands while the run goes on, while unp4k reads
         Game2.dcb or while unforge converts it, leaves a cache of the build
         unp4k read. The stamps were read after unforge, so the patched
-        Data.p4k's size made that cache read as current (perf proposal);
+        Data.p4k's size made that cache read as current (#522);
         read before unp4k runs, the next launch asks again."""
         leaf, run = setup
         p4k = leaf.parents[3] / "tools" / "Data.p4k"
@@ -905,7 +905,7 @@ class TestExtractDataforgeWorkingFolder:
     ], ids=["unp4k", "unforge"])
     def test_the_bundled_tools_hold_their_failure_text(self, exe, text):
         """The fakes print the constants' own text, so this is what ties
-        them to the tools Smart Citizen ships (perf proposal): each is a
+        them to the tools Smart Citizen ships (#522): each is a
         copy of a literal in odw-fast-unp4k's Program.cs, and a tool rebuilt
         with it worded otherwise would pass every other test while the
         check never fired again, so a run that lost a file would be used,
@@ -1108,7 +1108,7 @@ class TestExtractDataforgeWorkingFolder:
         wipe that gave up part-way could leave both stamps on a partial
         cache, which reads as fresh while they match this Data.p4k (#484,
         gap B). The stamps go before the wipe. The old cache is wiped in
-        place here because its set-aside rename is refused (perf proposal)."""
+        place here because its set-aside rename is refused (#522)."""
         leaf, run = setup
         _refuse_set_aside(monkeypatch, leaf)
         p4k = leaf.parents[3] / "tools" / "Data.p4k"
@@ -1593,7 +1593,7 @@ class TestMovingTheKeptFiles:
         assert _tree(self._cache(leaf)) == moved_tree
 
 
-# ── deleting the working folder after the run (perf proposal) ───────────────
+# ── deleting the working folder after the run (#522) ────────────────────────
 
 _STAMPS = (pe.P4K_MTIME_STAMP, pe.P4K_SIZE_STAMP)
 
@@ -1625,7 +1625,7 @@ def _kept_missing(leaf: Path) -> list[str]:
 class TestTheOldCacheIsSetAside:
     """Beside the cache the old cache is no longer wiped before the new one
     is filled: its stamps go, then one rename puts it in the working folder,
-    which is deleted after the run (perf proposal). It is wiped in place, as
+    which is deleted after the run (#522). It is wiped in place, as
     before, wherever that rename cannot help or is refused."""
 
     def test_one_rename_sets_it_aside_and_nothing_wipes_it(self, setup, monkeypatch, caplog):
@@ -1904,7 +1904,7 @@ class TestTheOldCacheIsSetAside:
 class TestTheWorkingFolderGoesAfterTheRun:
     """A caller that passes defer_cleanup is handed the working folder of a
     run that saved and stamped the new cache, and deletes it after the run,
-    in the background (perf proposal). Every other outcome still deletes it
+    in the background (#522). Every other outcome still deletes it
     before the run ends (#471)."""
 
     def test_it_outlives_the_run_with_its_marker_held_until_deleted(self, setup, caplog):
@@ -2001,7 +2001,7 @@ class TestTheWorkingFolderGoesAfterTheRun:
     ):
         """Logged once, never raised, with the marker file left closed, so
         the next sweep takes the folder at once. The entries after the one
-        that would not go are still tried (perf proposal): a file held under
+        that would not go are still tried (#522): a file held under
         Data used to keep the whole set-aside old cache, about 31,000 files,
         until the next DataForge extraction."""
         leaf, run = setup
@@ -2263,7 +2263,7 @@ class _FakeGlobalIniTool:
     writes into its working folder every language's global.ini whose entry
     name (``Data/Localization/<language>/global.ini``) holds its filter,
     ignoring case, and records the filters it was handed and the languages
-    it wrote (perf proposal). *stdout* and *stderr* are what it prints."""
+    it wrote (#522). *stdout* and *stderr* are what it prints."""
 
     def __init__(self, *, stdout: str = "", stderr: str = ""):
         self.cwds = []
@@ -2563,7 +2563,7 @@ class TestGlobalIniWorkingFolder:
 
 
 class TestGlobalIniTakesTheEnglishFileAlone:
-    """(perf proposal) unp4k takes every entry whose name holds its filter,
+    """(#522) unp4k takes every entry whose name holds its filter,
     ignoring case, so the filter "global.ini" took all 11 languages' files
     (20 to 26 s and 9 GB of memory on a 150 GB Data.p4k), while the run only
     ever reads the English one. The filter now names that file, and the
@@ -2601,7 +2601,7 @@ class TestGlobalIniTakesTheEnglishFileAlone:
         assert fake.written == ["english", "english"]
 
 
-# ── tools that exit 0 after an error (perf proposal) ─────────────────────────
+# ── tools that exit 0 after an error (#522) ──────────────────────────────────
 
 # What the tools print for a file they could not extract or convert. unp4k
 # catches the error, prints it and goes on to exit 0, and so does an unforge
@@ -2818,7 +2818,7 @@ class TestToolPhasesShowTheBusyBar:
             "unforge": (0, 0, pe.tr("progress.unforge_short")),
         }
         # Caching stays 2 of 3, and the run then ends at 3 of 3: no diff
-        # snapshot counts the cache's files any more (perf proposal, #495).
+        # snapshot counts the cache's files any more (#522, #495).
         assert calls == [
             (0, 0, pe.tr("progress.extract_dcb")),
             (0, 0, pe.tr("progress.unforge_short")),
@@ -3134,7 +3134,7 @@ class TestFreeSpaceCheck:
     def test_the_figures_cover_the_measured_run(self):
         """The LIVE 4.10 run the constants come from (#482), with GB read as
         GiB and MB as MiB, the larger readings. The global.ini run extracts
-        the English global.ini alone (perf proposal), measured at 10.1 MB,
+        the English global.ini alone (#522), measured at 10.1 MB,
         and at 11,128,009 bytes before that."""
         gib, mib = 1 << 30, 1 << 20
         assert pe._DATAFORGE_WORK_BYTES >= 317 * mib + 1.84 * gib   # Game2.dcb + unforge's tree

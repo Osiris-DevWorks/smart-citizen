@@ -97,7 +97,7 @@ def _generation_calculated_reward_titles(gen_module, contractgen_dir, xml_path_i
     *contractgen_dir*: _run_gen_missions over the records tree it sits in,
     with the set read off its calls to _calculated_reward_titles_in. The
     generation runs that on the contractgen parse it shares with
-    scan_contract_generators (perf proposal), so there is no separate scan
+    scan_contract_generators (#522), so there is no separate scan
     to call."""
     records = contractgen_dir.parent.parent
     loc: dict[str, str] = {}

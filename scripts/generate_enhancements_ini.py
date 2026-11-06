@@ -426,7 +426,7 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
 #     prefixed bp_dir/entity_dir callers compare them against and crashing
 #     scan_crafting_blueprints's xml_file.relative_to(bp_dir) with "not in
 #     the subpath of". Bump flushes any pre-#231 pickle.
-#   scitem_lookups v11 / blueprint_pools v16 (perf proposal) — both pickles
+#   scitem_lookups v11 / blueprint_pools v16 (#522) — both pickles
 #     now hold only XML facts, keyed on the DataForge build alone: no loc
 #     text, no Tag Builder config, no annotate toggle and no English-loc
 #     fallback mark (the extra_key is gone). The names and the
@@ -443,7 +443,7 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # bump, a regen against an unchanged DataForge reuses pools baked
     # before those fixes and the mission text stays untagged/garbled.
     # v15: name_fallback_tags read the English loc (see the history above).
-    # v16: XML facts only (perf proposal, see the history above).
+    # v16: XML facts only (#522, see the history above).
     "blueprint_pools": "v16",
     "scitem_lookups": "v11",
     "standings": "v3",
@@ -482,7 +482,7 @@ def _cached_lookup(forge_dir: Path, name: str, builder, extra_key: str = ""):
     the version in _LOOKUP_VERSIONS; passing a different *extra_key* (used
     by standings for the English-loc fallback mark; scitem_lookups and
     blueprint_pools used it for the components Tag Builder config until
-    they came to hold XML facts only, perf proposal) bumps the third
+    they came to hold XML facts only, #522) bumps the third
     segment. An unreadable pickle (a truncated one from a
     run cut off before these writes became atomic, say) is rebuilt, with an
     INFO line, since a rebuild re-reads its whole subtree. The pickle is
@@ -530,7 +530,7 @@ def _build_xml_path_index(records_dir: Path) -> dict[str, list[str]]:
     The walk stays rglob's, so the folders keep rglob's order, which every
     reader's file order follows. Only the relative folder key is worked out
     once per folder (keyed on the path text up to the last separator) rather
-    than with Path.relative_to for each of the ~31k files (perf proposal).
+    than with Path.relative_to for each of the ~31k files (#522).
     """
     idx: dict[str, list[str]] = defaultdict(list)  # type: ignore[assignment]
     key_by_folder: dict[str, str] = {}
@@ -590,7 +590,7 @@ def _parse_xml_file(xml_file: Path) -> ET.Element:
     and handing them to lxml is faster on Windows than letting lxml read the
     file itself: on a LIVE cache the ~2.6k pu_missions XMLs parse in 0.53 s
     instead of 0.73 s, the ~8.5k ships scitem XMLs in 2.1 s instead of
-    2.8 s (perf proposal)."""
+    2.8 s (#522)."""
     return ET.fromstring(xml_file.read_bytes())
 
 
@@ -971,7 +971,7 @@ def _component_name_tag(desc_value: str, root: ET.Element | None = None,
     The XML half is read by :func:`_component_tag_facts`, so the scitem
     lookup can cache those facts once per DataForge build and render the
     tags from them with :func:`_component_name_tag_from_facts`, the one
-    implementation both paths share (perf proposal).
+    implementation both paths share (#522).
     """
     return _component_name_tag_from_facts(
         desc_value, _component_tag_facts(root), config=config, component_type=component_type
@@ -1238,7 +1238,7 @@ def _mining_laser_tag_from_name(desc_value: str, name_attr: str,
                                 mining_tag_cfg: "TagConfig | None") -> str | None:
     """:func:`_mining_laser_component_tag` for a known mining laser, from
     its entity class name, so the scitem lookup can render the tag from
-    cached facts with the same code (perf proposal)."""
+    cached facts with the same code (#522)."""
     if mining_tag_cfg is None or render_tag is None:
         return None
     size = None
@@ -1561,7 +1561,7 @@ def _agreed_endpoint_tokens(per_body: list[dict]) -> dict:
     endpoints, invisible to a static scan; treating them as vetoes would strip
     routes that demonstrably resolve in-game. First body's order/tokens win,
     except that a var some agreeing bodies write bare and others with
-    ``|Address`` takes the ``|Address`` form (perf proposal): the bodies are
+    ``|Address`` takes the ``|Address`` form (#522): the bodies are
     sorted, and pooled bodies differ in their greetings, so the first one's
     form was down to which greeting sorts first.
     """
@@ -1612,7 +1612,7 @@ def _derive_route_fragment(desc_bodies: list[str], cfg=None, loc=None, expand_ca
     # _agreed_endpoint_tokens) and callers build the list from a set, whose
     # order changes with every run's string hashing. Unsorted, three courier
     # titles flipped between the bare and |Address forms of Pickup1 and
-    # Dropoff1 from one generation to the next (perf proposal); a var some
+    # Dropoff1 from one generation to the next (#522); a var some
     # bodies write bare and others with |Address now takes |Address whatever
     # the order.
     for body in sorted(b for b in desc_bodies if b):
@@ -3673,7 +3673,7 @@ def build_blueprint_pool_lookup(
             config) is cached there per DataForge build as the
             ``blueprint_pools`` pickle, and only the names below are worked
             out per run, so a Tag Builder change or the annotate toggle no
-            longer re-parses the pool and blueprint XMLs (perf proposal).
+            longer re-parses the pool and blueprint XMLs (#522).
 
     Returns:
         Tuple of:
@@ -3755,7 +3755,7 @@ def build_blueprint_pool_lookup(
 
 def _blueprint_pool_facts(pool_dir: Path, bp_dir: Path) -> list:
     """The XML half of :func:`build_blueprint_pool_lookup`, with no names,
-    tags or config, so it can be cached per DataForge build (perf proposal).
+    tags or config, so it can be cached per DataForge build (#522).
 
     Returns ``[(pool __ref UUID, pool filename stem, rewards), ...]`` in
     file order, one entry per pool record with a __ref, where *rewards* is
@@ -4027,7 +4027,7 @@ def _battaglia_mineable_rs_in(
     *template_lookup* is :func:`_build_template_lookup` of the sibling
     contracttemplates folder. _run_gen_missions runs this on each root of
     the contractgen parse it shares with scan_contract_generators, in file
-    order (perf proposal: it used to be a separate walk of its own).
+    order (#522: it used to be a separate walk of its own).
     """
     for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
         title_param = contract.find(".//ContractStringParam[@param='Title']")
@@ -4142,7 +4142,7 @@ def scan_contract_generators(
     *template_lookup* (:func:`_build_template_lookup` of the sibling
     contracttemplates folder) and *roots* (the parsed contractgen XML roots,
     in file order) let _run_gen_missions hand over the parse it shares with
-    the Battaglia RS-tag and calculated-reward scans (perf proposal); each
+    the Battaglia RS-tag and calculated-reward scans (#522); each
     is worked out here when omitted, as it always was, so a call with the
     folder alone still works. A generation always hands both over: only
     the tests that call this directly (test_blueprint_pools.py,
@@ -4578,7 +4578,7 @@ def _calculated_reward_titles_in(root: ET.Element, titles: set[str]) -> None:
     only the end-of-run diagnostic needs. _run_gen_missions runs it on each
     root of the contractgen parse scan_contract_generators already makes,
     rather than walking the files again once a zero-XP title turns up
-    (perf proposal).
+    (#522).
     """
     for contract in root.findall(".//CareerContract") + root.findall(".//Contract"):
         if contract.find(".//ContractResult_CalculatedReward") is None:
@@ -4692,7 +4692,7 @@ def _build_uuid_to_commodity(
                 fname,
             )
             # A carryable whose filename names no commodity can add nothing,
-            # so only the others are read (perf proposal: 658 of the 2,570
+            # so only the others are read (#522: 658 of the 2,570
             # carryables on a LIVE cache).
             if not m:
                 continue
@@ -4715,8 +4715,7 @@ def _commodity_loc_keys(loc: dict[str, str]) -> list[tuple[str, str]]:
     """``(key, key.lower())`` for every ``items_commodities_*`` key in *loc*
     (case-insensitive), in loc order: what every
     :func:`_discover_commodity_loc_pairs` call scans, worked out once
-    instead of lowercasing all ~91k loc keys for each commodity (perf
-    proposal)."""
+    instead of lowercasing all ~91k loc keys for each commodity (#522)."""
     keys = []
     for key in loc:
         klow = key.lower()
@@ -5123,7 +5122,7 @@ def scan_crafting_blueprints(
         logger.info("No crafting blueprints directory found")
         return {}, {}
 
-    # Step 1: Read every blueprint once (perf proposal: steps 1 and 3 each
+    # Step 1: Read every blueprint once (#522: steps 1 and 3 each
     # used to parse them all): its category, its display name and the
     # material UUIDs it names, collecting those UUIDs as it goes.
     resource_uuids: set[str] = set()
@@ -5169,7 +5168,7 @@ def scan_crafting_blueprints(
                 materials.add(uuid_names[uid])
         # Sorted, so each material is first met in the same place on every
         # run: crafting_index.json keeps that order, and a set's order changes
-        # with each run's string hashing (perf proposal review).
+        # with each run's string hashing (#522 review).
         for mat in sorted(materials):
             commodity_items[mat].append((category, item_name))
 
@@ -5178,7 +5177,7 @@ def scan_crafting_blueprints(
     # commodity strings) — surfacing that in the log beats silently writing an
     # empty enhancements file.
     # The items_commodities_* keys every loc lookup below scans, lowercased
-    # once (perf proposal).
+    # once (#522).
     commodity_keys = _commodity_loc_keys(loc)
     if crafting_index is not None:
         for commodity, pairs_ in commodity_items.items():
@@ -5690,7 +5689,7 @@ def build_controller_lookup(controller_dir: Path) -> dict[str, tuple]:
     included so each spaceship entity can find its exact match.
 
     The values are the few attributes the ship stats read, not the XML
-    root (perf proposal). The lookup is built on every run, not pickled per
+    root (#522). The lookup is built on every run, not pickled per
     DataForge build: DataForge patches are applied again before every
     generation without a re-extraction, and a pickle would keep a patched
     controller's old values until the next extraction.
@@ -5744,7 +5743,7 @@ def build_armor_lookup(armor_dir: Path) -> dict[str, tuple]:
     lowercased for case-insensitive matching.
 
     The values are the attributes _armor_stats_block formats, not the XML
-    root (perf proposal). The formatting stays in enhancements_ship_dataforge,
+    root (#522). The formatting stays in enhancements_ship_dataforge,
     so a value it cannot format still fails that one ship, as before. Built
     on every run, not pickled, for the same reason as build_controller_lookup:
     DataForge patches are applied again before every generation without a
@@ -6136,7 +6135,7 @@ def build_scitem_lookups(
     ``scitem_lookups`` pickle, and the names and tags are rendered from
     those facts, *loc* and *tag_config* on every run
     (:func:`_render_scitem_lookups`). A Tag Builder change used to key the
-    whole pickle and re-parse all ~24k scitem files (perf proposal).
+    whole pickle and re-parse all ~24k scitem files (#522).
     """
     if not scitem_dir.exists():
         return {}, {}, {}, {}
@@ -6178,7 +6177,7 @@ def _scitem_facts(
     records_dir: Path | None = None,
 ) -> tuple:
     """The XML half of :func:`build_scitem_lookups`, with no loc or Tag
-    Builder input, so it can be cached per DataForge build (perf proposal).
+    Builder input, so it can be cached per DataForge build (#522).
 
     Returns ``(mag_lookup, names, tag_candidates)``, all builtins so the
     pickle loads under any module name:
@@ -7246,7 +7245,7 @@ def _scan_pu_missions(
     separator: str,
 ) -> _PuMissionScan:
     """Read every pu_missions XML once for all of _run_gen_missions' uses
-    (perf proposal: they were five separate passes, each parsing every
+    (#522: they were five separate passes, each parsing every
     file). Each step keeps its own error handling and its file order.
 
     *mission_enhancement(root, ambiguous_keys)* is enhancements_mission
@@ -7423,7 +7422,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # matched against are both English. Reading the run's own language left a
     # translated run's pools untagged, and a later English run reused them
     # from the blueprint_pools pickle, which held the tagged names until it
-    # came to hold XML facts only (perf proposal).
+    # came to hold XML facts only (#522).
     name_fallback_tags = (
         bare_type_name_tag_lookup(ctx.get("tag_loc") or loc, _comp_cfg)
         if annotate_descs else {}
@@ -7453,7 +7452,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                                     show_fields=_mdf,
                                     spawn_ambiguous_keys=ambiguous_keys)
 
-    # One pass over the pu_missions XMLs (perf proposal; see
+    # One pass over the pu_missions XMLs (#522; see
     # _scan_pu_missions) gives their description entries plus everything the
     # title passes below read from them. #165: a single mission description
     # is often shared by many pu_missions XMLs with DIFFERENT hostile spawns
@@ -7506,7 +7505,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     bp_dir   = records / "crafting" / "blueprints" / "crafting"
     # Only the XML walk is cached (per DataForge build): the pool names bake
     # in the English names, the components tags, placement and the annotate
-    # toggle, so they are worked out from it on every run (perf proposal).
+    # toggle, so they are worked out from it on every run (#522).
     # Armor tags (#492) are added later still, when the bullets are written.
     blueprint_pools, pool_names = build_blueprint_pool_lookup(
         pool_dir, bp_dir, entity_names,
@@ -7520,7 +7519,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # One parse of each contractgen XML (and one template lookup) feeds
     # scan_contract_generators, the Battaglia RS-tag scan and the
     # calculated-reward diagnostic, which used to walk the files three times
-    # (perf proposal). The other two run on each root just before
+    # (#522). The other two run on each root just before
     # scan_contract_generators sees it. Each keeps its own error handling:
     # a failure in either is held and raised where that scan's own call
     # used to raise it, and the walk is finished for them if
@@ -8236,7 +8235,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # next English run to reuse: that run sees a different key and rebuilds.
     # Only standings is built from en_loc now: scitem_lookups and
     # blueprint_pools hold XML facts alone, and their names are resolved
-    # through en_loc on every run (perf proposal).
+    # through en_loc on every run (#522).
     en_loc_cache_mark = ""
     if english_base_ini_path is not None:
         english_base_ini_path = Path(english_base_ini_path)
@@ -8337,7 +8336,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # build_scitem_lookups renders into entity_name_tags (and so into the
     # POTENTIAL BLUEPRINTS list entries). Only the XML facts behind them are
     # pickled, per DataForge build, so a config change re-renders the tags
-    # instead of re-parsing every scitem XML (perf proposal).
+    # instead of re-parsing every scitem XML (#522).
     _components_cfg = (tag_configs or {}).get("components") or DEFAULT_TAG_CONFIGS.get("components")
 
     def _build_scitem_pair():

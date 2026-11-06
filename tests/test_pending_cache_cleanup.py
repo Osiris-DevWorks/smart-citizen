@@ -20,14 +20,14 @@ prefix spellings, the junction cases (which fail under CI if no junction can
 be made) and the 8.3 short name cases (which also skip where the volume makes
 no short names).
 
-The perf proposal: a queued folder that is not in use also has the working
+#522: a queued folder that is not in use also has the working
 folders a crash left beside it swept, in the background, since after a cache
 folder change no extraction sweeps there.
 
 MainWindow and ConfigTab run on stub selves, with a JsonSettings backend in
 ``tmp_path`` so nothing touches the registry. No widget is built, so the
 session ``qapp`` is only needed by the tests that run the background delete
-of a working folder beside the cleanup and that sweep (perf proposal), for
+of a working folder beside the cleanup and that sweep (#522), for
 their queued finished slots.
 """
 from __future__ import annotations
@@ -561,7 +561,7 @@ class TestIssueScenario:
         assert AppSettings.get_pending_cache_cleanup() == ""
 
 
-# ── Beside a working folder's background delete (perf proposal) ─────────────
+# ── Beside a working folder's background delete (#522) ──────────────────────
 
 def _finished_run_window(run_dir: Path, marker) -> tuple[MagicMock, MagicMock]:
     """A stub window, and the worker of a successful run that kept *run_dir*,
@@ -624,7 +624,7 @@ class TestBesideTheBackgroundDelete:
 class TestLeftoverWorkingFoldersBesideIt:
     """A crash or a kill during a successful run's background delete leaves
     its working folder beside the cache folder, with the old cache set aside
-    in it (perf proposal). After a cache folder change no extraction sweeps
+    in it (#522). After a cache folder change no extraction sweeps
     beside the old cache folder any more, so the cleanup sweeps there, in the
     background: beside a queued folder it deletes or finds gone, never beside
     a cache in use, where the extraction that just ran swept itself, or a

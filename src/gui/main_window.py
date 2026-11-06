@@ -802,7 +802,7 @@ class MainWindow(QMainWindow):
         self._forge_worker: Optional[DataForgeExtractWorker] = None
         self._forge_progress_dialog: Optional[AnimatedProgressDialog] = None
         # Threads deleting a finished extraction's working folder, or
-        # sweeping the ones a crash left, in the background (perf proposal).
+        # sweeping the ones a crash left, in the background (#522).
         # Closing waits for them, and so does a new DataForge extraction.
         self._working_folder_deleters: list[WorkingFolderDeleteWorker] = []
         # The startup sweep of leftover working folders runs once a session.
@@ -5668,7 +5668,7 @@ class MainWindow(QMainWindow):
 
         A folder that is not in use also has the working folders a crash or
         a kill left beside it swept, in the background, whether it is still
-        there or not (perf proposal).
+        there or not (#522).
         """
         queued = AppSettings.get_pending_cache_cleanup()
         if not queued:
@@ -5699,7 +5699,7 @@ class MainWindow(QMainWindow):
             )
             return
         # A working folder a crash or a kill left beside the old cache folder
-        # (perf proposal: with the old cache set aside in it, it lives on
+        # (#522: with the old cache set aside in it, it lives on
         # while enhancements are generated). The extractions sweep only
         # beside the cache folder in use, so nothing else ever would.
         self._sweep_working_folders_in_background(old_path.parent)
@@ -5908,8 +5908,8 @@ class MainWindow(QMainWindow):
 
         base_missing = not base_ini.exists()
         # Data.p4k's size says whether the game changed, not its modified
-        # time, which the launcher's file check moves on a game launch (perf
-        # proposal, the rule #209 gave the DataForge cache).
+        # time, which the launcher's file check moves on a game launch (#522,
+        # the rule #209 gave the DataForge cache).
         p4k_changed = (not base_missing) and not base_ini_is_fresh(p4k_path, base_ini)
 
         if not base_missing and not p4k_changed:
@@ -6708,7 +6708,7 @@ class MainWindow(QMainWindow):
 
         # The run waits on its own thread for any background delete of an
         # earlier run's working folder, or sweep of leftover ones, still
-        # going (perf proposal): its sweep would skip that folder and its
+        # going (#522): its sweep would skip that folder and its
         # free-space check count it as used.
         worker = DataForgeExtractWorker(
             p4k_path, unp4k_exe, unforge_exe, forge_dir,
@@ -6925,7 +6925,7 @@ class MainWindow(QMainWindow):
     def _on_dataforge_extract_finished(self, success: bool, worker):
         worker.quit()
         worker.wait()
-        # The working folder a successful run kept (perf proposal), taken
+        # The working folder a successful run kept (#522), taken
         # once the thread is done.
         working_folder = worker.take_working_folder()
         # As _on_applied_state_ready does: frees the thread and the lambda
@@ -6954,8 +6954,8 @@ class MainWindow(QMainWindow):
             return
 
         if working_folder is not None:
-            # Deleted while enhancements are generated, not before (perf
-            # proposal). Started first, so the queued cleanup below runs
+            # Deleted while enhancements are generated, not before (#522).
+            # Started first, so the queued cleanup below runs
             # beside it; the two never share a folder.
             self._delete_working_folder_in_background(working_folder)
 
@@ -7175,7 +7175,7 @@ class MainWindow(QMainWindow):
 
     def _delete_working_folder_in_background(self, working_folder) -> None:
         """Delete a finished DataForge extraction's working folder on a
-        thread of its own (perf proposal), which generation no longer waits
+        thread of its own (#522), which generation no longer waits
         for: on a re-extract beside the cache the ~31,000 files of the old
         cache set aside there (and ~31,000 more that an unforge without
         --exclude-file wrote and the cache does not keep), and all of
@@ -7195,7 +7195,7 @@ class MainWindow(QMainWindow):
 
     def _sweep_working_folders_in_background(self, parent) -> None:
         """Sweep the DataForge working folders a crash or a kill left in
-        *parent* on a thread of its own (perf proposal), never the GUI
+        *parent* on a thread of its own (#522), never the GUI
         thread: such a folder can hold an old cache of about 31,000 files.
         The sweep leaves a folder whose marker is still held. It first waits
         for the background deletes already running, and is kept with them
@@ -7210,7 +7210,7 @@ class MainWindow(QMainWindow):
 
     def _sweep_stale_working_folders_at_startup(self) -> None:
         """Once a session, sweep the DataForge working folders a crash or a
-        kill left beside the active cache folder (perf proposal).
+        kill left beside the active cache folder (#522).
 
         A successful run's working folder, with the old cache set aside in
         it, now lives on while enhancements are generated, and a crash
@@ -7260,7 +7260,7 @@ class MainWindow(QMainWindow):
 
     def _closing_would_wait(self) -> bool:
         """True while a job runs (#483) or a finished DataForge run's working
-        folder is still being deleted in the background (perf proposal).
+        folder is still being deleted in the background (#522).
         Import Settings and an update's install start the new copy before
         this one closes, and closing waits for such a delete with the window
         hidden (_stop_workers_for_close), so they wait for it as they do for
@@ -7324,7 +7324,7 @@ class MainWindow(QMainWindow):
         queued.
 
         The background deletes of finished extractions' working folders
-        (perf proposal) are waited for too, within the same deadline, with a
+        (#522) are waited for too, within the same deadline, with a
         DataForge run's own folder when it finished before its finished slot
         ran. Each holds its folder's marker, so past the deadline another
         window's sweep still leaves it alone until the process ends, and
@@ -7367,8 +7367,8 @@ class MainWindow(QMainWindow):
                 continue  # keep the reference so Qt doesn't destroy a live thread
             setattr(self, worker_attr, None)
             if worker_attr == "_forge_worker":
-                # Only a DataForge run keeps its working folder (perf
-                # proposal): one that succeeded just before the close.
+                # Only a DataForge run keeps its working folder (#522):
+                # one that succeeded just before the close.
                 working_folder = worker.take_working_folder()
                 if working_folder is not None:
                     self._delete_working_folder_in_background(working_folder)
@@ -7380,7 +7380,7 @@ class MainWindow(QMainWindow):
             self.hide()
         for deleter in deleting:
             # Only a sweep of leftovers stops here, before its next folder
-            # (perf proposal): the folder in hand is finished. A working
+            # (#522): the folder in hand is finished. A working
             # folder's own delete has no stop and finishes, or its marker
             # stays held for the next sweep.
             deleter.requestInterruption()
