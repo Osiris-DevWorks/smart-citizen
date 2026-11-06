@@ -801,8 +801,19 @@ class EnhancementsGeneratorWorker(QThread):
                 self.stopped = True
                 self.finished.emit(False)
                 return
-            logger.exception(f"Enhancements generation failed: {e}")
-            self.error.emit(str(e))
+            # The script stays free of tr(), and is loaded afresh for every run,
+            # so its ContractScanFailed is told apart by name and worded here.
+            if type(e).__name__ == "ContractScanFailed":
+                message = (
+                    tr("extract.contract_scan_failed", skipped=e.skipped,
+                       total=e.total, first=e.first)
+                    if e.total else tr("extract.contract_scan_stopped", first=e.first)
+                )
+                logger.exception(message)
+            else:
+                message = str(e)
+                logger.exception(f"Enhancements generation failed: {e}")
+            self.error.emit(message)
             self.finished.emit(False)
 
 

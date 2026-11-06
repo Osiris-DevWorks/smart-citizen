@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen n'a pas pu utiliser un dossier de travail dans :\n{folder}\n\n{reason}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "La génération des enrichissements s'est arrêtée, car {skipped} contrats sur {total} n'ont pas pu être lus. Vos enrichissements existants n'ont pas changé. Merci de le signaler : il s'agit généralement d'une erreur de Smart Citizen.\n\nPremier contrat :\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "La génération des enrichissements s'est arrêtée, car la lecture des contrats a échoué. Vos enrichissements existants n'ont pas changé. Merci de le signaler : il s'agit généralement d'une erreur de Smart Citizen.\n\nErreur :\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows a refusé à Smart Citizen l'autorisation de créer le cache DataForge dans :\n{folder}\n\nL'extraction n'a pas démarré, donc rien n'a été modifié."

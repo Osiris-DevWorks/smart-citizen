@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "La generación de mejoras se detuvo porque no se pudieron leer {skipped} de {total} contratos. Tus mejoras actuales no han cambiado. Infórmalo, ya que suele ser un error de Smart Citizen.\n\nPrimer contrato:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "La generación de mejoras se detuvo porque la lectura de contratos falló. Tus mejoras actuales no han cambiado. Infórmalo, ya que suele ser un error de Smart Citizen.\n\nEl error:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows le denegó a Smart Citizen el permiso para crear la caché de DataForge en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."

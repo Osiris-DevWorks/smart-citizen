@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen 無法在以下位置使用工作資料夾：\n{folder}\n\n{reason}\n\n提取未開始，因此未做任何更改。"
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "增強內容生成已停止，因為 {total} 份任務合約中有 {skipped} 份無法讀取。你現有的增強內容保持不變。請回報此問題，這通常是 Smart Citizen 的錯誤。\n\n第一份合約：\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "增強內容生成已停止，因為任務合約掃描因錯誤而中斷。你現有的增強內容保持不變。請回報此問題，這通常是 Smart Citizen 的錯誤。\n\n錯誤：\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows 拒絕了 Smart Citizen 在以下位置建立 DataForge 快取的權限：\n{folder}\n\n提取未開始，因此未做任何更改。"
