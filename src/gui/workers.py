@@ -13,8 +13,8 @@ Contents:
 - InstallScanWorker       — finds every Star Citizen install on the machine (2.4)
 - P4kExtractWorker        — unp4k extraction of global.ini
 - DataForgeExtractWorker  — unp4k + unforge + patch pipeline
-- WorkingFolderDeleteWorker — deletes a finished extraction's working folder (perf proposal)
-- StaleWorkingFolderSweepWorker — sweeps working folders a crash or a kill left (perf proposal)
+- WorkingFolderDeleteWorker — deletes a finished extraction's working folder (#522)
+- StaleWorkingFolderSweepWorker — sweeps working folders a crash or a kill left (#522)
 - SelectAllDelegate       — Custom Value cell delegate (auto-select, EM3/EM4 wrap)
 - OrderSpinBoxDelegate    — Sort Order cell delegate (0-99 spin box, #142)
 - TestPlanSubmitWorker    — POSTs a tester's test-plan report to a Discord webhook
@@ -875,13 +875,13 @@ class P4kExtractWorker(QThread):
             self.finished.emit(False)
 
 
-# How often a wait for a background delete looks for a stop (perf proposal).
+# How often a wait for a background delete looks for a stop (#522).
 _BACKGROUND_DELETE_POLL_SECONDS = 0.05
 
 
 def _wait_for_background_deletes(done_events, should_stop) -> bool:
     """Wait on this thread until every background delete in *done_events*
-    is over, each a WorkingFolderDeleteWorker's ``done`` (perf proposal).
+    is over, each a WorkingFolderDeleteWorker's ``done`` (#522).
     Returns False as soon as *should_stop()* turns True instead, so a stop
     or a close is never held up by a delete."""
     for done in done_events:
@@ -903,7 +903,7 @@ class DataForgeExtractWorker(QThread):
     which would fire the global ErrorDialogHandler for something the user
     asked for.
 
-    A successful run keeps its working folder (perf proposal):
+    A successful run keeps its working folder (#522):
     extract_dataforge hands it over instead of deleting it, and MainWindow
     takes it with take_working_folder() once this thread is done and has it
     deleted in the background (WorkingFolderDeleteWorker) while enhancements
@@ -912,7 +912,7 @@ class DataForgeExtractWorker(QThread):
     closing waits for it with the thread.
 
     *wait_for* holds the ``done`` events of the background deletes still
-    going when the run was started (perf proposal). The run waits for them
+    going when the run was started (#522). The run waits for them
     before extract_dataforge, so its sweep does not skip an earlier run's
     working folder still being deleted and its free-space check does not
     count that folder as used. It waits here, never on the GUI thread, with
@@ -945,7 +945,7 @@ class DataForgeExtractWorker(QThread):
         # QThread reports no interruption once the thread has finished, so a
         # finished slot that waits for the thread first would always see False.
         self.stopped = False
-        # The working folder extract_dataforge handed over (perf proposal).
+        # The working folder extract_dataforge handed over (#522).
         self._working_folder = None
         # Set when the user sends the run to the background from the progress
         # dialog's question (#483): the generation that follows runs without a
@@ -965,7 +965,7 @@ class DataForgeExtractWorker(QThread):
 
     def _finish(self, success: bool) -> None:
         """Emit finished. A run that did not succeed deletes a working
-        folder it kept first (perf proposal): a stop after the cache was
+        folder it kept first (#522): a stop after the cache was
         written, during the patches or as a failure on the way out, or a
         failure after extract_dataforge returned.
 
@@ -1084,7 +1084,7 @@ class DataForgeExtractWorker(QThread):
 
 class WorkingFolderDeleteWorker(QThread):
     """Deletes the working folder a successful DataForge extraction kept
-    (perf proposal), so enhancement generation does not wait for it.
+    (#522), so enhancement generation does not wait for it.
 
     MainWindow starts it on the GUI thread once the extraction's own thread
     is done, never from inside another worker, and closing waits for it
@@ -1128,7 +1128,7 @@ class WorkingFolderDeleteWorker(QThread):
 
 class StaleWorkingFolderSweepWorker(WorkingFolderDeleteWorker):
     """Sweeps the DataForge working folders a crash or a kill left in one
-    folder (perf proposal): pak_extractor's own sweep, which deletes only a
+    folder (#522): pak_extractor's own sweep, which deletes only a
     folder whose marker it can delete, so it leaves alone a folder a live
     run or delete in this or another window still holds.
 

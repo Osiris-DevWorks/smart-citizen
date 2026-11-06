@@ -1,5 +1,4 @@
-"""base.ini freshness follows Data.p4k's size, not its modified time (perf
-proposal).
+"""base.ini freshness follows Data.p4k's size, not its modified time (#522).
 
 The RSI launcher's file verification moves Data.p4k's modified time on an
 ordinary game launch without changing a byte (#209, which moved the

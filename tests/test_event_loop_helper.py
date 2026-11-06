@@ -1,5 +1,5 @@
 """tests/event_loop.py's ``pump_until``, the one loop the tests run the Qt
-event loop with while they wait for a queued slot (perf proposal review: it
+event loop with while they wait for a queued slot (#522 review: it
 replaced a copy each in test_applied_state_worker.py, test_extraction_stop.py,
 test_live_blueprint_log_worker.py and test_pending_cache_cleanup.py).
 

@@ -219,7 +219,7 @@ class TestRobustRmtreeRefusesALink:
         a link, as before, and what it leads to stays. A directory symbolic
         link too: Windows' DirEntry follows one when its stat is asked to
         follow, but never a junction, so the junction alone could not show
-        that the threaded pass's stat does not follow (perf proposal).
+        that the threaded pass's stat does not follow (#522).
         Where Windows refuses this account a symbolic link it skips, and
         under CI it fails, as the other symbolic link tests do."""
         target = tmp_path / "elsewhere"

@@ -9,7 +9,7 @@ tag_builder.apply_mission_title), the arrow and Location/Destination modifier
 come from the mission_titles config, and courier titles are eligible. The 2.1.1
 hotfix (#200) reworked the shapes: |Address is the default modifier, endpoint
 sides render comma lists, bare ``*Token`` vars expand one level against the loc
-table, and per-body intersection guards shared titles. The perf proposal
+table, and per-body intersection guards shared titles. #522
 sorted the bodies, so their order no longer changes a route, and an endpoint
 some bodies write bare and others with |Address takes |Address. The stale
 `kraken_4.7.ini` fixture is deliberately not used as ground truth.
@@ -153,7 +153,7 @@ def test_body_order_does_not_change_the_route(gen_module):
     list from a set, so its order changed with every run's string hashing.
     Pooled bodies that list their drop-offs in another order, or spell an
     endpoint differently, gave three courier titles a different route from
-    one generation to the next (perf proposal). The bodies are sorted now
+    one generation to the next (#522). The bodies are sorted now
     ("Hello" before "Hi"), and an endpoint written both bare and with
     |Address takes |Address."""
     bodies = [
@@ -174,7 +174,7 @@ def test_an_endpoint_written_both_ways_takes_its_address_form(gen_module, first)
     """Pooled bodies that write Pickup1 and Dropoff1 bare in one and with
     |Address in another give the |Address form, whichever body sorts first,
     so a title follows the tokens rather than which greeting sorts first
-    (perf proposal)."""
+    (#522)."""
     bare = "collect from ~mission(Pickup1), deliver to ~mission(Dropoff1)"
     address = "collect from ~mission(Pickup1|Address), deliver to ~mission(Dropoff1|Address)"
     greetings = ("A. ", "B. ") if first == "bare" else ("B. ", "A. ")
@@ -204,7 +204,7 @@ def test_the_agreed_tokens_take_the_address_form(gen_module, order):
 def test_a_mix_with_the_name_form_keeps_the_first_bodys_form(gen_module, first, second):
     """The |Address preference is only for a var written both bare and with
     |Address: a mix with |name keeps the first sorted body's form, as before
-    the perf proposal (and never makes up a token no body writes)."""
+    #522 (and never makes up a token no body writes)."""
     bodies = [f"A. collect from ~mission(Pickup1{first}), deliver to ~mission(Dropoff1{first})",
               f"B. collect from ~mission(Pickup1{second}), deliver to ~mission(Dropoff1{second})"]
     assert gen_module._derive_route_fragment(bodies) == (

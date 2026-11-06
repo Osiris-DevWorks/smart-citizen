@@ -84,7 +84,7 @@ class TestCraftingCostItemPickup:
             encoding="utf-8",
         )
         # The UUIDs scan_crafting_blueprints' blueprint pass hands to the
-        # carryable resolver (perf proposal: it collects them as it reads
+        # carryable resolver (#522: it collects them as it reads
         # each blueprint, so there is no separate UUID scan to call).
         with mock.patch.object(gen_module, "_build_uuid_to_commodity",
                                return_value={}) as resolve:
@@ -219,7 +219,7 @@ class TestCraftingCostItemPickup:
     def test_the_crafting_index_order_does_not_change_between_runs(self, gen_module, tmp_path):
         """The materials of one blueprint were read from a set, so their
         order in crafting_index.json, the order they were first met in,
-        changed with every run's string hashing (found in the perf proposal's
+        changed with every run's string hashing (found in #522's
         review). Now each blueprint's materials are met in name order, so
         the index keeps them in the order they are first met, blueprint by
         blueprint, each blueprint's by name. All eight here are in one

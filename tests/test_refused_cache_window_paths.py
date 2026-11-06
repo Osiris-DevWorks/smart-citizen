@@ -253,7 +253,7 @@ class _Worker:
         return True
 
     def take_working_folder(self):
-        return None   # no working folder kept (perf proposal)
+        return None   # no working folder kept (#522)
 
     def deleteLater(self):
         self.calls.append("deleteLater")
