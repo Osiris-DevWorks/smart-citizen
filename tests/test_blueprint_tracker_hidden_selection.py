@@ -31,7 +31,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.regression]
 
 def _list_with(names, hidden=()) -> QListWidget:
     lst = QListWidget()
-    # Matches the real tab's lists (blueprint_tracker_tab.py:325,349) -- a
+    # Matches the real tab's lists (_blueprints_available_list, _blueprints_owned_list) -- a
     # bare QListWidget defaults to SingleSelection, under which selecting a
     # second item silently deselects the first, which made an earlier draft
     # of this test's _select_all() collapse to "only the last item" and fail
