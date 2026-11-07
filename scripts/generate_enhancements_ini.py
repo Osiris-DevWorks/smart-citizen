@@ -5048,6 +5048,29 @@ def _place_commodity_tag(base_name: str, tag: str, cfg) -> str:
     return join_tag(base_name, tag, placement)
 
 
+_FPS_ROCK_NAME_PREFIX = "hud_mining_fps_rock_name_"
+
+
+def _tag_fps_rock_names(out: dict[str, str], loc: dict[str, str],
+                        tag_by_name: dict[str, str], cfg) -> None:
+    """Tag each ``hud_mining_fps_rock_name_*`` key in *loc* whose text is a
+    tagged commodity's name, ignoring case, with that commodity's tag.
+
+    These keys are the names the HUD shows for a hand-mineable gem rock
+    before it is fractured (``_1`` Aphorite, ``_2`` Dolivine, ``_3``
+    Hadanite). They name no commodity, so the crafting loop never reaches
+    them, and a gem rock showed no tag until it broke into commodities.
+    *tag_by_name* maps a lowercased commodity name to the tag its name key
+    got in the crafting loop.
+    """
+    for key, base in loc.items():
+        if not key.lower().startswith(_FPS_ROCK_NAME_PREFIX) or key in out:
+            continue
+        tag = tag_by_name.get(base.strip().lower())
+        if tag:
+            out[key] = _place_commodity_tag(base, tag, cfg)
+
+
 def _parse_compendium_locations(base_content: str) -> dict:
     """Map a Mining Compendium mineral name (lowercased) to its sorted mining
     locations, parsed from the stock ``Name - loc, loc, ...`` paragraphs.
@@ -5209,6 +5232,7 @@ def scan_crafting_blueprints(
     )
 
     out: dict[str, str] = {}
+    tag_by_name: dict[str, str] = {}   # lowercased commodity name -> its tag
     skipped_no_loc: list[str] = []
     for commodity in sorted(commodity_items.keys()):
         pairs = _discover_commodity_loc_pairs(commodity, loc, commodity_keys)
@@ -5234,6 +5258,8 @@ def scan_crafting_blueprints(
                     usage_keys=usage_keys,
                 )
                 out[name_key] = _place_commodity_tag(base_name, tag, cfg) if tag else base_name
+                if tag:
+                    tag_by_name.setdefault(base_name.strip().lower(), tag)
 
             base_desc = loc.get(desc_key, "")
             if base_desc and desc_key not in out:
@@ -5248,6 +5274,10 @@ def scan_crafting_blueprints(
                     sections.append(loc_block)
                 sections.append(enhancements_block)
                 out[desc_key] = f"{base_desc}\\n\\n" + "\\n\\n".join(sections)
+
+    # A gem rock not yet fractured shows its HUD name, not its commodity
+    # name, so give those names the commodity's tag too.
+    _tag_fps_rock_names(out, loc, tag_by_name, tag_config or DEFAULT_TAG_CONFIGS.get("commodities"))
 
     if skipped_no_loc:
         logger.warning(
