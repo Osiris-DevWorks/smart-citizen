@@ -264,7 +264,7 @@ The branching model above is enforced by GitHub settings, not just convention. D
 6. Create the GitHub release and attach `dist/SmartCitizen-{VERSION}-Setup.exe` (installer only; portable onefile exe is retired).
 7. Open the next `release/X.Y.(Z+1)` off `main` and bump `VERSION.TXT` — the new integration target.
 
-**Code signing**: `release.yml` signs `SmartCitizen.exe` (with the bundled unp4k/unforge), the installer and the portable `.exe` files through Azure Artifact Signing, then zips the portable folder again (`build_exe.py --portable --zip-only`). It runs only when the `AZURE_SIGNING_ACCOUNT` repository variable is set; the job uses the `release` environment so the Azure federated credential has one subject. The Inno uninstaller is not signed yet.
+**Code signing**: `release.yml` signs `SmartCitizen.exe` (with the bundled unp4k/unforge), the installer and the portable `.exe` files through Azure Artifact Signing, then zips the portable folder again (`build_exe.py --portable --zip-only`). It runs only when the `AZURE_SIGNING_ACCOUNT` repository variable is set; the job uses the `release` environment so the Azure federated credential has one subject. Inno signs the installer and its uninstaller itself through `scripts/build/sign_file.ps1` (`/DSIGN` turns on `SignTool=azure` in `installer.iss`). Every release also gets a build provenance attestation (`gh attestation verify <file> --repo Osiris-DevWorks/smart-citizen`), and, when the `VIRUSTOTAL_API_KEY` secret is set, a VirusTotal scan whose links are added to the release notes.
 
 Discord notification fires via GitHub Actions (`scripts/discord_notify.py`) when `DISCORD_RELEASE_WEBHOOK_URL` secret is set.
 
