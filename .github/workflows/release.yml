@@ -35,11 +35,26 @@ jobs:
     name: Build & Release
     runs-on: windows-latest
     timeout-minutes: 30
+    # A fixed environment name gives the Azure federated credential one
+    # subject to trust (repo:Osiris-DevWorks/smart-citizen:environment:release)
+    # whichever of the three triggers started the run.
+    environment: release
     permissions:
       # Required for: softprops/action-gh-release (create release + upload
       # assets) AND `git push origin <tag>` (auto-tag the merge commit on
       # branch-push trigger).
       contents: write
+      # Required for the Azure OIDC login that code signing uses.
+      id-token: write
+    # Code signing (Azure Artifact Signing) runs only once the
+    # AZURE_SIGNING_ACCOUNT repository variable is set. Until then every
+    # signing step is skipped and the release ships unsigned, as before.
+    # Repository variables it reads (none are secret): AZURE_CLIENT_ID,
+    # AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_SIGNING_ENDPOINT
+    # (e.g. https://weu.codesigning.azure.net/), AZURE_SIGNING_ACCOUNT,
+    # AZURE_SIGNING_PROFILE.
+    env:
+      SIGN: ${{ vars.AZURE_SIGNING_ACCOUNT != '' }}
 
     steps:
       - name: Checkout (at tag, branch HEAD, or dispatch input)
@@ -154,6 +169,28 @@ jobs:
         if: steps.gate.outputs.skip == 'false'
         run: python scripts/build/build_exe.py
 
+      - name: Azure login (code signing)
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign program files (SmartCitizen.exe, unp4k, unforge)
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist\SmartCitizen
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
       - name: Install Inno Setup
         if: steps.gate.outputs.skip == 'false'
         shell: pwsh
@@ -173,6 +210,20 @@ jobs:
             Write-Error "Inno Setup compile failed with exit code $LASTEXITCODE"
             exit $LASTEXITCODE
           }
+
+      - name: Sign installer
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist
+          files-folder-filter: exe
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
 
       - name: Stash standard installer before portable rebuild
         # build_exe.py unconditionally rmtrees `dist/` at the start of
@@ -197,6 +248,25 @@ jobs:
         # script removes _build_info.py in its finally block.
         if: steps.gate.outputs.skip == 'false'
         run: python scripts/build/build_exe.py --portable
+
+      - name: Sign portable program files
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist\SmartCitizen-Portable-v${{ steps.resolve.outputs.version }}
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Zip signed portable build again
+        # build_exe.py --portable zipped the folder before it was signed.
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        run: python scripts/build/build_exe.py --portable --zip-only
 
       - name: Restore standard installer
         # Move the stashed installer back into dist/ so both artifacts

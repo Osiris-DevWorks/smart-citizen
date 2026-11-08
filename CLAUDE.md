@@ -264,6 +264,8 @@ The branching model above is enforced by GitHub settings, not just convention. D
 6. Create the GitHub release and attach `dist/SmartCitizen-{VERSION}-Setup.exe` (installer only; portable onefile exe is retired).
 7. Open the next `release/X.Y.(Z+1)` off `main` and bump `VERSION.TXT` — the new integration target.
 
+**Code signing**: `release.yml` signs `SmartCitizen.exe` (with the bundled unp4k/unforge), the installer and the portable `.exe` files through Azure Artifact Signing, then zips the portable folder again (`build_exe.py --portable --zip-only`). It runs only when the `AZURE_SIGNING_ACCOUNT` repository variable is set; the job uses the `release` environment so the Azure federated credential has one subject. The Inno uninstaller is not signed yet.
+
 Discord notification fires via GitHub Actions (`scripts/discord_notify.py`) when `DISCORD_RELEASE_WEBHOOK_URL` secret is set.
 
 **Tester pre-release installers**: `.github/workflows/installer-preview.yml` builds a downloadable `SmartCitizen-{VERSION}-Setup.exe` artifact outside the standard release flow. Triggers: (1) `workflow_dispatch` from the Actions tab against any branch, (2) adding the `build-installer` label to a PR (later pushes to the labeled PR rebuild via `synchronize`; remove the label to stop rebuilds). In the integration-branch model this is the *primary* signal that a release is near test sign-off — when the user adds the label, treat the active release branch as approaching ship. Artifact: `smartcitizen-installer-{SHA}`, 30-day retention (testers need lead time vs. CI's 7). The `concurrency` group cancels in-flight builds when a newer commit lands on the same PR / branch.
