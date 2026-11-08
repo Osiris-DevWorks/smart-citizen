@@ -218,4 +218,13 @@ DIGIT_SAMPLES: tuple[tuple[str, int, int, str, str], ...] = (
     ("0", 5, 11, "50e1fff496bda26ea5ffc5976340fafb7c594aedf57c5d51fcf97e5a5ef4ff764f6cf0ff75644ffbf7835f43f2f2be5c64fc8df3eec6f0", "q2"),
     ("8", 5, 11, "49dafff276b5a078dbffe0a86053f9fb7e6356f3e7e3778ef666faeed983a78b52abfcef8b635dfef67e734dfcf9d15962ff77fdfed287", "q2"),
     ("0", 5, 11, "65f9fdd850bda280ece1eb695375ecff48633fffff45525ffbfc5e4f67ffe6495851f5f15e5150f5ef5f5d6cf1f36b546bf3e2fdf5d18e", "q2"),
+    ("3", 5, 8, "87fceef46feafed2ffe1d1c67df0f066abf1ff7d7d85b9ff97e0ba7dffffffffb0f9c4b3ebf0ff69", "fov3"),
+    ("1", 4, 8, "cdf1ff6ad2f6ff738dbfff6e85adff7684b2f46d91abff71b5d2ffa9fee8faff", "fov3"),
+    ("7", 5, 8, "f8fffffbc3b5aca0ffc38984b0fd796f7ff5ff6d8391eab9697cabf65c778aeffd66749be5e17a6f", "fov3"),
+    ("0", 5, 8, "8afaffb05deaf4e9ffb7f2b398f5d3f78677fdc3fc9c91facdffa083eacfffffa9ff91a1edecc163", "fov3"),
+    ("1", 4, 7, "fffffc7684dbff8385c1ed8882d8ff7985c8fb6f9ce8f98fffe9f7ff", "fov4"),
+    ("5", 5, 7, "fffbffffb5eaa89a8b7dfffffeab69c1e8fffb878e9073ffd5ffa893fdc3fefffaf488", "fov4"),
+    ("3", 4, 7, "fcf6edffff9aa4eb858cb7ff7ff5f9ff95829cf6fda7a9fdfff6fef6", "fov4"),
+    ("6", 5, 7, "f9fffefcaefba380927ffffbfaa97af9ebffed7be9aa87ffc7ffaa90f3cffff7f6f57a", "fov4"),
+    ("0", 5, 7, "7ef9ffffefc0f39dbdffa4f89a90f8a9fd788ae8abff9293ffabfd9da3fe9af3f7f0e4", "fov4"),
 )

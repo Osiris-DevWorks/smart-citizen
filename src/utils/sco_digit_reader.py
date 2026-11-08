@@ -15,8 +15,8 @@ height) with a comma before the last three. Steps:
    share a top and baseline. A blob as tall as a digit but too wide for one
    is two or three digits whose strokes touch (a "4"'s crossbar reaching
    the next digit on a 4K screen), so it is cut where the fewest pixels are
-   lit. A chain only counts if a comma-sized blob sits before its last
-   three digits, which rules out other HUD text.
+   lit. A chain only counts if a comma-sized blob sits on its baseline
+   before its last three digits, which rules out other HUD text.
 3. Match each digit to the nearest reference glyph in
    ``sco_digit_samples.py`` (min-max normalised, coarse grid, correlation).
 4. Prefer the reading that decodes to a known deposit. Where a digit's
@@ -42,6 +42,14 @@ DIGIT_HEIGHT_AT_1600 = 11
 # Red level that counts as "glyph"; tried in order until one finds a row.
 THRESHOLDS = (180, 210, 150)
 
+# Digit heights looked for, against the one the caller expects (a Golem's
+# readout at the default field of view). The readout is drawn in the 3D
+# cockpit, so a wider field of view draws it smaller: about 0.65 of that at
+# max field of view, and the Aurora's readout is as small (#546). Each size
+# takes digits from 0.75 to 1.35 of it (``_is_digit_tall``), so together they
+# cover about 0.5 to 1.35.
+DIGIT_SCALES = (1.0, 0.7)
+
 # Glyphs are compared on this coarse grid. Small on purpose: it absorbs
 # per-cockpit font weight and JPEG/fringe noise.
 GRID_W, GRID_H = 4, 7
@@ -49,7 +57,7 @@ GRID_W, GRID_H = 4, 7
 # Runner-up digits within this score of the best are tried as alternatives
 # (at most ALT_COUNT per digit).
 ALT_MARGIN = 0.3
-ALT_COUNT = 3
+ALT_COUNT = 4
 
 # A reading must match its reference glyphs at least this well on average,
 # so other white text (desktop clocks and dates while alt-tabbed) stays
@@ -187,9 +195,13 @@ def _split_joined(width, mask, box, digit_px) -> list[tuple[int, int, int, int]]
     return parts
 
 
-def _candidate_rows(width, height, mask, digit_px):
-    """Digit chains shaped like ``N,NNN`` or ``NN,NNN``: (boxes, top, base)."""
-    boxes = _components(width, height, mask)
+def _candidate_rows(width, height, mask, digit_px, boxes=None):
+    """Digit chains shaped like ``N,NNN`` or ``NN,NNN``: (boxes, top, base).
+
+    *boxes* are the mask's blobs, when the caller has them already.
+    """
+    if boxes is None:
+        boxes = _components(width, height, mask)
     digits = sorted(part for b in boxes if _is_digit_tall(b, digit_px)
                     for part in _split_joined(width, mask, b, digit_px)
                     if _is_digit_tall(part, digit_px))
@@ -223,13 +235,26 @@ def _candidate_rows(width, height, mask, digit_px):
             left, right = chain[k], chain[k + 1]
             has_comma = any(
                 left[0] + left[2] - 1 <= c[0] and c[0] + c[2] <= right[0] + 1
-                and c[1] + c[3] >= base - 2 and c[1] >= top + 0.5 * digit_px
+                and base - 2 <= c[1] + c[3] <= base + 0.5 * digit_px
+                and c[1] >= top + 0.5 * digit_px
                 for c in commas
             )
             if has_comma and 1 <= k + 1 <= 2 and len(chain) - (k + 1) >= 3:
                 rows.append((chain[:k + 4], top, base))
                 break
     return rows
+
+
+def _rows_at_each_size(width, height, red, threshold, digit_px):
+    """Candidate rows at one threshold for each of ``DIGIT_SCALES``.
+
+    The mask and its blobs are worked out once and shared by every size.
+    Runs wider than the largest digit are dropped from the mask.
+    """
+    mask = _mask(width, height, red, threshold, int(1.2 * digit_px * max(DIGIT_SCALES)))
+    boxes = _components(width, height, mask)
+    for scale in DIGIT_SCALES:
+        yield from _candidate_rows(width, height, mask, digit_px * scale, boxes)
 
 
 def _features(pixels: list[list[int]]) -> list[float]:
@@ -359,8 +384,7 @@ def cut_glyphs(width: int, height: int, red: bytes, digit_count: int,
     if colour and not len(green) == len(blue) == len(red):
         return None
     for threshold in THRESHOLDS:
-        mask = _mask(width, height, red, threshold, int(1.2 * digit_px))
-        for row in _candidate_rows(width, height, mask, digit_px):
+        for row in _rows_at_each_size(width, height, red, threshold, digit_px):
             boxes, top, base = row
             if len(boxes) != digit_count:
                 continue
@@ -379,7 +403,8 @@ def read_signature(width: int, height: int, red: bytes,
                    blue: Optional[bytes] = None) -> Optional[SignatureReading]:
     """Find and read the signature in a ``width`` x ``height`` red channel.
 
-    *digit_px* is the expected digit height in capture pixels. With the
+    *digit_px* is the expected digit height in capture pixels; digits down
+    to about half of it are found too (``DIGIT_SCALES``). With the
     *green* and *blue* channels too, coloured text (red warnings, green
     markers) is skipped. Returns the best reading, preferring one that decodes, or None.
     """
@@ -388,11 +413,9 @@ def read_signature(width: int, height: int, red: bytes,
     colour = green is not None and blue is not None
     if colour and not len(green) == len(blue) == len(red):
         return None
-    max_run = int(1.2 * digit_px)
     undecoded = None
     for threshold in THRESHOLDS:
-        mask = _mask(width, height, red, threshold, max_run)
-        rows = [row for row in _candidate_rows(width, height, mask, digit_px)
+        rows = [row for row in _rows_at_each_size(width, height, red, threshold, digit_px)
                 if not colour or _is_white(width, red, green, blue, row, threshold)]
         readings = [r for row in rows if (r := _read_row(width, red, row, threshold))]
         decoded = [r for r in readings

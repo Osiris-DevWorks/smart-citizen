@@ -3,7 +3,8 @@
 Fixtures in ``tests/fixtures/sco/`` are named ``<source>_<value>.png``:
 crops of 2560x1600 in-game screenshots (Drake Golem ``g*``, MISC Prospector
 ``p*``, Prospector on a planet with the orange HUD panel ``q*``), lossless
-crops SCO saved in-game (``live*``), and other HUD text
+crops SCO saved in-game (``live*``), Golem readouts at a wide field of
+view, drawn about 0.65 of their usual size (``fov*``, #546), and other HUD text
 the reader must ignore (``hud*_none``: "UNKNOWN", red "WARNING"). Qt-free:
 the channels go straight to ``read_signature``.
 """
@@ -94,12 +95,13 @@ def test_box_wraps_the_digits():
 
 
 @pytest.mark.parametrize("stem", ["live02_8540", "live06_7800", "live24_15600",
-                                  "q1_14160", "q2_17080"])
+                                  "q1_14160", "q2_17080", "fov3_3170"])
 def test_reads_without_its_own_glyphs(monkeypatch, stem):
     # The live crops were misread in-game (8 as 0/6/9, 8 as 0, 6 as 8); the
     # q crops were skipped as coloured text on the orange planet panel. Read
     # with that crop's own glyphs removed, so the rest of the set (and the
-    # decode check) has to carry it.
+    # decode check) has to carry it. fov3 is a wide field of view readout
+    # (#546) that the other small glyphs carry.
     prefix = stem.split("_")[0]
     source = "live_" + prefix[4:] if prefix.startswith("live") else prefix
     monkeypatch.setattr(sco_digit_reader, "DIGIT_SAMPLES",
@@ -149,9 +151,11 @@ def _read_scaled(path, screen_height):
 # panel that break apart, or small glyphs that look alike (6 read as 0).
 # Reference glyphs cut from real crops at those sizes are what fixes them
 # (scripts/add_sco_sample.py), so this list may only shrink.
+# The fov crops are already about 0.65 of the usual size (#546), so at 1080
+# their digits are under 5 px tall.
 SCALED_DOWN_MISSES = {
     1080: {"live24_15600", "live42_12900", "live50_40000", "live51_48000", "live52_48000",
-           "p3_15697", "q1_14160", "q2_17080"},
+           "p3_15697", "q1_14160", "q2_17080", "fov1_2000", "fov2_3170", "fov4_15360"},
     1440: {"live24_15600", "live51_48000", "live52_48000", "p3_15697", "q1_14160"},
 }
 
@@ -182,6 +186,32 @@ def test_reads_every_readout_on_a_4k_screen(path):
     assert reading is not None and reading.text == _expected(path)
 
 
+def test_digits_at_a_wide_field_of_view_are_found():
+    """#546: a wider field of view draws the cockpit readout smaller (7 px
+    digits where the reader expects 11). They read right at the expected
+    size, through the smaller of ``DIGIT_SCALES``."""
+    path = next(p for p in READOUTS if p.stem == "fov1_2000")
+    reading = _read(path)
+    assert reading.text == "2,000" and reading.box[3] < 0.75 * DIGIT_HEIGHT_AT_1600
+
+
+def test_a_comma_sized_blob_below_the_row_is_no_comma():
+    """#546: the taller scan box takes in HUD text below the readout. A small
+    blob far under the gap between the first two digits was taken for the
+    comma, and 21,200 was cut to a four-digit row that read nothing."""
+    w, h, red, green, blue = _channels(next(p for p in READOUTS if p.stem == "fov5_21200"))
+    x, *_ = read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue).box
+    extra = 40
+    red, green, blue = (bytearray(c) + bytearray(w * extra) for c in (red, green, blue))
+    for y in range(h + 25, h + 28):
+        for dx in (8, 9):
+            for c in (red, green, blue):
+                c[y * w + x + dx] = 255
+    reading = read_signature(w, h + extra, bytes(red), DIGIT_HEIGHT_AT_1600,
+                             green=bytes(green), blue=bytes(blue))
+    assert reading is not None and reading.text == "21,200"
+
+
 def test_touching_digits_are_cut_apart():
     # Two "0"s joined by one pixel, then three, each 3 wide and 5 tall.
     w, h, mask = _grid([
@@ -208,8 +238,9 @@ def test_an_undecoded_threshold_does_not_end_the_search(monkeypatch):
     from src.utils.sco_digit_reader import SignatureReading
 
     by_threshold = {180: "1,160", 210: None, 150: "14,160"}
+    monkeypatch.setattr(sco_digit_reader, "DIGIT_SCALES", (1.0,))
     monkeypatch.setattr(sco_digit_reader, "_candidate_rows",
-                        lambda w, h, mask, digit_px: [((0, 0, 1, 1),), ])
+                        lambda w, h, mask, digit_px, boxes=None: [((0, 0, 1, 1),), ])
     seen = []
 
     def read_row(width, red, row, threshold):
