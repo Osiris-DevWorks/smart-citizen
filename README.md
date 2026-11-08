@@ -77,6 +77,9 @@ Download the **`SmartCitizen-{VERSION}-Setup.exe`** installer and run it. The ap
 
 Smart Citizen runs on Linux through the same Wine prefix as Star Citizen — see **[LINUX.md](docs/LINUX.md)** for the full guide (download the portable build, then point a launch script at the Wine runner your game uses).
 
+> [!IMPORTANT]
+> **The Smart Citizen Overlay needs an X11 session, not Wayland.** If you want the overlay on Linux, log out and pick the **X11** (or **Xorg**) session on your login screen. Steps are in [LINUX.md](docs/LINUX.md).
+
 ### For Developers
 
 See **[docs/CONTRIBUTOR_GUIDE.md](docs/CONTRIBUTOR_GUIDE.md)** for local setup (prerequisites, clone, install, run).
