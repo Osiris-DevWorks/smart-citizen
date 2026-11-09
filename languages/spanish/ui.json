@@ -3123,7 +3123,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige qué categorías de mejoras se ejecutan al Generar. Naves, componentes, armas de nave, armas FPS, misiones, recompensas de misión, fabricación de mercancías y consumibles médicos pueden activarse de forma independiente."
+        "at": "Elige qué categorías de mejoras se ejecutan al Generar: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items incluye componentes, armas de nave y misiles; Gear incluye armas FPS y etiquetas de armadura. Cada categoría se activa o desactiva por separado."
       }
     },
     "enh_favorites": {
@@ -3156,16 +3156,6 @@
         "at": "Construye las etiquetas entre corchetes añadidas a componentes, misiles, armas de nave, mercancías y armaduras. Reordena elementos con ▲/▼, desmarca para excluir, cambia la longitud de abreviatura, elige separador y corchetes, o coloca la etiqueta después del nombre en lugar de antes."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Superposición de Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3164,16 @@
       "description": {
         "ht": "",
         "at": "Marca los blueprints que posees. Busca en la lista izquierda por nombre o misión, o acótala por Tipo, Clase, Tamaño y Grado de componente, y usa las flechas para mover objetos a tu lista de adquiridos. Los blueprints adquiridos reciben una etiqueta [Owned] allí donde aparezcan entre las recompensas potenciales de una misión, para ver de un vistazo qué merece la pena perseguir."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Superposición de Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
       }
     },
     "edit": {
@@ -3233,7 +3233,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y desactiva, si quieres, el recorrido automático en versiones nuevas."
+        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas."
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3273,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Importa un INI externo a tus modificaciones mediante el diálogo de resolución de conflictos, o restablece tu user.ini del canal activo (con copia de seguridad automática antes de borrarlo)."
+        "at": "Importa un INI externo a tus modificaciones mediante el diálogo de resolución de conflictos. Restablece tu user.ini del canal activo (con copia de seguridad previa) o recupera una copia anterior con Restaurar user.ini. Vista previa muestra lo que escribiría Aplicar, y Buscar actualizaciones comprueba si hay una versión nueva."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Config: Copia de seguridad de ajustes"
+      },
+      "description": {
+        "ht": "",
+        "at": "Exportar ajustes guarda tus preferencias, configuraciones de etiquetas, carpeta de Star Citizen y textos personalizados de todos los canales en un solo archivo. Importar ajustes los recupera, en un PC nuevo o tras una instalación limpia."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Config: Herramientas de Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Borrar caché de shaders muestra las carpetas de caché de shaders del juego, una por versión. Limpiar borra los shaders y conserva tus ajustes gráficos; Eliminar borra la carpeta entera. Cierra Star Citizen antes."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Ayuda y comentarios"
+        "at": "21. Ayuda y comentarios"
       },
       "description": {
         "ht": "",

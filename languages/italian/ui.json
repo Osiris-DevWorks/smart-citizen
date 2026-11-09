@@ -3123,7 +3123,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Attiva o disattiva quali categorie di miglioramenti vengono eseguite quando generi. Navi, componenti, armi delle navi, armi FPS, missioni, ricompense delle missioni, fabbricazione delle merci e beni di consumo medici possono essere abilitati ciascuno in modo indipendente."
+        "at": "Scegli quali categorie di miglioramenti vengono eseguite con Genera: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items comprende componenti, armi di nave e missili; Gear comprende armi FPS e tag delle armature. Ogni categoria si attiva o disattiva separatamente."
       }
     },
     "enh_favorites": {
@@ -3156,16 +3156,6 @@
         "at": "Crea i tag tra parentesi aggiunti ai nomi di componenti, missili, armi delle navi, merci e armature. Riordina gli elementi con ▲/▼, deseleziona per escludere, cambia la lunghezza dell'abbreviazione, scegli il separatore e le parentesi, oppure posiziona il tag dopo il nome invece che prima."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Overlay di Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Avvia l'overlay qui o con il pulsante Overlay della barra degli strumenti. Sopra il gioco decodifica le firme delle scansioni minerarie, apre un cassetto per cercare blueprint, minerali e crafting, e segna come posseduti i blueprint che ottieni. Avvia il gioco in modalità finestra senza bordi sullo schermo principale."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3164,16 @@
       "description": {
         "ht": "",
         "at": "Contrassegna i blueprint che possiedi. Cerca nell'elenco a sinistra per nome o missione, oppure restringilo per Tipo, Classe, Dimensione e Grado del componente, poi usa le frecce per spostare gli elementi nel tuo elenco posseduti. I blueprint posseduti ricevono un tag [Owned] ovunque compaiano tra le possibili ricompense di una missione, così puoi capire a colpo d'occhio cosa vale la pena inseguire."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Overlay di Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Avvia l'overlay qui o con il pulsante Overlay della barra degli strumenti. Sopra il gioco decodifica le firme delle scansioni minerarie, apre un cassetto per cercare blueprint, minerali e crafting, e segna come posseduti i blueprint che ottieni. Avvia il gioco in modalità finestra senza bordi sullo schermo principale."
       }
     },
     "edit": {
@@ -3233,7 +3233,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Scegli il tema dell'app (Predefinito / Chiaro / Scuro / ODW) e, facoltativamente, disattiva il tour automatico per le nuove versioni."
+        "at": "Scegli il tema dell'app (Predefinito / Chiaro / Scuro / ODW) e la dimensione del testo (Piccola / Media / Grande, applicata dopo un riavvio) e, se vuoi, disattiva il tour automatico nelle nuove versioni."
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3273,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Importa un INI esterno nelle tue sovrascritture tramite la finestra di risoluzione dei conflitti, oppure reimposta il tuo user.ini per il canale attivo (viene eseguito un backup automatico prima dello svuotamento)."
+        "at": "Importa un INI esterno nelle tue sovrascritture tramite la finestra di risoluzione dei conflitti. Reimposta lo user.ini del canale attivo (con backup prima) o recupera una copia precedente con Ripristina user.ini. L'anteprima mostra cosa scriverebbe Applica, e Controlla aggiornamenti verifica se c'è una nuova versione."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Configurazione: Backup Impostazioni"
+      },
+      "description": {
+        "ht": "",
+        "at": "Esporta impostazioni salva preferenze, configurazioni dei tag, cartella di Star Citizen e testi personalizzati di tutti i canali in un unico file. Importa impostazioni li ripristina, su un nuovo PC o dopo un'installazione pulita."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Configurazione: Strumenti di Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Svuota cache shader elenca le cartelle della cache shader del gioco, una per versione. Pulisci elimina gli shader e mantiene le impostazioni grafiche; Rimuovi elimina l'intera cartella. Chiudi prima Star Citizen."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Guida e feedback"
+        "at": "21. Guida e feedback"
       },
       "description": {
         "ht": "",

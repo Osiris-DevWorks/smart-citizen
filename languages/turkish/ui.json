@@ -3237,7 +3237,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Oluştur dediğinizde hangi geliştirme kategorilerinin çalışacağını seçin. Gemiler, bileşenler, gemi silahları, FPS silahları, görevler, görev ödülleri, emtia üretimi ve tıbbi sarf malzemelerinin her biri bağımsız olarak etkinleştirilebilir."
+        "at": "Oluştur'a basınca hangi geliştirme kategorilerinin çalışacağını seçin: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items bileşenleri, gemi silahlarını ve füzeleri; Gear FPS silahlarını ve zırh etiketlerini kapsar. Her kategori ayrı ayrı açılıp kapatılabilir."
       }
     },
     "enh_favorites": {
@@ -3270,16 +3270,6 @@
         "at": "Bileşenlere, füzelere, gemi silahlarına, emtialara ve zırhlara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Smart Citizen Katmanı"
-      },
-      "description": {
-        "ht": "",
-        "at": "Katmanı buradan veya araç çubuğundaki Katman düğmesiyle başlatın. Oyunun üzerinde maden tarama imzalarını çözer, planlarınızı, minerallerinizi ve üretimi aramak için bir çekmece açar ve kazandığınız planları sahip olunan olarak işaretler. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3288,6 +3278,16 @@
       "description": {
         "ht": "",
         "at": "Sahip olduğunuz planları işaretleyin. Soldaki listede ada veya göreve göre arama yapın ya da bileşen Türü, Sınıfı, Boyutu ve Derecesine göre daraltın, ardından öğeleri sahip olunanlar listenize taşımak için okları kullanın. Sahip olunan planlar, bir görevin olası ödüllerinde göründükleri her yerde [Owned] etiketi alır; böylece neyin peşine düşmeye değer olduğunu bir bakışta görebilirsiniz."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Katmanı"
+      },
+      "description": {
+        "ht": "",
+        "at": "Katmanı buradan veya araç çubuğundaki Katman düğmesiyle başlatın. Oyunun üzerinde maden tarama imzalarını çözer, planlarınızı, minerallerinizi ve üretimi aramak için bir çekmece açar ve kazandığınız planları sahip olunan olarak işaretler. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın."
       }
     },
     "edit": {
@@ -3347,7 +3347,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Uygulama temasını seçin (Varsayılan / Açık / Koyu / ODW) ve isterseniz yeni sürümlerde otomatik turu devre dışı bırakın."
+        "at": "Uygulama temasını (Varsayılan / Açık / Koyu / ODW) ve yazı boyutunu (Küçük / Orta / Büyük, yeniden başlatınca uygulanır) seçin; isterseniz yeni sürümlerde otomatik turu kapatın."
       }
     },
     "cfg_sc_install": {
@@ -3387,13 +3387,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Çakışma çözme iletişim kutusu aracılığıyla harici bir INI dosyasını geçersiz kılmalarınıza aktarın veya etkin kanal için user.ini dosyanızı sıfırlayın (temizlenmeden önce otomatik olarak yedeklenir)."
+        "at": "Harici bir INI dosyasını çakışma çözme penceresiyle geçersiz kılmalarınıza aktarın. Etkin kanalın user.ini dosyasını sıfırlayın (önce yedeklenir) ya da user.ini Dosyasını Geri Yükle ile önceki bir kopyayı geri getirin. Önizleme Uygula'nın ne yazacağını gösterir, Güncellemeleri Denetle yeni sürüm arar."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Yapılandırma: Ayar Yedeği"
+      },
+      "description": {
+        "ht": "",
+        "at": "Ayarları Dışa Aktar tercihlerinizi, etiket ayarlarınızı, Star Citizen klasörünüzü ve tüm kanallardaki özel metinlerinizi tek bir dosyaya kaydeder. Ayarları İçe Aktar bunları yeni bir bilgisayarda ya da temiz kurulumdan sonra geri getirir."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Yapılandırma: Star Citizen Araçları"
+      },
+      "description": {
+        "ht": "",
+        "at": "Gölgelendirici Önbelleğini Temizle, oyunun gölgelendirici önbellek klasörlerini her oyun sürümü için bir tane olacak şekilde listeler. Temizle gölgelendiricileri siler ve grafik ayarlarınızı korur; Kaldır tüm klasörü siler. Önce Star Citizen'ı kapatın."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Yardım ve geri bildirim"
+        "at": "21. Yardım ve geri bildirim"
       },
       "description": {
         "ht": "",

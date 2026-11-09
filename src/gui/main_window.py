@@ -4656,6 +4656,8 @@ class MainWindow(QMainWindow):
             "cfg_data_folder":       {"target": lambda: self.config_tab._data_group,                           "pre_action": _switch_to(config_tab)},
             "cfg_p4k_extraction":    {"target": lambda: self.config_tab._p4k_group,                            "pre_action": _switch_to(config_tab)},
             "cfg_tools":             {"target": lambda: self.config_tab._tools_group,                          "pre_action": _switch_to(config_tab)},
+            "cfg_backup":            {"target": lambda: self.config_tab._backup_group,                         "pre_action": _switch_to(config_tab)},
+            "cfg_sc_tools":          {"target": lambda: self.config_tab._sc_tools_group,                       "pre_action": _switch_to(config_tab)},
             "help":                  {"target": lambda: self.help_btn,                                         "pre_action": _switch_to(strings_tab)},
         }
 

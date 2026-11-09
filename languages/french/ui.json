@@ -3123,7 +3123,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Choisissez les catégories d'enrichissements exécutées lors de la génération. Vaisseaux, composants, armes de vaisseau, armes FPS, missions, récompenses de mission, fabrication de marchandises et consommables médicaux peuvent être activés indépendamment."
+        "at": "Choisissez les catégories d'enrichissements exécutées lors de la génération : Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items couvre les composants, les armes de vaisseau et les missiles ; Gear couvre les armes FPS et les étiquettes d'armure. Chaque catégorie s'active ou se désactive séparément."
       }
     },
     "enh_favorites": {
@@ -3154,6 +3154,26 @@
       "description": {
         "ht": "",
         "at": "Composez les balises entre crochets ajoutées aux noms des composants, missiles, armes de vaisseau, marchandises et armures. Réordonnez les éléments avec ▲/▼, décochez pour exclure, changez la longueur des abréviations, choisissez le séparateur et les crochets, ou placez la balise après le nom plutôt qu'avant."
+      }
+    },
+    "blueprint_tracker": {
+      "title": {
+        "ht": "",
+        "at": "7. Suivi des plans"
+      },
+      "description": {
+        "ht": "",
+        "at": "Marquez les plans que vous possédez. Cherchez dans la liste de gauche par nom ou par mission, ou affinez par Type, Classe, Taille et Grade de composant, puis utilisez les flèches pour déplacer des éléments vers votre liste de possédés. Les plans possédés reçoivent une étiquette [Owned] partout où ils apparaissent dans les récompenses potentielles d'une mission, pour voir d'un coup d'œil ce qui vaut la peine d'être chassé."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Superposition Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Démarrez la superposition ici ou avec le bouton Superposition de la barre d'outils. Par-dessus le jeu, elle décode les signatures de scan minier, ouvre un tiroir pour chercher vos plans, minéraux et fabrications, et marque comme possédés les plans que vous obtenez. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal."
       }
     },
     "edit": {
@@ -3213,7 +3233,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Choisissez le thème de l'application (Défaut / Clair / Sombre / ODW) et désactivez si vous le souhaitez la visite automatique à chaque nouvelle version."
+        "at": "Choisissez le thème de l'application (Défaut / Clair / Sombre / ODW) et la taille du texte (Petite / Moyenne / Grande, appliquée après un redémarrage), et désactivez si besoin la visite automatique lors des nouvelles versions."
       }
     },
     "cfg_sc_install": {
@@ -3253,37 +3273,37 @@
       },
       "description": {
         "ht": "",
-        "at": "Importez un INI externe dans vos modifications via la boîte de dialogue de résolution de conflits, ou réinitialisez votre user.ini pour le canal actif (sauvegardé automatiquement avant l'effacement)."
+        "at": "Importez un INI externe dans vos modifications via la fenêtre de résolution des conflits. Réinitialisez le user.ini du canal actif (sauvegardé avant) ou récupérez une copie précédente avec Restaurer user.ini. L'aperçu montre ce qu'Appliquer écrirait, et Rechercher des mises à jour vérifie s'il existe une nouvelle version."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Paramètres : Sauvegarde des paramètres"
+      },
+      "description": {
+        "ht": "",
+        "at": "Exporter les paramètres enregistre vos préférences, vos réglages d'étiquettes, votre dossier Star Citizen et vos textes personnalisés de tous les canaux dans un seul fichier. Importer les paramètres les restaure, sur un nouveau PC ou après une installation propre."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Paramètres : Outils Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Vider le cache des shaders liste les dossiers de cache de shaders du jeu, un par version. Nettoyer supprime les shaders et garde vos réglages graphiques ; Supprimer efface le dossier entier. Fermez Star Citizen avant."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Aide et retours"
+        "at": "21. Aide et retours"
       },
       "description": {
         "ht": "",
         "at": "Le bouton Aide ouvre un panneau latéral avec le guide complet, la liste des problèmes connus et un lien vers le canal Discord de Smart Citizen pour vos retours. Vous avez tout ce qu'il faut pour démarrer : bonne chance, citoyen."
-      }
-    },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Superposition Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Démarrez la superposition ici ou avec le bouton Superposition de la barre d'outils. Par-dessus le jeu, elle décode les signatures de scan minier, ouvre un tiroir pour chercher vos plans, minéraux et fabrications, et marque comme possédés les plans que vous obtenez. Lancez le jeu en mode fenêtré sans bordure sur votre écran principal."
-      }
-    },
-    "blueprint_tracker": {
-      "title": {
-        "ht": "",
-        "at": "7. Suivi des plans"
-      },
-      "description": {
-        "ht": "",
-        "at": "Marquez les plans que vous possédez. Cherchez dans la liste de gauche par nom ou par mission, ou affinez par Type, Classe, Taille et Grade de composant, puis utilisez les flèches pour déplacer des éléments vers votre liste de possédés. Les plans possédés reçoivent une étiquette [Owned] partout où ils apparaissent dans les récompenses potentielles d'une mission, pour voir d'un coup d'œil ce qui vaut la peine d'être chassé."
       }
     }
   },
