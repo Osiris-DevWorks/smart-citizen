@@ -236,6 +236,17 @@ class TestScanSpaceshipsDiscovery:
         assert "vehicle_DescAEGS_TestShip" in result
         assert "A fast light fighter." in result["vehicle_DescAEGS_TestShip"]
 
+    def test_skips_ship_whose_key_is_blank(self, gen_module, tmp_path):
+        """#561: a key base.ini leaves blank gets no stats, since the game
+        shows it elsewhere (the Carrack's interior map labels)."""
+        self._make_ship_xml(tmp_path, "AEGS_Test_Ship", "vehicle_DescAEGS_TestShip")
+        loc = {"vehicle_DescAEGS_TestShip": ""}
+
+        result = gen_module.scan_spaceships(
+            tmp_path, controller_lookup={}, loc=loc,
+        )
+        assert "vehicle_DescAEGS_TestShip" not in result
+
     def test_skips_ai_variants(self, gen_module, tmp_path):
         """AI variants are still skipped even with discovery enabled."""
         self._make_ship_xml(tmp_path, "AEGS_Test_pu_ai_Ship", "vehicle_DescAEGS_AI")

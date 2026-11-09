@@ -6027,6 +6027,12 @@ def scan_spaceships(
         loc_key = desc_attr.lstrip("@")
 
         base_value = loc.get(loc_key)
+        # #561: a key base.ini has but leaves blank is not this ship's own
+        # description. The game shows such keys elsewhere (the Carrack's
+        # interior map labels), so stats written there show up on the map.
+        if base_value is not None and not base_value.strip():
+            skipped += 1
+            continue
         is_discovered = base_value is None
         if is_discovered:
             base_value = _synthesize_description(root, xml_file, loc_key)
