@@ -4,6 +4,15 @@ This guide explains how to run Smart Citizen on Linux through the same Wine pref
 
 > Originally contributed by [@PinkFloyd1213](https://github.com/PinkFloyd1213) in [issue #33](https://github.com/Osiris-DevWorks/smart-citizen/issues/33#issuecomment-4460305053).
 
+> [!IMPORTANT]
+> **The Smart Citizen Overlay needs an X11 session, not Wayland.** It does not work on Wayland. If you want the overlay to work:
+>
+> 1. Log out of your desktop.
+> 2. On the login screen, pick your user, then use the session menu (often a gear icon) to choose the **X11** or **Xorg** session (for example "Plasma (X11)" or "GNOME on Xorg").
+> 3. Log in and run Star Citizen and Smart Citizen as usual.
+>
+> To check which one you're on, run `echo $XDG_SESSION_TYPE` in a terminal: it prints `x11` or `wayland`. The rest of Smart Citizen works on either.
+
 ## Prerequisites
 
 You need a working Star Citizen installation on Linux before installing Smart Citizen. If you haven't set that up yet, we strongly recommend the **[Star Citizen LUG](https://wiki.starcitizen-lug.org/)** community — they maintain scripts (notably the LUG-Helper) and have an active community that makes running SC on Linux relatively painless.
