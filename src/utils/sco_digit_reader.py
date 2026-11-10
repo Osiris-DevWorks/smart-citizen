@@ -13,7 +13,8 @@ height) with a comma before the last three. Steps:
    the digits can't merge with them. When no threshold of the red channel
    gives a reading that decodes, the blue channel is tried the same way:
    over snow or a bright sky the orange panel behind the digits is as red
-   as the digits, and only its blue is clearly darker.
+   as the digits, and only its blue is clearly darker. Green comes last,
+   for a panel washed so pale that its blue clips too.
 2. Find connected blobs, keep digit-sized ones, and chain neighbours that
    share a top and baseline. A blob as tall as a digit but too wide for one
    is two or three digits whose strokes touch (a "4"'s crossbar reaching
@@ -57,8 +58,16 @@ THRESHOLDS = (180, 210, 150)
 # 230-255. Blue is the second pass, not the first: on a dark background the
 # HUD's fringing moves blue a pixel sideways, and red keeps the shape best.
 # 210 comes first because at 180 the faint inside of a 6 or 9 on the panel
-# fills in and it reads as 0.
-BLUE_THRESHOLDS = (210, 230, 180)
+# fills in and it reads as 0. 245 is for a panel washed pale over snow with
+# HDR, where the panel's blue reaches 230-245 and only the digits clip.
+BLUE_THRESHOLDS = (210, 230, 180, 245)
+
+# Green level that counts as "glyph", the last pass. Where the panel glows
+# behind the first digits its blue clips to 255 as the digits do, while its
+# green stays a little lower. Green is last because the panel's green is
+# close to the digits' everywhere else: adding 240 gained no reading and
+# made two misreads.
+GREEN_THRESHOLDS = (250,)
 
 # Digit heights looked for, against the one the caller expects (a Golem's
 # readout at the default field of view). The readout is drawn in the 3D
@@ -470,10 +479,11 @@ def _is_white(width, red, green, blue, row, threshold) -> bool:
 def _passes(red, green, blue):
     """The ``(channel, thresholds)`` to read, in the order they are tried:
     red at ``THRESHOLDS``, then, with *green* and *blue*, blue at
-    ``BLUE_THRESHOLDS``."""
+    ``BLUE_THRESHOLDS`` and green at ``GREEN_THRESHOLDS``."""
     yield red, THRESHOLDS
     if green is not None and blue is not None:
         yield blue, BLUE_THRESHOLDS
+        yield green, GREEN_THRESHOLDS
 
 
 def cut_glyphs(width: int, height: int, red: bytes, digit_count: int,

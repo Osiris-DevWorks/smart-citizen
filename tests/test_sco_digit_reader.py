@@ -329,6 +329,17 @@ def test_digits_on_a_red_saturated_panel_are_read_in_blue(stem):
     assert reading is not None and reading.text == _expected(path)
 
 
+@pytest.mark.parametrize("stem", ["hdr14_8000", "hdr15_10000"])
+def test_digits_on_a_panel_whose_blue_clips_are_read_in_green(stem, monkeypatch):
+    """Where the pale panel glows behind the first digits, its blue clips
+    to 255 as the digits do, so red and blue hold nothing to read. Its
+    green stays a little under the digits' (SCO's own captures, HDR)."""
+    path = next(p for p in READOUTS if p.stem == stem)
+    assert _read(path).text == _expected(path)
+    monkeypatch.setattr(sco_digit_reader, "GREEN_THRESHOLDS", ())
+    assert _read(path) is None
+
+
 def test_the_sharpest_threshold_wins_over_the_first():
     """A low threshold blurred this 6 (on a dark panel, SCO's own capture)
     into an 8, and 8,000 decodes as 6,000 does. Every threshold of the
