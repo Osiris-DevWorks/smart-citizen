@@ -362,27 +362,39 @@ def test_two_bloomed_zeros_are_cut_at_their_bridge():
         (0, 0, 6, 12), (7, 0, 7, 12)]
 
 
+# A real mask, from 30,000 with HDR: the comma's foot joins the next digits
+# and hangs below their baseline.
+COMMA_JOINED_ON_THE_LEFT = [
+    "....#####..#####.",
+    "...######..######",
+    "...###.######..##",
+    "...##..######..##",
+    "...##..######..##",
+    "...##..######..##",
+    "...##..######..##",
+    "...##..######..##",
+    ".#.##..######..##",
+    "######.######..##",
+    "##.######..######",
+    "##..#####..#####.",
+    "##...............",
+]
+
+
 def test_a_comma_joined_to_the_next_digit_is_peeled_off():
-    """With HDR the comma's foot joins the next digits and hangs below their
-    baseline (a real mask, from 30,000). The columns on the left that hold
-    only its low ink are taken off as the comma."""
-    w, h, mask = _grid([
-        "....#####..#####.",
-        "...######..######",
-        "...###.######..##",
-        "...##..######..##",
-        "...##..######..##",
-        "...##..######..##",
-        "...##..######..##",
-        "...##..######..##",
-        ".#.##..######..##",
-        "######.######..##",
-        "##.######..######",
-        "##..#####..#####.",
-        "##...............",
-    ])
+    """The columns on the left that hold only the comma's low ink are taken
+    off as the comma."""
+    w, h, mask = _grid(COMMA_JOINED_ON_THE_LEFT)
     digits, comma = sco_digit_reader._peel_comma(w, mask, (0, 0, w, h))
     assert comma == (0, 8, 3, 5) and digits == (3, 0, 14, 12)
+
+
+def test_a_comma_joined_to_the_digit_before_is_peeled_off():
+    """The same comma joined to the foot of the digit before it (the mask
+    mirrored) comes off the right edge."""
+    w, h, mask = _grid([row[::-1] for row in COMMA_JOINED_ON_THE_LEFT])
+    digits, comma = sco_digit_reader._peel_comma(w, mask, (0, 0, w, h))
+    assert comma == (w - 3, 8, 3, 5) and digits == (0, 0, 14, 12)
 
 
 def test_a_foot_on_the_baseline_is_no_comma():
@@ -407,3 +419,18 @@ def test_a_comma_is_sized_against_its_own_digits():
     path = next(p for p in READOUTS if p.stem == "hdr4_10000")
     reading = _read(path)
     assert reading.text == "10,000" and reading.box[3] > DIGIT_HEIGHT_AT_1600 * 1440 / 1600
+
+
+def test_cut_glyphs_cuts_a_red_saturated_readout_from_blue():
+    """scripts/add_sco_sample.py cuts glyphs the way the reader finds them,
+    so a bright-planet crop whose red is saturated gives its blue glyphs."""
+    path = next(p for p in READOUTS if p.stem == "live00_15600")
+    w, h, red, green, blue = _channels(path)
+    red = b"\xff" * len(red)
+    green = bytes(140 + v * 115 // 255 for v in green)
+    blue = bytes(110 + v * 145 // 255 for v in blue)
+    assert sco_digit_reader.cut_glyphs(w, h, red, 5) is None
+    glyphs = sco_digit_reader.cut_glyphs(w, h, red, 5, green=green, blue=blue)
+    assert glyphs is not None and len(glyphs) == 5
+    # Each glyph is blue pixels: the red ones would all be 255.
+    assert all(min(pixels) < 255 for _, _, pixels in glyphs)
