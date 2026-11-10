@@ -308,6 +308,14 @@ def test_mask_drops_runs_wider_than_a_glyph():
     assert bytes(mask) == bytes([0] * 5 + [1] * 3 + [0] * 12)
 
 
+def _on_a_bright_panel(w, h, red, green, blue):
+    """A readout's channels as the orange panel over snow leaves them: red
+    saturated everywhere, green and blue squeezed toward the panel's."""
+    return (w, h, b"\xff" * len(red),
+            bytes(140 + v * 115 // 255 for v in green),
+            bytes(110 + v * 145 // 255 for v in blue))
+
+
 @pytest.mark.parametrize("stem", ["live00_15600", "p2_2000"])
 def test_digits_on_a_red_saturated_panel_are_read_in_blue(stem):
     """Over snow or a bright sky the orange panel behind the readout is as
@@ -315,10 +323,7 @@ def test_digits_on_a_red_saturated_panel_are_read_in_blue(stem):
     nothing to read while blue still does. A readout recoloured that way
     reads nothing in red alone and reads right once blue is there."""
     path = next(p for p in READOUTS if p.stem == stem)
-    w, h, red, green, blue = _channels(path)
-    red = b"\xff" * len(red)
-    green = bytes(140 + v * 115 // 255 for v in green)
-    blue = bytes(110 + v * 145 // 255 for v in blue)
+    w, h, red, green, blue = _on_a_bright_panel(*_channels(path))
     assert read_signature(w, h, red, DIGIT_HEIGHT_AT_1600) is None
     reading = read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue)
     assert reading is not None and reading.text == _expected(path)
@@ -425,10 +430,7 @@ def test_cut_glyphs_cuts_a_red_saturated_readout_from_blue():
     """scripts/add_sco_sample.py cuts glyphs the way the reader finds them,
     so a bright-planet crop whose red is saturated gives its blue glyphs."""
     path = next(p for p in READOUTS if p.stem == "live00_15600")
-    w, h, red, green, blue = _channels(path)
-    red = b"\xff" * len(red)
-    green = bytes(140 + v * 115 // 255 for v in green)
-    blue = bytes(110 + v * 145 // 255 for v in blue)
+    w, h, red, green, blue = _on_a_bright_panel(*_channels(path))
     assert sco_digit_reader.cut_glyphs(w, h, red, 5) is None
     glyphs = sco_digit_reader.cut_glyphs(w, h, red, 5, green=green, blue=blue)
     assert glyphs is not None and len(glyphs) == 5

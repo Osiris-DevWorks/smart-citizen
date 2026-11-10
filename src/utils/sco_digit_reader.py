@@ -97,7 +97,8 @@ FRINGE_PX = 2
 WHITE_LEVEL = 0.7
 MIN_WHITE_FRACTION = 0.45
 
-# A blob is digit-tall up to this many expected digit heights (and from 0.75).
+# A blob is digit-tall from DIGIT_TALL_MIN to DIGIT_TALL_MAX expected digit heights.
+DIGIT_TALL_MIN = 0.75
 DIGIT_TALL_MAX = 1.35
 
 # A comma is at most this tall and this wide, against the height of the
@@ -200,7 +201,7 @@ def _mask(width: int, height: int, red: bytes, threshold: int, max_run: int) -> 
 
 
 def _is_digit_tall(box, digit_px) -> bool:
-    return 0.75 * digit_px <= box[3] <= DIGIT_TALL_MAX * digit_px
+    return DIGIT_TALL_MIN * digit_px <= box[3] <= DIGIT_TALL_MAX * digit_px
 
 
 def _is_comma_sized(box, digit_height) -> bool:
@@ -289,8 +290,10 @@ def _candidate_rows(width, height, mask, digit_px, boxes=None):
     digits = []
     for b in boxes:
         # A digit with a comma joined to its foot is taller than a digit.
-        if not 0.75 * digit_px <= b[3] <= COMMA_JOINED_MAX * digit_px:
+        if not DIGIT_TALL_MIN * digit_px <= b[3] <= COMMA_JOINED_MAX * digit_px:
             continue
+        # Too tall, or wider than a digit (half its height), may be a comma
+        # joined to a digit.
         if not _is_digit_tall(b, digit_px) or b[2] > 0.5 * b[3]:
             b, comma = _peel_comma(width, mask, b)
             if comma is not None:
