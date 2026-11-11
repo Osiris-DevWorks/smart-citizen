@@ -4,10 +4,14 @@ Fixtures in ``tests/fixtures/sco/`` are named ``<source>_<value>.png``:
 crops of 2560x1600 in-game screenshots (Drake Golem ``g*``, MISC Prospector
 ``p*``, Prospector on a planet with the orange HUD panel ``q*``), lossless
 crops SCO saved in-game (``live*``), Golem readouts at a wide field of
-view, drawn about 0.65 of their usual size (``fov*``, #546), and other HUD text
-the reader must ignore (``hud*_none``: "UNKNOWN", red "WARNING"). Qt-free:
-the channels go straight to ``read_signature``.
+view, drawn about 0.65 of their usual size (``fov*``, #546), lossless SCO
+captures of an Argo MOLE over Microtech on a 2560x1440 screen with Windows
+HDR on (``hdr*``: the clipped white digits bloom, and over snow the panel
+behind them is as red as they are), and other HUD text the reader must
+ignore (``hud*_none``: "UNKNOWN", red "WARNING"). Qt-free: the channels go
+straight to ``read_signature``.
 """
+import re
 from pathlib import Path
 
 import pytest
@@ -34,9 +38,20 @@ def _expected(path):
     return f"{digits[:-3]},{digits[-3:]}"
 
 
+# Screen height each fixture was captured at, by source prefix; the rest are
+# 1600 px. The hdr crops are SCO's own captures on a 2560x1440 screen with
+# Windows HDR on.
+SCREEN_HEIGHTS = {"hdr": 1440}
+
+
+def _screen_height(path):
+    return SCREEN_HEIGHTS.get(re.match(r"[a-z]+", path.stem).group(), 1600)
+
+
 def _read(path):
     w, h, red, green, blue = _channels(path)
-    return read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue)
+    digit_px = DIGIT_HEIGHT_AT_1600 * _screen_height(path) / 1600
+    return read_signature(w, h, red, digit_px, green=green, blue=blue)
 
 
 @pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
@@ -131,11 +146,11 @@ def test_colour_channels_of_another_length_read_nothing():
 
 
 def _read_scaled(path, screen_height):
-    """Read a 1600 px crop scaled to what a *screen_height* screen captures."""
+    """Read a crop scaled to what a *screen_height* screen captures."""
     from PyQt6.QtCore import Qt
     from PyQt6.QtGui import QImage
 
-    factor = screen_height / 1600
+    factor = screen_height / _screen_height(path)
     img = QImage(str(path))
     img = img.scaled(round(img.width() * factor), round(img.height() * factor),
                      Qt.AspectRatioMode.IgnoreAspectRatio,
@@ -143,7 +158,8 @@ def _read_scaled(path, screen_height):
     img = img.convertToFormat(QImage.Format.Format_RGB32)
     data = img.constBits().asstring(img.sizeInBytes())
     return read_signature(img.width(), img.height(), data[2::4],
-                          DIGIT_HEIGHT_AT_1600 * factor, green=data[1::4], blue=data[0::4])
+                          DIGIT_HEIGHT_AT_1600 * screen_height / 1600,
+                          green=data[1::4], blue=data[0::4])
 
 
 # Readouts that do not read right yet scaled down to a smaller screen (#523
@@ -154,14 +170,21 @@ def _read_scaled(path, screen_height):
 # The fov crops are already about 0.65 of the usual size (#546), so at 1080
 # their digits are under 5 px tall.
 SCALED_DOWN_MISSES = {
-    1080: {"live24_15600", "live42_12900", "live50_40000", "live51_48000", "live52_48000",
+    1080: {"live24_15600", "live42_12900", "live51_48000",
            "p3_15697", "q1_14160", "q2_17080", "fov1_2000", "fov2_3170", "fov4_15360"},
     1440: {"live24_15600", "live51_48000", "live52_48000", "p3_15697", "q1_14160"},
 }
 
 
+# The scaling tests stand in for screens no fixture was captured on, so they
+# scale the 1600 px crops only. A real capture at its own size (hdr) is not
+# scaled: scaling would scale its one pixel of HDR bloom too, which a real
+# screen of that size does not have.
+SCALED = [p for p in READOUTS if _screen_height(p) == 1600]
+
+
 @pytest.mark.parametrize("screen_height", sorted(SCALED_DOWN_MISSES))
-@pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("path", SCALED, ids=lambda p: p.stem)
 def test_reads_at_smaller_screen_heights(path, screen_height):
     """The digit size follows the screen height. Fixtures are 1600 px crops,
     scaled here to what other screens would capture (until testers send real
@@ -175,7 +198,7 @@ def test_reads_at_smaller_screen_heights(path, screen_height):
         assert right
 
 
-@pytest.mark.parametrize("path", READOUTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("path", SCALED, ids=lambda p: p.stem)
 def test_reads_every_readout_on_a_4k_screen(path):
     """#523: on a 3840x2160 screen 3,400 showed nothing. Scaled to 2160 px, a
     "4" touches the digit after it and the two read as one blob too wide for
@@ -283,3 +306,144 @@ def test_mask_drops_runs_wider_than_a_glyph():
     mask = sco_digit_reader._mask(w, h, red, 180, max_run=3)
     # Row 0: the 4-wide run goes, the 3-wide one stays. Row 1: all 10 go.
     assert bytes(mask) == bytes([0] * 5 + [1] * 3 + [0] * 12)
+
+
+def _on_a_bright_panel(w, h, red, green, blue):
+    """A readout's channels as the orange panel over snow leaves them: red
+    saturated everywhere, green and blue squeezed toward the panel's."""
+    return (w, h, b"\xff" * len(red),
+            bytes(140 + v * 115 // 255 for v in green),
+            bytes(110 + v * 145 // 255 for v in blue))
+
+
+@pytest.mark.parametrize("stem", ["live00_15600", "p2_2000"])
+def test_digits_on_a_red_saturated_panel_are_read_in_blue(stem):
+    """Over snow or a bright sky the orange panel behind the readout is as
+    red as the white digits (both over 230 on Microtech), so red holds
+    nothing to read while blue still does. A readout recoloured that way
+    reads nothing in red alone and reads right once blue is there."""
+    path = next(p for p in READOUTS if p.stem == stem)
+    w, h, red, green, blue = _on_a_bright_panel(*_channels(path))
+    assert read_signature(w, h, red, DIGIT_HEIGHT_AT_1600) is None
+    reading = read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue)
+    assert reading is not None and reading.text == _expected(path)
+
+
+@pytest.mark.parametrize("stem", ["hdr14_8000", "hdr15_10000"])
+def test_digits_on_a_panel_whose_blue_clips_are_read_in_green(stem, monkeypatch):
+    """Where the pale panel glows behind the first digits, its blue clips
+    to 255 as the digits do, so red and blue hold nothing to read. Its
+    green stays a little under the digits' (SCO's own captures, HDR)."""
+    path = next(p for p in READOUTS if p.stem == stem)
+    assert _read(path).text == _expected(path)
+    monkeypatch.setattr(sco_digit_reader, "GREEN_THRESHOLDS", ())
+    assert _read(path) is None
+
+
+def test_the_sharpest_threshold_wins_over_the_first():
+    """A low threshold blurred this 6 (on a dark panel, SCO's own capture)
+    into an 8, and 8,000 decodes as 6,000 does. Every threshold of the
+    channel is read and the best match kept, so it reads 6,000."""
+    path = next(p for p in READOUTS if p.stem == "hdr9_6000")
+    assert _read(path).text == "6,000"
+
+
+def test_a_number_no_deposit_has_is_not_swapped_for_one():
+    """70,000 is no deposit, and its 7 is close to a 1. Runner-up digits
+    are tried only within ALT_MARGIN of the best, so the reader shows 70,000
+    as it is rather than 10,000 or 76,000, which decode."""
+    path = next(p for p in READOUTS if p.stem == "hdr10_70000")
+    assert _read(path).text == "70,000"
+
+
+def test_two_bloomed_zeros_are_cut_at_their_bridge():
+    """With HDR the clipped white digits bloom, and two 0s touch along a
+    column with more ink than either hollow (a real mask, from 10,000). No
+    part may be narrower than a 1, so the cut lands between them."""
+    w, h, mask = _grid([
+        ".####....####.",
+        "######..#####.",
+        "##..##.###..##",
+        "##..#####...##",
+        "##..#####...##",
+        "##..#####...##",
+        "##..#####...##",
+        "##..#####...##",
+        "##..#####...##",
+        "##..##.###..##",
+        "######..#####.",
+        ".####...#####.",
+    ])
+    assert sco_digit_reader._split_joined(w, mask, (0, 0, w, h), 9.9) == [
+        (0, 0, 6, 12), (7, 0, 7, 12)]
+
+
+# A real mask, from 30,000 with HDR: the comma's foot joins the next digits
+# and hangs below their baseline.
+COMMA_JOINED_ON_THE_LEFT = [
+    "....#####..#####.",
+    "...######..######",
+    "...###.######..##",
+    "...##..######..##",
+    "...##..######..##",
+    "...##..######..##",
+    "...##..######..##",
+    "...##..######..##",
+    ".#.##..######..##",
+    "######.######..##",
+    "##.######..######",
+    "##..#####..#####.",
+    "##...............",
+]
+
+
+def test_a_comma_joined_to_the_next_digit_is_peeled_off():
+    """The columns on the left that hold only the comma's low ink are taken
+    off as the comma."""
+    w, h, mask = _grid(COMMA_JOINED_ON_THE_LEFT)
+    digits, comma = sco_digit_reader._peel_comma(w, mask, (0, 0, w, h))
+    assert comma == (0, 8, 3, 5) and digits == (3, 0, 14, 12)
+
+
+def test_a_comma_joined_to_the_digit_before_is_peeled_off():
+    """The same comma joined to the foot of the digit before it (the mask
+    mirrored) comes off the right edge."""
+    w, h, mask = _grid([row[::-1] for row in COMMA_JOINED_ON_THE_LEFT])
+    digits, comma = sco_digit_reader._peel_comma(w, mask, (0, 0, w, h))
+    assert comma == (w - 3, 8, 3, 5) and digits == (0, 0, 14, 12)
+
+
+def test_a_foot_on_the_baseline_is_no_comma():
+    """A "1" with a foot (a wide field of view Golem readout) has a right
+    column inked only at the bottom, but it ends on the baseline: no comma."""
+    w, h, mask = _grid([
+        "###.",
+        ".##.",
+        ".##.",
+        ".##.",
+        ".##.",
+        ".##.",
+        "####",
+    ])
+    assert sco_digit_reader._peel_comma(w, mask, (0, 0, w, h)) == ((0, 0, w, h), None)
+
+
+def test_a_comma_is_sized_against_its_own_digits():
+    """With HDR a 10,000 readout drew 12 px digits and a 6 px comma where the
+    reader expected 9.9 px digits; against those the comma looked too tall
+    and the row was dropped. Sized against its own digits it counts."""
+    path = next(p for p in READOUTS if p.stem == "hdr4_10000")
+    reading = _read(path)
+    assert reading.text == "10,000" and reading.box[3] > DIGIT_HEIGHT_AT_1600 * 1440 / 1600
+
+
+def test_cut_glyphs_cuts_a_red_saturated_readout_from_blue():
+    """scripts/add_sco_sample.py cuts glyphs the way the reader finds them,
+    so a bright-planet crop whose red is saturated gives its blue glyphs."""
+    path = next(p for p in READOUTS if p.stem == "live00_15600")
+    w, h, red, green, blue = _on_a_bright_panel(*_channels(path))
+    assert sco_digit_reader.cut_glyphs(w, h, red, 5) is None
+    glyphs = sco_digit_reader.cut_glyphs(w, h, red, 5, green=green, blue=blue)
+    assert glyphs is not None and len(glyphs) == 5
+    # Each glyph is blue pixels: the red ones would all be 255.
+    assert all(min(pixels) < 255 for _, _, pixels in glyphs)

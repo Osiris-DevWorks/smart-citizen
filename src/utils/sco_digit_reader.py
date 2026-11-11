@@ -10,20 +10,29 @@ height) with a comma before the last three. Steps:
 1. Threshold the red channel. The digits are white-cored, and red keeps
    their shape best through the HUD's colour fringing. Horizontal runs
    wider than a glyph are dropped first, so a bright panel edge touching
-   the digits can't merge with them.
+   the digits can't merge with them. When no threshold of the red channel
+   gives a reading that decodes, the blue channel is tried the same way:
+   over snow or a bright sky the orange panel behind the digits is as red
+   as the digits, and only its blue is clearly darker. Green comes last,
+   for a panel washed so pale that its blue clips too.
 2. Find connected blobs, keep digit-sized ones, and chain neighbours that
    share a top and baseline. A blob as tall as a digit but too wide for one
    is two or three digits whose strokes touch (a "4"'s crossbar reaching
-   the next digit on a 4K screen), so it is cut where the fewest pixels are
-   lit. A chain only counts if a comma-sized blob sits on its baseline
-   before its last three digits, which rules out other HUD text.
+   the next digit on a 4K screen, or two 0s bloomed together with HDR), so
+   it is cut where the fewest pixels are lit, never closer to its edge than
+   a "1" is wide. A comma joined to the foot of a digit, as HDR bloom
+   leaves it, is peeled off that digit. A chain only counts if a comma
+   sits on its baseline before its last three digits, sized against the
+   chain's own digits, which rules out other HUD text.
 3. Match each digit to the nearest reference glyph in
    ``sco_digit_samples.py`` (min-max normalised, coarse grid, correlation).
 4. Prefer the reading that decodes to a known deposit. Where a digit's
    runners-up are close, try them too: valid signatures are sparse, so this
    fixes look-alike misses such as 8 read as 0, 6 or 9. A leading zero is
-   never a reading. A threshold whose readings all decode to nothing does
-   not end the search: the next threshold may keep a thin stroke whole.
+   never a reading. Every threshold of a channel is read and the best
+   match kept: a low threshold can blur a 6 into an 8 that decodes too.
+   A channel whose readings all decode to nothing does not end the search,
+   and its best undecoded reading stands only when no channel decodes.
 """
 from __future__ import annotations
 
@@ -42,6 +51,24 @@ DIGIT_HEIGHT_AT_1600 = 11
 # Red level that counts as "glyph"; tried in order until one finds a row.
 THRESHOLDS = (180, 210, 150)
 
+# Blue level that counts as "glyph", tried in order once no red threshold
+# gives a reading that decodes. Over snow or a bright sky the orange panel
+# behind the digits is as red as the white digits (both over 230 on
+# Microtech), while its blue stays at about 125-180 against the digits'
+# 230-255. Blue is the second pass, not the first: on a dark background the
+# HUD's fringing moves blue a pixel sideways, and red keeps the shape best.
+# 210 comes first because at 180 the faint inside of a 6 or 9 on the panel
+# fills in and it reads as 0. 245 is for a panel washed pale over snow with
+# HDR, where the panel's blue reaches 230-245 and only the digits clip.
+BLUE_THRESHOLDS = (210, 230, 180, 245)
+
+# Green level that counts as "glyph", the last pass. Where the panel glows
+# behind the first digits its blue clips to 255 as the digits do, while its
+# green stays a little lower. Green is last because the panel's green is
+# close to the digits' everywhere else: adding 240 gained no reading and
+# made two misreads.
+GREEN_THRESHOLDS = (250,)
+
 # Digit heights looked for, against the one the caller expects (a Golem's
 # readout at the default field of view). The readout is drawn in the 3D
 # cockpit, so a wider field of view draws it smaller: about 0.65 of that at
@@ -55,8 +82,10 @@ DIGIT_SCALES = (1.0, 0.7)
 GRID_W, GRID_H = 4, 7
 
 # Runner-up digits within this score of the best are tried as alternatives
-# (at most ALT_COUNT per digit).
-ALT_MARGIN = 0.3
+# (at most ALT_COUNT per digit). At 0.3 a number no deposit has was swapped
+# for one that decodes: with HDR on Microtech 70,000 read 76,000 or 10,000,
+# 87,000 read 57,000, and "12.0km" under an UNKNOWN marker read 12,000.
+ALT_MARGIN = 0.15
 ALT_COUNT = 4
 
 # A reading must match its reference glyphs at least this well on average,
@@ -77,11 +106,27 @@ FRINGE_PX = 2
 WHITE_LEVEL = 0.7
 MIN_WHITE_FRACTION = 0.45
 
+# A blob is digit-tall from DIGIT_TALL_MIN to DIGIT_TALL_MAX expected digit heights.
+DIGIT_TALL_MIN = 0.75
+DIGIT_TALL_MAX = 1.35
+
+# A comma is at most this tall and this wide, against the height of the
+# digits in its row.
+COMMA_MAX_HEIGHT = 0.6
+COMMA_MAX_WIDTH = 0.5
+
+# A digit with a comma joined to its foot (``_peel_comma``) can be up to
+# this many expected digit heights tall: the comma hangs below the baseline.
+COMMA_JOINED_MAX = 1.7
+
 # A digit-tall blob up to this many digit heights wide is taken for touching
-# digits and cut apart; each part must be at least MIN_PART_WIDTH digit
-# heights wide (a "1" is about 0.3).
+# digits and cut apart; each part must be at least MIN_PART_WIDTH of the
+# blob's own height wide, as a "1" is. Narrower parts would let the cut land
+# in the hollow of a 0: with HDR the clipped white glyphs bloom, two 0s touch
+# along a column with more ink than either hollow, and "00" came out as three
+# slivers.
 MAX_JOINED_WIDTH = 2.6
-MIN_PART_WIDTH = 0.2
+MIN_PART_WIDTH = 0.3
 
 
 @dataclass(frozen=True)
@@ -165,7 +210,12 @@ def _mask(width: int, height: int, red: bytes, threshold: int, max_run: int) -> 
 
 
 def _is_digit_tall(box, digit_px) -> bool:
-    return 0.75 * digit_px <= box[3] <= 1.35 * digit_px
+    return DIGIT_TALL_MIN * digit_px <= box[3] <= DIGIT_TALL_MAX * digit_px
+
+
+def _is_comma_sized(box, digit_height) -> bool:
+    """At most COMMA_MAX_HEIGHT and COMMA_MAX_WIDTH of *digit_height*."""
+    return box[3] <= COMMA_MAX_HEIGHT * digit_height and box[2] <= COMMA_MAX_WIDTH * digit_height
 
 
 def _split_joined(width, mask, box, digit_px) -> list[tuple[int, int, int, int]]:
@@ -180,7 +230,7 @@ def _split_joined(width, mask, box, digit_px) -> list[tuple[int, int, int, int]]
     x0, y0, w, h = box
     if w <= digit_px:
         return [box]
-    min_part = max(2, round(MIN_PART_WIDTH * digit_px))
+    min_part = max(2, round(MIN_PART_WIDTH * h))
     if w > MAX_JOINED_WIDTH * digit_px or w < 2 * min_part + 1:
         return []
     ink = [sum(mask[y * width + x] for y in range(y0, y0 + h)) for x in range(x0, x0 + w)]
@@ -195,6 +245,47 @@ def _split_joined(width, mask, box, digit_px) -> list[tuple[int, int, int, int]]
     return parts
 
 
+def _trimmed(width, mask, x0, x1, y0, y1):
+    """The box of the lit pixels in columns x0..x1-1, rows y0..y1-1, or None."""
+    rows = [y for y in range(y0, y1) if any(mask[y * width + x] for x in range(x0, x1))]
+    return (x0, rows[0], x1 - x0, rows[-1] - rows[0] + 1) if rows else None
+
+
+def _peel_comma(width, mask, box):
+    """Split a comma off the digit it touches: ``(digit box, comma box)``.
+
+    With HDR the clipped white glyphs bloom, and the comma's foot joins the
+    next digit's bottom-left corner (or the previous one's bottom-right).
+    Columns at the blob's left or right edge whose ink all lies in its lower
+    half, and reaches its bottom row below the rest of the blob, are that
+    comma: every digit has ink in the top half of its outer columns (the
+    "1"'s flag, the bars of "5" and "7", the curves of the rest), and the
+    one low edge a digit has, the foot of a "1" in some cockpits, ends on
+    the baseline. Returns ``(box, None)`` when there is none.
+    """
+    x0, y0, w, h = box
+    mid, bottom = y0 + h / 2, y0 + h - 1
+    for columns in (range(x0, x0 + w), range(x0 + w - 1, x0 - 1, -1)):
+        peeled = []
+        for x in columns:
+            lit = [y for y in range(y0, y0 + h) if mask[y * width + x]]
+            if not lit or lit[0] < mid:
+                break
+            peeled.append((x, lit))
+        if (not peeled or len(peeled) > COMMA_MAX_WIDTH * h or len(peeled) == w
+                or not any(lit[-1] == bottom for _, lit in peeled)):
+            continue
+        xs = [x for x, _ in peeled]
+        cx0, cx1 = min(xs), max(xs) + 1
+        comma = _trimmed(width, mask, cx0, cx1, y0, y0 + h)
+        digit = (_trimmed(width, mask, cx1, x0 + w, y0, y0 + h) if cx0 == x0
+                 else _trimmed(width, mask, x0, cx0, y0, y0 + h))
+        # A comma hangs below the digits' baseline; a "1"'s foot does not.
+        if digit is not None and comma[1] + comma[3] > digit[1] + digit[3]:
+            return digit, comma
+    return box, None
+
+
 def _candidate_rows(width, height, mask, digit_px, boxes=None):
     """Digit chains shaped like ``N,NNN`` or ``NN,NNN``: (boxes, top, base).
 
@@ -202,10 +293,24 @@ def _candidate_rows(width, height, mask, digit_px, boxes=None):
     """
     if boxes is None:
         boxes = _components(width, height, mask)
-    digits = sorted(part for b in boxes if _is_digit_tall(b, digit_px)
-                    for part in _split_joined(width, mask, b, digit_px)
-                    if _is_digit_tall(part, digit_px))
-    commas = [b for b in boxes if b[3] <= 0.6 * digit_px and b[2] <= 0.5 * digit_px]
+    # Sized against the tallest digit taken here; each row checks its commas
+    # against its own digits below.
+    commas = [b for b in boxes if _is_comma_sized(b, DIGIT_TALL_MAX * digit_px)]
+    digits = []
+    for b in boxes:
+        # A digit with a comma joined to its foot is taller than a digit.
+        if not DIGIT_TALL_MIN * digit_px <= b[3] <= COMMA_JOINED_MAX * digit_px:
+            continue
+        # Too tall, or wider than a digit (half its height), may be a comma
+        # joined to a digit.
+        if not _is_digit_tall(b, digit_px) or b[2] > 0.5 * b[3]:
+            b, comma = _peel_comma(width, mask, b)
+            if comma is not None:
+                commas.append(comma)
+        if _is_digit_tall(b, digit_px):
+            digits.extend(part for part in _split_joined(width, mask, b, digit_px)
+                          if _is_digit_tall(part, digit_px))
+    digits.sort()
     rows = []
     used = set()
     for i, first in enumerate(digits):
@@ -231,12 +336,16 @@ def _candidate_rows(width, height, mask, digit_px, boxes=None):
         bottoms = sorted(b[1] + b[3] for b in chain)
         base = bottoms[len(bottoms) // 2]
         top = min(b[1] for b in chain)
+        # The comma is sized against these digits, not the expected height:
+        # with HDR the white glyphs bloom, and 12 px digits carry a 6 px comma.
+        tall = base - top
         for k in range(len(chain) - 1):
             left, right = chain[k], chain[k + 1]
             has_comma = any(
                 left[0] + left[2] - 1 <= c[0] and c[0] + c[2] <= right[0] + 1
-                and base - 2 <= c[1] + c[3] <= base + 0.5 * digit_px
-                and c[1] >= top + 0.5 * digit_px
+                and base - 2 <= c[1] + c[3] <= base + 0.5 * tall
+                and c[1] >= top + 0.5 * tall
+                and _is_comma_sized(c, tall)
                 for c in commas
             )
             if has_comma and 1 <= k + 1 <= 2 and len(chain) - (k + 1) >= 3:
@@ -367,6 +476,16 @@ def _is_white(width, red, green, blue, row, threshold) -> bool:
     return inked > 0 and white >= MIN_WHITE_FRACTION * inked
 
 
+def _passes(red, green, blue):
+    """The ``(channel, thresholds)`` to read, in the order they are tried:
+    red at ``THRESHOLDS``, then, with *green* and *blue*, blue at
+    ``BLUE_THRESHOLDS`` and green at ``GREEN_THRESHOLDS``."""
+    yield red, THRESHOLDS
+    if green is not None and blue is not None:
+        yield blue, BLUE_THRESHOLDS
+        yield green, GREEN_THRESHOLDS
+
+
 def cut_glyphs(width: int, height: int, red: bytes, digit_count: int,
                digit_px: float = DIGIT_HEIGHT_AT_1600,
                green: Optional[bytes] = None,
@@ -375,25 +494,29 @@ def cut_glyphs(width: int, height: int, red: bytes, digit_count: int,
 
     Finds the first row with *digit_count* digits, the way
     :func:`read_signature` would, and returns each digit's ``(width,
-    height, red pixels)`` without matching it, so a crop the reader got
-    wrong can still teach it. None when no such row is found.
+    height, pixels)`` without matching it, so a crop the reader got
+    wrong can still teach it. The pixels are from the channel the row was
+    found in (red, or blue on a bright planet). None when
+    no such row is found.
     """
     if len(red) != width * height or width <= 0 or height <= 0:
         return None
     colour = green is not None and blue is not None
     if colour and not len(green) == len(blue) == len(red):
         return None
-    for threshold in THRESHOLDS:
-        for row in _rows_at_each_size(width, height, red, threshold, digit_px):
-            boxes, top, base = row
-            if len(boxes) != digit_count:
-                continue
-            if colour and not _is_white(width, red, green, blue, row, threshold):
-                continue
-            glyphs = [_glyph_pixels(width, red, box, top, base, threshold) for box in boxes]
-            if all(glyphs):
-                return [(len(px[0]), len(px), bytes(v for line in px for v in line))
-                        for px in glyphs]
+    for channel, thresholds in _passes(red, green, blue):
+        for threshold in thresholds:
+            for row in _rows_at_each_size(width, height, channel, threshold, digit_px):
+                boxes, top, base = row
+                if len(boxes) != digit_count:
+                    continue
+                if colour and not _is_white(width, channel, green, blue, row, threshold):
+                    continue
+                glyphs = [_glyph_pixels(width, channel, box, top, base, threshold)
+                          for box in boxes]
+                if all(glyphs):
+                    return [(len(px[0]), len(px), bytes(v for line in px for v in line))
+                            for px in glyphs]
     return None
 
 
@@ -406,7 +529,8 @@ def read_signature(width: int, height: int, red: bytes,
     *digit_px* is the expected digit height in capture pixels; digits down
     to about half of it are found too (``DIGIT_SCALES``). With the
     *green* and *blue* channels too, coloured text (red warnings, green
-    markers) is skipped. Returns the best reading, preferring one that decodes, or None.
+    markers) is skipped, and the blue channel is tried after red
+    (``_passes``). Returns the best reading, preferring one that decodes, or None.
     """
     if len(red) != width * height or width <= 0 or height <= 0:
         return None
@@ -414,16 +538,21 @@ def read_signature(width: int, height: int, red: bytes,
     if colour and not len(green) == len(blue) == len(red):
         return None
     undecoded = None
-    for threshold in THRESHOLDS:
-        rows = [row for row in _rows_at_each_size(width, height, red, threshold, digit_px)
-                if not colour or _is_white(width, red, green, blue, row, threshold)]
-        readings = [r for row in rows if (r := _read_row(width, red, row, threshold))]
-        decoded = [r for r in readings
-                   if decode_signature(int(r.text.replace(",", "")))]
+    for channel, thresholds in _passes(red, green, blue):
+        # Every threshold of the channel is read and the best match kept: a
+        # low threshold can blur a 6 into an 8 that decodes too, while a
+        # higher one reads it sharp.
+        decoded = []
+        for threshold in thresholds:
+            rows = [row for row in _rows_at_each_size(width, height, channel, threshold, digit_px)
+                    if not colour or _is_white(width, channel, green, blue, row, threshold)]
+            readings = [r for row in rows if (r := _read_row(width, channel, row, threshold))]
+            decoded += [r for r in readings
+                        if decode_signature(int(r.text.replace(",", "")))]
+            # A later threshold may keep a thin stroke whole and read a number
+            # that decodes; this one's best stands only if none does.
+            if readings and undecoded is None:
+                undecoded = max(readings, key=lambda r: r.score)
         if decoded:
             return max(decoded, key=lambda r: r.score)
-        # A later threshold may keep a thin stroke whole and read a number
-        # that decodes; this one's best stands only if none does.
-        if readings and undecoded is None:
-            undecoded = max(readings, key=lambda r: r.score)
     return undecoded
