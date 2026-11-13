@@ -33,11 +33,10 @@ def gen_module():
     return mod
 
 
-# Canonical mission-variant tuple — same shape as the one built at
-# generate_enhancements_ini.py:2817 (``missions[title_key].append(...)``).
-# Keeping this aligned with the writer site is the entire point: when the
-# writer shape moves, this constant must move, and every destructure in
-# ``_run_gen_missions`` must follow.
+# Canonical mission-variant tuple — same shape as the ``ContractVariant`` that
+# ``scan_contract_generators`` appends (``missions[title_key].append(...)``).
+# Keeping this aligned with ``ContractVariant`` is the entire point: when that
+# shape moves, this helper must move too.
 def _make_variant(
     system_name: str = "Stanton",
     success_xp: int = 100,
