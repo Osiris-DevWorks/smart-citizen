@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen이 다음 위치에서 작업 폴더를 사용할 수 없었습니다:\n{folder}\n\n{reason}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "계약 {total}개 중 {skipped}개를 읽을 수 없어 강화 생성이 중지되었습니다. 기존 강화는 변경되지 않았습니다. 대개 Smart Citizen의 오류이므로 신고해 주세요.\n\n첫 번째 계약:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "계약을 읽는 중 오류가 발생해 강화 생성이 중지되었습니다. 기존 강화는 변경되지 않았습니다. 대개 Smart Citizen의 오류이므로 신고해 주세요.\n\n오류:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows가 다음 위치에 DataForge 캐시를 만드는 권한을 Smart Citizen에 거부했습니다:\n{folder}\n\n추출이 시작되지 않았으므로 아무것도 변경되지 않았습니다."

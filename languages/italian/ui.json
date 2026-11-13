@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen non è riuscito a usare una cartella di lavoro in:\n{folder}\n\n{reason}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "La generazione dei miglioramenti si è interrotta perché {skipped} contratti su {total} non sono stati letti. I miglioramenti esistenti non sono cambiati. Segnalalo, perché di solito è un errore di Smart Citizen.\n\nIl primo contratto:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "La generazione dei miglioramenti si è interrotta perché la lettura dei contratti ha dato un errore. I miglioramenti esistenti non sono cambiati. Segnalalo, perché di solito è un errore di Smart Citizen.\n\nL'errore:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows ha negato a Smart Citizen l'autorizzazione a creare la cache DataForge in:\n{folder}\n\nL'estrazione non è stata avviata, quindi non è stato modificato nulla."

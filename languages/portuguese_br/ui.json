@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "O Smart Citizen não conseguiu usar uma pasta de trabalho em:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "A geração de aprimoramentos foi interrompida porque {skipped} de {total} contratos não puderam ser lidos. Seus aprimoramentos atuais não foram alterados. Informe isso, pois costuma ser um erro do Smart Citizen.\n\nPrimeiro contrato:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "A geração de aprimoramentos foi interrompida porque a leitura dos contratos parou com um erro. Seus aprimoramentos atuais não foram alterados. Informe isso, pois costuma ser um erro do Smart Citizen.\n\nO erro:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "O Windows negou ao Smart Citizen a permissão para criar o cache do DataForge em:\n{folder}\n\nA extração não foi iniciada, então nada foi alterado."
