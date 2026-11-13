@@ -297,7 +297,7 @@ class TestWhileAWorkingFolderIsDeleted:
     def test_the_cache_in_use_clears_and_the_working_folder_is_left_to_its_delete(
         self, clear
     ):
-        """perf proposal: a finished extraction's working folder, holding the
+        """#522: a finished extraction's working folder, holding the
         old cache it set aside, can still be deleted in the background after
         generation has ended. Clear Cache does not wait for that: the delete
         never touches the cache folder, and Clear Cache never touches the
