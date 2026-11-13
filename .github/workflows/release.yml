@@ -35,11 +35,29 @@ jobs:
     name: Build & Release
     runs-on: windows-latest
     timeout-minutes: 30
+    # A fixed environment name gives the Azure federated credential one
+    # subject to trust (repo:Osiris-DevWorks/smart-citizen:environment:release)
+    # whichever of the three triggers started the run.
+    environment: release
     permissions:
       # Required for: softprops/action-gh-release (create release + upload
       # assets) AND `git push origin <tag>` (auto-tag the merge commit on
       # branch-push trigger).
       contents: write
+      # Required for the Azure OIDC login that code signing uses, and for
+      # the build provenance attestation.
+      id-token: write
+      attestations: write
+    # Code signing (Azure Artifact Signing) runs only once the
+    # AZURE_SIGNING_ACCOUNT repository variable is set. Until then every
+    # signing step is skipped and the release ships unsigned, as before.
+    # Repository variables it reads (none are secret): AZURE_CLIENT_ID,
+    # AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_SIGNING_ENDPOINT
+    # (e.g. https://weu.codesigning.azure.net/), AZURE_SIGNING_ACCOUNT,
+    # AZURE_SIGNING_PROFILE.
+    env:
+      SIGN: ${{ vars.AZURE_SIGNING_ACCOUNT != '' }}
+      VT_KEY_SET: ${{ secrets.VIRUSTOTAL_API_KEY != '' }}
 
     steps:
       - name: Checkout (at tag, branch HEAD, or dispatch input)
@@ -154,6 +172,28 @@ jobs:
         if: steps.gate.outputs.skip == 'false'
         run: python scripts/build/build_exe.py
 
+      - name: Azure login (code signing)
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign program files (SmartCitizen.exe, unp4k, unforge)
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist\SmartCitizen
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
       - name: Install Inno Setup
         if: steps.gate.outputs.skip == 'false'
         shell: pwsh
@@ -162,13 +202,24 @@ jobs:
       - name: Compile installer
         if: steps.gate.outputs.skip == 'false'
         shell: pwsh
+        env:
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
             Write-Error "ISCC.exe not found at $iscc — Inno Setup install failed?"
             exit 1
           }
-          & $iscc installer.iss
+          if ($env:SIGN -eq 'true') {
+            # Inno signs Setup.exe and the uninstaller itself, so the
+            # uninstaller it writes into the install folder is signed too.
+            $signScript = Join-Path $env:GITHUB_WORKSPACE "scripts\build\sign_file.ps1"
+            & $iscc /DSIGN "/Sazure=pwsh -NoProfile -ExecutionPolicy Bypass -File `"$signScript`" `$f" installer.iss
+          } else {
+            & $iscc installer.iss
+          }
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Inno Setup compile failed with exit code $LASTEXITCODE"
             exit $LASTEXITCODE
@@ -197,6 +248,25 @@ jobs:
         # script removes _build_info.py in its finally block.
         if: steps.gate.outputs.skip == 'false'
         run: python scripts/build/build_exe.py --portable
+
+      - name: Sign portable program files
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist\SmartCitizen-Portable-v${{ steps.resolve.outputs.version }}
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Zip signed portable build again
+        # build_exe.py --portable zipped the folder before it was signed.
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        run: python scripts/build/build_exe.py --portable --zip-only
 
       - name: Restore standard installer
         # Move the stashed installer back into dist/ so both artifacts
@@ -279,6 +349,17 @@ jobs:
           git tag -a $tag -m "Release $tag (auto-tagged by release.yml on merge to ${{ github.ref_name }})"
           git push origin $tag
 
+      - name: Attest build provenance
+        # Records that these exact files were built by this workflow from
+        # this commit. Anyone can check a download with
+        # `gh attestation verify <file> --repo Osiris-DevWorks/smart-citizen`.
+        if: steps.gate.outputs.skip == 'false'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            ${{ steps.artifacts.outputs.installer_path }}
+            ${{ steps.artifacts.outputs.portable_path }}
+
       - name: Publish GitHub Release
         if: steps.gate.outputs.skip == 'false'
         uses: softprops/action-gh-release@v2
@@ -293,6 +374,24 @@ jobs:
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
+
+      - name: Scan release files on VirusTotal
+        # Uploads both files to VirusTotal and adds the scan links to the
+        # end of the release notes, so users can check the results
+        # themselves. Runs only when the VIRUSTOTAL_API_KEY secret is set
+        # (a free VirusTotal account's key is enough). A VirusTotal outage
+        # never fails a release that is already published.
+        if: steps.gate.outputs.skip == 'false' && env.VT_KEY_SET == 'true'
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          update_release_body: true
+          request_rate: 4
+          files: |
+            ${{ steps.artifacts.outputs.installer_path }}
+            ${{ steps.artifacts.outputs.portable_path }}
+        continue-on-error: true
 
       - name: Post Discord notification
         # Inlined here because the standalone release-notify.yml workflow
