@@ -4573,8 +4573,7 @@ def _calculated_reward_titles_in(root: ET.Element, titles: set[str]) -> None:
     correct "nothing to show" case.
 
     A separate scan rather than widening ContractVariant (its 12-field
-    width is locked by tests/test_mission_variant_tuple.py, and several
-    ``for ... in variants:`` sites destructure it positionally) for a value
+    width is locked by tests/test_mission_variant_tuple.py) for a value
     only the end-of-run diagnostic needs. _run_gen_missions runs it on each
     root of the contractgen parse scan_contract_generators already makes,
     rather than walking the files again once a zero-XP title turns up

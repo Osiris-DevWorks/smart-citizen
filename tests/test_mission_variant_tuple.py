@@ -1,13 +1,16 @@
 """Regression guard for the contract mission-variant tuple shape.
 
-Contract generators store one tuple per mission variant under
+Contract generators store one ``ContractVariant`` per mission variant under
 ``contractgen_missions[title_key]``. The 1.4.2 rep-tier-names change grew
 the tuple from 10 → 11 elements (adding ``rank_name`` at position 10). The
 2.2.0 reputation-track change (issue #161) grew it again, 11 → 12 (adding
 ``rep_track`` at position 11) so a mission's body/title can show which
 reputation track (e.g. "Security" vs the generic Contractor/Standing track)
-its XP feeds. These tests lock the tuple width at every consumer so the
-next refactor can't slip a similar drift through.
+its XP feeds. ``_run_gen_missions`` reads a variant by field name since #240,
+but ``scan_contract_generators`` still builds it by position, so a field that
+moves puts values in the wrong fields with no error. These tests lock the real
+``ContractVariant`` and both calls that build it, so the next refactor can't
+slip a similar drift through.
 """
 from __future__ import annotations
 
@@ -38,26 +41,26 @@ def gen_module():
 # Keeping this aligned with ``ContractVariant`` is the entire point: when that
 # shape moves, this helper must move too.
 def _make_variant(
-    system_name: str = "Stanton",
-    success_xp: int = 100,
-    failure_xp: int = -50,
-    desc_key: str = "test_desc_key",
-    contract_flags=None,
-    spawns=None,
-    contract_difficulty: str | None = "3",
-    contract_has_bp: bool = False,
-    contract_bp_chance: float = 0.0,
-    contract_bp_variant: str = "",
-    rank_name: str = "",
-    rep_track: str = "",
+    system_name: str,
+    success_xp: int,
+    failure_xp: int,
+    desc_key: str,
+    contract_flags: list[str],
+    spawns: dict,
+    contract_difficulty: str | None,
+    contract_has_bp: bool,
+    contract_bp_chance: float,
+    contract_bp_variant: str,
+    rank_name: str,
+    rep_track: str,
 ) -> tuple:
     return (
         system_name,
         success_xp,
         failure_xp,
         desc_key,
-        contract_flags or [],
-        spawns if spawns is not None else {},
+        contract_flags,
+        spawns,
         contract_difficulty,
         contract_has_bp,
         contract_bp_chance,
@@ -68,81 +71,119 @@ def _make_variant(
 
 
 class TestMissionVariantTupleShape:
-    """The canonical variant tuple has exactly 12 positions."""
+    """``_make_variant`` holds the real ``ContractVariant``'s fields, in order."""
 
-    def test_variant_tuple_has_twelve_positions(self):
-        v = _make_variant()
-        assert len(v) == 12, (
-            "The mission-variant tuple width is locked at 12 since the 2.2.0 "
-            "reputation-track change (#161). If you're changing this, also "
-            "update every destructure in _run_gen_missions and every v[N] "
-            "index access — see the comment block at the top of this test "
-            "file."
-        )
-
-
-class TestRunGenMissionsTupleConsumers:
-    """Both ``for ... in variants`` destructures in ``_run_gen_missions``
-    must accept the canonical 12-tuple without raising. Pre-fix the head
-    destructure had 11 placeholders and exploded on the first call."""
-
-    def test_seen_tiers_destructure_accepts_canonical_tuple(self):
-        """Locks the ``for _, sxp, fxp, _, _, _, _, _, _, _, rname, rtrack in
-        variants:`` loop near the start of ``_run_gen_missions``."""
-        variants = [
-            _make_variant(success_xp=100, failure_xp=-50, rank_name="Rookie", rep_track="Security"),
-            _make_variant(success_xp=200, failure_xp=-100, rank_name="Junior", rep_track="Security"),
-            _make_variant(success_xp=300, failure_xp=-150, rank_name="Member", rep_track="Contractor"),
-        ]
-        seen_tiers: list[tuple[int, int, str, str]] = []
-        for _, sxp, fxp, _, _, _, _, _, _, _, rname, rtrack in variants:
-            tier = (sxp, fxp, rname, rtrack)
-            if tier not in seen_tiers:
-                seen_tiers.append(tier)
-        assert seen_tiers == [
-            (100, -50, "Rookie", "Security"),
-            (200, -100, "Junior", "Security"),
-            (300, -150, "Member", "Contractor"),
-        ]
-
-    def test_desc_variants_destructure_accepts_canonical_tuple(self):
-        """Locks the ``for _, vsxp, vfxp, _, vflags, vspawns, vdiff, vhas_bp,
-        vbp_chance, vbp_variant, vrname, vrtrack in desc_variants:``
-        aggregator loop."""
-        desc_variants = [
-            _make_variant(
-                success_xp=500,
-                contract_flags=["Starter"],
-                spawns={"hostile": {"Pirates": 4}},
-                contract_difficulty="2",
-                contract_has_bp=True,
-                contract_bp_chance=0.25,
-                contract_bp_variant="hard",
-                rank_name="Rookie",
-                rep_track="Security",
-            )
-        ]
-        rows: list[tuple] = []
-        for _, vsxp, vfxp, _, vflags, vspawns, vdiff, vhas_bp, vbp_chance, vbp_variant, vrname, vrtrack in desc_variants:
-            rows.append((vsxp, vflags, vspawns, vdiff, vhas_bp, vbp_chance, vbp_variant, vrname, vrtrack))
-        assert rows == [
-            (500, ["Starter"], {"hostile": {"Pirates": 4}}, "2", True, 0.25, "hard", "Rookie", "Security")
-        ]
-
-    def test_indexed_access_positions(self):
-        """v[3] = desc_key, v[7] = contract_has_bp, v[0] = system_name,
-        v[10] = rank_name, v[11] = rep_track — these are the exact ``v[N]``
-        indices read inside _run_gen_missions (the destructure-free access
-        paths). Locks each."""
-        v = _make_variant(
+    def test_helper_holds_each_field_at_its_position(self, gen_module):
+        """A field added to, dropped from, renamed in or moved within
+        ``ContractVariant`` fails here until ``_make_variant`` and the expected
+        dict below agree with it. Every value differs from the others, so a
+        field that moved cannot pass."""
+        values = _make_variant(
             system_name="Pyro",
+            success_xp=500,
+            failure_xp=-250,
             desc_key="my_desc",
+            contract_flags=["Starter"],
+            spawns={"hostile": {"Pirates": 4}},
+            contract_difficulty="2",
             contract_has_bp=True,
+            contract_bp_chance=0.25,
+            contract_bp_variant="hard",
             rank_name="Rookie",
             rep_track="Security",
         )
-        assert v[0] == "Pyro"
-        assert v[3] == "my_desc"
-        assert v[7] is True
-        assert v[10] == "Rookie"
-        assert v[11] == "Security"
+        fields = gen_module.ContractVariant._fields
+        assert len(values) == len(fields), (
+            f"ContractVariant has {len(fields)} fields, _make_variant gives {len(values)}. "
+            "Change both, and both ContractVariant(...) calls in scan_contract_generators, "
+            "which pass every field by position."
+        )
+        assert gen_module.ContractVariant(*values)._asdict() == {
+            "system_name": "Pyro",
+            "success_xp": 500,
+            "failure_xp": -250,
+            "desc_key": "my_desc",
+            "flags": ["Starter"],
+            "spawns": {"hostile": {"Pirates": 4}},
+            "difficulty": "2",
+            "has_bp": True,
+            "bp_chance": 0.25,
+            "bp_variant": "hard",
+            "rank_name": "Rookie",
+            "rep_track": "Security",
+        }
+
+
+# One contract with two sub-contracts, the second with no description of its own.
+# Each field of their variants gets a value of its own, so a value that lands in
+# another field cannot pass.
+_CONTRACT_GEN_XML = """\
+<ContractGenerator>
+  <ContractGeneratorHandler_Career debugName="Test_Handler">
+    <CareerContract debugName="Pyro_Intro_Test" minStanding="standing">
+      <ContractStringParam param="Title" value="@my_title" />
+      <ContractStringParam param="Description" value="@my_desc" />
+      <BlueprintRewards blueprintPool="pool" chance="0.25" />
+      <ContractResult_LegacyReputation>
+        <contractResultReputationAmounts reward="gain" />
+      </ContractResult_LegacyReputation>
+      <ContractResult_LegacyReputation>
+        <contractResultReputationAmounts reward="loss" />
+      </ContractResult_LegacyReputation>
+      <ContractDifficulty mechanicalSkill="Hard_action_5" />
+      <SpawnDescription_ShipGroup Name="Pirates">
+        <SpawnDescription_Ship concurrentAmount="4" />
+      </SpawnDescription_ShipGroup>
+      <subContracts>
+        <SubContract>
+          <ContractStringParam param="Title" value="@sub_title" />
+          <ContractStringParam param="Description" value="@sub_desc" />
+        </SubContract>
+        <SubContract>
+          <ContractStringParam param="Title" value="@sub_no_desc_title" />
+        </SubContract>
+      </subContracts>
+    </CareerContract>
+  </ContractGeneratorHandler_Career>
+</ContractGenerator>
+"""
+
+
+class TestScanContractGeneratorsFillsEachField:
+    """Both ``ContractVariant(...)`` calls in ``scan_contract_generators`` pass
+    every field by position. Two values swapped there raise nothing. Nor does a
+    wrong count: the scan logs the ``TypeError`` at DEBUG and goes on to the next
+    contract, losing that variant and the contract's remaining sub-contracts."""
+
+    def test_each_value_lands_in_its_field(self, gen_module, tmp_path):
+        contractgen_dir = tmp_path / "contractgenerators"
+        contractgen_dir.mkdir()
+        (contractgen_dir / "contracts.xml").write_text(_CONTRACT_GEN_XML, encoding="utf-8")
+
+        missions, _, _, _ = gen_module.scan_contract_generators(
+            contractgen_dir,
+            reputation_lookup={"gain": 500, "loss": -250},
+            blueprint_pools={"pool": ["Some Armor"]},
+            standings_lookup={"standing": "Rookie"},
+            standing_track_lookup={"standing": "Security"},
+        )
+
+        shared = dict(
+            system_name="Pyro",
+            success_xp=500,
+            failure_xp=-250,
+            contract_flags=["Starter"],
+            spawns={
+                **gen_module._empty_spawn_breakdown(),
+                gen_module.SPAWN_HOSTILE: {"Pirates": 4},
+            },
+            contract_difficulty="Combat 5/7",
+            contract_has_bp=True,
+            contract_bp_chance=0.25,
+            contract_bp_variant="Pyro_Intro_Test",
+            rank_name="Rookie",
+            rep_track="Security",
+        )
+        assert missions["my_title"] == [_make_variant(desc_key="my_desc", **shared)]
+        assert missions["sub_title"] == [_make_variant(desc_key="sub_desc", **shared)]
+        assert missions["sub_no_desc_title"] == [_make_variant(desc_key="my_desc", **shared)]
