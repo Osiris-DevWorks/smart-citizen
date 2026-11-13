@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -87,6 +88,10 @@ from src.utils.win_paths import win_plain_path
 
 logger = logging.getLogger(__name__)
 
+# The loc-string line break: a backslash and an n, two characters that
+# global.ini holds as they are and the game draws as a new line.
+_LOC_LINE_BREAK = "\\n"
+
 
 # Preview-pane token translation — turns the raw loc-string format the game
 # reads into styled HTML that mirrors the in-game feel. Patterns:
@@ -107,8 +112,11 @@ _MISSION_TOKEN_RE = _re_mod.compile(r"~mission\(([^|)]+)(?:\|[^)]*)?\)")
 # leading separators the loc-string format uses for line breaks). Stripped
 # from prior values before re-stamping so successive applies don't
 # accumulate tags and a version bump rolls the stamp forward cleanly.
+# _LOC_LINE_BREAK_PATTERN is the line break as a regex, for this pattern and
+# the two below that strip a line along with the line breaks before it.
+_LOC_LINE_BREAK_PATTERN = _re_mod.escape(_LOC_LINE_BREAK)
 _JOURNAL_STAMP_RE = _re_mod.compile(
-    r"(?:\\n)*\[Edited with Smart Citizen v[^\]]+\]\s*$"
+    "(?:" + _LOC_LINE_BREAK_PATTERN + r")*\[Edited with Smart Citizen v[^\]]+\]\s*$"
 )
 
 # Title-like journal keys we should NOT stamp — the stamp belongs at the
@@ -138,9 +146,90 @@ _JOURNAL_TITLE_KEY_RE = _re_mod.compile(
 # on-disk watermark generation rolls forward cleanly on the next apply.
 _FRONTEND_VERSION_KEY = "Frontend_PU_Version"
 _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
-    r"\s*(?:\|\s*|(?:\\n)+\s*)"
+    r"\s*(?:\|\s*|(?:" + _LOC_LINE_BREAK_PATTERN + r")+\s*)"
     r"(?:Localizations Enhanced (?:with|by)|Enhanced with <3 by)\s+Smart Citizen\s+v?[^\s|]+\s*$"
 )
+
+# Main-menu Play button reminder. A game patch leaves the applied global.ini
+# in place, but that file has none of the keys the patch added, and the game
+# shows those as raw @key names until Smart Citizen is run again. The Play
+# button takes its label from the same file, so a second line on it is still
+# there the first time the game starts after a patch. It uses the watermark's
+# literal-\n line break and its idempotency: _PLAY_BUTTON_REMINDER_RE strips
+# an earlier reminder, on a line of its own, before the current one is added,
+# so applies don't stack it. If the wording changes, make the regex strip the
+# old wording too, as _FRONTEND_VERSION_STAMP_RE does for the watermark's old
+# phrasings.
+_PLAY_BUTTON_KEY = "Frontend_play_star_citizen"
+_PLAY_BUTTON_REMINDER = "Run Smart Citizen after every patch"
+_PLAY_BUTTON_REMINDER_RE = _re_mod.compile(
+    r"(?:^|\s*(?:" + _LOC_LINE_BREAK_PATTERN + r")+)\s*"
+    + _re_mod.escape(_PLAY_BUTTON_REMINDER) + r"\s*$"
+)
+
+
+# The game draws the Play button's lines left-aligned and in capitals, so
+# _centre_menu_lines pushes each shorter line right with no-break spaces (as
+# wide as a space, and never trimmed or collapsed as a plain space can be)
+# until it sits centred under the widest. The widths are the advances, in
+# 1/20480 em, of the font the button is drawn in, read from Data.p4k. Most
+# language slots draw it in Blender Pro Medium (Data/UI/fonts/Shared/
+# fonts_en.swf) with no letter spacing. The four slots whose own
+# Data/Localization/<slot>/UI/fonts/Shared/FontConfig.xml maps that font to
+# Noto Sans SC, TC, JP or KR draw it in Noto Sans, and all four have the same
+# space, no-break space, Latin and Cyrillic advances, so Russian, which
+# borrows the Korean slot, is measured in it too. A character with no advance
+# here counts as an average capital and an accented capital as its letter,
+# while in Noto Sans a wide East Asian character is a full em and a Hangul
+# syllable 0.92 em, as their glyphs are. The English label needs 19 spaces
+# (19.3). A screenshot of the 4.10 menu agreed with Blender Pro's widths:
+# under an earlier, longer wording it measured 25.9 spaces, where they give 26.0.
+@dataclass(frozen=True)
+class _MenuFont:
+    """A font the Play button is drawn in, by its advances in 1/20480 em."""
+
+    advances: dict  # the space and the capitals
+    other: int  # any other character: the average capital
+    wide: int = 0  # a wide East Asian character, in a font that draws them
+    hangul: int = 0  # a Hangul syllable
+
+
+_BLENDER_PRO_MEDIUM = _MenuFont(
+    advances={
+        " ": 4760,
+        "A": 11600, "B": 11360, "C": 11080, "D": 11540, "E": 10460, "F": 10020,
+        "G": 12120, "H": 11580, "I": 4560, "J": 9560, "K": 10700, "L": 9720,
+        "M": 13720, "N": 11700, "O": 11860, "P": 11020, "Q": 11880, "R": 11780,
+        "S": 11680, "T": 10320, "U": 11340, "V": 11080, "W": 15040, "X": 10520,
+        "Y": 10240, "Z": 10260,
+    },
+    other=11030,
+)
+_NOTO_SANS = _MenuFont(
+    advances={
+        " ": 4580,
+        "A": 12440, "B": 13460, "C": 13060, "D": 14060, "E": 12040, "F": 11300,
+        "G": 14120, "H": 14900, "I": 6000, "J": 10980, "K": 13240, "L": 11120,
+        "M": 16620, "N": 14780, "O": 15200, "P": 12940, "Q": 15200, "R": 13020,
+        "S": 12220, "T": 12260, "U": 14760, "V": 11780, "W": 17980, "X": 11740,
+        "Y": 10880, "Z": 12340,
+        # The Cyrillic capitals U+0410 to U+042F, by code point, since they
+        # look the same as Latin ones as text.
+        **dict(zip((chr(code) for code in range(0x410, 0x430)), (
+            12440, 13280, 13460, 11400, 14580, 12040, 18400, 12680, 15020, 15020, 13280,
+            14420, 16620, 14900, 15200, 14740, 12940, 13060, 12260, 11760, 16740, 11740,
+            14680, 13660, 19780, 19980, 16460, 18240, 13280, 13060, 20760, 13320,
+        ))),
+    },
+    other=13020,
+    wide=20480,
+    hangul=18840,
+)
+_NOTO_SANS_SLOTS = frozenset(
+    SC_LANGUAGE_IDS[language]
+    for language in ("chinese", "chinese_traditional", "japanese", "korean")
+)
+_MENU_PAD = "\u00a0"
 
 # #268, #446: "Scan Logs for Owned Blueprints" reads LIVE, and HOTFIX when it is
 # present. HOTFIX is a same-account emergency-patch channel on the same server
@@ -327,7 +416,62 @@ def _stamp_frontend_version(merged: dict) -> dict:
         return merged
     from src.utils.version import get_version
     base = _FRONTEND_VERSION_STAMP_RE.sub("", merged[_FRONTEND_VERSION_KEY]).rstrip()
-    merged[_FRONTEND_VERSION_KEY] = f"{base}\\nLocalizations Enhanced with Smart Citizen v{get_version()}"
+    merged[_FRONTEND_VERSION_KEY] = (
+        f"{base}{_LOC_LINE_BREAK}Localizations Enhanced with Smart Citizen v{get_version()}"
+    )
+    return merged
+
+
+def _menu_text_width(text: str, font: _MenuFont = _BLENDER_PRO_MEDIUM) -> int:
+    """Estimated width of *text* on the main menu, in 1/20480 em of *font*."""
+    width = 0
+    for ch in text.upper():
+        if ch.isspace():
+            width += font.advances[" "]
+            continue
+        letter = unicodedata.normalize("NFD", ch)[0]  # an accented capital as its letter
+        if letter in font.advances:
+            width += font.advances[letter]
+        elif font.wide and unicodedata.east_asian_width(ch) in ("W", "F"):
+            hangul = unicodedata.name(ch, "").startswith("HANGUL SYLLABLE")
+            width += font.hangul if hangul else font.wide
+        else:
+            width += font.other
+    return width
+
+
+def _centre_menu_lines(lines: list[str], font: _MenuFont = _BLENDER_PRO_MEDIUM) -> list[str]:
+    """Pad the start of each line with no-break spaces so it sits centred
+    under the widest in *font*, since the game left-aligns the Play button's
+    lines."""
+    widths = [_menu_text_width(line, font) for line in lines]
+    widest = max(widths)
+    space = font.advances[" "]
+    return [_MENU_PAD * round((widest - width) / (2 * space)) + line
+            for line, width in zip(lines, widths)]
+
+
+def _add_play_button_reminder(merged: dict, sc_language_id: str = "") -> dict:
+    """Add the Play button reminder to Frontend_play_star_citizen in place, on
+    its own line (_LOC_LINE_BREAK, as the watermark uses), with every line
+    centred by _centre_menu_lines in the font the game draws the button in
+    for *sc_language_id* (the language slot the file is written to, as
+    SC_LANGUAGE_IDS names it). A blank label leaves the reminder as the
+    button's only line, with no empty line above it.
+
+    Skips if the key is not in *merged*, as _stamp_frontend_version does, so
+    the key is never added. Mutates and returns *merged*.
+    """
+    if _PLAY_BUTTON_KEY not in merged:
+        return merged
+    label = _PLAY_BUTTON_REMINDER_RE.sub("", merged[_PLAY_BUTTON_KEY])
+    lines = [line.strip() for line in label.split(_LOC_LINE_BREAK)]
+    if not any(lines):
+        lines = []
+    font = _NOTO_SANS if sc_language_id in _NOTO_SANS_SLOTS else _BLENDER_PRO_MEDIUM
+    merged[_PLAY_BUTTON_KEY] = _LOC_LINE_BREAK.join(
+        _centre_menu_lines(lines + [_PLAY_BUTTON_REMINDER], font)
+    )
     return merged
 
 
@@ -350,7 +494,7 @@ def _stamp_journal_entries(merged: dict, stock: dict | None = None) -> dict:
     """
     from src.utils.version import get_version
     version = get_version()
-    new_stamp = f"\\n\\n[Edited with Smart Citizen v{version}]"
+    new_stamp = f"{_LOC_LINE_BREAK * 2}[Edited with Smart Citizen v{version}]"
     stock = stock or {}
     out: dict = {}
     for key, value in merged.items():
@@ -394,6 +538,11 @@ class _ApplyMergeInputs:
     owned: set
     enclosings: tuple
     bp_header: "str | None"
+    # The game's language slot the file is written to (SC_LANGUAGE_IDS), which
+    # picks the font the Play button reminder is centred in. No default, so a
+    # place that builds these inputs without it fails instead of centring
+    # every language in Blender Pro.
+    sc_language_id: str
 
 
 def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
@@ -439,6 +588,11 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     # write-time and idempotent across re-applies.
     stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
     merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
+
+    # Add the Play button reminder to run Smart Citizen after every patch,
+    # centred in the font of the language slot the file is written to.
+    # Idempotent across re-applies, and skipped if stock doesn't ship the key.
+    _add_play_button_reminder(merged_dict, inputs.sc_language_id)
 
     # Stamp the main-menu version chip so the game shows that
     # Smart Citizen is active. Idempotent across re-applies and
@@ -554,7 +708,7 @@ def _render_preview_html(key: str, raw: str, stamp: str | None = None) -> str:
     # Append the stamp on the raw side, before HTML rendering, so the
     # standard `\n` → `<br>` transform handles the spacing in lockstep.
     if stamp:
-        raw = (raw or "") + "\\n\\n" + stamp
+        raw = (raw or "") + _LOC_LINE_BREAK * 2 + stamp
     if not raw:
         body = "<em style='color:#888;'>(empty)</em>"
     else:
@@ -562,7 +716,7 @@ def _render_preview_html(key: str, raw: str, stamp: str | None = None) -> str:
         # Literal backslash-n in the INI → actual line break. Handle the
         # escape sequence as two characters, not a Python newline — the
         # parser reads lines verbatim.
-        escaped = escaped.replace("\\n", "<br>")
+        escaped = escaped.replace(_LOC_LINE_BREAK, "<br>")
         escaped = _EM3_RE.sub(
             r'<span style="text-decoration:underline;">\1</span>',
             escaped,
@@ -2630,6 +2784,7 @@ class MainWindow(QMainWindow):
             owned=owned,
             enclosings=enclosings,
             bp_header=self._bp_header(),
+            sc_language_id=AppSettings.get_sc_language_id(),
         )
 
     def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
@@ -4547,7 +4702,7 @@ class MainWindow(QMainWindow):
         # Show real newlines while editing, even though the loc-string
         # format stores them as the literal two-char escape "\n".
         raw = entry.custom_value if entry.custom_value else entry.original_value
-        visual = (raw or "").replace("\\n", "\n")
+        visual = (raw or "").replace(_LOC_LINE_BREAK, "\n")
         self._editor_dock_loading = True
         try:
             self.editor_dock_text.setPlainText(visual)
@@ -4568,7 +4723,7 @@ class MainWindow(QMainWindow):
         # QTextCursor uses U+2029 as paragraph separator in some APIs; the
         # plain-text path here returns "\n" so a direct conversion is safe.
         visual = self.editor_dock_text.toPlainText()
-        new_value = visual.replace("\n", "\\n")
+        new_value = visual.replace("\n", _LOC_LINE_BREAK)
         if new_value == entry.custom_value:
             return
         entry.custom_value = new_value
@@ -7603,7 +7758,7 @@ class MainWindow(QMainWindow):
             if dock_row is None or top_left.row() <= dock_row <= bottom_right.row():
                 entry = self.entries[self._editor_dock_entry_idx]
                 raw = entry.custom_value if entry.custom_value else entry.original_value
-                visual = (raw or "").replace("\\n", "\n")
+                visual = (raw or "").replace(_LOC_LINE_BREAK, "\n")
                 if visual != self.editor_dock_text.toPlainText():
                     self._editor_dock_loading = True
                     try:

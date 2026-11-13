@@ -82,6 +82,8 @@ El color del botón te dice en qué punto estás: **rojo** significa que algo ha
 
 Smart Citizen también estampa una pequeña marca de agua en el texto de versión del lanzador (`Frontend_PU_Version`), añadiendo `\nLocalizations Enhanced with Smart Citizen v{VERSION}` en su propia línea. Así confirmas en el juego que tu loc-pack está activo: mira la etiqueta de versión en el menú principal de Star Citizen. La marca se reescribe con cada aplicación, así que nunca se acumula entre versiones.
 
+Al aplicar también se añade una segunda línea al botón Jugar del menú principal (`Frontend_play_star_citizen`), `Run Smart Citizen after every patch`, con las dos líneas centradas. Un parche del juego deja en su sitio el `global.ini` aplicado, pero las claves que añadió el parche se muestran como nombres `@key` en bruto hasta que ejecutes Smart Citizen y vuelvas a aplicar, así que el recordatorio está en el menú la primera vez que el juego arranca tras un parche. Como la marca, se reescribe con cada aplicación, y queda en inglés sea cual sea tu idioma.
+
 ## 8. Restaurar una copia de seguridad
 
 Abre el menú **Más** de la barra de herramientas y elige **Restaurar copia** para volver a una versión anterior. Smart Citizen conserva hasta **5 copias de seguridad automáticas**; la más antigua se elimina a medida que se crean nuevas.

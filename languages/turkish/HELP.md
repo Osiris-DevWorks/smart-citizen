@@ -80,6 +80,8 @@ Düğmenin rengi nerede olduğunuzu söyler: **kırmızı**, son uygulamanızdan
 
 Smart Citizen ayrıca başlatıcı sürüm metnine (`Frontend_PU_Version`) küçük bir filigran ekler ve kendi satırında `\nLocalizations Enhanced with Smart Citizen v{VERSION}` yazar. Yerelleştirme paketinizin etkin olduğunu oyun içinde böyle doğrulayabilirsiniz — Star Citizen ana menüsündeki sürüm etiketine bakın. Damga her uygulamada yeniden yazılır; bu nedenle sürümler arasında birikmez.
 
+Uygulama sırasında Smart Citizen, ana menüdeki Oyna düğmesine (`Frontend_play_star_citizen`) ikinci satır olarak `Run Smart Citizen after every patch` ekler ve iki satırı da ortalar. Bir oyun yaması uygulanmış `global.ini` dosyasını yerinde bırakır, ancak yamanın eklediği anahtarlar siz Smart Citizen'ı çalıştırıp yeniden uygulayana kadar ham `@key` adları olarak görünür. Bu yüzden hatırlatma, yamadan sonra oyun ilk açıldığında menüde durur. Damga gibi her uygulamada yeniden yazılır ve hangi dili seçerseniz seçin İngilizce kalır.
+
 ## 8. Bir Yedeği Geri Yükleyin
 
 Önceki bir sürüme dönmek için araç çubuğundaki **Daha Fazla** menüsünü açın ve **Yedeği Geri Yükle** seçeneğini seçin. Smart Citizen en fazla **5 otomatik yedek** saklar — yenileri oluşturuldukça en eskisi silinir.
