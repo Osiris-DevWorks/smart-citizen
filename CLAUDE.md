@@ -195,6 +195,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change what unforge leaves out of the DataForge cache | `src/utils/dataforge_exclude.py`, `src/utils/pak_extractor.py` | `DATAFORGE_EXCLUDE_SUBPATHS` (never a `DATAFORGE_KEEP_SUBPATHS` path, one under it or one above it), `_write_unforge_exclude_list()`, `_unlisted_records()` |
 | Change Export Loc-Pack zip behavior | `src/utils/locpack_exporter.py` | `default_locpack_filename()`, `write_locpack_zip()` |
 | Change apply-time launcher watermark | `src/gui/main_window.py` | `_stamp_frontend_version()`, `_FRONTEND_VERSION_KEY`, `_FRONTEND_VERSION_STAMP_RE` |
+| Change the main-menu Play button reminder | `src/gui/main_window.py` | `_add_play_button_reminder()`, `_PLAY_BUTTON_KEY`, `_PLAY_BUTTON_REMINDER` (a replaced wording must stay in `_PLAY_BUTTON_REMINDER_RE`), `_centre_menu_lines()`, the button's fonts `_BLENDER_PRO_MEDIUM` and `_NOTO_SANS` (for `_NOTO_SANS_SLOTS`, picked by `_ApplyMergeInputs.sc_language_id`) (#566) |
 | Change Modified/Enhanced/Unmodified/New status logic | `src/parser/ini_parser.py` | `_determine_status_from_source()` |
 | Adjust close-time user.ini autosave guard | `src/utils/user_ini_manager.py` | `should_autosave_user_ini()` |
 | Change "Reset user.ini" tool behavior | `src/utils/user_ini_manager.py`, `src/gui/config_tab.py` | `reset_user_ini()` (+ Config-tab button wiring) |

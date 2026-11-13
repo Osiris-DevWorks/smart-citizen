@@ -140,7 +140,7 @@ class TestUserCfgLanguageMatches:
 def _inputs(**overrides) -> _ApplyMergeInputs:
     values = dict(
         user_overrides={}, discarded_new_keys=frozenset(), owned=set(),
-        enclosings=(), bp_header=None,
+        enclosings=(), bp_header=None, sc_language_id="english",
     )
     values.update(overrides)
     return _ApplyMergeInputs(**values)
@@ -226,6 +226,26 @@ class TestMergeForApply:
         without_key = _merge_for_apply({"global": {"a": "x"}}, ["global"], _inputs())
         assert "Frontend_PU_Version" not in without_key
 
+    def test_the_play_button_gets_the_reminder_only_when_the_key_exists(self):
+        stock = {"Frontend_play_star_citizen": "Play Star Citizen"}
+        with_key = _merge_for_apply({"global": stock}, ["global"], _inputs())
+        label, reminder = with_key["Frontend_play_star_citizen"].split("\\n")
+        assert label.lstrip("\u00a0") == "Play Star Citizen"  # centred with no-break spaces
+        assert reminder == "Run Smart Citizen after every patch"
+        without_key = _merge_for_apply({"global": {"a": "x"}}, ["global"], _inputs())
+        assert "Frontend_play_star_citizen" not in without_key
+
+    def test_the_play_button_is_centred_in_the_font_of_the_language_slot(self):
+        # The Korean slot draws the button in Noto Sans, where the label needs
+        # 23 no-break spaces, and English in Blender Pro Medium, where it needs 19.
+        def label(slot):
+            stock = {"Frontend_play_star_citizen": "Play Star Citizen"}
+            merged = _merge_for_apply({"global": stock}, ["global"], _inputs(sc_language_id=slot))
+            return merged["Frontend_play_star_citizen"].split("\\n")[0]
+
+        assert label("korean_(south_korea)") == "\u00a0" * 23 + "Play Star Citizen"
+        assert label("english") == "\u00a0" * 19 + "Play Star Citizen"
+
     def test_modified_journal_entries_are_stamped_and_stock_ones_are_not(self):
         sources = {"global": {"journal_a_body": "stock a", "journal_b_body": "stock b"}}
         merged = _merge_for_apply(
@@ -258,12 +278,18 @@ class _InputsWindow:
 
 @pytest.fixture
 def settings(monkeypatch):
-    state = {"include_new": True, "owned": set(), "tag_configs": {"cfg": 1}, "tag_config_reads": 0}
+    state = {
+        "include_new": True, "owned": set(), "tag_configs": {"cfg": 1}, "tag_config_reads": 0,
+        "language": "english",
+    }
 
     def get_all_tag_configs():
         state["tag_config_reads"] += 1
         return state["tag_configs"]
 
+    monkeypatch.setattr(
+        AppSettings, "get_selected_language", staticmethod(lambda: state["language"]),
+    )
     monkeypatch.setattr(AppSettings, "get_include_new_lines", staticmethod(lambda: state["include_new"]))
     monkeypatch.setattr(AppSettings, "get_owned_items", staticmethod(lambda: set(state["owned"])))
     monkeypatch.setattr(AppSettings, "get_all_tag_configs", staticmethod(get_all_tag_configs))
@@ -316,6 +342,21 @@ class TestApplyMergeInputs:
 
     def test_blueprint_header_is_captured(self, settings):
         assert _InputsWindow([], bp_header="Blueprints")._apply_merge_inputs().bp_header == "Blueprints"
+
+    def test_the_language_slot_is_captured(self, settings):
+        # The game's slot for the selected language, which picks the font the
+        # Play button reminder is centred in: Russian borrows the Korean one.
+        settings["language"] = "russian"
+        assert _InputsWindow([])._apply_merge_inputs().sc_language_id == "korean_(south_korea)"
+
+    def test_the_language_slot_has_no_default(self):
+        # Inputs built without it fail at once, rather than centring every
+        # language in Blender Pro.
+        with pytest.raises(TypeError, match="sc_language_id"):
+            _ApplyMergeInputs(
+                user_overrides={}, discarded_new_keys=frozenset(), owned=set(),
+                enclosings=(), bp_header=None,
+            )
 
     def test_apply_to_game_merges_exactly_what_the_snapshot_would(self, settings):
         """_build_apply_merged_dict (apply_to_game's entry) is the pure merge
@@ -422,6 +463,28 @@ class TestComputeAlreadyApplied:
         assert _compute_already_applied(self._snapshot(env, overrides={"a": " *mine "})) is True
         # A different amount of whitespace is a real difference, not a match.
         assert _compute_already_applied(self._snapshot(env, overrides={"a": "*mine"})) is False
+
+    def test_the_play_button_reminder_reads_as_applied_after_a_real_apply(
+        self, env, tmp_path, monkeypatch,
+    ):
+        """Apply adds the Play button reminder in _merge_for_apply, the merge
+        the check shares, so the button reads green after a real apply. A file
+        applied without the reminder, by a version before it, reads as not
+        applied, so the next Apply adds it."""
+        from src.merger.ini_merger import merge_ini_files
+
+        stock = {"Frontend_play_star_citizen": "Play Star Citizen", "b": "stock b"}
+        monkeypatch.setattr(main_window, "load_sources_from_settings", lambda: (
+            {"global": dict(stock)}, ["global"], {},
+        ))
+        base = tmp_path / "base.ini"
+        base.write_text("".join(f"{k}={v}\n" for k, v in stock.items()), encoding="utf-8")
+        merged = _merge_for_apply({"global": dict(stock)}, ["global"], _inputs())
+        merge_ini_files(str(base), merged, str(env.applied))
+        assert _compute_already_applied(self._snapshot(env)) is True
+
+        self._write_applied(env, stock)
+        assert _compute_already_applied(self._snapshot(env)) is False
 
     def test_false_when_user_cfg_points_at_another_language(self, env):
         """Content matches, but switching language in the UI never touches
