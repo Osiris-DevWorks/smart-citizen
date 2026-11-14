@@ -80,6 +80,8 @@ The button's color tells you where you stand: **red** means something changed si
 
 Smart Citizen also stamps a small watermark onto the launcher version string (`Frontend_PU_Version`), appending `\nLocalizations Enhanced with Smart Citizen v{VERSION}` on its own line. That's how you can confirm in-game that your loc-pack is active — look at the version label on the Star Citizen main menu. The stamp is rewritten on each apply, so it never piles up across versions.
 
+Apply also adds a second line to the main menu's **Play Star Citizen** button (`Frontend_play_star_citizen`), `Run Smart Citizen after every patch`, with both lines centered. A game patch leaves the applied `global.ini` in place, but the keys the patch added show as raw `@key` names until you run Smart Citizen and apply again, so the reminder is on the menu the first time the game starts after a patch. Like the stamp, it is rewritten on each apply, and it stays in English whatever language you play in.
+
 ## 8. Restore a Backup
 
 Open the **More** menu on the toolbar and choose **Restore Backup** to revert to a previous version. Smart Citizen keeps up to **5 automatic backups** — the oldest is pruned as new ones are created.

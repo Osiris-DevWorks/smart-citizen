@@ -80,6 +80,8 @@ Die Farbe des Knopfs zeigt dir, wo du stehst: **Rot** bedeutet, dass sich seit d
 
 Smart Citizen stempelt außerdem ein kleines Wasserzeichen in die Launcher-Versionszeichenfolge (`Frontend_PU_Version`) und hängt `\nLocalizations Enhanced with Smart Citizen v{VERSION}` in einer eigenen Zeile an. So kannst du im Spiel bestätigen, dass dein Loc-Pack aktiv ist — schau dir das Versionslabel im Star-Citizen-Hauptmenü an. Der Stempel wird bei jedem Anwenden neu geschrieben, sodass er sich über Versionen hinweg nicht anhäuft.
 
+Beim Anwenden bekommt außerdem die Spielen-Schaltfläche im Hauptmenü (`Frontend_play_star_citizen`) eine zweite Zeile, `Run Smart Citizen after every patch`, und beide Zeilen werden zentriert. Ein Spiel-Patch lässt die angewendete `global.ini` an ihrem Platz, aber die Schlüssel, die der Patch hinzugefügt hat, erscheinen als rohe `@key`-Namen, bis du Smart Citizen startest und erneut anwendest. So steht die Erinnerung schon beim ersten Spielstart nach einem Patch im Menü. Wie der Stempel wird sie bei jedem Anwenden neu geschrieben, und sie bleibt in jeder Sprache englisch.
+
 ## 8. Eine Sicherung wiederherstellen
 
 Öffne das Menü **Mehr** in der Symbolleiste und wähle **Sicherung wiederherstellen**, um zu einer früheren Version zurückzukehren. Smart Citizen bewahrt bis zu **5 automatische Sicherungen** auf — die älteste wird entfernt, sobald eine neue erstellt wird.

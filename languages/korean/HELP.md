@@ -80,6 +80,8 @@ Smart Citizen은 두 모드 중 하나로 열리며, 언제든지 전환할 수 
 
 Smart Citizen은 또한 런처 버전 문자열(`Frontend_PU_Version`)에 작은 워터마크를 남깁니다. 자체 줄에 `\nLocalizations Enhanced with Smart Citizen v{VERSION}`을 추가합니다. 이를 통해 현지화 패키지가 활성화되어 있는지 게임 내에서 확인할 수 있습니다. Star Citizen 메인 메뉴의 버전 레이블을 보세요. 이 워터마크는 적용할 때마다 다시 작성되므로 버전이 바뀌어도 계속 쌓이지 않습니다.
 
+적용할 때 Smart Citizen은 메인 메뉴의 플레이 버튼(`Frontend_play_star_citizen`)에도 두 번째 줄로 `Run Smart Citizen after every patch`를 추가하고, 두 줄을 모두 가운데 정렬합니다. 게임 패치는 적용된 `global.ini`를 그대로 두지만, 패치로 추가된 키는 Smart Citizen을 실행해 다시 적용할 때까지 `@key` 이름 그대로 표시됩니다. 그래서 패치 후 게임을 처음 시작할 때도 이 알림이 메뉴에 표시됩니다. 워터마크와 마찬가지로 적용할 때마다 다시 작성되며, 어떤 언어를 선택해도 영어로 표시됩니다.
+
 ## 8. 백업 복원하기
 
 이전 버전으로 되돌리려면 도구 모음의 **더 보기** 메뉴를 열고 **백업 복원**을 선택하세요. Smart Citizen은 최대 **5개의 자동 백업**을 유지하며, 새 백업이 생성될 때마다 가장 오래된 것이 삭제됩니다.

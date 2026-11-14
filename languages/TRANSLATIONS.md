@@ -82,6 +82,20 @@ them against the new source.
 
 ## Backfill log
 
+- **3.0.1 cycle (2026-11-13, Claude Opus 5.5):** #566, the Play button
+  reminder. HELP section 7 gains a paragraph after the watermark one in all
+  eleven translated `HELP.md` files, AI-translated: Apply also adds
+  `Run Smart Citizen after every patch` as a second line on the main menu's
+  Play button, because a patch leaves the applied `global.ini` without the
+  keys it added. The reminder and the `Frontend_play_star_citizen` key stay
+  in English, since the game shows the reminder in English in every
+  language, as it does the watermark. Each file's own words for patch, apply
+  and the watermark. Checked by a script against English: every paragraph
+  keeps the key, the reminder, `global.ini` and `@key` as code, runs 1.05 to
+  1.16 times the English length (0.47 to 0.64 in chinese,
+  chinese_traditional, japanese and korean), and the korean has no sentence
+  end run straight into the next syllable. Not back-translated. No
+  `ui.json` changed.
 - **3.0.0 cycle (2026-10-30, Claude Opus 5.5, pre-release language check):**
   two gaps filled. (1) New key `enhancements.blueprints_default_owned_mission`,
   the starter blueprints' mission label ("Default blueprint (every player has
