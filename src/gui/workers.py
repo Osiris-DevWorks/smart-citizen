@@ -199,21 +199,97 @@ class AnimatedProgressDialog(QProgressDialog):
             self.setLabelText(message)
 
 
+def read_language_name_tables(cached: dict) -> "dict | None":
+    """The item name tables of one cached base.ini per language but the
+    loaded one (#569: ``blueprint_meta.other_language_files`` over
+    ``AppSettings.get_cached_base_ini_paths``, read by
+    ``blueprint_meta.read_item_keys_by_name``), reusing the tables in
+    *cached* for files that have not changed. What the Owned set's rename
+    traces a name saved in another language through.
+
+    Never runs on the GUI thread: ``FileLoaderWorker`` runs it on its own
+    thread, and a synchronous reload through :class:`LanguageNameTablesRead`.
+    A failure, which it logs at WARNING, never fails the load: the rename is
+    an extra. It hands back the tables it had then, with one more entry,
+    ``_NOT_LISTED``, that has no stamp, since which languages went unread is
+    unknown: the rename still uses the tables, and the #570 label drop waits
+    for a load that reads them all (``MainWindow._language_tables_complete``).
+    """
+    from src.utils.blueprint_meta import other_language_files, read_item_keys_by_name
+
+    try:
+        paths = other_language_files(
+            AppSettings.get_cached_base_ini_paths(),
+            AppSettings.get_source_path(AppSettings.SOURCE_GLOBAL),
+            AppSettings.get_active_channel(),
+        )
+        return read_item_keys_by_name(paths, cached=cached)
+    except Exception as e:
+        logger.warning(f"Owned names: could not read the other languages' names: {e} (#569)")
+        return {**cached, _NOT_LISTED: (None, {})}
+
+
+# read_language_name_tables' entry for a failure that left unknown which
+# languages' files it should have read: no path is "", and its stamp is None.
+_NOT_LISTED = ""
+
+
+class LanguageNameTablesRead:
+    """:func:`read_language_name_tables` on a thread of its own, for a
+    reload that merges on the GUI thread (#569).
+
+    ``MainWindow.perform_merge_and_reload`` (a channel switch, a data folder
+    change, a backup restore, a favourite prefix change) starts one before
+    it reads and merges the sources and takes :meth:`result` just before its
+    rebuild renames the Owned set, so the GUI thread reads none of these
+    files. It waits only if they take longer than the merge, which reads a
+    larger file. A daemon thread, so it never holds up the app's exit.
+    """
+
+    def __init__(self, cached: dict):
+        self._tables = None
+        self._thread = threading.Thread(
+            target=self._read, args=(dict(cached),),
+            name="language-name-tables", daemon=True,
+        )
+        self._thread.start()
+
+    def _read(self, cached: dict) -> None:
+        self._tables = read_language_name_tables(cached)
+
+    def result(self) -> dict:
+        """The tables (see :func:`read_language_name_tables`), once the read
+        is over."""
+        self._thread.join()
+        return self._tables
+
+
 class FileLoaderWorker(QThread):
     """Worker thread for loading INI files without blocking UI.
 
     Loads configured sources from settings and emits the merged entries plus
     pre-computed sort keys so the main thread doesn't need to re-parse base.ini.
+    It also reads the other languages' item name tables (#569,
+    :func:`read_language_name_tables`), reusing *language_tables*, the
+    window's tables when the load started, for files that have not changed.
     """
 
-    # (entries, default_values dict, pre-computed group sort keys)
-    finished = pyqtSignal(list, dict, list)
+    # (entries, default_values dict, pre-computed group sort keys,
+    #  the other languages' name tables, or None to keep the window's)
+    finished = pyqtSignal(list, dict, list, object)
     error = pyqtSignal(str)
     progress = pyqtSignal(str)
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
 
     # 3 phase boundaries: sources read → entries built → sort keys computed.
     _PHASE_TOTAL = 3
+
+    def __init__(self, language_tables: "dict | None" = None, parent=None):
+        super().__init__(parent)
+        # A copy: the window may replace its own while this runs. The
+        # tables in it are never changed, only replaced, so sharing them
+        # across threads is safe.
+        self._language_tables = dict(language_tables or {})
 
     def run(self):
         from src.gui.string_table_model import _group_sort_key
@@ -238,10 +314,11 @@ class FileLoaderWorker(QThread):
             self.progress_pct.emit(2, self._PHASE_TOTAL, tr("progress.computing_sort_keys"))
             self.progress.emit(tr("progress.computing_sort_keys"))
             sort_keys = [_group_sort_key(e.key) for e in entries]
+            language_tables = read_language_name_tables(self._language_tables)
 
             self.progress_pct.emit(3, self._PHASE_TOTAL, tr("progress.ready"))
             logger.info("FileLoaderWorker finished successfully")
-            self.finished.emit(entries, default_values, sort_keys)
+            self.finished.emit(entries, default_values, sort_keys, language_tables)
         except Exception as e:
             logger.exception(f"Error loading files: {e}")
             self.error.emit(str(e))

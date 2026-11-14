@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from functools import lru_cache
-from typing import Sequence
+from typing import Collection, Iterable, Mapping, Sequence
 
 # The bullet line separator inside a stored INI value (literal backslash-n).
 _NL = "\\n"
@@ -649,6 +649,93 @@ def repair_foreign_owned_names(
             repaired.add(real)
             renamed[nm] = real
     return repaired, renamed
+
+
+def drop_short_labels(
+    owned: "set[str]",
+    short_labels: "set[str]",
+    other_languages: "Iterable[Mapping[str, Collection[str]]] | None" = (),
+) -> "tuple[set[str], set[str]]":
+    """Split *owned* into ``(kept, dropped)``, dropping the names in
+    *short_labels* (#570), but not one that another cached language uses
+    as an item's own name (#569, *other_languages* as
+    ``rename_across_languages`` takes them): that is the item, saved while
+    that language was loaded, and the rename after this gives it its loaded
+    name. Community translations keep some short labels untranslated, so a
+    label's text can be another language's item name: the Spanish file
+    names the S-38 "S-38 Pistola" and keeps its short label as "S-38
+    Pistol", the pistol's English name, which a Spanish load used to drop
+    from an Owned set seeded in English. *other_languages* is None when a
+    language's file could not be read this time, which leaves that unknown:
+    nothing is dropped then, and the next load tries again.
+
+    Before #570 the catalogue this module's repair searched held items' short
+    labels (an armour set's name on its own), so a scan, an import or the
+    load-time repair could save an old logged name as a short label, which
+    matches no blueprint. *short_labels* is ``MainWindow._short_label_names``:
+    the labels ``blueprint_meta.item_name_sets`` gives, which leave out a
+    label that is also some item's own name, less the names the Blueprint
+    Tracker offers, so only those saved labels go. This is the one case where the repair drops
+    a name it cannot match: the label is no item at all, and the name the
+    logs held cannot be told from it, since one label stands for every piece
+    of a set. A scan with Rescan all logs reads those names again.
+    """
+    if other_languages is None:
+        return set(owned), set()
+    dropped = owned & short_labels
+    if dropped:
+        tables = list(other_languages)
+        dropped = {nm for nm in dropped if not any(nm in table for table in tables)}
+    return owned - dropped, dropped
+
+
+def rename_across_languages(
+    owned: "set[str]",
+    catalogue: "set[str]",
+    other_languages: "Iterable[Mapping[str, Collection[str]]]",
+    names_by_key: "Mapping[str, str]",
+) -> "tuple[set[str], dict[str, str]]":
+    """Rename each name in *owned* that *catalogue* does not know to its
+    name in the loaded strings, through its loc key (#569). Returns
+    ``(renamed_owned, renamed)``.
+
+    The Owned set holds display names, in the language that was loaded when
+    each was added, so after a language switch an item owned under its old
+    name stayed in Owned under that name and showed again in Available under
+    its new one. *other_languages* holds, per other cached language, its
+    item names mapped to their loc keys (``blueprint_meta.item_keys_by_name``),
+    and *names_by_key* maps each loc key to its name in the loaded strings
+    (``blueprint_meta.item_name_sets``). An unknown name takes the loaded
+    name of the keys it has in any of those languages, but only when they
+    all lead to one name: a name two items share in some language, or one
+    whose item the loaded strings lack, stays as it is. A renamed name that
+    is already in the set is merged into it, which is how the reporter's
+    two S-38 Pistol entries become one.
+
+    ``renamed`` maps every name that changed to the name it became; an
+    empty one means nothing changed and the caller writes nothing.
+    *other_languages* is read only when some name is unknown.
+    """
+    if not catalogue or not names_by_key:
+        return set(owned), {}
+    unknown = owned - catalogue
+    if not unknown:
+        return set(owned), {}
+    tables = list(other_languages)
+    result = set(owned)
+    renamed: "dict[str, str]" = {}
+    for nm in sorted(unknown):
+        keys: "set[str]" = set()
+        for table in tables:
+            keys.update(table.get(nm, ()))
+        current = {names_by_key[k] for k in keys if k in names_by_key}
+        if len(current) != 1:
+            continue
+        (new,) = current
+        result.discard(nm)
+        result.add(new)
+        renamed[nm] = new
+    return result, renamed
 
 
 def extract_bp_item_names(

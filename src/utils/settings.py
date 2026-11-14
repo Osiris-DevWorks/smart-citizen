@@ -3143,11 +3143,29 @@ class AppSettings:
     # caller channel-aware automatically.
 
     @staticmethod
+    def _channel_cache_dir(channel: str) -> Path:
+        r"""``…\{channel}\cache\`` for *channel*, named without making it.
+        The one place the channel's cache folder is spelled out, for
+        :meth:`get_cache_dir` and :meth:`get_cached_base_ini_paths`."""
+        return AppSettings.get_user_data_dir() / channel / "cache"
+
+    @staticmethod
     def get_cache_dir() -> Path:
         r"""Get the active channel's cache directory (``…\{channel}\cache\``)."""
-        cache_dir = AppSettings.get_channel_data_dir() / "cache"
+        cache_dir = AppSettings._channel_cache_dir(AppSettings.get_active_channel())
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
+
+    @staticmethod
+    def _base_ini_in(cache_dir: Path, language: str) -> Path:
+        r"""Where the cache folder *cache_dir* keeps *language*'s base.ini:
+        ``base.ini`` at its top for English, ``lang\{language}\base.ini``
+        for the others. Names the file only, nothing is read or made. The
+        one place the layout is spelled out, for :meth:`get_base_ini_path`
+        and :meth:`get_cached_base_ini_paths`."""
+        if language == AppSettings.DEFAULT_LANGUAGE:
+            return cache_dir / "base.ini"
+        return cache_dir / "lang" / language / "base.ini"
 
     @staticmethod
     def get_base_ini_path(language: "str | None" = None) -> Path:
@@ -3162,12 +3180,9 @@ class AppSettings:
         """
         if language is None:
             language = AppSettings.get_selected_language()
-        cache_dir = AppSettings.get_cache_dir()
-        if language == AppSettings.DEFAULT_LANGUAGE:
-            return cache_dir / "base.ini"
-        lang_dir = cache_dir / "lang" / language
-        lang_dir.mkdir(parents=True, exist_ok=True)
-        return lang_dir / "base.ini"
+        path = AppSettings._base_ini_in(AppSettings.get_cache_dir(), language)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
 
     @staticmethod
     def get_global_source_base_ini(language: "str | None" = None) -> Path:
@@ -3188,6 +3203,53 @@ class AppSettings:
         if language != AppSettings.DEFAULT_LANGUAGE and not own.exists():
             return AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
         return own
+
+    @staticmethod
+    def get_cached_base_ini_paths() -> "list[tuple[str, str, Path]]":
+        r"""``(channel, language, base.ini)`` for every base.ini cached for
+        any channel, in any language the app ships (#569): the files
+        :meth:`get_base_ini_path` names, found by looking, so it makes no
+        folder, unlike that getter. In channel order, then language order.
+
+        Every channel, not only the active one, because the Blueprint
+        Tracker's Owned set is shared by all of them: a name saved while
+        another channel was loaded in another language can be traced
+        through that channel's file. The languages are the app's own
+        (:meth:`_shipped_languages`), offered in the selector or not, so a
+        language the selector has since hidden is still found, while a
+        folder of another name in the cache (a backup such as
+        ``spanish.bak``) is no language. A channel whose cache Windows
+        refuses or cannot reach is skipped with a WARNING (on Python 3.11,
+        which the release builds use, ``Path.is_file`` raises
+        ``PermissionError`` rather than answering False), so this raises
+        only when the data folder itself cannot be had.
+        """
+        languages = AppSettings._shipped_languages()
+        found: "list[tuple[str, str, Path]]" = []
+        for channel in AppSettings.AVAILABLE_CHANNELS:
+            cache_dir = AppSettings._channel_cache_dir(channel)
+            try:
+                for language in languages:
+                    path = AppSettings._base_ini_in(cache_dir, language)
+                    if path.is_file():
+                        found.append((channel, language, path))
+            except OSError as e:
+                logger.warning(f"Could not look for cached base.ini files in {cache_dir}: {e}")
+        return found
+
+    @staticmethod
+    def _shipped_languages() -> list:
+        """Every language the app ships a folder for in ``languages/``,
+        sorted, English always among them: the ones the selector offers and
+        the ones it hides (a stub ``ui.json``,
+        :meth:`get_available_languages`). Reads the folder's names only."""
+        try:
+            names = sorted(p.name for p in AppSettings.get_languages_dir().iterdir() if p.is_dir())
+        except OSError:
+            names = []
+        if AppSettings.DEFAULT_LANGUAGE not in names:
+            names.append(AppSettings.DEFAULT_LANGUAGE)
+        return names
 
     @staticmethod
     def sync_global_source_path(context: str) -> None:
