@@ -23,6 +23,8 @@ tuple into :func:`build_blueprint_metadata`.
 """
 from __future__ import annotations
 
+import logging
+import os
 import re
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -78,6 +80,8 @@ from src.utils.owned_items import (
     strip_via_stock_diff,
 )
 from src.utils.tag_builder import DEFAULT_COMPONENT_CLASS_MAPPING
+
+logger = logging.getLogger(__name__)
 
 # The Class facet should read as a full word ("Military") regardless of the
 # Tag Builder style the tag was actually rendered in (Short "M" / Medium
@@ -373,6 +377,15 @@ _EXTRA_NAME_KEY_PREFIXES = (
     "item_mining_mininglaser_",
 )
 
+# An item's short label (#570): the name the game shows in tight spaces, under
+# the item's key plus "_short" (now and then "_short_0"), some with CIG's ",P"
+# parallel-form suffix, such as an armour set's name on its own
+# (item_Name_srvl_armor_heavy_armor_02_short = "Dust Devil"). No one owns a
+# short label, so it is not in known_item_names. Matched at the end of the key
+# only, because "short" also sits inside real items' keys
+# (item_Namecrlf_medgun_01_short_grey01, item_NameRSI_DefaultRadar_ShortRange).
+_SHORT_LABEL_KEY_RE = re.compile(r"_short(?:_\d+)?(?:,p)?$", re.IGNORECASE)
+
 # Default (open, close) pair(s) to parse when a caller doesn't pass its own —
 # today's original hardcoded Square-only behavior, preserved exactly so every
 # existing caller that doesn't know about #352 is unaffected.
@@ -637,19 +650,176 @@ def known_item_names(
     configured style, so on a non-Square install real items would read as
     unmatched -- precisely what recovery must not mistake for a
     foreign-editor name.
+
+    Items' short labels are left out (#570, ``_SHORT_LABEL_KEY_RE``). They
+    name no item anyone owns, and with them in, the repair turned an old
+    logged name that ends in a set's name into that label: older Spanish logs
+    say "Piernas de la armadura Dust Devil" where today's file says
+    "Dust Devil (Piernas)", and the repair saved it as "Dust Devil", which
+    matches no blueprint. A text that is also some item's own name stays in.
     """
-    default_values = default_values or {}
-    names: "set[str]" = set()
-    for e in entries:
-        key = getattr(e, "key", "") or ""
-        val = getattr(e, "original_value", "") or ""
+    return item_name_sets(entries, enclosings, default_values)[0]
+
+
+def short_label_names(
+    entries,
+    enclosings: "Sequence[tuple[str, str]] | None" = None,
+    default_values: "dict[str, str] | None" = None,
+) -> "set[str]":
+    """Every item short label in *entries* that is not also an item's own
+    name, normalized as ``known_item_names`` normalizes its names (#570).
+
+    These are what the #372 repair could save in the owned set before #570
+    left the labels out of its catalogue. ``MainWindow._repair_foreign_owned_
+    names`` drops them on load (``owned_items.drop_short_labels``). A label
+    that is also some item's own name is left out here, so an owned item of
+    that name is never dropped.
+    """
+    return item_name_sets(entries, enclosings, default_values)[1]
+
+
+def _item_names(pairs, enclosings, default_values):
+    """``(key, is_short_label, name)`` for every item or vehicle name in
+    *pairs* (loc key, value), normalized as the Owned set and the Blueprint
+    Tracker normalize them, with each key's ``default_values`` value as its
+    stock value. A name that normalizes to nothing is left out."""
+    for key, val in pairs:
         kl = key.lower()
         if (kl.startswith("item_name") or kl.startswith("vehicle_name")
                 or kl.startswith(_EXTRA_NAME_KEY_PREFIXES)):
             nm = normalize_item_name(val, enclosings, default_values.get(key) or None)
             if nm:
-                names.add(nm)
-    return names
+                yield key, bool(_SHORT_LABEL_KEY_RE.search(key)), nm
+
+
+def item_name_sets(
+    entries,
+    enclosings: "Sequence[tuple[str, str]] | None" = None,
+    default_values: "dict[str, str] | None" = None,
+) -> "tuple[set[str], set[str], dict[str, str]]":
+    """``(known_item_names, short_label_names, names_by_key)`` from one pass
+    over *entries*, for the caller that needs them all
+    (``MainWindow._rebuild_blueprint_metadata`` on every load), since each
+    walks every entry and normalizes every name.
+
+    ``names_by_key`` maps each item's loc key, lower-cased, to its name in
+    the loaded strings, short labels left out (#569): what
+    ``owned_items.rename_across_languages`` renames an owned name to."""
+    real: "set[str]" = set()
+    labels: "set[str]" = set()
+    by_key: "dict[str, str]" = {}
+    pairs = (
+        (getattr(e, "key", "") or "", getattr(e, "original_value", "") or "")
+        for e in entries
+    )
+    for key, label, nm in _item_names(pairs, enclosings, default_values or {}):
+        if label:
+            labels.add(nm)
+        else:
+            real.add(nm)
+            by_key[key.lower()] = nm
+    return real, labels - real, by_key
+
+
+def item_keys_by_name(values: "dict[str, str]") -> "dict[str, tuple[str, ...]]":
+    """Every item or vehicle name in a parsed base.ini (*values*, loc key to
+    value) mapped to its loc keys, lower-cased and sorted, short labels left
+    out (#569).
+
+    Built from another language's cached base.ini, so an owned name saved
+    while that language was loaded can be traced to its item. Each value is
+    its own stock value, which normalizes it the way a load of that language
+    normalized it (``default_values`` is the loaded language's base.ini).
+    The keys are tuples, not sets: a window keeps one table per cached file
+    for the session, and a tuple takes about 40% less memory.
+    """
+    keys: "dict[str, set[str]]" = {}
+    for key, label, nm in _item_names(values.items(), None, values):
+        if not label:
+            keys.setdefault(nm, set()).add(key.lower())
+    return {nm: tuple(sorted(ks)) for nm, ks in keys.items()}
+
+
+def _same_file(a, b) -> bool:
+    """True when *a* and *b* name one file, however each is spelled (case,
+    separators, the long-path prefix, a junction on the way). False when
+    either cannot be read, a URL among them."""
+    try:
+        return os.path.samefile(a, b)
+    except (OSError, ValueError):
+        return False
+
+
+def other_language_files(files, loaded, active_channel) -> list:
+    """One cached base.ini for each language but the loaded one (#569):
+    the active channel's copy when it has one, otherwise the first in
+    *files*' order.
+
+    *files* is ``AppSettings.get_cached_base_ini_paths``' ``(channel,
+    language, path)`` list and *loaded* the file the ``global`` source
+    loads. Every copy of the loaded file's language is left out, since its
+    names are the loaded names, and one copy of each other language is
+    enough to trace a name to its loc key, so a window keeps one table per
+    language rather than one per channel and language. A name only one
+    channel's build of a language uses (an item renamed between builds) is
+    not traced through another channel's copy. When *loaded* is none of
+    *files* (a URL or a file of the user's own), every language counts.
+    """
+    loaded_language = None
+    if loaded:
+        loaded_language = next(
+            (language for _channel, language, path in files if _same_file(path, loaded)), None,
+        )
+    chosen: dict = {}
+    for channel, language, path in files:
+        if language == loaded_language:
+            continue
+        if language not in chosen or channel == active_channel:
+            chosen[language] = path
+    return list(chosen.values())
+
+
+def read_item_keys_by_name(paths, cached=None) -> dict:
+    """``{path: ((size, mtime_ns), item_keys_by_name(its values))}`` for
+    each base.ini in *paths* (#569, ``other_language_files``' choice).
+
+    *cached* is an earlier call's result: a file whose size and modified
+    time are unchanged is not read again, so a window reads each file once
+    a session. A file that cannot be read (its stat fails, or it holds
+    something and no line could be read from it) gets ``(None, {})``: no
+    names and no stamp, so the next call reads it again, and the window can
+    tell its tables are not complete (``MainWindow._language_tables_complete``),
+    which holds back the #570 label drop. An empty file counts as read, with
+    no names: there is nothing in it to wait for, and one a cut-off download
+    left would otherwise hold the drop back for as long as it is there.
+    Reads files, so ``MainWindow`` never runs it on the GUI thread
+    (``workers.read_language_name_tables``).
+    """
+    from src.parser.ini_parser import parse_ini_file
+
+    cached = cached or {}
+    tables: dict = {}
+    for path in paths:
+        key = str(path)
+        try:
+            st = os.stat(path)
+        except OSError as e:
+            logger.warning(f"Owned names: could not read {path}: {e} (#569)")
+            tables[key] = (None, {})
+            continue
+        stamp = (st.st_size, st.st_mtime_ns)
+        hit = cached.get(key)
+        if hit is not None and hit[0] == stamp:
+            tables[key] = hit
+            continue
+        values = parse_ini_file(path)
+        if not values and st.st_size:
+            logger.warning(f"Owned names: nothing could be read from {path} (#569)")
+            tables[key] = (None, {})
+            continue
+        tables[key] = (stamp, item_keys_by_name(values))
+        logger.info(f"Owned names: read {len(tables[key][1])} item names from {path} (#569)")
+    return tables
 
 
 def build_blueprint_metadata(

@@ -408,10 +408,19 @@ class _RunStub(_NextStub):
     def __init__(self, queue):
         super().__init__(queue)
         self._known_item_names = set()
+        self._item_names_by_key = {}
         self._bp_scan_new_names = set()
 
     def _reap_worker(self, worker):
         pass
+
+    def _other_language_item_keys(self):
+        """No other language cached (#569's rename is tested in
+        test_owned_names_language.py)."""
+        return iter(())
+
+    def _rename_from_other_languages(self, names, what):
+        return MainWindow._rename_from_other_languages(self, names, what)
 
     def _on_blueprint_log_scan_finished(self, result):
         MainWindow._on_blueprint_log_scan_finished(self, result)

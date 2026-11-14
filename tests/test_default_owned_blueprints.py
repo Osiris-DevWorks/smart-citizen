@@ -443,6 +443,7 @@ class _Stub:
     _seed_default_owned_blueprints = MainWindow._seed_default_owned_blueprints
     _rebuild_blueprint_metadata = MainWindow._rebuild_blueprint_metadata
     _repair_foreign_owned_names = MainWindow._repair_foreign_owned_names
+    _rename_from_other_languages = MainWindow._rename_from_other_languages
     _report_blueprints_added = MainWindow._report_blueprints_added
     _queue_deferred_starter_report = MainWindow._queue_deferred_starter_report
     _flush_deferred_starter_report = MainWindow._flush_deferred_starter_report
@@ -467,6 +468,14 @@ class _Stub:
 
     def statusBar(self):
         return self._status_bar
+
+    def _other_language_item_keys(self):
+        """No other language cached (#569's rename is tested in
+        test_owned_names_language.py)."""
+        return iter(())
+
+    def _language_tables_complete(self):
+        return True
 
     def _recompute_owned(self):
         self.recompute_calls += 1
