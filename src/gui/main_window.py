@@ -267,6 +267,51 @@ def _scan_queue_for_root(root) -> list:
     return _channels_to_scan(present)
 
 
+# The last "data folder could not be reached" line _blueprint_notification_files
+# logged at WARNING. The same line again (the run's next channel, the next
+# scan, the overlay's start) goes to DEBUG, so one failure is one WARNING, and
+# a data folder that answers again clears it, so a later failure warns again.
+_data_folder_warning = ""
+
+
+def _blueprint_notification_files(channel: str, channel_dir) -> tuple:
+    """The loc files a read of *channel*'s logs takes the "Received
+    Blueprint" notification's text from, besides the English text it always
+    looks for (#564). The game logs the notification in the language it
+    shows, so these are that channel's own files, whichever channel is
+    active: its base.ini for the selected language as the table reads it
+    (the English one until the language's own is fetched), and the
+    global.ini applied to the game in its install folder *channel_dir*, which
+    holds what the game shows (an override once applied, or another tool's
+    file).
+
+    Named on the main thread without making any folder (one check sees
+    whether the language's own file is there), and read on the worker's,
+    since each can be about 11 MB. When the data folder cannot be reached
+    only the applied file is named: the read is of the install's logs and
+    must not fail on the data folder. That is one WARNING for as long as the
+    same failure lasts (``_data_folder_warning``)."""
+    global _data_folder_warning
+    language = AppSettings.get_selected_language()
+    files = []
+    try:
+        base_ini = AppSettings.get_base_ini_leaf(language, channel)
+        if language != AppSettings.DEFAULT_LANGUAGE and not base_ini.exists():
+            # What the table reads until the language's own file is fetched
+            # (AppSettings.get_global_source_base_ini, #502).
+            base_ini = AppSettings.get_base_ini_leaf(AppSettings.DEFAULT_LANGUAGE, channel)
+        files.append(base_ini)
+        _data_folder_warning = ""
+    except OSError as exc:
+        message = (f"Blueprint log read: the data folder could not be reached ({exc}), so "
+                   f"the notification's text comes from the game's applied global.ini alone")
+        logger.log(logging.DEBUG if message == _data_folder_warning else logging.WARNING,
+                   message)
+        _data_folder_warning = message
+    files.append(AppSettings.get_applied_global_ini(channel_dir, language))
+    return tuple(files)
+
+
 def _normalized_folder(path) -> str:
     """*path* as text two folders can be compared by (#486): absolute, without
     the ``\\\\?\\`` long-path prefix, one kind of separator, no trailing
@@ -8195,7 +8240,10 @@ class MainWindow(QMainWindow):
         so a blueprint earned on a test server must not be marked owned.
         Skipped quietly for other channels and without a valid install path:
         the drawer still works, it just won't pick up new blueprints on its
-        own. ``_on_channel_changed`` restarts it for the new channel.
+        own. ``_on_channel_changed`` restarts it for the new channel. A
+        language switch does not: the running game keeps the language it was
+        started in, so the watch keeps the notification texts it started
+        with (#564).
         """
         from src.utils.blueprint_log_scanner import LIVE_LOG_NAME
         channel = AppSettings.get_active_channel()
@@ -8207,7 +8255,9 @@ class MainWindow(QMainWindow):
             logger.warning("SCO: no valid channel install path; live blueprint watch off")
             return
         since = AppSettings.get_blueprint_log_watermark(channel=channel)
-        self._sco_log_worker = LiveBlueprintLogWorker(Path(channel_path) / LIVE_LOG_NAME, since)
+        self._sco_log_worker = LiveBlueprintLogWorker(
+            Path(channel_path) / LIVE_LOG_NAME, since,
+            _blueprint_notification_files(channel, channel_path))
         self._sco_log_worker.blueprints_found.connect(self._on_sco_blueprints_found)
         self._sco_log_worker.start()
 
@@ -8349,7 +8399,8 @@ class MainWindow(QMainWindow):
         since = _blueprint_scan_since(
             self._bp_scan_force_rescan, AppSettings.get_blueprint_log_watermark(channel=channel)
         )
-        self._bp_log_scan_worker = BlueprintLogScanWorker(channel_path, since)
+        self._bp_log_scan_worker = BlueprintLogScanWorker(
+            channel_path, since, _blueprint_notification_files(channel, channel_path))
         # #386: a silent (startup auto-scan) run gets no progress dialog --
         # it's a background operation, not something the user launched, so
         # popping a window the moment the app starts would defeat the point.

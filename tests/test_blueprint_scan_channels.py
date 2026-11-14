@@ -248,12 +248,21 @@ class _FakeSignal:
         self.slots.append(slot)
 
 
+def _stub_loc_files(channel, channel_dir):
+    """What the fixtures below put in place of
+    main_window._blueprint_notification_files (#564): a record of the channel
+    and folder it was asked about, since the real one reads the settings and
+    names files in the data folder (tests/test_blueprint_scan_language.py)."""
+    return ("loc files for", channel, str(channel_dir))
+
+
 class _FakeWorker:
     created: list = []
 
-    def __init__(self, channel_path, since):
+    def __init__(self, channel_path, since, loc_files=()):
         self.channel_path = channel_path
         self.since = since
+        self.loc_files = loc_files
         self.progress = _FakeSignal()
         self.progress_pct = _FakeSignal()
         self.error = _FakeSignal()
@@ -309,6 +318,7 @@ def fake_worker(monkeypatch, tmp_path):
     monkeypatch.setattr(AppSettings, "get_sc_install_root", staticmethod(lambda: root))
     monkeypatch.setattr(AppSettings, "get_blueprint_log_watermark", staticmethod(lambda channel=None: None))
     monkeypatch.setattr(main_window, "BlueprintLogScanWorker", _FakeWorker)
+    monkeypatch.setattr(main_window, "_blueprint_notification_files", _stub_loc_files)
     return tmp_path
 
 
@@ -364,6 +374,10 @@ class TestTheWorkerStartRefusesTestChannels:
         stub = _NextStub([channel])
         stub._start_next_blueprint_scan()
         assert [w.channel_path for w in _FakeWorker.created] == [str(fake_worker / channel)]
+        # #564: with that channel's files that hold the notification's text
+        # in the language the game shows (tests/test_blueprint_scan_language.py).
+        assert _FakeWorker.created[0].loc_files == (
+            "loc files for", channel, str(fake_worker / channel))
 
     def test_the_progress_goes_to_the_status_bar_through_the_remembering_slot(
             self, fake_worker):
@@ -438,6 +452,7 @@ def run_env(json_backend, monkeypatch, tmp_path):
     monkeypatch.setattr(AppSettings, "get_sc_install_root", staticmethod(lambda: root))
     monkeypatch.setattr(AppSettings, "get_active_channel", staticmethod(lambda: "PTU"))
     monkeypatch.setattr(main_window, "BlueprintLogScanWorker", _FakeWorker)
+    monkeypatch.setattr(main_window, "_blueprint_notification_files", _stub_loc_files)
     return tmp_path
 
 
@@ -464,6 +479,15 @@ class TestTheScanKeepsItsWatermarks:
         assert AppSettings.get_blueprint_log_watermark(channel="HOTFIX") == T2
         for channel in TEST_CHANNELS:
             assert AppSettings.get_blueprint_log_watermark(channel=channel) is None
+
+    def test_each_worker_gets_its_own_channels_loc_files_not_the_config_channels(self, run_env):
+        # #564 review: with PTU selected, LIVE's logs are read with LIVE's
+        # files and HOTFIX's with HOTFIX's, each from its own install folder.
+        _walk_run(str(run_env), _result(T1, "A"), _result(T2, "B"))
+        assert [w.loc_files for w in _FakeWorker.created] == [
+            ("loc files for", "LIVE", str(run_env / "LIVE")),
+            ("loc files for", "HOTFIX", str(run_env / "HOTFIX")),
+        ]
 
     def test_the_next_run_hands_each_worker_its_saved_watermark(self, run_env):
         _walk_run(str(run_env), _result(T1, "A"), _result(T2, "B"))

@@ -10,14 +10,23 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.utils.blueprint_log_scanner import GameLogTail
+from src.utils.blueprint_log_scanner import ENGLISH_NOTIFICATION, GameLogTail
 
 pytestmark = [pytest.mark.unit]
+
+# #564: the notification's text in the Spanish global.ini languages/sources.json maps.
+ENGLISH_AND_SPANISH = (ENGLISH_NOTIFICATION, "Plano recibido: %s")
 
 
 def _event(ts_iso: str, name: str) -> str:
     return (f"<{ts_iso}> [Notice] <SHUDEvent_OnNotification> Added notification "
             f'"Received Blueprint: {name}: " [7] to queue. New queue size: 1\n')
+
+
+def _spanish_event(ts_iso: str, name: str) -> str:
+    """The line a player who plays in Spanish logs for a received blueprint."""
+    return (f"<{ts_iso}> [Notice] <SHUDEvent_OnNotification> Added notification "
+            f'"Plano recibido: {name}: " [8] to queue. New queue size: 1\n')
 
 
 def _append(path, text):
@@ -151,3 +160,30 @@ def test_since_follows_the_newest_event(tmp_path):
     tail = GameLogTail(log)
     tail.poll()
     assert tail.since == datetime(2026, 10, 7, 20, 9, tzinfo=timezone.utc)
+
+
+def test_spanish_events_are_read_with_their_template(tmp_path):
+    """#564: the game logs the notification in the language it shows."""
+    log = tmp_path / "Game.log"
+    log.write_text(_event("2026-10-07T20:01:00.000Z", "Agni")
+                   + _spanish_event("2026-10-07T20:02:00.000Z", "Pistola Coda"),
+                   encoding="utf-8")
+    assert _names(GameLogTail(log).poll()) == ["Agni"]       # English alone, the bug
+    tail = GameLogTail(log, templates=ENGLISH_AND_SPANISH)
+    assert _names(tail.poll()) == ["Agni", "Pistola Coda"]
+    _append(log, _spanish_event("2026-10-07T20:05:00.000Z", "Casco Antium"))
+    assert _names(tail.poll()) == ["Casco Antium"]
+    assert tail.since == datetime(2026, 10, 7, 20, 5, tzinfo=timezone.utc)
+
+
+def test_a_spanish_name_split_across_polls_stays_intact(tmp_path):
+    log = tmp_path / "Game.log"
+    name = "Cañón láser S3"
+    data = _spanish_event("2026-10-07T20:01:00.000Z", name).encode("utf-8")
+    cut = data.index("ñ".encode("utf-8")) + 1   # one byte into the 2-byte ñ
+    log.write_bytes(data[:cut])
+    tail = GameLogTail(log, templates=ENGLISH_AND_SPANISH)
+    assert tail.poll() == []
+    with open(log, "ab") as fh:
+        fh.write(data[cut:])
+    assert _names(tail.poll()) == [name]
