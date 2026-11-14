@@ -29,6 +29,7 @@ Smart Citizen にコードを貢献してくださった方々に感謝します
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
+- **RWolfyo**
 
 ## 翻訳者
 

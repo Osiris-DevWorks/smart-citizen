@@ -220,6 +220,7 @@ Thanks to those who've contributed code to Smart Citizen:
 - [**scubamount**](https://github.com/scubamount)
 - **hkstrongside**
 - [**odw-okano**](https://github.com/odw-okano)
+- [**RWolfyo**](https://github.com/RWolfyo)
 
 ## Acknowledgments
 

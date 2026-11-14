@@ -29,6 +29,7 @@ Grazie a chi ha contribuito al codice di Smart Citizen:
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
+- **RWolfyo**
 
 ## Traduttori
 
