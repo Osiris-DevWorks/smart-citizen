@@ -29,6 +29,7 @@
 - **scubamount**
 - **hkstrongside**
 - **odw-okano**
+- **RWolfyo**
 
 ## Переводчики
 
