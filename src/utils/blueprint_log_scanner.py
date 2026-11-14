@@ -13,6 +13,14 @@ continuation lines quoting the notification; those are UI echoes, so we key
 only on the ``<SHUDEvent_OnNotification> Added notification`` line and de-dup
 by display name.
 
+The game logs the notification in the language it shows (#564): a player
+who plays in Spanish logs ``"Plano recibido: <name>: "``. That text comes
+from the loc key ``NOTIFICATION_LOC_KEY``, English ``Received Blueprint: %s``.
+So the functions here take templates, that key's text in each language to
+look for, with ``%s`` where the name goes, and look for English alone when
+given none. :func:`notification_templates` reads them from the loc files the
+caller names.
+
 This module is Qt-free and settings-free: it takes explicit paths and returns
 plain data so it unit-tests with fixture strings. Name *normalization* and the
 watermark *persistence* live elsewhere (``owned_items.normalize_item_name`` and
@@ -39,7 +47,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional, Sequence, Set
+from typing import Callable, Iterator, List, Optional, Sequence, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +56,39 @@ logger = logging.getLogger(__name__)
 # (UTC) to compare cleanly against the ``...Z`` timestamps the log carries.
 BLUEPRINT_EPOCH = datetime(2026, 3, 1, tzinfo=timezone.utc)
 
-# The one authoritative "you received a blueprint" line. The name is captured
-# non-greedily up to the trailing ``: "`` so embedded quotes survive intact
-# (e.g. ``Demeco "Purgatory Camo" LMG``). Anchored on the
+#: The loc key whose text the game shows, and logs, when the player receives
+#: a blueprint (#564).
+NOTIFICATION_LOC_KEY = "crafting_hud_notification_received_blueprint"
+
+#: That key's text in the game's own English global.ini, with ``%s`` where
+#: the game puts the blueprint's name. Always looked for: a log written while
+#: the game showed English holds it, whatever language is selected now.
+ENGLISH_NOTIFICATION = "Received Blueprint: %s"
+
+# Where a template takes the blueprint's name.
+_NAME_SLOT = "%s"
+
+# Every "Added notification" line, blueprint or not. The game logs the
+# notification's text (the template with the name in place of %s), then
+# ``: "`` and its id in brackets, so the text is captured non-greedily up to
+# the first ``: " [``, and embedded quotes survive intact (e.g.
+# ``Demeco "Purgatory Camo" LMG``). Anchored on the
 # ``<SHUDEvent_OnNotification> Added notification`` prefix (not just the
-# ``Received Blueprint: ...`` text) so the ``<UpdateNotificationItem>`` echo
-# lines and bare continuation lines that quote the same notification are
-# never mistaken for a second, distinct event.
-_EVENT_RE = re.compile(
+# notification's text) so the ``<UpdateNotificationItem>`` echo lines and
+# bare continuation lines that quote the same notification are never
+# mistaken for a second, distinct event. Whether a notification is a
+# blueprint is decided from its text, against the templates (_name_in).
+_NOTIFICATION_RE = re.compile(
     r"<(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)>"
     r".*?<SHUDEvent_OnNotification> Added notification "
-    r'"Received Blueprint: (?P<name>.*?): " \['
+    r'"(?P<text>.*?): " \['
 )
+
+# Every line _NOTIFICATION_RE can match holds this, so a line without it is
+# rejected before the regex runs: the vast majority of log lines are not
+# notifications. It holds no text of the notification itself, so it is the
+# same check whatever language the game shows.
+_NOTIFICATION_MARK = "<SHUDEvent_OnNotification> Added notification"
 
 # The live (current-session) log at the channel install root, plus the rotated
 # copies beside it.
@@ -110,16 +139,113 @@ def _parse_ts(raw: str) -> Optional[datetime]:
         return None
 
 
-def parse_events(text: str) -> Iterator[BlueprintEvent]:
+def notification_templates(loc_files: Sequence = ()) -> Tuple[str, ...]:
+    """The templates a scan looks for: English, then the text of
+    ``NOTIFICATION_LOC_KEY`` in each of *loc_files* that has it, each text
+    once, in that order (#564).
+
+    The game logs the notification in the language it shows, so the caller
+    names the files that say what it shows (the base.ini Smart Citizen shows
+    and applies, the global.ini applied to the game). A file that is missing,
+    cannot be read or has no such key adds nothing. Each can be about 11 MB,
+    so this runs on a worker's thread.
+    """
+    templates = [ENGLISH_NOTIFICATION]
+    for path in loc_files:
+        text = (_loc_value(path, NOTIFICATION_LOC_KEY) or "").strip()
+        if text and text not in templates:
+            templates.append(text)
+    return tuple(templates)
+
+
+def _loc_value(path, key: str) -> Optional[str]:
+    """*key*'s value in the INI file at *path*, or None when the file or the
+    key is not there. Keys are matched as ``mining_catalog.read_compendium``
+    matches them: a ``,P``-style suffix CIG puts after a key is dropped, and
+    case doesn't matter. Reading stops at the first match."""
+    wanted = key.lower()
+    try:
+        with open(path, encoding="utf-8-sig", errors="replace") as fh:
+            for line in fh:
+                k, sep, value = line.partition("=")
+                if sep and k.split(",", 1)[0].strip().lower() == wanted:
+                    return value.rstrip("\r\n")
+    except OSError as exc:
+        logger.debug("Blueprint log scan: no notification text read from %s: %s", path, exc)
+    return None
+
+
+def _template_pattern(template: str) -> Optional[re.Pattern]:
+    """The pattern a notification's text must match in full to be
+    *template*'s, with the name captured where ``%s`` is.
+
+    None for a template a scan cannot use: one without exactly one ``%s``
+    has no one name to read, and one with no letter or digit around its
+    ``%s`` would take every notification for a blueprint. Both ends are
+    stripped, as they are from the text it is matched against.
+    """
+    text = template.strip()
+    if text.count(_NAME_SLOT) != 1:
+        return None
+    before, after = text.split(_NAME_SLOT)
+    if not any(ch.isalnum() for ch in before + after):
+        return None
+    return re.compile(re.escape(before) + "(?P<name>.*)" + re.escape(after))
+
+
+def _template_patterns(templates: Sequence[str]) -> List[re.Pattern]:
+    """The patterns of *templates*, each once, the one with the most fixed
+    text first: a template that holds another's text and more (an override
+    such as ``Received Blueprint: %s (new)``) must be tried before the
+    shorter one, which would read the extra text as part of the name. A
+    template that cannot be used is logged and left out."""
+    found = {}
+    for template in templates:
+        pattern = _template_pattern(template)
+        if pattern is None:
+            logger.info("Blueprint log scan: not using the notification text %r, "
+                        "which needs one %%s with text around it", template)
+            continue
+        fixed = len(template.strip()) - len(_NAME_SLOT)
+        found.setdefault(pattern.pattern, (fixed, pattern))
+    ordered = sorted(found.values(), key=lambda entry: entry[0], reverse=True)
+    return [pattern for _, pattern in ordered]
+
+
+def _name_in(text: str, patterns: Sequence[re.Pattern]) -> str:
+    """The blueprint name in a notification's *text*: what the first template
+    that matches all of it holds where ``%s`` is, stripped. "" when none
+    does, as for every notification that is not a received blueprint."""
+    text = text.strip()
+    for pattern in patterns:
+        m = pattern.fullmatch(text)
+        if m:
+            return m.group("name").strip()
+    return ""
+
+
+def parse_events(
+    text: str, templates: Sequence[str] = (ENGLISH_NOTIFICATION,)
+) -> Iterator[BlueprintEvent]:
     """Yield every ``BlueprintEvent`` in *text*, unfiltered and in file order.
 
+    *templates* are the notification texts that mean a blueprint was
+    received, ``%s`` where the name goes (#564); English alone by default.
     De-duplication and time filtering are the caller's job (``scan_files``);
     this stays a pure line matcher so it is trivially testable.
     """
-    for m in _EVENT_RE.finditer(text):
+    yield from _events(text, _template_patterns(templates))
+
+
+def _events(text: str, patterns: Sequence[re.Pattern]) -> Iterator[BlueprintEvent]:
+    """parse_events with the templates' patterns already built, so a scan
+    builds them once rather than once a line."""
+    for m in _NOTIFICATION_RE.finditer(text):
+        name = _name_in(m.group("text"), patterns)
+        if not name:
+            continue
         ts = _parse_ts(m.group("ts"))
-        name = m.group("name").strip()
-        if ts is not None and name:
+        if ts is not None:
             yield BlueprintEvent(ts, name)
 
 
@@ -169,6 +295,7 @@ def scan_files(
     *,
     since: Optional[datetime] = None,
     progress: Optional[ProgressCallback] = None,
+    templates: Sequence[str] = (ENGLISH_NOTIFICATION,),
 ) -> ScanResult:
     """Scan *paths* for received-blueprint names, applying both time filters.
 
@@ -179,12 +306,14 @@ def scan_files(
     to tens of MB — rather than loaded whole, and unreadable files (permission
     errors, a mid-write live ``Game.log``) are skipped, not fatal:
     ``logbackups/`` can hold hundreds of rotated session logs and one bad file
-    shouldn't abort the whole scan.
+    shouldn't abort the whole scan. *templates* are as for
+    :func:`parse_events`.
     """
     names: Set[str] = set()
     latest: Optional[datetime] = None
     matched = 0
     total = len(paths)
+    patterns = _template_patterns(templates)
 
     for i, path in enumerate(paths):
         if progress is not None:
@@ -193,10 +322,10 @@ def scan_files(
             with open(path, encoding="utf-8", errors="replace") as fh:
                 for line in fh:
                     # Cheap reject before the regex — the vast majority of log
-                    # lines never mention a blueprint.
-                    if "Received Blueprint:" not in line:
+                    # lines are not notifications.
+                    if _NOTIFICATION_MARK not in line:
                         continue
-                    for ev in parse_events(line):
+                    for ev in _events(line, patterns):
                         if ev.timestamp < BLUEPRINT_EPOCH:
                             continue
                         if latest is None or ev.timestamp > latest:
@@ -225,10 +354,11 @@ def scan_channel(
     *,
     since: Optional[datetime] = None,
     progress: Optional[ProgressCallback] = None,
+    templates: Sequence[str] = (ENGLISH_NOTIFICATION,),
 ) -> ScanResult:
     """Discover and scan a channel's logs in one call (the worker entry point)."""
     paths = find_log_files(channel_dir, since=since)
-    return scan_files(paths, since=since, progress=progress)
+    return scan_files(paths, since=since, progress=progress, templates=templates)
 
 
 class GameLogTail:
@@ -246,7 +376,7 @@ class GameLogTail:
     restarts from the top. The identity check matters when the old log was
     short: a new one could pass its size between two polls. Events at or before
     *since* (the watermark) are dropped, so re-reading a rotated file never
-    double-counts. Same epoch floor as :func:`scan_files`.
+    double-counts. Same epoch floor and *templates* as :func:`scan_files`.
     """
 
     #: Bytes read per step, so a first poll of a large log never holds it
@@ -254,9 +384,16 @@ class GameLogTail:
     #: reason).
     READ_CHUNK = 1 << 20
 
-    def __init__(self, path, *, since: Optional[datetime] = None):
+    def __init__(
+        self,
+        path,
+        *,
+        since: Optional[datetime] = None,
+        templates: Sequence[str] = (ENGLISH_NOTIFICATION,),
+    ):
         self.path = Path(path)
         self.since = since
+        self._patterns = _template_patterns(templates)
         self._offset = 0
         self._file_id: Optional[int] = None
         # Kept as bytes, not text: a poll can end inside a multi-byte UTF-8
@@ -304,9 +441,9 @@ class GameLogTail:
     def _events_in(self, complete: bytes) -> List[BlueprintEvent]:
         found: List[BlueprintEvent] = []
         for line in complete.decode("utf-8", errors="replace").splitlines():
-            if "Received Blueprint:" not in line:
+            if _NOTIFICATION_MARK not in line:
                 continue
-            for ev in parse_events(line):
+            for ev in _events(line, self._patterns):
                 if ev.timestamp < BLUEPRINT_EPOCH:
                     continue
                 if self.since is not None and ev.timestamp <= self.since:

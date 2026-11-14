@@ -3170,6 +3170,25 @@ class AppSettings:
         return lang_dir / "base.ini"
 
     @staticmethod
+    def get_base_ini_leaf(language: "str | None" = None, channel: "str | None" = None) -> Path:
+        r"""The base.ini :meth:`get_base_ini_path` names for *language*, in
+        *channel*'s cache, without making the channel, cache or language
+        folder (#564). Both default to the selected language and the active
+        channel. For a read that must leave the disk alone, as
+        :meth:`get_dataforge_cache_leaf` is for the DataForge cache: a
+        blueprint scan reads LIVE's and HOTFIX's files whichever channel is
+        active, and must not make folders for a channel nobody selected.
+        """
+        if language is None:
+            language = AppSettings.get_selected_language()
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        cache_dir = AppSettings.get_user_data_dir() / channel / "cache"
+        if language == AppSettings.DEFAULT_LANGUAGE:
+            return cache_dir / "base.ini"
+        return cache_dir / "lang" / language / "base.ini"
+
+    @staticmethod
     def get_global_source_base_ini(language: "str | None" = None) -> Path:
         r"""The base.ini the ``global`` merge source reads for *language*
         (default: the selected language): its own base.ini when the active
@@ -3756,18 +3775,26 @@ class AppSettings:
         scattered ``if name == "LIVE"`` branches that don't cover the new
         channels.
         """
-        sc_lang = AppSettings.get_sc_language_id(language)
         channel_path = AppSettings.get_channel_install_path()
         if channel_path:
-            return Path(channel_path) / "data" / "Localization" / sc_lang / "global.ini"
+            return AppSettings.get_applied_global_ini(channel_path, language)
 
         game_path = Path(AppSettings.get_game_install_path())
         if game_path.name.upper() in {c.upper() for c in AppSettings.AVAILABLE_CHANNELS}:
-            return game_path / "data" / "Localization" / sc_lang / "global.ini"
-        return (
-            game_path / AppSettings.get_active_channel()
-            / "data" / "Localization" / sc_lang / "global.ini"
-        )
+            return AppSettings.get_applied_global_ini(game_path, language)
+        return AppSettings.get_applied_global_ini(
+            game_path / AppSettings.get_active_channel(), language)
+
+    @staticmethod
+    def get_applied_global_ini(channel_dir, language: str | None = None) -> Path:
+        r"""The applied ``global.ini`` in the channel install folder
+        *channel_dir*: ``{channel_dir}\data\Localization\{sc_language_id}\global.ini``,
+        for *language* (default: the selected one). :meth:`get_global_ini_path`
+        gives it for the active channel; a blueprint scan asks for the channel
+        it reads (#564). Names the file only, nothing is read or made.
+        """
+        sc_lang = AppSettings.get_sc_language_id(language)
+        return Path(channel_dir) / "data" / "Localization" / sc_lang / "global.ini"
 
     @staticmethod
     def is_local_source_same_as_apply_target(local_path: str, language: str) -> bool:

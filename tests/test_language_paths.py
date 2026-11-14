@@ -434,6 +434,50 @@ class TestGlobalIniPath:
         assert path == tmp_path / "data" / "Localization" / "french_(france)" / "global.ini"
 
 
+class TestAnotherChannelsFiles:
+    """#564: a blueprint scan reads LIVE's and HOTFIX's logs whichever
+    channel is active, so it names their base.ini and applied global.ini for
+    the channel it reads, and makes no folder doing so. Real paths
+    (tmp_profile), where the creating getters are compared with the new ones."""
+
+    @pytest.mark.parametrize("language", ["english", "spanish"])
+    def test_the_leaf_is_the_base_ini_path_of_the_active_channel(self, tmp_profile, language):
+        assert AppSettings.get_base_ini_leaf(language) == AppSettings.get_base_ini_path(language)
+
+    def test_the_leaf_defaults_to_the_selected_language(self, tmp_profile):
+        AppSettings.set_selected_language("german")
+        assert AppSettings.get_base_ini_leaf() == AppSettings.get_base_ini_path("german")
+
+    def test_another_channels_leaf_makes_no_folder(self, tmp_profile):
+        AppSettings.get_user_data_dir()          # made at every start
+        before = sorted(p.name for p in (tmp_profile / "data").iterdir())
+        assert AppSettings.get_base_ini_leaf("spanish", "HOTFIX") == (
+            tmp_profile / "data" / "HOTFIX" / "cache" / "lang" / "spanish" / "base.ini")
+        assert AppSettings.get_base_ini_leaf("english", "HOTFIX") == (
+            tmp_profile / "data" / "HOTFIX" / "cache" / "base.ini")
+        assert sorted(p.name for p in (tmp_profile / "data").iterdir()) == before
+
+    @pytest.mark.parametrize("language, folder", [
+        ("english", "english"), ("spanish", "spanish_(spain)"),
+        ("portuguese_br", "portuguese_(brazil)"),
+    ])
+    def test_the_applied_file_in_a_channel_folder(self, tmp_profile, language, folder):
+        live = tmp_profile / "StarCitizen" / "LIVE"
+        assert AppSettings.get_applied_global_ini(live, language) == (
+            live / "data" / "Localization" / folder / "global.ini")
+        assert AppSettings.get_applied_global_ini(live, language) == (
+            AppSettings.get_global_ini_path(language))
+        hotfix = tmp_profile / "StarCitizen" / "HOTFIX"
+        assert AppSettings.get_applied_global_ini(str(hotfix), language) == (
+            hotfix / "data" / "Localization" / folder / "global.ini")
+
+    def test_the_applied_file_defaults_to_the_selected_language(self, tmp_profile):
+        AppSettings.set_selected_language("french")
+        live = tmp_profile / "StarCitizen" / "LIVE"
+        assert AppSettings.get_applied_global_ini(live) == (
+            live / "data" / "Localization" / "french_(france)" / "global.ini")
+
+
 class TestIsLocalSourceSameAsApplyTarget:
     """Guards Map Language File against mapping a language's own apply
     target as its source (#409 follow-up) — see is_local_source_same_as_apply_target."""

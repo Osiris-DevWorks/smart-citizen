@@ -423,6 +423,10 @@ class BlueprintLogScanWorker(QThread):
     set or the watermark — the main-thread slot normalizes the returned raw
     names, unions them into the owned set, and advances the watermark, so all
     settings mutation stays on one thread.
+
+    *loc_files* are the files MainWindow names for the notification's text in
+    the language the game shows (#564). They are read here, not on the main
+    thread, because each can be about 11 MB.
     """
 
     progress = pyqtSignal(str)
@@ -430,13 +434,14 @@ class BlueprintLogScanWorker(QThread):
     finished = pyqtSignal(object)             # ScanResult, or None on error
     error = pyqtSignal(str)
 
-    def __init__(self, channel_dir, since):
+    def __init__(self, channel_dir, since, loc_files=()):
         super().__init__()
         self._channel_dir = channel_dir
         self._since = since  # datetime watermark, or None to use the epoch floor
+        self._loc_files = tuple(loc_files)
 
     def run(self):
-        from src.utils.blueprint_log_scanner import scan_channel
+        from src.utils.blueprint_log_scanner import notification_templates, scan_channel
         try:
             def _cb(done, total, name):
                 msg = (tr("enhancements.bp_scan_progress", file=name)
@@ -444,7 +449,10 @@ class BlueprintLogScanWorker(QThread):
                 self.progress.emit(msg)
                 self.progress_pct.emit(done, total, msg)
 
-            result = scan_channel(self._channel_dir, since=self._since, progress=_cb)
+            templates = notification_templates(self._loc_files)
+            logger.info("BP Scan: looking for %s", ", ".join(repr(t) for t in templates))
+            result = scan_channel(
+                self._channel_dir, since=self._since, progress=_cb, templates=templates)
             logger.info(
                 "BP Scan: %d new names across %d files (latest=%s)",
                 len(result.names), result.files_scanned, result.latest_timestamp,
@@ -467,20 +475,40 @@ class LiveBlueprintLogWorker(QThread):
     and updates the owned set (the persisted watermark stays the Scan's).
     Only started for LIVE or HOTFIX (#446). Stop with
     ``requestInterruption()`` + ``wait()``.
+
+    *loc_files* are as for ``BlueprintLogScanWorker`` (#564), read once when
+    the watch starts: the game keeps the language it was started in, whatever
+    the Config tab is switched to while it runs.
     """
 
     POLL_MS = 3000
 
     blueprints_found = pyqtSignal(object, object)  # (list[str] raw names, datetime newest)
 
-    def __init__(self, log_path, since):
+    def __init__(self, log_path, since, loc_files=()):
         super().__init__()
         self._log_path = log_path
         self._since = since
+        self._loc_files = tuple(loc_files)
 
     def run(self):
-        from src.utils.blueprint_log_scanner import GameLogTail
-        tail = GameLogTail(self._log_path, since=self._since)
+        from src.utils.blueprint_log_scanner import (
+            ENGLISH_NOTIFICATION, GameLogTail, notification_templates,
+        )
+        try:
+            templates = notification_templates(self._loc_files)
+        except Exception:
+            # Guarded as a poll is, so a failure here never ends the watch:
+            # it goes on with English alone. At WARNING, not ERROR, which
+            # would open the error box over the game for a failure the watch
+            # has already got past. Nothing is lost for good: the watermark
+            # is the Scan's, and the Scan reads its own texts.
+            logger.warning(
+                "SCO: could not read the notification texts, watching for English alone",
+                exc_info=True)
+            templates = (ENGLISH_NOTIFICATION,)
+        logger.info("SCO: watching Game.log for %s", ", ".join(repr(t) for t in templates))
+        tail = GameLogTail(self._log_path, since=self._since, templates=templates)
         failing = False
         while not self.isInterruptionRequested():
             try:
