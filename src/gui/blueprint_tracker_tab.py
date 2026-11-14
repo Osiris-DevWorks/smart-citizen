@@ -184,6 +184,9 @@ class BlueprintTrackerTab(QWidget):
         # #372: every real item name this install knows about, wider than
         # _blueprint_meta's keys -- see set_known_item_names.
         self._known_item_names: set = set()
+        # #569: renames imported names saved in another language, see
+        # set_name_renamer. None leaves them as they are.
+        self._rename_names = None
         # Gates the Apply Owned Tags button, same pattern as the
         # Enhancements tab's Generate Enhancements / Save Tag Changes:
         # disabled until the Owned set changes since the last apply.
@@ -553,6 +556,16 @@ class BlueprintTrackerTab(QWidget):
         """
         self._known_item_names = set(names or ())
 
+    def set_name_renamer(self, renamer) -> None:
+        """Receive the callable Import Owned Blueprints renames its names
+        with (#569): it takes a set of normalized names and returns ``(names,
+        {old: new})``, each one saved in another language renamed to its
+        name in the loaded strings (``MainWindow._rename_imported_names``).
+        This tab cannot see the loaded strings or the other languages'
+        files, so the window does the renaming, as a load does with the
+        Owned set."""
+        self._rename_names = renamer
+
     def _facet_value(self, name: str, attr: str):
         """The value of one facet attribute for *name*, or None if unknown."""
         item = self._blueprint_meta.get(name)
@@ -873,10 +886,23 @@ class BlueprintTrackerTab(QWidget):
             )
             return
 
+        # #569: a list exported while another language was loaded names its
+        # blueprints in that language. Renamed to the loaded names first, as
+        # a load renames the Owned set, and before match_import_names' #372
+        # recovery, which could fold such a name into a shorter item.
+        file_names = imported_names
+        renamed: dict = {}
+        if self._rename_names is not None:
+            imported_names, renamed = self._rename_names(imported_names)
         matched, unmatched = match_import_names(
             imported_names, set(self._blueprint_meta),
             catalogue=self._known_item_names, enclosings=enclosings,
         )
+        if renamed:
+            # The skipped list names what the file holds: a renamed name that
+            # still matched nothing is listed, and counted, as the file
+            # spells it.
+            unmatched = {nm for nm in file_names if renamed.get(nm, nm) in unmatched}
         skipped_list = "\n".join(sorted(unmatched, key=str.lower))
         if not matched:
             box = QMessageBox(self)

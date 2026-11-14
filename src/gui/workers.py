@@ -199,21 +199,97 @@ class AnimatedProgressDialog(QProgressDialog):
             self.setLabelText(message)
 
 
+def read_language_name_tables(cached: dict) -> "dict | None":
+    """The item name tables of one cached base.ini per language but the
+    loaded one (#569: ``blueprint_meta.other_language_files`` over
+    ``AppSettings.get_cached_base_ini_paths``, read by
+    ``blueprint_meta.read_item_keys_by_name``), reusing the tables in
+    *cached* for files that have not changed. What the Owned set's rename
+    traces a name saved in another language through.
+
+    Never runs on the GUI thread: ``FileLoaderWorker`` runs it on its own
+    thread, and a synchronous reload through :class:`LanguageNameTablesRead`.
+    A failure, which it logs at WARNING, never fails the load: the rename is
+    an extra. It hands back the tables it had then, with one more entry,
+    ``_NOT_LISTED``, that has no stamp, since which languages went unread is
+    unknown: the rename still uses the tables, and the #570 label drop waits
+    for a load that reads them all (``MainWindow._language_tables_complete``).
+    """
+    from src.utils.blueprint_meta import other_language_files, read_item_keys_by_name
+
+    try:
+        paths = other_language_files(
+            AppSettings.get_cached_base_ini_paths(),
+            AppSettings.get_source_path(AppSettings.SOURCE_GLOBAL),
+            AppSettings.get_active_channel(),
+        )
+        return read_item_keys_by_name(paths, cached=cached)
+    except Exception as e:
+        logger.warning(f"Owned names: could not read the other languages' names: {e} (#569)")
+        return {**cached, _NOT_LISTED: (None, {})}
+
+
+# read_language_name_tables' entry for a failure that left unknown which
+# languages' files it should have read: no path is "", and its stamp is None.
+_NOT_LISTED = ""
+
+
+class LanguageNameTablesRead:
+    """:func:`read_language_name_tables` on a thread of its own, for a
+    reload that merges on the GUI thread (#569).
+
+    ``MainWindow.perform_merge_and_reload`` (a channel switch, a data folder
+    change, a backup restore, a favourite prefix change) starts one before
+    it reads and merges the sources and takes :meth:`result` just before its
+    rebuild renames the Owned set, so the GUI thread reads none of these
+    files. It waits only if they take longer than the merge, which reads a
+    larger file. A daemon thread, so it never holds up the app's exit.
+    """
+
+    def __init__(self, cached: dict):
+        self._tables = None
+        self._thread = threading.Thread(
+            target=self._read, args=(dict(cached),),
+            name="language-name-tables", daemon=True,
+        )
+        self._thread.start()
+
+    def _read(self, cached: dict) -> None:
+        self._tables = read_language_name_tables(cached)
+
+    def result(self) -> dict:
+        """The tables (see :func:`read_language_name_tables`), once the read
+        is over."""
+        self._thread.join()
+        return self._tables
+
+
 class FileLoaderWorker(QThread):
     """Worker thread for loading INI files without blocking UI.
 
     Loads configured sources from settings and emits the merged entries plus
     pre-computed sort keys so the main thread doesn't need to re-parse base.ini.
+    It also reads the other languages' item name tables (#569,
+    :func:`read_language_name_tables`), reusing *language_tables*, the
+    window's tables when the load started, for files that have not changed.
     """
 
-    # (entries, default_values dict, pre-computed group sort keys)
-    finished = pyqtSignal(list, dict, list)
+    # (entries, default_values dict, pre-computed group sort keys,
+    #  the other languages' name tables, or None to keep the window's)
+    finished = pyqtSignal(list, dict, list, object)
     error = pyqtSignal(str)
     progress = pyqtSignal(str)
     progress_pct = pyqtSignal(int, int, str)  # (completed, total, message)
 
     # 3 phase boundaries: sources read → entries built → sort keys computed.
     _PHASE_TOTAL = 3
+
+    def __init__(self, language_tables: "dict | None" = None, parent=None):
+        super().__init__(parent)
+        # A copy: the window may replace its own while this runs. The
+        # tables in it are never changed, only replaced, so sharing them
+        # across threads is safe.
+        self._language_tables = dict(language_tables or {})
 
     def run(self):
         from src.gui.string_table_model import _group_sort_key
@@ -238,10 +314,11 @@ class FileLoaderWorker(QThread):
             self.progress_pct.emit(2, self._PHASE_TOTAL, tr("progress.computing_sort_keys"))
             self.progress.emit(tr("progress.computing_sort_keys"))
             sort_keys = [_group_sort_key(e.key) for e in entries]
+            language_tables = read_language_name_tables(self._language_tables)
 
             self.progress_pct.emit(3, self._PHASE_TOTAL, tr("progress.ready"))
             logger.info("FileLoaderWorker finished successfully")
-            self.finished.emit(entries, default_values, sort_keys)
+            self.finished.emit(entries, default_values, sort_keys, language_tables)
         except Exception as e:
             logger.exception(f"Error loading files: {e}")
             self.error.emit(str(e))
@@ -423,6 +500,10 @@ class BlueprintLogScanWorker(QThread):
     set or the watermark — the main-thread slot normalizes the returned raw
     names, unions them into the owned set, and advances the watermark, so all
     settings mutation stays on one thread.
+
+    *loc_files* are the files MainWindow names for the notification's text in
+    the language the game shows (#564). They are read here, not on the main
+    thread, because each can be about 11 MB.
     """
 
     progress = pyqtSignal(str)
@@ -430,13 +511,14 @@ class BlueprintLogScanWorker(QThread):
     finished = pyqtSignal(object)             # ScanResult, or None on error
     error = pyqtSignal(str)
 
-    def __init__(self, channel_dir, since):
+    def __init__(self, channel_dir, since, loc_files=()):
         super().__init__()
         self._channel_dir = channel_dir
         self._since = since  # datetime watermark, or None to use the epoch floor
+        self._loc_files = tuple(loc_files)
 
     def run(self):
-        from src.utils.blueprint_log_scanner import scan_channel
+        from src.utils.blueprint_log_scanner import notification_templates, scan_channel
         try:
             def _cb(done, total, name):
                 msg = (tr("enhancements.bp_scan_progress", file=name)
@@ -444,7 +526,10 @@ class BlueprintLogScanWorker(QThread):
                 self.progress.emit(msg)
                 self.progress_pct.emit(done, total, msg)
 
-            result = scan_channel(self._channel_dir, since=self._since, progress=_cb)
+            templates = notification_templates(self._loc_files)
+            logger.info("BP Scan: looking for %s", ", ".join(repr(t) for t in templates))
+            result = scan_channel(
+                self._channel_dir, since=self._since, progress=_cb, templates=templates)
             logger.info(
                 "BP Scan: %d new names across %d files (latest=%s)",
                 len(result.names), result.files_scanned, result.latest_timestamp,
@@ -467,20 +552,40 @@ class LiveBlueprintLogWorker(QThread):
     and updates the owned set (the persisted watermark stays the Scan's).
     Only started for LIVE or HOTFIX (#446). Stop with
     ``requestInterruption()`` + ``wait()``.
+
+    *loc_files* are as for ``BlueprintLogScanWorker`` (#564), read once when
+    the watch starts: the game keeps the language it was started in, whatever
+    the Config tab is switched to while it runs.
     """
 
     POLL_MS = 3000
 
     blueprints_found = pyqtSignal(object, object)  # (list[str] raw names, datetime newest)
 
-    def __init__(self, log_path, since):
+    def __init__(self, log_path, since, loc_files=()):
         super().__init__()
         self._log_path = log_path
         self._since = since
+        self._loc_files = tuple(loc_files)
 
     def run(self):
-        from src.utils.blueprint_log_scanner import GameLogTail
-        tail = GameLogTail(self._log_path, since=self._since)
+        from src.utils.blueprint_log_scanner import (
+            ENGLISH_NOTIFICATION, GameLogTail, notification_templates,
+        )
+        try:
+            templates = notification_templates(self._loc_files)
+        except Exception:
+            # Guarded as a poll is, so a failure here never ends the watch:
+            # it goes on with English alone. At WARNING, not ERROR, which
+            # would open the error box over the game for a failure the watch
+            # has already got past. Nothing is lost for good: the watermark
+            # is the Scan's, and the Scan reads its own texts.
+            logger.warning(
+                "SCO: could not read the notification texts, watching for English alone",
+                exc_info=True)
+            templates = (ENGLISH_NOTIFICATION,)
+        logger.info("SCO: watching Game.log for %s", ", ".join(repr(t) for t in templates))
+        tail = GameLogTail(self._log_path, since=self._since, templates=templates)
         failing = False
         while not self.isInterruptionRequested():
             try:

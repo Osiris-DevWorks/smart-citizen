@@ -48,6 +48,7 @@ from src.gui.workers import (
     EnhancementsGeneratorWorker,
     FileLoaderWorker,
     LanguageBaseDownloadWorker,
+    LanguageNameTablesRead,
     LiveBlueprintLogWorker,
     OrderSpinBoxDelegate,
     P4kExtractWorker,
@@ -354,6 +355,51 @@ def _scan_queue_for_root(root) -> list:
         return []
     present = {folder.name for folder in channel_dirs(Path(root))}
     return _channels_to_scan(present)
+
+
+# The last "data folder could not be reached" line _blueprint_notification_files
+# logged at WARNING. The same line again (the run's next channel, the next
+# scan, the overlay's start) goes to DEBUG, so one failure is one WARNING, and
+# a data folder that answers again clears it, so a later failure warns again.
+_data_folder_warning = ""
+
+
+def _blueprint_notification_files(channel: str, channel_dir) -> tuple:
+    """The loc files a read of *channel*'s logs takes the "Received
+    Blueprint" notification's text from, besides the English text it always
+    looks for (#564). The game logs the notification in the language it
+    shows, so these are that channel's own files, whichever channel is
+    active: its base.ini for the selected language as the table reads it
+    (the English one until the language's own is fetched), and the
+    global.ini applied to the game in its install folder *channel_dir*, which
+    holds what the game shows (an override once applied, or another tool's
+    file).
+
+    Named on the main thread without making any folder (one check sees
+    whether the language's own file is there), and read on the worker's,
+    since each can be about 11 MB. When the data folder cannot be reached
+    only the applied file is named: the read is of the install's logs and
+    must not fail on the data folder. That is one WARNING for as long as the
+    same failure lasts (``_data_folder_warning``)."""
+    global _data_folder_warning
+    language = AppSettings.get_selected_language()
+    files = []
+    try:
+        base_ini = AppSettings.get_base_ini_leaf(language, channel)
+        if language != AppSettings.DEFAULT_LANGUAGE and not base_ini.exists():
+            # What the table reads until the language's own file is fetched
+            # (AppSettings.get_global_source_base_ini, #502).
+            base_ini = AppSettings.get_base_ini_leaf(AppSettings.DEFAULT_LANGUAGE, channel)
+        files.append(base_ini)
+        _data_folder_warning = ""
+    except OSError as exc:
+        message = (f"Blueprint log read: the data folder could not be reached ({exc}), so "
+                   f"the notification's text comes from the game's applied global.ini alone")
+        logger.log(logging.DEBUG if message == _data_folder_warning else logging.WARNING,
+                   message)
+        _data_folder_warning = message
+    files.append(AppSettings.get_applied_global_ini(channel_dir, language))
+    return tuple(files)
 
 
 def _normalized_folder(path) -> str:
@@ -991,6 +1037,20 @@ class MainWindow(QMainWindow):
         # pool would misread as unmatched and could be resolved into an
         # unrelated shorter owned item).
         self._known_item_names: set[str] = set()
+        # #570: items' short labels that are no item's own name and no
+        # blueprint the tracker offers, which an older #372 repair could save
+        # in the owned set. _repair_foreign_owned_names drops them on load.
+        self._short_label_names: set[str] = set()
+        # #569: each item's loc key (lower-cased) to its name in the loaded
+        # strings, built with _known_item_names. An owned name saved in
+        # another language is renamed through it.
+        self._item_names_by_key: dict[str, str] = {}
+        # #569: the other languages' item names, read from one cached
+        # base.ini per language by each load (never on the GUI thread, see
+        # workers.read_language_name_tables) and kept for the session, each
+        # file read again only once it changes:
+        # {path: ((size, mtime_ns), {name: loc keys})}.
+        self._language_name_tables: dict = {}
         # #157 follow-up: per-blueprint-item metadata (mission names + ship
         # component type/class/size/grade) for the Blueprints shuttle filters.
         # Built once per load (pure function of the loaded strings), so
@@ -1156,6 +1216,9 @@ class MainWindow(QMainWindow):
 
         # Blueprint Tracker tab (#222: split out of the Enhancements tab)
         self.blueprint_tracker_tab = BlueprintTrackerTab()
+        # #569: Import Owned Blueprints renames names saved in another
+        # language, as the load does with the Owned set.
+        self.blueprint_tracker_tab.set_name_renamer(self._rename_imported_names)
         self.blueprint_tracker_tab.owned_items_changed.connect(self._recompute_owned)
         self.blueprint_tracker_tab.scan_logs_requested.connect(self._run_blueprint_log_scan)
         self.blueprint_tracker_tab.apply_owned_requested.connect(self._on_apply_owned_tags_clicked)
@@ -3526,6 +3589,10 @@ class MainWindow(QMainWindow):
         sources, merges them in hierarchy order, and updates the table display.
         """
         pending_edits = self._snapshot_pending_user_edits()
+        # #569: the other languages' item names are read on a thread of their
+        # own while this reload reads and merges the sources here, and taken
+        # just before the rebuild renames the Owned set through them.
+        language_tables = LanguageNameTablesRead(self._language_name_tables)
         try:
             # Load all configured sources
             sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
@@ -3557,6 +3624,8 @@ class MainWindow(QMainWindow):
                     AppSettings.get_favorite_prefix(),
                 )
                 self.apply_filters()
+                # #569, before the rebuild's rename
+                self._language_name_tables = language_tables.result()
                 self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
                 self._recompute_owned()  # #157
                 # Same as an async reload: _recompute_owned marked it red, and
@@ -6381,8 +6450,10 @@ class MainWindow(QMainWindow):
             self._loading_progress.close()
             self._loading_progress = None
 
-        # Load sources in background worker thread
-        self._loader_worker = FileLoaderWorker()
+        # Load sources in background worker thread. It also reads the other
+        # languages' item names for the Owned set's rename (#569), reusing
+        # the tables already read this session.
+        self._loader_worker = FileLoaderWorker(language_tables=self._language_name_tables)
 
         # Create reusable animated progress dialog
         self._loading_progress = AnimatedProgressDialog(message, parent=self, title="Loading")
@@ -6394,15 +6465,20 @@ class MainWindow(QMainWindow):
         self._loader_worker.progress_pct.connect(self._loading_progress.set_progress)
         self._loader_worker.start()
 
-    @pyqtSlot(list, dict, list)
+    @pyqtSlot(list, dict, list, object)
     @timed
-    def _on_loading_finished(self, entries: list, default_values: dict, sort_keys: list):
+    def _on_loading_finished(
+        self, entries: list, default_values: dict, sort_keys: list,
+        language_tables: "dict | None" = None,
+    ):
         """Handle file loading completion.
 
         Args:
             entries: Merged StringEntry list.
             default_values: Global source key→value dict (for the Default Value column).
             sort_keys: Pre-computed grouped sort keys (one per entry).
+            language_tables: The other languages' item name tables the worker
+                read (#569), or None to keep the window's.
         """
         # Close modal progress dialog and clean up worker FIRST so the modal
         # event loop exits before heavy synchronous UI work.
@@ -6449,6 +6525,9 @@ class MainWindow(QMainWindow):
             sort_keys=model_sort_keys,
         )
         self.apply_filters()
+        if language_tables is not None:
+            # Before the rebuild, whose Owned-set repair renames through them.
+            self._language_name_tables = language_tables
         self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
         self._recompute_owned()  # #157: weave [Owned] tags + populate Owned stars
         if self._reload_follows_clean_apply:
@@ -7992,7 +8071,7 @@ class MainWindow(QMainWindow):
         Blueprints shuttle filters on. Pure function of the loaded strings, so
         it runs on load — not on every owned-toggle (that path re-partitions
         the cached result)."""
-        from src.utils.blueprint_meta import build_blueprint_metadata, known_item_names
+        from src.utils.blueprint_meta import build_blueprint_metadata, item_name_sets
         from src.utils.owned_items import enclosings_from_tag_configs
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
@@ -8005,10 +8084,13 @@ class MainWindow(QMainWindow):
         # this install knows about, not just ones currently offered as a
         # mission reward. See known_item_names' and repair_foreign_owned_
         # names' docstrings for why recovery must anchor on this wider set.
-        self._known_item_names = known_item_names(
+        self._known_item_names, short_labels, self._item_names_by_key = item_name_sets(
             self.entries, enclosings=enclosings,
             default_values=self.default_values,
         )
+        # #570: a label's text that the Blueprint Tracker offers as a
+        # blueprint stays, since the user can mark that owned.
+        self._short_label_names = short_labels - self._bp_item_names
         if hasattr(self, "blueprint_tracker_tab"):
             self.blueprint_tracker_tab.set_known_item_names(self._known_item_names)
         self._repair_foreign_owned_names()
@@ -8168,7 +8250,9 @@ class MainWindow(QMainWindow):
             return set()
 
     def _repair_foreign_owned_names(self) -> None:
-        """One-shot cleanup of owned entries left by another editor (#372).
+        """Clean up the owned set's names on every load: names another editor
+        left (#372), items' short labels (#570) and names saved in another
+        language (#569).
 
         The scan-time fix only helps the next scan. A user who already imported
         foreign-formatted names has them sitting in the owned set, and
@@ -8188,6 +8272,23 @@ class MainWindow(QMainWindow):
         now, and silently deleting a user's owned marks is worse than
         leaving one unmatched.
 
+        The one name it drops without a match is an item's short label
+        (#570, ``self._short_label_names``): before #570 the catalogue held
+        the labels, so this repair, a scan or an import could save an old
+        logged name as one (an armour set's name on its own), and a label is
+        no item anyone owns. That runs first, before the #372 repair.
+
+        Then a name saved in another language is renamed to its name in the
+        loaded strings, through its loc key (#569,
+        ``owned_items.rename_across_languages``), which is how a language
+        switch renames the Owned set: the load after the switch runs this.
+        It comes before the #372 repair, which would otherwise read an old
+        language's name as decorated and could fold it into a shorter item
+        whose name it happens to end with. The label drop keeps a label's
+        text that another language uses as an item's own name, for this
+        rename: the Spanish file keeps the S-38's short label as "S-38
+        Pistol", the pistol's English name.
+
         Wrapped defensively: by the time this runs, ``self.entries`` has
         already loaded successfully, so a failure in this ancillary cleanup
         step must never surface as a load/merge failure to the caller -- it
@@ -8197,12 +8298,32 @@ class MainWindow(QMainWindow):
         if not catalogue:
             return
         try:
-            from src.utils.owned_items import repair_foreign_owned_names
+            from src.utils.owned_items import drop_short_labels, repair_foreign_owned_names
 
             owned = AppSettings.get_owned_items()
-            repaired, renamed = repair_foreign_owned_names(owned, catalogue)
-            if not renamed:
+            # A label's text another language uses as an item's own name is
+            # kept for the rename below (#569, drop_short_labels), and while
+            # a language's file went unread, every label waits for a load
+            # that reads it.
+            complete = self._language_tables_complete()
+            kept, dropped = drop_short_labels(
+                owned, self._short_label_names,
+                self._other_language_item_keys() if complete else None,
+            )
+            if not complete and owned & self._short_label_names:
+                logger.info(
+                    "Owned set: short labels kept for a later load, since another "
+                    "language's base.ini was not read (#569, #570)"
+                )
+            kept, moved = self._rename_from_other_languages(kept, "Owned set")
+            repaired, renamed = repair_foreign_owned_names(kept, catalogue)
+            if not dropped and not moved and not renamed:
                 return
+            for nm in sorted(dropped):
+                logger.info(
+                    f"Owned set: dropped {nm!r}, an item's short label that an earlier "
+                    f"name repair saved (#570)"
+                )
             for nm, real in renamed.items():
                 if real is not None:
                     logger.info(
@@ -8215,10 +8336,66 @@ class MainWindow(QMainWindow):
                     )
             AppSettings.set_owned_items(repaired)
             logger.info(
-                f"Owned set: {len(owned)} entries repaired to {len(repaired)} (#372)"
+                f"Owned set: {len(owned)} entries repaired to {len(repaired)} (#372, #569, #570)"
             )
         except Exception:
-            logger.exception("Owned-set repair failed (#372); leaving owned set untouched")
+            logger.exception(
+                "Owned-set repair failed (#372, #569, #570); leaving owned set untouched"
+            )
+
+    def _other_language_item_keys(self) -> list:
+        """The other languages' item names, each mapped to its loc keys
+        (``blueprint_meta.item_keys_by_name``), which
+        ``owned_items.rename_across_languages`` traces an owned name back
+        through (#569): one cached base.ini per language but the loaded one
+        (``blueprint_meta.other_language_files``), as the last load read
+        them into ``_language_name_tables``.
+
+        Reads no file. The async load reads them on its worker's thread
+        (``FileLoaderWorker``) and a synchronous reload on a thread of their
+        own (``workers.LanguageNameTablesRead``), each only once a session
+        per file unless the file changes, so neither a load, a scan, an
+        import nor the overlay's live watch reads one on the GUI thread.
+        """
+        return [table for _stamp, table in self._language_name_tables.values()]
+
+    def _language_tables_complete(self) -> bool:
+        """True when the last load read every other language's file it chose
+        (#569). A file it could not read, or a failure that left unknown which
+        files to read, has an entry with no stamp: whether an owned short
+        label is that language's item name is then unknown, so the #570 label
+        drop waits for a load that reads it (a Spanish load would otherwise
+        drop "S-38 Pistol", the pistol's English name, whenever the English
+        file was held by another program at the session's first load)."""
+        return all(stamp is not None for stamp, _table in self._language_name_tables.values())
+
+    def _rename_from_other_languages(self, names, what: str) -> "tuple[set, dict]":
+        """*names* with each one the loaded strings do not know renamed to its
+        name in them through its loc key (#569,
+        ``owned_items.rename_across_languages``), each rename logged at INFO
+        under *what*. Returns ``(names, {old: new})``. Shared by the load's
+        Owned-set repair, a scan's log names and Import Owned Blueprints, so
+        all three rename alike."""
+        from src.utils.owned_items import rename_across_languages
+
+        result, renamed = rename_across_languages(
+            set(names), self._known_item_names, self._other_language_item_keys(),
+            self._item_names_by_key,
+        )
+        for nm, new in renamed.items():
+            logger.info(
+                f"{what}: renamed {nm!r} -> {new!r}, its name in the loaded language (#569)"
+            )
+        return result, renamed
+
+    def _rename_imported_names(self, names) -> "tuple[set, dict]":
+        """Import Owned Blueprints' names, renamed as a load renames the Owned
+        set (#569), so a list exported while another language was loaded
+        matches the loaded language's blueprints. Returns ``(names, {old:
+        new})``: the tab lists a name it still cannot match as the file
+        spells it. Handed to the Blueprint Tracker tab, which cannot see the
+        loaded strings."""
+        return self._rename_from_other_languages(names, "Import Owned Blueprints")
 
     def _recompute_owned(self):
         """#157: weave/strip [Owned] tags on blueprint-list bullets to match the
@@ -8350,7 +8527,10 @@ class MainWindow(QMainWindow):
         so a blueprint earned on a test server must not be marked owned.
         Skipped quietly for other channels and without a valid install path:
         the drawer still works, it just won't pick up new blueprints on its
-        own. ``_on_channel_changed`` restarts it for the new channel.
+        own. ``_on_channel_changed`` restarts it for the new channel. A
+        language switch does not: the running game keeps the language it was
+        started in, so the watch keeps the notification texts it started
+        with (#564).
         """
         from src.utils.blueprint_log_scanner import LIVE_LOG_NAME
         channel = AppSettings.get_active_channel()
@@ -8362,7 +8542,9 @@ class MainWindow(QMainWindow):
             logger.warning("SCO: no valid channel install path; live blueprint watch off")
             return
         since = AppSettings.get_blueprint_log_watermark(channel=channel)
-        self._sco_log_worker = LiveBlueprintLogWorker(Path(channel_path) / LIVE_LOG_NAME, since)
+        self._sco_log_worker = LiveBlueprintLogWorker(
+            Path(channel_path) / LIVE_LOG_NAME, since,
+            _blueprint_notification_files(channel, channel_path))
         self._sco_log_worker.blueprints_found.connect(self._on_sco_blueprints_found)
         self._sco_log_worker.start()
 
@@ -8504,7 +8686,8 @@ class MainWindow(QMainWindow):
         since = _blueprint_scan_since(
             self._bp_scan_force_rescan, AppSettings.get_blueprint_log_watermark(channel=channel)
         )
-        self._bp_log_scan_worker = BlueprintLogScanWorker(channel_path, since)
+        self._bp_log_scan_worker = BlueprintLogScanWorker(
+            channel_path, since, _blueprint_notification_files(channel, channel_path))
         # #386: a silent (startup auto-scan) run gets no progress dialog --
         # it's a background operation, not something the user launched, so
         # popping a window the moment the app starts would defeat the point.
@@ -8552,6 +8735,17 @@ class MainWindow(QMainWindow):
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         scanned = {normalize_item_name(n, enclosings=enclosings) for n in raw_names}
         scanned.discard("")
+
+        # #569: a log holds each name as the game showed it, in the language
+        # the game was set to then, so an older log can name a blueprint in
+        # another language. It is renamed through its loc key, as the load
+        # does with the owned set, or the scan would add a second entry for
+        # an item already owned. Before the #372 recovery below, which could
+        # fold such a name into a shorter item whose name it ends with. Not
+        # tied to the Config channel as that recovery is (#446): it matches
+        # loc keys exactly, never a shorter name, and the next load would
+        # rename the name in any channel anyway.
+        scanned, _renamed = self._rename_from_other_languages(scanned, "BP scan")
 
         # #372: Star Citizen logs whatever name it was DISPLAYING, so a
         # player who previously ran a different localization editor has
