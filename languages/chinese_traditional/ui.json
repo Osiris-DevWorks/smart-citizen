@@ -3724,6 +3724,198 @@
       "ht": "",
       "at": "疊加層執行時，從 Game.log 讀取你在遊戲中獲得的藍圖並標記為已擁有。"
     },
+    "player_id_group": {
+      "ht": "",
+      "at": "玩家識別與地點（測試）"
+    },
+    "player_id": {
+      "ht": "",
+      "at": "標註其他玩家的名字"
+    },
+    "player_id_hint": {
+      "ht": "",
+      "at": "這是測試。當 Star Citizen 是最前面的視窗時，疊加層會讀取船艦和玩家上方的名牌，並在每個名字周圍畫出標註。你清單中的名字會使用清單的顏色。不會在任何地方查詢任何內容：清單由你在這裡維護。執行時會持續占用一個處理器核心，移動中的名字上的標註會稍有延遲。"
+    },
+    "player_id_unlisted": {
+      "ht": "",
+      "at": "也標註不在任何清單中的名字"
+    },
+    "player_id_unlisted_hint": {
+      "ht": "",
+      "at": "不在你任何清單中的名字，在兩次讀取一致後，也會以你在清單編輯器中選擇的顏色標註。"
+    },
+    "player_id_all": {
+      "ht": "",
+      "at": "測試：顯示所有玩家的資訊"
+    },
+    "player_id_all_hint": {
+      "ht": "",
+      "at": "用於檢查讀取是否能正常運作。疊加層讀取的每個名牌都會立即標註，並在上方顯示讀到的文字。可能的名字在兩次讀取一致之前為黃色，之後使用不在任何清單中的名字的顏色。不可能是名字的文字，例如 UNKNOWN 或船艦的序號，為青色。駕駛艙和選單中的文字也可能被點亮。"
+    },
+    "player_id_edit_lists": {
+      "ht": "",
+      "at": "編輯玩家清單…"
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "",
+      "at": "你的組織和玩家及其顏色，隨設定一起儲存。編輯器也會顯示遊戲中讀到的名字。"
+    },
+    "highlight_locations": {
+      "ht": "",
+      "at": "醒目標示地點"
+    },
+    "highlight_locations_hint": {
+      "ht": "",
+      "at": "這是測試。當某個地點標記點的文字在你的清單中時，它會獲得你指定顏色的外框。名字和地點由同樣的讀取完成，因此任一開關在疊加層執行時都會持續占用一個處理器核心。"
+    },
+    "player_id_distance": {
+      "ht": "",
+      "at": "只讀取下方有距離行的文字"
+    },
+    "player_id_distance_hint": {
+      "ht": "",
+      "at": "遊戲中的每個標記點都會在名字下方顯示距離，例如 6.2km。選單、駕駛艙和 HUD 文字沒有距離。開啟後，下方沒有距離行的文字會在讀取前被排除，因此選單和駕駛艙的文字不會被標註，讀取時間都用在真正的名牌上。如果你看到的名字沒有標註，例如步行玩家頭上的名字，請關閉此項。"
+    },
+    "locations_edit": {
+      "ht": "",
+      "at": "編輯地點…"
+    },
+    "locations_edit_hint": {
+      "ht": "",
+      "at": "要醒目標示的地點及其顏色。它們會隨設定一起儲存。"
+    },
+    "locations_title": {
+      "ht": "",
+      "at": "要醒目標示的地點（測試）"
+    },
+    "locations_intro": {
+      "ht": "",
+      "at": "依標記點顯示的樣子輸入地點，例如 NEW BABBAGE，並為它選擇顏色。疊加層讀到該文字時，會用該顏色在其周圍畫出外框。遊戲分兩行顯示的長名稱會逐行讀取，因此請輸入其中一行。"
+    },
+    "locations_location": {
+      "ht": "",
+      "at": "地點"
+    },
+    "locations_add": {
+      "ht": "",
+      "at": "新增地點"
+    },
+    "locations_bad_names": {
+      "ht": "",
+      "at": "以下內容無法從標記點讀取。地點為 3 到 40 個字元：字母、數字、空格、連字號、底線、句點和撇號：\n{names}"
+    },
+    "player_id_status_off": {
+      "ht": "",
+      "at": "啟動疊加層並開啟名字或地點，即可看到它運作。"
+    },
+    "player_id_status_starting": {
+      "ht": "",
+      "at": "正在準備…"
+    },
+    "player_id_status_no_game": {
+      "ht": "",
+      "at": "執行中。等待 Star Citizen 成為最前面的視窗。"
+    },
+    "player_id_status_looking": {
+      "ht": "",
+      "at": "正在讀取遊戲（{width}x{height}）。上次讀取耗時 {seconds} 秒：找到 {lines} 行文字，{skipped} 行因沒有距離行被排除，讀取 {read} 個名牌，標註 {marked} 個。"
+    },
+    "player_id_status_failed": {
+      "ht": "",
+      "at": "發生錯誤後已停止。詳細資訊請見「日誌」分頁。請停止並重新啟動疊加層以重試。"
+    },
+    "player_lists_title": {
+      "ht": "",
+      "at": "玩家清單（測試）"
+    },
+    "player_lists_intro": {
+      "ht": "",
+      "at": "為組織設定顏色，再把玩家放到它底下，或為玩家設定自己的顏色。名字會依名牌顯示的樣子以大寫字母比對。這裡不會查詢任何內容：你輸入你知道的資訊。"
+    },
+    "player_lists_orgs": {
+      "ht": "",
+      "at": "組織"
+    },
+    "player_lists_org": {
+      "ht": "",
+      "at": "組織"
+    },
+    "player_lists_color": {
+      "ht": "",
+      "at": "顏色"
+    },
+    "player_lists_add_org": {
+      "ht": "",
+      "at": "新增組織"
+    },
+    "player_lists_remove": {
+      "ht": "",
+      "at": "移除"
+    },
+    "player_lists_players": {
+      "ht": "",
+      "at": "玩家"
+    },
+    "player_lists_player": {
+      "ht": "",
+      "at": "玩家"
+    },
+    "player_lists_add_player": {
+      "ht": "",
+      "at": "新增玩家"
+    },
+    "player_lists_own_color": {
+      "ht": "",
+      "at": "（自訂顏色）"
+    },
+    "player_lists_org_color_hint": {
+      "ht": "",
+      "at": "這位玩家屬於某個組織，使用該組織的顏色。"
+    },
+    "player_lists_seen": {
+      "ht": "",
+      "at": "上次工作階段（{when}）：讀到的不在任何清單中的名字"
+    },
+    "player_lists_seen_none": {
+      "ht": "",
+      "at": "上次工作階段：尚未讀到名字"
+    },
+    "player_lists_past": {
+      "ht": "",
+      "at": "過往玩家：所有工作階段中不在任何清單中的名字，最新的在前"
+    },
+    "player_lists_past_hint": {
+      "ht": "",
+      "at": "每個名字及其最後一次被讀到的日期。只保存在這台電腦上，最多 {count} 個名字，且絕不會包含在設定備份中。"
+    },
+    "player_lists_clear_past": {
+      "ht": "",
+      "at": "清除過往玩家"
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "",
+      "at": "按下 OK 後清空遊戲中讀到的兩個名字清單。你的組織和玩家會保留。"
+    },
+    "player_lists_add_seen": {
+      "ht": "",
+      "at": "新增到玩家"
+    },
+    "player_lists_open_rsi": {
+      "ht": "",
+      "at": "開啟 RSI 頁面"
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "",
+      "at": "在你自己的瀏覽器中開啟該玩家在 RSI 網站上的頁面，供你閱讀。Smart Citizen 不會查詢任何內容。"
+    },
+    "player_lists_unlisted": {
+      "ht": "",
+      "at": "不在任何清單中的名字的顏色"
+    },
+    "player_lists_bad_names": {
+      "ht": "",
+      "at": "以下內容不能作為名牌。名字是由字母、數字、連字號和底線組成的一個詞，至少三個字元：\n{names}"
+    },
     "drawer": {
       "ht": "",
       "at": "疊加層抽屜"

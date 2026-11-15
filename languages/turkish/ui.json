@@ -3724,6 +3724,198 @@
       "ht": "",
       "at": "Katman çalışırken oyunda aldığınız planlar Game.log dosyasından okunur ve sahip olunan olarak işaretlenir."
     },
+    "player_id_group": {
+      "ht": "",
+      "at": "Oyuncu kimliği ve konumlar (test)"
+    },
+    "player_id": {
+      "ht": "",
+      "at": "Diğer oyuncuların adlarını işaretle"
+    },
+    "player_id_hint": {
+      "ht": "",
+      "at": "Bir test. Star Citizen öndeki pencere olduğu sürece katman, gemilerin ve oyuncuların üzerindeki isim etiketlerini okur ve her adın çevresine bir işaret çizer. Listelerinizdeki adlar listenin rengini alır. Hiçbir yerde hiçbir şey sorgulanmaz: listeleri burada siz tutarsınız. Çalışırken bir işlemci çekirdeğini meşgul eder ve işaretler hareket eden bir adın gerisinde kalır."
+    },
+    "player_id_unlisted": {
+      "ht": "",
+      "at": "Hiçbir listede olmayan adları da işaretle"
+    },
+    "player_id_unlisted_hint": {
+      "ht": "",
+      "at": "Listelerinizin hiçbirinde olmayan bir ad da, iki okuma aynı sonucu verince, liste düzenleyicide seçtiğiniz renkte bir işaret alır."
+    },
+    "player_id_all": {
+      "ht": "",
+      "at": "Test: Tüm oyuncuların bilgilerini göster"
+    },
+    "player_id_all_hint": {
+      "ht": "",
+      "at": "Okumanın çalışıp çalışmadığını denemek için. Katmanın okuduğu her etiket hemen işaretlenir ve okunan metin üstünde gösterilir. Olası bir ad, iki okuma aynı sonucu verene kadar sarıdır, sonra listede olmayan adların rengini alır. Ad olamayacak metin, örneğin UNKNOWN ya da bir geminin seri numarası, camgöbeğidir. Kokpit ve menü sözcükleri de yanabilir."
+    },
+    "player_id_edit_lists": {
+      "ht": "",
+      "at": "Oyuncu listelerini düzenle..."
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "",
+      "at": "Organizasyonlarınız, oyuncularınız ve renkleri, ayarlarınızla birlikte kaydedilir. Düzenleyici oyunda okunan adları da gösterir."
+    },
+    "highlight_locations": {
+      "ht": "",
+      "at": "Konumları vurgula"
+    },
+    "highlight_locations_hint": {
+      "ht": "",
+      "at": "Bir test. Bir konumun işaretçisi, metni listenizdeyse, ona verdiğiniz renkte bir çerçeve alır. Adlar ve konumlar aynı okumalarla okunur, bu yüzden iki anahtardan biri açıkken katman çalıştığı sürece bir işlemci çekirdeği meşgul olur."
+    },
+    "player_id_distance": {
+      "ht": "",
+      "at": "Yalnızca altında mesafe satırı olan metni oku"
+    },
+    "player_id_distance_hint": {
+      "ht": "",
+      "at": "Oyundaki her işaretçi, adının altında mesafesini gösterir, örneğin 6.2km. Menü, kokpit ve HUD metninde bu yoktur. Bu açıkken altında mesafe satırı olmayan metin okunmadan önce dışarıda bırakılır, böylece menü ve kokpit sözcükleri işaretlenmez ve okuma süresi gerçek etiketlere gider. Gördüğünüz bir ad işaret almıyorsa, örneğin yürüyen bir oyuncunun üzerinde, bunu kapatın."
+    },
+    "locations_edit": {
+      "ht": "",
+      "at": "Konumları düzenle..."
+    },
+    "locations_edit_hint": {
+      "ht": "",
+      "at": "Vurgulanacak konumlar ve renkleri. Ayarlarınızla birlikte kaydedilir."
+    },
+    "locations_title": {
+      "ht": "",
+      "at": "Vurgulanacak konumlar (test)"
+    },
+    "locations_intro": {
+      "ht": "",
+      "at": "Bir konumu işaretçisinin gösterdiği gibi yazın, örneğin NEW BABBAGE, ve ona bir renk verin. Katman bu metni okuduğunda çevresine o renkte bir çerçeve çizer. Oyunun iki satıra böldüğü uzun bir ad satır satır okunur, bu yüzden satırlarından birini yazın."
+    },
+    "locations_location": {
+      "ht": "",
+      "at": "Konum"
+    },
+    "locations_add": {
+      "ht": "",
+      "at": "Konum ekle"
+    },
+    "locations_bad_names": {
+      "ht": "",
+      "at": "Bunlar bir işaretçiden okunamaz. Bir konum 3 ile 40 karakter arasındadır: harfler, rakamlar, boşluklar, kısa çizgiler, alt çizgiler, noktalar ve kesme işaretleri:\n{names}"
+    },
+    "player_id_status_off": {
+      "ht": "",
+      "at": "Çalıştığını görmek için katmanı adlar ya da konumlar açıkken başlatın."
+    },
+    "player_id_status_starting": {
+      "ht": "",
+      "at": "Hazırlanıyor..."
+    },
+    "player_id_status_no_game": {
+      "ht": "",
+      "at": "Çalışıyor. Star Citizen'ın öndeki pencere olması bekleniyor."
+    },
+    "player_id_status_looking": {
+      "ht": "",
+      "at": "Oyun okunuyor ({width}x{height}). Son okuma {seconds} sn sürdü: {lines} metin satırı bulundu, {skipped} satır mesafe satırı olmadığı için dışarıda bırakıldı, {read} etiket okundu, {marked} işaretlendi."
+    },
+    "player_id_status_failed": {
+      "ht": "",
+      "at": "Bir hatadan sonra durdu. Ayrıntılar Günlük sekmesinde. Yeniden denemek için katmanı durdurup başlatın."
+    },
+    "player_lists_title": {
+      "ht": "",
+      "at": "Oyuncu listeleri (test)"
+    },
+    "player_lists_intro": {
+      "ht": "",
+      "at": "Bir organizasyona renk verin, sonra oyuncuları onun altına koyun ya da bir oyuncuya kendi rengini verin. Bir ad, etiketinin gösterdiği gibi büyük harflerle karşılaştırılır. Burada hiçbir şey sorgulanmaz: bildiğinizi siz yazarsınız."
+    },
+    "player_lists_orgs": {
+      "ht": "",
+      "at": "Organizasyonlar"
+    },
+    "player_lists_org": {
+      "ht": "",
+      "at": "Organizasyon"
+    },
+    "player_lists_color": {
+      "ht": "",
+      "at": "Renk"
+    },
+    "player_lists_add_org": {
+      "ht": "",
+      "at": "Organizasyon ekle"
+    },
+    "player_lists_remove": {
+      "ht": "",
+      "at": "Kaldır"
+    },
+    "player_lists_players": {
+      "ht": "",
+      "at": "Oyuncular"
+    },
+    "player_lists_player": {
+      "ht": "",
+      "at": "Oyuncu"
+    },
+    "player_lists_add_player": {
+      "ht": "",
+      "at": "Oyuncu ekle"
+    },
+    "player_lists_own_color": {
+      "ht": "",
+      "at": "(kendi rengi)"
+    },
+    "player_lists_org_color_hint": {
+      "ht": "",
+      "at": "Bu oyuncu bir organizasyonda ve onun rengini alır."
+    },
+    "player_lists_seen": {
+      "ht": "",
+      "at": "Son oturum ({when}): hiçbir listede olmayan okunan adlar"
+    },
+    "player_lists_seen_none": {
+      "ht": "",
+      "at": "Son oturum: henüz ad okunmadı"
+    },
+    "player_lists_past": {
+      "ht": "",
+      "at": "Geçmiş oyuncular: tüm oturumlardan hiçbir listede olmayan adlar, en yenisi önce"
+    },
+    "player_lists_past_hint": {
+      "ht": "",
+      "at": "Her ad, en son okunduğu günle birlikte. Yalnızca bu bilgisayarda tutulur, en fazla {count} ad, ve asla bir ayar yedeğine girmez."
+    },
+    "player_lists_clear_past": {
+      "ht": "",
+      "at": "Geçmiş oyuncuları temizle"
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "",
+      "at": "OK düğmesine bastığınızda oyunda okunan adların iki listesini de boşaltır. Organizasyonlarınız ve oyuncularınız kalır."
+    },
+    "player_lists_add_seen": {
+      "ht": "",
+      "at": "Oyunculara ekle"
+    },
+    "player_lists_open_rsi": {
+      "ht": "",
+      "at": "RSI sayfasını aç"
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "",
+      "at": "Oyuncunun RSI sitesindeki sayfasını okumanız için kendi tarayıcınızda açar. Smart Citizen hiçbir şey sorgulamaz."
+    },
+    "player_lists_unlisted": {
+      "ht": "",
+      "at": "Hiçbir listede olmayan adların rengi"
+    },
+    "player_lists_bad_names": {
+      "ht": "",
+      "at": "Bunlar isim etiketi olamaz. Bir ad, harf, rakam, kısa çizgi ve alt çizgiden oluşan, en az üç karakter uzunluğunda tek bir sözcüktür:\n{names}"
+    },
     "drawer": {
       "ht": "",
       "at": "Katman çekmecesi"

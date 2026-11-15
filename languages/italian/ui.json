@@ -3724,6 +3724,198 @@
       "ht": "",
       "at": "Mentre l'overlay è attivo, i blueprint ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
     },
+    "player_id_group": {
+      "ht": "",
+      "at": "ID giocatori e luoghi (test)"
+    },
+    "player_id": {
+      "ht": "",
+      "at": "Segna i nomi degli altri giocatori"
+    },
+    "player_id_hint": {
+      "ht": "",
+      "at": "Un test. Mentre Star Citizen è la finestra in primo piano, l'overlay legge le etichette dei nomi sopra navi e giocatori e disegna un segno attorno a ogni nome. I nomi nelle tue liste prendono il loro colore. Non viene cercato nulla da nessuna parte: le liste le tieni tu qui. Mentre è attivo tiene occupato un core del processore, e i segni seguono in ritardo un nome che si muove."
+    },
+    "player_id_unlisted": {
+      "ht": "",
+      "at": "Segna anche i nomi che non sono in nessuna lista"
+    },
+    "player_id_unlisted_hint": {
+      "ht": "",
+      "at": "Anche un nome che non è in nessuna delle tue liste riceve un segno, nel colore che scegli nell'editor delle liste, appena due letture concordano."
+    },
+    "player_id_all": {
+      "ht": "",
+      "at": "Test: mostra le informazioni di tutti i giocatori"
+    },
+    "player_id_all_hint": {
+      "ht": "",
+      "at": "Per verificare che la lettura funzioni. Ogni etichetta letta dall'overlay viene segnata subito, con il testo letto sopra. Un possibile nome è giallo finché due letture non concordano, poi prende il colore dei nomi senza lista. Il testo che non può essere un nome, come UNKNOWN o il numero di serie di una nave, è ciano. Possono accendersi anche parole della cabina e dei menu."
+    },
+    "player_id_edit_lists": {
+      "ht": "",
+      "at": "Modifica liste giocatori..."
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "",
+      "at": "Le tue org, i tuoi giocatori e i loro colori, salvati con le tue impostazioni. L'editor mostra anche i nomi letti in gioco."
+    },
+    "highlight_locations": {
+      "ht": "",
+      "at": "Evidenzia luoghi"
+    },
+    "highlight_locations_hint": {
+      "ht": "",
+      "at": "Un test. L'indicatore di un luogo riceve una cornice nel colore che gli hai dato quando il suo testo è nella tua lista. Le stesse letture servono per nomi e luoghi, quindi ciascuno dei due interruttori tiene occupato un core del processore mentre l'overlay è attivo."
+    },
+    "player_id_distance": {
+      "ht": "",
+      "at": "Leggi solo il testo con una riga di distanza sotto"
+    },
+    "player_id_distance_hint": {
+      "ht": "",
+      "at": "Ogni indicatore del gioco mostra la sua distanza sotto il nome, per esempio 6.2km. Il testo di menu, cabina e HUD non ce l'ha. Con questa opzione attiva, il testo senza riga di distanza sotto viene scartato prima di essere letto, così le parole di menu e cabina non vengono segnate e il tempo di lettura va alle etichette vere. Disattivala se un nome che vedi non riceve un segno, per esempio sopra un giocatore a piedi."
+    },
+    "locations_edit": {
+      "ht": "",
+      "at": "Modifica luoghi..."
+    },
+    "locations_edit_hint": {
+      "ht": "",
+      "at": "I luoghi da evidenziare e i loro colori. Vengono salvati con le tue impostazioni."
+    },
+    "locations_title": {
+      "ht": "",
+      "at": "Luoghi da evidenziare (test)"
+    },
+    "locations_intro": {
+      "ht": "",
+      "at": "Scrivi un luogo come lo mostra il suo indicatore, per esempio NEW BABBAGE, e dagli un colore. Quando l'overlay legge quel testo, disegna una cornice attorno in quel colore. Un nome lungo che il gioco spezza su due righe viene letto una riga alla volta, quindi scrivi una delle sue righe."
+    },
+    "locations_location": {
+      "ht": "",
+      "at": "Luogo"
+    },
+    "locations_add": {
+      "ht": "",
+      "at": "Aggiungi luogo"
+    },
+    "locations_bad_names": {
+      "ht": "",
+      "at": "Questi non si possono leggere da un indicatore. Un luogo ha da 3 a 40 caratteri: lettere, cifre, spazi, trattini, trattini bassi, punti e apostrofi:\n{names}"
+    },
+    "player_id_status_off": {
+      "ht": "",
+      "at": "Avvia l'overlay con i nomi o i luoghi attivi per vederlo funzionare."
+    },
+    "player_id_status_starting": {
+      "ht": "",
+      "at": "Preparazione..."
+    },
+    "player_id_status_no_game": {
+      "ht": "",
+      "at": "In esecuzione. In attesa che Star Citizen sia la finestra in primo piano."
+    },
+    "player_id_status_looking": {
+      "ht": "",
+      "at": "Lettura del gioco ({width}x{height}). L'ultima lettura ha richiesto {seconds} s: {lines} righe di testo trovate, {skipped} scartate perché senza riga di distanza, {read} etichette lette, {marked} segnate."
+    },
+    "player_id_status_failed": {
+      "ht": "",
+      "at": "Fermato dopo un errore. La scheda Log ha i dettagli. Ferma e riavvia l'overlay per riprovare."
+    },
+    "player_lists_title": {
+      "ht": "",
+      "at": "Liste dei giocatori (test)"
+    },
+    "player_lists_intro": {
+      "ht": "",
+      "at": "Dai un colore a una org, poi mettici dei giocatori, oppure dai a un giocatore un colore suo. Un nome viene confrontato come lo mostra la sua etichetta, in maiuscolo. Qui non si cerca nulla: scrivi quello che sai."
+    },
+    "player_lists_orgs": {
+      "ht": "",
+      "at": "Org"
+    },
+    "player_lists_org": {
+      "ht": "",
+      "at": "Org"
+    },
+    "player_lists_color": {
+      "ht": "",
+      "at": "Colore"
+    },
+    "player_lists_add_org": {
+      "ht": "",
+      "at": "Aggiungi org"
+    },
+    "player_lists_remove": {
+      "ht": "",
+      "at": "Rimuovi"
+    },
+    "player_lists_players": {
+      "ht": "",
+      "at": "Giocatori"
+    },
+    "player_lists_player": {
+      "ht": "",
+      "at": "Giocatore"
+    },
+    "player_lists_add_player": {
+      "ht": "",
+      "at": "Aggiungi giocatore"
+    },
+    "player_lists_own_color": {
+      "ht": "",
+      "at": "(colore proprio)"
+    },
+    "player_lists_org_color_hint": {
+      "ht": "",
+      "at": "Questo giocatore è in una org e ne prende il colore."
+    },
+    "player_lists_seen": {
+      "ht": "",
+      "at": "Ultima sessione ({when}): nomi letti che non sono in nessuna lista"
+    },
+    "player_lists_seen_none": {
+      "ht": "",
+      "at": "Ultima sessione: nessun nome letto finora"
+    },
+    "player_lists_past": {
+      "ht": "",
+      "at": "Giocatori passati: nomi di tutte le sessioni che non sono in nessuna lista, dal più recente"
+    },
+    "player_lists_past_hint": {
+      "ht": "",
+      "at": "Ogni nome con il giorno in cui è stato letto l'ultima volta. Conservato solo su questo PC, fino a {count} nomi, e mai incluso in un backup delle impostazioni."
+    },
+    "player_lists_clear_past": {
+      "ht": "",
+      "at": "Cancella giocatori passati"
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "",
+      "at": "Svuota entrambe le liste dei nomi letti in gioco quando premi OK. Le tue org e i tuoi giocatori restano."
+    },
+    "player_lists_add_seen": {
+      "ht": "",
+      "at": "Aggiungi ai giocatori"
+    },
+    "player_lists_open_rsi": {
+      "ht": "",
+      "at": "Apri pagina RSI"
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "",
+      "at": "Apre la pagina del giocatore sul sito RSI nel tuo browser, perché tu la legga. Smart Citizen non cerca nulla."
+    },
+    "player_lists_unlisted": {
+      "ht": "",
+      "at": "Colore per i nomi senza lista"
+    },
+    "player_lists_bad_names": {
+      "ht": "",
+      "at": "Questi non possono essere etichette di nomi. Un nome è una sola parola di lettere, cifre, trattini e trattini bassi, lunga almeno tre caratteri:\n{names}"
+    },
     "drawer": {
       "ht": "",
       "at": "Cassetto dell'overlay"

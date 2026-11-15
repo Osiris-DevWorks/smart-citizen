@@ -3724,6 +3724,198 @@
       "ht": "",
       "at": "Solange das Overlay läuft, werden im Spiel erhaltene Baupläne aus Game.log gelesen und als besessen markiert."
     },
+    "player_id_group": {
+      "ht": "",
+      "at": "Spieler-ID und Orte (Test)"
+    },
+    "player_id": {
+      "ht": "",
+      "at": "Namen anderer Spieler markieren"
+    },
+    "player_id_hint": {
+      "ht": "",
+      "at": "Ein Test. Solange Star Citizen das Fenster im Vordergrund ist, liest das Overlay die Namensschilder über Schiffen und Spielern und zeichnet eine Markierung um jeden Namen. Namen auf deinen Listen erhalten ihre Farbe. Nichts wird irgendwo nachgeschlagen: Die Listen pflegst du hier. Während es läuft, ist ein Prozessorkern ausgelastet, und die Markierungen hängen einem Namen, der sich bewegt, hinterher."
+    },
+    "player_id_unlisted": {
+      "ht": "",
+      "at": "Auch Namen auf keiner Liste markieren"
+    },
+    "player_id_unlisted_hint": {
+      "ht": "",
+      "at": "Ein Name, der auf keiner deiner Listen steht, erhält ebenfalls eine Markierung, in der Farbe, die du im Listen-Editor wählst, sobald zwei Durchgänge übereinstimmen."
+    },
+    "player_id_all": {
+      "ht": "",
+      "at": "Test: Informationen zu allen Spielern anzeigen"
+    },
+    "player_id_all_hint": {
+      "ht": "",
+      "at": "Zum Prüfen, ob das Lesen überhaupt funktioniert. Jedes Schild, das das Overlay liest, wird sofort markiert, mit dem gelesenen Text darüber. Ein möglicher Name ist gelb, bis zwei Durchgänge übereinstimmen, dann erhält er die Farbe für Namen auf keiner Liste. Text, der kein Name sein kann, etwa UNKNOWN oder die Seriennummer eines Schiffs, ist cyan. Auch Wörter aus Cockpit und Menüs können aufleuchten."
+    },
+    "player_id_edit_lists": {
+      "ht": "",
+      "at": "Spielerlisten bearbeiten…"
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "",
+      "at": "Deine Orgs und Spieler und ihre Farben, gespeichert mit deinen Einstellungen. Der Editor zeigt auch die im Spiel gelesenen Namen."
+    },
+    "highlight_locations": {
+      "ht": "",
+      "at": "Orte hervorheben"
+    },
+    "highlight_locations_hint": {
+      "ht": "",
+      "at": "Ein Test. Der Marker eines Orts erhält einen Rahmen in der Farbe, die du ihm gegeben hast, wenn sein Text auf deiner Liste steht. Namen und Orte werden in denselben Durchgängen gelesen, daher hält jeder der beiden Schalter einen Prozessorkern beschäftigt, solange das Overlay läuft."
+    },
+    "player_id_distance": {
+      "ht": "",
+      "at": "Nur Text mit einer Entfernungszeile darunter lesen"
+    },
+    "player_id_distance_hint": {
+      "ht": "",
+      "at": "Jeder Marker im Spiel zeigt unter seinem Namen seine Entfernung, etwa 6.2km. Text aus Menüs, Cockpit und HUD hat keine. Ist dies an, wird Text ohne Entfernungszeile darunter weggelassen, bevor er gelesen wird. So werden Wörter aus Menüs und Cockpit nicht markiert, und die Lesezeit geht an echte Namensschilder. Schalte es aus, wenn ein Name, den du siehst, keine Markierung erhält, etwa über einem Spieler zu Fuß."
+    },
+    "locations_edit": {
+      "ht": "",
+      "at": "Orte bearbeiten…"
+    },
+    "locations_edit_hint": {
+      "ht": "",
+      "at": "Die hervorzuhebenden Orte und ihre Farben. Sie werden mit deinen Einstellungen gespeichert."
+    },
+    "locations_title": {
+      "ht": "",
+      "at": "Hervorzuhebende Orte (Test)"
+    },
+    "locations_intro": {
+      "ht": "",
+      "at": "Gib einen Ort so ein, wie sein Marker ihn zeigt, etwa NEW BABBAGE, und gib ihm eine Farbe. Liest das Overlay diesen Text, zeichnet es einen Rahmen in dieser Farbe darum. Einen langen Namen, den das Spiel auf zwei Zeilen umbricht, liest es zeilenweise, also gib eine seiner Zeilen ein."
+    },
+    "locations_location": {
+      "ht": "",
+      "at": "Ort"
+    },
+    "locations_add": {
+      "ht": "",
+      "at": "Ort hinzufügen"
+    },
+    "locations_bad_names": {
+      "ht": "",
+      "at": "Diese lassen sich nicht von einem Marker lesen. Ein Ort hat 3 bis 40 Zeichen: Buchstaben, Ziffern, Leerzeichen, Bindestriche, Unterstriche, Punkte und Apostrophe:\n{names}"
+    },
+    "player_id_status_off": {
+      "ht": "",
+      "at": "Starte das Overlay mit eingeschalteten Namen oder Orten, um es arbeiten zu sehen."
+    },
+    "player_id_status_starting": {
+      "ht": "",
+      "at": "Wird vorbereitet…"
+    },
+    "player_id_status_no_game": {
+      "ht": "",
+      "at": "Läuft. Wartet, bis Star Citizen das Fenster im Vordergrund ist."
+    },
+    "player_id_status_looking": {
+      "ht": "",
+      "at": "Liest das Spiel ({width}x{height}). Der letzte Durchgang dauerte {seconds} s: {lines} Textzeilen gefunden, {skipped} ohne Entfernungszeile weggelassen, {read} Namensschilder gelesen, {marked} markiert."
+    },
+    "player_id_status_failed": {
+      "ht": "",
+      "at": "Nach einem Fehler gestoppt. Details stehen im Tab „Protokoll“. Stoppe das Overlay und starte es neu, um es noch einmal zu versuchen."
+    },
+    "player_lists_title": {
+      "ht": "",
+      "at": "Spielerlisten (Test)"
+    },
+    "player_lists_intro": {
+      "ht": "",
+      "at": "Gib einer Org eine Farbe und ordne ihr dann Spieler zu, oder gib einem Spieler eine eigene Farbe. Ein Name wird so verglichen, wie sein Namensschild ihn zeigt: in Großbuchstaben. Hier wird nichts nachgeschlagen: Du trägst ein, was du weißt."
+    },
+    "player_lists_orgs": {
+      "ht": "",
+      "at": "Orgs"
+    },
+    "player_lists_org": {
+      "ht": "",
+      "at": "Org"
+    },
+    "player_lists_color": {
+      "ht": "",
+      "at": "Farbe"
+    },
+    "player_lists_add_org": {
+      "ht": "",
+      "at": "Org hinzufügen"
+    },
+    "player_lists_remove": {
+      "ht": "",
+      "at": "Entfernen"
+    },
+    "player_lists_players": {
+      "ht": "",
+      "at": "Spieler"
+    },
+    "player_lists_player": {
+      "ht": "",
+      "at": "Spieler"
+    },
+    "player_lists_add_player": {
+      "ht": "",
+      "at": "Spieler hinzufügen"
+    },
+    "player_lists_own_color": {
+      "ht": "",
+      "at": "(eigene Farbe)"
+    },
+    "player_lists_org_color_hint": {
+      "ht": "",
+      "at": "Dieser Spieler gehört zu einer Org und erhält deren Farbe."
+    },
+    "player_lists_seen": {
+      "ht": "",
+      "at": "Letzte Sitzung ({when}): gelesene Namen, die auf keiner Liste stehen"
+    },
+    "player_lists_seen_none": {
+      "ht": "",
+      "at": "Letzte Sitzung: noch keine Namen gelesen"
+    },
+    "player_lists_past": {
+      "ht": "",
+      "at": "Frühere Spieler: Namen aller Sitzungen, die auf keiner Liste stehen, neueste zuerst"
+    },
+    "player_lists_past_hint": {
+      "ht": "",
+      "at": "Jeder Name mit dem Tag, an dem er zuletzt gelesen wurde. Nur auf diesem PC gespeichert, bis zu {count} Namen, und nie Teil einer Sicherung der Einstellungen."
+    },
+    "player_lists_clear_past": {
+      "ht": "",
+      "at": "Frühere Spieler löschen"
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "",
+      "at": "Leert beide Listen der im Spiel gelesenen Namen, sobald du OK drückst. Deine Orgs und Spieler bleiben."
+    },
+    "player_lists_add_seen": {
+      "ht": "",
+      "at": "Zu Spielern hinzufügen"
+    },
+    "player_lists_open_rsi": {
+      "ht": "",
+      "at": "RSI-Seite öffnen"
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "",
+      "at": "Öffnet die Seite des Spielers auf der RSI-Website in deinem eigenen Browser, zum Lesen. Smart Citizen schlägt nichts nach."
+    },
+    "player_lists_unlisted": {
+      "ht": "",
+      "at": "Farbe für Namen auf keiner Liste"
+    },
+    "player_lists_bad_names": {
+      "ht": "",
+      "at": "Das können keine Namensschilder sein. Ein Name ist ein Wort aus Buchstaben, Ziffern, Bindestrichen und Unterstrichen, mindestens drei Zeichen lang:\n{names}"
+    },
     "drawer": {
       "ht": "",
       "at": "Overlay-Schublade"

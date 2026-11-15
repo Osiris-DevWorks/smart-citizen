@@ -3724,6 +3724,198 @@
       "ht": "",
       "at": "Enquanto a sobreposição roda, os blueprints recebidos no jogo são lidos do Game.log e marcados como possuídos."
     },
+    "player_id_group": {
+      "ht": "",
+      "at": "ID de jogadores e locais (teste)"
+    },
+    "player_id": {
+      "ht": "",
+      "at": "Marcar os nomes de outros jogadores"
+    },
+    "player_id_hint": {
+      "ht": "",
+      "at": "Um teste. Enquanto o Star Citizen é a janela em primeiro plano, a sobreposição lê as etiquetas de nome sobre naves e jogadores e desenha uma marca em volta de cada nome. Os nomes das suas listas recebem a cor delas. Nada é consultado em lugar nenhum: você mantém as listas aqui. Ela ocupa um núcleo do processador enquanto roda, e as marcas seguem com atraso um nome que se move."
+    },
+    "player_id_unlisted": {
+      "ht": "",
+      "at": "Marcar também nomes que não estão em nenhuma lista"
+    },
+    "player_id_unlisted_hint": {
+      "ht": "",
+      "at": "Um nome que não está em nenhuma das suas listas também recebe uma marca, na cor que você escolher no editor de listas, assim que duas leituras concordam."
+    },
+    "player_id_all": {
+      "ht": "",
+      "at": "Teste: mostrar informações de todos os jogadores"
+    },
+    "player_id_all_hint": {
+      "ht": "",
+      "at": "Para verificar se a leitura funciona. Cada etiqueta que a sobreposição lê é marcada na hora, com o texto lido acima dela. Um possível nome fica amarelo até que duas leituras concordem e depois recebe a cor dos nomes sem lista. Texto que não pode ser um nome, como UNKNOWN ou o número de série de uma nave, fica ciano. Palavras do cockpit e dos menus também podem acender."
+    },
+    "player_id_edit_lists": {
+      "ht": "",
+      "at": "Editar listas de jogadores..."
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "",
+      "at": "Suas orgs, seus jogadores e as cores deles, salvos com suas configurações. O editor também mostra os nomes lidos no jogo."
+    },
+    "highlight_locations": {
+      "ht": "",
+      "at": "Destacar locais"
+    },
+    "highlight_locations_hint": {
+      "ht": "",
+      "at": "Um teste. O marcador de um local recebe uma moldura na cor que você deu a ele quando o texto dele está na sua lista. As mesmas leituras servem para nomes e locais, então qualquer um dos dois interruptores ocupa um núcleo do processador enquanto a sobreposição roda."
+    },
+    "player_id_distance": {
+      "ht": "",
+      "at": "Ler só texto com uma linha de distância embaixo"
+    },
+    "player_id_distance_hint": {
+      "ht": "",
+      "at": "Cada marcador do jogo mostra a distância embaixo do nome, como 6.2km. Texto de menus, cockpit e HUD não tem. Com isto ligado, o texto sem linha de distância embaixo é deixado de lado antes de ser lido, então palavras de menus e do cockpit não são marcadas e o tempo de leitura vai para etiquetas reais. Desligue se um nome que você vê não recebe marca, por exemplo sobre um jogador a pé."
+    },
+    "locations_edit": {
+      "ht": "",
+      "at": "Editar locais..."
+    },
+    "locations_edit_hint": {
+      "ht": "",
+      "at": "Os locais a destacar e suas cores. Eles são salvos com suas configurações."
+    },
+    "locations_title": {
+      "ht": "",
+      "at": "Locais a destacar (teste)"
+    },
+    "locations_intro": {
+      "ht": "",
+      "at": "Digite um local como o marcador dele mostra, por exemplo NEW BABBAGE, e dê uma cor a ele. Quando a sobreposição lê esse texto, desenha uma moldura em volta dele nessa cor. Um nome longo que o jogo quebra em duas linhas é lido uma linha por vez, então digite uma das linhas dele."
+    },
+    "locations_location": {
+      "ht": "",
+      "at": "Local"
+    },
+    "locations_add": {
+      "ht": "",
+      "at": "Adicionar local"
+    },
+    "locations_bad_names": {
+      "ht": "",
+      "at": "Isto não pode ser lido em um marcador. Um local tem de 3 a 40 caracteres: letras, dígitos, espaços, hifens, sublinhados, pontos e apóstrofos:\n{names}"
+    },
+    "player_id_status_off": {
+      "ht": "",
+      "at": "Inicie a sobreposição com nomes ou locais ligados para vê-la funcionar."
+    },
+    "player_id_status_starting": {
+      "ht": "",
+      "at": "Preparando..."
+    },
+    "player_id_status_no_game": {
+      "ht": "",
+      "at": "Rodando. Esperando o Star Citizen ser a janela em primeiro plano."
+    },
+    "player_id_status_looking": {
+      "ht": "",
+      "at": "Lendo o jogo ({width}x{height}). A última leitura levou {seconds} s: {lines} linhas de texto encontradas, {skipped} deixadas de lado por não ter linha de distância, {read} etiquetas lidas, {marked} marcadas."
+    },
+    "player_id_status_failed": {
+      "ht": "",
+      "at": "Parou após um erro. A aba Log tem os detalhes. Pare e inicie a sobreposição para tentar de novo."
+    },
+    "player_lists_title": {
+      "ht": "",
+      "at": "Listas de jogadores (teste)"
+    },
+    "player_lists_intro": {
+      "ht": "",
+      "at": "Dê uma cor a uma org e depois coloque jogadores nela, ou dê a um jogador uma cor própria. Um nome é comparado como a etiqueta dele mostra, em maiúsculas. Nada aqui é consultado: você digita o que sabe."
+    },
+    "player_lists_orgs": {
+      "ht": "",
+      "at": "Orgs"
+    },
+    "player_lists_org": {
+      "ht": "",
+      "at": "Org"
+    },
+    "player_lists_color": {
+      "ht": "",
+      "at": "Cor"
+    },
+    "player_lists_add_org": {
+      "ht": "",
+      "at": "Adicionar org"
+    },
+    "player_lists_remove": {
+      "ht": "",
+      "at": "Remover"
+    },
+    "player_lists_players": {
+      "ht": "",
+      "at": "Jogadores"
+    },
+    "player_lists_player": {
+      "ht": "",
+      "at": "Jogador"
+    },
+    "player_lists_add_player": {
+      "ht": "",
+      "at": "Adicionar jogador"
+    },
+    "player_lists_own_color": {
+      "ht": "",
+      "at": "(cor própria)"
+    },
+    "player_lists_org_color_hint": {
+      "ht": "",
+      "at": "Este jogador está em uma org e recebe a cor dela."
+    },
+    "player_lists_seen": {
+      "ht": "",
+      "at": "Última sessão ({when}): nomes lidos que não estão em nenhuma lista"
+    },
+    "player_lists_seen_none": {
+      "ht": "",
+      "at": "Última sessão: nenhum nome lido ainda"
+    },
+    "player_lists_past": {
+      "ht": "",
+      "at": "Jogadores anteriores: nomes de todas as sessões que não estão em nenhuma lista, os mais recentes primeiro"
+    },
+    "player_lists_past_hint": {
+      "ht": "",
+      "at": "Cada nome com o dia em que foi lido pela última vez. Guardado só neste PC, até {count} nomes, e nunca faz parte de um backup das configurações."
+    },
+    "player_lists_clear_past": {
+      "ht": "",
+      "at": "Limpar jogadores anteriores"
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "",
+      "at": "Esvazia as duas listas de nomes lidos no jogo quando você clicar em OK. Suas orgs e seus jogadores ficam."
+    },
+    "player_lists_add_seen": {
+      "ht": "",
+      "at": "Adicionar aos jogadores"
+    },
+    "player_lists_open_rsi": {
+      "ht": "",
+      "at": "Abrir página da RSI"
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "",
+      "at": "Abre a página do jogador no site da RSI no seu próprio navegador, para você ler. O Smart Citizen não consulta nada."
+    },
+    "player_lists_unlisted": {
+      "ht": "",
+      "at": "Cor para nomes sem lista"
+    },
+    "player_lists_bad_names": {
+      "ht": "",
+      "at": "Estas não podem ser etiquetas de nome. Um nome é uma única palavra de letras, dígitos, hifens e sublinhados, com três caracteres ou mais:\n{names}"
+    },
     "drawer": {
       "ht": "",
       "at": "Gaveta da sobreposição"

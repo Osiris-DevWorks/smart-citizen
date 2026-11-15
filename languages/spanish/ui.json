@@ -3724,6 +3724,198 @@
       "ht": "",
       "at": "Mientras la superposición está activa, los blueprints que recibes en el juego se leen de Game.log y se marcan como poseídos."
     },
+    "player_id_group": {
+      "ht": "",
+      "at": "ID de jugadores y ubicaciones (prueba)"
+    },
+    "player_id": {
+      "ht": "",
+      "at": "Marcar los nombres de otros jugadores"
+    },
+    "player_id_hint": {
+      "ht": "",
+      "at": "Una prueba. Mientras Star Citizen es la ventana en primer plano, la superposición lee las etiquetas de nombre sobre naves y jugadores y dibuja una marca alrededor de cada nombre. Los nombres de tus listas toman su color. No se consulta nada en ningún sitio: las listas las llevas tú aquí. Mantiene ocupado un núcleo del procesador mientras funciona, y las marcas van con retraso tras un nombre que se mueve."
+    },
+    "player_id_unlisted": {
+      "ht": "",
+      "at": "Marcar también nombres que no están en ninguna lista"
+    },
+    "player_id_unlisted_hint": {
+      "ht": "",
+      "at": "Un nombre que no está en ninguna de tus listas también recibe una marca, en el color que elijas en el editor de listas, en cuanto dos lecturas coinciden."
+    },
+    "player_id_all": {
+      "ht": "",
+      "at": "Prueba: mostrar información de todos los jugadores"
+    },
+    "player_id_all_hint": {
+      "ht": "",
+      "at": "Para comprobar que la lectura funciona. Cada etiqueta que lee la superposición se marca al instante, con el texto leído encima. Un posible nombre es amarillo hasta que dos lecturas coinciden, y luego toma el color de los nombres sin lista. Un texto que no puede ser un nombre, como UNKNOWN o el número de serie de una nave, es cian. También pueden iluminarse palabras de la cabina y de los menús."
+    },
+    "player_id_edit_lists": {
+      "ht": "",
+      "at": "Editar listas de jugadores..."
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "",
+      "at": "Tus orgs y jugadores y sus colores, guardados con tus ajustes. El editor también muestra los nombres leídos en el juego."
+    },
+    "highlight_locations": {
+      "ht": "",
+      "at": "Resaltar ubicaciones"
+    },
+    "highlight_locations_hint": {
+      "ht": "",
+      "at": "Una prueba. El marcador de una ubicación recibe un marco del color que le diste cuando su texto está en tu lista. Las mismas lecturas sirven para nombres y ubicaciones, así que cualquiera de los dos interruptores mantiene ocupado un núcleo del procesador mientras la superposición funciona."
+    },
+    "player_id_distance": {
+      "ht": "",
+      "at": "Leer solo texto con una línea de distancia debajo"
+    },
+    "player_id_distance_hint": {
+      "ht": "",
+      "at": "Cada marcador del juego muestra su distancia bajo su nombre, por ejemplo 6.2km. El texto de menús, cabina y HUD no tiene. Con esto activado, el texto sin línea de distancia debajo se descarta antes de leerlo, así que las palabras de menús y cabina no se marcan y el tiempo de lectura se dedica a etiquetas reales. Desactívalo si un nombre que ves no recibe marca, por ejemplo sobre un jugador a pie."
+    },
+    "locations_edit": {
+      "ht": "",
+      "at": "Editar ubicaciones..."
+    },
+    "locations_edit_hint": {
+      "ht": "",
+      "at": "Las ubicaciones que resaltar y sus colores. Se guardan con tus ajustes."
+    },
+    "locations_title": {
+      "ht": "",
+      "at": "Ubicaciones que resaltar (prueba)"
+    },
+    "locations_intro": {
+      "ht": "",
+      "at": "Escribe una ubicación tal como la muestra su marcador, por ejemplo NEW BABBAGE, y dale un color. Cuando la superposición lee ese texto, dibuja un marco a su alrededor en ese color. Un nombre largo que el juego parte en dos líneas se lee línea a línea, así que escribe una de sus líneas."
+    },
+    "locations_location": {
+      "ht": "",
+      "at": "Ubicación"
+    },
+    "locations_add": {
+      "ht": "",
+      "at": "Añadir ubicación"
+    },
+    "locations_bad_names": {
+      "ht": "",
+      "at": "Esto no se puede leer en un marcador. Una ubicación tiene de 3 a 40 caracteres: letras, dígitos, espacios, guiones, guiones bajos, puntos y apóstrofos:\n{names}"
+    },
+    "player_id_status_off": {
+      "ht": "",
+      "at": "Inicia la superposición con los nombres o las ubicaciones activados para verla funcionar."
+    },
+    "player_id_status_starting": {
+      "ht": "",
+      "at": "Preparando..."
+    },
+    "player_id_status_no_game": {
+      "ht": "",
+      "at": "En marcha. Esperando a que Star Citizen sea la ventana en primer plano."
+    },
+    "player_id_status_looking": {
+      "ht": "",
+      "at": "Leyendo el juego ({width}x{height}). La última lectura tardó {seconds} s: {lines} líneas de texto encontradas, {skipped} descartadas por no tener línea de distancia, {read} etiquetas leídas, {marked} marcadas."
+    },
+    "player_id_status_failed": {
+      "ht": "",
+      "at": "Detenido tras un error. La pestaña Registro tiene los detalles. Detén e inicia la superposición para volver a intentarlo."
+    },
+    "player_lists_title": {
+      "ht": "",
+      "at": "Listas de jugadores (prueba)"
+    },
+    "player_lists_intro": {
+      "ht": "",
+      "at": "Dale un color a una org y luego pon jugadores en ella, o dale a un jugador un color propio. Un nombre se compara tal como lo muestra su etiqueta, en mayúsculas. Aquí no se consulta nada: escribes lo que sabes."
+    },
+    "player_lists_orgs": {
+      "ht": "",
+      "at": "Orgs"
+    },
+    "player_lists_org": {
+      "ht": "",
+      "at": "Org"
+    },
+    "player_lists_color": {
+      "ht": "",
+      "at": "Color"
+    },
+    "player_lists_add_org": {
+      "ht": "",
+      "at": "Añadir org"
+    },
+    "player_lists_remove": {
+      "ht": "",
+      "at": "Quitar"
+    },
+    "player_lists_players": {
+      "ht": "",
+      "at": "Jugadores"
+    },
+    "player_lists_player": {
+      "ht": "",
+      "at": "Jugador"
+    },
+    "player_lists_add_player": {
+      "ht": "",
+      "at": "Añadir jugador"
+    },
+    "player_lists_own_color": {
+      "ht": "",
+      "at": "(color propio)"
+    },
+    "player_lists_org_color_hint": {
+      "ht": "",
+      "at": "Este jugador está en una org y toma su color."
+    },
+    "player_lists_seen": {
+      "ht": "",
+      "at": "Última sesión ({when}): nombres leídos que no están en ninguna lista"
+    },
+    "player_lists_seen_none": {
+      "ht": "",
+      "at": "Última sesión: aún no se ha leído ningún nombre"
+    },
+    "player_lists_past": {
+      "ht": "",
+      "at": "Jugadores anteriores: nombres de todas las sesiones que no están en ninguna lista, los más recientes primero"
+    },
+    "player_lists_past_hint": {
+      "ht": "",
+      "at": "Cada nombre con el día en que se leyó por última vez. Se guarda solo en este PC, hasta {count} nombres, y nunca forma parte de una copia de seguridad de los ajustes."
+    },
+    "player_lists_clear_past": {
+      "ht": "",
+      "at": "Borrar jugadores anteriores"
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "",
+      "at": "Vacía las dos listas de nombres leídos en el juego cuando pulses OK. Tus orgs y jugadores se mantienen."
+    },
+    "player_lists_add_seen": {
+      "ht": "",
+      "at": "Añadir a jugadores"
+    },
+    "player_lists_open_rsi": {
+      "ht": "",
+      "at": "Abrir página de RSI"
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "",
+      "at": "Abre la página del jugador en el sitio de RSI en tu propio navegador, para que la leas. Smart Citizen no consulta nada."
+    },
+    "player_lists_unlisted": {
+      "ht": "",
+      "at": "Color para nombres sin lista"
+    },
+    "player_lists_bad_names": {
+      "ht": "",
+      "at": "Estas no pueden ser etiquetas de nombre. Un nombre es una sola palabra de letras, dígitos, guiones y guiones bajos, de tres caracteres o más:\n{names}"
+    },
     "drawer": {
       "ht": "",
       "at": "Cajón de la superposición"
