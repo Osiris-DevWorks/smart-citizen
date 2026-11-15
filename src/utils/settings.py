@@ -748,6 +748,18 @@ class AppSettings:
     SCO_DRAWER = "drawer"
     SCO_DRAWER_SECTION_PREFIX = "drawer_"
     SCO_LIVE_BLUEPRINT_WATCH = "live_blueprint_watch"
+    # The player ID test: a mark round each name tag the overlay reads
+    # (src/gui/player_id_overlay.py). Off by default. Under it: whether names
+    # on no list are marked too (on), and the test switch that marks every
+    # tag read at once (off). Beside it: highlight the locations on the
+    # player's own list (off), which the same looks read. For both: read
+    # only text that has a distance line under it, as every marker has and
+    # menu and cockpit text has not (on).
+    SCO_PLAYER_ID = "player_id"
+    SCO_PLAYER_ID_UNLISTED = "player_id_unlisted"
+    SCO_PLAYER_ID_ALL = "player_id_all"
+    SCO_HIGHLIGHT_LOCATIONS = "highlight_locations"
+    SCO_PLAYER_ID_DISTANCE = "player_id_distance"
     # Option name -> (key, default). On by default, matching how the overlay
     # behaved before the tab existed, except the alerts #523 added: the glow
     # (the one alert there was) and the flash are on, the rest off.
@@ -763,6 +775,11 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
+        SCO_PLAYER_ID:            ("sco/player_id", False),
+        SCO_PLAYER_ID_UNLISTED:   ("sco/player_id_unlisted", True),
+        SCO_PLAYER_ID_ALL:        ("sco/player_id_all", False),
+        SCO_HIGHLIGHT_LOCATIONS:  ("sco/highlight_locations", False),
+        SCO_PLAYER_ID_DISTANCE:   ("sco/player_id_distance", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
     # every combination but the screen centre.
@@ -795,6 +812,17 @@ class AppSettings:
     # decoded scan of one sets off the label's alerts. JSON list of
     # ORE_SIGNATURES keys and "salvage".
     SCO_WATCHED_MINERALS = "sco/watched_minerals"
+    # The player ID test's lists, kept by hand on the Overlay tab: orgs with a
+    # colour, players with an org or a colour, and the colour for names on no
+    # list. A JSON object (src/utils/player_id.py reads it).
+    SCO_PLAYER_LISTS = "sco/player_lists"
+    # The locations the player ID test highlights: a JSON list of
+    # [text, colour], kept by hand on the Overlay tab.
+    SCO_LOCATION_LIST = "sco/location_list"
+    # The names the player ID test has read in play, kept from session to
+    # session for its lists editor (player_id.PastPlayers). They are other
+    # players' names, so they stay on this PC: never in a settings backup.
+    SCO_PLAYER_HISTORY = "sco/player_history"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -837,6 +865,8 @@ class AppSettings:
         "vehicles_path",
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
+        # Other players' names, read off the screen: they never leave this PC.
+        SCO_PLAYER_HISTORY,
     })
 
     # Keys that have a default but are deliberately NOT materialised into a
@@ -861,6 +891,11 @@ class AppSettings:
         "game_install_path",
         "owned_items",
         DEFAULT_BLUEPRINTS_SEED,
+        # The player ID lists and the locations to highlight are the user's
+        # own data, like owned_items: an older backup without them must not
+        # empty them.
+        SCO_PLAYER_LISTS,
+        SCO_LOCATION_LIST,
         "tutorial_completed_version",
         "test_plan/checks",
         "test_plan/tester_name",
@@ -1769,6 +1804,65 @@ class AppSettings:
     def set_sco_watched_minerals(names) -> None:
         import json
         AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_player_lists() -> dict:
+        """The player ID test's lists as stored: ``{"orgs": [[name, colour]],
+        "players": [[name, org, colour]], "unlisted": colour}``, or ``{}``
+        when none are saved or the value cannot be read.
+        ``player_id.PlayerLists.from_data`` checks what is in it."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_PLAYER_LISTS, "", type=str)
+        try:
+            data = json.loads(raw) if raw else {}
+        except (ValueError, TypeError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    @staticmethod
+    def set_player_lists(data: dict) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_PLAYER_LISTS, json.dumps(data))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_location_list() -> list:
+        """The locations the player ID test highlights, as stored:
+        ``[[text, colour], ...]``, or ``[]`` when none are saved or the value
+        cannot be read. ``player_id.PlaceList.from_data`` checks what is in
+        it."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_LOCATION_LIST, "", type=str)
+        try:
+            data = json.loads(raw) if raw else []
+        except (ValueError, TypeError):
+            return []
+        return data if isinstance(data, list) else []
+
+    @staticmethod
+    def set_location_list(data: list) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_LOCATION_LIST, json.dumps(data))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_player_history() -> dict:
+        """The names the player ID test has read in play, as stored
+        (``player_id.PastPlayers`` gives the shape and checks what is in it),
+        or ``{}`` when there are none or the value cannot be read."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_PLAYER_HISTORY, "", type=str)
+        try:
+            data = json.loads(raw) if raw else {}
+        except (ValueError, TypeError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    @staticmethod
+    def set_player_history(data: dict) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_PLAYER_HISTORY, json.dumps(data))
         AppSettings.settings().sync()
 
     @staticmethod

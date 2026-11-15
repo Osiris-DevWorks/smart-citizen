@@ -19,7 +19,10 @@ def json_backend(tmp_path):
 
 def test_options_default_on_but_three_alerts(json_backend):
     # #523's alerts: the glow (the one there was) and the flash start on.
-    off = {"alert_color", "alert_bigger", "alert_sound"}
+    # The player ID test starts off, and so do its "show information for all
+    # players" switch and the locations to highlight.
+    off = {"alert_color", "alert_bigger", "alert_sound", AppSettings.SCO_PLAYER_ID,
+           AppSettings.SCO_PLAYER_ID_ALL, AppSettings.SCO_HIGHLIGHT_LOCATIONS}
     for name in AppSettings.SCO_OPTION_SETTING:
         assert AppSettings.get_sco_option(name) is (name not in off), name
 
@@ -472,11 +475,14 @@ def test_options_sit_in_titled_boxes_with_rows_of_switches(qapp, json_backend, t
     tab = OverlayTab()
     boxes = tab.findChildren(QGroupBox)
     assert [b.title() for b in boxes] == [
-        "Scan decoder", "Drawer", "Blueprints from Game.log"]
-    home = {"scan_decoder": 0, "drawer": 1, "live_blueprint_watch": 2}
+        "Scan decoder", "Drawer", "Blueprints from Game.log", "Player ID and locations (test)"]
+    home = {"scan_decoder": 0, "drawer": 1, "live_blueprint_watch": 2, "highlight_locations": 3}
     for name, check in tab._checks.items():
-        index = home.get(name, 0 if name.startswith("alert_") else 1)
+        index = home.get(name, 3 if name.startswith("player_id") else
+                         0 if name.startswith("alert_") else 1)
         assert boxes[index].isAncestorOf(check), name
+    for widget in (tab._player_lists_btn, tab._locations_btn, tab._player_status_label):
+        assert boxes[3].isAncestorOf(widget)
     assert tab._size_combo.parent() is not None and boxes[0].isAncestorOf(tab._size_combo)
     for widget in (tab._position_combo, tab._hotkey_edit):
         assert boxes[1].isAncestorOf(widget)
@@ -538,3 +544,366 @@ def test_channel_switch_restarts_the_live_watch(monkeypatch):
     main_window.MainWindow._on_channel_changed(me, "PTU")
     me._stop_sco_log_watcher.assert_called_once_with()
     me._apply_sco_options.assert_called_once_with()
+
+
+# -- The player ID test -------------------------------------------------------
+
+LISTS = {"orgs": [["WOLVES", "#40C057"]], "players": [["FRIEND_ONE", "WOLVES", "#FA5252"]],
+         "unlisted": "#ADB5BD"}
+LOCATIONS = [["NEW BABBAGE", "#40C057"], ["OM-3", "#FA5252"]]
+HISTORY = {"session": "2026-11-15 14:02:10",
+           "names": [["STRANGER", "2026-11-15 14:02:10"], ["OLD_HAND", "2026-11-01 09:00:00"]]}
+
+
+def test_player_id_switches_hang_under_its_switch(qapp, json_backend, tmp_path):
+    """The player ID test starts off. The two switches under it grey out
+    with it, its status line with it and the locations switch together, and
+    the lists can be edited either way."""
+    tab = OverlayTab()
+    main = tab._checks[AppSettings.SCO_PLAYER_ID]
+    unlisted = tab._checks[AppSettings.SCO_PLAYER_ID_UNLISTED]
+    everything = tab._checks[AppSettings.SCO_PLAYER_ID_ALL]
+    under = (unlisted, everything, tab._player_status_label)
+    assert (main.isChecked(), unlisted.isChecked(), everything.isChecked()) == (False, True, False)
+    assert not any(w.isEnabled() for w in under) and tab._player_lists_btn.isEnabled()
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    main.setChecked(True)
+    assert all(w.isEnabled() for w in under) and changed == [True]
+    everything.setChecked(True)
+    unlisted.setChecked(False)
+    assert AppSettings.get_sco_option(AppSettings.SCO_PLAYER_ID_ALL) is True
+    assert AppSettings.get_sco_option(AppSettings.SCO_PLAYER_ID_UNLISTED) is False
+    assert len(changed) == 3
+    assert main.text() == "Mark the names of other players"
+    assert everything.text() == "Test: Show information for all players"
+    assert everything.toolTip().startswith("For checking that the reading works at all.")
+    assert unlisted.text() == "Mark names on no list too" and unlisted.toolTip()
+    assert tab._player_lists_btn.text() == "Edit player lists..."
+    fresh = OverlayTab()                                    # a new tab reads them back
+    assert fresh._checks[AppSettings.SCO_PLAYER_ID_ALL].isChecked()
+    assert not fresh._checks[AppSettings.SCO_PLAYER_ID_UNLISTED].isChecked()
+    main.setChecked(False)
+    assert not any(w.isEnabled() for w in under)
+    assert AppSettings.get_sco_option(AppSettings.SCO_PLAYER_ID_ALL) is True   # kept
+
+
+def test_highlight_locations_sits_beside_the_names(qapp, json_backend, tmp_path):
+    """Players' names are the left half of the box and the locations to
+    highlight the right half, each with its switch and its editor. The
+    status line runs under both and is live with either switch, since the
+    same looks read names and locations."""
+    tab = OverlayTab()
+    names = tab._checks[AppSettings.SCO_PLAYER_ID]
+    places = tab._checks[AppSettings.SCO_HIGHLIGHT_LOCATIONS]
+    assert places.text() == "Highlight locations" and not places.isChecked()
+    assert tab._hints[AppSettings.SCO_HIGHLIGHT_LOCATIONS].text().startswith("A test.")
+    assert tab._locations_btn.text() == "Edit locations..." and tab._locations_btn.isEnabled()
+    tab.resize(1100, 900)
+    tab.show()
+    qapp.processEvents()
+    try:
+        def left_top(widget):
+            point = widget.mapTo(tab, widget.rect().topLeft())
+            return point.x(), point.y()
+
+        assert left_top(names)[1] == left_top(places)[1]             # side by side
+        middle = tab.width() // 2
+        assert left_top(names)[0] < middle <= left_top(places)[0]
+        assert left_top(tab._player_lists_btn)[0] < middle <= left_top(tab._locations_btn)[0]
+        for name in (AppSettings.SCO_PLAYER_ID_UNLISTED, AppSettings.SCO_PLAYER_ID_ALL):
+            assert left_top(tab._checks[name])[0] < middle
+        # The status line is under both halves.
+        status_y = left_top(tab._player_status_label)[1]
+        assert status_y > max(left_top(tab._player_lists_btn)[1], left_top(tab._locations_btn)[1])
+    finally:
+        tab.hide()
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    places.setChecked(True)
+    assert AppSettings.get_sco_option(AppSettings.SCO_HIGHLIGHT_LOCATIONS) is True
+    assert changed == [True] and tab._player_status_label.isEnabled()
+    # The switches under the names one still follow the names switch alone.
+    assert not tab._checks[AppSettings.SCO_PLAYER_ID_UNLISTED].isEnabled()
+    places.setChecked(False)
+    assert not tab._player_status_label.isEnabled()
+
+
+def test_the_distance_switch_sits_under_both_halves(qapp, json_backend, tmp_path):
+    """Reading only text with a distance line under it is about what the
+    looks read at all, names and locations alike. So its switch runs under
+    both halves, with its hint under it, is on from the start, and is live
+    with either half's switch."""
+    tab = OverlayTab()
+    distance = tab._checks[AppSettings.SCO_PLAYER_ID_DISTANCE]
+    hint = tab._hints[AppSettings.SCO_PLAYER_ID_DISTANCE]
+    assert distance.text() == "Only read text with a distance line under it"
+    assert distance.isChecked() and AppSettings.get_sco_option(AppSettings.SCO_PLAYER_ID_DISTANCE)
+    assert hint.text().startswith("Every marker in the game shows its distance under its name")
+    assert "player on foot" in hint.text()
+    tab.resize(1100, 950)
+    tab.show()
+    qapp.processEvents()
+    try:
+        def top(widget):
+            return widget.mapTo(tab, widget.rect().topLeft()).y()
+
+        def left(widget):
+            return widget.mapTo(tab, widget.rect().topLeft()).x()
+
+        # Under both editors' buttons, above the status line, starting where
+        # the names' own switch starts.
+        assert top(distance) > max(top(tab._player_lists_btn), top(tab._locations_btn))
+        assert top(distance) < top(hint) < top(tab._player_status_label)
+        assert left(distance) == left(tab._checks[AppSettings.SCO_PLAYER_ID])
+        # Its hint runs the box's whole width, past the middle where the
+        # locations' half begins: it belongs to neither half.
+        assert left(hint) + hint.width() > left(tab._locations_btn) + tab._locations_btn.width()
+    finally:
+        tab.hide()
+    # Greyed with both halves off, live with either on.
+    assert not distance.isEnabled() and not hint.isEnabled()
+    tab._checks[AppSettings.SCO_HIGHLIGHT_LOCATIONS].setChecked(True)
+    assert distance.isEnabled() and hint.isEnabled()
+    tab._checks[AppSettings.SCO_HIGHLIGHT_LOCATIONS].setChecked(False)
+    tab._checks[AppSettings.SCO_PLAYER_ID].setChecked(True)
+    assert distance.isEnabled()
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    distance.setChecked(False)
+    assert AppSettings.get_sco_option(AppSettings.SCO_PLAYER_ID_DISTANCE) is False
+    assert changed == [True]
+    assert not OverlayTab()._checks[AppSettings.SCO_PLAYER_ID_DISTANCE].isChecked()
+
+
+def test_the_lists_editor_saves_what_it_leaves(qapp, json_backend, tmp_path, monkeypatch):
+    """The button opens the editor with the saved lists and the names read
+    in play as the settings hold them. What an OK leaves is saved and
+    announced, so a running overlay takes the new lists. A Cancel saves
+    nothing. The record of past players is emptied only on an OK that asks
+    for it."""
+    from PyQt6.QtWidgets import QDialog
+
+    from src.gui import overlay_tab
+
+    opened = []
+    script = {"answer": QDialog.DialogCode.Accepted, "leaves": LISTS, "cleared": False}
+
+    class FakeDialog:
+        def __init__(self, data, past, parent=None):
+            opened.append((data, past, parent))
+
+        def exec(self):
+            return script["answer"]
+
+        def lists(self):
+            return script["leaves"]
+
+        def past_cleared(self):
+            return script["cleared"]
+
+    monkeypatch.setattr(overlay_tab, "PlayerListsDialog", FakeDialog)
+    tab = OverlayTab()
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    tab._player_lists_btn.click()
+    assert opened == [({}, {}, tab)]              # nothing saved yet, nothing read yet
+    assert AppSettings.get_player_lists() == LISTS and changed == [True]
+    # The names read in play come from the settings, read each time.
+    AppSettings.set_player_history(HISTORY)
+    script.update(answer=QDialog.DialogCode.Rejected, cleared=True,
+                  leaves={"orgs": [], "players": [], "unlisted": "#000000"})
+    tab._player_lists_btn.click()
+    assert opened[1] == (LISTS, HISTORY, tab)
+    assert AppSettings.get_player_lists() == LISTS and changed == [True]
+    assert AppSettings.get_player_history() == HISTORY          # a Cancel clears nothing
+    script.update(answer=QDialog.DialogCode.Accepted, cleared=False, leaves=LISTS)
+    tab._player_lists_btn.click()
+    assert AppSettings.get_player_history() == HISTORY          # nor an OK that did not ask
+    script.update(cleared=True)
+    tab._player_lists_btn.click()
+    assert AppSettings.get_player_history() == {} and len(changed) == 3
+
+
+def test_the_real_editors_ok_reaches_the_settings(qapp, json_backend, tmp_path, monkeypatch):
+    from src.gui.player_lists_dialog import PlayerListsDialog
+
+    seen = {}
+
+    def edit_and_press_ok(dialog):                # what exec() gives back: a plain number
+        seen["offered"] = [dialog.past.item(row).text() for row in range(dialog.past.count())]
+        dialog.add_player("friend_one", "", "green")
+        dialog.accept()
+        return dialog.result()
+
+    monkeypatch.setattr(PlayerListsDialog, "exec", edit_and_press_ok)
+    AppSettings.set_player_lists({"orgs": [["Wolves", "red"]], "players": [], "unlisted": "blue"})
+    AppSettings.set_player_history(HISTORY)
+    tab = OverlayTab()
+    tab._player_lists_btn.click()
+    assert AppSettings.get_player_lists() == {
+        "orgs": [["WOLVES", "#FA5252"]], "players": [["FRIEND_ONE", "", "#40C057"]],
+        "unlisted": "#4DABF7"}
+    # The real editor was handed the names read in play, and an OK keeps them.
+    assert seen["offered"] == ["STRANGER    2026-11-15", "OLD_HAND    2026-11-01"]
+    assert AppSettings.get_player_history() == HISTORY
+
+
+def test_the_locations_editor_saves_what_it_leaves(qapp, json_backend, tmp_path, monkeypatch):
+    """The locations button opens their editor with the saved list. What an
+    OK leaves is saved and announced. A Cancel saves nothing."""
+    from PyQt6.QtWidgets import QDialog
+
+    from src.gui import overlay_tab
+
+    opened = []
+    script = {"answer": QDialog.DialogCode.Accepted, "leaves": LOCATIONS}
+
+    class FakeDialog:
+        def __init__(self, data, parent=None):
+            opened.append((data, parent))
+
+        def exec(self):
+            return script["answer"]
+
+        def locations(self):
+            return script["leaves"]
+
+    monkeypatch.setattr(overlay_tab, "LocationListDialog", FakeDialog)
+    tab = OverlayTab()
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    tab._locations_btn.click()
+    assert opened == [([], tab)]
+    assert AppSettings.get_location_list() == LOCATIONS and changed == [True]
+    script.update(answer=QDialog.DialogCode.Rejected, leaves=[])
+    tab._locations_btn.click()
+    assert opened[1] == (LOCATIONS, tab)
+    assert AppSettings.get_location_list() == LOCATIONS and changed == [True]
+
+
+def test_the_real_locations_editors_ok_reaches_the_settings(qapp, json_backend, tmp_path,
+                                                            monkeypatch):
+    from src.gui.player_lists_dialog import LocationListDialog
+
+    def edit_and_press_ok(dialog):
+        dialog.add_location("new  babbage", "green")
+        dialog.accept()
+        return dialog.result()
+
+    monkeypatch.setattr(LocationListDialog, "exec", edit_and_press_ok)
+    AppSettings.set_location_list([["om-3", "red"]])
+    tab = OverlayTab()
+    tab._locations_btn.click()
+    assert AppSettings.get_location_list() == [["OM-3", "#FA5252"], ["NEW BABBAGE", "#40C057"]]
+
+
+def test_the_player_id_status_line(qapp, json_backend, tmp_path):
+    from src.gui import player_id_overlay
+    from src.utils.i18n import tr
+
+    tab = OverlayTab()
+    label = tab._player_status_label
+    assert label.text() == "Start the overlay with names or locations switched on to see it work."
+    tab.set_player_id_status("no_game", {})
+    assert label.text() == "Running. Waiting for Star Citizen to be the window in front."
+    tab.set_player_id_status("looking", {"width": 3840, "height": 2160, "seconds": 0.42,
+                                         "lines": 31, "skipped": 19, "read": 12, "marked": 3})
+    assert label.text() == ("Looking at the game (3840x2160). The last look took 0.42 s: "
+                            "31 lines of text found, 19 left out for having no distance line, "
+                            "12 tags read, 3 marked.")
+    tab.retranslate_ui()                          # a language switch keeps what it says
+    assert label.text().startswith("Looking at the game (3840x2160).")
+    # Every state the overlay can report has its text.
+    states = [value for name, value in vars(player_id_overlay).items()
+              if name.startswith("STATUS_") and isinstance(value, str)]
+    assert sorted(states) == ["failed", "looking", "no_game", "off", "starting"]
+    for state in states:
+        key = f"overlay.player_id_status_{state}"
+        assert tr(key) != key, state
+
+
+def test_player_lists_round_trip_and_reach_a_backup_only_once_saved(json_backend):
+    import json
+
+    assert AppSettings.get_player_lists() == {}
+    # The user's own data, like the owned blueprints: an older backup that
+    # has no lists must not empty them, so no default is put into a backup.
+    assert AppSettings.SCO_PLAYER_LISTS not in AppSettings.profile_default_values()
+    assert AppSettings.SCO_PLAYER_LISTS not in AppSettings.export_all_values()
+    AppSettings.set_player_lists(LISTS)
+    assert AppSettings.get_player_lists() == LISTS
+    assert json.loads(AppSettings.export_all_values()[AppSettings.SCO_PLAYER_LISTS]) == LISTS
+    for damaged in ("not json", "[1, 2]", '"text"', ""):
+        json_backend.setValue(AppSettings.SCO_PLAYER_LISTS, damaged)
+        assert AppSettings.get_player_lists() == {}, damaged
+
+
+def test_the_locations_round_trip_and_reach_a_backup_only_once_saved(json_backend):
+    import json
+
+    assert AppSettings.get_location_list() == []
+    # The user's own data too: no default goes into a backup.
+    assert AppSettings.SCO_LOCATION_LIST not in AppSettings.profile_default_values()
+    assert AppSettings.SCO_LOCATION_LIST not in AppSettings.export_all_values()
+    AppSettings.set_location_list(LOCATIONS)
+    assert AppSettings.get_location_list() == LOCATIONS
+    assert json.loads(AppSettings.export_all_values()[AppSettings.SCO_LOCATION_LIST]) == LOCATIONS
+    for damaged in ("not json", '{"a": 1}', '"text"', ""):
+        json_backend.setValue(AppSettings.SCO_LOCATION_LIST, damaged)
+        assert AppSettings.get_location_list() == [], damaged
+
+
+def test_the_names_read_in_play_never_reach_a_backup(json_backend):
+    """They are other players' names, read off the screen: kept on this PC,
+    and left out of an Export Settings backup and of an import."""
+    assert AppSettings.get_player_history() == {}
+    AppSettings.set_player_history(HISTORY)
+    assert AppSettings.get_player_history() == HISTORY
+    assert AppSettings.is_profile_excluded_key(AppSettings.SCO_PLAYER_HISTORY)
+    assert AppSettings.SCO_PLAYER_HISTORY not in AppSettings.profile_default_values()
+    exported = AppSettings.export_all_values()
+    assert AppSettings.SCO_PLAYER_HISTORY not in exported
+    assert not any("STRANGER" in str(value) for value in exported.values())
+    for damaged in ("not json", "[1, 2]", '"text"', ""):
+        json_backend.setValue(AppSettings.SCO_PLAYER_HISTORY, damaged)
+        assert AppSettings.get_player_history() == {}, damaged
+
+
+def test_starting_the_overlay_wires_the_player_id_status(json_backend, monkeypatch):
+    """MainWindow hands the Overlay tab the player ID test's status when it
+    makes the overlay."""
+    from unittest.mock import MagicMock
+
+    from src.gui import main_window, sco_overlay
+
+    made = MagicMock()
+    monkeypatch.setattr(sco_overlay, "ScoOverlay", MagicMock(return_value=made))
+    me = MagicMock()
+    me._sco_overlay = None
+    me._blueprint_meta = {"Agni": object()}
+    main_window.MainWindow._toggle_sco_overlay(me, True)
+    assert me._sco_overlay is made
+    made.player_id.status.connect.assert_called_once_with(me.overlay_tab.set_player_id_status)
+    made.start.assert_called_once_with()
+
+
+def test_apply_options_hands_the_overlay_the_player_id_switches(json_backend):
+    from types import SimpleNamespace
+
+    from src.gui.main_window import MainWindow
+
+    AppSettings.set_sco_option(AppSettings.SCO_PLAYER_ID, True)
+    AppSettings.set_sco_option(AppSettings.SCO_PLAYER_ID_ALL, True)
+    AppSettings.set_sco_option(AppSettings.SCO_HIGHLIGHT_LOCATIONS, True)
+    got = {}
+    overlay = SimpleNamespace(
+        set_options=lambda options: got.update(options),
+        drawer=SimpleNamespace(set_position=lambda p: None),
+        set_label_size=lambda s: None, set_alert_sound=lambda s: None,
+        set_drawer_hotkey=lambda h: None, is_running=lambda: False)
+    MainWindow._apply_sco_options(SimpleNamespace(_sco_overlay=overlay))
+    assert (got["player_id"], got["player_id_unlisted"], got["player_id_all"]) == (
+        True, True, True)
+    assert got["highlight_locations"] is True
+    assert got["player_id_distance"] is True              # its default, never switched

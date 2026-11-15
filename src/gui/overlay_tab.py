@@ -13,12 +13,14 @@ import logging
 from PyQt6.QtCore import QEvent, QKeyCombination, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (
-    QCheckBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QCheckBox, QDialog, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QWidget,
 )
 
 from src.gui.combo_box import NoScrollComboBox
 from src.gui.global_hotkey import HOTKEY_UNSUPPORTED, hotkey_text, windows_hotkey
+from src.gui.player_id_overlay import STATUS_OFF
+from src.gui.player_lists_dialog import LocationListDialog, PlayerListsDialog
 from src.gui.theme import get_button_color, get_button_text_color, host_in_scroll_area
 from src.utils.i18n import tr
 from src.utils.settings import AppSettings
@@ -175,6 +177,8 @@ class OverlayTab(QWidget):
         super().__init__(parent)
         self._checks: dict[str, QCheckBox] = {}
         self._hints: dict[str, QLabel] = {}
+        # The player ID test: how its looks are going (PlayerIdOverlay.status).
+        self._player_status: tuple[str, dict] = (STATUS_OFF, {})
         self.setup_ui()
 
     def setup_ui(self):
@@ -238,9 +242,52 @@ class OverlayTab(QWidget):
         self._add_switch(self._group(layout, "blueprint_watch_group"),
                          AppSettings.SCO_LIVE_BLUEPRINT_WATCH)
 
+        # The player ID test, in two halves. On the left, players' names: its
+        # switch, what gets a mark and the lists editor. On the right, the
+        # locations to highlight: its switch and its list. Both editors are
+        # placeholders until they have real ones. Under the two, a line that
+        # says how the looks are going, which both halves share.
+        player_id = self._group(layout, "player_id_group")
+        halves = QHBoxLayout()
+        halves.setSpacing(24)
+        player_id.addLayout(halves)
+        names = QVBoxLayout()
+        halves.addLayout(names, 1)
+        self._add_switch(names, AppSettings.SCO_PLAYER_ID)
+        under = self._indented(names)
+        for name in (AppSettings.SCO_PLAYER_ID_UNLISTED, AppSettings.SCO_PLAYER_ID_ALL):
+            under.addWidget(self._new_switch(name))
+        self._player_lists_btn = QPushButton()
+        self._player_lists_btn.clicked.connect(self._edit_player_lists)
+        row = QHBoxLayout()
+        row.addWidget(self._player_lists_btn)
+        row.addStretch()
+        under.addLayout(row)
+        names.addStretch()
+        places = QVBoxLayout()
+        halves.addLayout(places, 1)
+        self._add_switch(places, AppSettings.SCO_HIGHLIGHT_LOCATIONS)
+        under = self._indented(places)
+        self._locations_btn = QPushButton()
+        self._locations_btn.clicked.connect(self._edit_locations)
+        row = QHBoxLayout()
+        row.addWidget(self._locations_btn)
+        row.addStretch()
+        under.addLayout(row)
+        places.addStretch()
+        # Under both halves, since it is about what the looks read at all:
+        # only text with a distance line under it, as every marker has.
+        self._add_switch(player_id, AppSettings.SCO_PLAYER_ID_DISTANCE)
+        self._player_status_label = QLabel()
+        self._player_status_label.setProperty("role", "secondary")
+        self._player_status_label.setStyleSheet("font-size: 11px;")
+        self._player_status_label.setWordWrap(True)
+        player_id.addWidget(self._player_status_label)
+
         layout.addStretch()
 
-        for name in (AppSettings.SCO_SCAN_DECODER, AppSettings.SCO_DRAWER, SOUND_ALERT):
+        for name in (AppSettings.SCO_SCAN_DECODER, AppSettings.SCO_DRAWER, SOUND_ALERT,
+                     AppSettings.SCO_PLAYER_ID, AppSettings.SCO_HIGHLIGHT_LOCATIONS):
             self._checks[name].toggled.connect(self._sync_enabled)
         self._sync_enabled()
 
@@ -278,6 +325,40 @@ class OverlayTab(QWidget):
         self._hotkey_clear.setText(tr("overlay.drawer_hotkey_clear"))
         self._hotkey_hint.setText(tr("overlay.drawer_hotkey_hint"))
         self._show_hotkey_problem()
+        self._player_lists_btn.setText(tr("overlay.player_id_edit_lists"))
+        self._player_lists_btn.setToolTip(tr("overlay.player_id_edit_lists_hint"))
+        self._locations_btn.setText(tr("overlay.locations_edit"))
+        self._locations_btn.setToolTip(tr("overlay.locations_edit_hint"))
+        self._show_player_id_status()
+
+    def set_player_id_status(self, state: str, figures: dict) -> None:
+        """Show how the player ID looks are going (``PlayerIdOverlay.status``)."""
+        self._player_status = (state, dict(figures))
+        self._show_player_id_status()
+
+    def _show_player_id_status(self) -> None:
+        state, figures = self._player_status
+        self._player_status_label.setText(tr(f"overlay.player_id_status_{state}", **figures))
+
+    def _edit_player_lists(self) -> None:
+        """Open the lists editor, with the names read in play as the settings
+        hold them, and save what it leaves. ``options_changed`` then hands
+        the new lists to a running overlay."""
+        dialog = PlayerListsDialog(AppSettings.get_player_lists(),
+                                   AppSettings.get_player_history(), self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            AppSettings.set_player_lists(dialog.lists())
+            if dialog.past_cleared():
+                AppSettings.set_player_history({})
+            self.options_changed.emit()
+
+    def _edit_locations(self) -> None:
+        """Open the editor of the locations to highlight and save what it
+        leaves. ``options_changed`` then hands them to a running overlay."""
+        dialog = LocationListDialog(AppSettings.get_location_list(), self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            AppSettings.set_location_list(dialog.locations())
+            self.options_changed.emit()
 
     def refresh_styles(self) -> None:
         """Re-apply the theme's button colours (MainWindow calls this after a
@@ -431,6 +512,17 @@ class OverlayTab(QWidget):
         """Grey out what hangs under a switch that is off (kept, not changed)."""
         decoder_on = self._checks[AppSettings.SCO_SCAN_DECODER].isChecked()
         drawer_on = self._checks[AppSettings.SCO_DRAWER].isChecked()
+        player_id_on = self._checks[AppSettings.SCO_PLAYER_ID].isChecked()
+        places_on = self._checks[AppSettings.SCO_HIGHLIGHT_LOCATIONS].isChecked()
+        for name in (AppSettings.SCO_PLAYER_ID_UNLISTED, AppSettings.SCO_PLAYER_ID_ALL):
+            self._checks[name].setEnabled(player_id_on)
+        # Names and locations are read by the same looks, so either one on
+        # means there is something for the distance switch to filter and for
+        # the status line to say.
+        for widget in (self._checks[AppSettings.SCO_PLAYER_ID_DISTANCE],
+                       self._hints[AppSettings.SCO_PLAYER_ID_DISTANCE],
+                       self._player_status_label):
+            widget.setEnabled(player_id_on or places_on)
         for name, check in self._checks.items():
             for prefix, on in ((DRAWER_SECTION_PREFIX, drawer_on), (ALERT_PREFIX, decoder_on)):
                 if name.startswith(prefix):

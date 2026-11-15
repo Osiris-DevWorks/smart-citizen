@@ -8113,6 +8113,8 @@ class MainWindow(QMainWindow):
             self._sco_overlay.decoder_failed.connect(
                 lambda: self.statusBar().showMessage(tr("sco.decoder_stopped")))
             self._sco_overlay.hotkey_problem.connect(self._on_sco_hotkey_problem)
+            # The player ID test: its status line, for the Overlay tab.
+            self._sco_overlay.player_id.status.connect(self.overlay_tab.set_player_id_status)
         self._sco_overlay.drawer.set_items(self._blueprint_meta, AppSettings.get_owned_items())
         self._sco_overlay.set_watched_minerals(AppSettings.get_sco_watched_minerals())
         self._refresh_sco_catalog()

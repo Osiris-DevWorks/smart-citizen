@@ -60,6 +60,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
+from src.gui.player_id_overlay import PlayerIdOverlay
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
@@ -1375,6 +1376,10 @@ class ScoOverlay(QObject):
         self._running = False
         self._show_label = True
         self._show_drawer = True
+        # The player ID test (marks round name tags): its own windows, looks
+        # and pool thread, run only while the overlay runs with its switch on.
+        self.player_id = PlayerIdOverlay(self)
+        self._show_player_id = False
 
     def set_options(self, options: dict[str, bool]) -> None:
         """Apply the Overlay tab's switches (``AppSettings.SCO_OPTION_SETTING``
@@ -1391,6 +1396,14 @@ class ScoOverlay(QObject):
         self._show_drawer = on(AppSettings.SCO_DRAWER)
         self.drawer.set_sections(
             [name for name in SECTION_ICONS if on(AppSettings.SCO_DRAWER_SECTION_PREFIX + name)])
+        # Names and locations are read by the same looks, so either switch
+        # runs them.
+        names, places = on(AppSettings.SCO_PLAYER_ID), on(AppSettings.SCO_HIGHLIGHT_LOCATIONS)
+        self._show_player_id = names or places
+        self.player_id.set_marking(names, on(AppSettings.SCO_PLAYER_ID_UNLISTED),
+                                   on(AppSettings.SCO_PLAYER_ID_ALL), places)
+        self.player_id.set_distance_filter(on(AppSettings.SCO_PLAYER_ID_DISTANCE))
+        self.player_id.reload_lists()
         if self._running:
             self._sync_windows()
 
@@ -1450,6 +1463,7 @@ class ScoOverlay(QObject):
         self._focus_before_drawer = 0
         self.label.hide()
         self.drawer.hide()
+        self.player_id.stop()
         self._sync_hotkey()
 
     def _sync_windows(self) -> None:
@@ -1463,6 +1477,10 @@ class ScoOverlay(QObject):
             self.drawer.hide()
         if not self._show_label:
             self.label.hide()
+        if self._show_player_id:
+            self.player_id.start()
+        else:
+            self.player_id.stop()
         self._sync_timer()
         self._sync_hotkey()
 
@@ -1547,7 +1565,8 @@ class ScoOverlay(QObject):
     def wait_for_reader(self, msecs: int = -1) -> bool:
         """Block until no capture is being read and no sample is being saved
         (used on close and in tests)."""
-        return self._pool.waitForDone(msecs)
+        done = self._pool.waitForDone(msecs)
+        return self.player_id.wait_for_reader(msecs) and done
 
     def _on_read_done(self, token: int, found, failed: bool, image: QImage, region: QRect) -> None:
         self._reading = False

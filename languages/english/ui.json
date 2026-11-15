@@ -3522,6 +3522,198 @@
       "ht": "While the overlay runs, blueprints you receive in game are read from Game.log and marked owned.",
       "at": ""
     },
+    "player_id_group": {
+      "ht": "Player ID and locations (test)",
+      "at": ""
+    },
+    "player_id": {
+      "ht": "Mark the names of other players",
+      "at": ""
+    },
+    "player_id_hint": {
+      "ht": "A test. While Star Citizen is the window in front, the overlay reads the name tags over ships and players and draws a mark round each name. Names on your lists get their color. Nothing is looked up anywhere: you keep the lists here. It keeps one processor core busy while it runs, and the marks trail a name that moves.",
+      "at": ""
+    },
+    "player_id_unlisted": {
+      "ht": "Mark names on no list too",
+      "at": ""
+    },
+    "player_id_unlisted_hint": {
+      "ht": "A name that is on none of your lists gets a mark as well, in the color you pick in the lists editor, once two looks agree on it.",
+      "at": ""
+    },
+    "player_id_all": {
+      "ht": "Test: Show information for all players",
+      "at": ""
+    },
+    "player_id_all_hint": {
+      "ht": "For checking that the reading works at all. Every tag the overlay reads is marked at once, with the text it read above it. A possible name is yellow until two looks agree, then it takes the color for names on no list. Text that cannot be a name, such as UNKNOWN or a ship's serial, is cyan. Cockpit and menu words can light up too.",
+      "at": ""
+    },
+    "player_id_edit_lists": {
+      "ht": "Edit player lists...",
+      "at": ""
+    },
+    "player_id_edit_lists_hint": {
+      "ht": "Your orgs and players and their colors, saved with your settings. The editor also shows the names read in play.",
+      "at": ""
+    },
+    "highlight_locations": {
+      "ht": "Highlight locations",
+      "at": ""
+    },
+    "highlight_locations_hint": {
+      "ht": "A test. A location's marker gets a frame when its text is on your list, in the color you gave it. The same looks read names and locations, so either switch keeps one processor core busy while the overlay runs.",
+      "at": ""
+    },
+    "player_id_distance": {
+      "ht": "Only read text with a distance line under it",
+      "at": ""
+    },
+    "player_id_distance_hint": {
+      "ht": "Every marker in the game shows its distance under its name, such as 6.2km. Menu, cockpit and HUD text has none. With this on, text with no distance line under it is left out before it is read, so menu and cockpit words are not marked and the reader's time goes to real tags. Switch it off if a name you can see gets no mark, for example over a player on foot.",
+      "at": ""
+    },
+    "locations_edit": {
+      "ht": "Edit locations...",
+      "at": ""
+    },
+    "locations_edit_hint": {
+      "ht": "The locations to highlight and their colors. They are saved with your settings.",
+      "at": ""
+    },
+    "locations_title": {
+      "ht": "Locations to highlight (test)",
+      "at": ""
+    },
+    "locations_intro": {
+      "ht": "Type a location as its marker shows it, such as NEW BABBAGE, and give it a color. When the overlay reads that text it draws a frame round it in that color. A long name that the game breaks over two lines is read one line at a time, so type one of its lines.",
+      "at": ""
+    },
+    "locations_location": {
+      "ht": "Location",
+      "at": ""
+    },
+    "locations_add": {
+      "ht": "Add location",
+      "at": ""
+    },
+    "locations_bad_names": {
+      "ht": "These cannot be read off a marker. A location is 3 to 40 characters: letters, digits, spaces, hyphens, underscores, full stops and apostrophes:\n{names}",
+      "at": ""
+    },
+    "player_id_status_off": {
+      "ht": "Start the overlay with names or locations switched on to see it work.",
+      "at": ""
+    },
+    "player_id_status_starting": {
+      "ht": "Getting ready...",
+      "at": ""
+    },
+    "player_id_status_no_game": {
+      "ht": "Running. Waiting for Star Citizen to be the window in front.",
+      "at": ""
+    },
+    "player_id_status_looking": {
+      "ht": "Looking at the game ({width}x{height}). The last look took {seconds} s: {lines} lines of text found, {skipped} left out for having no distance line, {read} tags read, {marked} marked.",
+      "at": ""
+    },
+    "player_id_status_failed": {
+      "ht": "Stopped after an error. The Log tab has the details. Stop and start the overlay to try again.",
+      "at": ""
+    },
+    "player_lists_title": {
+      "ht": "Player lists (test)",
+      "at": ""
+    },
+    "player_lists_intro": {
+      "ht": "Give an org a color, then put players under it, or give a player a color of their own. A name is matched as its tag shows it, in capitals. Nothing here is looked up: you type in what you know.",
+      "at": ""
+    },
+    "player_lists_orgs": {
+      "ht": "Orgs",
+      "at": ""
+    },
+    "player_lists_org": {
+      "ht": "Org",
+      "at": ""
+    },
+    "player_lists_color": {
+      "ht": "Color",
+      "at": ""
+    },
+    "player_lists_add_org": {
+      "ht": "Add org",
+      "at": ""
+    },
+    "player_lists_remove": {
+      "ht": "Remove",
+      "at": ""
+    },
+    "player_lists_players": {
+      "ht": "Players",
+      "at": ""
+    },
+    "player_lists_player": {
+      "ht": "Player",
+      "at": ""
+    },
+    "player_lists_add_player": {
+      "ht": "Add player",
+      "at": ""
+    },
+    "player_lists_own_color": {
+      "ht": "(own color)",
+      "at": ""
+    },
+    "player_lists_org_color_hint": {
+      "ht": "This player is under an org and gets its color.",
+      "at": ""
+    },
+    "player_lists_seen": {
+      "ht": "Last session ({when}): names read that are on no list",
+      "at": ""
+    },
+    "player_lists_seen_none": {
+      "ht": "Last session: no names read yet",
+      "at": ""
+    },
+    "player_lists_past": {
+      "ht": "Past players: every session's names that are on no list, newest first",
+      "at": ""
+    },
+    "player_lists_past_hint": {
+      "ht": "Each name with the day it was last read. Kept on this PC only, up to {count} names, and never part of a settings backup.",
+      "at": ""
+    },
+    "player_lists_clear_past": {
+      "ht": "Clear past players",
+      "at": ""
+    },
+    "player_lists_clear_past_hint": {
+      "ht": "Empties both lists of names read in play once you press OK. Your orgs and players stay.",
+      "at": ""
+    },
+    "player_lists_add_seen": {
+      "ht": "Add to players",
+      "at": ""
+    },
+    "player_lists_open_rsi": {
+      "ht": "Open RSI page",
+      "at": ""
+    },
+    "player_lists_open_rsi_hint": {
+      "ht": "Opens the player's page on the RSI site in your own browser, for you to read. Smart Citizen looks nothing up.",
+      "at": ""
+    },
+    "player_lists_unlisted": {
+      "ht": "Color for names on no list",
+      "at": ""
+    },
+    "player_lists_bad_names": {
+      "ht": "These cannot be name tags. A name is one word of letters, digits, hyphens and underscores, three or more long:\n{names}",
+      "at": ""
+    },
     "drawer": {
       "ht": "Overlay drawer",
       "at": ""
