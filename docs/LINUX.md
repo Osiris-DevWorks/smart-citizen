@@ -88,8 +88,8 @@ Smart Citizen should now launch. From there, usage is identical to the Windows v
 
 ## Troubleshooting
 
-**Don't run Star Citizen and Smart Citizen at the same time:**
-Smart Citizen modifies the game's files (translations, etc.) and is not meant to run alongside the game — once your changes are applied, you can close it before launching Star Citizen. On top of that, running two applications concurrently inside the same Wine prefix tends to cause conflicts. Always run one *or* the other, never both at once.
+**Apply your changes with Star Citizen closed:**
+Smart Citizen changes the game's files (translations, etc.), so apply your changes before you launch Star Citizen, not while it's running. The **Smart Citizen Overlay** is the exception: it's meant to run alongside the game, so keep Smart Citizen open while you play if you use it (on an X11 session, see the note at the top of this guide). If you don't use the overlay, you can close Smart Citizen once your changes are applied. Running two apps in the same Wine prefix can sometimes cause conflicts, so if either one misbehaves while both are open, close Smart Citizen.
 
 **Smart Citizen doesn't detect the Star Citizen installation:**
 This should be auto-detected since both apps share the same Wine prefix. If it isn't, point Smart Citizen manually to the Star Citizen install folder inside the prefix (typically `<WINE_PREFIX>/drive_c/Program Files/Roberts Space Industries/StarCitizen/`).
