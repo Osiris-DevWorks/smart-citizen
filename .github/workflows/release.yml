@@ -44,10 +44,8 @@ jobs:
       # assets) AND `git push origin <tag>` (auto-tag the merge commit on
       # branch-push trigger).
       contents: write
-      # Required for the Azure OIDC login that code signing uses, and for
-      # the build provenance attestation.
+      # Required for the Azure OIDC login that code signing uses.
       id-token: write
-      attestations: write
     # Code signing (Azure Artifact Signing) runs only once the
     # AZURE_SIGNING_ACCOUNT repository variable is set. Until then every
     # signing step is skipped and the release ships unsigned, as before.
@@ -57,7 +55,6 @@ jobs:
     # AZURE_SIGNING_PROFILE.
     env:
       SIGN: ${{ vars.AZURE_SIGNING_ACCOUNT != '' }}
-      VT_KEY_SET: ${{ secrets.VIRUSTOTAL_API_KEY != '' }}
 
     steps:
       - name: Checkout (at tag, branch HEAD, or dispatch input)
@@ -349,17 +346,6 @@ jobs:
           git tag -a $tag -m "Release $tag (auto-tagged by release.yml on merge to ${{ github.ref_name }})"
           git push origin $tag
 
-      - name: Attest build provenance
-        # Records that these exact files were built by this workflow from
-        # this commit. Anyone can check a download with
-        # `gh attestation verify <file> --repo Osiris-DevWorks/smart-citizen`.
-        if: steps.gate.outputs.skip == 'false'
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: |
-            ${{ steps.artifacts.outputs.installer_path }}
-            ${{ steps.artifacts.outputs.portable_path }}
-
       - name: Publish GitHub Release
         if: steps.gate.outputs.skip == 'false'
         uses: softprops/action-gh-release@v2
@@ -374,24 +360,6 @@ jobs:
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
-
-      - name: Scan release files on VirusTotal
-        # Uploads both files to VirusTotal and adds the scan links to the
-        # end of the release notes, so users can check the results
-        # themselves. Runs only when the VIRUSTOTAL_API_KEY secret is set
-        # (a free VirusTotal account's key is enough). A VirusTotal outage
-        # never fails a release that is already published.
-        if: steps.gate.outputs.skip == 'false' && env.VT_KEY_SET == 'true'
-        uses: crazy-max/ghaction-virustotal@v4
-        with:
-          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          update_release_body: true
-          request_rate: 4
-          files: |
-            ${{ steps.artifacts.outputs.installer_path }}
-            ${{ steps.artifacts.outputs.portable_path }}
-        continue-on-error: true
 
       - name: Post Discord notification
         # Inlined here because the standalone release-notify.yml workflow
