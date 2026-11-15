@@ -23,7 +23,9 @@ Overlays only draw over Star Citizen in borderless windowed mode, not
 exclusive fullscreen. SCO only captures the screen and, with a drawer
 hotkey set, registers that one key combination with Windows and watches the
 keyboard's raw input for it while it is held (``global_hotkey.py``); it
-never reads game memory or sends input.
+never reads game memory or sends input. Both windows and the capture follow
+the screen the game window is on (``game_screen.py``, by window class and
+title only), the primary screen when the game is not found (#573).
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
@@ -51,7 +53,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QColor, QGuiApplication, QImage, QPainter, QPainterPath, QPalette, QPen,
-    QTransform,
+    QScreen, QTransform,
 )
 from PyQt6.QtWidgets import (
     QBoxLayout, QCheckBox, QFrame, QGraphicsDropShadowEffect, QHBoxLayout,
@@ -59,6 +61,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
+from src.gui.game_screen import game_screen
 from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
@@ -74,13 +77,16 @@ from src.utils.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
-# Where the scanner's signature readout sits, as fractions of the primary
-# screen (x, y, w, h). Measured from 2560x1600 Drake Golem screenshots: the
+# Where the scanner's signature readout sits, as fractions of the screen
+# Star Citizen is on (x, y, w, h). Measured from 2560x1600 Drake Golem screenshots: the
 # pin + number sit in a small panel under the cockpit radar screen, top
 # centre. In-game checks found the area is the same across cockpits; the box is
 # padded for head movement (~115 px between the two samples).
 SCAN_REGION = (0.38, 0.28, 0.24, 0.12)
 CAPTURE_INTERVAL_MS = 250
+# How often a running overlay looks for the screen Star Citizen is on, so the
+# drawer and the capture follow the game to another monitor (#573).
+GAME_SCREEN_CHECK_MS = 1000
 # For tuning the digit reader only: with this environment variable set (any
 # value) when the app starts, a crop of each distinct reading (named after the
 # text read) is kept so misreads can be fixed by adding reference glyphs
@@ -878,6 +884,9 @@ class BlueprintDrawer(QWidget):
         self._layout.setSpacing(0)
         self._layout.addWidget(self._handle)
         self._layout.addWidget(self._panel)
+        # The screen it docks to: the game's (ScoOverlay.set_screen), or the
+        # primary screen while none is set.
+        self._screen: Optional[QScreen] = None
         self._position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
         self.set_position(self._position)
         self._panel.hide()
@@ -1081,8 +1090,13 @@ class BlueprintDrawer(QWidget):
             Qt.AlignmentFlag.AlignVCenter if sideways else Qt.AlignmentFlag.AlignHCenter)
         self._dock()
 
+    def set_screen(self, screen: Optional[QScreen]) -> None:
+        """Dock to *screen* (None: the primary screen), moving there at once."""
+        self._screen = screen
+        self._dock()
+
     def _dock(self) -> None:
-        screen = QGuiApplication.primaryScreen().availableGeometry()
+        screen = (self._screen or QGuiApplication.primaryScreen()).availableGeometry()
         edge = drawer_edge(self._position)
         vertical, _, horizontal = self._position.partition("_")
         handle = self._handle.size()
@@ -1375,6 +1389,15 @@ class ScoOverlay(QObject):
         self._running = False
         self._show_label = True
         self._show_drawer = True
+        # The screen the drawer docks to and the capture reads: Star
+        # Citizen's, or the primary screen when the game is not found.
+        self._screen: Optional[QScreen] = None
+        self._screen_timer = QTimer(self)
+        self._screen_timer.setInterval(GAME_SCREEN_CHECK_MS)
+        self._screen_timer.timeout.connect(self._follow_game_screen)
+        app = QGuiApplication.instance()
+        if app is not None:
+            app.screenRemoved.connect(self._on_screen_removed)
 
     def set_options(self, options: dict[str, bool]) -> None:
         """Apply the Overlay tab's switches (``AppSettings.SCO_OPTION_SETTING``
@@ -1441,16 +1464,48 @@ class ScoOverlay(QObject):
         colors = OverlayColors.from_theme()
         self.drawer.apply_colors(colors)
         self.label.set_glow_color(colors.accent)
+        self._follow_game_screen()
+        self._screen_timer.start()
         self._sync_windows()
 
     def stop(self) -> None:
         self._running = False
         self._timer.stop()
+        self._screen_timer.stop()
         self._read_token += 1
         self._focus_before_drawer = 0
         self.label.hide()
         self.drawer.hide()
         self._sync_hotkey()
+
+    def screen(self) -> Optional[QScreen]:
+        """The screen the overlay works on (None until it first starts)."""
+        return self._screen
+
+    def _follow_game_screen(self) -> None:
+        """Move to the screen Star Citizen is on, if that changed: the drawer
+        docks there and the next capture reads it. A label still showing
+        belongs to the old screen, so it goes, with any pending reading."""
+        screen = game_screen()
+        if screen is self._screen:
+            return
+        if self._screen is not None:
+            logger.info("SCO: following the game to screen %s",
+                        screen.name() if screen else "none")
+        self._screen = screen
+        self.drawer.set_screen(screen)
+        self.label.hide()
+        self._candidate, self._candidate_count = None, 0
+        self._read_token += 1           # a capture of the old screen is void
+
+    def _on_screen_removed(self, screen: QScreen) -> None:
+        # Never keep a screen Qt is about to delete.
+        if screen is not self._screen:
+            return
+        self._screen = None
+        self.drawer.set_screen(None)
+        if self._running:
+            self._follow_game_screen()
 
     def _sync_windows(self) -> None:
         if self._show_drawer and self.drawer.has_sections():
@@ -1536,10 +1591,14 @@ class ScoOverlay(QObject):
         # A confirming capture queued just before a stop must not run either.
         if self._reading or self._reader is None or not self._timer.isActive():
             return
-        screen = QGuiApplication.primaryScreen()
-        region = scan_region_rect(screen.geometry())
+        screen = self._screen or QGuiApplication.primaryScreen()
+        geometry = screen.geometry()
+        region = scan_region_rect(geometry)
+        # With window 0, grabWindow's x and y count from the screen's own
+        # top-left; the region is in desktop coordinates.
         image = screen.grabWindow(
-            0, region.x(), region.y(), region.width(), region.height()).toImage()
+            0, region.x() - geometry.x(), region.y() - geometry.y(),
+            region.width(), region.height()).toImage()
         self._mask_own_label(image, region)
         self._reading = True
         self._pool.start(_ReadTask(self._reader, image, region, self._read_done, self._read_token))
