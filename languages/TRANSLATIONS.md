@@ -91,7 +91,7 @@ them against the new source.
   at 63 characters and its body at 255, which every language keeps to).
   `ht` in english, `at` in the other eleven (chinese_traditional through
   OpenCC `s2twp` from chinese, as that language is made). HELP's
-  **Appearance** bullet gains two sentences about it in all eleven translated
+  **Appearance** bullet gains three sentences about it in all eleven translated
   `HELP.md` files, AI-translated, each naming the tick box with its own
   `ui.json` text. The guided tour's Appearance step names the tick box too,
   in a sentence added after the step's text as `release/3.0.1` has it (with
