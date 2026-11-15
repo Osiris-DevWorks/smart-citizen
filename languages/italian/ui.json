@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Mostra Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Esci"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen è ancora in esecuzione"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Si trova nell'area di notifica. Fai clic sulla sua icona per riportare la finestra, oppure fai clic destro per uscire. Se non vedi l'icona, potrebbe essere dietro la freccia ^ accanto all'orologio."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -797,6 +815,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "Se selezionato, il tour guidato non si avvierà automaticamente con una nuova versione. Il pulsante Tutorial nella barra degli strumenti continua a funzionare."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Riduci nell'area di notifica"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Se selezionato, ridurre a icona Smart Citizen lo nasconde nell'area di notifica (le icone accanto all'orologio) invece che nella barra delle applicazioni. Fai clic sulla sua icona per riportarlo indietro. Finché è lì, avviare di nuovo Smart Citizen riporta quella finestra invece di aprirne una seconda copia."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Nessuna area di notifica trovata, quindi Smart Citizen viene ridotto a icona nella barra delle applicazioni."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3233,7 +3263,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Scegli il tema dell'app (Predefinito / Chiaro / Scuro / ODW) e, facoltativamente, disattiva il tour automatico per le nuove versioni."
+        "at": "Scegli il tema dell'app (Predefinito / Chiaro / Scuro / ODW) e la dimensione del testo (Piccola / Media / Grande, applicata dopo un riavvio) e, se vuoi, disattiva il tour automatico nelle nuove versioni. Seleziona Riduci nell'area di notifica perché la finestra ci vada quando la riduci a icona."
       }
     },
     "cfg_sc_install": {

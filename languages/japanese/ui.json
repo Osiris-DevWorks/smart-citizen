@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen を表示"
+    },
+    "quit": {
+      "ht": "",
+      "at": "終了"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen は実行中です"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "システムトレイに格納されています。アイコンをクリックするとウィンドウが元に戻り、右クリックで終了できます。アイコンが見えない場合は、時計の横の ^ の中にあるかもしれません。"
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -797,6 +815,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "チェックすると、新しいバージョンでガイドツアーが自動起動しなくなります。ツールバーのチュートリアルボタンは引き続き機能します。"
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "システムトレイに最小化"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "チェックすると、Smart Citizen を最小化したときにタスクバーではなくシステムトレイ（時計の横のアイコン）に格納します。トレイのアイコンをクリックすると元に戻ります。トレイにある間に Smart Citizen をもう一度起動すると、2 つ目を開かずにそのウィンドウが元に戻ります。"
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "システムトレイが見つからないため、Smart Citizen はタスクバーに最小化されます。"
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3233,7 +3263,7 @@
       },
       "description": {
         "ht": "",
-        "at": "アプリのテーマ（Default / Light / Dark / ODW）を選び、任意で新バージョン時の自動ツアーを無効にできます。"
+        "at": "アプリのテーマ（Default / Light / Dark / ODW）と文字サイズ（小 / 中 / 大、再起動後に反映）を選び、任意で新バージョン時の自動ツアーを無効にできます。「システムトレイに最小化」をオンにすると、最小化したときにウィンドウがシステムトレイに格納されます。"
       }
     },
     "cfg_sc_install": {

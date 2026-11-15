@@ -15,6 +15,7 @@ from src.gui.theme import (
     AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, host_in_scroll_area,
     needs_apply_style,
 )
+from src.gui.tray import tray_available
 from src.utils.i18n import tr
 from src.utils.pak_extractor import base_ini_is_fresh, windows_reason
 from src.utils.settings import (
@@ -88,6 +89,9 @@ class ConfigTab(QWidget):
     # what Apply would write (#532). A direct connection, so it runs before
     # the preview goes on.
     preview_starting = pyqtSignal()
+    # Emitted when Minimize to Tray is ticked or unticked, once the setting is
+    # saved. MainWindow hands it to its TrayController (src/gui/tray.py).
+    minimize_to_tray_changed = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -227,6 +231,14 @@ class ConfigTab(QWidget):
         self.disable_tutorial_cb.setChecked(AppSettings.get_tutorial_disabled())
         self.disable_tutorial_cb.toggled.connect(AppSettings.set_tutorial_disabled)
         appearance_layout.addWidget(self.disable_tutorial_cb)
+
+        # Greyed out while the desktop has no system tray to minimize to.
+        appearance_layout.addSpacing(20)
+        self.minimize_to_tray_cb = QCheckBox(tr("config.minimize_to_tray_cb"))
+        self.minimize_to_tray_cb.setChecked(AppSettings.get_minimize_to_tray())
+        self._refresh_minimize_to_tray_box()
+        self.minimize_to_tray_cb.toggled.connect(self._on_minimize_to_tray_toggled)
+        appearance_layout.addWidget(self.minimize_to_tray_cb)
 
         appearance_layout.addStretch()
         layout.addWidget(self._appearance_group)
@@ -545,6 +557,8 @@ class ConfigTab(QWidget):
             self.font_size_combo.blockSignals(False)
         self.disable_tutorial_cb.setText(tr("config.disable_tutorial_cb"))
         self.disable_tutorial_cb.setToolTip(tr("config.disable_tutorial_tooltip"))
+        self.minimize_to_tray_cb.setText(tr("config.minimize_to_tray_cb"))
+        self._refresh_minimize_to_tray_box()
         self._loc_group.setTitle(tr("config.star_citizen_group"))
         self._install_label.setText(tr("config.installation_label"))
         self._game_desc_label.setText(tr("config.installation_desc"))
@@ -643,6 +657,28 @@ class ConfigTab(QWidget):
 
     def _on_include_new_toggled(self, checked: bool):
         AppSettings.set_include_new_lines(checked)
+
+    def _on_minimize_to_tray_toggled(self, checked: bool):
+        """Save Minimize to Tray and tell MainWindow, which turns its tray
+        icon on or off at once (src/gui/tray.py)."""
+        AppSettings.set_minimize_to_tray(checked)
+        self.minimize_to_tray_changed.emit(checked)
+
+    def _refresh_minimize_to_tray_box(self) -> None:
+        """Grey Minimize to Tray out, with a tooltip that says why, while the
+        desktop has no system tray. The build, a language switch and every
+        showing of the tab ask, so a switch shows what a restart shows and a
+        tray that appeared after the start (a start before the taskbar was
+        up) makes the box usable without a restart."""
+        available = tray_available()
+        self.minimize_to_tray_cb.setEnabled(available)
+        self.minimize_to_tray_cb.setToolTip(
+            tr("config.minimize_to_tray_tooltip") if available
+            else tr("config.minimize_to_tray_unavailable_tooltip"))
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._refresh_minimize_to_tray_box()
 
     # ── Game path ────────────────────────────────────────────────────────────
 

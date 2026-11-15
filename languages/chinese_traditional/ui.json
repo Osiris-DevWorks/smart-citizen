@@ -15,6 +15,24 @@
       "at": "智慧公民 v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "顯示 Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "退出"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen 仍在執行"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "它在系統托盤中。點選其圖示即可恢復視窗，右鍵點選可退出。如果看不到圖示，它可能在時鐘旁的 ^ 箭頭裡。"
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -793,6 +811,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "勾選後，引導教程將不會在新版本中自動啟動。工具欄中的教程按鈕仍然可用。"
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "最小化到系統托盤"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "勾選後，最小化 Smart Citizen 時會將其隱藏到系統托盤（時鐘旁的圖示）而不是工作列。點選其托盤圖示即可恢復。在托盤中時，再次啟動 Smart Citizen 會恢復該視窗，而不是開啟第二個副本。"
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "未找到系統托盤，因此 Smart Citizen 將最小化到工作列。"
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3233,7 +3263,7 @@
       },
       "description": {
         "ht": "",
-        "at": "選擇應用主題（預設 / 淺色 / 深色 / ODW），並可選擇禁用新版本的自動教程。"
+        "at": "選擇應用程式主題（預設 / 淺色 / 深色 / ODW）和字型大小（小 / 中 / 大，重新啟動後生效），並可選擇在新版本時關閉自動教程。勾選“最小化到系統托盤”後，視窗在最小化時會進入系統托盤。"
       }
     },
     "cfg_sc_install": {

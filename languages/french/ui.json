@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Afficher Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Quitter"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen est toujours en cours d'exécution"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Il est dans la zone de notification. Cliquez sur son icône pour faire revenir la fenêtre, ou faites un clic droit pour quitter. Si vous ne voyez pas l'icône, elle est peut-être derrière la flèche ^ près de l'horloge."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -797,6 +815,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "Si coché, la visite guidée ne se lancera pas automatiquement lors d'une nouvelle version. Le bouton Tutoriel de la barre d'outils reste fonctionnel."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Réduire dans la zone de notification"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Si coché, réduire Smart Citizen le place dans la zone de notification (les icônes près de l'horloge) au lieu de la barre des tâches. Cliquez sur son icône pour le faire revenir. Tant qu'il s'y trouve, relancer Smart Citizen fait revenir cette fenêtre au lieu d'ouvrir une deuxième copie."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Aucune zone de notification n'a été trouvée, Smart Citizen se réduit donc dans la barre des tâches."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3213,7 +3243,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Choisissez le thème de l'application (Défaut / Clair / Sombre / ODW) et désactivez si vous le souhaitez la visite automatique à chaque nouvelle version."
+        "at": "Choisissez le thème de l'application (Défaut / Clair / Sombre / ODW) et la taille du texte (Petite / Moyenne / Grande, appliquée après un redémarrage), et désactivez si besoin la visite automatique lors des nouvelles versions. Cochez Réduire dans la zone de notification pour y envoyer la fenêtre quand vous la réduisez."
       }
     },
     "cfg_sc_install": {

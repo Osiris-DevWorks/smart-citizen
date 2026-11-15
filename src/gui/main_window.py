@@ -30,6 +30,7 @@ from src.gui.filter_header import FilterHeaderView
 from src.gui.log_tab import LogTab
 from src.gui.overlay_tab import OverlayTab, hotkey_problem_text
 from src.gui.simple_mode_widget import SimpleModeWidget
+from src.gui.tray import TrayController
 from src.gui.markdown_renderer import markdown_to_html as _md_to_html
 from src.gui.string_table_model import (
     StringTableModel, COL_CATEGORY, COL_KEY, COL_DEFAULT, COL_CURRENT,
@@ -888,6 +889,13 @@ class MainWindow(QMainWindow):
         # content's natural size scrolls it rather than squeezing/clipping it.
         self.setMinimumSize(0, 0)
         self.restore_window_state()
+
+        # Minimize to tray (the Config tab's tick box) and the second start
+        # that brings a copy in the tray back (src/gui/tray.py). Built after
+        # setup_ui, which sets the window icon the tray icon shows.
+        self._tray = TrayController(self)
+        self._tray.set_enabled(AppSettings.get_minimize_to_tray())
+        self.config_tab.minimize_to_tray_changed.connect(self._tray.set_enabled)
 
         # Ensure cache directory exists
         AppSettings.get_cache_dir()
@@ -5238,6 +5246,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tr("window.title", version=get_version()))
         self.title_label.setText(tr("branding.title"))
         self.tagline_label.setText(tr("branding.tagline"))
+        # The tray icon's menu, and its tooltip, the window title just set.
+        self._tray.retranslate_ui()
 
         # Tab bar
         self.tabs.setTabText(self._strings_tab_index, tr("tabs.string_editor"))
@@ -7482,6 +7492,9 @@ class MainWindow(QMainWindow):
         # now, ahead of the unbounded loader wait below, so its tool dies at
         # once; _stop_workers_for_close waits for it last.
         self._close_committed = True
+        # The tray icon goes now, so a click on it cannot bring the window
+        # back while the close waits for the workers with it hidden.
+        self._tray.shut_down()
         self._request_stops_for_close()
         if self._loader_worker:
             self._loader_worker.quit()

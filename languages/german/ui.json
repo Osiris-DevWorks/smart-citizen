@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen anzeigen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Beenden"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen läuft weiter"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Es ist jetzt im Infobereich. Ein Klick auf sein Symbol holt das Fenster zurück, ein Rechtsklick bietet Beenden an. Ist das Symbol nicht zu sehen, liegt es vielleicht hinter dem Pfeil ^ neben der Uhr."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -797,6 +815,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "Wenn aktiviert, startet die geführte Tour bei einer neuen Version nicht automatisch. Der Tutorial-Knopf in der Symbolleiste funktioniert weiterhin."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "In den Infobereich minimieren"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Wenn aktiviert, verschwindet Smart Citizen beim Minimieren in den Infobereich (die Symbole neben der Uhr) statt in die Taskleiste. Ein Klick auf sein Symbol dort holt es zurück. Solange es dort ist, holt ein erneuter Start von Smart Citizen dieses Fenster zurück, statt eine zweite Kopie zu öffnen."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Es wurde kein Infobereich gefunden, daher wird Smart Citizen in die Taskleiste minimiert."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3233,7 +3263,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und deaktiviere optional die automatische Tour bei neuen Versionen."
+        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und die Schriftgröße (Klein / Mittel / Groß, gilt nach einem Neustart) und deaktiviere optional die automatische Tour bei neuen Versionen. Aktiviere „In den Infobereich minimieren“, damit das Fenster beim Minimieren in den Infobereich geht."
       }
     },
     "cfg_sc_install": {

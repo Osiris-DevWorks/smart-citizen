@@ -82,6 +82,23 @@ them against the new source.
 
 ## Backfill log
 
+- **3.1.0 cycle (2026-11-15, Claude Opus 5.5, minimize to tray):** seven new
+  keys for the Config tab's **Minimize to Tray**, the tray icon's menu and
+  its one-time "still running" notice: `config.minimize_to_tray_cb`,
+  `config.minimize_to_tray_tooltip`,
+  `config.minimize_to_tray_unavailable_tooltip`, `tray.show`, `tray.quit`,
+  `tray.notice_title` and `tray.notice_body` (Windows cuts a notice's title
+  at 63 characters and its body at 255, which every language keeps to).
+  `ht` in english, `at` in the other eleven (chinese_traditional through
+  OpenCC `s2twp` from chinese, as that language is made). HELP's
+  **Appearance** bullet gains two sentences about it in all eleven translated
+  `HELP.md` files, AI-translated, each naming the tick box with its own
+  `ui.json` text. The guided tour's Appearance step names the tick box too,
+  in a sentence added after the step's text as `release/3.0.1` has it (with
+  the font size): `assets/tutorial.json` in English and
+  `tutorial.cfg_appearance.description` (`at` only in every language, no `ht`
+  touched) in the other eleven, each quoting the box the way that language's
+  tour quotes a control.
 - **3.0.0 cycle (2026-10-30, Claude Opus 5.5, pre-release language check):**
   two gaps filled. (1) New key `enhancements.blueprints_default_owned_mission`,
   the starter blueprints' mission label ("Default blueprint (every player has

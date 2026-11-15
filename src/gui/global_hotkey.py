@@ -203,6 +203,8 @@ def _user32():
         dll.SetForegroundWindow.restype = wintypes.BOOL
         dll.IsWindow.argtypes = [wintypes.HWND]
         dll.IsWindow.restype = wintypes.BOOL
+        dll.AllowSetForegroundWindow.argtypes = [wintypes.DWORD]
+        dll.AllowSetForegroundWindow.restype = wintypes.BOOL
         dll.RegisterRawInputDevices.argtypes = [ctypes.POINTER(RAWINPUTDEVICE), wintypes.UINT,
                                                 wintypes.UINT]
         dll.RegisterRawInputDevices.restype = wintypes.BOOL
@@ -370,6 +372,20 @@ def give_focus_back(hwnd: int) -> bool:
     if not user32 or not hwnd or not user32.IsWindow(hwnd):
         return False
     return bool(user32.SetForegroundWindow(hwnd))
+
+
+# AllowSetForegroundWindow's "any process" (ASFW_ANY, (DWORD)-1).
+ASFW_ANY = 0xFFFFFFFF
+
+
+def allow_any_foreground() -> bool:
+    """Let another process bring its window to the front (AllowSetForegroundWindow
+    with ASFW_ANY). Windows grants that right only to the process the user
+    just started or the one in front, so that one hands it on: a second
+    start of Smart Citizen does, for the copy in the tray (src/gui/tray.py).
+    False off Windows or when Windows refuses."""
+    user32 = _user32()
+    return bool(user32.AllowSetForegroundWindow(ASFW_ANY)) if user32 else False
 
 
 class _HotkeyFilter(QAbstractNativeEventFilter):

@@ -88,7 +88,7 @@
     {
       "id": "cfg_appearance",
       "title": "14. Config: Appearance",
-      "description": "Pick the app theme (Default / Light / Dark / ODW) and optionally disable the auto-tour on new versions.",
+      "description": "Pick the app theme (Default / Light / Dark / ODW) and the font size (Small / Medium / Large, applied after a restart), and optionally turn off the auto-tour on new versions. Check Minimize to Tray to send the window to the system tray when you minimize it.",
       "preferred_side": "right"
     },
     {
