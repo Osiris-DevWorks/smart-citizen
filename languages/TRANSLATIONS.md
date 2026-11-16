@@ -82,6 +82,20 @@ them against the new source.
 
 ## Backfill log
 
+- **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** #582, the overlay drawer
+  now lets clicks pass through to the game while the player aims (a player
+  lost the game's focus that way, 2026-11-16), and for it the overlay asks
+  Windows which window is in front and whether the mouse pointer shows. One English
+  text changed, `overlay.desc` (the overlay only reads the screen and
+  Game.log, asks Windows those two things and, with a drawer hotkey set,
+  watches key presses for that one combination), and the overlay paragraph
+  in `docs/HELP.md` and `docs/FAQ.md` and the overlay bullet in
+  `docs/ABOUT.md` say the same. AI `at` in all 11 other languages. None had
+  an `ht` on `overlay.desc`, so nothing needs human re-review. The 11
+  translated copies of the three docs gained the same words, with each
+  `ui.json`'s own names for the overlay, the drawer and the hotkey. Checked
+  by a script: each old text matched once and every line ending was kept.
+  Not back-translated.
 - **3.0.1 cycle (2026-11-13, Claude Opus 5.5):** #566, the Play button
   reminder. HELP section 7 gains a paragraph after the watermark one in all
   eleven translated `HELP.md` files, AI-translated: Apply also adds

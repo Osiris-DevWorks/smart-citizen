@@ -10,7 +10,9 @@ Two windows, because they need opposite input behaviour:
   system and location, and crafting (mineral to items and back). A tab opens
   the drawer straight to its section. It
   has to take clicks, so using it takes focus from the game; the player
-  needs a free cursor.
+  needs a free cursor. While Star Citizen is in front with its pointer
+  hidden (the player aiming), clicks pass through it to the game
+  (``game_in_front``, ``pointer_hidden``).
 
 ``ScoOverlay`` owns both, plus the capture timer and the drawer's hotkey
 (``global_hotkey.py``). The reader that turns a
@@ -23,7 +25,8 @@ Overlays only draw over Star Citizen in borderless windowed mode, not
 exclusive fullscreen. SCO only captures the screen and, with a drawer
 hotkey set, registers that one key combination with Windows and watches the
 keyboard's raw input for it while it is held (``global_hotkey.py``); it
-never reads game memory or sends input.
+never reads game memory or sends input. It also asks Windows which window
+is in front and whether the mouse pointer shows, never the game.
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
@@ -46,7 +49,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from PyQt6.QtCore import (
-    QObject, QPoint, QPointF, QRect, QRunnable, Qt, QThreadPool, QTimer,
+    QObject, QPoint, QPointF, QRect, QRectF, QRunnable, Qt, QThreadPool, QTimer,
     QVariantAnimation, pyqtSignal,
 )
 from PyQt6.QtGui import (
@@ -54,8 +57,8 @@ from PyQt6.QtGui import (
     QTransform,
 )
 from PyQt6.QtWidgets import (
-    QBoxLayout, QCheckBox, QFrame, QGraphicsDropShadowEffect, QHBoxLayout,
-    QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QWIDGETSIZE_MAX, QApplication, QBoxLayout, QCheckBox, QFrame, QGraphicsDropShadowEffect,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
     QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -139,6 +142,18 @@ ALERT_TEXT_SCALE = 1.5
 # How long after the hotkey opens the drawer it checks whether Windows gave
 # it focus, for the log.
 FOCUS_CHECK_MS = 250
+# How often, while the drawer shows, the overlay asks whether Star Citizen is
+# in front (``game_in_front``) with its pointer hidden (``pointer_hidden``) and
+# lets clicks pass through the drawer while it is. With the game in front it
+# asks every PASS_THROUGH_POLL_MS: the game shows or hides its pointer 35 to
+# 50 ms after F goes down or up and puts it in the middle of the screen as it
+# does (measured), which only an open top or bottom centre drawer covers, so
+# only there can a shot fired within one tick of letting go of F reach the
+# drawer. Qt runs a timer of 20 ms or less on a 1 ms Windows timer, which
+# costs power (measured), so with any other window in front it asks every
+# PASS_THROUGH_IDLE_POLL_MS instead.
+PASS_THROUGH_POLL_MS = 15
+PASS_THROUGH_IDLE_POLL_MS = 100
 # The Minerals section's one row that is not a mineral (#523): the
 # OTHER_SIGNATURES key it watches.
 SALVAGE = "salvage"
@@ -155,6 +170,16 @@ DRAWER_HANDLE_HEIGHT = 48
 DRAWER_HANDLE_TAPER = 0.15
 DRAWER_HANDLE_OVERLAP = round(DRAWER_HANDLE_HEIGHT * DRAWER_HANDLE_TAPER)
 DRAWER_ICON_SIZE = 14
+# A tab's outline width, and the open section's, drawn bolder.
+DRAWER_HANDLE_PEN = 1.2
+DRAWER_HANDLE_SELECTED_PEN = 1.8
+# How far outside a tab's shape a press still opens that tab, in logical px:
+# half the bolder outline plus a pixel's diagonal. Windows sends a click on
+# any pixel the tabs paint (their anti-aliased outline included) to the
+# drawer, which then takes focus from the game, so every such pixel must
+# open a tab: a click on the outline at the screen corner used to take focus
+# and open nothing.
+DRAWER_HANDLE_HIT_SLACK = DRAWER_HANDLE_SELECTED_PEN / 2 + math.sqrt(2)
 DRAWER_PANEL_WIDTH = 340
 # Share of the screen an open drawer takes along its edge: the full side
 # for a left/right drawer, less for a top/bottom one, which sits over the
@@ -543,6 +568,245 @@ def drawer_edge(position: str) -> str:
     return LEFT if horizontal == "left" else RIGHT
 
 
+def qt_round(value: float) -> int:
+    """Qt 6's qRound: a half rounds away from zero (Python's round() takes it
+    to even)."""
+    return int(value + math.copysign(0.5, value))
+
+
+def device_start(start: int, origin: int, factor: float) -> int:
+    """The device pixel where a window starting at logical *start* begins, as
+    Qt places it on a screen whose top-left is *origin* (the same in logical
+    and device pixels) at *factor* device pixels per logical one."""
+    return origin + qt_round((start - origin) * factor)
+
+
+def device_end(start: int, length: int, origin: int, factor: float) -> int:
+    """The device pixel just past a window *length* logical pixels long that
+    starts at logical *start* (see ``device_start``): Qt scales the position
+    from the screen's top-left and the size separately, rounding each."""
+    return device_start(start, origin, factor) + qt_round(length * factor)
+
+
+MONITOR_DEFAULTTONULL = 0
+# Star Citizen's main window (CryEngine): its class, or its title when the
+# class is another.
+GAME_WINDOW_CLASS = "CryENGINE"
+GAME_WINDOW_TITLE = "Star Citizen"
+CURSOR_SHOWING = 0x1
+GWL_EXSTYLE = -20
+WS_EX_TRANSPARENT = 0x20
+WS_EX_LAYERED = 0x80000
+# The name Qt gives a tooltip's window (QTipLabel).
+TOOLTIP_OBJECT_NAME = "qtooltip_label"
+
+
+class _Point(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+
+class _Rect(ctypes.Structure):
+    _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long),
+                ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+
+
+class _MonitorInfo(ctypes.Structure):
+    _fields_ = [("cbSize", ctypes.c_ulong), ("rcMonitor", _Rect), ("rcWork", _Rect),
+                ("dwFlags", ctypes.c_ulong)]
+
+
+class _CursorInfo(ctypes.Structure):
+    _fields_ = [("cbSize", ctypes.c_ulong), ("flags", ctypes.c_ulong),
+                ("hCursor", ctypes.c_void_p), ("ptScreenPos", _Point)]
+
+
+_overlay_user32 = None
+
+
+def _user32():
+    """user32 with the overlay's calls typed on a private copy (the monitors,
+    the window in front, the pointer, the drawer's own style), None off
+    Windows."""
+    global _overlay_user32
+    if _overlay_user32 is None and sys.platform == "win32":
+        from ctypes import wintypes
+        dll = ctypes.WinDLL("user32", use_last_error=True)
+        dll.MonitorFromPoint.argtypes = [_Point, wintypes.DWORD]
+        dll.MonitorFromPoint.restype = wintypes.HMONITOR
+        dll.MonitorFromRect.argtypes = [ctypes.POINTER(_Rect), wintypes.DWORD]
+        dll.MonitorFromRect.restype = wintypes.HMONITOR
+        dll.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.POINTER(_MonitorInfo)]
+        dll.GetMonitorInfoW.restype = wintypes.BOOL
+        dll.GetForegroundWindow.argtypes = []
+        dll.GetForegroundWindow.restype = wintypes.HWND
+        dll.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+        dll.GetClassNameW.restype = ctypes.c_int
+        dll.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+        dll.GetWindowTextW.restype = ctypes.c_int
+        dll.GetCursorInfo.argtypes = [ctypes.POINTER(_CursorInfo)]
+        dll.GetCursorInfo.restype = wintypes.BOOL
+        dll.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
+        dll.GetWindowLongPtrW.restype = ctypes.c_ssize_t
+        dll.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
+        dll.SetWindowLongPtrW.restype = ctypes.c_ssize_t
+        _overlay_user32 = dll
+    return _overlay_user32
+
+
+def _window_text(read, hwnd) -> str:
+    buf = ctypes.create_unicode_buffer(256)
+    read(hwnd, buf, len(buf))
+    return buf.value
+
+
+def game_in_front(user32=None) -> bool:
+    """Whether Star Citizen's window is the one in front: its class, or its
+    title when the class is another. Only Windows is asked, never the game.
+    False off Windows or with nothing in front."""
+    user32 = user32 or _user32()
+    if not user32:
+        return False
+    hwnd = user32.GetForegroundWindow()
+    if not hwnd:
+        return False
+    return (_window_text(user32.GetClassNameW, hwnd) == GAME_WINDOW_CLASS
+            or _window_text(user32.GetWindowTextW, hwnd) == GAME_WINDOW_TITLE)
+
+
+def pointer_hidden(user32=None) -> bool:
+    """Whether Windows says the mouse pointer is hidden. With Star Citizen in
+    front that means the player is aiming, with no pointer to click anything
+    with: the game hides its pointer while aiming but lets it run over the
+    whole screen, so a shot fired as it crossed the drawer took the game's
+    focus (player report, 2026-11-16). The game shows its pointer when the
+    player holds F or opens the mobiGlas, which is when the drawer is
+    clicked, and Windows says it is hidden while aiming even over the drawer
+    (both measured in game). False off Windows or when Windows does not say."""
+    user32 = user32 or _user32()
+    if not user32:
+        return False
+    info = _CursorInfo()
+    info.cbSize = ctypes.sizeof(_CursorInfo)
+    if not user32.GetCursorInfo(ctypes.byref(info)):
+        return False
+    return not info.flags & CURSOR_SHOWING
+
+
+_warned_not_layered = False
+
+
+def set_click_through(hwnd: int, on: bool, user32=None) -> bool:
+    """Let every click on window *hwnd* through to the window below (*on*),
+    or take clicks again: its ``WS_EX_TRANSPARENT`` style. Windows leaves a
+    window with that style out of the hit test only when it is layered too
+    (measured): the drawer is, as a see-through frameless Qt window, and a
+    window that is not gets a warning once rather than a layer set here,
+    since Qt draws a layered window itself. Written only when it changes, so
+    it can be asked every tick and puts the style back should anything clear
+    it. False off Windows or with no window."""
+    global _warned_not_layered
+    user32 = user32 or _user32()
+    if not user32 or not hwnd:
+        return False
+    style = user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
+    if on and not style & WS_EX_LAYERED and not _warned_not_layered:
+        _warned_not_layered = True
+        logger.warning("SCO: the drawer's window is not layered, so clicks cannot pass "
+                       "through it to the game")
+    wanted = style | WS_EX_TRANSPARENT if on else style & ~WS_EX_TRANSPARENT
+    if wanted != style:
+        user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, wanted)
+    return True
+
+
+def native_work_area(screen, user32=None) -> Optional[tuple[int, int, int, int]]:
+    """*screen*'s work area (the monitor less the taskbar) in native pixels,
+    as (left, top, right, bottom) with right and bottom just past it, or None
+    off Windows or when Windows has no monitor there. Qt on Windows keeps a
+    screen's top-left in native pixels, so its monitor is the one at that
+    point. Only monitors are asked about, never the game."""
+    user32 = user32 or _user32()
+    if not user32:
+        return None
+    corner = screen.geometry().topLeft()
+    monitor = user32.MonitorFromPoint(_Point(corner.x(), corner.y()), MONITOR_DEFAULTTONULL)
+    if not monitor:
+        return None
+    info = _MonitorInfo()
+    info.cbSize = ctypes.sizeof(_MonitorInfo)
+    if not user32.GetMonitorInfoW(monitor, ctypes.byref(info)):
+        return None
+    work = info.rcWork
+    return work.left, work.top, work.right, work.bottom
+
+
+def monitor_at(left: int, top: int, right: int, bottom: int, user32=None) -> bool:
+    """Whether any monitor shows part of the native-pixel rectangle (right
+    and bottom just past it). Only monitors are asked about, never the game.
+    True off Windows, where nothing says otherwise."""
+    user32 = user32 or _user32()
+    if not user32:
+        return True
+    return bool(user32.MonitorFromRect(ctypes.byref(_Rect(left, top, right, bottom)),
+                                       MONITOR_DEFAULTTONULL))
+
+
+def within_device_pixels(screen, x: int, y: int, width: int, height: int) -> tuple[int, int]:
+    """*x* and *y* moved back by whole logical pixels until the window, as Qt
+    puts it in device pixels, ends inside the right and bottom of *screen*'s
+    work area, wherever a monitor (or this one's taskbar) lies beyond that
+    edge. Qt rounds a window's position and size separately, so flush with
+    the right edge in logical pixels a drawer ended one device pixel past it
+    at 125% and 150%, on the monitor beyond. With no monitor beyond, that
+    pixel shows nowhere, and moving back would hand the screen's last pixel,
+    where a pointer pushed to the edge clicks, to the window below. At 100%,
+    off Windows, or when Windows names no work area, *x* and *y* stay as they
+    are (at 100% a logical pixel is a device pixel)."""
+    factor = screen.devicePixelRatio()
+    if factor == 1:
+        return x, y
+    native = native_work_area(screen)
+    if native is None:
+        return x, y
+    origin, area = screen.geometry().topLeft(), screen.availableGeometry()
+    right, bottom = native[2], native[3]
+    if (device_end(x, width, origin.x(), factor) > right
+            and monitor_at(right, device_start(y, origin.y(), factor),
+                           right + 1, device_end(y, height, origin.y(), factor))):
+        while x > area.x() and device_end(x, width, origin.x(), factor) > right:
+            x -= 1
+    if (device_end(y, height, origin.y(), factor) > bottom
+            and monitor_at(device_start(x, origin.x(), factor), bottom,
+                           device_end(x, width, origin.x(), factor), bottom + 1)):
+        while y > area.y() and device_end(y, height, origin.y(), factor) > bottom:
+            y -= 1
+    return x, y
+
+
+def outline_distance(shape: QPainterPath, point: QPointF) -> float:
+    """How far *point* lies from the outline of *shape*, a polygon."""
+    corners = list(shape.toFillPolygon())
+    px, py = point.x(), point.y()
+    nearest = math.inf
+    for a, b in zip(corners, corners[1:] + corners[:1]):
+        dx, dy = b.x() - a.x(), b.y() - a.y()
+        length2 = dx * dx + dy * dy
+        t = 0.0 if not length2 else max(
+            0.0, min(1.0, ((px - a.x()) * dx + (py - a.y()) * dy) / length2))
+        nearest = min(nearest, math.hypot(px - a.x() - t * dx, py - a.y() - t * dy))
+    return nearest
+
+
+def close_tooltips() -> None:
+    """Close a showing tooltip at once. A tooltip is a window of its own
+    (Qt's QTipLabel), which takes clicks, and Qt hides it only 0.3 s after
+    the pointer leaves (``QToolTip.hideText`` waits as long), so one left up
+    as the player starts aiming could take a shot."""
+    for widget in QApplication.topLevelWidgets():
+        if widget.objectName() == TOOLTIP_OBJECT_NAME and widget.isVisible():
+            widget.close()
+
+
 def _arc(path: QPainterPath, center: tuple[float, float], radius: float,
          end: tuple[float, float]) -> None:
     """Counter-clockwise arc from the path's current point to ``end``."""
@@ -670,13 +934,24 @@ class SectionTabBar(QWidget):
         return sorted(indices, key=lambda i: self.sections[i] == self.current)
 
     def tab_at(self, pos: QPointF) -> Optional[str]:
-        """The section whose tab is in front at ``pos`` (widget coordinates)."""
+        """The section whose tab is in front at ``pos`` (widget coordinates).
+        A point on no tab but within ``DRAWER_HANDLE_HIT_SLACK`` of one (its
+        painted outline) counts for the tab whose outline is nearest, the one
+        in front on a tie, so a click on any painted pixel opens something."""
         to_local, _ = self._to_edge().inverted()
         point = to_local.map(QPointF(pos))
-        for i in reversed(self._paint_order()):
+        front_to_back = list(reversed(self._paint_order()))
+        for i in front_to_back:
             if self._tab_shape(i).contains(point):
                 return self.sections[i]
-        return None
+        nearest, nearest_distance = None, math.inf
+        for i in front_to_back:
+            distance = outline_distance(self._tab_shape(i), point)
+            if distance < nearest_distance:
+                nearest, nearest_distance = i, distance
+        if nearest_distance > DRAWER_HANDLE_HIT_SLACK:
+            return None
+        return self.sections[nearest]
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -707,7 +982,7 @@ class SectionTabBar(QWidget):
             # Closed, every tab is lit; open, only the open section's.
             lit = selected or self.current is None
             colour = QColor(self.colors.accent if lit else self.colors.secondary)
-            p.setPen(QPen(colour, 1.8 if selected else 1.2))
+            p.setPen(QPen(colour, DRAWER_HANDLE_SELECTED_PEN if selected else DRAWER_HANDLE_PEN))
             p.drawPath(tab)
             self._paint_icon(p, to_edge, name, i, colour)
         p.end()
@@ -881,6 +1156,8 @@ class BlueprintDrawer(QWidget):
         self._layout.setSpacing(0)
         self._layout.addWidget(self._handle)
         self._layout.addWidget(self._panel)
+        # Whether clicks pass through to the window below (set_pass_through).
+        self.pass_through = False
         self._position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
         self.set_position(self._position)
         self._panel.hide()
@@ -1062,6 +1339,34 @@ class BlueprintDrawer(QWidget):
         self._dock()
         self.show()
 
+    def mousePressEvent(self, event):  # noqa: N802 (Qt's name)
+        # Qt hands a press to the child under it by a rectangle that stops a
+        # pixel short of the child's right and bottom edges (QWidget.childAt),
+        # so above 100% the tab bar's outermost line of device pixels reaches
+        # the drawer itself. Windows sends a click there to the drawer, which
+        # takes focus, so that pixel opens its tab too (found in review).
+        handle = self._handle.geometry()
+        if (event.button() == Qt.MouseButton.LeftButton
+                and QRectF(handle).contains(event.position())):
+            name = self._handle.tab_at(event.position() - QPointF(handle.topLeft()))
+            if name:
+                self._handle.clicked.emit(name)
+
+    def set_pass_through(self, on: bool) -> None:
+        """Let every click through to the window below, the game (*on*), or
+        take clicks again. Set on the window's own style (``set_click_through``),
+        where it holds through the drawer opening, closing, docking again and
+        a hide and show: Qt's WindowTransparentForInput, set on the shown
+        window and cleared again, left it letting clicks through (measured).
+        A tooltip still showing as clicks start passing through is closed."""
+        if on and not self.pass_through:
+            close_tooltips()
+        self.pass_through = on
+        # Only a real Windows window has the style. The offscreen platform the
+        # tests run on gives made-up ids, which must never reach user32.
+        if QGuiApplication.platformName() == "windows":
+            set_click_through(int(self.winId()), on)
+
     def set_position(self, position: str) -> None:
         """Dock to one of ``AppSettings.SCO_DRAWER_POSITIONS``."""
         if position not in AppSettings.SCO_DRAWER_POSITIONS:
@@ -1085,7 +1390,8 @@ class BlueprintDrawer(QWidget):
         self._dock()
 
     def _dock(self) -> None:
-        screen = QGuiApplication.primaryScreen().availableGeometry()
+        display = QGuiApplication.primaryScreen()
+        screen = display.availableGeometry()
         edge = drawer_edge(self._position)
         vertical, _, horizontal = self._position.partition("_")
         handle = self._handle.size()
@@ -1097,7 +1403,6 @@ class BlueprintDrawer(QWidget):
             width = DRAWER_PANEL_WIDTH if self._expanded else handle.width()
             height = handle.height() + (
                 int(screen.height() * DRAWER_TOP_BOTTOM_LENGTH) if self._expanded else 0)
-        self.setFixedSize(width, height)
         x = {LEFT: screen.x(), RIGHT: screen.right() - width + 1}.get(
             edge, screen.x() + (screen.width() - width) // 2)
         if vertical == "top":
@@ -1106,7 +1411,16 @@ class BlueprintDrawer(QWidget):
             y = screen.bottom() - height + 1
         else:
             y = screen.y() + (screen.height() - height) // 2
-        self.move(x, y)
+        x, y = within_device_pixels(display, x, y, width, height)
+        # Place and size in one step. Resized first, an opening drawer lay
+        # mostly on the monitor beyond for a moment, and with that monitor at
+        # another scale Qt moved the window there and rescaled it, so the move
+        # kept a wrong size (found in review). Qt clamps a geometry to the
+        # fixed size, so that is let go for the step and set again after.
+        self.setMinimumSize(0, 0)
+        self.setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX)
+        self.setGeometry(x, y, width, height)
+        self.setFixedSize(width, height)
 
     def _render(self) -> None:
         needle = self._search.text().strip().lower()
@@ -1355,6 +1669,11 @@ class ScoOverlay(QObject):
         # The window that had focus when the hotkey opened the drawer, handed
         # focus back when it closes (the game, so the mouse goes back to it).
         self._focus_before_drawer = 0
+        # While the drawer shows: clicks pass through it whenever Star
+        # Citizen is in front with its pointer hidden (_sync_pass_through,
+        # which also sets the interval, and runs before every start).
+        self._pass_through_timer = QTimer(self)
+        self._pass_through_timer.timeout.connect(self._sync_pass_through)
         self._sound_alert = False
         self._alert_sound = AppSettings.SCO_ALERT_SOUND_DEFAULT
         self._watched: set[str] = set()
@@ -1449,6 +1768,7 @@ class ScoOverlay(QObject):
     def stop(self) -> None:
         self._running = False
         self._timer.stop()
+        self._pass_through_timer.stop()
         self._read_token += 1
         self._focus_before_drawer = 0
         self.label.hide()
@@ -1459,15 +1779,29 @@ class ScoOverlay(QObject):
         if self._show_drawer and self.drawer.has_sections():
             if not self.drawer.isVisible():
                 self.drawer.show_docked()
+            self._sync_pass_through()
+            self._pass_through_timer.start()
         else:
             # Hidden, it closes nothing the hotkey opened: forget the window
             # it would have handed focus back to.
             self._focus_before_drawer = 0
+            self._pass_through_timer.stop()
             self.drawer.hide()
         if not self._show_label:
             self.label.hide()
         self._sync_timer()
         self._sync_hotkey()
+
+    def _sync_pass_through(self) -> None:
+        """Clicks pass through the drawer to the game while Star Citizen is
+        in front with its pointer hidden (the player aiming), and the drawer
+        takes them while the pointer shows (F held, the mobiGlas) or another
+        window is in front. Asked often only while the game is in front."""
+        in_front = game_in_front()
+        self.drawer.set_pass_through(in_front and pointer_hidden())
+        interval = PASS_THROUGH_POLL_MS if in_front else PASS_THROUGH_IDLE_POLL_MS
+        if self._pass_through_timer.interval() != interval:
+            self._pass_through_timer.setInterval(interval)
 
     def _sync_hotkey(self) -> None:
         """Hold the hotkey only while it can open something: overlay running,
