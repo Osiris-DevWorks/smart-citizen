@@ -1498,7 +1498,7 @@ def test_a_click_names_the_window_in_front_while_the_pointer_was_over_it(qapp, m
     assert named == [4242, 777, 0]
 
 
-def test_closing_after_a_click_in_game_hands_focus_back(qapp, monkeypatch):
+def test_closing_after_a_click_in_game_hands_focus_back(qapp, monkeypatch, slot_errors):
     """The tab path as logged in game: the pointer moves over the drawer
     while the game is in front, nothing is in front at the click, the tab
     closes the drawer with its button down, and focus goes back to the game
@@ -1530,9 +1530,11 @@ def test_closing_after_a_click_in_game_hands_focus_back(qapp, monkeypatch):
         assert pump_until(lambda: handed == [0x15057C], seconds=2)
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_the_hotkey_takes_the_noted_window_when_the_drawer_is_in_front(qapp, monkeypatch):
+def test_the_hotkey_takes_the_noted_window_when_the_drawer_is_in_front(qapp, monkeypatch,
+                                                                       slot_errors):
     """A hand-back Windows refused leaves the closed drawer in front, so the
     hotkey would remember the drawer itself: it takes the window noted under
     the pointer instead, and closing hands focus back to that one. Once the
@@ -1562,9 +1564,10 @@ def test_the_hotkey_takes_the_noted_window_when_the_drawer_is_in_front(qapp, mon
         assert handed == [4242]                                 # no old window brought back
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_closing_after_a_click_gave_the_drawer_focus_hands_it_back(qapp, monkeypatch):
+def test_closing_after_a_click_gave_the_drawer_focus_hands_it_back(qapp, monkeypatch, slot_errors):
     """A click gives the drawer focus as the hotkey can: Windows asks first,
     while the game still has focus, so closing the drawer by its own tab or
     the hotkey hands focus back to the game, unless the player clicked away."""
@@ -1601,6 +1604,7 @@ def test_closing_after_a_click_gave_the_drawer_focus_hands_it_back(qapp, monkeyp
         assert handed == [4242, 4242]
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
 def _clicked_overlay(monkeypatch, held, handed):
@@ -1616,7 +1620,7 @@ def _clicked_overlay(monkeypatch, held, handed):
     return overlay
 
 
-def test_a_tab_click_hands_focus_back_once_its_button_is_up(qapp, monkeypatch):
+def test_a_tab_click_hands_focus_back_once_its_button_is_up(qapp, monkeypatch, slot_errors):
     """A tab click closes the drawer with its mouse button still down, and
     focus handed back then left the game needing a click before it took a
     key, while the hotkey's did not (found in testing): the hand-back waits
@@ -1640,9 +1644,10 @@ def test_a_tab_click_hands_focus_back_once_its_button_is_up(qapp, monkeypatch):
         assert handed == [4242]
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_a_hand_back_still_waiting_goes_after_the_wait(qapp, monkeypatch):
+def test_a_hand_back_still_waiting_goes_after_the_wait(qapp, monkeypatch, slot_errors):
     """A button that never reads as up (a release Qt never saw) holds the
     hand-back for HAND_BACK_WAIT_MS at most."""
     from src.gui import sco_overlay
@@ -1660,9 +1665,10 @@ def test_a_hand_back_still_waiting_goes_after_the_wait(qapp, monkeypatch):
         assert pump_until(lambda: handed == [4242], seconds=2)
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_a_waiting_hand_back_is_dropped_by_an_open_or_a_stop(qapp, monkeypatch):
+def test_a_waiting_hand_back_is_dropped_by_an_open_or_a_stop(qapp, monkeypatch, slot_errors):
     from PyQt6.QtTest import QTest
     from src.gui import sco_overlay
 
@@ -1688,9 +1694,10 @@ def test_a_waiting_hand_back_is_dropped_by_an_open_or_a_stop(qapp, monkeypatch):
         assert handed == []
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_a_hand_back_refused_or_not_kept_is_logged(qapp, monkeypatch, caplog):
+def test_a_hand_back_refused_or_not_kept_is_logged(qapp, monkeypatch, caplog, slot_errors):
     """Windows refusing the hand-back, or another window in front
     FOCUS_CHECK_MS after it, is logged at INFO; one that stays says nothing."""
     from PyQt6.QtTest import QTest
@@ -1729,9 +1736,10 @@ def test_a_hand_back_refused_or_not_kept_is_logged(qapp, monkeypatch, caplog):
                                    "window 777 is in front"]
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_a_click_that_names_no_window_keeps_the_kept_one(qapp, monkeypatch):
+def test_a_click_that_names_no_window_keeps_the_kept_one(qapp, monkeypatch, slot_errors):
     """The hotkey keeps the game and Windows leaves focus on it, then a click
     on the open panel comes with nothing in front and nothing noted (the
     panel opened under a pointer that had not moved). The click names no
@@ -1759,9 +1767,10 @@ def test_a_click_that_names_no_window_keeps_the_kept_one(qapp, monkeypatch):
         assert handed == [4242]
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_a_hidden_drawer_forgets_the_window_noted_under_the_pointer(qapp, monkeypatch):
+def test_a_hidden_drawer_forgets_the_window_noted_under_the_pointer(qapp, monkeypatch, slot_errors):
     """Windows may send no WM_MOUSELEAVE for a window hidden under the
     pointer, so hiding the drawer (the overlay stopped, or the drawer switched
     off) drops the note: shown again, a click with nothing in front names no
@@ -1789,9 +1798,10 @@ def test_a_hidden_drawer_forgets_the_window_noted_under_the_pointer(qapp, monkey
         assert named == [0, 0]
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
-def test_each_hand_back_is_checked_for_its_own_window(qapp, monkeypatch, caplog):
+def test_each_hand_back_is_checked_for_its_own_window(qapp, monkeypatch, caplog, slot_errors):
     """Two hand-backs within FOCUS_CHECK_MS are each checked for their own
     window (one shared check named the second window for both, then nothing),
     and a check says nothing once the drawer opened again or the overlay
@@ -1839,6 +1849,7 @@ def test_each_hand_back_is_checked_for_its_own_window(qapp, monkeypatch, caplog)
             assert len(lines()) == 2
     finally:
         overlay.stop()
+    assert not slot_errors
 
 
 def test_the_hotkey_watches_raw_input_only_while_it_is_held(qapp):
