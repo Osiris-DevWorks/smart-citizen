@@ -1337,7 +1337,7 @@ class ConfigTab(QWidget):
                     tr("config.p4k_status_found_with_base", date=last_str)
                 )
                 # The same rule as the startup prompt: Data.p4k's size, not
-                # the modified time a game launch moves (perf proposal).
+                # the modified time a game launch moves (#522).
                 needs_update = not base_ini_is_fresh(p4k_path, base_ini)
             else:
                 self._p4k_status_label.setText(tr("config.p4k_status_found_no_base"))
