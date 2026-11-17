@@ -3574,7 +3574,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur, Windows'a hangi pencerenin önde olduğunu ve işaretçinin görünüp görünmediğini sorar, bir çekmece kısayolu ayarlarsanız yalnızca o birleşim için tuş basışlarını izler; oyun işlemine asla dokunmaz."
+      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur, Windows'a hangi pencerenin önde olduğunu ve işaretçinin görünüp görünmediğini sorar, bir çekmece kısayolu ayarlarsanız kısayolun tuşunun ve Ctrl, Alt, Shift ve Win tuşlarının basılı olup olmadığını da sorar; oyun işlemine asla dokunmaz."
     },
     "start_btn": {
       "ht": "",

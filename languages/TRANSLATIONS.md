@@ -82,6 +82,27 @@ them against the new source.
 
 ## Backfill log
 
+- **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** #587, the drawer hotkey no
+  longer takes the keyboard's raw input: while Star Citizen is in front the
+  overlay asks Windows whether the hotkey's key and the modifier keys are
+  down. One English text changed, `overlay.desc` (with a drawer hotkey set,
+  the overlay asks whether its key and the Ctrl, Alt, Shift and Win keys are
+  down, where it said it watches key presses for that one combination), and
+  the overlay paragraph in `docs/HELP.md` and the overlay bullet in
+  `README.md` say the same. In `docs/FAQ.md` the privacy paragraph's two
+  sentences on raw input became two on the key check: the combination's key,
+  and the modifier keys only while it is down, no other key, and nothing
+  typed in the game or another program sent to the app. HELP's drawer hotkey
+  bullet gained two sentences: hold the keys a moment in game (a very quick
+  press can be missed), and run Smart Citizen as administrator when Star
+  Citizen runs that way. AI `at` in all 11 other languages. None had an `ht`
+  on `overlay.desc`, so nothing needs human re-review. The 11 translated
+  `HELP.md` and `FAQ.md` files gained the same words, naming the modifier
+  keys as each `ui.json` does (Strg and Umschalt in German, Maj in French,
+  Maiusc in Italian, Mayús in Spanish, Shift elsewhere), and
+  chinese_traditional's through OpenCC s2twp from chinese, keeping its
+  files' 快速鍵 for the hotkey where s2twp gives 熱鍵. Checked by a script: each
+  old text matched once and every line ending was kept. Not back-translated.
 - **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** #582, the overlay drawer
   now lets clicks pass through to the game while the player aims (a player
   lost the game's focus that way, 2026-11-16), and for it the overlay asks

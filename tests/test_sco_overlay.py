@@ -1226,7 +1226,7 @@ def test_the_real_calls_take_the_structs(monkeypatch):
     which the fakes cannot see), names the work area of the monitor at (0, 0),
     finds a monitor there and none far away, and sets and clears the style on
     a message-only window this test makes (never shown)."""
-    from src.gui import global_hotkey
+    from ctypes import wintypes
 
     user32 = so._user32()
     for _ in range(2):          # Windows clears cbSize after a call: a fresh struct each time
@@ -1240,10 +1240,17 @@ def test_the_real_calls_take_the_structs(monkeypatch):
     assert monitor_at(0, 0, 1, 1) is True
     assert monitor_at(-1000000, -1000000, -999999, -999999) is False
 
-    # The hotkey's own sink window is made the same way.
-    hotkey_user32 = global_hotkey._user32()
-    hwnd = hotkey_user32.CreateWindowExW(0, "STATIC", None, 0, 0, 0, 0, 0,
-                                         global_hotkey.HWND_MESSAGE, None, None, None)
+    # A message-only window (its parent HWND_MESSAGE, (HWND)-3), typed on a
+    # copy of user32 of the test's own.
+    windows = ctypes.WinDLL("user32", use_last_error=True)
+    windows.CreateWindowExW.argtypes = [
+        wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.HWND, wintypes.HMENU,
+        wintypes.HINSTANCE, wintypes.LPVOID]
+    windows.CreateWindowExW.restype = wintypes.HWND
+    windows.DestroyWindow.argtypes = [wintypes.HWND]
+    windows.DestroyWindow.restype = wintypes.BOOL
+    hwnd = windows.CreateWindowExW(0, "STATIC", None, 0, 0, 0, 0, 0, -3, None, None, None)
     assert hwnd
     monkeypatch.setattr(so, "_warned_not_layered", True)    # this window is not layered
     try:
@@ -1252,7 +1259,7 @@ def test_the_real_calls_take_the_structs(monkeypatch):
         assert set_click_through(hwnd, False)
         assert not user32.GetWindowLongPtrW(hwnd, so.GWL_EXSTYLE) & WS_EX_TRANSPARENT
     finally:
-        hotkey_user32.DestroyWindow(hwnd)
+        windows.DestroyWindow(hwnd)
 
 
 def test_the_drawer_sets_its_window_style_only_on_windows(qapp, monkeypatch):
@@ -1985,11 +1992,13 @@ def test_play_alert_sound_is_quiet_off_windows(monkeypatch):
 
 
 class _FakeUser32:
-    """RegisterHotKey, UnregisterHotKey and the raw input switch, recorded
-    instead of called."""
+    """RegisterHotKey and UnregisterHotKey, recorded instead of called, and a
+    keyboard whose keys in ``down`` read as down, every key asked about
+    recorded in ``asked``."""
 
     def __init__(self, refuse=False):
-        self.calls, self.refuse, self.raw = [], refuse, []
+        self.calls, self.refuse = [], refuse
+        self.down, self.asked = set(), []
 
     def RegisterHotKey(self, hwnd, hotkey_id, modifiers, key):  # noqa: N802
         self.calls.append(("register", modifiers, key))
@@ -1999,15 +2008,9 @@ class _FakeUser32:
         self.calls.append(("unregister",))
         return True
 
-    def RegisterRawInputDevices(self, device, count, size):  # noqa: N802
-        self.raw.append(device._obj.dwFlags)
-        return True
-
-    def CreateWindowExW(self, *args):  # noqa: N802
-        return 0x5150
-
-    def DestroyWindow(self, hwnd):  # noqa: N802
-        return True
+    def GetAsyncKeyState(self, virtual_key):  # noqa: N802
+        self.asked.append(virtual_key)
+        return -0x8000 if virtual_key in self.down else 0      # the high bit: down now
 
 
 def _overlay_with_fake_hotkey(refuse=False):
@@ -2021,7 +2024,9 @@ def _overlay_with_fake_hotkey(refuse=False):
     return overlay, fake
 
 
-CTRL_SHIFT_O = ("register", 0x2 | 0x4 | 0x4000, 0x4F)
+# Windows' virtual-key codes, as the stand-in keyboard is asked for them.
+CTRL, SHIFT, ALT, LWIN, RWIN, O_KEY = 0x11, 0x10, 0x12, 0x5B, 0x5C, 0x4F
+CTRL_SHIFT_O = ("register", 0x2 | 0x4 | 0x4000, O_KEY)
 
 
 def _recording(handed):
@@ -2557,24 +2562,48 @@ def test_each_hand_back_is_checked_for_its_own_window(qapp, monkeypatch, caplog,
     assert not slot_errors
 
 
-def test_the_hotkey_watches_raw_input_only_while_it_is_held(qapp):
-    from src.gui.global_hotkey import RIDEV_INPUTSINK, RIDEV_REMOVE
+def test_the_hotkeys_keys_are_looked_at_only_while_the_game_is_in_front(
+        qapp, monkeypatch, slot_errors):
+    """#587: Star Citizen keeps the hotkey's WM_HOTKEY away while it is in
+    front, so the pass-through tick looks at the hotkey's keys then, and
+    only then. With another window in front nothing on the keyboard is asked
+    about, and a combination down at the first tick after the game came back
+    is a press (it may have gone down just then)."""
+    from tests.event_loop import pump_until
 
+    game = {"in_front": True}
+    monkeypatch.setattr(so, "game_in_front", lambda: game["in_front"])
+    monkeypatch.setattr(so, "pointer_hidden", lambda: True)
+    monkeypatch.setattr(so, "foreground_window", lambda: 4242)       # the game
+    monkeypatch.setattr(so, "give_focus_back", _recording([]))
     overlay, fake = _overlay_with_fake_hotkey()
     overlay.set_drawer_hotkey("Ctrl+Shift+O")
-    assert fake.raw == []                                       # not running
-    overlay.start()
-    assert fake.raw == [RIDEV_INPUTSINK]
-    overlay.set_options({"drawer": False})
-    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE]
-    overlay.set_options({})
-    overlay.stop()
-    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE, RIDEV_INPUTSINK, RIDEV_REMOVE]
+    drawer = overlay.drawer
+    try:
+        overlay.start()
+        overlay._pass_through_timer.stop()                      # the test runs the ticks
+        fake.down = {CTRL, SHIFT, O_KEY}
+        overlay._sync_pass_through()                            # held as the hotkey was set
+        assert fake.asked == [O_KEY] and not drawer.is_open()   # no press, nothing more asked
+        game["in_front"] = False                                # another window in front
+        overlay._sync_pass_through()
+        assert fake.asked == [O_KEY]                            # nothing asked
+        game["in_front"] = True                                 # back, the keys still down:
+        overlay._sync_pass_through()                            # let go and pressed meanwhile?
+        assert pump_until(drawer.is_open, seconds=2)            # a press, after KEY_GRACE_MS
+        assert set(fake.asked) == {O_KEY, SHIFT, CTRL, ALT, LWIN, RWIN}
+        game["in_front"] = False
+        fake.asked.clear()
+        overlay._sync_pass_through()
+        assert fake.asked == []
+    finally:
+        overlay.stop()
+    assert not slot_errors
 
 
 def test_a_drawer_opened_without_focus_is_logged(qapp, monkeypatch, caplog):
-    """Raw input saw the hotkey but Windows kept focus on the game: the log
-    says so, once the check after the open has run."""
+    """A key check found the press but Windows kept focus on the game: the
+    log says so, once the check after the open has run."""
     from PyQt6.QtTest import QTest
     from src.gui import sco_overlay
 
