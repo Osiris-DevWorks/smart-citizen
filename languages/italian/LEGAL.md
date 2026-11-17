@@ -47,6 +47,17 @@ Smart Citizen effettua richieste di rete in uscita solo in tre circostanze:
 - **Download delle lingue** — Quando passi a una lingua diversa dall'inglese, Smart Citizen scarica il `global.ini` tradotto dalla comunità per quella lingua dall'URL configurato (per impostazione predefinita il repository GitHub [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization)). Il download viene memorizzato in cache localmente; nulla dalla tua macchina viene inviato.
 - **Fonti remote configurate dall'utente** — Se hai configurato una fonte dati che punta a un URL `http(s)://` nella scheda Config, Smart Citizen recupera quell'URL durante l'aggiornamento dei file di origine. Di base questo riguarda solo la forma URL GitHub-raw della fonte `global`; la configurazione standard a partire dalla v1.0 legge invece `base.ini` dalla tua estrazione locale di Data.p4k.
 
+### L'overlay di Smart Citizen
+
+L'overlay resta spento finché non lo avvii. Mentre è attivo, tutto ciò che legge rimane sul tuo computer:
+
+- **Schermo** — cattura una piccola area intorno al display dello scanner minerario per leggere il numero del segnale. Le catture vengono lette in memoria e non salvate.
+- **Game.log** — legge il log di Star Citizen per trovare i blueprint che ricevi.
+- **Windows** — chiede a Windows quale finestra è in primo piano e se il puntatore del mouse è visibile, così il cassetto lascia passare i tuoi clic al gioco mentre miri.
+- **Scorciatoia del cassetto** — solo se ne imposti una. Mentre Star Citizen è in primo piano, chiede a Windows se il tasto della scorciatoia è premuto, e i tasti Ctrl, Alt, Maiusc e Win solo quando lo è. Non chiede di nessun altro tasto e non riceve mai ciò che digiti.
+
+Non legge mai la memoria del gioco, non si aggancia né si inietta mai nel gioco e non gli invia mai input.
+
 ### Cosa Smart Citizen **non** fa
 
 - Nessuna telemetria, analisi o segnalazione di utilizzo di alcun tipo.

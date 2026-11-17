@@ -318,7 +318,7 @@ jobs:
         # (a free VirusTotal account's key is enough). A VirusTotal outage
         # never fails a release that is already published.
         if: steps.gate.outputs.skip == 'false' && env.VT_KEY_SET == 'true'
-        uses: crazy-max/ghaction-virustotal@v4
+        uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f # v4.2.0
         with:
           vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}

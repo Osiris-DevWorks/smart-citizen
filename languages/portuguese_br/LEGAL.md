@@ -49,6 +49,17 @@ O Smart Citizen faz requisições de rede de saída em apenas três circunstânc
 - **Download de idiomas**: quando você troca para um idioma diferente do inglês, o Smart Citizen baixa o `global.ini` traduzido pela comunidade para aquele idioma a partir da URL configurada (por padrão, o repositório GitHub [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization)). O download fica em cache local; nada da sua máquina é enviado.
 - **Fontes remotas configuradas pelo usuário**: se você configurou uma fonte de dados apontando para uma URL `http(s)://` na aba Config, o Smart Citizen consulta essa URL ao atualizar os arquivos de fontes. De fábrica, isso só se aplica à forma de URL GitHub-raw da fonte `global`; a configuração padrão desde a v1.0 lê o `base.ini` da sua extração local do Data.p4k.
 
+### A sobreposição do Smart Citizen
+
+A sobreposição fica desligada até você iniciá-la. Enquanto ela roda, tudo o que ela lê fica no seu computador:
+
+- **Tela** — ela captura uma pequena área ao redor do mostrador do scanner de mineração para ler o número do sinal. As capturas são lidas na memória e não são salvas.
+- **Game.log** — ela lê o log do Star Citizen para encontrar os blueprints que você recebe.
+- **Windows** — ela pergunta ao Windows qual janela está em primeiro plano e se o ponteiro do mouse está visível, para que a gaveta deixe seus cliques passarem para o jogo enquanto você mira.
+- **Atalho da gaveta** — só se você definir um. Enquanto o Star Citizen está em primeiro plano, ela pergunta ao Windows se a tecla do atalho está pressionada, e as teclas Ctrl, Alt, Shift e Win só quando ela está. Ela não pergunta sobre nenhuma outra tecla e nunca recebe o que você digita.
+
+Ela nunca lê a memória do jogo, nunca se conecta nem se injeta no jogo e nunca envia entradas para ele.
+
 ### O que o Smart Citizen **não** faz
 
 - Nenhuma telemetria, análise ou relatório de uso de qualquer tipo.
