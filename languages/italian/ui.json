@@ -3830,7 +3830,7 @@
     },
     "drawer_hotkey_hint": {
       "ht": "",
-      "at": "Apre e chiude il cassetto dal gioco, sull'ultima sezione usata. In gioco tieni comunque premuto F per usare il mouse al suo interno. Fai clic nella casella, poi premi i tasti insieme, per esempio Alt+8. Star Citizen riceve comunque questi tasti, quindi scegli una combinazione che non usi in gioco."
+      "at": "Apre e chiude il cassetto sull'ultima sezione usata. La scorciatoia potrebbe non funzionare quando Star Citizen ha il focus. Tieni premuto F per liberare il puntatore, poi fai clic su una scheda del cassetto. Fai clic nella casella, poi premi i tasti insieme, per esempio Alt+8."
     },
     "hotkey_taken": {
       "ht": "",

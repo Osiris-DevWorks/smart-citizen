@@ -3607,7 +3607,7 @@
       "at": ""
     },
     "drawer_hotkey_hint": {
-      "ht": "Opens and closes the drawer from the game, on the section used last. In game you still hold F to use the mouse in it. Click the box, then press the keys together, such as Alt+8. Star Citizen still gets these keys, so pick a combination you do not use in game.",
+      "ht": "Opens and closes the drawer on the last section used. The shortcut may be unavailable while Star Citizen has focus. Hold F to free the cursor, then click a drawer tab. Click the box, then press the keys together, such as Alt+8.",
       "at": ""
     },
     "hotkey_taken": {

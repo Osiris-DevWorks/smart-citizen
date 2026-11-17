@@ -3830,7 +3830,7 @@
     },
     "drawer_hotkey_hint": {
       "ht": "",
-      "at": "Abre e fecha a gaveta de dentro do jogo, na última seção usada. No jogo, continue segurando F para usar o mouse nela. Clique na caixa e aperte as teclas juntas, por exemplo Alt+8. O Star Citizen continua recebendo essas teclas, então escolha uma combinação que você não usa no jogo."
+      "at": "Abre e fecha a gaveta na última seção usada. O atalho pode ficar indisponível enquanto o Star Citizen estiver em foco. Segure F para liberar o cursor e clique em uma aba da gaveta. Clique no campo e pressione as teclas juntas, por exemplo Alt+8."
     },
     "hotkey_taken": {
       "ht": "",

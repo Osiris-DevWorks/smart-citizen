@@ -3830,7 +3830,7 @@
     },
     "drawer_hotkey_hint": {
       "ht": "",
-      "at": "Abre y cierra el cajón desde el juego, en la última sección usada. En el juego sigue manteniendo pulsada la F para usar el ratón en él. Haz clic en la casilla y pulsa las teclas a la vez, por ejemplo Alt+8. Star Citizen sigue recibiendo estas teclas, así que elige una combinación que no uses en el juego."
+      "at": "Abre y cierra el cajón en la última sección usada. El atajo podría no funcionar mientras Star Citizen tiene el foco. Mantén pulsada la F para liberar el cursor y haz clic en una pestaña del cajón. Haz clic en la casilla y pulsa las teclas a la vez, por ejemplo Alt+8."
     },
     "hotkey_taken": {
       "ht": "",

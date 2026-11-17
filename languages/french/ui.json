@@ -3830,7 +3830,7 @@
     },
     "drawer_hotkey_hint": {
       "ht": "",
-      "at": "Ouvre et ferme le tiroir depuis le jeu, sur la dernière section utilisée. En jeu, maintenez toujours F pour vous servir de la souris dedans. Cliquez dans la case, puis appuyez sur les touches ensemble, par exemple Alt+8. Star Citizen reçoit quand même ces touches : choisissez donc une combinaison que vous n'utilisez pas en jeu."
+      "at": "Ouvre et ferme le tiroir sur la dernière section utilisée. Le raccourci peut être indisponible lorsque Star Citizen a le focus. Maintenez F pour libérer le curseur, puis cliquez sur un onglet du tiroir. Cliquez dans la case, puis appuyez sur les touches ensemble, par exemple Alt+8."
     },
     "hotkey_taken": {
       "ht": "",

@@ -3830,7 +3830,7 @@
     },
     "drawer_hotkey_hint": {
       "ht": "",
-      "at": "Çekmeceyi oyunun içinden, en son kullanılan bölümde açıp kapatır. Oyunda fareyi içinde kullanmak için yine F tuşunu basılı tutun. Kutuya tıklayın, ardından tuşlara birlikte basın, örneğin Alt+8. Star Citizen bu tuşları yine de alır, bu yüzden oyunda kullanmadığınız bir birleşim seçin."
+      "at": "Çekmeceyi en son kullanılan bölümde açar ve kapatır. Star Citizen odaktayken kısayol çalışmayabilir. İmleci serbest bırakmak için F tuşunu basılı tutun, sonra bir çekmece sekmesine tıklayın. Kutuya tıklayın, ardından tuşlara birlikte basın, örneğin Alt+8."
     },
     "hotkey_taken": {
       "ht": "",

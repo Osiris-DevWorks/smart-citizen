@@ -1,17 +1,5 @@
-"""#523: the SCO drawer's hotkey, through Windows' RegisterHotKey and, for a
-game with focus that keeps WM_HOTKEY away, the keyboard's raw input.
-
-The key mapping is checked on its own, with the rule that a key other than
-an F key or Pause needs Ctrl, Alt or Win. ``RawCombination`` is fed press
-and release streams. ``GlobalHotkey`` runs against a recorded stand-in for
-user32 (the raw input window, one toggle per press, the native filter), and
-once for real: a combination no keyboard can press (F24) is registered with
-Windows along with its raw input, a WM_HOTKEY for it is posted to this
-thread and must come out of the Qt event loop as ``activated``, and a second
-owner of the same combination is refused by Windows itself.
-"""
+"""Key mapping, shortcut lifecycle, and Windows hotkey delivery without Raw Input."""
 import sys
-import time
 
 import pytest
 
@@ -242,8 +230,8 @@ def test_virtual_key_text():
 
 
 class _FakeUser32:
-    def __init__(self, refuse=False, refuse_raw=False):
-        self.calls, self.refuse, self.refuse_raw, self.raw = [], refuse, refuse_raw, []
+    def __init__(self, refuse=False):
+        self.calls, self.refuse = [], refuse
 
     def RegisterHotKey(self, hwnd, hotkey_id, modifiers, key):  # noqa: N802
         self.calls.append(("register", hwnd, hotkey_id, modifiers, key))
@@ -253,262 +241,27 @@ class _FakeUser32:
         self.calls.append(("unregister", hwnd, hotkey_id))
         return True
 
-    def RegisterRawInputDevices(self, device, count, size):  # noqa: N802
-        d = device._obj
-        self.raw.append((d.usUsagePage, d.usUsage, d.dwFlags, d.hwndTarget or 0, count))
-        return not self.refuse_raw
-
-    SINK = 0x5150
-
-    def CreateWindowExW(self, ex_style, cls, title, style, x, y, w, h, parent,  # noqa: N802
-                        menu, instance, param):
-        self.windows = getattr(self, "windows", []) + [(cls, parent)]
-        return self.SINK
-
-    def DestroyWindow(self, hwnd):  # noqa: N802
-        self.destroyed = getattr(self, "destroyed", []) + [hwnd]
-        return True
-
-
-CTRL, ALT, SHIFT, O_KEY = 0x11, 0x12, 0x10, 0x4F
-
-
-def _combination(modifiers=MOD_CONTROL | MOD_ALT, key=O_KEY, windows_says=0):
-    from src.gui.global_hotkey import RawCombination
-
-    clock = [100.0]
-    tracker = RawCombination(modifiers, key, modifiers_now=lambda: windows_says,
-                             clock=lambda: clock[0])
-    return tracker, clock
-
-
-def test_raw_presses_match_the_combination_exactly():
-    """#523: the raw stream, in order, makes the combination: its key going
-    down with exactly its modifiers held, as RegisterHotKey matches."""
-    tracker, _clock = _combination()
-    presses = [tracker.feed(vk, False) for vk in (CTRL, ALT, O_KEY)]
-    assert presses == [False, False, True]
-    assert not tracker.feed(O_KEY, False)                      # a key repeat
-    tracker.feed(O_KEY, True)
-    assert tracker.feed(O_KEY, False)                          # pressed again
-    tracker.feed(O_KEY, True)
-    tracker.feed(SHIFT, False)
-    assert not tracker.feed(O_KEY, False)                      # one modifier too many
-    tracker.feed(O_KEY, True)
-    tracker.feed(SHIFT, True)
-    tracker.feed(ALT, True)
-    assert not tracker.feed(O_KEY, False)                      # one too few
-    tracker.feed(O_KEY, True)
-    tracker.feed(0xA4, False)                                  # left Alt by its own key
-    assert tracker.feed(O_KEY, False)
-    assert not tracker.feed(0x50, False)                       # another key
-
-
-def test_a_stale_modifier_is_checked_with_windows():
-    """A release that never arrived (a lock screen) must not leave Ctrl down
-    for good: a modifier held past STALE_AFTER is asked about."""
-    from src.gui.global_hotkey import RawCombination
-
-    tracker, clock = _combination(modifiers=MOD_ALT, windows_says=MOD_ALT)
-    tracker.feed(CTRL, False)                                  # its release is lost
-    tracker.feed(ALT, False)
-    clock[0] += RawCombination.STALE_AFTER + 1
-    assert tracker.feed(O_KEY, False)                          # Windows: only Alt is down
-    held, clock = _combination(windows_says=MOD_CONTROL | MOD_ALT)
-    held.feed(CTRL, False)
-    held.feed(ALT, False)
-    clock[0] += RawCombination.STALE_AFTER + 1
-    assert held.feed(O_KEY, False)                             # still down, still counted
-
-
-def test_a_lost_release_of_the_key_misses_no_press():
-    """A press of the key last seen longer ago than STALE_AFTER is a new
-    press: its release was lost (a lock screen), and a held key repeats
-    far more often than that."""
-    from src.gui.global_hotkey import RawCombination
-
-    tracker, clock = _combination(windows_says=MOD_CONTROL | MOD_ALT)   # both still held
-    for vk in (CTRL, ALT):
-        tracker.feed(vk, False)
-    assert tracker.feed(O_KEY, False)                          # its release is lost
-    clock[0] += 0.5
-    assert not tracker.feed(O_KEY, False)                      # a repeat in time is a repeat
-    clock[0] += RawCombination.STALE_AFTER + 1
-    assert tracker.feed(O_KEY, False)
-
-
-def test_modifiers_down_now_asks_windows_about_each_modifier(monkeypatch):
-    from src.gui import global_hotkey
-
-    class _Keys:
-        def __init__(self, down):
-            self.down, self.asked = down, []
-
-        def GetAsyncKeyState(self, vk):  # noqa: N802
-            self.asked.append(vk)
-            return -0x8000 if vk in self.down else 0           # the high bit: down now
-
-    keys = _Keys({0x11, 0x5C})                                 # Ctrl and the right Win key
-    monkeypatch.setattr(global_hotkey, "_user32", lambda: keys)
-    assert global_hotkey.modifiers_down_now() == MOD_CONTROL | MOD_WIN
-    assert set(keys.asked) == set(global_hotkey._MODIFIER_VKS)
-    keys.down = {0xA4}                                         # left Alt by its own key
-    assert global_hotkey.modifiers_down_now() == MOD_ALT
-    monkeypatch.setattr(global_hotkey, "_user32", lambda: None)  # off Windows
-    assert global_hotkey.modifiers_down_now() == 0
-
-
-def _raw_hotkey(qapp, fake=None):
-    clock = [50.0]
-    hotkey = GlobalHotkey(user32=fake or _FakeUser32(), clock=lambda: clock[0])
-    fired = []
-    hotkey.activated.connect(lambda: fired.append(clock[0]))
-    assert hotkey.register("Ctrl+Alt+O") == ""
-    return hotkey, clock, fired
-
-
-def _wait_for(qapp, condition, timeout_s: float = 5.0) -> bool:
-    """Run the event loop until *condition* holds. The raw-input wait is a
-    real 80 ms timer, and a busy CI runner can fire it late, so a test that
-    waits for a toggle waits for the toggle, not a fixed time."""
-    deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        qapp.processEvents()
-        if condition():
-            return True
-        time.sleep(0.005)
-    return False
-
-
-def _press_raw(hotkey):
-    for vk, released in ((CTRL, False), (ALT, False), (O_KEY, False),
-                         (O_KEY, True), (ALT, True), (CTRL, True)):
-        hotkey.raw_key(vk, released)
-
-
-def test_raw_input_is_switched_on_with_the_hotkey(qapp):
-    from src.gui.global_hotkey import HWND_MESSAGE, RIDEV_INPUTSINK, RIDEV_REMOVE
-
-    fake = _FakeUser32()
-    hotkey, _clock, _fired = _raw_hotkey(qapp, fake)
-    # A message-only window, keyboard input sent to it whatever has focus.
-    assert fake.windows == [("STATIC", HWND_MESSAGE)] and hotkey.sink_hwnd == fake.SINK
-    assert fake.raw == [(1, 6, RIDEV_INPUTSINK, fake.SINK, 1)]
-    hotkey.unregister()
-    assert fake.raw[-1] == (1, 6, RIDEV_REMOVE, 0, 1)
-    assert fake.destroyed == [fake.SINK] and hotkey.sink_hwnd == 0
-    hotkey.raw_key(O_KEY, False)                               # nothing held: nothing done
-    assert not hotkey._raw_wait.isActive()
-
-
-def test_raw_input_refused_still_leaves_the_hotkey(qapp, caplog):
-    fake = _FakeUser32(refuse_raw=True)
-    with caplog.at_level("INFO", logger="src.gui.global_hotkey"):
-        hotkey, _clock, _fired = _raw_hotkey(qapp, fake)
-    assert hotkey.registered == "Ctrl+Alt+O"
-    assert fake.destroyed == [fake.SINK] and hotkey.sink_hwnd == 0   # its window closed
-    assert any("raw input refused" in r.getMessage() for r in caplog.records)
-    hotkey.unregister()
-    assert fake.destroyed == [fake.SINK]                       # nothing left to close
-
-
-def test_in_game_raw_input_toggles_once_per_press(qapp):
-    """A game with focus keeps WM_HOTKEY away: raw input's sighting acts
-    after RAW_GRACE_MS, once per press, and a later press acts again."""
-    from src.gui.global_hotkey import SAME_PRESS_S
-    hotkey, clock, fired = _raw_hotkey(qapp)
-    _press_raw(hotkey)
-    assert fired == [] and hotkey._raw_wait.isActive()         # WM_HOTKEY gets its chance
-    assert _wait_for(qapp, lambda: fired) and fired == [50.0]
-    clock[0] += SAME_PRESS_S + 0.1
-    _press_raw(hotkey)
-    assert _wait_for(qapp, lambda: len(fired) == 2)
-    hotkey.unregister()
-
-
-def test_one_press_seen_both_ways_toggles_once(qapp):
-    """Outside a game a press brings WM_HOTKEY and raw input: one toggle,
-    by WM_HOTKEY when it is in time, whichever comes first."""
-    from PyQt6.QtTest import QTest
-
-    from src.gui.global_hotkey import RAW_GRACE_MS, SAME_PRESS_S
-    hotkey, clock, fired = _raw_hotkey(qapp)
-    _press_raw(hotkey)                                         # raw input first
-    hotkey.hotkey_message()
-    assert len(fired) == 1 and not hotkey._raw_wait.isActive()   # its wait is over
-    QTest.qWait(RAW_GRACE_MS + 60)
-    assert len(fired) == 1
-    clock[0] += SAME_PRESS_S + 0.1
-    hotkey.hotkey_message()                                    # WM_HOTKEY first
-    _press_raw(hotkey)
-    QTest.qWait(RAW_GRACE_MS + 60)
-    assert len(fired) == 2
-    clock[0] += SAME_PRESS_S + 0.1
-    _press_raw(hotkey)                                         # raw input acts first
-    assert _wait_for(qapp, lambda: len(fired) == 3)
-    hotkey.hotkey_message()                                    # its WM_HOTKEY, late
-    assert len(fired) == 3
-    hotkey.unregister()
-
-
-class _RawEvents(_FakeUser32):
-    """GetRawInputData answering from a table of handles."""
-
-    def __init__(self, events):
-        super().__init__()
-        self.events, self.reads = events, []
-
-    def GetRawInputData(self, handle, command, buffer, size_ref, header_size):  # noqa: N802
-        import ctypes
-
-        from src.gui.global_hotkey import RAWINPUTHEADER, RAWKEYBOARD
-        size = size_ref._obj
-        total = ctypes.sizeof(RAWINPUTHEADER) + ctypes.sizeof(RAWKEYBOARD)
-        if buffer is None:
-            size.value = total
-            return 0
-        self.reads.append(handle)
-        kind, vk, released = self.events[handle]
-        RAWINPUTHEADER.from_buffer(buffer).dwType = kind
-        keyboard = RAWKEYBOARD.from_buffer(buffer, ctypes.sizeof(RAWINPUTHEADER))
-        keyboard.VKey, keyboard.Flags = vk, 1 if released else 0
-        return total
-
-
-def test_raw_messages_are_read_once_each(qapp):
-    """Qt can hand one WM_INPUT to the filter twice; it is read once."""
-    events = {1: (1, CTRL, False), 2: (1, ALT, False), 3: (1, O_KEY, False),
-              4: (0, O_KEY, False)}                            # 4: a mouse, not a keyboard
-    fake = _RawEvents(events)
-    hotkey, _clock, fired = _raw_hotkey(qapp, fake)
-    for handle in (1, 1, 2, 2, 4, 3, 3):
-        hotkey.raw_message(handle)
-    assert fake.reads == [1, 2, 4, 3]
-    assert _wait_for(qapp, lambda: fired) and len(fired) == 1
-    hotkey.unregister()
-
 
 def test_the_filter_takes_only_its_own_messages(qapp):
-    """WM_HOTKEY for its id is consumed; WM_INPUT for its hidden window is
-    read and then left to Windows' default handling, which tidies it up."""
     import ctypes
     from ctypes import wintypes
 
-    from src.gui.global_hotkey import WM_HOTKEY, WM_INPUT
-    fake = _RawEvents({7: (1, CTRL, False)})
-    hotkey, _clock, fired = _raw_hotkey(qapp, fake)
+    hotkey = GlobalHotkey(user32=_FakeUser32())
+    assert hotkey.register("Ctrl+Alt+O") == ""
+    fired = []
+    hotkey.activated.connect(lambda: fired.append(True))
 
-    def deliver(message, hwnd=0, wparam=0, lparam=0, kind=b"windows_dispatcher_MSG"):
-        msg = wintypes.MSG(hwnd or None, message, wparam, lparam)
-        return hotkey._filter.nativeEventFilter(kind, ctypes.addressof(msg))
+    def deliver(message, identifier):
+        msg = wintypes.MSG(None, message, identifier)
+        return hotkey._filter.nativeEventFilter(b"windows_dispatcher_MSG", ctypes.addressof(msg))
 
-    assert deliver(WM_HOTKEY, wparam=hotkey.hotkey_id) == (True, 0) and len(fired) == 1
-    assert deliver(WM_HOTKEY, wparam=hotkey.hotkey_id + 1) == (False, 0) and len(fired) == 1
-    assert deliver(WM_INPUT, hwnd=0x1234, lparam=7) == (False, 0)   # another window's
-    assert fake.reads == []
-    assert deliver(WM_INPUT, hwnd=fake.SINK, lparam=7, kind=b"windows_generic_MSG") == (False, 0)
-    assert fake.reads == [7]
-    hotkey.unregister()
+    try:
+        assert deliver(WM_HOTKEY, hotkey.hotkey_id) == (True, 0)
+        assert deliver(WM_HOTKEY, hotkey.hotkey_id + 1) == (False, 0)
+        assert deliver(0x00FF, hotkey.hotkey_id) == (False, 0)   # WM_INPUT
+        assert fired == [True]
+    finally:
+        hotkey.unregister()
 
 
 def test_register_change_and_clear(qapp):
@@ -541,6 +294,29 @@ def test_a_refusal_is_reported_and_logged(qapp, caplog):
     assert any("refused the drawer hotkey Ctrl+Shift+O" in r.getMessage() for r in caplog.records)
 
 
+def _has_keyboard_raw_input(user32):
+    """Read registered device types in this process without reading input events."""
+    import ctypes
+    from ctypes import wintypes
+
+    class RawInputDevice(ctypes.Structure):
+        _fields_ = [
+            ("usage_page", wintypes.USHORT), ("usage", wintypes.USHORT),
+            ("flags", wintypes.DWORD), ("target", wintypes.HWND),
+        ]
+
+    get_devices = user32.GetRegisteredRawInputDevices
+    get_devices.argtypes = [
+        ctypes.POINTER(RawInputDevice), ctypes.POINTER(wintypes.UINT), wintypes.UINT,
+    ]
+    get_devices.restype = wintypes.UINT
+    entries = (RawInputDevice * 16)()
+    count = wintypes.UINT(len(entries))
+    received = get_devices(entries, ctypes.byref(count), ctypes.sizeof(RawInputDevice))
+    assert received <= len(entries), ctypes.get_last_error()
+    return any((entry.usage_page, entry.usage) == (1, 6) for entry in entries[:received])
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="RegisterHotKey is Windows only")
 def test_a_real_hotkey_reaches_activated_and_a_second_owner_is_refused(qapp):
     import ctypes
@@ -553,15 +329,11 @@ def test_a_real_hotkey_reaches_activated_and_a_second_owner_is_refused(qapp):
                                           wintypes.LPARAM]
     user32.PostThreadMessageW.restype = wintypes.BOOL
     thread = ctypes.WinDLL("kernel32").GetCurrentThreadId()
-    combo = "Ctrl+Alt+Shift+F24"          # no keyboard has F24, so nobody presses it meanwhile
-    # Each post is a press of its own: a second WM_HOTKEY within SAME_PRESS_S
-    # would be taken as the same press, whatever its id.
-    clock = [0.0]
-    first = GlobalHotkey(clock=lambda: clock[0])
+    combo = "Ctrl+Alt+Shift+F24"
+    first = GlobalHotkey()
     second = GlobalHotkey()
 
     def post(hotkey_id):
-        clock[0] += 10
         assert user32.PostThreadMessageW(thread, WM_HOTKEY, hotkey_id, 0)
         QCoreApplication.processEvents()
 
@@ -570,17 +342,18 @@ def test_a_real_hotkey_reaches_activated_and_a_second_owner_is_refused(qapp):
     second.activated.connect(lambda: other.append(True))
     try:
         assert first.register(combo) == ""
-        assert first._raw_on and first.sink_hwnd               # Windows took the raw input too
+        assert not _has_keyboard_raw_input(user32)
         assert second.register(combo) == HOTKEY_TAKEN          # Windows' own refusal
         post(first.hotkey_id)
         assert fired == [True] and other == []
         post(first.hotkey_id + 1000)
         assert fired == [True]                                 # another id is not ours
         first.unregister()
-        assert not first._raw_on
+        assert not _has_keyboard_raw_input(user32)
         post(first.hotkey_id)
         assert fired == [True]                                 # no filter left to hear it
         assert second.register(combo) == ""                    # free again
+        assert not _has_keyboard_raw_input(user32)
     finally:
         first.unregister()
         second.unregister()

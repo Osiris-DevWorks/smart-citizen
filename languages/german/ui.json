@@ -3830,7 +3830,7 @@
     },
     "drawer_hotkey_hint": {
       "ht": "",
-      "at": "Öffnet und schließt die Schublade aus dem Spiel heraus, mit dem zuletzt genutzten Bereich. Im Spiel hältst du weiterhin F gedrückt, um die Maus darin zu nutzen. Klicke in das Feld und drücke die Tasten zusammen, etwa Alt+8. Star Citizen bekommt diese Tasten trotzdem, also wähle eine Kombination, die du im Spiel nicht nutzt."
+      "at": "Öffnet und schließt die Schublade mit dem zuletzt genutzten Bereich. Das Tastenkürzel ist möglicherweise nicht verfügbar, solange Star Citizen den Fokus hat. Halte F gedrückt, um den Mauszeiger freizugeben, und klicke auf einen Reiter der Schublade. Klicke in das Feld und drücke die Tasten zusammen, etwa Alt+8."
     },
     "hotkey_taken": {
       "ht": "",

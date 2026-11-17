@@ -1280,11 +1280,10 @@ def test_play_alert_sound_is_quiet_off_windows(monkeypatch):
 
 
 class _FakeUser32:
-    """RegisterHotKey, UnregisterHotKey and the raw input switch, recorded
-    instead of called."""
+    """Record the Windows hotkey calls."""
 
     def __init__(self, refuse=False):
-        self.calls, self.refuse, self.raw = [], refuse, []
+        self.calls, self.refuse = [], refuse
 
     def RegisterHotKey(self, hwnd, hotkey_id, modifiers, key):  # noqa: N802
         self.calls.append(("register", modifiers, key))
@@ -1292,16 +1291,6 @@ class _FakeUser32:
 
     def UnregisterHotKey(self, hwnd, hotkey_id):  # noqa: N802
         self.calls.append(("unregister",))
-        return True
-
-    def RegisterRawInputDevices(self, device, count, size):  # noqa: N802
-        self.raw.append(device._obj.dwFlags)
-        return True
-
-    def CreateWindowExW(self, *args):  # noqa: N802
-        return 0x5150
-
-    def DestroyWindow(self, hwnd):  # noqa: N802
         return True
 
 
@@ -1429,24 +1418,8 @@ def test_the_hotkey_leaves_focus_alone_once_the_player_moved_on(qapp, monkeypatc
         overlay.stop()
 
 
-def test_the_hotkey_watches_raw_input_only_while_it_is_held(qapp):
-    from src.gui.global_hotkey import RIDEV_INPUTSINK, RIDEV_REMOVE
-
-    overlay, fake = _overlay_with_fake_hotkey()
-    overlay.set_drawer_hotkey("Ctrl+Shift+O")
-    assert fake.raw == []                                       # not running
-    overlay.start()
-    assert fake.raw == [RIDEV_INPUTSINK]
-    overlay.set_options({"drawer": False})
-    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE]
-    overlay.set_options({})
-    overlay.stop()
-    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE, RIDEV_INPUTSINK, RIDEV_REMOVE]
-
-
 def test_a_drawer_opened_without_focus_is_logged(qapp, monkeypatch, caplog):
-    """Raw input saw the hotkey but Windows kept focus on the game: the log
-    says so, once the check after the open has run."""
+    """Log when the drawer opens and Windows keeps focus on the game."""
     from PyQt6.QtTest import QTest
     from src.gui import sco_overlay
 

@@ -21,9 +21,8 @@ screen capture runs at all.
 
 Overlays only draw over Star Citizen in borderless windowed mode, not
 exclusive fullscreen. SCO only captures the screen and, with a drawer
-hotkey set, registers that one key combination with Windows and watches the
-keyboard's raw input for it while it is held (``global_hotkey.py``); it
-never reads game memory or sends input.
+hotkey set, lets Windows match that one key combination. The game may
+prevent Windows from delivering the shortcut while it has focus.
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
@@ -1471,9 +1470,8 @@ class ScoOverlay(QObject):
 
     def _sync_hotkey(self) -> None:
         """Hold the hotkey only while it can open something: overlay running,
-        drawer showing. While it is held, Windows keeps the combination from
-        the program with focus and its raw input is watched, since Star
-        Citizen keeps registered hotkeys away (and still gets the keys)."""
+        drawer showing. Players can click a drawer tab if the game prevents
+        Windows from delivering the shortcut."""
         drawer_up = self._running and self._show_drawer and self.drawer.has_sections()
         wanted = self._hotkey_sequence if drawer_up else ""
         if wanted and wanted == self._hotkey_refused:
@@ -1491,8 +1489,7 @@ class ScoOverlay(QObject):
 
     def toggle_drawer(self) -> None:
         """The hotkey: open the drawer on its last section and bring it to the
-        front, or close it. Over Star Citizen, Windows keeps focus on the
-        game (the press came through raw input), so the player holds F."""
+        front, or close it when Windows delivers the shortcut."""
         drawer = self.drawer
         if not drawer.isVisible():
             return
@@ -1507,9 +1504,7 @@ class ScoOverlay(QObject):
         QTimer.singleShot(FOCUS_CHECK_MS, self._report_focus)
 
     def _report_focus(self) -> None:
-        """Say in the log when Windows kept focus on another window (a game
-        that keeps the hotkey from us, so raw input saw it, #523): the drawer
-        then opened on top without focus, and clicking it needs a free mouse."""
+        """Log when the drawer opens while focus stays on another window."""
         drawer = self.drawer
         if not (self._running and drawer.isVisible() and drawer.is_open()):
             return
