@@ -2024,6 +2024,14 @@ def _overlay_with_fake_hotkey(refuse=False):
 CTRL_SHIFT_O = ("register", 0x2 | 0x4 | 0x4000, 0x4F)
 
 
+def _recording(handed):
+    """A give_focus_back stand-in: notes each window, and Windows agrees."""
+    def give_focus_back(window):
+        handed.append(window)
+        return True
+    return give_focus_back
+
+
 def test_the_hotkey_is_held_only_while_the_drawer_shows(qapp):
     overlay, fake = _overlay_with_fake_hotkey()
     problems = []
@@ -2067,7 +2075,7 @@ def test_the_hotkey_opens_the_drawer_on_its_last_section_and_hands_focus_back(qa
     from src.gui import sco_overlay
     monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)   # the game
     handed = []
-    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
     overlay, _fake = _overlay_with_fake_hotkey()
     overlay.start()
     drawer = overlay.drawer
@@ -2079,9 +2087,9 @@ def test_the_hotkey_opens_the_drawer_on_its_last_section_and_hands_focus_back(qa
         assert drawer.is_open() and drawer._current == "blueprints" and activated == [True]
         overlay._hotkey.activated.emit()
         assert not drawer.is_open() and handed == [4242]
-        drawer.open_section("crafting")                         # opened by a click
+        drawer.open_section("crafting")                         # no hotkey, no activating click
         drawer.close_drawer()
-        assert handed == [4242]                                 # the hotkey took nothing
+        assert handed == [4242]                                 # nothing took focus
         overlay.toggle_drawer()
         assert drawer._current == "crafting"                    # the section used last
         drawer.open_section("crafting")                         # its own tab closes it
@@ -2096,7 +2104,7 @@ def test_a_drawer_hidden_by_its_switch_forgets_the_window(qapp, monkeypatch):
     from src.gui import sco_overlay
     monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
     handed = []
-    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
     overlay, _fake = _overlay_with_fake_hotkey()
     overlay.start()
     drawer = overlay.drawer
@@ -2117,7 +2125,7 @@ def test_the_hotkey_leaves_focus_alone_once_the_player_moved_on(qapp, monkeypatc
     from src.gui import sco_overlay
     monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
     handed = []
-    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
     overlay, _fake = _overlay_with_fake_hotkey()
     overlay.start()
     drawer = overlay.drawer
@@ -2130,6 +2138,410 @@ def test_the_hotkey_leaves_focus_alone_once_the_player_moved_on(qapp, monkeypatc
         overlay.set_options({"drawer": False})                  # no drawer, nothing to open
         overlay.toggle_drawer()
         assert not drawer.is_open()
+    finally:
+        overlay.stop()
+
+
+def _native(drawer, message, event_type=b"windows_generic_MSG"):
+    """Hand the drawer a Windows message the way Qt does (offscreen, Qt sends
+    none): the event type and a pointer to a built ``MSG``."""
+    from ctypes import addressof, wintypes
+
+    from PyQt6 import sip
+
+    msg = wintypes.MSG()
+    msg.message = message
+    return drawer.nativeEvent(event_type, sip.voidptr(addressof(msg)))
+
+
+def test_only_a_click_about_to_activate_the_drawer_names_a_window(qapp, monkeypatch):
+    """Every native message is left to Qt (not handled), and only Windows'
+    WM_MOUSEACTIVATE, sent before a click activates the drawer, names the
+    window that has focus then."""
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
+    assert sco_overlay.WM_MOUSEACTIVATE == 0x0021                # Windows' own value
+    drawer = BlueprintDrawer()
+    named = []
+    drawer.taking_focus.connect(named.append)
+    for message in (0x0200, 0x0201, 0x0006):                    # mouse move, button down, activate
+        assert _native(drawer, message) == (False, 0)
+    assert _native(drawer, 0x0021, b"windows_dispatcher_MSG") == (False, 0)
+    assert drawer.nativeEvent(b"windows_generic_MSG", None) == (False, 0)
+    assert named == []
+    assert _native(drawer, 0x0021) == (False, 0)                # Qt still activates it
+    assert named == [4242]
+
+
+def test_a_click_names_the_window_in_front_while_the_pointer_was_over_it(qapp, monkeypatch):
+    """In game nothing is in front by the time Windows sends WM_MOUSEACTIVATE
+    (GetForegroundWindow gave none, logged in testing), so a click names the
+    window in front at the pointer's last move over the drawer, never the
+    drawer itself; a window in front at the click itself still comes first."""
+    from src.gui import sco_overlay
+    assert sco_overlay.WM_MOUSEMOVE == 0x0200                    # Windows' own values
+    assert sco_overlay.WM_MOUSELEAVE == 0x02A3
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    drawer = BlueprintDrawer()
+    named = []
+    drawer.taking_focus.connect(named.append)
+    _native(drawer, sco_overlay.WM_MOUSEMOVE)                   # the pointer comes over it
+    focus["window"] = int(drawer.winId())                       # the drawer in front: not noted
+    _native(drawer, sco_overlay.WM_MOUSEMOVE)
+    focus["window"] = 0                                         # nothing in front: not noted
+    _native(drawer, sco_overlay.WM_MOUSEMOVE)
+    assert named == []                                          # a move names nothing
+    _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+    assert named == [4242]
+    focus["window"] = 777
+    _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+    assert named == [4242, 777]
+    _native(drawer, sco_overlay.WM_MOUSELEAVE)                  # the pointer left: note dropped
+    focus["window"] = 0
+    _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+    assert named == [4242, 777, 0]
+
+
+def test_closing_after_a_click_in_game_hands_focus_back(qapp, monkeypatch):
+    """The tab path as logged in game: the pointer moves over the drawer
+    while the game is in front, nothing is in front at the click, the tab
+    closes the drawer with its button down, and focus goes back to the game
+    once the button comes up."""
+    from src.gui import sco_overlay
+    from tests.event_loop import pump_until
+
+    focus = {"window": 0x15057C}                                # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    held = {"button": False}
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: held["button"])
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEMOVE)               # over a tab, the game in front
+        focus["window"] = 0                                     # Windows took focus for the click
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        focus["window"] = int(drawer.winId())                   # the drawer has focus now
+        _native(drawer, sco_overlay.WM_MOUSEMOVE)               # on to an item and back
+        held["button"] = True
+        drawer.open_section("minerals")                         # its tab closes it, button down
+        assert handed == []
+        held["button"] = False
+        assert pump_until(lambda: handed == [0x15057C], seconds=2)
+    finally:
+        overlay.stop()
+
+
+def test_the_hotkey_takes_the_noted_window_when_the_drawer_is_in_front(qapp, monkeypatch):
+    """A hand-back Windows refused leaves the closed drawer in front, so the
+    hotkey would remember the drawer itself: it takes the window noted under
+    the pointer instead, and closing hands focus back to that one. Once the
+    pointer has left the drawer that note is gone, so an old one is never
+    brought back."""
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEMOVE)               # the pointer over it, game in front
+        focus["window"] = int(drawer.winId())                   # the closed drawer kept focus
+        overlay.toggle_drawer()                                 # the hotkey opens it
+        overlay.toggle_drawer()                                 # and closes it
+        assert handed == [4242]
+        _native(drawer, sco_overlay.WM_MOUSELEAVE)              # the pointer left: note dropped
+        overlay.toggle_drawer()
+        overlay.toggle_drawer()
+        assert handed == [4242]                                 # no old window brought back
+    finally:
+        overlay.stop()
+
+
+def test_closing_after_a_click_gave_the_drawer_focus_hands_it_back(qapp, monkeypatch):
+    """A click gives the drawer focus as the hotkey can: Windows asks first,
+    while the game still has focus, so closing the drawer by its own tab or
+    the hotkey hands focus back to the game, unless the player clicked away."""
+    from src.gui import sco_overlay
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    active = {"drawer": True}
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: active["drawer"])
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)           # a click on a closed tab
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # its own tab closes it
+        assert not drawer.is_open() and handed == [4242]
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("crafting")
+        overlay.toggle_drawer()                                 # the hotkey closes it
+        assert not drawer.is_open() and handed == [4242, 4242]
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("crafting")
+        active["drawer"] = False                                # the player clicked the game
+        drawer.open_section("crafting")
+        assert handed == [4242, 4242]
+        active["drawer"] = True
+        focus["window"] = int(drawer.winId())                   # never the drawer itself
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("blueprints")
+        drawer.open_section("blueprints")
+        assert handed == [4242, 4242]
+    finally:
+        overlay.stop()
+
+
+def _clicked_overlay(monkeypatch, held, handed):
+    """A running overlay whose drawer a click gave focus (the game is window
+    4242), with the mouse button state and the hand-back recorded."""
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: held["button"])
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    monkeypatch.setattr(overlay.drawer, "isActiveWindow", lambda: True)
+    return overlay
+
+
+def test_a_tab_click_hands_focus_back_once_its_button_is_up(qapp, monkeypatch):
+    """A tab click closes the drawer with its mouse button still down, and
+    focus handed back then left the game needing a click before it took a
+    key, while the hotkey's did not (found in testing): the hand-back waits
+    for the button to come up, then goes at once, and once."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+    from tests.event_loop import pump_until
+
+    held, handed = {"button": True}, []
+    overlay = _clicked_overlay(monkeypatch, held, handed)
+    drawer = overlay.drawer
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # its tab closes it, button down
+        QTest.qWait(80)
+        assert not drawer.is_open() and handed == []            # not while it is held
+        held["button"] = False                                  # the button comes up
+        assert pump_until(lambda: handed == [4242], seconds=2)
+        QTest.qWait(80)
+        assert handed == [4242]
+    finally:
+        overlay.stop()
+
+
+def test_a_hand_back_still_waiting_goes_after_the_wait(qapp, monkeypatch):
+    """A button that never reads as up (a release Qt never saw) holds the
+    hand-back for HAND_BACK_WAIT_MS at most."""
+    from src.gui import sco_overlay
+    from tests.event_loop import pump_until
+
+    monkeypatch.setattr(sco_overlay, "HAND_BACK_WAIT_MS", 60)
+    held, handed = {"button": True}, []
+    overlay = _clicked_overlay(monkeypatch, held, handed)
+    drawer = overlay.drawer
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("crafting")
+        drawer.open_section("crafting")
+        assert handed == []
+        assert pump_until(lambda: handed == [4242], seconds=2)
+    finally:
+        overlay.stop()
+
+
+def test_a_waiting_hand_back_is_dropped_by_an_open_or_a_stop(qapp, monkeypatch):
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    held, handed = {"button": True}, []
+    overlay = _clicked_overlay(monkeypatch, held, handed)
+    drawer = overlay.drawer
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # waits for the button
+        drawer.open_section("crafting")                         # opened again meanwhile
+        held["button"] = False
+        QTest.qWait(80)
+        assert handed == []
+        drawer.close_drawer()
+        held["button"] = True
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("blueprints")
+        drawer.open_section("blueprints")                       # waits for the button
+        overlay.stop()
+        held["button"] = False
+        QTest.qWait(80)
+        assert handed == []
+    finally:
+        overlay.stop()
+
+
+def test_a_hand_back_refused_or_not_kept_is_logged(qapp, monkeypatch, caplog):
+    """Windows refusing the hand-back, or another window in front
+    FOCUS_CHECK_MS after it, is logged at INFO; one that stays says nothing."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    focus, refused = {"window": 4242}, {"now": True}
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    monkeypatch.setattr(sco_overlay, "give_focus_back", lambda w: not refused["now"])
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    monkeypatch.setattr(sco_overlay, "FOCUS_CHECK_MS", 0)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+
+    def lines():
+        return [r.getMessage() for r in caplog.records if "back to window" in r.getMessage()]
+
+    def click_open_and_close():
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")
+
+    try:
+        with caplog.at_level("INFO", logger="src.gui.sco_overlay"):
+            click_open_and_close()                              # Windows refuses
+            assert lines() == ["SCO: Windows did not hand focus back to window 4242"]
+            refused["now"] = False
+            click_open_and_close()                              # handed back, and it stays
+            QTest.qWait(30)
+            assert len(lines()) == 1
+            click_open_and_close()
+            focus["window"] = 777                               # then another window has it
+            QTest.qWait(30)
+            assert lines()[1:] == ["SCO: 0 ms after focus went back to window 4242, "
+                                   "window 777 is in front"]
+    finally:
+        overlay.stop()
+
+
+def test_a_click_that_names_no_window_keeps_the_kept_one(qapp, monkeypatch):
+    """The hotkey keeps the game and Windows leaves focus on it, then a click
+    on the open panel comes with nothing in front and nothing noted (the
+    panel opened under a pointer that had not moved). The click names no
+    window, so the game stays kept and closing by the tab hands focus back."""
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    named = []
+    drawer.taking_focus.connect(named.append)
+    try:
+        overlay.toggle_drawer()                                 # the hotkey opens it
+        focus["window"] = 0                                     # mid-click, nothing in front
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)           # and no pointer move noted
+        assert named == [0] and drawer.is_open()
+        drawer.open_section(drawer._current)                    # its own tab closes it
+        assert handed == [4242]
+    finally:
+        overlay.stop()
+
+
+def test_a_hidden_drawer_forgets_the_window_noted_under_the_pointer(qapp, monkeypatch):
+    """Windows may send no WM_MOUSELEAVE for a window hidden under the
+    pointer, so hiding the drawer (the overlay stopped, or the drawer switched
+    off) drops the note: shown again, a click with nothing in front names no
+    window from before."""
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    named = []
+    drawer.taking_focus.connect(named.append)
+    hides = ((overlay.stop, overlay.start),
+             (lambda: overlay.set_options({"drawer": False}), lambda: overlay.set_options({})))
+    try:
+        for hide, show in hides:
+            focus["window"] = 4242
+            _native(drawer, sco_overlay.WM_MOUSEMOVE)           # noted under the pointer
+            hide()                                              # hidden with the pointer on it
+            show()
+            assert drawer.isVisible()
+            focus["window"] = 0                                 # mid-click, nothing in front
+            _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        assert named == [0, 0]
+    finally:
+        overlay.stop()
+
+
+def test_each_hand_back_is_checked_for_its_own_window(qapp, monkeypatch, caplog):
+    """Two hand-backs within FOCUS_CHECK_MS are each checked for their own
+    window (one shared check named the second window for both, then nothing),
+    and a check says nothing once the drawer opened again or the overlay
+    stopped."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    monkeypatch.setattr(sco_overlay, "give_focus_back", lambda window: True)
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    monkeypatch.setattr(sco_overlay, "FOCUS_CHECK_MS", 0)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+
+    def lines():
+        return [r.getMessage() for r in caplog.records if "went back" in r.getMessage()]
+
+    def hand_back_to(window):
+        focus["window"] = window                                # in front at the click
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # its tab closes it
+
+    try:
+        with caplog.at_level("INFO", logger="src.gui.sco_overlay"):
+            hand_back_to(4242)
+            hand_back_to(5151)                                  # before the first check ran
+            focus["window"] = 777                               # then another window has it
+            QTest.qWait(30)
+            assert lines() == [
+                "SCO: 0 ms after focus went back to window 4242, window 777 is in front",
+                "SCO: 0 ms after focus went back to window 5151, window 777 is in front"]
+            hand_back_to(4242)
+            drawer.open_section("crafting")                     # opened again before its check
+            focus["window"] = 777
+            QTest.qWait(30)
+            drawer.close_drawer()
+            hand_back_to(4242)
+            overlay.stop()                                      # stopped before its check
+            focus["window"] = 777
+            QTest.qWait(30)
+            assert len(lines()) == 2
     finally:
         overlay.stop()
 
