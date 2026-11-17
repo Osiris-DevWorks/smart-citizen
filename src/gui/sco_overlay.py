@@ -23,10 +23,12 @@ screen capture runs at all.
 
 Overlays only draw over Star Citizen in borderless windowed mode, not
 exclusive fullscreen. SCO only captures the screen and, with a drawer
-hotkey set, registers that one key combination with Windows and watches the
-keyboard's raw input for it while it is held (``global_hotkey.py``); it
-never reads game memory or sends input. It also asks Windows which window
-is in front and whether the mouse pointer shows, never the game.
+hotkey set, registers that one key combination with Windows and, while Star
+Citizen is in front, asks Windows whether its key and the modifier keys are
+down (``global_hotkey.py``); it never reads game memory or sends input, and
+no key press made in the game or another program reaches it. It also asks
+Windows which window is in front and whether the mouse pointer shows, never
+the game.
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
@@ -152,7 +154,10 @@ FOCUS_CHECK_MS = 250
 # only there can a shot fired within one tick of letting go of F reach the
 # drawer. Qt runs a timer of 20 ms or less on a 1 ms Windows timer, which
 # costs power (measured), so with any other window in front it asks every
-# PASS_THROUGH_IDLE_POLL_MS instead.
+# PASS_THROUGH_IDLE_POLL_MS instead. The same tick checks the drawer hotkey's
+# keys while the game is in front (#587), so PASS_THROUGH_POLL_MS is also
+# about the shortest press the hotkey sees in game: a longer interval misses
+# more quick taps.
 PASS_THROUGH_POLL_MS = 15
 PASS_THROUGH_IDLE_POLL_MS = 100
 # What Windows sends a window before a click activates it. By then Windows
@@ -1738,7 +1743,8 @@ class ScoOverlay(QObject):
         # back to it).
         self._focus_before_drawer = 0
         # While the drawer shows: clicks pass through it whenever Star
-        # Citizen is in front with its pointer hidden (_sync_pass_through,
+        # Citizen is in front with its pointer hidden, and the drawer
+        # hotkey's keys are checked while it is in front (_sync_pass_through,
         # which also sets the interval, and runs before every start).
         self._pass_through_timer = QTimer(self)
         self._pass_through_timer.timeout.connect(self._sync_pass_through)
@@ -1873,9 +1879,15 @@ class ScoOverlay(QObject):
         """Clicks pass through the drawer to the game while Star Citizen is
         in front with its pointer hidden (the player aiming), and the drawer
         takes them while the pointer shows (F held, the mobiGlas) or another
-        window is in front. Asked often only while the game is in front."""
+        window is in front. Asked often only while the game is in front,
+        when the same tick checks the drawer hotkey's keys, since the game
+        keeps the hotkey's WM_HOTKEY away (``GlobalHotkey.check_keys``)."""
         in_front = game_in_front()
         self.drawer.set_pass_through(in_front and pointer_hidden())
+        if in_front:
+            self._hotkey.check_keys()
+        else:
+            self._hotkey.forget_keys()
         interval = PASS_THROUGH_POLL_MS if in_front else PASS_THROUGH_IDLE_POLL_MS
         if self._pass_through_timer.interval() != interval:
             self._pass_through_timer.setInterval(interval)
@@ -1883,8 +1895,8 @@ class ScoOverlay(QObject):
     def _sync_hotkey(self) -> None:
         """Hold the hotkey only while it can open something: overlay running,
         drawer showing. While it is held, Windows keeps the combination from
-        the program with focus and its raw input is watched, since Star
-        Citizen keeps registered hotkeys away (and still gets the keys)."""
+        the program with focus, apart from Star Citizen, which keeps it away
+        and still gets the keys (``_sync_pass_through``)."""
         drawer_up = self._running and self._show_drawer and self.drawer.has_sections()
         wanted = self._hotkey_sequence if drawer_up else ""
         if wanted and wanted == self._hotkey_refused:
@@ -1903,7 +1915,7 @@ class ScoOverlay(QObject):
     def toggle_drawer(self) -> None:
         """The hotkey: open the drawer on its last section and bring it to the
         front, or close it. Over Star Citizen, Windows keeps focus on the
-        game (the press came through raw input), so the player holds F."""
+        game (a key check found the press), so the player holds F."""
         drawer = self.drawer
         if not drawer.isVisible():
             return
@@ -1918,8 +1930,9 @@ class ScoOverlay(QObject):
 
     def _report_focus(self) -> None:
         """Say in the log when Windows kept focus on another window (a game
-        that keeps the hotkey from us, so raw input saw it, #523): the drawer
-        then opened on top without focus, and clicking it needs a free mouse."""
+        that keeps the hotkey from us, so a key check found the press, #587):
+        the drawer then opened on top without focus, and clicking it needs a
+        free mouse."""
         drawer = self.drawer
         if not (self._running and drawer.isVisible() and drawer.is_open()):
             return

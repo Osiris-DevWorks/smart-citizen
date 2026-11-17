@@ -87,6 +87,16 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: drawer hotkey (#587)",
+        "items": [
+            "Set a drawer hotkey on the Overlay tab and start the overlay. In game, press it: the drawer opens. Hold F to use it, then press the hotkey again: it closes.",
+            "In game, press the hotkey's key alone, or with one modifier more than it has (Ctrl+Alt+8 for Alt+8): the drawer stays as it is.",
+            "With the Smart Citizen window in front, press the hotkey: the drawer opens in front. Press it again: it closes.",
+            "Set Pause as the drawer hotkey and start the overlay. In game, press Pause: the drawer opens. Press it again: it closes.",
+            "Alt-Tab into the game and at once press the hotkey, holding it a moment: the drawer opens.",
+        ],
+    },
+    {
         "title": "Enhancements (#555, #561)",
         "items": [
             "Generate with Commodities ticked. Point a mining tool at an unfractured Aphorite, Dolivine or Hadanite rock: its HUD name carries the [CF] tag.",

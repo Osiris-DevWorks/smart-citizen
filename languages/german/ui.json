@@ -3574,7 +3574,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log, fragt Windows, welches Fenster im Vordergrund ist und ob der Zeiger sichtbar ist, und achtet, wenn du ein Tastenkürzel für die Schublade festlegst, auf Tastendrücke für genau diese Kombination; den Spielprozess berührt es nie."
+      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log, fragt Windows, welches Fenster im Vordergrund ist und ob der Zeiger sichtbar ist, und, wenn du ein Tastenkürzel für die Schublade festlegst, ob seine Taste und die Tasten Strg, Alt, Umschalt und Win gedrückt sind; den Spielprozess berührt es nie."
     },
     "start_btn": {
       "ht": "",
