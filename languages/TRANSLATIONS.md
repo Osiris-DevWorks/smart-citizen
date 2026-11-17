@@ -82,6 +82,16 @@ them against the new source.
 
 ## Backfill log
 
+- **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** pre-release, the Legal
+  tab's privacy section gained a "The Smart Citizen Overlay" subsection
+  (`docs/LEGAL.md`, before "What Smart Citizen does not do"): what the overlay
+  reads (a screen area around the scanner readout, Game.log), what it asks
+  Windows (the window in front, whether the pointer shows, and with a drawer
+  hotkey set its key and the modifier keys while Star Citizen is in front),
+  and what it never does. AI-written in all 11 translated `LEGAL.md` files,
+  with each `ui.json`'s names for the overlay, drawer and hotkey and the
+  modifier key names the #587 entry lists. No `ht` exists for LEGAL. Not
+  back-translated.
 - **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** #587, the drawer hotkey no
   longer takes the keyboard's raw input: while Star Citizen is in front the
   overlay asks Windows whether the hotkey's key and the modifier keys are
