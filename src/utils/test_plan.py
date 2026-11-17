@@ -61,6 +61,13 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: closing the drawer with its tab (#585)",
+        "items": [
+            "In game, hold F, click a drawer tab, click an item in it, then click the same tab to close it: keys and a single click work in game at once.",
+            "In game, open the drawer with its hotkey, click an item with F held, then close it with the hotkey: keys and a single click work in game at once, as in 3.0.0.",
+        ],
+    },
+    {
         "title": "Overlay: scan decoder (#546, #563)",
         "items": [
             "Golem or Prospector, HDR off: scan rocks; the label shows the deposit as in 3.0.0.",

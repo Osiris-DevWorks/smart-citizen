@@ -43,6 +43,7 @@ import os
 import sys
 import wave
 from array import array
+from ctypes import wintypes
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -154,6 +155,21 @@ FOCUS_CHECK_MS = 250
 # PASS_THROUGH_IDLE_POLL_MS instead.
 PASS_THROUGH_POLL_MS = 15
 PASS_THROUGH_IDLE_POLL_MS = 100
+# What Windows sends a window before a click activates it. By then Windows
+# has taken focus from the window in front (in game GetForegroundWindow gave
+# none), so the drawer notes the window in front while the pointer moves over
+# it (WM_MOUSEMOVE), and a click names that one. The note is dropped when the
+# pointer leaves (WM_MOUSELEAVE), so an old one never names a window the
+# player has since left.
+WM_MOUSEACTIVATE = 0x0021
+WM_MOUSEMOVE = 0x0200
+WM_MOUSELEAVE = 0x02A3
+# Focus goes back once no mouse button is held, looked for this often, and
+# after this long it goes back anyway. A tab click closes the drawer with its
+# button still down: waiting hands focus back as the hotkey does, which works
+# in game, and the game never gets a button's release without its press.
+HAND_BACK_CHECK_MS = 15
+HAND_BACK_WAIT_MS = 5000
 # The Minerals section's one row that is not a mineral (#523): the
 # OTHER_SIGNATURES key it watches.
 SALVAGE = "salvage"
@@ -364,7 +380,6 @@ def play_alert_sound(sound: str = AppSettings.SCO_ALERT_SOUND_DEFAULT) -> bool:
     if sys.platform != "win32":
         return False
     if _play_sound is None:
-        from ctypes import wintypes
         function = ctypes.WinDLL("winmm").PlaySoundW
         function.argtypes = [ctypes.c_void_p, wintypes.HMODULE, wintypes.DWORD]
         function.restype = wintypes.BOOL
@@ -1064,6 +1079,10 @@ class BlueprintDrawer(QWidget):
     watched_changed = pyqtSignal(object)
     # The panel opened (True) or closed (False).
     expanded_changed = pyqtSignal(bool)
+    # A click is about to give the drawer focus: the window it takes focus
+    # from (the game), to be handed it back when the drawer closes. An
+    # object, since a window handle can be past a 32-bit int.
+    taking_focus = pyqtSignal(object)
 
     def __init__(self, colors: OverlayColors = DEFAULT_OVERLAY_COLORS):
         super().__init__(None, _OVERLAY_FLAGS)
@@ -1074,6 +1093,10 @@ class BlueprintDrawer(QWidget):
         self._meta: dict = {}
         self._owned: set = set()
         self._expanded = False
+        # The window in front the last time the pointer moved over the
+        # drawer, 0 once it has left: the one a click takes focus from (see
+        # nativeEvent).
+        self._front_under_pointer = 0
 
         self._handle = SectionTabBar(self)
         self._handle.clicked.connect(self.open_section)
@@ -1367,6 +1390,44 @@ class BlueprintDrawer(QWidget):
         if QGuiApplication.platformName() == "windows":
             set_click_through(int(self.winId()), on)
 
+    def window_to_hand_back(self) -> int:
+        """The window to give focus back to when the drawer closes: the one in
+        front now, or, with none in front (Windows mid-click) or the drawer
+        itself (a hand-back Windows refused), the one noted while the pointer
+        is over the drawer. Never the drawer itself."""
+        front = foreground_window()
+        if front and front != int(self.winId()):
+            return front
+        return self._front_under_pointer
+
+    def nativeEvent(self, event_type, message):  # noqa: N802 (Qt's name)
+        """Name the window a click takes focus from in ``taking_focus``.
+        Windows asks before a click activates the drawer
+        (``WM_MOUSEACTIVATE``), but by then it has taken focus from the window
+        in front (in game GetForegroundWindow gave none), so that window is
+        noted while the pointer moves over the drawer (``WM_MOUSEMOVE``). Qt
+        then handles each message as before, so a click still activates the
+        drawer. Never call ``super().nativeEvent()`` here: with PyQt6 6.11 that
+        crashes the app when the window shows, and QWidget's own only answers
+        False."""
+        if bytes(event_type) == b"windows_generic_MSG" and message:
+            kind = wintypes.MSG.from_address(int(message)).message
+            if kind == WM_MOUSEMOVE:
+                self._front_under_pointer = self.window_to_hand_back()
+            elif kind == WM_MOUSELEAVE:
+                self._front_under_pointer = 0
+            elif kind == WM_MOUSEACTIVATE:
+                self.taking_focus.emit(self.window_to_hand_back())
+        return False, 0
+
+    def hideEvent(self, event):  # noqa: N802 (Qt's name)
+        # Windows may send no WM_MOUSELEAVE for a window hidden under the
+        # pointer (the overlay stopped or the drawer switched off), so the
+        # window noted there is dropped: shown again, a click names none from
+        # before.
+        self._front_under_pointer = 0
+        super().hideEvent(event)
+
     def set_position(self, position: str) -> None:
         """Dock to one of ``AppSettings.SCO_DRAWER_POSITIONS``."""
         if position not in AppSettings.SCO_DRAWER_POSITIONS:
@@ -1635,6 +1696,11 @@ class _ReadTask(QRunnable):
         self._done.emit(self._token, found, failed, self._image, self._region)
 
 
+def _mouse_button_held() -> bool:
+    """Whether a mouse button is down on one of the app's windows (Qt's view)."""
+    return QGuiApplication.mouseButtons() != Qt.MouseButton.NoButton
+
+
 class ScoOverlay(QObject):
     """Owns the overlay windows and the signature capture loop."""
 
@@ -1660,20 +1726,30 @@ class ScoOverlay(QObject):
         self.drawer.scan_decoder_toggled.connect(self.scan_decoder_toggled)
         self.drawer.watched_changed.connect(self._on_watched_changed)
         self.drawer.expanded_changed.connect(self._on_drawer_expanded)
+        self.drawer.taking_focus.connect(self._remember_focus)
         self._hotkey = GlobalHotkey(self)
         self._hotkey.activated.connect(self.toggle_drawer)
         self._hotkey_sequence = ""
         # A sequence Windows refused is not tried again until it changes or
         # the overlay restarts, so one start reports it once.
         self._hotkey_refused = ""
-        # The window that had focus when the hotkey opened the drawer, handed
-        # focus back when it closes (the game, so the mouse goes back to it).
+        # The window that had focus when the hotkey or a click gave the drawer
+        # focus, handed focus back when it closes (the game, so the mouse goes
+        # back to it).
         self._focus_before_drawer = 0
         # While the drawer shows: clicks pass through it whenever Star
         # Citizen is in front with its pointer hidden (_sync_pass_through,
         # which also sets the interval, and runs before every start).
         self._pass_through_timer = QTimer(self)
         self._pass_through_timer.timeout.connect(self._sync_pass_through)
+        # A hand-back waiting for the mouse button to come up: the window it
+        # goes to, how long it has waited, and the timer that looks again.
+        self._hand_back_to = 0
+        self._hand_back_waited = 0
+        self._hand_back_timer = QTimer(self)
+        self._hand_back_timer.setSingleShot(True)
+        self._hand_back_timer.setInterval(HAND_BACK_CHECK_MS)
+        self._hand_back_timer.timeout.connect(self._hand_back_when_released)
         self._sound_alert = False
         self._alert_sound = AppSettings.SCO_ALERT_SOUND_DEFAULT
         self._watched: set[str] = set()
@@ -1771,6 +1847,7 @@ class ScoOverlay(QObject):
         self._pass_through_timer.stop()
         self._read_token += 1
         self._focus_before_drawer = 0
+        self._cancel_hand_back()
         self.label.hide()
         self.drawer.hide()
         self._sync_hotkey()
@@ -1782,8 +1859,8 @@ class ScoOverlay(QObject):
             self._sync_pass_through()
             self._pass_through_timer.start()
         else:
-            # Hidden, it closes nothing the hotkey opened: forget the window
-            # it would have handed focus back to.
+            # Hidden, it closes nothing the hotkey or a click opened: forget
+            # the window it would have handed focus back to.
             self._focus_before_drawer = 0
             self._pass_through_timer.stop()
             self.drawer.hide()
@@ -1833,8 +1910,7 @@ class ScoOverlay(QObject):
         if drawer.is_open():
             drawer.close_drawer()
             return
-        before = foreground_window()
-        self._focus_before_drawer = before if before != int(drawer.winId()) else 0
+        self._remember_focus(drawer.window_to_hand_back())
         drawer.open_last_section()
         drawer.raise_()
         drawer.activateWindow()
@@ -1851,14 +1927,64 @@ class ScoOverlay(QObject):
         if now and now != int(drawer.winId()):
             logger.info("SCO: the drawer opened without focus: Windows kept it on window %s", now)
 
+    def _remember_focus(self, window: int) -> None:
+        """The hotkey or a click is about to give the drawer focus: keep the
+        window to give it back to when the drawer closes
+        (``BlueprintDrawer.window_to_hand_back``, never the drawer itself).
+        One that names no window (none in front and none noted, as for a click
+        on a panel that opened under a pointer that has not moved) leaves the
+        window already kept, so a click never wipes the one the hotkey kept."""
+        if window:
+            self._focus_before_drawer = window
+
     def _on_drawer_expanded(self, expanded: bool) -> None:
         # Closed by the hotkey or its own tab while it still has focus: hand
-        # focus back to the window the hotkey took it from.
-        if expanded or not self._focus_before_drawer:
+        # focus back to the window the hotkey or a click took it from, once
+        # no mouse button is held. Opened again, nothing is handed back.
+        if expanded:
+            self._cancel_hand_back()
+            return
+        if not self._focus_before_drawer:
             return
         before, self._focus_before_drawer = self._focus_before_drawer, 0
         if self.drawer.isActiveWindow():
-            give_focus_back(before)
+            self._hand_back_to, self._hand_back_waited = before, 0
+            self._hand_back_when_released()
+
+    def _hand_back_when_released(self) -> None:
+        """Hand focus back now if no mouse button is held, else look again in
+        HAND_BACK_CHECK_MS, and after HAND_BACK_WAIT_MS hand it back anyway.
+        Only while the drawer still has focus: one the player clicked away
+        from in the meantime leaves focus alone."""
+        if _mouse_button_held() and self._hand_back_waited < HAND_BACK_WAIT_MS:
+            self._hand_back_waited += HAND_BACK_CHECK_MS
+            self._hand_back_timer.start()
+            return
+        window, self._hand_back_to = self._hand_back_to, 0
+        if not window or not self.drawer.isActiveWindow():
+            return
+        if not give_focus_back(window):
+            logger.info("SCO: Windows did not hand focus back to window %s", window)
+            return
+        QTimer.singleShot(FOCUS_CHECK_MS, lambda: self._report_hand_back(window))
+
+    def _report_hand_back(self, window: int) -> None:
+        """Say in the log which window is in front FOCUS_CHECK_MS after focus
+        went back to *window*, when it is not that one: the game letting it
+        go again, or the player moving on to another window. Each hand-back
+        is checked for its own window. Nothing once the overlay stopped or
+        the drawer opened again, since the player is using the drawer then."""
+        if not self._running or self.drawer.is_open():
+            return
+        now = foreground_window()
+        if now and now != window:
+            logger.info("SCO: %s ms after focus went back to window %s, window %s is in front",
+                        FOCUS_CHECK_MS, window, now)
+
+    def _cancel_hand_back(self) -> None:
+        """Drop a hand-back still waiting."""
+        self._hand_back_timer.stop()
+        self._hand_back_to = 0
 
     def _sync_timer(self) -> None:
         # No reader, or no label to show, means nothing to do with a capture.
