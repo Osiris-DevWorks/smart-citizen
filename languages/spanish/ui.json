@@ -3574,7 +3574,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log y, si defines un atajo para el cajón, observa las teclas pulsadas solo para esa combinación; nunca toca el proceso del juego."
+      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log, pregunta a Windows qué ventana está en primer plano y si el puntero está visible y, si defines un atajo para el cajón, observa las teclas pulsadas solo para esa combinación; nunca toca el proceso del juego."
     },
     "start_btn": {
       "ht": "",

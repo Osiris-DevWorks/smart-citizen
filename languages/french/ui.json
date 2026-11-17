@@ -3574,7 +3574,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Fenêtres affichées par-dessus Star Citizen : le décodeur de scan minier et le tiroir des plans. Lancez le jeu en mode fenêtré sans bordure. La superposition lit seulement votre écran et Game.log et, si vous définissez un raccourci pour le tiroir, surveille les touches pressées pour cette seule combinaison ; elle ne touche jamais au processus du jeu."
+      "at": "Fenêtres affichées par-dessus Star Citizen : le décodeur de scan minier et le tiroir des plans. Lancez le jeu en mode fenêtré sans bordure. La superposition lit seulement votre écran et Game.log, demande à Windows quelle fenêtre est au premier plan et si le pointeur est affiché et, si vous définissez un raccourci pour le tiroir, surveille les touches pressées pour cette seule combinaison ; elle ne touche jamais au processus du jeu."
     },
     "start_btn": {
       "ht": "",

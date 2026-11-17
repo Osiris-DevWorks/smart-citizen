@@ -3574,7 +3574,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log e, se você definir um atalho para a gaveta, observa as teclas pressionadas só para essa combinação; nunca toca no processo do jogo."
+      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log, pergunta ao Windows qual janela está em primeiro plano e se o ponteiro está visível e, se você definir um atalho para a gaveta, observa as teclas pressionadas só para essa combinação; nunca toca no processo do jogo."
     },
     "start_btn": {
       "ht": "",

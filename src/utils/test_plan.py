@@ -70,6 +70,16 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: drawer while aiming (#582)",
+        "items": [
+            "Drawer at top right, in game: aim with the pointer hidden and shoot across the drawer and the screen corner. The game keeps focus and every shot fires.",
+            "Hold F (or open the mobiGlas) and click a drawer tab: it opens. Click back into the game, then aim and shoot over the drawer: the game keeps focus.",
+            "With the Smart Citizen window in front, click a drawer tab: it opens as in 3.0.0.",
+            "Windows scale at 125% or 150%, drawer at middle right: click the drawer's outermost edge pixels; a tab opens each time.",
+            "Two screens at different scales, the second to the right: open and close the drawer at middle right; it stays on the main screen at its usual size.",
+        ],
+    },
+    {
         "title": "Enhancements (#555, #561)",
         "items": [
             "Generate with Commodities ticked. Point a mining tool at an unfractured Aphorite, Dolivine or Hadanite rock: its HUD name carries the [CF] tag.",

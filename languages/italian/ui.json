@@ -3574,7 +3574,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei blueprint. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log e, se imposti una scorciatoia per il cassetto, osserva i tasti premuti solo per quella combinazione; non tocca mai il processo del gioco."
+      "at": "Finestre disegnate sopra Star Citizen: il decodificatore delle scansioni minerarie e il cassetto dei blueprint. Avvia il gioco in modalità finestra senza bordi. L'overlay legge solo lo schermo e Game.log, chiede a Windows quale finestra è in primo piano e se il puntatore è visibile e, se imposti una scorciatoia per il cassetto, osserva i tasti premuti solo per quella combinazione; non tocca mai il processo del gioco."
     },
     "start_btn": {
       "ht": "",
