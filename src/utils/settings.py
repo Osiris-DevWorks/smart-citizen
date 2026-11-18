@@ -122,6 +122,11 @@ def _path_ends_in_channel(path: str) -> bool:
 # set, the cache is ``(candidates, {active_channel: pick})``: the walk over the
 # drives happens once, and only the cheap ranking is redone per channel.
 _SC_SCAN_UNSET = object()
+
+# The Owned list's backup file, under the data folder (not per channel).
+# The uninstaller's settings wipe leaves this folder alone on purpose.
+OWNED_BACKUP_FOLDER = "owned_blueprints_backup"
+OWNED_BACKUP_FILE = "owned_blueprints.json"
 _sc_scan_cache: "tuple[list[str], dict[str, str | None]] | object" = _SC_SCAN_UNSET
 
 
@@ -1619,6 +1624,7 @@ class AppSettings:
             AppSettings.OWNED_ITEMS, json.dumps(sorted(names))
         )
         AppSettings.settings().sync()
+        AppSettings.write_owned_items_backup_file()
 
     @staticmethod
     def get_owned_items_snapshots() -> "list[tuple[str, list[str]]]":
@@ -1640,6 +1646,103 @@ class AppSettings:
             saved, names = item.get("saved"), item.get("names")
             if isinstance(saved, str) and isinstance(names, list):
                 out.append((saved, sorted(str(n) for n in names)))
+        return out
+
+    @staticmethod
+    def get_owned_items_backup_path() -> Path:
+        r"""``{user_data_dir}\owned_blueprints_backup\owned_blueprints.json``: the Owned
+        list and its kept copies on disk, outside the settings backend, so a
+        settings reset (or the uninstaller's settings wipe) leaves a way back.
+        Not per channel, like the Owned list. Names the file without making
+        its folder."""
+        return AppSettings.get_user_data_dir() / OWNED_BACKUP_FOLDER / OWNED_BACKUP_FILE
+
+    @staticmethod
+    def write_owned_items_backup_file() -> bool:
+        """Write the Owned list and its kept copies to
+        ``get_owned_items_backup_path()`` in one step. Returns whether it was
+        written. Never raises: a failure is logged at WARNING.
+
+        Nothing is written while the list and its copies are both empty, so
+        a fresh settings backend (a reset, a reinstall after a wipe) never
+        replaces a file that still holds the old list."""
+        import json
+        from datetime import datetime
+        from src.utils.atomic_io import atomic_write_text
+        try:
+            current = AppSettings.get_owned_items()
+            snapshots = AppSettings.get_owned_items_snapshots()
+            if not current and not snapshots:
+                return False
+            path = AppSettings.get_owned_items_backup_path()
+            # The file's own lists stay with the kept copies, so a list that
+            # only the file still holds (the settings were reset since) is
+            # not lost to the next write.
+            merged, seen = [], {tuple(sorted(current))}
+            for saved, names in snapshots + AppSettings.read_owned_items_backup_file():
+                if tuple(names) not in seen:
+                    seen.add(tuple(names))
+                    merged.append((saved, names))
+            merged.sort(key=lambda item: item[0], reverse=True)
+            merged = merged[:AppSettings.OWNED_SNAPSHOTS_KEPT]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            data = {
+                "version": 1,
+                "saved": datetime.now().isoformat(timespec="seconds"),
+                "names": sorted(current),
+                "snapshots": [{"saved": saved, "names": names} for saved, names in merged],
+            }
+            atomic_write_text(path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+            return True
+        except Exception:
+            logger.warning("Owned set: could not write its backup file", exc_info=True)
+            return False
+
+    @staticmethod
+    def read_owned_items_backup_file() -> "list[tuple[str, list[str]]]":
+        """The backup file's lists as ``(saved, names)``, its current list
+        first and then its kept copies, each with at least one name. Empty
+        when there is no file or it cannot be read (logged at WARNING)."""
+        import json
+        path = AppSettings.get_owned_items_backup_path()
+        try:
+            if not path.is_file():
+                return []
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            logger.warning("Owned set: could not read the backup file %s: %s", path, e)
+            return []
+        if not isinstance(data, dict):
+            return []
+        out = []
+        entries = [{"saved": data.get("saved"), "names": data.get("names")},
+                   *(data.get("snapshots") or [])]
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            saved, names = item.get("saved"), item.get("names")
+            if isinstance(saved, str) and isinstance(names, list) and names:
+                out.append((saved, sorted(str(n) for n in names)))
+        return out
+
+    @staticmethod
+    def get_owned_items_restore_points() -> "list[tuple[str, list[str]]]":
+        """Every list Restore Owned Blueprints can offer, newest first: the
+        kept copies, then the backup file's lists, each list once (the file
+        mirrors the copies while both are there, so only a file left from
+        before a settings reset adds anything)."""
+        seen = set()
+        out = []
+        for saved, names in (
+            AppSettings.get_owned_items_snapshots()
+            + AppSettings.read_owned_items_backup_file()
+        ):
+            key = tuple(names)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append((saved, names))
+        out.sort(key=lambda item: item[0], reverse=True)
         return out
 
     @staticmethod
@@ -4187,6 +4290,8 @@ class AppSettings:
             )
             applied += 1
         backend.sync()
+        if AppSettings.OWNED_ITEMS in values:
+            AppSettings.write_owned_items_backup_file()
         logger.info("Import Settings: applied %d settings keys", applied)
         return applied
 

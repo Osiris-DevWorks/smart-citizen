@@ -19,11 +19,25 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.utils.json_settings import JsonSettings  # noqa: E402
-from src.utils.settings import AppSettings  # noqa: E402
+from src.utils.settings import (  # noqa: E402
+    OWNED_BACKUP_FILE,
+    OWNED_BACKUP_FOLDER,
+    AppSettings,
+)
 
 
 @pytest.fixture
-def json_backend(tmp_path):
+def json_backend(tmp_path, monkeypatch):
+    """Settings in a tmp JsonSettings file and the data folder (where the
+    Owned list's backup file goes) in tmp_path, never the real ones."""
+    folder = tmp_path / "data"
+    monkeypatch.setattr(AppSettings, "get_user_data_dir", staticmethod(lambda: folder))
+    # conftest points the backup file at tmp_path for every test; these
+    # tests check the real path, under the tmp data folder above.
+    monkeypatch.setattr(
+        AppSettings, "get_owned_items_backup_path",
+        staticmethod(lambda: folder / OWNED_BACKUP_FOLDER / OWNED_BACKUP_FILE),
+    )
     saved = AppSettings._backend
     AppSettings._backend = JsonSettings(tmp_path / "config.json")
     yield AppSettings._backend
@@ -159,3 +173,76 @@ class TestRestoreButton:
         )
         tab._restore_owned_blueprints()
         assert asked == [] and len(tab.boxes) == 1
+
+
+class TestBackupFile:
+    @pytest.fixture
+    def data_dir(self, json_backend):
+        return AppSettings.get_user_data_dir()
+
+    def _file(self, data_dir):
+        return json.loads(
+            (data_dir / "owned_blueprints_backup" / "owned_blueprints.json").read_text("utf-8")
+        )
+
+    def test_every_write_mirrors_the_list_and_its_copies(self, data_dir):
+        AppSettings.set_owned_items({"A", "B"})
+        assert self._file(data_dir)["names"] == ["A", "B"]
+        AppSettings.set_owned_items({"A"})
+        data = self._file(data_dir)
+        assert data["names"] == ["A"]
+        assert [s["names"] for s in data["snapshots"]] == [["A", "B"]]
+
+    def test_nothing_is_written_while_everything_is_empty(self, data_dir):
+        assert AppSettings.write_owned_items_backup_file() is False
+        assert not (data_dir / "owned_blueprints_backup").exists()
+
+    def test_a_settings_reset_keeps_the_file_and_restore_offers_it(self, data_dir, tmp_path):
+        AppSettings.set_owned_items({"A", "B", "C"})
+        # The settings are wiped (uninstaller, reset), the file stays.
+        AppSettings._backend = JsonSettings(tmp_path / "fresh.json")
+        assert AppSettings.write_owned_items_backup_file() is False
+        assert self._file(data_dir)["names"] == ["A", "B", "C"]
+        assert _names(AppSettings.get_owned_items_restore_points()) == [["A", "B", "C"]]
+        # A scan then writes a small new list: the old one stays in the file.
+        AppSettings.set_owned_items({"New"})
+        data = self._file(data_dir)
+        assert data["names"] == ["New"]
+        assert ["A", "B", "C"] in [s["names"] for s in data["snapshots"]]
+
+    def test_restore_points_list_each_list_once(self, data_dir):
+        AppSettings.set_owned_items({"A", "B"})
+        AppSettings.set_owned_items({"A"})
+        points = _names(AppSettings.get_owned_items_restore_points())
+        assert sorted(map(tuple, points)) == [("A",), ("A", "B")]
+
+    def test_an_unreadable_file_offers_nothing(self, data_dir):
+        path = data_dir / "owned_blueprints_backup" / "owned_blueprints.json"
+        path.parent.mkdir(parents=True)
+        path.write_text("{not json", encoding="utf-8")
+        assert AppSettings.read_owned_items_backup_file() == []
+
+    def test_a_failed_file_write_still_writes_the_list(self, data_dir, monkeypatch):
+        def broken():
+            raise OSError("no data folder")
+
+        monkeypatch.setattr(AppSettings, "get_user_data_dir", staticmethod(broken))
+        AppSettings.set_owned_items({"A"})
+        assert AppSettings.get_owned_items() == {"A"}
+
+    def test_the_path_is_in_the_data_folder(self, monkeypatch, tmp_path):
+        monkeypatch.undo()  # drop conftest's tmp path for the real function
+        monkeypatch.setattr(AppSettings, "get_user_data_dir", staticmethod(lambda: tmp_path))
+        assert AppSettings.get_owned_items_backup_path() == (
+            tmp_path / OWNED_BACKUP_FOLDER / OWNED_BACKUP_FILE
+        )
+
+    def test_the_folder_moves_with_the_data(self):
+        from src.utils.user_ini_manager import OWNED_DATA_FOLDERS
+        assert OWNED_BACKUP_FOLDER in OWNED_DATA_FOLDERS
+
+    def test_the_uninstaller_never_names_the_folder(self):
+        text = (Path(__file__).resolve().parent.parent / "installer.iss").read_text("utf-8")
+        code = [ln for ln in text.splitlines() if OWNED_BACKUP_FOLDER in ln]
+        # Only the warning text names it: the wipe keeps the folder.
+        assert code and all("'" in ln and "DelTree" not in ln for ln in code)

@@ -44,6 +44,23 @@ def no_real_install_detection_inputs():
         yield
 
 
+@pytest.fixture(autouse=True)
+def owned_backup_file_in_tmp(tmp_path, monkeypatch):
+    """Every write of the Owned list also writes its backup file into the data
+    folder. Point that file into the test's tmp_path, so no test that sets
+    owned items (or imports settings) writes into the developer's real data
+    folder. tests/test_owned_snapshots.py puts the real path function back
+    over a tmp data folder to test it."""
+    try:
+        from src.utils.settings import AppSettings
+    except ImportError:  # no PyQt6
+        yield
+        return
+    path = tmp_path / "owned_blueprints_backup" / "owned_blueprints.json"
+    monkeypatch.setattr(AppSettings, "get_owned_items_backup_path", staticmethod(lambda: path))
+    yield
+
+
 @pytest.fixture(scope="session", autouse=True)
 def no_real_free_space():
     """Every extraction checks free space before it writes (#482), so any

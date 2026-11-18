@@ -1554,6 +1554,9 @@ begin
     '  - Your Smart Citizen settings (registry), including your owned blueprints list' + #13#10 +
     '  - The Smart Citizen files in your user data folder (custom edits, backups, logs)' + #13#10 +
     '  - The cached DataForge data' + #13#10 + #13#10 +
+    'A backup of your owned blueprints list is kept in the owned_blueprints_backup' + #13#10 +
+    'folder in your user data folder. Restore Owned Blueprints in the Blueprint' + #13#10 +
+    'Tracker tab brings it back after a reinstall.' + #13#10 + #13#10 +
     'This cannot be undone. Click OK to confirm, or Cancel to keep your settings.',
     mbError, MB_OKCANCEL);
   if Response <> IDOK then

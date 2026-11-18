@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 # What Smart Citizen writes in its data folder's root since the 0.9.3 channel
 # layout: a folder per channel, and logs (crash dumps and log exports). The
 # installer's DeleteOwnedSubpaths knows the same folders.
-OWNED_DATA_FOLDERS = (*SC_CHANNELS, "logs")
+# "owned_blueprints_backup" holds the Owned list's backup file
+# (settings.OWNED_BACKUP_FOLDER).
+OWNED_DATA_FOLDERS = (*SC_CHANNELS, "logs", "owned_blueprints_backup")
 
 
 def migrate_user_data_dir(

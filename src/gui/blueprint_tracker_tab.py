@@ -973,12 +973,14 @@ class BlueprintTrackerTab(QWidget):
         """Put back the names from a kept copy of the Owned set.
 
         AppSettings keeps a copy whenever a change removes a name from the
-        set (``AppSettings.snapshot_owned_items_before``). The user picks
+        set (``AppSettings.snapshot_owned_items_before``), and a backup file
+        in the data folder holds the list and those copies too, for after a
+        settings reset (``get_owned_items_restore_points``). The user picks
         one, newest first, and every name in it that is not owned now is
         added back. Additive, like Import and the log scan: what was owned
         since the copy stays owned.
         """
-        snapshots = AppSettings.get_owned_items_snapshots()
+        snapshots = AppSettings.get_owned_items_restore_points()
         if not snapshots:
             QMessageBox.information(
                 self,

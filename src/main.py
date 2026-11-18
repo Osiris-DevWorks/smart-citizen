@@ -145,6 +145,11 @@ def main():
     # once. Runs in both build modes.
     AppSettings.migrate_title_tag_settings()
 
+    # The Owned list's backup file, so an install that has not changed the
+    # list since this version still gets one. Writes nothing while the list
+    # and its copies are empty, so a reset never replaces an older file.
+    AppSettings.write_owned_items_backup_file()
+
     # Always keep user source path in sync with canonical user.ini location
     AppSettings.set_source_path(AppSettings.SOURCE_USER, str(AppSettings.get_user_ini_path()))
 
