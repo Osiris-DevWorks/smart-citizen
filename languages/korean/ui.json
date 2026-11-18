@@ -1682,6 +1682,34 @@
       "ht": "",
       "at": "JSON 또는 CSV 파일(scmdb.net 내보내기 포함)에서 보유 설계도를 현재 보유 목록에 추가합니다. 이미 보유로 표시된 항목은 제거하지 않습니다."
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "보유 설계도 복원…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "보유 설계도 목록의 사본에서 설계도를 되돌립니다. 목록에서 무언가가 제거될 때마다 Smart Citizen이 사본을 저장합니다. 이미 보유로 표시된 항목은 제거하지 않습니다."
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "보유 설계도 복원"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "보유 설계도 목록의 저장된 사본이 아직 없습니다. 목록에서 무언가가 제거될 때마다 Smart Citizen이 저장합니다."
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "저장된 사본을 선택하세요. 지금 보유 목록에 없는 설계도가 다시 추가됩니다:"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}: 설계도 {count}개, 현재 미보유 {missing}개"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "이 사본의 모든 설계도가 이미 보유 목록에 있습니다."
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "내보낼 항목 없음"

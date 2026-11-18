@@ -1706,6 +1706,34 @@
       "ht": "",
       "at": "Ajoutez des plans possédés depuis un fichier JSON ou CSV (y compris un export scmdb.net) à votre liste actuelle de plans possédés. Ne retire jamais un élément déjà marqué comme possédé."
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "Restaurer les plans possédés…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "Récupère des plans depuis une copie de ta liste de plans possédés. Smart Citizen enregistre une copie chaque fois que quelque chose est retiré de la liste. Ne retire jamais rien de ce qui est déjà marqué comme possédé."
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "Restaurer les plans possédés"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "Il n'y a pas encore de copie enregistrée de ta liste de plans possédés. Smart Citizen en enregistre une chaque fois que quelque chose en est retiré."
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "Choisis une copie enregistrée. Ses plans qui ne sont pas dans ta liste de plans possédés seront rajoutés :"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when} : {count} plans, {missing} non possédés actuellement"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "Tous les plans de cette copie sont déjà dans ta liste de plans possédés."
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "Rien à exporter"

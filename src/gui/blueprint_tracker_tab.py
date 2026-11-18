@@ -15,7 +15,7 @@ The available universe is fed in by MainWindow via ``set_blueprint_items``
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QAbstractItemView, QCheckBox, QFileDialog, QGridLayout,
-    QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
     QMessageBox, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
@@ -321,6 +321,13 @@ class BlueprintTrackerTab(QWidget):
         self._import_owned_btn.clicked.connect(self._import_owned_blueprints)
         top_grid.addWidget(self._import_owned_btn, 1, 3)
 
+        # Puts back names from a copy AppSettings keeps whenever a change
+        # removes a name from the Owned set.
+        self._restore_owned_btn = QPushButton(tr("blueprint_tracker.restore_owned_btn"))
+        self._restore_owned_btn.setToolTip(tr("blueprint_tracker.restore_owned_tooltip"))
+        self._restore_owned_btn.clicked.connect(self._restore_owned_blueprints)
+        top_grid.addWidget(self._restore_owned_btn, 2, 2, 1, 2)
+
         layout.addLayout(top_grid)
 
         # Shown instead of the lists when no blueprint items exist yet (mission
@@ -483,6 +490,8 @@ class BlueprintTrackerTab(QWidget):
         self._export_owned_btn.setToolTip(tr("blueprint_tracker.export_owned_tooltip"))
         self._import_owned_btn.setText(tr("blueprint_tracker.import_owned_btn"))
         self._import_owned_btn.setToolTip(tr("blueprint_tracker.import_owned_tooltip"))
+        self._restore_owned_btn.setText(tr("blueprint_tracker.restore_owned_btn"))
+        self._restore_owned_btn.setToolTip(tr("blueprint_tracker.restore_owned_tooltip"))
         self._force_rescan_checkbox.setText(
             tr("blueprint_tracker.force_rescan_checkbox")
         )
@@ -959,6 +968,66 @@ class BlueprintTrackerTab(QWidget):
                 tr("blueprint_tracker.hide_skipped_btn"),
             )
         box.exec()
+
+    def _restore_owned_blueprints(self) -> None:
+        """Put back the names from a kept copy of the Owned set.
+
+        AppSettings keeps a copy whenever a change removes a name from the
+        set (``AppSettings.snapshot_owned_items_before``). The user picks
+        one, newest first, and every name in it that is not owned now is
+        added back. Additive, like Import and the log scan: what was owned
+        since the copy stays owned.
+        """
+        snapshots = AppSettings.get_owned_items_snapshots()
+        if not snapshots:
+            QMessageBox.information(
+                self,
+                tr("blueprint_tracker.restore_dialog_title"),
+                tr("blueprint_tracker.restore_none_body"),
+            )
+            return
+
+        owned = AppSettings.get_owned_items()
+        labels = [
+            tr(
+                "blueprint_tracker.restore_snapshot_label",
+                when=saved.replace("T", " "),
+                count=len(names),
+                missing=len(set(names) - owned),
+            )
+            for saved, names in snapshots
+        ]
+        choice, ok = QInputDialog.getItem(
+            self,
+            tr("blueprint_tracker.restore_dialog_title"),
+            tr("blueprint_tracker.restore_picker_label"),
+            labels,
+            0,
+            False,
+        )
+        if not ok:
+            return
+        _saved, names = snapshots[labels.index(choice)]
+        missing = set(names) - owned
+        if not missing:
+            QMessageBox.information(
+                self,
+                tr("blueprint_tracker.restore_dialog_title"),
+                tr("blueprint_tracker.restore_nothing_missing_body"),
+            )
+            return
+
+        AppSettings.set_owned_items(owned | missing)
+        self._render_blueprint_lists()
+        self.owned_items_changed.emit()
+        # owned_items_changed re-weaves the [Owned] tags, as Import does.
+        self.mark_owned_clean()
+        QMessageBox.information(
+            self,
+            tr("blueprint_tracker.restore_dialog_title"),
+            tr("blueprint_tracker.owned_added_singular") if len(missing) == 1
+            else tr("blueprint_tracker.owned_added_plural", count=len(missing)),
+        )
 
     # ── Apply Owned Tags dirty-tracking ──────────────────────────────────────
     # Mirrors the Enhancements tab's Generate Enhancements / Save Tag Changes

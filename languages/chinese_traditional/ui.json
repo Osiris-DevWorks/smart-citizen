@@ -1682,6 +1682,34 @@
       "ht": "",
       "at": "從 JSON 或 CSV 檔案（包括 scmdb.net 匯出的檔案）中新增已擁有的藍圖到你當前的已擁有列表。絕不會移除任何已標記為擁有的專案。"
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "還原已擁有的藍圖…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "從已擁有清單的副本中找回藍圖。每當清單中有內容被移除時，Smart Citizen 都會儲存一份副本。不會移除任何已標記為擁有的內容。"
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "還原已擁有的藍圖"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "還沒有已擁有清單的儲存副本。每當清單中有內容被移除時，Smart Citizen 都會儲存一份。"
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "選擇一份儲存的副本。其中目前不在已擁有清單中的藍圖將被重新加入："
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}：{count} 個藍圖，目前未擁有 {missing} 個"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "該副本中的所有藍圖都已在你的已擁有清單中。"
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "沒有可匯出的內容"

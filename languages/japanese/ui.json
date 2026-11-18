@@ -1706,6 +1706,34 @@
       "ht": "",
       "at": "JSON または CSV ファイル（scmdb.net からのエクスポートを含む）から所有ブループリントを現在の所有リストに追加します。すでに所有としてマークされている項目が削除されることはありません。"
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "所有ブループリントを復元…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "所有ブループリント一覧のコピーからブループリントを戻します。一覧から何かが削除されるたびに、Smart Citizen がコピーを保存します。所有済みとしてマークされたものを削除することはありません。"
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "所有ブループリントを復元"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "所有ブループリント一覧の保存済みコピーはまだありません。一覧から何かが削除されるたびに、Smart Citizen が保存します。"
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "保存済みのコピーを選んでください。現在の所有一覧にないブループリントが戻されます:"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}: {count} 件、現在未所有 {missing} 件"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "このコピーのブループリントはすべて所有一覧にあります。"
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "エクスポートする項目がありません"

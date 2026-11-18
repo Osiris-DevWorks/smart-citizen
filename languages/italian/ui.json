@@ -1706,6 +1706,34 @@
       "ht": "",
       "at": "Aggiungi blueprint posseduti da un file JSON o CSV (inclusa un'esportazione da scmdb.net) alla tua lista Posseduti attuale. Non rimuove mai nulla già contrassegnato come posseduto."
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "Ripristina blueprint posseduti…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "Recupera blueprint da una copia della tua lista di blueprint posseduti. Smart Citizen salva una copia ogni volta che qualcosa viene rimosso dalla lista. Non rimuove mai nulla di già segnato come posseduto."
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "Ripristina blueprint posseduti"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "Non c'è ancora nessuna copia salvata della tua lista di blueprint posseduti. Smart Citizen ne salva una ogni volta che qualcosa viene rimosso."
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "Scegli una copia salvata. I suoi blueprint che ora non sono nella tua lista di blueprint posseduti verranno aggiunti di nuovo:"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}: {count} blueprint, {missing} non posseduti ora"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "Tutti i blueprint di quella copia sono già nella tua lista di blueprint posseduti."
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "Niente da esportare"

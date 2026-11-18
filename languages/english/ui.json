@@ -1706,6 +1706,34 @@
       "ht": "Add owned blueprints from a JSON or CSV file (including an scmdb.net export) to your current Owned list. Never removes anything already marked owned.",
       "at": ""
     },
+    "restore_owned_btn": {
+      "ht": "Restore Owned Blueprints…",
+      "at": ""
+    },
+    "restore_owned_tooltip": {
+      "ht": "Put back blueprints from a copy of your Owned list. Smart Citizen saves a copy whenever something is removed from the list. Never removes anything already marked owned.",
+      "at": ""
+    },
+    "restore_dialog_title": {
+      "ht": "Restore Owned Blueprints",
+      "at": ""
+    },
+    "restore_none_body": {
+      "ht": "There's no saved copy of your Owned list yet. Smart Citizen saves one whenever something is removed from it.",
+      "at": ""
+    },
+    "restore_picker_label": {
+      "ht": "Pick a saved copy. Its blueprints that aren't in your Owned list now will be added back:",
+      "at": ""
+    },
+    "restore_snapshot_label": {
+      "ht": "{when}: {count} blueprints, {missing} not owned now",
+      "at": ""
+    },
+    "restore_nothing_missing_body": {
+      "ht": "Every blueprint in that copy is already in your Owned list.",
+      "at": ""
+    },
     "export_nothing_title": {
       "ht": "Nothing to export",
       "at": ""

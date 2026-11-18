@@ -1778,6 +1778,34 @@
       "ht": "",
       "at": "Fügt eigene Baupläne aus einer JSON- oder CSV-Datei (einschließlich eines scmdb.net-Exports) zu deiner aktuellen Liste eigener Baupläne hinzu. Entfernt niemals etwas, das bereits als eigen markiert ist."
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "Eigene Baupläne wiederherstellen…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "Holt Baupläne aus einer Kopie deiner Liste eigener Baupläne zurück. Smart Citizen speichert eine Kopie, sobald etwas aus der Liste entfernt wird. Entfernt niemals etwas, das bereits als eigen markiert ist."
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "Eigene Baupläne wiederherstellen"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "Es gibt noch keine gespeicherte Kopie deiner Liste eigener Baupläne. Smart Citizen speichert eine, sobald etwas daraus entfernt wird."
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "Wähle eine gespeicherte Kopie. Ihre Baupläne, die jetzt nicht in deiner Liste eigener Baupläne stehen, werden wieder hinzugefügt:"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}: {count} Baupläne, {missing} derzeit nicht im Besitz"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "Jeder Bauplan in dieser Kopie ist bereits in deiner Liste eigener Baupläne."
+    },
     "import_skipped_note": {
       "ht": "",
       "at": "{skipped} weitere Einträge in der Datei werden derzeit nicht von Smart Citizen erfasst und wurden übersprungen."

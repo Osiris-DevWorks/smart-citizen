@@ -1706,6 +1706,34 @@
       "ht": "",
       "at": "从 JSON 或 CSV 文件（包括 scmdb.net 导出的文件）中添加已拥有的蓝图到你当前的已拥有列表。绝不会移除任何已标记为拥有的项目。"
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "恢复已拥有的蓝图…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "从已拥有列表的副本中找回蓝图。每当列表中有内容被移除时，Smart Citizen 都会保存一份副本。不会移除任何已标记为拥有的内容。"
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "恢复已拥有的蓝图"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "还没有已拥有列表的保存副本。每当列表中有内容被移除时，Smart Citizen 都会保存一份。"
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "选择一份保存的副本。其中当前不在已拥有列表中的蓝图将被重新添加："
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}：{count} 个蓝图，当前未拥有 {missing} 个"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "该副本中的所有蓝图都已在你的已拥有列表中。"
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "没有可导出的内容"

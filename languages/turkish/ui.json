@@ -1706,6 +1706,34 @@
       "ht": "",
       "at": "Bir JSON veya CSV dosyasından (scmdb.net dışa aktarımı dahil) sahip olunan planları mevcut Sahip Olunan listenize ekleyin. Zaten sahip olunan olarak işaretlenmiş hiçbir şeyi kaldırmaz."
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "Sahip Olunan Planları Geri Yükle…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "Sahip olunan planlar listenin bir kopyasından planları geri getirir. Smart Citizen, listeden bir şey kaldırıldığında bir kopya kaydeder. Sahip olunan olarak işaretlenmiş hiçbir şeyi kaldırmaz."
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "Sahip Olunan Planları Geri Yükle"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "Sahip olunan planlar listenin henüz kayıtlı bir kopyası yok. Smart Citizen, listeden bir şey kaldırıldığında bir kopya kaydeder."
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "Kayıtlı bir kopya seç. Şu anda listende olmayan planları geri eklenecek:"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}: {count} plan, şu anda sahip olunmayan {missing}"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "Bu kopyadaki tüm planlar zaten sahip olunan planlar listende."
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "Dışa aktarılacak bir şey yok"

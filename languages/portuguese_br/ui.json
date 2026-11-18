@@ -1706,6 +1706,34 @@
       "ht": "",
       "at": "Adicione blueprints adquiridos de um arquivo JSON ou CSV (incluindo uma exportação do scmdb.net) à sua lista atual de Adquiridos. Nunca remove nada que já esteja marcado como adquirido."
     },
+    "restore_owned_btn": {
+      "ht": "",
+      "at": "Restaurar Blueprints Adquiridos…"
+    },
+    "restore_owned_tooltip": {
+      "ht": "",
+      "at": "Recupera blueprints de uma cópia da sua lista de blueprints adquiridos. O Smart Citizen salva uma cópia sempre que algo é removido da lista. Nunca remove nada que já esteja marcado como adquirido."
+    },
+    "restore_dialog_title": {
+      "ht": "",
+      "at": "Restaurar Blueprints Adquiridos"
+    },
+    "restore_none_body": {
+      "ht": "",
+      "at": "Ainda não há nenhuma cópia salva da sua lista de blueprints adquiridos. O Smart Citizen salva uma sempre que algo é removido dela."
+    },
+    "restore_picker_label": {
+      "ht": "",
+      "at": "Escolha uma cópia salva. Os blueprints dela que não estão agora na sua lista de blueprints adquiridos serão adicionados de volta:"
+    },
+    "restore_snapshot_label": {
+      "ht": "",
+      "at": "{when}: {count} blueprints, {missing} não adquiridos agora"
+    },
+    "restore_nothing_missing_body": {
+      "ht": "",
+      "at": "Todos os blueprints dessa cópia já estão na sua lista de blueprints adquiridos."
+    },
     "export_nothing_title": {
       "ht": "",
       "at": "Nada para exportar"

@@ -699,6 +699,13 @@ class AppSettings:
     # for being too broad, now split into its own toggle).
     RS_ORE_NAME_ANNOTATIONS = "enhancements/rs_ore_name_annotations"
     OWNED_ITEMS = "owned_items"      # #157: blueprint items the user owns (JSON list of names)
+    # Copies of the Owned set taken just before a write that removes a name
+    # from it, newest first, at most OWNED_SNAPSHOTS_KEPT. JSON: a list of
+    # {"saved": local ISO time, "names": [sorted names]}. The Owned set is
+    # often the only record of a player's blueprints (the game's logbackups
+    # can be deleted), and nothing else kept a copy of it.
+    OWNED_ITEMS_SNAPSHOTS = "owned_items_snapshots"
+    OWNED_SNAPSHOTS_KEPT = 10
     # #222: newest "Received Blueprint" log event a BP Scan has already
     # consumed, so a re-scan only imports genuinely new blueprints. Per-channel
     # (each SC channel has its own LogBackups), stored as an ISO-8601 string
@@ -837,6 +844,9 @@ class AppSettings:
         "vehicles_path",
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
+        # The kept copies of the Owned set are this machine's safety net:
+        # an import must not replace them with a backup's older ones.
+        OWNED_ITEMS_SNAPSHOTS,
     })
 
     # Keys that have a default but are deliberately NOT materialised into a
@@ -1595,12 +1605,79 @@ class AppSettings:
 
     @staticmethod
     def set_owned_items(names) -> None:
-        """Persist the owned blueprint item-name set (#157)."""
+        """Persist the owned blueprint item-name set (#157).
+
+        A write that removes any name first keeps a copy of the set it
+        replaces (``snapshot_owned_items_before``), so a name lost by mistake
+        can be put back from the Blueprint Tracker's Restore. A write that
+        only adds keeps none: it loses nothing.
+        """
         import json
+        names = set(names)
+        AppSettings.snapshot_owned_items_before(names)
         AppSettings.settings().setValue(
             AppSettings.OWNED_ITEMS, json.dumps(sorted(names))
         )
         AppSettings.settings().sync()
+
+    @staticmethod
+    def get_owned_items_snapshots() -> "list[tuple[str, list[str]]]":
+        """The kept copies of the Owned set, newest first, as
+        ``(saved, names)``: when it was saved (local ISO time, to the second)
+        and its names, sorted. An unreadable value or entry is left out."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.OWNED_ITEMS_SNAPSHOTS, "", type=str)
+        if not raw:
+            return []
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+        out = []
+        for item in data if isinstance(data, list) else ():
+            if not isinstance(item, dict):
+                continue
+            saved, names = item.get("saved"), item.get("names")
+            if isinstance(saved, str) and isinstance(names, list):
+                out.append((saved, sorted(str(n) for n in names)))
+        return out
+
+    @staticmethod
+    def snapshot_owned_items_before(new_names) -> bool:
+        """Keep a copy of the stored Owned set when *new_names* would drop
+        any name from it. Returns whether a copy was kept.
+
+        Newest first, at most ``OWNED_SNAPSHOTS_KEPT``, the oldest going
+        first. Never raises: a failure is logged at WARNING and the write
+        that asked goes ahead, since a copy that could not be kept must not
+        also lose the change."""
+        import json
+        from datetime import datetime
+        try:
+            current = AppSettings.get_owned_items()
+            removed = current - set(new_names)
+            if not removed:
+                return False
+            entry = {
+                "saved": datetime.now().isoformat(timespec="seconds"),
+                "names": sorted(current),
+            }
+            kept = [
+                {"saved": saved, "names": names}
+                for saved, names in AppSettings.get_owned_items_snapshots()
+            ]
+            kept = [entry, *kept][:AppSettings.OWNED_SNAPSHOTS_KEPT]
+            AppSettings.settings().setValue(
+                AppSettings.OWNED_ITEMS_SNAPSHOTS, json.dumps(kept)
+            )
+            logger.info(
+                "Owned set: kept a copy of %d names before a change that removes %d",
+                len(current), len(removed),
+            )
+            return True
+        except Exception:
+            logger.warning("Owned set: could not keep a copy before the change", exc_info=True)
+            return False
 
     @staticmethod
     def get_blueprint_show_tags() -> bool:
@@ -4085,6 +4162,12 @@ class AppSettings:
         """
         backend = AppSettings.settings()
         applied = 0
+        if AppSettings.OWNED_ITEMS in values:
+            # The backup's Owned set replaces this one, so keep a copy of
+            # this one first when it would lose a name.
+            AppSettings._snapshot_before_imported_owned_items(
+                values[AppSettings.OWNED_ITEMS]
+            )
         for key, value in values.items():
             if not isinstance(key, str) or not key:
                 continue
@@ -4106,6 +4189,19 @@ class AppSettings:
         backend.sync()
         logger.info("Import Settings: applied %d settings keys", applied)
         return applied
+
+    @staticmethod
+    def _snapshot_before_imported_owned_items(raw) -> None:
+        """``snapshot_owned_items_before`` for a backup's stored Owned set
+        (its JSON text). One that cannot be read counts as empty, so the
+        current set is kept whenever it holds anything."""
+        import json
+        try:
+            names = json.loads(raw) if raw else []
+            names = set(names) if isinstance(names, list) else set()
+        except (ValueError, TypeError):
+            names = set()
+        AppSettings.snapshot_owned_items_before(names)
 
     @staticmethod
     def reconcile_imported_install_path() -> str:
