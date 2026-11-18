@@ -3537,6 +3537,158 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Minerales aquí: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Pedido"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Añadir un objeto al pedido..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Resumen del pedido: {items} objetos, {crafts} fabricaciones"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "El pedido está vacío. Busca abajo para añadir un objeto."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Aún no hay datos de pedidos. Extrae DataForge y genera las mejoras con Commodities o Journal marcado."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Calidad {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Lo usa: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "Ver SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "Ver cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Mostrar las cantidades de mineral en SCU o cSCU (una centésima de SCU, como en el juego)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Copiar"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Copiado"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Copiar el pedido y sus materiales como texto, para Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Vigilar minerales"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Añadir los minerales del pedido a la lista de vigilancia del escaneo, para que el escáner te avise cuando lea uno"
+    },
+    "order_clear": {
+      "ht": "",
+      "at": "Vaciar"
+    },
+    "order_clear_confirm": {
+      "ht": "",
+      "at": "Haz clic otra vez para vaciar"
+    },
+    "order_clear_tooltip": {
+      "ht": "",
+      "at": "Quitar todos los objetos del pedido"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Uno menos"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Uno más"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Quitar del pedido"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Plano aún no obtenido"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Usa {need} de estos {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Usar esta ranura. Marcar una más de las que necesita el plano desmarca otra."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "C {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "La calidad del material para esta ranura (0 a 1000)"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Necesita calidad {quality} o mejor"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Todas las ranuras: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "La calidad del material no cambia las estadísticas de este objeto."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pips"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} uds."
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Pedido de fabricación: {count} fabricaciones"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materiales:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} con calidad {quality}+"
     }
   },
   "overlay": {
@@ -3811,6 +3963,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Esto no puede ser un atajo. Mantén pulsada Ctrl, Alt o Win con una letra, un número, un símbolo, Espacio, Tab o una tecla de navegación (flechas, Inicio, Fin, Re Pág/Av Pág, Insert, Supr), y también Mayús si quieres. Una tecla F o Pausa también sirve sola."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Pedido"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Arma un pedido de fabricación y mira cada material que necesita, por calidad. Requiere una extracción de DataForge."
     }
   },
   "shader_cache": {

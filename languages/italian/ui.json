@@ -3537,6 +3537,158 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Minerali qui: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Ordine"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Aggiungi un oggetto all'ordine..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Riepilogo ordine: {items} oggetti, {crafts} fabbricazioni"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "L'ordine è vuoto. Cerca qui sotto per aggiungere un oggetto."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Nessun dato per gli ordini. Estrai DataForge, poi genera i miglioramenti con Commodities o Journal spuntato."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Qualità {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Usato da: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "Mostra SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "Mostra cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Mostra le quantità di minerale in SCU o cSCU (un centesimo di SCU, come in gioco)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Copia"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Copiato"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Copia l'ordine e i suoi materiali come testo, per Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Osserva minerali"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Aggiungi i minerali dell'ordine alla lista di osservazione della scansione, così lo scanner ti avvisa quando ne legge uno"
+    },
+    "order_clear": {
+      "ht": "",
+      "at": "Svuota"
+    },
+    "order_clear_confirm": {
+      "ht": "",
+      "at": "Clicca di nuovo per svuotare"
+    },
+    "order_clear_tooltip": {
+      "ht": "",
+      "at": "Rimuovi tutti gli oggetti dall'ordine"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Uno in meno"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Uno in più"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Rimuovi dall'ordine"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Progetto non ancora posseduto"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Usa {need} di questi {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Usa questo slot. Spuntarne uno in più di quelli richiesti dal progetto ne toglie un altro."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "La qualità del materiale per questo slot (da 0 a 1000)"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Richiede qualità {quality} o superiore"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Tutti gli slot: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "La qualità dei materiali non cambia le statistiche di questo oggetto."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pip"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} pz"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Ordine di fabbricazione: {count} fabbricazioni"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materiali:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} con qualità {quality}+"
     }
   },
   "overlay": {
@@ -3811,6 +3963,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Questa non può essere una scorciatoia. Tieni premuto Ctrl, Alt o Win con una lettera, un numero, un simbolo, Spazio, Tab o un tasto di navigazione (frecce, Home, Fine, Pag su/giù, Ins, Canc), e anche Maiusc se vuoi. Un tasto F o Pausa funziona anche da solo."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Ordine"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Prepara un ordine di fabbricazione e vedi ogni materiale necessario, per qualità. Richiede un'estrazione DataForge."
     }
   },
   "shader_cache": {

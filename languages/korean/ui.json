@@ -3537,6 +3537,158 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "이곳의 광물: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "주문"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "주문에 아이템 추가..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "주문 요약: 아이템 {items}개, 제작 {crafts}회"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "주문이 비어 있습니다. 아래에서 검색해 아이템을 추가하세요."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "아직 주문 데이터가 없습니다. DataForge를 추출한 다음 Commodities 또는 Journal을 체크하고 향상 기능을 생성하세요."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "품질 {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "사용처: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU로 보기"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU로 보기"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "광석 양을 SCU 또는 cSCU(게임과 같이 SCU의 100분의 1)로 표시합니다"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "복사"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "복사됨"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "주문과 재료를 디스코드용 텍스트로 복사합니다"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "광물 감시"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "주문의 광물을 스캔 감시 목록에 추가해, 스캐너가 하나를 읽으면 알려 줍니다"
+    },
+    "order_clear": {
+      "ht": "",
+      "at": "비우기"
+    },
+    "order_clear_confirm": {
+      "ht": "",
+      "at": "한 번 더 클릭하면 비웁니다"
+    },
+    "order_clear_tooltip": {
+      "ht": "",
+      "at": "주문에서 모든 아이템을 제거합니다"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "하나 줄이기"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "하나 늘리기"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "주문에서 제거"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "아직 보유하지 않은 청사진"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "이 {of}개 중 {need}개 사용:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "이 슬롯을 사용합니다. 청사진에 필요한 수보다 하나 더 체크하면 다른 하나의 체크가 해제됩니다."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "이 슬롯에 쓰는 재료의 품질(0~1000)"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "품질 {quality} 이상 필요"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "모든 슬롯: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "재료 품질은 이 아이템의 능력치를 바꾸지 않습니다."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value}핍"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count}개"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "제작 주문: {count}회"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "재료:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "품질 {quality}+로 {amount}"
     }
   },
   "overlay": {
@@ -3811,6 +3963,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "이것은 단축키로 쓸 수 없습니다. Ctrl, Alt 또는 Win을 누른 채 영문자, 숫자, 기호, Space, Tab 또는 이동 키(화살표, Home, End, Page Up/Down, Insert, Delete)를 누르세요. Shift를 더해도 됩니다. F 키나 Pause는 단독으로도 쓸 수 있습니다."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "주문"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "제작 주문을 만들고 필요한 모든 재료를 품질별로 확인합니다. DataForge 추출이 필요합니다."
     }
   },
   "shader_cache": {

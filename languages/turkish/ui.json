@@ -3537,6 +3537,158 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Buradaki mineraller: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Sipariş"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Siparişe bir eşya ekle..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Sipariş özeti: {items} eşya, {crafts} üretim"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "Siparişte henüz bir şey yok. Eşya eklemek için aşağıda arayın."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Henüz sipariş verisi yok. DataForge'u çıkarın, ardından Commodities veya Journal işaretliyken geliştirmeleri oluşturun."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Kalite {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Kullanan: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU göster"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU göster"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Cevher miktarlarını SCU veya cSCU olarak göster (oyundaki gibi, SCU'nun yüzde biri)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Kopyala"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Kopyalandı"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Siparişi ve malzemelerini Discord için metin olarak kopyala"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Mineralleri izle"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Siparişin minerallerini tarama izleme listesine ekle; tarayıcı birini okuduğunda uyarır"
+    },
+    "order_clear": {
+      "ht": "",
+      "at": "Temizle"
+    },
+    "order_clear_confirm": {
+      "ht": "",
+      "at": "Temizlemek için tekrar tıklayın"
+    },
+    "order_clear_tooltip": {
+      "ht": "",
+      "at": "Siparişteki tüm eşyaları kaldır"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Bir eksik"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Bir fazla"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Siparişten kaldır"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Plan henüz sahip olunmadı"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Bunlardan {of} tanesinin {need} tanesini kullanır:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Bu yuvayı kullan. Planın gerektirdiğinden fazlasını işaretlemek başka birinin işaretini kaldırır."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "K {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "Bu yuva için malzemenin kalitesi (0 ile 1000 arası)"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "En az {quality} kalite gerekir"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Tüm yuvalar: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "Malzeme kalitesi bu eşyanın değerlerini değiştirmez."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pip"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} adet"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Üretim siparişi: {count} üretim"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Malzemeler:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{quality}+ kalitede {amount}"
     }
   },
   "overlay": {
@@ -3811,6 +3963,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Bu bir kısayol olamaz. Bir harf, rakam, sembol, Boşluk, Tab veya gezinme tuşuyla (oklar, Home, End, Page Up/Down, Insert, Delete) birlikte Ctrl, Alt veya Win tuşunu basılı tutun; isterseniz Shift de ekleyin. Bir F tuşu veya Pause tek başına da çalışır."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Sipariş"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Bir üretim siparişi oluşturun ve gereken her malzemeyi kaliteye göre görün. DataForge çıkarması gerekir."
     }
   },
   "shader_cache": {

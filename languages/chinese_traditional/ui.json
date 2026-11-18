@@ -3537,6 +3537,158 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "此處礦物：{minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "訂單"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "將物品加入訂單..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "訂單摘要：{items} 種物品，{crafts} 次製造"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "訂單還是空的。在下方搜尋以加入物品。"
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "還沒有訂單資料。擷取 DataForge，然後勾選 Commodities 或 Journal 產生增強內容。"
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}：{amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "品質 {quality}+：{amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "用於：{items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "顯示 SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "顯示 cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "以 SCU 或 cSCU（SCU 的百分之一，與遊戲內相同）顯示礦石數量"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "複製"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "已複製"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "將訂單及其材料複製為文字，用於 Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "監視礦物"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "將訂單的礦物加入掃描監視清單，掃描器讀到其中之一時會提醒你"
+    },
+    "order_clear": {
+      "ht": "",
+      "at": "清空"
+    },
+    "order_clear_confirm": {
+      "ht": "",
+      "at": "再按一次以清空"
+    },
+    "order_clear_tooltip": {
+      "ht": "",
+      "at": "從訂單移除所有物品"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "減少一個"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "增加一個"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "從訂單移除"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "尚未擁有藍圖"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "從這 {of} 個中選用 {need} 個："
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "使用此槽位。勾選數超過藍圖所需時，會取消另一個的勾選。"
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}：{material}，{amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "此槽位所用材料的品質（0 到 1000）"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "需要品質 {quality} 或更高"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "所有槽位：{bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "材料品質不會改變此物品的屬性。"
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} 點能量"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} 個"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "製造訂單：{count} 次製造"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "材料："
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "品質 {quality}+ 的 {amount}"
     }
   },
   "overlay": {
@@ -3811,6 +3963,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "這個不能用作快速鍵。請按住 Ctrl、Alt 或 Win，再加一個字母、數字、符號、空白鍵、Tab 或導覽鍵（方向鍵、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 鍵或 Pause 也可以單獨使用。"
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "訂單"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "建立製造訂單，依品質查看所需的每種材料。需要擷取 DataForge。"
     }
   },
   "shader_cache": {

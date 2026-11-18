@@ -3335,6 +3335,158 @@
     "tooltip_minerals_here": {
       "ht": "Minerals here: {minerals}",
       "at": ""
+    },
+    "section_order": {
+      "ht": "Order",
+      "at": ""
+    },
+    "order_search_placeholder": {
+      "ht": "Add an item to the order...",
+      "at": ""
+    },
+    "order_summary": {
+      "ht": "Order summary: {items} items, {crafts} crafts",
+      "at": ""
+    },
+    "order_empty": {
+      "ht": "Nothing on the order yet. Search below to add an item.",
+      "at": ""
+    },
+    "order_no_data": {
+      "ht": "No order data yet. Extract DataForge, then generate enhancements with Commodities or Journal ticked.",
+      "at": ""
+    },
+    "order_material_total": {
+      "ht": "{material}: {amount}",
+      "at": ""
+    },
+    "order_band": {
+      "ht": "Quality {quality}+: {amount}",
+      "at": ""
+    },
+    "order_used_by": {
+      "ht": "Used by: {items}",
+      "at": ""
+    },
+    "order_show_scu": {
+      "ht": "Show SCU",
+      "at": ""
+    },
+    "order_show_cscu": {
+      "ht": "Show cSCU",
+      "at": ""
+    },
+    "order_volume_tooltip": {
+      "ht": "Show ore amounts in SCU or cSCU (a hundredth of an SCU, as in game)",
+      "at": ""
+    },
+    "order_copy": {
+      "ht": "Copy",
+      "at": ""
+    },
+    "order_copied": {
+      "ht": "Copied",
+      "at": ""
+    },
+    "order_copy_tooltip": {
+      "ht": "Copy the order and its materials as text, for Discord",
+      "at": ""
+    },
+    "order_watch": {
+      "ht": "Watch minerals",
+      "at": ""
+    },
+    "order_watch_tooltip": {
+      "ht": "Add the order's minerals to the scan watch list, so the scanner alerts you when it reads one",
+      "at": ""
+    },
+    "order_clear": {
+      "ht": "Clear",
+      "at": ""
+    },
+    "order_clear_confirm": {
+      "ht": "Click again to clear",
+      "at": ""
+    },
+    "order_clear_tooltip": {
+      "ht": "Remove every item from the order",
+      "at": ""
+    },
+    "order_less": {
+      "ht": "One less",
+      "at": ""
+    },
+    "order_more": {
+      "ht": "One more",
+      "at": ""
+    },
+    "order_remove": {
+      "ht": "Remove from the order",
+      "at": ""
+    },
+    "order_not_owned": {
+      "ht": "Blueprint not owned yet",
+      "at": ""
+    },
+    "order_pick": {
+      "ht": "Uses {need} of these {of}:",
+      "at": ""
+    },
+    "order_pick_tooltip": {
+      "ht": "Use this slot. Ticking one past what the blueprint needs unticks another.",
+      "at": ""
+    },
+    "order_slot": {
+      "ht": "{slot}: {material}, {amount}",
+      "at": ""
+    },
+    "order_quality": {
+      "ht": "Q {quality}",
+      "at": ""
+    },
+    "order_quality_tooltip": {
+      "ht": "The quality of the material for this slot (0 to 1000)",
+      "at": ""
+    },
+    "order_min_quality": {
+      "ht": "Needs quality {quality} or better",
+      "at": ""
+    },
+    "order_item_bonus": {
+      "ht": "All slots: {bonuses}",
+      "at": ""
+    },
+    "order_no_bonus": {
+      "ht": "Material quality doesn't change this item's stats.",
+      "at": ""
+    },
+    "order_pips": {
+      "ht": "{value} pips",
+      "at": ""
+    },
+    "order_pieces": {
+      "ht": "{count} pcs",
+      "at": ""
+    },
+    "order_scu": {
+      "ht": "{amount} SCU",
+      "at": ""
+    },
+    "order_cscu": {
+      "ht": "{amount} cSCU",
+      "at": ""
+    },
+    "order_text_title": {
+      "ht": "Crafting order: {count} crafts",
+      "at": ""
+    },
+    "order_text_materials": {
+      "ht": "Materials:",
+      "at": ""
+    },
+    "order_text_band": {
+      "ht": "{amount} at quality {quality}+",
+      "at": ""
     }
   },
   "overlay": {
@@ -3608,6 +3760,14 @@
     },
     "hotkey_unsupported": {
       "ht": "This cannot be a hotkey. Hold Ctrl, Alt or Win with a letter, number, symbol, Space, Tab or navigation key (arrows, Home, End, Page Up/Down, Insert, Delete), and Shift too if you like. An F key or Pause also works on its own.",
+      "at": ""
+    },
+    "drawer_order": {
+      "ht": "Order",
+      "at": ""
+    },
+    "drawer_order_hint": {
+      "ht": "Build a crafting order and see every material it needs, by quality. Requires a DataForge extraction.",
       "at": ""
     }
   },

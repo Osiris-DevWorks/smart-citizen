@@ -63,6 +63,7 @@ from PyQt6.QtWidgets import (
 
 from src.gui.game_screen import game_screen
 from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
+from src.gui.sco_order import OrderSection
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
@@ -595,11 +596,23 @@ def _crafting_icon() -> QPainterPath:
     return path
 
 
+def _order_icon() -> QPainterPath:
+    """A clipboard with three ticked lines: the crafting order."""
+    path = QPainterPath()
+    _polyline(path, (6, 5), (18, 5), (18, 21), (6, 21), close=True)
+    _polyline(path, (9, 3), (15, 3), (15, 7), (9, 7), close=True)
+    for y in (11, 15, 19):
+        _polyline(path, (8.5, y - 1), (9.5, y), (11, y - 2))
+        _polyline(path, (13, y - 1), (16, y - 1))
+    return path
+
+
 # Drawer sections in handle order, each with its icon on a 24-unit grid.
 SECTION_ICONS = {
     "blueprints": _blueprints_icon,
     "minerals": _minerals_icon,
     "crafting": _crafting_icon,
+    "order": _order_icon,
 }
 
 
@@ -859,9 +872,14 @@ class BlueprintDrawer(QWidget):
         self._crafting_search, self._crafting_tree, crafting_page = self._search_page(
             self._render_crafting)
 
+        # Order (3.1.0): a crafting order and everything it needs.
+        self._order = OrderSection()
+        self._order.watch_requested.connect(self._watch_ores)
+
         # The tabs pick the page, so the panel only needs a stack of them.
         self._sections = QStackedWidget(self._panel)
-        self._section_pages = dict(zip(SECTION_ICONS, (bp_page, mineral_page, crafting_page)))
+        self._section_pages = dict(zip(
+            SECTION_ICONS, (bp_page, mineral_page, crafting_page, self._order)))
         for page in self._section_pages.values():
             self._sections.addWidget(page)
         self._current: Optional[str] = None
@@ -911,6 +929,7 @@ class BlueprintDrawer(QWidget):
         self._render()
         self._render_minerals()
         self._render_crafting()
+        self._order.retranslate_ui()
 
     def apply_colors(self, colors: OverlayColors) -> None:
         """Restyle the tab and panel, e.g. after the app theme changes."""
@@ -930,6 +949,13 @@ class BlueprintDrawer(QWidget):
             QListWidget, QTreeWidget {{
                 color: {colors.text}; background: transparent; border: none;
             }}
+            QScrollArea, QScrollArea > QWidget > QWidget {{ background: transparent; }}
+            QFrame#scoOrderCard {{
+                border: 1px solid {colors.secondary}; border-radius: 3px;
+            }}
+            QLabel[role="secondary"] {{ color: {colors.secondary}; }}
+            QLabel:disabled {{ color: {colors.secondary}; }}
+            QToolButton {{ color: {colors.text}; background: transparent; border: none; }}
             QListWidget::item:selected, QTreeWidget::item:selected {{
                 background: {_rgba(colors.accent, 60)}; color: {colors.text};
             }}
@@ -985,6 +1011,15 @@ class BlueprintDrawer(QWidget):
         self._watched = set(ores)
         self._render_minerals()
 
+    def _watch_ores(self, ores) -> None:
+        """The Order section's Watch minerals: add these ores to the watch list."""
+        added = set(ores) - self._watched
+        if not added:
+            return
+        self._watched |= added
+        self._render_minerals()
+        self.watched_changed.emit(set(self._watched))
+
     def _clear_watched(self) -> None:
         if not self._watched:
             return
@@ -1016,12 +1051,15 @@ class BlueprintDrawer(QWidget):
                 self._mineral_by_material.setdefault(key, info)
         self._render_minerals()
         self._render_crafting()
+        self._order.set_catalog(crafting, self._mineral_by_material,
+                                lambda info: mineral_tooltip(info, self._crafting))
 
     def set_items(self, meta: dict, owned: set) -> None:
         """Replace the list contents: ``{name: BlueprintItem}`` + owned names."""
         self._meta = dict(meta)
         self._owned = set(owned)
         self._render()
+        self._order.set_owned(self._owned)
 
     def notify_new(self, names: list[str]) -> None:
         """Flash the names of blueprints the live log watcher just found."""
@@ -1264,6 +1302,7 @@ class BlueprintDrawer(QWidget):
             self._owned.add(name)
         else:
             self._owned.discard(name)
+        self._order.set_owned(self._owned)
         self.owned_toggled.emit(name, checked)
 
 

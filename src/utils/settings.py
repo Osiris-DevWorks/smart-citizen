@@ -762,6 +762,7 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_DRAWER_SECTION_PREFIX + "order":      ("sco/drawer_order", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
@@ -795,6 +796,14 @@ class AppSettings:
     # decoded scan of one sets off the label's alerts. JSON list of
     # ORE_SIGNATURES keys and "salvage".
     SCO_WATCHED_MINERALS = "sco/watched_minerals"
+    # The SCO drawer's crafting order (3.1.0): a JSON list of
+    # crafting_order.OrderLine dicts. User data, like owned_items, so a
+    # backup's "unset" never empties it (PROFILE_DEFAULT_EXCLUDE_KEYS).
+    SCO_ORDER = "sco/order"
+    # How the Order tab shows ore volumes: "cscu" (as in game) or "scu".
+    SCO_ORDER_VOLUME = "sco/order_volume"
+    SCO_ORDER_VOLUMES = ("cscu", "scu")
+    SCO_ORDER_VOLUME_DEFAULT = "cscu"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -860,6 +869,7 @@ class AppSettings:
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
         "test_plan/checks",
@@ -1770,6 +1780,37 @@ class AppSettings:
         import json
         AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
         AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order() -> list:
+        """The SCO drawer's crafting order as stored: a list of line dicts
+        (``crafting_order.OrderLine.to_dict``), [] when none or unreadable.
+        ``crafting_order.load_order`` fits it to the blueprints there are."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_ORDER, "", type=str)
+        try:
+            lines = json.loads(raw) if raw else []
+        except (ValueError, TypeError):
+            return []
+        return lines if isinstance(lines, list) else []
+
+    @staticmethod
+    def set_sco_order(lines) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER, json.dumps(list(lines)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order_volume() -> str:
+        return AppSettings._get_choice(AppSettings.SCO_ORDER_VOLUME,
+                                       AppSettings.SCO_ORDER_VOLUMES,
+                                       AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def set_sco_order_volume(volume: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_ORDER_VOLUME, volume,
+                                AppSettings.SCO_ORDER_VOLUMES,
+                                AppSettings.SCO_ORDER_VOLUME_DEFAULT)
 
     @staticmethod
     def get_sco_option(name: str) -> bool:
@@ -3886,6 +3927,7 @@ class AppSettings:
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
+            AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({

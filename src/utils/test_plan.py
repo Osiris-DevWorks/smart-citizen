@@ -60,6 +60,18 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: Order tab (3.1.0)",
+        "items": [
+            "Extract DataForge, then generate with Commodities ticked. Drawer Order tab: search an item and click it. It shows as a line, and the Order summary at the top lists its materials.",
+            "Add the same item again: its count goes up, with no second line. Use - and + and the X: the count and the summary follow.",
+            "Open a line: each slot shows its material and amount. Drag a quality slider: the stat bonuses change, and the summary splits that material by quality.",
+            "Compare one blueprint with RK Crafting Central: same materials, amounts and stat bonuses at the same qualities.",
+            "Show SCU and Show cSCU switch the amounts. Copy, then paste in Discord: the order and its materials.",
+            "Watch minerals: the Minerals tab ticks the order's minerals. Clear needs a second click.",
+            "Restart the app: the order is still there.",
+        ],
+    },
+    {
         "title": "Blueprints (#416, #527)",
         "items": [
             "Scan Logs for Owned Blueprints: the P4-AR Rifle, S-38 Pistol, their magazines and the four Field Recon Suit pieces are added to Owned.",

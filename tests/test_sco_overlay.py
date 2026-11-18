@@ -179,7 +179,8 @@ def test_tabs_overlap_and_the_open_one_is_in_front(qapp):
     from PyQt6.QtCore import QPointF
 
     bar = SectionTabBar()
-    assert bar.height() == 3 * DRAWER_HANDLE_HEIGHT - 2 * DRAWER_HANDLE_OVERLAP
+    assert bar.height() == (len(SECTION_ICONS) * DRAWER_HANDLE_HEIGHT
+                            - (len(SECTION_ICONS) - 1) * DRAWER_HANDLE_OVERLAP)
     for i, name in enumerate(SECTION_ICONS):
         assert bar.tab_at(_tab_centre(bar, i)) == name
     # Along the edge, where Blueprints' and Minerals' tall sides overlap, the
@@ -209,7 +210,8 @@ def test_a_click_on_a_tab_opens_its_section(qapp):
 def test_tabs_run_along_each_edge(qapp, edge):
     bar = SectionTabBar()
     bar.set_edge(edge)
-    length = 3 * DRAWER_HANDLE_HEIGHT - 2 * DRAWER_HANDLE_OVERLAP
+    length = (len(SECTION_ICONS) * DRAWER_HANDLE_HEIGHT
+              - (len(SECTION_ICONS) - 1) * DRAWER_HANDLE_OVERLAP)
     sideways = edge in ("left", "right")
     assert (bar.width(), bar.height()) == (
         (DRAWER_HANDLE_WIDTH, length) if sideways else (length, DRAWER_HANDLE_WIDTH))
@@ -219,7 +221,7 @@ def test_tabs_run_along_each_edge(qapp, edge):
     mid, near = DRAWER_HANDLE_WIDTH / 2, DRAWER_HANDLE_HEIGHT / 2
     far = length - DRAWER_HANDLE_HEIGHT / 2
     at = (lambda along: QPointF(mid, along)) if sideways else (lambda along: QPointF(along, mid))
-    assert bar.tab_at(at(near)) == "blueprints" and bar.tab_at(at(far)) == "crafting"
+    assert bar.tab_at(at(near)) == "blueprints" and bar.tab_at(at(far)) == "order"
 
 
 def test_tab_bar_paints(qapp):
@@ -590,7 +592,7 @@ def test_sections_follow_the_options(qapp):
     overlay = ScoOverlay()
     overlay.drawer.open_section("minerals")
     overlay.set_options({"drawer_minerals": False})
-    assert overlay.drawer._handle.sections == ["blueprints", "crafting"]
+    assert overlay.drawer._handle.sections == ["blueprints", "crafting", "order"]
     # Switching off the open section closes the drawer.
     assert not overlay.drawer._panel.isVisibleTo(overlay.drawer)
     assert overlay.drawer.has_sections()
@@ -600,8 +602,7 @@ def test_no_sections_hides_the_drawer(qapp):
     overlay = ScoOverlay()
     overlay.start()
     try:
-        overlay.set_options({"drawer_blueprints": False, "drawer_minerals": False,
-                             "drawer_crafting": False})
+        overlay.set_options({f"drawer_{name}": False for name in SECTION_ICONS})
         assert not overlay.drawer.has_sections() and not overlay.drawer.isVisible()
     finally:
         overlay.stop()
