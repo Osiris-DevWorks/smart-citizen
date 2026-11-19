@@ -264,11 +264,14 @@ class TestGeneratorSlots:
         assert by_key["bp_craft_test_rifle"] == "NDB-30 Repeater"
         # Neither found: the file name, and the log says so.
         assert by_key["bp_craft_test_armor"] == "test_armor"
-        assert "1 blueprints with no item name" in caplog.text and "bp_craft_test_armor" in caplog.text
+        assert (
+            "1 blueprints with no item name" in caplog.text and "bp_craft_test_armor" in caplog.text
+        )
 
     def test_a_linked_name_wins_over_the_file_name(self, gen, records):
-        _index, order = _scan(gen, records, entity_names={OUTPUT: "Test Rifle"},
-                              by_filename={"test_rifle": "Other"})
+        _index, order = _scan(
+            gen, records, entity_names={OUTPUT: "Test Rifle"}, by_filename={"test_rifle": "Other"}
+        )
         rifle = next(bp for bp in order["blueprints"] if bp["k"] == "bp_craft_test_rifle")
         assert rifle["n"] == "Test Rifle"
 
