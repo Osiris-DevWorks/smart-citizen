@@ -447,3 +447,61 @@ def test_cut_glyphs_cuts_a_red_saturated_readout_from_blue():
     assert glyphs is not None and len(glyphs) == 5
     # Each glyph is blue pixels: the red ones would all be 255.
     assert all(min(pixels) < 255 for _, _, pixels in glyphs)
+
+
+def _with_text_after(stem, glyphs, drop=0.0):
+    """A readout with *glyphs* copies of its last digit drawn after it, a
+    space apart, each moved down by *drop* of the digit height. Stands in
+    for a unit after a number: "µSCU" on a cargo size (#592)."""
+    path = next(p for p in READOUTS if p.stem == stem)
+    w, h, red, green, blue = _channels(path)
+    x, y, bw, bh = _read(path).box
+    inked = [c for c in range(x, x + bw)
+             if any(red[r * w + c] >= sco_digit_reader.THRESHOLDS[0] for r in range(y, y + bh))]
+    # The last digit: the inked columns after the last blank one.
+    start = max(c for c in range(x, inked[-1]) if c not in inked) + 1
+    glyph = range(start, inked[-1] + 1)
+    red, green, blue = (bytearray(c) for c in (red, green, blue))
+    left, shift = inked[-1] + 1 + round(0.4 * bh), round(drop * bh)
+    for _ in range(glyphs):
+        for i, c in enumerate(glyph):
+            for r in range(max(0, y - 2), min(h, y + bh + 2)):
+                for ch in (red, green, blue):
+                    ch[(r + shift) * w + left + i] = ch[r * w + c]
+        left += len(glyph) + 2
+    assert left < w
+    return w, h, bytes(red), bytes(green), bytes(blue)
+
+
+@pytest.mark.parametrize("stem", ["g1_7200", "p2_2000"])
+def test_a_number_with_a_unit_after_it_is_no_readout(stem):
+    """#592: a cargo size such as "7,200 µSCU" read as a signature. The
+    "SCU" is digit tall and joined the row as more digits, which the row
+    used to cut off after the comma's three."""
+    w, h, red, green, blue = _with_text_after(stem, 3)
+    assert read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue) is None
+
+
+@pytest.mark.parametrize("stem", ["g1_7200", "p2_2000"])
+def test_a_glyph_dropping_below_the_line_after_the_number_is_no_readout(stem):
+    """#592: the "µ" of "µSCU" hangs below the line, so it never joins the
+    row as a digit; a glyph right after the last digit still means text."""
+    w, h, red, green, blue = _with_text_after(stem, 1, drop=0.3)
+    assert read_signature(w, h, red, DIGIT_HEIGHT_AT_1600, green=green, blue=blue) is None
+
+
+@pytest.mark.parametrize("stem", ["g1_7200", "p2_2000"])
+def test_text_further_along_the_line_does_not_hide_the_readout(stem):
+    """Only a glyph within a digit height of the number counts as its unit."""
+    path = next(p for p in READOUTS if p.stem == stem)
+    w, h, red, green, blue = _channels(path)
+    x, y, bw, bh = _read(path).box
+    red, green, blue = (bytearray(c) for c in (red, green, blue))
+    left = x + bw + 2 * bh
+    for r in range(y, y + bh):
+        for c in range(left, left + 3):
+            for ch in (red, green, blue):
+                ch[r * w + c] = 255
+    reading = read_signature(w, h, bytes(red), DIGIT_HEIGHT_AT_1600,
+                             green=bytes(green), blue=bytes(blue))
+    assert reading is not None and reading.text == _expected(path)
