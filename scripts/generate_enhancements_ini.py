@@ -5365,6 +5365,38 @@ def _build_crafting_order(
             "mnames": dict(sorted(mnames.items()))}
 
 
+def _looks_like_loc_key(name: str) -> bool:
+    """A name the loc did not resolve: _render_scitem_lookups keeps the key
+    itself (``item_NameMXOX_...``) when base.ini has no text for it."""
+    return not name or name.startswith("@") or name.lower().startswith("item_name")
+
+
+def _crafted_item_name(
+    root: ET.Element,
+    xml_file: Path,
+    entity_names: dict[str, str],
+    entity_names_by_filename: dict[str, str],
+) -> tuple[str, bool]:
+    """The display name of the item a blueprint makes, and whether one was
+    found. The same chain as the mission blueprint lists
+    (:func:`build_blueprint_pool_lookup`): the ``CraftingProcess_Creation``
+    entityClass, then the entity file named like the blueprint (CIG ships
+    some blueprints ahead of the entity link, so NDB-30 and others went
+    unnamed and the Order search could not find them), then the file name
+    minus ``bp_craft_``."""
+    stem = xml_file.stem.replace("bp_craft_", "")
+    for elem in root.iter():
+        if _poly_type(elem) == "CraftingProcess_Creation":
+            name = entity_names.get(elem.get("entityClass", ""), "")
+            if not _looks_like_loc_key(name):
+                return name, True
+            break
+    name = entity_names_by_filename.get(stem.lower(), "")
+    if not _looks_like_loc_key(name):
+        return _strip_cig_size_prefix(name), True
+    return stem, False
+
+
 def scan_crafting_blueprints(
     bp_dir: Path,
     carryables_dir: Path,
@@ -5377,6 +5409,7 @@ def scan_crafting_blueprints(
     header_em_tag: str = "EM3",
     crafting_index: dict | None = None,
     crafting_order: dict | None = None,
+    entity_names_by_filename: dict[str, str] | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Scan crafting blueprints and produce commodity + journal entries.
 
@@ -5408,6 +5441,10 @@ def scan_crafting_blueprints(
     bp_records: list[tuple[str, str, list[str]]] = []
     # (blueprint key, category, item name, slot facts) for the Order tab.
     order_records: list[tuple[str, str, str, dict]] = []
+    # Blueprints whose item has no name (the entity and its file both
+    # missed), logged so a tester's log shows why an item's search fails.
+    unnamed: list[str] = []
+    entity_names_by_filename = entity_names_by_filename or {}
     _bp_files = (
         sorted(_index_rglob(xml_path_index, bp_dir, records_dir))
         if xml_path_index is not None and records_dir is not None
@@ -5420,14 +5457,10 @@ def scan_crafting_blueprints(
             continue
         rel = xml_file.relative_to(bp_dir)
         category = str(rel.parent).replace(os.sep, "/")
-        item_name = xml_file.stem.replace("bp_craft_", "")
-        # Try to resolve display name from entity reference
-        for elem in root.iter():
-            if _poly_type(elem) == "CraftingProcess_Creation":
-                entity_ref = elem.get("entityClass", "")
-                if entity_ref in entity_names:
-                    item_name = entity_names[entity_ref]
-                break
+        item_name, named = _crafted_item_name(root, xml_file, entity_names,
+                                              entity_names_by_filename)
+        if not named:
+            unnamed.append(xml_file.stem)
         material_uids = _blueprint_material_uids(root)
         for uid in material_uids:
             if uid and uid != "00000000-0000-0000-0000-000000000000":
@@ -5438,6 +5471,9 @@ def scan_crafting_blueprints(
             if facts is not None:
                 order_records.append((xml_file.stem.lower(), category, item_name, facts))
     logger.info(f"Found {len(resource_uuids)} unique resource UUIDs in blueprints")
+    if unnamed:
+        logger.info(f"Crafting: {len(unnamed)} blueprints with no item name, shown by file name, "
+                    f"e.g. {', '.join(unnamed[:5])}")
 
     # Step 2: Resolve UUIDs to commodity names via carryables
     uuid_names = _build_uuid_to_commodity(resource_uuids, carryables_dir, xml_path_index=xml_path_index, records_dir=records_dir)
@@ -8406,7 +8442,8 @@ def _run_gen_commodity_journal(ctx: dict) -> tuple[dict[str, str], dict[str, str
                                     blueprint_data_header=mh.get("blueprint_data", _DEFAULT_MISSION_HEADERS["blueprint_data"]),
                                     header_em_tag=mh_em,
                                     crafting_index=ctx.get("crafting_index"),
-                                    crafting_order=ctx.get("crafting_order"))
+                                    crafting_order=ctx.get("crafting_order"),
+                                    entity_names_by_filename=ctx.get("entity_names_by_filename"))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

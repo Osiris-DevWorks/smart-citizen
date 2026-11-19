@@ -160,7 +160,7 @@ def records(tmp_path):
     return tmp_path
 
 
-def _scan(gen, records, entity_names=None):
+def _scan(gen, records, entity_names=None, by_filename=None):
     loc = {
         "crafting_UI_SlotName_Frame,P": "Frame",
         "crafting_ui_slotname_cabling": "Cabling",
@@ -181,6 +181,7 @@ def _scan(gen, records, entity_names=None):
         records_dir=records,
         crafting_index=index,
         crafting_order=order,
+        entity_names_by_filename=by_filename,
     )
     return index, order
 
@@ -249,6 +250,27 @@ class TestGeneratorSlots:
         rifle = next(bp for bp in order["blueprints"] if bp["k"] == "bp_craft_test_rifle")
         assert rifle["s"][2]["mat"] == f"item:{HADANITE}"
         assert order["mnames"] == {f"item:{HADANITE}": "Hadanite"}
+
+    def test_an_unlinked_item_is_named_from_its_entity_file(self, gen, records, caplog):
+        """Amr's NDB-30 report: an item whose blueprint entityClass links no
+        entity (or one base.ini has no name for) is named from the entity
+        file named like the blueprint, as the mission blueprint lists are,
+        so the Order search finds it by its real name."""
+        names = {OUTPUT: "item_NameMXOX_NeutronRepeater_S3"}  # a loc key nothing resolved
+        by_file = {"test_rifle": "NDB-30 Repeater"}
+        with caplog.at_level("INFO"):
+            _index, order = _scan(gen, records, entity_names=names, by_filename=by_file)
+        by_key = {bp["k"]: bp["n"] for bp in order["blueprints"]}
+        assert by_key["bp_craft_test_rifle"] == "NDB-30 Repeater"
+        # Neither found: the file name, and the log says so.
+        assert by_key["bp_craft_test_armor"] == "test_armor"
+        assert "1 blueprints with no item name" in caplog.text and "bp_craft_test_armor" in caplog.text
+
+    def test_a_linked_name_wins_over_the_file_name(self, gen, records):
+        _index, order = _scan(gen, records, entity_names={OUTPUT: "Test Rifle"},
+                              by_filename={"test_rifle": "Other"})
+        rifle = next(bp for bp in order["blueprints"] if bp["k"] == "bp_craft_test_rifle")
+        assert rifle["n"] == "Test Rifle"
 
     def test_index_file_round_trip(self, gen, records, tmp_path):
         index, order = _scan(gen, records)
