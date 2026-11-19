@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "Ajouter les minéraux de la commande à la liste de surveillance du scan, pour être alerté quand le scanner en lit un"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "Vider"
+      "at": "Nouvelle commande"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "Cliquez à nouveau pour vider"
+      "at": "Sûr ?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "Retirer tous les objets de la commande"
+      "at": "Cliquez à nouveau sur Nouvelle commande pour vider cette commande. Les commandes enregistrées sont conservées."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Démarrer une nouvelle commande : retire tous les objets de celle-ci. Les commandes enregistrées sont conservées."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "Remplacer cette commande par celle choisie dans la liste."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Supprimer"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Sûr ?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Cliquez à nouveau sur Supprimer pour supprimer la commande enregistrée « {name} »."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Supprimer la commande enregistrée choisie dans la liste. La commande en cours reste."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Impossible de supprimer la commande enregistrée « {name} »."
     },
     "order_load_empty": {
       "ht": "",

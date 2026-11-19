@@ -3400,16 +3400,20 @@
       "ht": "Add the order's minerals to the scan watch list, so the scanner alerts you when it reads one",
       "at": ""
     },
-    "order_clear": {
-      "ht": "Clear",
+    "order_new": {
+      "ht": "New order",
       "at": ""
     },
-    "order_clear_confirm": {
-      "ht": "Click again to clear",
+    "order_new_confirm": {
+      "ht": "Sure?",
       "at": ""
     },
-    "order_clear_tooltip": {
-      "ht": "Remove every item from the order",
+    "order_new_note": {
+      "ht": "Click New order again to empty this order. Saved orders are kept.",
+      "at": ""
+    },
+    "order_new_tooltip": {
+      "ht": "Start a new order: removes every item from this one. Saved orders are kept.",
       "at": ""
     },
     "order_less": {
@@ -3478,6 +3482,26 @@
     },
     "order_load_tooltip": {
       "ht": "Replace this order with the saved one picked in the list.",
+      "at": ""
+    },
+    "order_delete": {
+      "ht": "Delete",
+      "at": ""
+    },
+    "order_delete_confirm": {
+      "ht": "Sure?",
+      "at": ""
+    },
+    "order_delete_note": {
+      "ht": "Click Delete again to delete the saved order \"{name}\".",
+      "at": ""
+    },
+    "order_delete_tooltip": {
+      "ht": "Delete the saved order picked in the list. The order you are building stays.",
+      "at": ""
+    },
+    "order_delete_failed": {
+      "ht": "Could not delete the saved order \"{name}\".",
       "at": ""
     },
     "order_load_empty": {

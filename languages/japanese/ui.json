@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "注文の鉱物をスキャン監視リストに追加し、スキャナーが読み取ったときに知らせます"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "クリア"
+      "at": "新規注文"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "もう一度クリックでクリア"
+      "at": "本当に？"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "注文からすべてのアイテムを削除します"
+      "at": "もう一度「新規注文」をクリックするとこの注文を空にします。保存した注文は残ります。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "新しい注文を始めます：この注文のアイテムをすべて削除します。保存した注文は残ります。"
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "この注文を、リストで選んだ保存済みの注文に置き換えます。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "削除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "確認"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "もう一度「削除」をクリックすると保存した注文「{name}」を削除します。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "リストで選んだ保存済みの注文を削除します。作成中の注文はそのままです。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "保存した注文「{name}」を削除できませんでした。"
     },
     "order_load_empty": {
       "ht": "",

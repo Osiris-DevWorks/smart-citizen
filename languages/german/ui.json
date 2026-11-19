@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "Die Mineralien des Auftrags zur Scan-Beobachtungsliste hinzufügen, damit der Scanner dich warnt, wenn er eines liest"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "Leeren"
+      "at": "Neuer Auftrag"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "Zum Leeren erneut klicken"
+      "at": "Sicher?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "Alle Gegenstände aus dem Auftrag entfernen"
+      "at": "Klicke erneut auf Neuer Auftrag, um diesen Auftrag zu leeren. Gespeicherte Aufträge bleiben erhalten."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Einen neuen Auftrag beginnen: entfernt alle Gegenstände aus diesem. Gespeicherte Aufträge bleiben erhalten."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "Diesen Auftrag durch den in der Liste gewählten gespeicherten ersetzen."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Löschen"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Sicher?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Klicke erneut auf Löschen, um den gespeicherten Auftrag „{name}“ zu löschen."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Den in der Liste gewählten gespeicherten Auftrag löschen. Der Auftrag, den du gerade baust, bleibt."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Der gespeicherte Auftrag „{name}“ konnte nicht gelöscht werden."
     },
     "order_load_empty": {
       "ht": "",

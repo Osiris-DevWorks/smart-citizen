@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "Adicionar os minerais do pedido à lista de vigilância do escaneamento, para o scanner avisar quando ler um"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "Limpar"
+      "at": "Novo pedido"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "Clique de novo para limpar"
+      "at": "Certeza?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "Remover todos os itens do pedido"
+      "at": "Clique em Novo pedido de novo para esvaziar este pedido. Os pedidos salvos são mantidos."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Começar um novo pedido: remove todos os itens deste. Os pedidos salvos são mantidos."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "Substitua este pedido pelo salvo escolhido na lista."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Excluir"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Certo?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Clique em Excluir de novo para excluir o pedido salvo \"{name}\"."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Excluir o pedido salvo escolhido na lista. O pedido que você está montando continua."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Não foi possível excluir o pedido salvo \"{name}\"."
     },
     "order_load_empty": {
       "ht": "",

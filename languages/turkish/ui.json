@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "Siparişin minerallerini tarama izleme listesine ekle; tarayıcı birini okuduğunda uyarır"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "Temizle"
+      "at": "Yeni sipariş"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "Temizlemek için tekrar tıklayın"
+      "at": "Emin misin?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "Siparişteki tüm eşyaları kaldır"
+      "at": "Bu siparişi boşaltmak için Yeni sipariş'e tekrar tıklayın. Kayıtlı siparişler korunur."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Yeni bir sipariş başlat: bu siparişteki tüm eşyaları kaldırır. Kayıtlı siparişler korunur."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "Bu siparişi listeden seçilen kayıtlı siparişle değiştirin."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Sil"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Emin?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Kayıtlı \"{name}\" siparişini silmek için Sil'e tekrar tıklayın."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Listede seçilen kayıtlı siparişi sil. Hazırladığın sipariş kalır."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Kayıtlı \"{name}\" siparişi silinemedi."
     },
     "order_load_empty": {
       "ht": "",

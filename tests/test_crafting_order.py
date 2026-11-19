@@ -481,6 +481,13 @@ class TestSavedOrders:
         co.save_order(folder, "Rifles week 1", [co.new_line(PICK)])
         assert [r["key"] for r in co.read_saved_order(folder, "Rifles week 1")] == ["armor"]
 
+    def test_delete(self, tmp_path):
+        co.save_order(tmp_path, "run", [co.new_line(BP)])
+        co.delete_saved_order(tmp_path, "run")
+        assert co.list_saved_orders(tmp_path) == []
+        co.delete_saved_order(tmp_path, "run")  # already gone: no error
+        co.delete_saved_order(tmp_path, "CON")  # unusable name: nothing to do
+
     def test_bad_input(self, tmp_path):
         with pytest.raises(ValueError):
             co.save_order(tmp_path, "CON", [])

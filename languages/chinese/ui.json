@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "将订单的矿物加入扫描监视列表，扫描仪读到其中之一时会提醒你"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "清空"
+      "at": "新订单"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "再次点击以清空"
+      "at": "确定？"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "从订单中移除所有物品"
+      "at": "再次点击“新订单”以清空此订单。已保存的订单会保留。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "开始新订单：移除当前订单中的所有物品。已保存的订单会保留。"
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "用列表中选中的已保存订单替换此订单。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "删除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "确定"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "再次点击“删除”以删除已保存的订单“{name}”。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "删除列表中选中的已保存订单。正在编辑的订单不受影响。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "无法删除已保存的订单“{name}”。"
     },
     "order_load_empty": {
       "ht": "",

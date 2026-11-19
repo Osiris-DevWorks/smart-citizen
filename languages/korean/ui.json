@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "주문의 광물을 스캔 감시 목록에 추가해, 스캐너가 하나를 읽으면 알려 줍니다"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "비우기"
+      "at": "새 주문"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "한 번 더 클릭하면 비웁니다"
+      "at": "확인?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "주문에서 모든 아이템을 제거합니다"
+      "at": "새 주문을 한 번 더 클릭하면 이 주문을 비웁니다. 저장한 주문은 남습니다."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "새 주문 시작: 이 주문의 아이템을 모두 제거합니다. 저장한 주문은 남습니다."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "이 주문을 목록에서 고른 저장된 주문으로 바꿉니다."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "삭제"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "확인"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "삭제를 한 번 더 클릭하면 저장한 주문 \"{name}\"을(를) 삭제합니다."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "목록에서 고른 저장한 주문을 삭제합니다. 작성 중인 주문은 그대로입니다."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "저장한 주문 \"{name}\"을(를) 삭제할 수 없습니다."
     },
     "order_load_empty": {
       "ht": "",

@@ -440,6 +440,14 @@ def save_order(folder: Path, name: str, lines: list[OrderLine]) -> Path:
     return path
 
 
+def delete_saved_order(folder: Path, name: str) -> None:
+    """Delete the order called *name*. One already gone is no error; raises
+    OSError when the file is there but cannot be deleted."""
+    path = saved_order_path(folder, name)
+    if path is not None:
+        path.unlink(missing_ok=True)
+
+
 def read_saved_order(folder: Path, name: str) -> list[dict]:
     """The saved lines of the order called *name*, as :func:`load_order`
     takes them; [] when it is missing or unreadable."""

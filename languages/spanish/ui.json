@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "Añadir los minerales del pedido a la lista de vigilancia del escaneo, para que el escáner te avise cuando lea uno"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "Vaciar"
+      "at": "Nuevo pedido"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "Haz clic otra vez para vaciar"
+      "at": "¿Seguro?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "Quitar todos los objetos del pedido"
+      "at": "Haz clic otra vez en Nuevo pedido para vaciar este pedido. Los pedidos guardados se conservan."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Empezar un pedido nuevo: quita todos los objetos de este. Los pedidos guardados se conservan."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "Reemplaza este pedido por el guardado que elegiste en la lista."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Eliminar"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "¿Seguro?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Haz clic otra vez en Eliminar para borrar el pedido guardado \"{name}\"."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Eliminar el pedido guardado elegido en la lista. El pedido que estás armando se queda."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "No se pudo eliminar el pedido guardado \"{name}\"."
     },
     "order_load_empty": {
       "ht": "",

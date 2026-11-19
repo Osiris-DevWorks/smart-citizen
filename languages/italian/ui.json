@@ -3602,17 +3602,21 @@
       "ht": "",
       "at": "Aggiungi i minerali dell'ordine alla lista di osservazione della scansione, così lo scanner ti avvisa quando ne legge uno"
     },
-    "order_clear": {
+    "order_new": {
       "ht": "",
-      "at": "Svuota"
+      "at": "Nuovo ordine"
     },
-    "order_clear_confirm": {
+    "order_new_confirm": {
       "ht": "",
-      "at": "Clicca di nuovo per svuotare"
+      "at": "Sicuro?"
     },
-    "order_clear_tooltip": {
+    "order_new_note": {
       "ht": "",
-      "at": "Rimuovi tutti gli oggetti dall'ordine"
+      "at": "Clicca di nuovo su Nuovo ordine per svuotare questo ordine. Gli ordini salvati restano."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Inizia un nuovo ordine: rimuove tutti gli oggetti da questo. Gli ordini salvati restano."
     },
     "order_less": {
       "ht": "",
@@ -3681,6 +3685,26 @@
     "order_load_tooltip": {
       "ht": "",
       "at": "Sostituisci questo ordine con quello salvato scelto nell'elenco."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Elimina"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Sicuro?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Clicca di nuovo su Elimina per eliminare l'ordine salvato \"{name}\"."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Elimina l'ordine salvato scelto nell'elenco. L'ordine che stai creando resta."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Impossibile eliminare l'ordine salvato \"{name}\"."
     },
     "order_load_empty": {
       "ht": "",

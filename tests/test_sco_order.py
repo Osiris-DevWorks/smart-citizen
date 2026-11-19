@@ -4,6 +4,7 @@ at the top, quality sliders, Clear's second click, Watch, the saved order."""
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -135,13 +136,35 @@ def test_count_buttons_and_remove(section):
     assert section.lines() == [] and section._cards == []
 
 
-def test_clear_needs_a_second_click(section):
+def test_new_order_needs_a_second_click(section):
     section.add(RIFLE)
-    section._clear_btn.click()
-    assert section.lines() and section._clear_btn.text() == tr("sco.order_clear_confirm")
-    section._clear_btn.click()
+    section._save_name.setText("mining run")
+    section._new_btn.click()
+    assert section.lines() and section._new_btn.text() == tr("sco.order_new_confirm")
+    assert section._status.text() == tr("sco.order_new_note")
+    section._new_btn.click()
     assert section.lines() == [] and AppSettings.get_sco_order() == []
-    assert section._clear_btn.text() == tr("sco.order_clear")
+    assert section._new_btn.text() == tr("sco.order_new")
+    assert section._save_name.text() == "" and section._status_note == ""
+
+
+def test_new_order_note_goes_when_the_click_times_out(section):
+    section.add(RIFLE)
+    section._new_btn.click()
+    section._new_timer.timeout.emit()
+    assert section.lines() and section._status_note == ""
+    assert section._new_btn.text() == tr("sco.order_new")
+
+
+def test_new_order_confirm_is_never_wider_than_the_button():
+    """Amr: "Click again to clear" ran off the drawer. The armed text must
+    not be longer than the label in any language, so the button never grows."""
+    root = Path(__file__).resolve().parent.parent / "languages"
+    for path in sorted(root.glob("*/ui.json")):
+        sco = json.loads(path.read_text(encoding="utf-8"))["sco"]
+        label = sco["order_new"]["ht"] or sco["order_new"]["at"]
+        confirm = sco["order_new_confirm"]["ht"] or sco["order_new_confirm"]["at"]
+        assert label and confirm and len(confirm) <= len(label), path.parent.name
 
 
 def test_watch_asks_for_the_order_minerals(section):
@@ -246,6 +269,37 @@ def test_saving_over_a_name_needs_a_second_click(section):
     assert len(co.read_saved_order(AppSettings.get_sco_orders_dir(), "run")) == 1
     section._save_btn.click()
     assert len(co.read_saved_order(AppSettings.get_sco_orders_dir(), "run")) == 2
+
+
+def test_delete_a_saved_order_needs_a_second_click(section):
+    folder = AppSettings.get_sco_orders_dir()
+    section.add(RIFLE)
+    section._save_name.setText("run")
+    section._save_btn.click()
+    assert section._delete_btn.isEnabled()
+    section._delete_btn.click()
+    assert section._delete_btn.text() == tr("sco.order_delete_confirm")
+    assert section._status.text() == tr("sco.order_delete_note", name="run")
+    assert (folder / "run.json").is_file()
+    section._delete_btn.click()
+    assert not (folder / "run.json").exists()
+    assert section._saved_orders.count() == 0 and not section._delete_btn.isEnabled()
+    assert section._status_note == "" and section._delete_btn.text() == tr("sco.order_delete")
+    # The order being built is left alone.
+    assert [line.key for line in section.lines()] == ["rifle"]
+
+
+def test_picking_another_saved_order_disarms_delete(section):
+    section.add(RIFLE)
+    for name in ("a", "b"):
+        section._save_name.setText(name)
+        section._save_btn.click()
+    section._saved_orders.setCurrentIndex(0)
+    section._delete_btn.click()
+    section._saved_orders.setCurrentIndex(1)
+    assert section._delete_btn.text() == tr("sco.order_delete")
+    section._delete_btn.click()
+    assert co.list_saved_orders(AppSettings.get_sco_orders_dir()) == ["a", "b"]
 
 
 def test_an_unusable_name_says_so(section):

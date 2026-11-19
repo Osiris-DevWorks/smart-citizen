@@ -319,11 +319,14 @@ class OrderSection(QWidget):
         self._volume_btn = _button(slot=self._toggle_volume)
         self._copy_btn = _button(slot=self._copy)
         self._watch_btn = _button(slot=self._watch)
-        self._clear_btn = _button(slot=self._clear)
-        self._clear_armed = False
-        self._clear_timer = QTimer(self)
-        self._clear_timer.setSingleShot(True)
-        self._clear_timer.timeout.connect(self._disarm_clear)
+        # New order empties this one; a first click arms it (a short "Sure?"
+        # on the button, the why in the status line, so nothing runs off the
+        # drawer) and a second within CLEAR_CONFIRM_MS clears it.
+        self._new_btn = _button(slot=self._new_order)
+        self._new_armed = False
+        self._new_timer = QTimer(self)
+        self._new_timer.setSingleShot(True)
+        self._new_timer.timeout.connect(self._disarm_new)
         self._summary_tree = QTreeWidget()
         self._summary_tree.setHeaderHidden(True)
         self._summary_tree.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
@@ -335,7 +338,7 @@ class OrderSection(QWidget):
         summary_layout = QVBoxLayout(self._summary_body)
         summary_layout.setContentsMargins(0, 0, 0, 0)
         buttons = QHBoxLayout()
-        for btn in (self._volume_btn, self._copy_btn, self._watch_btn, self._clear_btn):
+        for btn in (self._volume_btn, self._copy_btn, self._watch_btn):
             buttons.addWidget(btn)
         buttons.addStretch()
         summary_layout.addLayout(buttons)
@@ -356,17 +359,28 @@ class OrderSection(QWidget):
         self._save_timer.setSingleShot(True)
         self._save_timer.timeout.connect(self._disarm_save)
         self._saved_orders = QComboBox()
-        self._saved_orders.currentIndexChanged.connect(lambda _i: self._refresh_saved_buttons())
+        self._saved_orders.currentIndexChanged.connect(self._on_saved_order_picked)
         _no_focus(self._saved_orders, self._saved_orders.view())
         self._load_btn = _button(slot=self._load_named)
+        # Delete asks for a second click within CLEAR_CONFIRM_MS, as New order does.
+        self._delete_btn = _button(slot=self._delete_named)
+        self._delete_armed = False
+        self._delete_timer = QTimer(self)
+        self._delete_timer.setSingleShot(True)
+        self._delete_timer.timeout.connect(self._disarm_delete)
         save_row = QHBoxLayout()
         save_row.addWidget(self._save_name, 1)
         save_row.addWidget(self._save_btn)
         load_row = QHBoxLayout()
         load_row.addWidget(self._saved_orders, 1)
         load_row.addWidget(self._load_btn)
+        load_row.addWidget(self._delete_btn)
+        new_row = QHBoxLayout()
+        new_row.addWidget(self._new_btn)
+        new_row.addStretch()
         summary_layout.addLayout(save_row)
         summary_layout.addLayout(load_row)
+        summary_layout.addLayout(new_row)
 
         # Add an item.
 
@@ -584,7 +598,7 @@ class OrderSection(QWidget):
         if not totals:
             self._summary_tree.addTopLevelItem(QTreeWidgetItem([tr("sco.order_empty")]))
         has_lines = bool(self._lines)
-        for btn in (self._copy_btn, self._watch_btn, self._clear_btn):
+        for btn in (self._copy_btn, self._watch_btn, self._new_btn):
             btn.setEnabled(has_lines)
         self._refresh_saved_buttons()
         self._watch_btn.setEnabled(bool(self._watchable(totals)))
@@ -652,13 +666,18 @@ class OrderSection(QWidget):
         if ores:
             self.watch_requested.emit(ores)
 
-    def _clear(self) -> None:
-        if not self._clear_armed:
-            self._clear_armed = True
-            self._clear_btn.setText(tr("sco.order_clear_confirm"))
-            self._clear_timer.start(CLEAR_CONFIRM_MS)
+    def _new_order(self) -> None:
+        """Start a new order: the second click empties this one and the
+        save name. Saved orders are left as they are."""
+        if not self._new_armed:
+            self._new_armed = True
+            self._new_btn.setText(tr("sco.order_new_confirm"))
+            self._show_status(tr("sco.order_new_note"))
+            self._new_timer.start(CLEAR_CONFIRM_MS)
             return
-        self._disarm_clear()
+        self._disarm_new()
+        self._save_name.clear()
+        self._saved_orders.setCurrentIndex(-1)
         self.clear()
 
     # -- saved orders ------------------------------------------------------
@@ -686,12 +705,14 @@ class OrderSection(QWidget):
 
     def _refresh_saved_buttons(self) -> None:
         self._save_btn.setEnabled(self._loaded and bool(self._lines))
-        self._load_btn.setEnabled(self._loaded and self._saved_orders.currentIndex() >= 0)
+        picked = self._saved_orders.currentIndex() >= 0
+        self._load_btn.setEnabled(self._loaded and picked)
+        self._delete_btn.setEnabled(picked)
         self._saved_orders.setEnabled(self._saved_orders.count() > 0)
 
     def _save_named(self) -> None:
         """Save the order as <name>.json. A name already saved asks for a
-        second click within CLEAR_CONFIRM_MS, as Clear does."""
+        second click within CLEAR_CONFIRM_MS, as New order does."""
         if not (self._loaded and self._lines):
             return
         folder = AppSettings.get_sco_orders_dir()
@@ -738,15 +759,50 @@ class OrderSection(QWidget):
         self._rebuild_cards()
         self._save()
 
+    def _on_saved_order_picked(self, _index: int) -> None:
+        self._disarm_delete()
+        self._refresh_saved_buttons()
+
+    def _delete_named(self) -> None:
+        """Delete the saved order picked in the list, on a second click. The
+        order being built is left alone."""
+        name = self._saved_orders.currentText()
+        if not name:
+            return
+        if not self._delete_armed:
+            self._delete_armed = True
+            self._delete_btn.setText(tr("sco.order_delete_confirm"))
+            self._show_status(tr("sco.order_delete_note", name=name))
+            self._delete_timer.start(CLEAR_CONFIRM_MS)
+            return
+        self._disarm_delete()
+        try:
+            co.delete_saved_order(AppSettings.get_sco_orders_dir(), name)
+        except OSError as exc:
+            logger.warning(f"Could not delete the saved crafting order {name}: {exc}")
+            self._show_status(tr("sco.order_delete_failed", name=name))
+            return
+        self._saved_orders.setCurrentIndex(-1)
+        self.refresh_saved_orders()
+
+    def _disarm_delete(self) -> None:
+        if self._delete_armed:
+            self._show_status("")  # the "click again" note
+        self._delete_armed = False
+        self._delete_timer.stop()
+        self._delete_btn.setText(tr("sco.order_delete"))
+
     def _show_status(self, text: str) -> None:
         self._status_note = text
         self._status.setText(self._status_text())
         self._status.setVisible(bool(self._status.text()))
 
-    def _disarm_clear(self) -> None:
-        self._clear_armed = False
-        self._clear_timer.stop()
-        self._clear_btn.setText(tr("sco.order_clear"))
+    def _disarm_new(self) -> None:
+        if self._new_armed:
+            self._show_status("")  # the "click again" note
+        self._new_armed = False
+        self._new_timer.stop()
+        self._new_btn.setText(tr("sco.order_new"))
 
     # -- search ------------------------------------------------------------
 
@@ -788,13 +844,15 @@ class OrderSection(QWidget):
         self._copy_btn.setToolTip(tr("sco.order_copy_tooltip"))
         self._watch_btn.setText(tr("sco.order_watch"))
         self._watch_btn.setToolTip(tr("sco.order_watch_tooltip"))
-        self._disarm_clear()
-        self._clear_btn.setToolTip(tr("sco.order_clear_tooltip"))
+        self._disarm_new()
+        self._new_btn.setToolTip(tr("sco.order_new_tooltip"))
         self._save_name.setPlaceholderText(tr("sco.order_save_placeholder"))
         self._disarm_save()
         self._save_btn.setToolTip(tr("sco.order_save_tooltip"))
         self._saved_orders.setPlaceholderText(tr("sco.order_saved_orders"))
         self._load_btn.setText(tr("sco.order_load"))
         self._load_btn.setToolTip(tr("sco.order_load_tooltip"))
+        self._disarm_delete()
+        self._delete_btn.setToolTip(tr("sco.order_delete_tooltip"))
         self._rebuild_cards()
         self._render_results()
