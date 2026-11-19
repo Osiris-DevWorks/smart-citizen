@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "Blaupause noch nicht im Besitz"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Nur besessene"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Nur Blaupausen durchsuchen, die du besitzt."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Unbekanntes Material"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Auftragsname"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Speichern"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Diesen Auftrag unter dem eingegebenen Namen speichern."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Ersetzen?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Gespeichert"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Gib zuerst einen Namen für den Auftrag ein."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Der Auftrag konnte nicht gespeichert werden in:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Gespeicherte Aufträge"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Laden"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Diesen Auftrag durch den in der Liste gewählten gespeicherten ersetzen."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "„{name}“ enthält keine Gegenstände, die diese Spieldaten kennen."
+    },
     "order_pick": {
       "ht": "",
       "at": "Nutzt {need} von diesen {of}:"

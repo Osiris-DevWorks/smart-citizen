@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "未所持の設計図"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "所有済みのみ"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "所有しているブループリントだけを検索します。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "不明な素材"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "注文名"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "保存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "入力した名前でこの注文を保存します。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "上書きしますか？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "保存しました"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "先に注文の名前を入力してください。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "注文を保存できませんでした:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "保存した注文"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "読み込む"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "この注文を、リストで選んだ保存済みの注文に置き換えます。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "「{name}」には、このゲームデータにあるアイテムがありません。"
+    },
     "order_pick": {
       "ht": "",
       "at": "この {of} 個のうち {need} 個を使用："

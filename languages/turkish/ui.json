@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "Plan henüz sahip olunmadı"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Yalnızca sahip olunanlar"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Yalnızca sahip olduğunuz planlarda arayın."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Bilinmeyen malzeme"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Sipariş adı"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Kaydet"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Bu siparişi yazdığınız adla kaydedin."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Değiştirilsin mi?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Kaydedildi"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Önce sipariş için bir ad yazın."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Sipariş şuraya kaydedilemedi:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Kayıtlı siparişler"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Yükle"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Bu siparişi listeden seçilen kayıtlı siparişle değiştirin."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "\"{name}\" bu oyun verilerinin bildiği hiçbir eşyayı içermiyor."
+    },
     "order_pick": {
       "ht": "",
       "at": "Bunlardan {of} tanesinin {need} tanesini kullanır:"

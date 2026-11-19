@@ -31,6 +31,10 @@ from src.utils.mining_signatures import ORE_SIGNATURES
 
 COMPENDIUM_KEY = "Journal_General_Mining_Compendium_Content"
 CRAFTING_INDEX_FILE = "crafting_index.json"
+# Order tab material keys for a slot whose material is no commodity: an item
+# (named in ``CraftingIndex.item_materials``) or one nothing names.
+ORDER_ITEM_MATERIAL = "item:"
+ORDER_UNKNOWN_MATERIAL = "unknown:"
 
 STANTON, PYRO, NYX = "Stanton", "Pyro", "Nyx"
 # Locations the compendium lists that no rule below places. Lower-cased.
@@ -172,18 +176,25 @@ class CraftingIndex:
     ``blueprints``, ``stats`` and ``curves`` are the Order tab's (version 2,
     empty in an index an older generation wrote): each blueprint's slots
     with amounts, lowest qualities and quality ramps, the stat names, and
-    the ramps they share by index. See ``generate_enhancements_ini.
-    _build_crafting_order`` for the shape.
+    the ramps they share by index. ``item_materials`` names the slot
+    materials that are items, not commodities (:data:`ORDER_ITEM_MATERIAL`
+    keys). See ``generate_enhancements_ini._build_crafting_order`` for the
+    shape.
     """
     materials: dict[str, dict] = field(default_factory=dict)
     blueprints: list[dict] = field(default_factory=list)
     stats: dict[str, str] = field(default_factory=dict)
     curves: list[dict] = field(default_factory=list)
+    item_materials: dict[str, str] = field(default_factory=dict)
 
     def material_name(self, key: str) -> str:
-        """A material's display name (its first, shortest one), or its key."""
+        """A material's display name (its first, shortest one), an item
+        material's name, or its key. A material nothing names
+        (:func:`is_unknown_material`) is left to the caller to word."""
         names = (self.materials.get(key) or {}).get("names") or []
-        return names[0] if names else key
+        if names:
+            return names[0]
+        return self.item_materials.get(key) or key
 
     def material_names(self) -> dict[str, list[str]]:
         return {key: entry.get("names") or [key] for key, entry in self.materials.items()}
@@ -228,6 +239,11 @@ class CraftingIndex:
         return None
 
 
+def is_unknown_material(key: str) -> bool:
+    """True for an Order slot material nothing in the cache names."""
+    return key.startswith(ORDER_UNKNOWN_MATERIAL)
+
+
 def load_crafting_index(path: Path) -> CraftingIndex:
     """Read ``crafting_index.json``; an empty index when missing or unreadable.
 
@@ -246,20 +262,20 @@ def load_crafting_index(path: Path) -> CraftingIndex:
         return value if isinstance(value, kind) else kind()
 
     return CraftingIndex(part("materials", dict), part("blueprints", list),
-                         part("stats", dict), part("curves", list))
+                         part("stats", dict), part("curves", list), part("mnames", dict))
 
 
 def write_crafting_index(path: Path, materials: dict[str, dict],
                          order: dict | None = None) -> None:
     """Write the index the generator builds (see :class:`CraftingIndex`):
-    the materials, plus the Order tab's ``blueprints``, ``stats`` and
-    ``curves`` when *order* holds them.
+    the materials, plus the Order tab's ``blueprints``, ``stats``,
+    ``curves`` and ``mnames`` (item materials) when *order* holds them.
 
     Replaced in one step like every file a generation writes (atomic_io,
     #476), so a run cut off here leaves the old index whole. Written without
     indents: the blueprints' slots make it a few hundred KB.
     """
     data: dict = {"version": 2, "materials": materials}
-    for name in ("blueprints", "stats", "curves"):
-        data[name] = (order or {}).get(name) or ([] if name != "stats" else {})
+    for name in ("blueprints", "stats", "curves", "mnames"):
+        data[name] = (order or {}).get(name) or ({} if name in ("stats", "mnames") else [])
     atomic_write_text(path, json.dumps(data, ensure_ascii=False, separators=(",", ":")))

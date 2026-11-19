@@ -19,9 +19,13 @@ line's count, so each item has one set of slot qualities.
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from pathlib import Path
+from typing import Callable, Iterable, Optional
 
+from src.utils.atomic_io import atomic_write_text, read_bytes_retrying
 from src.utils.i18n import tr
 
 QUALITY_MIN = 0
@@ -325,15 +329,19 @@ def search_blueprints(
     query: str,
     material_names: Optional[dict[str, str]] = None,
     limit: int = 40,
+    keep: Optional[Callable[[dict], bool]] = None,
 ) -> list[dict]:
     """Blueprints whose name, category or materials hold every word of the
-    query, names starting with the first word first."""
+    query, names starting with the first word first. *keep*, when given,
+    must also say yes (the Order tab's Owned only filter)."""
     words = query.strip().lower().split()
     if not words:
         return []
     names = material_names or {}
     scored = []
     for bp in blueprints:
+        if keep is not None and not keep(bp):
+            continue
         name = bp["n"].lower()
         hay = " ".join(
             [name, bp.get("c", "").lower()]
@@ -372,3 +380,75 @@ def order_text(
             f"{format_amount(row.amount, row.unit, volume)} ({bands})"
         )
     return "\n".join(out)
+
+
+# -- Saved orders ------------------------------------------------------------
+# A saved order is <name>.json in AppSettings.get_sco_orders_dir(): the name
+# the player typed, made safe for a Windows file name.
+
+SAVED_ORDERS_FOLDER = "orders"  # in the data folder's root, not per channel
+SAVED_ORDER_SUFFIX = ".json"
+SAVED_ORDER_NAME_MAX = 60
+# Characters Windows refuses in a file name, plus control characters.
+_UNSAFE_NAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+# Names Windows keeps for devices, with or without an extension.
+_RESERVED_NAMES = frozenset(
+    {"con", "prn", "aux", "nul"}
+    | {f"com{i}" for i in range(1, 10)}
+    | {f"lpt{i}" for i in range(1, 10)}
+)
+
+
+def saved_order_name(name: str) -> str:
+    """*name* as a saved order's file name (without ``.json``), or "" when
+    nothing usable is left: Windows' refused characters dropped, spaces
+    collapsed, trailing dots and spaces trimmed (Windows drops them), at most
+    :data:`SAVED_ORDER_NAME_MAX` characters, and a device name (CON, COM1,
+    ...) refused."""
+    cleaned = " ".join(_UNSAFE_NAME_CHARS.sub("", name or "").split())
+    cleaned = cleaned[:SAVED_ORDER_NAME_MAX].rstrip(". ")
+    if cleaned.split(".")[0].strip().lower() in _RESERVED_NAMES:
+        return ""
+    return cleaned
+
+
+def saved_order_path(folder: Path, name: str) -> Optional[Path]:
+    """Where the order called *name* is saved, or None for an unusable name."""
+    safe = saved_order_name(name)
+    return Path(folder) / f"{safe}{SAVED_ORDER_SUFFIX}" if safe else None
+
+
+def list_saved_orders(folder: Path) -> list[str]:
+    """The saved orders' names, in name order (any case); [] when none."""
+    try:
+        files = [p for p in Path(folder).iterdir() if p.suffix.lower() == SAVED_ORDER_SUFFIX]
+    except OSError:
+        return []
+    return sorted((p.stem for p in files if p.is_file()), key=lambda n: (n.casefold(), n))
+
+
+def save_order(folder: Path, name: str, lines: list[OrderLine]) -> Path:
+    """Write *lines* as the order called *name*, replacing one of that name,
+    in one step (atomic_io). Raises ValueError for an unusable name and
+    OSError when the file cannot be written."""
+    path = saved_order_path(folder, name)
+    if path is None:
+        raise ValueError(f"Unusable order name: {name!r}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = {"version": 1, "name": path.stem, "lines": [line.to_dict() for line in lines]}
+    atomic_write_text(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    return path
+
+
+def read_saved_order(folder: Path, name: str) -> list[dict]:
+    """The saved lines of the order called *name*, as :func:`load_order`
+    takes them; [] when it is missing or unreadable."""
+    path = saved_order_path(folder, name)
+    if path is None:
+        return []
+    try:
+        data = json.loads(read_bytes_retrying(path).decode("utf-8"))
+    except (OSError, ValueError):
+        return []
+    lines = data.get("lines") if isinstance(data, dict) else None
+    return lines if isinstance(lines, list) else []

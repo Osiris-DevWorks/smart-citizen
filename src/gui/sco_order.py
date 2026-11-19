@@ -24,12 +24,14 @@ only the search box ever takes the keyboard (#523): everything here is
 
 from __future__ import annotations
 
+import logging
 from typing import Callable, Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -48,7 +50,8 @@ from PyQt6.QtWidgets import (
 
 from src.utils import crafting_order as co
 from src.utils.i18n import tr
-from src.utils.mining_catalog import CraftingIndex, MineralInfo, ore_key
+from src.utils.mining_catalog import CraftingIndex, MineralInfo, is_unknown_material, ore_key
+from src.utils.owned_items import normalize_item_name
 from src.utils.settings import AppSettings
 
 # How many search results show at once, and how tall that list may get.
@@ -56,9 +59,17 @@ SEARCH_LIMIT = 30
 SEARCH_LIST_HEIGHT = 140
 # Clear asks to be clicked again within this time.
 CLEAR_CONFIRM_MS = 3000
+logger = logging.getLogger(__name__)
+
 # Bonus colours: better, worse (neutral takes the panel's secondary colour).
 BONUS_UP = "#5CFF8A"
 BONUS_DOWN = "#FF7A7A"
+
+
+def _owned_key(name: str) -> str:
+    """How an owned name and a blueprint's item name are matched: the
+    Blueprint Tracker's own normalizer (tags, [Owned], aliases), any case."""
+    return normalize_item_name(name).casefold()
 
 
 def _no_focus(*widgets: QWidget) -> None:
@@ -289,6 +300,8 @@ class OrderSection(QWidget):
         # Loaded once the catalog holds blueprints, so an older index (or
         # none yet) never empties the saved order.
         self._loaded = False
+        # A saved-order message (a bad name, a failed save), shown in the status line.
+        self._status_note = ""
         self._owned: set[str] = set()
         self._mineral_by_material: dict[str, MineralInfo] = {}
         self._tooltip_for: Callable[[MineralInfo], str] = lambda info: info.name
@@ -329,11 +342,40 @@ class OrderSection(QWidget):
         summary_layout.addWidget(self._summary_tree)
         self._status = _wrapped(secondary=True)
 
-        # Add an item.
         from src.gui.sco_overlay import DrawerSearch  # the drawer's own search box
+
+        # Saved orders: a name to save the order under (<name>.json), and a
+        # list of the saved ones to load.
+        self._save_name = DrawerSearch()
+        self._save_name.setMaxLength(co.SAVED_ORDER_NAME_MAX)
+        self._save_name.returnPressed.connect(self._save_named)
+        self._save_name.textChanged.connect(lambda _t: self._disarm_save())
+        self._save_btn = _button(slot=self._save_named)
+        self._save_armed = False
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.timeout.connect(self._disarm_save)
+        self._saved_orders = QComboBox()
+        self._saved_orders.currentIndexChanged.connect(lambda _i: self._refresh_saved_buttons())
+        _no_focus(self._saved_orders, self._saved_orders.view())
+        self._load_btn = _button(slot=self._load_named)
+        save_row = QHBoxLayout()
+        save_row.addWidget(self._save_name, 1)
+        save_row.addWidget(self._save_btn)
+        load_row = QHBoxLayout()
+        load_row.addWidget(self._saved_orders, 1)
+        load_row.addWidget(self._load_btn)
+        summary_layout.addLayout(save_row)
+        summary_layout.addLayout(load_row)
+
+        # Add an item.
 
         self.search = DrawerSearch()
         self.search.textChanged.connect(self._render_results)
+        self._owned_only = QCheckBox()
+        self._owned_only.setChecked(AppSettings.get_sco_order_owned_only())
+        self._owned_only.toggled.connect(self._on_owned_only_toggled)
+        _no_focus(self._owned_only)
         self._results = QListWidget()
         self._results.setMaximumHeight(SEARCH_LIST_HEIGHT)
         self._results.itemClicked.connect(self._on_result_clicked)
@@ -351,6 +393,7 @@ class OrderSection(QWidget):
         content_layout.addWidget(self._summary_body)
         content_layout.addWidget(self._status)
         content_layout.addWidget(self.search)
+        content_layout.addWidget(self._owned_only)
         content_layout.addWidget(self._results)
         content_layout.addLayout(self._lines_box)
         content_layout.addStretch()
@@ -386,12 +429,16 @@ class OrderSection(QWidget):
             self._loaded = True
         self._rebuild_cards()
         self._render_results()
+        self._refresh_saved_buttons()
 
     def set_owned(self, owned) -> None:
-        """The owned blueprint names, for the not-owned mark."""
-        self._owned = {name.casefold() for name in owned}
+        """The owned blueprint names, for the not-owned mark and the Owned
+        only filter. Called on every owned change (the Blueprint Tracker,
+        the drawer's own list, a log scan), so both follow at once."""
+        self._owned = {_owned_key(name) for name in owned}
         for card in self._cards:
             card.refresh()
+        self._render_results()
 
     def lines(self) -> list[co.OrderLine]:
         return list(self._lines)
@@ -399,10 +446,19 @@ class OrderSection(QWidget):
     # -- helpers the cards use -------------------------------------------
 
     def is_owned(self, name: str) -> bool:
-        return name.casefold() in self._owned
+        return _owned_key(name) in self._owned
 
     def material_name(self, key: str) -> str:
+        if is_unknown_material(key):
+            return tr("sco.order_unknown_material")
         return self.index.material_name(key)
+
+    def _material_names(self) -> dict[str, str]:
+        """Every slot material's display name, commodities and items alike."""
+        keys = set(self.index.materials) | set(self.index.item_materials)
+        for bp in self.index.blueprints:
+            keys.update(slot["mat"] for slot in bp["s"])
+        return {key: self.material_name(key) for key in keys}
 
     def material_tooltip(self, key: str) -> str:
         info = self._mineral_by_material.get(key)
@@ -530,6 +586,7 @@ class OrderSection(QWidget):
         has_lines = bool(self._lines)
         for btn in (self._copy_btn, self._watch_btn, self._clear_btn):
             btn.setEnabled(has_lines)
+        self._refresh_saved_buttons()
         self._watch_btn.setEnabled(bool(self._watchable(totals)))
         self._fit_summary()
         self._status.setText(self._status_text())
@@ -538,7 +595,7 @@ class OrderSection(QWidget):
     def _status_text(self) -> str:
         if not self.index.blueprints:
             return tr("sco.order_no_data")
-        return ""
+        return self._status_note
 
     def _fit_summary(self) -> None:
         """Size the tree to its rows, so the page scrolls as one."""
@@ -571,7 +628,7 @@ class OrderSection(QWidget):
         )
 
     def _copy(self) -> None:
-        names = {key: self.material_name(key) for key in self.index.materials}
+        names = self._material_names()
         text = co.order_text(self._totals(), self._lines, self._by_key, names, self.volume)
         QApplication.clipboard().setText(text)
         self._copy_btn.setText(tr("sco.order_copied"))
@@ -604,6 +661,88 @@ class OrderSection(QWidget):
         self._disarm_clear()
         self.clear()
 
+    # -- saved orders ------------------------------------------------------
+
+    def showEvent(self, event):  # noqa: N802 (Qt's name)
+        """Read the orders folder when the section is shown, not when the
+        drawer is built, so a file added by hand shows up too."""
+        super().showEvent(event)
+        try:
+            self.refresh_saved_orders()
+        except Exception as exc:  # a Qt override: an exception here ends the app
+            logger.warning(f"Could not list the saved crafting orders: {exc}")
+
+    def refresh_saved_orders(self, select: str = "") -> None:
+        """Fill the saved-orders list from the orders folder, keeping the
+        current choice (or choosing *select*)."""
+        current = select or self._saved_orders.currentText()
+        names = co.list_saved_orders(AppSettings.get_sco_orders_dir())
+        self._saved_orders.blockSignals(True)
+        self._saved_orders.clear()
+        self._saved_orders.addItems(names)
+        self._saved_orders.setCurrentIndex(names.index(current) if current in names else -1)
+        self._saved_orders.blockSignals(False)
+        self._refresh_saved_buttons()
+
+    def _refresh_saved_buttons(self) -> None:
+        self._save_btn.setEnabled(self._loaded and bool(self._lines))
+        self._load_btn.setEnabled(self._loaded and self._saved_orders.currentIndex() >= 0)
+        self._saved_orders.setEnabled(self._saved_orders.count() > 0)
+
+    def _save_named(self) -> None:
+        """Save the order as <name>.json. A name already saved asks for a
+        second click within CLEAR_CONFIRM_MS, as Clear does."""
+        if not (self._loaded and self._lines):
+            return
+        folder = AppSettings.get_sco_orders_dir()
+        path = co.saved_order_path(folder, self._save_name.text())
+        if path is None:
+            self._show_status(tr("sco.order_save_name_needed"))
+            return
+        if path.exists() and not self._save_armed:
+            self._save_armed = True
+            self._save_btn.setText(tr("sco.order_save_replace"))
+            self._save_timer.start(CLEAR_CONFIRM_MS)
+            return
+        self._disarm_save()
+        try:
+            co.save_order(folder, path.stem, self._lines)
+        except OSError as exc:
+            logger.warning(f"Could not save the crafting order {path}: {exc}")
+            self._show_status(tr("sco.order_save_failed", file=str(path)))
+            return
+        self._show_status("")
+        self._save_name.clear()
+        self.refresh_saved_orders(select=path.stem)
+        self._save_btn.setText(tr("sco.order_saved"))
+        QTimer.singleShot(2000, self._disarm_save)
+
+    def _disarm_save(self) -> None:
+        self._save_armed = False
+        self._save_timer.stop()
+        self._save_btn.setText(tr("sco.order_save"))
+
+    def _load_named(self) -> None:
+        """Replace the order with the saved one picked in the list."""
+        name = self._saved_orders.currentText()
+        if not (self._loaded and name):
+            return
+        raw = co.read_saved_order(AppSettings.get_sco_orders_dir(), name)
+        lines = co.load_order(raw, self._by_key)
+        if not lines:
+            self._show_status(tr("sco.order_load_empty", name=name))
+            return
+        self._show_status("")
+        self._lines = lines
+        self._expanded.clear()
+        self._rebuild_cards()
+        self._save()
+
+    def _show_status(self, text: str) -> None:
+        self._status_note = text
+        self._status.setText(self._status_text())
+        self._status.setVisible(bool(self._status.text()))
+
     def _disarm_clear(self) -> None:
         self._clear_armed = False
         self._clear_timer.stop()
@@ -613,8 +752,11 @@ class OrderSection(QWidget):
 
     def _render_results(self) -> None:
         self._results.clear()
-        names = {key: self.material_name(key) for key in self.index.materials}
-        found = co.search_blueprints(self.index.blueprints, self.search.text(), names, SEARCH_LIMIT)
+        names = self._material_names()
+        keep = (lambda bp: self.is_owned(bp["n"])) if self._owned_only.isChecked() else None
+        found = co.search_blueprints(
+            self.index.blueprints, self.search.text(), names, SEARCH_LIMIT, keep
+        )
         for bp in found:
             item = QListWidgetItem(bp["n"])
             item.setData(Qt.ItemDataRole.UserRole, bp["k"])
@@ -626,6 +768,10 @@ class OrderSection(QWidget):
             self._results.addItem(item)
         self._results.setVisible(bool(found))
 
+    def _on_owned_only_toggled(self, checked: bool) -> None:
+        AppSettings.set_sco_order_owned_only(checked)
+        self._render_results()
+
     def _on_result_clicked(self, item: QListWidgetItem) -> None:
         bp = self._by_key.get(item.data(Qt.ItemDataRole.UserRole))
         if bp is not None:
@@ -634,6 +780,8 @@ class OrderSection(QWidget):
 
     def retranslate_ui(self) -> None:
         self.search.setPlaceholderText(tr("sco.order_search_placeholder"))
+        self._owned_only.setText(tr("sco.order_owned_only"))
+        self._owned_only.setToolTip(tr("sco.order_owned_only_tooltip"))
         self._volume_btn.setText(self._volume_text())
         self._volume_btn.setToolTip(tr("sco.order_volume_tooltip"))
         self._copy_btn.setText(tr("sco.order_copy"))
@@ -642,5 +790,11 @@ class OrderSection(QWidget):
         self._watch_btn.setToolTip(tr("sco.order_watch_tooltip"))
         self._disarm_clear()
         self._clear_btn.setToolTip(tr("sco.order_clear_tooltip"))
+        self._save_name.setPlaceholderText(tr("sco.order_save_placeholder"))
+        self._disarm_save()
+        self._save_btn.setToolTip(tr("sco.order_save_tooltip"))
+        self._saved_orders.setPlaceholderText(tr("sco.order_saved_orders"))
+        self._load_btn.setText(tr("sco.order_load"))
+        self._load_btn.setToolTip(tr("sco.order_load_tooltip"))
         self._rebuild_cards()
         self._render_results()

@@ -69,6 +69,9 @@ TEST_SECTIONS: list[dict] = [
             "Show SCU and Show cSCU switch the amounts. Copy, then paste in Discord: the order and its materials.",
             "Watch minerals: the Minerals tab ticks the order's minerals. Clear needs a second click.",
             "Restart the app: the order is still there.",
+            "Search NDB-30 (and other items you know): they show whether you own them or not. Tick Owned only: only owned blueprints are listed.",
+            "With the overlay running, mark a blueprint owned in the Blueprint Tracker tab: the Order card's not-owned mark goes at once.",
+            "Type a name, click Save, then Clear. Pick the name under Saved orders and click Load: the order comes back. The file is in your data folder under orders.",
         ],
     },
     {

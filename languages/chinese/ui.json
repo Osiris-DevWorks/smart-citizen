@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "尚未拥有蓝图"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "仅已拥有"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "只搜索你已拥有的蓝图。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "未知材料"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "订单名称"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "保存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "以你输入的名称保存此订单。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "替换？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "已保存"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "请先输入订单名称。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "无法将订单保存到：\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "已保存的订单"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "加载"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "用列表中选中的已保存订单替换此订单。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "“{name}”中没有当前游戏数据认识的物品。"
+    },
     "order_pick": {
       "ht": "",
       "at": "从这 {of} 个中选用 {need} 个："

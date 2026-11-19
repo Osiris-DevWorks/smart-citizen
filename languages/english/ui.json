@@ -3428,6 +3428,62 @@
       "ht": "Blueprint not owned yet",
       "at": ""
     },
+    "order_owned_only": {
+      "ht": "Owned only",
+      "at": ""
+    },
+    "order_owned_only_tooltip": {
+      "ht": "Search only the blueprints you own.",
+      "at": ""
+    },
+    "order_unknown_material": {
+      "ht": "Unknown material",
+      "at": ""
+    },
+    "order_save_placeholder": {
+      "ht": "Order name",
+      "at": ""
+    },
+    "order_save": {
+      "ht": "Save",
+      "at": ""
+    },
+    "order_save_tooltip": {
+      "ht": "Save this order under the name you typed.",
+      "at": ""
+    },
+    "order_save_replace": {
+      "ht": "Replace?",
+      "at": ""
+    },
+    "order_saved": {
+      "ht": "Saved",
+      "at": ""
+    },
+    "order_save_name_needed": {
+      "ht": "Type a name for the order first.",
+      "at": ""
+    },
+    "order_save_failed": {
+      "ht": "Could not save the order to:\n{file}",
+      "at": ""
+    },
+    "order_saved_orders": {
+      "ht": "Saved orders",
+      "at": ""
+    },
+    "order_load": {
+      "ht": "Load",
+      "at": ""
+    },
+    "order_load_tooltip": {
+      "ht": "Replace this order with the saved one picked in the list.",
+      "at": ""
+    },
+    "order_load_empty": {
+      "ht": "\"{name}\" has no items this game data knows.",
+      "at": ""
+    },
     "order_pick": {
       "ht": "Uses {need} of these {of}:",
       "at": ""

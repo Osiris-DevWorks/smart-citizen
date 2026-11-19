@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "Plan pas encore possédé"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Possédés uniquement"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Chercher uniquement parmi les plans que vous possédez."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Matériau inconnu"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nom de la commande"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Enregistrer"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Enregistrer cette commande sous le nom saisi."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Remplacer ?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Enregistrée"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Saisissez d'abord un nom pour la commande."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Impossible d'enregistrer la commande dans :\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Commandes enregistrées"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Charger"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Remplacer cette commande par celle choisie dans la liste."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "« {name} » ne contient aucun objet connu de ces données de jeu."
+    },
     "order_pick": {
       "ht": "",
       "at": "Utilise {need} de ces {of} :"

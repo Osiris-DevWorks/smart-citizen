@@ -222,7 +222,9 @@ class TestGeneratorSlots:
         assert armor["p"] == [{"n": 3, "k": 2}]
         assert [s.get("g") for s in armor["s"]] == [None, 0, 0, 0]
 
-    def test_unresolved_material_leaves_the_blueprint_out(self, gen, records):
+    def test_a_material_no_carryable_names_keeps_the_blueprint(self, gen, records):
+        """Amr's NDB-30 report: dropping such blueprints hid most of the
+        catalogue, which read as an owned-only filter."""
         (
             records
             / "entities"
@@ -231,7 +233,22 @@ class TestGeneratorSlots:
             / "carryable_1h_commodity_metal_copper.xml"
         ).unlink()
         _index, order = _scan(gen, records)
-        assert [bp["k"] for bp in order["blueprints"]] == ["bp_craft_test_rifle"]
+        assert sorted(bp["k"] for bp in order["blueprints"]) == [
+            "bp_craft_test_armor",
+            "bp_craft_test_rifle",
+        ]
+        armor = next(bp for bp in order["blueprints"] if bp["k"] == "bp_craft_test_armor")
+        assert armor["s"][1]["mat"] == f"unknown:{COPPER}"
+        assert order["mnames"] == {}
+
+    def test_an_item_material_is_named_from_its_entity(self, gen, records):
+        carry = records / "entities" / "scitem" / "carryables"
+        (carry / "harvestable_mineral_1h_hadanite.xml").unlink()
+        names = {OUTPUT: "Test Rifle", HADANITE: "Hadanite"}
+        _index, order = _scan(gen, records, entity_names=names)
+        rifle = next(bp for bp in order["blueprints"] if bp["k"] == "bp_craft_test_rifle")
+        assert rifle["s"][2]["mat"] == f"item:{HADANITE}"
+        assert order["mnames"] == {f"item:{HADANITE}": "Hadanite"}
 
     def test_index_file_round_trip(self, gen, records, tmp_path):
         index, order = _scan(gen, records)
@@ -244,6 +261,14 @@ class TestGeneratorSlots:
         assert loaded.blueprints == order["blueprints"]
         assert loaded.curves == order["curves"] and loaded.stats == order["stats"]
         assert loaded.material_name("gold") == "Gold"
+
+    def test_item_materials_round_trip(self, tmp_path):
+        path = tmp_path / "crafting_index.json"
+        write_crafting_index(path, {}, {"blueprints": [], "mnames": {"item:x": "Widget"}})
+        loaded = load_crafting_index(path)
+        assert loaded.item_materials == {"item:x": "Widget"}
+        assert loaded.material_name("item:x") == "Widget"
+        assert loaded.material_name("unknown:y") == "unknown:y"
 
     def test_a_version_1_index_reads_with_no_blueprints(self, tmp_path):
         path = tmp_path / "crafting_index.json"
@@ -417,6 +442,9 @@ class TestText:
             "armor"
         ]
         assert co.search_blueprints([BP], "  ") == []
+        keep = lambda bp: bp["k"] == "rifle"  # noqa: E731
+        found = co.search_blueprints([BP, PICK], "test", names, keep=keep)
+        assert [bp["k"] for bp in found] == ["rifle"]
 
     def test_order_text(self):
         line = co.new_line(BP)
@@ -426,3 +454,36 @@ class TestText:
         assert text.splitlines()[0] == "Crafting order: 2 crafts"
         assert "- 2 x Test Rifle" in text
         assert "- Tungsten: 12 cSCU (12 cSCU at quality 500+)" in text
+
+
+class TestSavedOrders:
+    def test_names_are_made_safe_for_windows(self):
+        assert co.saved_order_name("  Mining  run #2 ") == "Mining run #2"
+        assert co.saved_order_name('a/b:c?"<>|*') == "abc"
+        assert co.saved_order_name("trailing... ") == "trailing"
+        assert co.saved_order_name("CON") == "" and co.saved_order_name("com1.txt") == ""
+        assert co.saved_order_name("") == "" and co.saved_order_name("???") == ""
+        assert len(co.saved_order_name("x" * 200)) == co.SAVED_ORDER_NAME_MAX
+
+    def test_save_list_and_read(self, tmp_path):
+        folder = tmp_path / "orders"
+        assert co.list_saved_orders(folder) == []
+        line = co.new_line(BP)
+        line.count = 3
+        path = co.save_order(folder, "Rifles: week 1", [line])
+        assert path == folder / "Rifles week 1.json"
+        co.save_order(folder, "armor", [co.new_line(PICK)])
+        (folder / "notes.txt").write_text("x", encoding="utf-8")
+        assert co.list_saved_orders(folder) == ["armor", "Rifles week 1"]
+        raw = co.read_saved_order(folder, "Rifles week 1")
+        assert [(line.key, line.count) for line in co.load_order(raw, BY_KEY)] == [("rifle", 3)]
+        # Saving under the same name replaces it.
+        co.save_order(folder, "Rifles week 1", [co.new_line(PICK)])
+        assert [r["key"] for r in co.read_saved_order(folder, "Rifles week 1")] == ["armor"]
+
+    def test_bad_input(self, tmp_path):
+        with pytest.raises(ValueError):
+            co.save_order(tmp_path, "CON", [])
+        assert co.read_saved_order(tmp_path, "missing") == []
+        (tmp_path / "broken.json").write_text("{", encoding="utf-8")
+        assert co.read_saved_order(tmp_path, "broken") == []

@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "Plano aún no obtenido"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Solo los que tengo"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Buscar solo entre los planos que tienes."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Material desconocido"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nombre del pedido"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Guardar"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Guarda este pedido con el nombre que escribiste."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "¿Reemplazar?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Guardado"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Escribe primero un nombre para el pedido."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "No se pudo guardar el pedido en:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Pedidos guardados"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Cargar"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Reemplaza este pedido por el guardado que elegiste en la lista."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "«{name}» no tiene objetos que estos datos del juego conozcan."
+    },
     "order_pick": {
       "ht": "",
       "at": "Usa {need} de estos {of}:"

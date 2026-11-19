@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "尚未擁有藍圖"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "僅已擁有"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "只搜尋你已擁有的藍圖。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "未知材料"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "訂單名稱"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "儲存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "以你輸入的名稱儲存此訂單。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "取代？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "已儲存"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "請先輸入訂單名稱。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "無法將訂單儲存到：\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "已儲存的訂單"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "載入"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "用清單中選取的已儲存訂單取代此訂單。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "「{name}」中沒有目前遊戲資料認得的物品。"
+    },
     "order_pick": {
       "ht": "",
       "at": "從這 {of} 個中選用 {need} 個："

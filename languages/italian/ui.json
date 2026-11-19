@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "Progetto non ancora posseduto"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Solo posseduti"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Cerca solo tra i progetti che possiedi."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Materiale sconosciuto"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nome dell'ordine"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Salva"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Salva questo ordine con il nome inserito."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Sostituire?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Salvato"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Inserisci prima un nome per l'ordine."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Impossibile salvare l'ordine in:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Ordini salvati"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Carica"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Sostituisci questo ordine con quello salvato scelto nell'elenco."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "\"{name}\" non contiene oggetti noti a questi dati di gioco."
+    },
     "order_pick": {
       "ht": "",
       "at": "Usa {need} di questi {of}:"

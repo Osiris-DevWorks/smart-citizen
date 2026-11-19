@@ -3630,6 +3630,62 @@
       "ht": "",
       "at": "Blueprint ainda não obtido"
     },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Somente os que tenho"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Pesquisar apenas os projetos que você possui."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Material desconhecido"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nome do pedido"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Salvar"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Salve este pedido com o nome que você digitou."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Substituir?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Salvo"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Digite primeiro um nome para o pedido."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Não foi possível salvar o pedido em:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Pedidos salvos"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Carregar"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Substitua este pedido pelo salvo escolhido na lista."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "\"{name}\" não tem itens que estes dados do jogo conheçam."
+    },
     "order_pick": {
       "ht": "",
       "at": "Usa {need} destes {of}:"

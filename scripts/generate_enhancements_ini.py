@@ -143,9 +143,10 @@ try:
     from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
     from src.utils.mining_catalog import (
         COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES,
-        CRAFTING_INDEX_FILE, write_crafting_index,
+        CRAFTING_INDEX_FILE, ORDER_ITEM_MATERIAL, ORDER_UNKNOWN_MATERIAL, write_crafting_index,
     )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    ORDER_ITEM_MATERIAL, ORDER_UNKNOWN_MATERIAL = "item:", "unknown:"
     MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
     ORE_SIGNATURES = {}  # type: ignore[assignment]
     _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
@@ -5288,6 +5289,7 @@ def _build_crafting_order(
     uuid_names: dict[str, str],
     stat_names: dict[str, tuple[str, str]],
     loc_index: dict[str, str],
+    entity_names: dict[str, str] | None = None,
 ) -> dict:
     """The SCO Order tab's half of ``crafting_index.json``.
 
@@ -5296,16 +5298,25 @@ def _build_crafting_order(
     "add": bool}]}``. A slot is ``{"n": name, "mat": material key (the
     ``materials`` keys), "u": "scu"|"unit", "q": amount, "min": lowest
     quality, "m": [[stat key, curve index]], "g": pick index}``. Curves are
-    shared by index to keep the file small. A blueprint with a material no
-    carryable names is left out (its totals would be wrong), and so is a
-    same-named variant with the same recipe (one per paint, say).
+    shared by index to keep the file small. A same-named variant with the
+    same recipe (one per paint, say) is left out.
+
+    Every other blueprint is kept, whatever its materials. A material no
+    carryable names is keyed by its uuid: ``item:<uuid>`` for an item cost
+    whose entity has a name (written to ``"mnames"``, key to display name,
+    since it is no commodity), ``unknown:<uuid>`` otherwise, which the
+    drawer shows as an unknown material. Dropping those blueprints hid most
+    of the catalogue (NDB-30 among them), which read as an owned-only
+    filter.
     """
     curves: list[dict] = []
     curve_index: dict[str, int] = {}
     stats: dict[str, str] = {}
     blueprints: list[dict] = []
     seen: dict[str, set[str]] = defaultdict(set)
-    unresolved = 0
+    entity_names = entity_names or {}
+    mnames: dict[str, str] = {}
+    unknown = 0
     for key, category, item_name, facts in order_records:
         if "$templates" in category.lower():
             continue
@@ -5313,7 +5324,13 @@ def _build_crafting_order(
         for raw in facts["slots"]:
             material = uuid_names.get(raw["mat"])
             if material is None:
-                break
+                item = entity_names.get(raw["mat"], "").strip()
+                if item:
+                    material = f"{ORDER_ITEM_MATERIAL}{raw['mat']}"
+                    mnames[material] = _strip_cig_size_prefix(item)
+                else:
+                    material = f"{ORDER_UNKNOWN_MATERIAL}{raw['mat']}"
+                    unknown += 1
             mods = []
             for mod in raw["mods"]:
                 stat = stat_names.get(mod["stat"])
@@ -5334,21 +5351,18 @@ def _build_crafting_order(
             if "g" in raw:
                 slot["g"] = raw["g"]
             slots.append(slot)
-        else:
-            entry = {"k": key, "n": item_name, "c": _humanize_craft_category(category),
-                     "s": slots, "p": facts["picks"]}
-            same = json.dumps([entry["c"], slots, entry["p"]], sort_keys=True)
-            if same in seen[item_name.casefold()]:
-                continue
-            seen[item_name.casefold()].add(same)
-            blueprints.append(entry)
+        entry = {"k": key, "n": item_name, "c": _humanize_craft_category(category),
+                 "s": slots, "p": facts["picks"]}
+        same = json.dumps([entry["c"], slots, entry["p"]], sort_keys=True)
+        if same in seen[item_name.casefold()]:
             continue
-        unresolved += 1
-    if unresolved:
-        logger.info(f"Crafting order: {unresolved} blueprints left out, "
-                    f"a material named no carryable")
+        seen[item_name.casefold()].add(same)
+        blueprints.append(entry)
+    logger.info(f"Crafting order: {len(blueprints)} blueprints, {len(mnames)} item materials, "
+                f"{unknown} slots with a material nothing names")
     blueprints.sort(key=lambda b: (b["n"].casefold(), b["k"]))
-    return {"blueprints": blueprints, "stats": dict(sorted(stats.items())), "curves": curves}
+    return {"blueprints": blueprints, "stats": dict(sorted(stats.items())), "curves": curves,
+            "mnames": dict(sorted(mnames.items()))}
 
 
 def scan_crafting_blueprints(
@@ -5469,7 +5483,8 @@ def scan_crafting_blueprints(
                      else bp_dir.parent.parent / "craftedproperties")
         stat_names = _crafted_property_names(props_dir, loc_index, xml_path_index, records_dir)
         crafting_order.update(
-            _build_crafting_order(order_records, uuid_names, stat_names, loc_index))
+            _build_crafting_order(order_records, uuid_names, stat_names, loc_index,
+                                  entity_names))
 
     logger.info(
         f"Crafting: {len(commodity_items)} commodities discovered from blueprints; "

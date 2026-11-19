@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt  # noqa: E402
 from PyQt6.QtWidgets import QApplication, QSlider  # noqa: E402
 
 from src.gui.sco_order import OrderSection  # noqa: E402
+from src.utils import crafting_order as co  # noqa: E402
 from src.utils.i18n import tr  # noqa: E402
 from src.utils.mining_catalog import CraftingIndex  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
@@ -166,6 +167,95 @@ def test_not_owned_is_marked(section):
     assert not section._cards[0]._owned.isVisibleTo(section._cards[0])
 
 
+def test_owned_follows_at_once_and_matches_tagged_names(section):
+    section.search.setText("test")
+    section.add(RIFLE)
+    # A tracker name with a Tag Builder tag still matches (the normalizer).
+    section.set_owned({"[Mil-S1-A] Test Rifle"})
+    assert not section._cards[0]._owned.isVisibleTo(section._cards[0])
+    assert tr("sco.order_not_owned") not in section._results.item(1).toolTip()
+    section.set_owned(set())
+    assert section._cards[0]._owned.text() == tr("sco.order_not_owned")
+    assert tr("sco.order_not_owned") in section._results.item(1).toolTip()
+
+
+def test_owned_only_is_a_saved_toggle_off_by_default(section):
+    assert not section._owned_only.isChecked()
+    section.set_owned({"test rifle"})
+    section.search.setText("test")
+    assert section._results.count() == 2
+    section._owned_only.setChecked(True)
+    assert [section._results.item(i).text() for i in range(section._results.count())] == [
+        "Test Rifle"
+    ]
+    assert AppSettings.get_sco_order_owned_only() is True
+    # Real time: owning the armor puts it in the filtered list.
+    section.set_owned({"test rifle", "test armor"})
+    assert section._results.count() == 2
+
+
+def test_unknown_and_item_materials_are_named(qapp, tmp_profile):
+    index = _index()
+    gem = {
+        "k": "gem",
+        "n": "Test Gem",
+        "c": "Rifles",
+        "s": [
+            {"n": "Core", "mat": "item:abc", "u": "unit", "q": 1, "min": 0, "m": []},
+            {"n": "Shell", "mat": "unknown:def", "u": "scu", "q": 0.1, "min": 0, "m": []},
+        ],
+        "p": [],
+    }
+    index.blueprints = [gem]
+    index.item_materials = {"item:abc": "Widget"}
+    widget = OrderSection()
+    widget.set_catalog(index, {}, lambda info: "")
+    widget.add(gem)
+    unknown = tr("sco.order_unknown_material")
+    assert sorted(_summary_rows(widget)) == sorted([f"{unknown}: 10 cSCU", "Widget: 1 pcs"])
+    widget.search.setText("widget")
+    assert widget._results.count() == 1
+    widget.deleteLater()
+
+
+def test_save_and_load_a_named_order(section):
+    folder = AppSettings.get_sco_orders_dir()
+    assert not section._save_btn.isEnabled() and not section._load_btn.isEnabled()
+    section.add(RIFLE, 2)
+    section._save_name.setText("My: run")
+    section._save_btn.click()
+    assert (folder / "My run.json").is_file()
+    assert section._save_name.text() == ""
+    assert section._saved_orders.currentText() == "My run"
+    # Load replaces the order with the saved one.
+    section.clear()
+    section.add(ARMOR)
+    section._load_btn.click()
+    assert [(line.key, line.count) for line in section.lines()] == [("rifle", 2)]
+    assert [row["key"] for row in AppSettings.get_sco_order()] == ["rifle"]
+
+
+def test_saving_over_a_name_needs_a_second_click(section):
+    section.add(RIFLE)
+    section._save_name.setText("run")
+    section._save_btn.click()
+    section.add(ARMOR)
+    section._save_name.setText("run")
+    section._save_btn.click()
+    assert section._save_btn.text() == tr("sco.order_save_replace")
+    assert len(co.read_saved_order(AppSettings.get_sco_orders_dir(), "run")) == 1
+    section._save_btn.click()
+    assert len(co.read_saved_order(AppSettings.get_sco_orders_dir(), "run")) == 2
+
+
+def test_an_unusable_name_says_so(section):
+    section.add(RIFLE)
+    section._save_name.setText("???")
+    section._save_btn.click()
+    assert section._status.text() == tr("sco.order_save_name_needed")
+    assert co.list_saved_orders(AppSettings.get_sco_orders_dir()) == []
+
+
 def test_only_the_search_takes_the_keyboard(section):
     from PyQt6.QtWidgets import QWidget
 
@@ -175,7 +265,6 @@ def test_only_the_search_takes_the_keyboard(section):
         w
         for w in section.findChildren(QWidget)
         if w.focusPolicy() != Qt.FocusPolicy.NoFocus
-        and w is not section.search
-        and not section.search.isAncestorOf(w)
+        and not any(box is w or box.isAncestorOf(w) for box in (section.search, section._save_name))
     ]
     assert takers == []
