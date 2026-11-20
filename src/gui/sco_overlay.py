@@ -5,9 +5,10 @@ Two windows, because they need opposite input behaviour:
 - ``ScanLabelWindow`` shows the decoded mining signature ("2 x Bexalite")
   just under the scanner's signature readout. Clicks pass straight through
   it to the game.
-- ``BlueprintDrawer`` is a stack of three icon tabs on a screen edge, one per
+- ``BlueprintDrawer`` is a stack of icon tabs on a screen edge, one per
   searchable section: blueprints with owned checkboxes, minerals by star
-  system and location, and crafting (mineral to items and back). A tab opens
+  system and location, crafting (mineral to items and back) and the Item
+  Finder (the shops that sell an item, from UEX). A tab opens
   the drawer straight to its section. It
   has to take clicks, so using it takes focus from the game; the player
   needs a free cursor.
@@ -29,7 +30,9 @@ title only), the primary screen when the game is not found (#573).
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
-(``src/utils/mining_catalog.py``). Owned changes made in the drawer go back out through
+(``src/utils/mining_catalog.py``), and the Item Finder's shop data
+(``src/utils/uex_shops.py``, loaded off the GUI thread by
+``workers.UexShopDataWorker``). Owned changes made in the drawer go back out through
 ``owned_toggled`` so ``MainWindow`` stays the one writer of the owned set.
 """
 from __future__ import annotations
@@ -75,6 +78,7 @@ from src.utils.mining_signatures import (
 )
 from src.utils.sco_digit_reader import DIGIT_HEIGHT_AT_1600, read_signature
 from src.utils.settings import AppSettings
+from src.utils.uex_shops import UEX_SITE, ShopData, ShopLocation
 
 logger = logging.getLogger(__name__)
 
@@ -607,12 +611,21 @@ def _order_icon() -> QPainterPath:
     return path
 
 
+def _finder_icon() -> QPainterPath:
+    """A magnifying glass, handle bottom right: the item finder."""
+    path = QPainterPath()
+    path.addEllipse(QPointF(10, 10), 6, 6)
+    _polyline(path, (14.5, 14.5), (20, 20))
+    return path
+
+
 # Drawer sections in handle order, each with its icon on a 24-unit grid.
 SECTION_ICONS = {
     "blueprints": _blueprints_icon,
     "minerals": _minerals_icon,
     "crafting": _crafting_icon,
     "order": _order_icon,
+    "finder": _finder_icon,
 }
 
 
@@ -795,7 +808,7 @@ class DrawerSearch(QLineEdit):
 
 class BlueprintDrawer(QWidget):
     """A stack of section tabs on a screen edge (blueprints, minerals,
-    crafting). A tab opens the see-through panel straight to its section;
+    crafting, item finder). A tab opens the see-through panel straight to its section;
     the open section's tab closes it again."""
 
     owned_toggled = pyqtSignal(str, bool)
@@ -876,10 +889,21 @@ class BlueprintDrawer(QWidget):
         self._order = OrderSection()
         self._order.watch_requested.connect(self._watch_ores)
 
+        # Item Finder (3.1.0): the shops that sell an item, from UEX.
+        self._shops: Optional[ShopData] = None
+        self._shops_error = ""
+        self._finder_search, self._finder_tree, finder_page = self._search_page(
+            self._render_finder)
+        self._finder_source = QLabel(finder_page)
+        self._finder_source.setProperty("role", "secondary")
+        self._finder_source.setWordWrap(True)
+        finder_page.layout().addWidget(self._finder_source)
+
         # The tabs pick the page, so the panel only needs a stack of them.
         self._sections = QStackedWidget(self._panel)
         self._section_pages = dict(zip(
-            SECTION_ICONS, (bp_page, mineral_page, crafting_page, self._order)))
+            SECTION_ICONS,
+            (bp_page, mineral_page, crafting_page, self._order, finder_page)))
         for page in self._section_pages.values():
             self._sections.addWidget(page)
         self._current: Optional[str] = None
@@ -923,6 +947,7 @@ class BlueprintDrawer(QWidget):
         self._owned_only.setText(tr("sco.drawer_owned_only"))
         self._mineral_search.setPlaceholderText(tr("sco.minerals_search_placeholder"))
         self._crafting_search.setPlaceholderText(tr("sco.crafting_search_placeholder"))
+        self._finder_search.setPlaceholderText(tr("sco.finder_search_placeholder"))
         self._decoder_check.setText(tr("overlay.scan_decoder"))
         self._decoder_check.setToolTip(tr("overlay.scan_decoder_hint"))
         self._clear_watched_btn.setText(tr("sco.clear_watched"))
@@ -930,6 +955,7 @@ class BlueprintDrawer(QWidget):
         self._render_minerals()
         self._render_crafting()
         self._order.retranslate_ui()
+        self._render_finder()
 
     def apply_colors(self, colors: OverlayColors) -> None:
         """Restyle the tab and panel, e.g. after the app theme changes."""
@@ -942,6 +968,7 @@ class BlueprintDrawer(QWidget):
                 border: 1px solid {colors.accent};
             }}
             QLabel, QCheckBox {{ color: {colors.text}; background: transparent; }}
+            QLabel[role="secondary"] {{ color: {colors.secondary}; }}
             QLineEdit {{
                 color: {colors.text}; background: {_rgba(colors.background, 120)};
                 border: 1px solid {colors.secondary}; border-radius: 3px; padding: 2px 4px;
@@ -1053,6 +1080,13 @@ class BlueprintDrawer(QWidget):
         self._render_crafting()
         self._order.set_catalog(crafting, self._mineral_by_material,
                                 lambda info: mineral_tooltip(info, self._crafting))
+
+    def set_shop_data(self, shops: Optional[ShopData], error: str = "") -> None:
+        """The Item Finder's shop data (None while none has loaded) and,
+        when the last fetch failed, why."""
+        self._shops = shops
+        self._shops_error = error
+        self._render_finder()
 
     def set_items(self, meta: dict, owned: set) -> None:
         """Replace the list contents: ``{name: BlueprintItem}`` + owned names."""
@@ -1287,6 +1321,53 @@ class BlueprintDrawer(QWidget):
                 node.addChild(child)
             tree.addTopLevelItem(node)
             node.setExpanded(True)
+
+    def _render_finder(self) -> None:
+        tree = self._finder_tree
+        tree.clear()
+        shops = self._shops
+        if shops is None or shops.is_empty():
+            self._finder_source.setText(tr("sco.finder_failed") if self._shops_error
+                                        else tr("sco.finder_loading"))
+            return
+        updated = datetime.fromtimestamp(shops.fetched_at).strftime("%Y-%m-%d %H:%M")
+        source = tr("sco.finder_source", site=UEX_SITE, updated=updated)
+        if self._shops_error:
+            source = f"{source}\n{tr('sco.finder_offline')}"
+        self._finder_source.setText(source)
+        if not self._finder_search.text().strip():
+            return
+        matches, total = shops.search(self._finder_search.text())
+        if not matches:
+            tree.addTopLevelItem(QTreeWidgetItem([tr("sco.finder_none")]))
+            return
+        for match in matches:
+            prices = [loc.price for loc in match.locations]
+            node = QTreeWidgetItem([tr("sco.finder_item", item=match.name,
+                                       count=len(match.locations))])
+            node.setToolTip(0, "\n".join((match.name, tr(
+                "sco.finder_price_range", low=f"{min(prices):,.0f}", high=f"{max(prices):,.0f}"))))
+            for loc in match.locations:
+                child = QTreeWidgetItem([tr("sco.finder_location", shop=loc.shop,
+                                            place=loc.place, system=loc.system,
+                                            price=f"{loc.price:,.0f}")])
+                child.setToolTip(0, self._shop_tooltip(loc))
+                node.addChild(child)
+            tree.addTopLevelItem(node)
+        if len(matches) == 1:
+            tree.topLevelItem(0).setExpanded(True)
+        if total > len(matches):
+            tree.addTopLevelItem(QTreeWidgetItem([tr("sco.finder_more",
+                                                     shown=len(matches), total=total)]))
+
+    @staticmethod
+    def _shop_tooltip(loc: ShopLocation) -> str:
+        where = ", ".join(part for part in (loc.place, loc.body, loc.system) if part)
+        lines = [loc.shop, where]
+        if loc.reported:
+            lines.append(tr("sco.finder_reported", date=datetime.fromtimestamp(
+                loc.reported).strftime("%Y-%m-%d")))
+        return "\n".join(lines)
 
     def _item_tooltip(self, item: str, category: str) -> str:
         lines = [item, category]
