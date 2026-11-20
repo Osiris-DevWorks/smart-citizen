@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen'ı Göster"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Çıkış"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen çalışmaya devam ediyor"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Sistem tepsisinde. Pencereyi geri getirmek için simgesine tıklayın, çıkmak için sağ tıklayın. Simgeyi göremiyorsanız saatin yanındaki ^ okunun içinde olabilir."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "Geri bildirim, hata bildirimi ve gelecek özelliklere oy vermek için Smart Citizen Discord kanalını açar (Osiris DevWorks Discord sunucusuna katılmayı gerektirir)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Karolinger Guides'daki Smart Citizen kılavuzlarını aç"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Birleştirilmiş tablo içeriğini oyunun global.ini dosyasına yazar. Önce mevcut global.ini dosyasının zaman damgalı bir yedeği oluşturulur."
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Geri Bildirim, Hatalar ve Özellik Oylaması"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -822,6 +848,18 @@
       "ht": "",
       "at": "İşaretlendiğinde, rehberli tur yeni bir sürümde otomatik olarak başlatılmaz. Araç çubuğundaki Rehberli Tur düğmesi çalışmaya devam eder."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Sistem Tepsisine Küçült"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "İşaretlendiğinde, Smart Citizen küçültüldüğünde görev çubuğu yerine sistem tepsisine (saatin yanındaki simgeler) gizlenir. Geri getirmek için tepsideki simgesine tıklayın. Tepsideyken Smart Citizen'ı yeniden başlatmak, ikinci bir kopya açmak yerine o pencereyi geri getirir."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Sistem tepsisi bulunamadı, bu yüzden Smart Citizen görev çubuğuna küçültülür."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Star Citizen kurulum kök dizini — LIVE/, PTU/, EPTU/, HOTFIX/ ve/veya TECH-PREVIEW/ klasörlerini içeren dizin. Kurulum sırasında otomatik algılanır; oyununuz başka bir yerdeyse düzenleyin. Aşağıdaki 'Kanal' açılır listesi uygulamanın hangisini okuyup yazacağını seçer."
@@ -869,6 +907,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Özel önbellek klasörünü temizleyin ve platform varsayılanını kullanın."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Sahip olunan planlarınızı oynadığınız her bilgisayarda aynı tutun. Bulut uygulamanızın zaten eşitlediği bir klasör seçin (ör. Google Drive, OneDrive veya Dropbox içinde), ardından diğer bilgisayarlarınızda da aynı klasörü seçin. Smart Citizen orada yalnızca birkaç küçük dosya okur ve yazar, bunları bulut uygulamanız taşır."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Kapalı. Açmak için bir klasör seçin."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Bulut uygulamanızın diğer bilgisayarlarınızla eşitlediği bir klasör seçin"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Kapat"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Eşitlemeyi durdur. Bu bilgisayardaki sahip olunan planlar olduğu gibi kalır."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart Sync klasörünü seçin"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync kapalı."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Eşitleniyor..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Son eşitleme {time}. Bu klasördeki diğer bilgisayarlar: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Eşitlenemedi: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2338,10 @@
       "ht": "",
       "at": "{language} yerelleştirmesi yapılandırılan kaynaktan yüklenemedi ve önbelleğe alınmış bir kopya bulunamadı. Bunun yerine İngilizce temel gösteriliyor. Dil Dosyası Eşle'deki URL'yi veya dosyayı kontrol edip yeniden deneyin."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Daha yeni bir {language} çevirisi indirildi. Onunla yeniden yükleniyor."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge'dan {language} geliştirmeleri oluşturuluyor…"
@@ -2583,6 +2669,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Pencere oranları varsayılanlara sıfırlandı."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync klasörünü kullanamadı: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync diğer bilgisayarlarınızdan {count} sahip olunan planı güncelledi."
     }
   },
   "import_flow": {
@@ -3355,7 +3449,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Uygulama temasını (Varsayılan / Açık / Koyu / ODW) ve yazı boyutunu (Küçük / Orta / Büyük, yeniden başlatınca uygulanır) seçin; isterseniz yeni sürümlerde otomatik turu kapatın."
+        "at": "Uygulama temasını (Varsayılan / Açık / Koyu / ODW) ve yazı boyutunu (Küçük / Orta / Büyük, yeniden başlatınca uygulanır) seçin; isterseniz yeni sürümlerde otomatik turu kapatın. Küçültüldüğünde pencerenin sistem tepsisine gitmesi için Sistem Tepsisine Küçült seçeneğini işaretleyin."
       }
     },
     "cfg_sc_install": {
@@ -3425,7 +3519,21 @@
       },
       "description": {
         "ht": "",
-        "at": "Yardım düğmesi, tam kılavuzu, Bilinen Sorunlar listesini ve Smart Citizen Discord kanalına bir geri bildirim bağlantısını içeren bir yan panel açar. Başlamak için gereken her şey bu kadar — bol şans, vatandaş."
+        "at": "Yardım düğmesi, tam kılavuzu, Bilinen Sorunlar listesini ve Smart Citizen Discord kanalına bir geri bildirim bağlantısını içeren bir yan panel açar."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Kılavuzlar ve video eğitimi"
+      },
+      "description": {
+        "ht": "",
+        "at": "Pencerenin altındaki Karolinger Guides logosu, Karolinger Guides'daki Smart Citizen kılavuzlarını açar. İzlemeyi mi tercih edersin? Video eğitimi her şeyi adım adım gösterir. Başlamak için gereken her şey bu kadar — bol şans, vatandaş."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Video eğitimini izle"
       }
     }
   },
@@ -3565,6 +3673,290 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Buradaki mineraller: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Sipariş"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Siparişe bir eşya ekle..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Sipariş özeti: {items} eşya, {crafts} üretim"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "Siparişte henüz bir şey yok. Eşya eklemek için aşağıda arayın."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Henüz sipariş verisi yok. DataForge'u çıkarın, ardından Commodities veya Journal işaretliyken geliştirmeleri oluşturun."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Kalite {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Kullanan: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU göster"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU göster"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Cevher miktarlarını SCU veya cSCU olarak göster (oyundaki gibi, SCU'nun yüzde biri)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Kopyala"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Kopyalandı"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Siparişi ve malzemelerini Discord için metin olarak kopyala"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Mineralleri izle"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Siparişin minerallerini tarama izleme listesine ekle; tarayıcı birini okuduğunda uyarır"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Yeni sipariş"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "Emin misin?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Bu siparişi boşaltmak için Yeni sipariş'e tekrar tıklayın. Kayıtlı siparişler korunur."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Yeni bir sipariş başlat: bu siparişteki tüm eşyaları kaldırır. Kayıtlı siparişler korunur."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Bir eksik"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Bir fazla"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Siparişten kaldır"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Plan henüz sahip olunmadı"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Yalnızca sahip olunanlar"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Yalnızca sahip olduğunuz planlarda arayın."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Bilinmeyen malzeme"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Sipariş adı"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Kaydet"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Bu siparişi yazdığınız adla kaydedin."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Değiştirilsin mi?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Kaydedildi"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Önce sipariş için bir ad yazın."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Sipariş şuraya kaydedilemedi:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Kayıtlı siparişler"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Yükle"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Bu siparişi listeden seçilen kayıtlı siparişle değiştirin."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Sil"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Emin?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Kayıtlı \"{name}\" siparişini silmek için Sil'e tekrar tıklayın."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Listede seçilen kayıtlı siparişi sil. Hazırladığın sipariş kalır."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Kayıtlı \"{name}\" siparişi silinemedi."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "\"{name}\" bu oyun verilerinin bildiği hiçbir eşyayı içermiyor."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Bunlardan {of} tanesinin {need} tanesini kullanır:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Bu yuvayı kullan. Planın gerektirdiğinden fazlasını işaretlemek başka birinin işaretini kaldırır."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "K {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "Bu yuva için malzemenin kalitesi (0 ile 1000 arası)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} yalnızca bu kalitelerde bulunur ({source} verisi): {tiers}. Kaydırıcı bunlarda ve 0, 500 ve 1000'de durur."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "En az {quality} kalite gerekir"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Tüm yuvalar: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "Malzeme kalitesi bu eşyanın değerlerini değiştirmez."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pip"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} adet"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Üretim siparişi: {count} üretim"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Malzemeler:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{quality}+ kalitede {amount}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Nereden alınacağını görmek için bir eşya yazın..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Mağaza verileri UEX'ten yükleniyor..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "Mağaza verileri için UEX'e ulaşılamadı. İnternet bağlantınızı kontrol edin. Overlay birkaç dakika içinde yeniden dener."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Mağaza verileri {site} sitesinden, oyuncular tarafından bildirildi. Güncelleme: {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX'e ulaşılamadı, bu yüzden bu son kaydedilen kopya."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "Bu adda bir eşya satan bilinen bir mağaza yok."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place}: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} - {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{total} eşyadan {shown} tanesi gösteriliyor. Daraltmak için daha fazla yazın."
     }
   },
   "overlay": {
@@ -3784,6 +4176,14 @@
       "ht": "",
       "at": "Bir mineral yazın, onu kullanan eşyaları görün; ya da bir eşya yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Eşya Bulucu"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Hangi mağazaların sattığını, nerede olduklarını ve fiyatını görmek için bir eşya yazın. Mağaza verileri internet üzerinden UEX'ten gelir ve oyuncular tarafından bildirilir."
+    },
     "drawer_position": {
       "ht": "",
       "at": "Çekmece konumu:"
@@ -3839,6 +4239,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Bu bir kısayol olamaz. Bir harf, rakam, sembol, Boşluk, Tab veya gezinme tuşuyla (oklar, Home, End, Page Up/Down, Insert, Delete) birlikte Ctrl, Alt veya Win tuşunu basılı tutun; isterseniz Shift de ekleyin. Bir F tuşu veya Pause tek başına da çalışır."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Sipariş"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Bir üretim siparişi oluşturun ve gereken her malzemeyi kaliteye göre görün. DataForge çıkarması gerekir."
     }
   },
   "shader_cache": {

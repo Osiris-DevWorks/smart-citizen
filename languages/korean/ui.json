@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen 표시"
+    },
+    "quit": {
+      "ht": "",
+      "at": "종료"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen이 계속 실행 중입니다"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "시스템 트레이에 있습니다. 아이콘을 클릭하면 창이 다시 나타나고, 마우스 오른쪽 버튼을 클릭하면 종료할 수 있습니다. 아이콘이 보이지 않으면 시계 옆 ^ 화살표 안에 있을 수 있습니다."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "피드백, 버그 보고, 향후 기능 투표를 위한 Smart Citizen Discord 채널을 엽니다(Osiris DevWorks Discord 가입 필요)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Karolinger Guides의 Smart Citizen 가이드 열기"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "병합된 테이블 내용을 게임의 global.ini에 씁니다. 먼저 현재 global.ini의 타임스탬프가 찍힌 백업을 만듭니다."
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "피드백, 버그 및 기능 투표"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -822,6 +848,18 @@
       "ht": "",
       "at": "선택하면, 새 버전에서 가이드 투어가 자동으로 실행되지 않습니다. 도구 모음의 튜토리얼 버튼은 계속 작동합니다."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "시스템 트레이로 최소화"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "선택하면, Smart Citizen을 최소화할 때 작업 표시줄 대신 시스템 트레이(시계 옆 아이콘)에 숨깁니다. 트레이 아이콘을 클릭하면 다시 나타납니다. 트레이에 있는 동안 Smart Citizen을 다시 실행하면 두 번째 사본을 여는 대신 그 창이 다시 나타납니다."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "시스템 트레이를 찾을 수 없어 Smart Citizen이 작업 표시줄로 최소화됩니다."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Star Citizen 설치 루트, 즉 LIVE/, PTU/, EPTU/, HOTFIX/, TECH-PREVIEW/가 포함된 디렉터리입니다. 설치 시 자동으로 감지되며, 게임이 다른 위치에 있으면 여기서 편집하세요. 아래의 '채널' 드롭다운이 앱이 읽고 쓸 채널을 선택합니다."
@@ -869,6 +907,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "사용자 지정 캐시 폴더를 지우고 플랫폼 기본값을 사용합니다."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "플레이하는 모든 PC에서 보유한 설계도를 똑같이 유지합니다. 클라우드 앱이 이미 동기화하는 폴더(Google Drive, OneDrive, Dropbox 등)를 고른 다음, 다른 PC에서도 같은 폴더를 고르세요. Smart Citizen은 그곳에서 작은 파일 몇 개만 읽고 쓰며, 파일 이동은 클라우드 앱이 합니다."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "꺼짐. 폴더를 고르면 켜집니다."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "클라우드 앱이 다른 PC와 동기화하는 폴더 선택"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "끄기"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "동기화를 멈춥니다. 이 PC의 보유한 설계도는 그대로 남습니다."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart Sync 폴더 선택"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync가 꺼져 있습니다."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "동기화 중..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "마지막 동기화 {time}. 이 폴더의 다른 PC: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "동기화할 수 없습니다: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2338,10 @@
       "ht": "",
       "at": "설정된 소스에서 {language} 현지화를 불러올 수 없었고, 캐시된 사본도 없습니다. 대신 영어 기본값을 표시합니다. 언어 파일 매핑의 URL 또는 파일을 확인한 후 다시 시도하세요."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "새 {language} 번역을 내려받았습니다. 다시 불러오는 중입니다."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge에서 {language} 강화 생성 중…"
@@ -2583,6 +2669,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "창 비율이 기본값으로 재설정되었습니다."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync가 폴더를 사용할 수 없습니다: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync가 다른 PC에서 보유한 설계도 {count}개를 업데이트했습니다."
     }
   },
   "import_flow": {
@@ -3355,7 +3449,7 @@
       },
       "description": {
         "ht": "",
-        "at": "앱 테마(기본값 / 밝게 / 어둡게 / ODW)와 글꼴 크기(작게 / 보통 / 크게, 재시작 후 적용)를 고르고, 원하면 새 버전에서 자동 투어를 끌 수 있습니다."
+        "at": "앱 테마(기본값 / 밝게 / 어둡게 / ODW)와 글꼴 크기(작게 / 보통 / 크게, 재시작 후 적용)를 고르고, 원하면 새 버전에서 자동 투어를 끌 수 있습니다. 시스템 트레이로 최소화를 선택하면 최소화할 때 창이 시스템 트레이로 들어갑니다."
       }
     },
     "cfg_sc_install": {
@@ -3425,7 +3519,21 @@
       },
       "description": {
         "ht": "",
-        "at": "도움말 버튼은 전체 가이드, 알려진 문제 목록, Smart Citizen Discord 채널로의 피드백 링크가 담긴 옆 패널을 엽니다. 시작하는 데 필요한 모든 것이 여기 있습니다. 행운을 빕니다, 시민."
+        "at": "도움말 버튼은 전체 가이드, 알려진 문제 목록, Smart Citizen Discord 채널로의 피드백 링크가 담긴 옆 패널을 엽니다."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. 가이드 및 동영상 튜토리얼"
+      },
+      "description": {
+        "ht": "",
+        "at": "창 아래쪽의 Karolinger Guides 로고는 Karolinger Guides의 Smart Citizen 가이드를 엽니다. 영상으로 보고 싶다면 동영상 튜토리얼에서 전체 과정을 볼 수 있습니다. 시작하는 데 필요한 모든 것이 여기 있습니다. 행운을 빕니다, 시민."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "동영상 튜토리얼 보기"
       }
     }
   },
@@ -3565,6 +3673,290 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "이곳의 광물: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "주문"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "주문에 아이템 추가..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "주문 요약: 아이템 {items}개, 제작 {crafts}회"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "주문이 비어 있습니다. 아래에서 검색해 아이템을 추가하세요."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "아직 주문 데이터가 없습니다. DataForge를 추출한 다음 Commodities 또는 Journal을 체크하고 향상 기능을 생성하세요."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "품질 {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "사용처: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU로 보기"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU로 보기"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "광석 양을 SCU 또는 cSCU(게임과 같이 SCU의 100분의 1)로 표시합니다"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "복사"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "복사됨"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "주문과 재료를 디스코드용 텍스트로 복사합니다"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "광물 감시"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "주문의 광물을 스캔 감시 목록에 추가해, 스캐너가 하나를 읽으면 알려 줍니다"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "새 주문"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "확인?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "새 주문을 한 번 더 클릭하면 이 주문을 비웁니다. 저장한 주문은 남습니다."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "새 주문 시작: 이 주문의 아이템을 모두 제거합니다. 저장한 주문은 남습니다."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "하나 줄이기"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "하나 늘리기"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "주문에서 제거"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "아직 보유하지 않은 청사진"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "보유한 것만"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "보유한 블루프린트만 검색합니다."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "알 수 없는 재료"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "주문 이름"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "저장"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "입력한 이름으로 이 주문을 저장합니다."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "바꿀까요?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "저장됨"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "먼저 주문 이름을 입력하세요."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "주문을 저장하지 못했습니다:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "저장된 주문"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "불러오기"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "이 주문을 목록에서 고른 저장된 주문으로 바꿉니다."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "삭제"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "확인"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "삭제를 한 번 더 클릭하면 저장한 주문 \"{name}\"을(를) 삭제합니다."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "목록에서 고른 저장한 주문을 삭제합니다. 작성 중인 주문은 그대로입니다."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "저장한 주문 \"{name}\"을(를) 삭제할 수 없습니다."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "\"{name}\"에는 이 게임 데이터가 아는 아이템이 없습니다."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "이 {of}개 중 {need}개 사용:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "이 슬롯을 사용합니다. 청사진에 필요한 수보다 하나 더 체크하면 다른 하나의 체크가 해제됩니다."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "이 슬롯에 쓰는 재료의 품질(0~1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material}은(는) 이 품질로만 나옵니다({source} 데이터): {tiers}. 슬라이더는 이 값들과 0, 500, 1000에서 멈춥니다."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "품질 {quality} 이상 필요"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "모든 슬롯: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "재료 품질은 이 아이템의 능력치를 바꾸지 않습니다."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value}핍"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count}개"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "제작 주문: {count}회"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "재료:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "품질 {quality}+로 {amount}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "아이템을 입력해 구매 장소를 확인하세요..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "UEX에서 상점 데이터를 불러오는 중..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "상점 데이터를 위해 UEX에 연결할 수 없습니다. 인터넷 연결을 확인하세요. 오버레이가 몇 분 후 다시 시도합니다."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "상점 데이터: {site}, 플레이어 제보. 업데이트: {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX에 연결할 수 없어 마지막으로 저장된 사본을 표시합니다."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "그 이름의 아이템을 파는 알려진 상점이 없습니다."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place}: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} ~ {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{total}개 중 {shown}개 아이템 표시. 더 입력해 범위를 좁히세요."
     }
   },
   "overlay": {
@@ -3784,6 +4176,14 @@
       "ht": "",
       "at": "광물을 입력하면 그 광물을 쓰는 아이템을, 아이템을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "아이템 찾기"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "아이템을 입력하면 어떤 상점이 팔고, 어디에 있으며, 가격이 얼마인지 볼 수 있습니다. 상점 데이터는 인터넷을 통해 UEX에서 가져오며 플레이어가 제보한 것입니다."
+    },
     "drawer_position": {
       "ht": "",
       "at": "서랍 위치:"
@@ -3839,6 +4239,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "이것은 단축키로 쓸 수 없습니다. Ctrl, Alt 또는 Win을 누른 채 영문자, 숫자, 기호, Space, Tab 또는 이동 키(화살표, Home, End, Page Up/Down, Insert, Delete)를 누르세요. Shift를 더해도 됩니다. F 키나 Pause는 단독으로도 쓸 수 있습니다."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "주문"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "제작 주문을 만들고 필요한 모든 재료를 품질별로 확인합니다. DataForge 추출이 필요합니다."
     }
   },
   "shader_cache": {

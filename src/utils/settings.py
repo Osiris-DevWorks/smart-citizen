@@ -103,6 +103,20 @@ def _is_valid_sc_root(path: str) -> bool:
         return False
 
 
+def _p4k_exists(path: Path) -> bool:
+    """Return True if *path* exists, False when it is missing or can't be read.
+
+    ``Path.exists()`` swallows only a few Windows errors. Any other OSError,
+    such as WinError 448 for an elevated process following a link a normal
+    user made (#595), reads as missing here instead of crashing the caller.
+    """
+    try:
+        return path.exists()
+    except OSError as exc:
+        logger.warning("Could not check %s: %s", path, exc)
+        return False
+
+
 def _path_ends_in_channel(path: str) -> bool:
     """Return True if *path*'s last component is a recognised channel name.
 
@@ -568,6 +582,15 @@ class AppSettings:
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
 
+    # Settings keys - Window
+    # Minimize to the system tray instead of the taskbar (Config tab,
+    # src/gui/tray.py). Off by default.
+    MINIMIZE_TO_TRAY = "minimize_to_tray"
+    # Whether the one-time "still running" notice has been shown, on the
+    # first trip to the tray (src/gui/tray.py). Per-install state, like the
+    # tour's completed version.
+    TRAY_NOTICE_SHOWN = "tray_notice_shown"
+
     # Settings keys - App self-update check
     # Settings keys - Star Citizen channel selection
     # Star Citizen ships multiple channels (LIVE/PTU/EPTU/HOTFIX/TECH-PREVIEW)
@@ -738,6 +761,15 @@ class AppSettings:
     # owned_items (see import_values): restoring an owned set from before 3.0
     # resets it, so the next scan adds the starters to that set.
     DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
+    # Smart Sync (#567): the folder the player picked (empty means off), this
+    # PC's random machine id, this PC's ledger of owned changes (JSON, see
+    # smart_sync.py) and the "updated" time this PC last wrote to its file.
+    # All four are this PC's own, so they are in PROFILE_EXCLUDE_KEYS: a
+    # settings backup restored on another PC must not bring this PC's id.
+    SMART_SYNC_FOLDER = "smart_sync/folder"
+    SMART_SYNC_MACHINE_ID = "smart_sync/machine_id"
+    SMART_SYNC_LEDGER = "smart_sync/owned_ledger"
+    SMART_SYNC_LAST_WRITTEN = "smart_sync/last_written"
 
     # Smart Citizen Overlay (SCO) switch names on the Overlay tab (3.0.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
@@ -762,6 +794,8 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_DRAWER_SECTION_PREFIX + "order":      ("sco/drawer_order", True),
+        SCO_DRAWER_SECTION_PREFIX + "finder":     ("sco/drawer_finder", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
@@ -795,6 +829,16 @@ class AppSettings:
     # decoded scan of one sets off the label's alerts. JSON list of
     # ORE_SIGNATURES keys and "salvage".
     SCO_WATCHED_MINERALS = "sco/watched_minerals"
+    # The SCO drawer's crafting order (3.1.0): a JSON list of
+    # crafting_order.OrderLine dicts. User data, like owned_items, so a
+    # backup's "unset" never empties it (PROFILE_DEFAULT_EXCLUDE_KEYS).
+    SCO_ORDER = "sco/order"
+    # How the Order tab shows ore volumes: "cscu" (as in game) or "scu".
+    SCO_ORDER_VOLUME = "sco/order_volume"
+    SCO_ORDER_VOLUMES = ("cscu", "scu")
+    SCO_ORDER_VOLUME_DEFAULT = "cscu"
+    # The Order tab's "Owned only" search filter (off: every blueprint).
+    SCO_ORDER_OWNED_ONLY = "sco/order_owned_only"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -837,6 +881,10 @@ class AppSettings:
         "vehicles_path",
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
+        SMART_SYNC_FOLDER,
+        SMART_SYNC_MACHINE_ID,
+        SMART_SYNC_LEDGER,
+        SMART_SYNC_LAST_WRITTEN,
     })
 
     # Keys that have a default but are deliberately NOT materialised into a
@@ -851,6 +899,8 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - tray_notice_shown: the same kind of state, for the one-time "still
+    #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
     #     set, so it is exported only when stored, the same way owned_items
     #     is, and import_values takes it from a backup only together with
@@ -860,8 +910,10 @@ class AppSettings:
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
@@ -1595,11 +1647,95 @@ class AppSettings:
 
     @staticmethod
     def set_owned_items(names) -> None:
-        """Persist the owned blueprint item-name set (#157)."""
+        """Persist the owned blueprint item-name set (#157).
+
+        With Smart Sync on (#567), each name that changes is also stamped in
+        this PC's sync ledger, so the change carries its real time to the
+        other PCs. Every writer of the owned set comes through here; one that
+        does not (Import Settings writes the key itself) is caught at the
+        next sync, which records the same differences.
+        """
         import json
+        names = set(names)
+        if AppSettings.get_smart_sync_folder():
+            from src.utils import smart_sync
+            AppSettings.set_smart_sync_ledger(
+                smart_sync.record(AppSettings.get_smart_sync_ledger(), names)
+            )
         AppSettings.settings().setValue(
             AppSettings.OWNED_ITEMS, json.dumps(sorted(names))
         )
+        AppSettings.settings().sync()
+
+    # -- Smart Sync (#567) -------------------------------------------------
+
+    @staticmethod
+    def get_smart_sync_folder() -> str:
+        """The folder Smart Sync uses, or "" when it is off."""
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_FOLDER, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_folder(folder) -> None:
+        """Turn Smart Sync on with *folder*, or off with None or "".
+
+        Turning it on with no ledger yet shares what this PC owns as a
+        baseline that any real change wins over; turning it on again later
+        records what changed while it was off as changes made now.
+        """
+        from src.utils import smart_sync
+        folder = str(folder) if folder else ""
+        backend = AppSettings.settings()
+        if folder:
+            ledger = AppSettings.get_smart_sync_ledger()
+            owned = AppSettings.get_owned_items()
+            ledger = (smart_sync.record(ledger, owned) if ledger
+                      else smart_sync.baseline(ledger, owned))
+            AppSettings.set_smart_sync_ledger(ledger)
+            backend.setValue(AppSettings.SMART_SYNC_FOLDER, folder)
+        else:
+            backend.remove(AppSettings.SMART_SYNC_FOLDER)
+        backend.sync()
+
+    @staticmethod
+    def get_smart_sync_machine_id() -> str:
+        """This PC's random Smart Sync id, made the first time it is asked for."""
+        backend = AppSettings.settings()
+        machine_id = backend.value(AppSettings.SMART_SYNC_MACHINE_ID, "", type=str) or ""
+        if not machine_id:
+            from src.utils import smart_sync
+            machine_id = smart_sync.new_machine_id()
+            AppSettings.set_smart_sync_machine_id(machine_id)
+        return machine_id
+
+    @staticmethod
+    def set_smart_sync_machine_id(machine_id: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_MACHINE_ID, machine_id)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_ledger() -> dict:
+        """This PC's Smart Sync ledger (see smart_sync.py); {} when unset or unreadable."""
+        from src.utils import smart_sync
+        raw = AppSettings.settings().value(AppSettings.SMART_SYNC_LEDGER, "", type=str)
+        try:
+            return smart_sync.clean_ledger(json.loads(raw)) if raw else {}
+        except ValueError:
+            return {}
+
+    @staticmethod
+    def set_smart_sync_ledger(ledger: dict) -> None:
+        AppSettings.settings().setValue(
+            AppSettings.SMART_SYNC_LEDGER, json.dumps(ledger, sort_keys=True)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_last_written() -> str:
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_LAST_WRITTEN, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_last_written(updated: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_LAST_WRITTEN, updated)
         AppSettings.settings().sync()
 
     @staticmethod
@@ -1772,6 +1908,46 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
+    def get_sco_order() -> list:
+        """The SCO drawer's crafting order as stored: a list of line dicts
+        (``crafting_order.OrderLine.to_dict``), [] when none or unreadable.
+        ``crafting_order.load_order`` fits it to the blueprints there are."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_ORDER, "", type=str)
+        try:
+            lines = json.loads(raw) if raw else []
+        except (ValueError, TypeError):
+            return []
+        return lines if isinstance(lines, list) else []
+
+    @staticmethod
+    def set_sco_order(lines) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER, json.dumps(list(lines)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order_volume() -> str:
+        return AppSettings._get_choice(AppSettings.SCO_ORDER_VOLUME,
+                                       AppSettings.SCO_ORDER_VOLUMES,
+                                       AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def set_sco_order_volume(volume: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_ORDER_VOLUME, volume,
+                                AppSettings.SCO_ORDER_VOLUMES,
+                                AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def get_sco_order_owned_only() -> bool:
+        return AppSettings.settings().value(AppSettings.SCO_ORDER_OWNED_ONLY, False, type=bool)
+
+    @staticmethod
+    def set_sco_order_owned_only(owned_only: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER_OWNED_ONLY, bool(owned_only))
+        AppSettings.settings().sync()
+
+    @staticmethod
     def get_sco_option(name: str) -> bool:
         """One of the Overlay tab's switches (``SCO_OPTION_SETTING``)."""
         key, default = AppSettings.SCO_OPTION_SETTING[name]
@@ -1860,6 +2036,28 @@ class AppSettings:
     @staticmethod
     def set_tutorial_disabled(disabled: bool) -> None:
         AppSettings.settings().setValue(AppSettings.TUTORIAL_DISABLED, bool(disabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_minimize_to_tray() -> bool:
+        """When True, minimizing hides the window in the system tray instead
+        of the taskbar (Config tab opt-in, src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.MINIMIZE_TO_TRAY, False, type=bool)
+
+    @staticmethod
+    def set_minimize_to_tray(enabled: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.MINIMIZE_TO_TRAY, bool(enabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_tray_notice_shown() -> bool:
+        """Whether the one-time "still running" notice has been shown, so it
+        comes on the first trip to the tray only (src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.TRAY_NOTICE_SHOWN, False, type=bool)
+
+    @staticmethod
+    def set_tray_notice_shown(shown: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.TRAY_NOTICE_SHOWN, bool(shown))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3102,6 +3300,11 @@ class AppSettings:
         can't actually switch to. When the root isn't configured yet we
         return all channels so the combo isn't empty — the user can still
         pick one before the path is set.
+
+        A channel whose Data.p4k can't be checked counts as missing rather
+        than crashing the app (#595): Windows raises WinError 448 when an
+        elevated process follows a link a normal user made, e.g. a PTU folder
+        linked to LIVE, and ``Path.exists()`` lets that error through.
         """
         root = AppSettings.get_sc_install_root()
         if not root:
@@ -3109,7 +3312,7 @@ class AppSettings:
         root_path = Path(root)
         return [
             channel for channel in AppSettings.AVAILABLE_CHANNELS
-            if (root_path / channel / "Data.p4k").exists()
+            if _p4k_exists(root_path / channel / "Data.p4k")
         ]
 
     @staticmethod
@@ -3363,7 +3566,25 @@ class AppSettings:
         :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
         """
         stamp = AppSettings.get_enhancements_stamp(language)
-        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+        return bool(stamp) and stamp == AppSettings.enhancements_stamp_value(
+            AppSettings.get_dataforge_build_key(), language)
+
+    @staticmethod
+    def enhancements_stamp_value(build_key: str, language: "str | None" = None) -> str:
+        """The ``.dataforge_stamp`` text for a set generated from *build_key*
+        in *language*.
+
+        A language with a table of translated generated text (#579,
+        ``languages/<language>/enhancements.json``) adds ``|text=`` and the
+        table's fingerprint, so an update that changes the table makes that
+        language's set read as out of date and the app offers to generate it
+        again. English has no table, so its stamp is the plain build key, as
+        before."""
+        from src.utils.enhancement_text import table_fingerprint
+        if language is None:
+            language = AppSettings.get_selected_language()
+        text = table_fingerprint(language)
+        return f"{build_key}|text={text}" if text else build_key
 
     @staticmethod
     def invalidate_enhancements_stamp(folder: Path) -> None:
@@ -3489,6 +3710,15 @@ class AppSettings:
         backups_dir = AppSettings.get_channel_data_dir() / "backups"
         backups_dir.mkdir(parents=True, exist_ok=True)
         return backups_dir
+
+    @staticmethod
+    def get_sco_orders_dir() -> Path:
+        r"""Where the SCO Order tab's saved orders go
+        (``{user_data_dir}\orders\<name>.json``). Not per channel: an
+        order is the same on every channel. Not created here; saving makes
+        it."""
+        from src.utils.crafting_order import SAVED_ORDERS_FOLDER
+        return AppSettings.get_user_data_dir() / SAVED_ORDERS_FOLDER
 
     @staticmethod
     def get_logs_dir() -> Path:
@@ -3966,6 +4196,7 @@ class AppSettings:
             AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
             AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
             AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.MINIMIZE_TO_TRAY: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
@@ -3975,6 +4206,8 @@ class AppSettings:
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
+            AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,
+            AppSettings.SCO_ORDER_OWNED_ONLY: False,
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({
@@ -4082,6 +4315,12 @@ class AppSettings:
         adds the starters to the restored set instead of leaving them out for
         good. A backup with no owned set leaves both alone, so it can't undo
         the one-shot and bring back a starter the user moved out of Owned.
+
+        With Smart Sync on (#567) the backup's owned set is added to the
+        current one rather than replacing it, and recorded in the ledger as
+        it is added: replacing it would read as this PC moving every newer
+        blueprint back to Available, and the next sync would take them off
+        every other PC too.
         """
         backend = AppSettings.settings()
         applied = 0
@@ -4090,6 +4329,14 @@ class AppSettings:
                 continue
             if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
                 continue  # follows owned_items, below
+            if key == AppSettings.OWNED_ITEMS and AppSettings.get_smart_sync_folder():
+                try:
+                    imported = set(json.loads(value)) if value else set()
+                except (ValueError, TypeError):
+                    imported = set()
+                AppSettings.set_owned_items(AppSettings.get_owned_items() | imported)
+                applied += 1
+                continue
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)

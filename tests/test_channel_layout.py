@@ -272,6 +272,23 @@ class TestAvailableChannels:
         AppSettings.set_sc_install_root(str(sc_root))
         assert AppSettings.get_available_channels() == []
 
+    def test_unreadable_channel_counts_as_missing(
+        self, isolated_qsettings, fake_sc_root, monkeypatch
+    ):
+        """#595: a channel whose Data.p4k can't be checked (WinError 448 when
+        an elevated process follows a user-made link) reads as not installed
+        instead of crashing the app."""
+        AppSettings.set_sc_install_root(str(fake_sc_root))
+        real_exists = Path.exists
+
+        def exists(path, *args, **kwargs):
+            if path.parent.name == "PTU" and path.name == "Data.p4k":
+                raise OSError(448, "untrusted mount point")
+            return real_exists(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "exists", exists)
+        assert AppSettings.get_available_channels() == ["LIVE"]
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Migrator

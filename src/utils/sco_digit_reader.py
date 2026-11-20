@@ -23,7 +23,10 @@ height) with a comma before the last three. Steps:
    a "1" is wide. A comma joined to the foot of a digit, as HDR bloom
    leaves it, is peeled off that digit. A chain only counts if a comma
    sits on its baseline before its last three digits, sized against the
-   chain's own digits, which rules out other HUD text.
+   chain's own digits, which rules out other HUD text. A chain with
+   anything right after its last digit is dropped too: the readout stands
+   alone, and a cargo size such as "12,000 µSCU" goes on with its unit
+   (#592).
 3. Match each digit to the nearest reference glyph in
    ``sco_digit_samples.py`` (min-max normalised, coarse grid, correlation).
 4. Prefer the reading that decodes to a known deposit. Where a digit's
@@ -127,6 +130,14 @@ COMMA_JOINED_MAX = 1.7
 # slivers.
 MAX_JOINED_WIDTH = 2.6
 MIN_PART_WIDTH = 0.3
+
+# A glyph starting within TRAILING_GAP digit heights after a row's last
+# digit, on its line and at least TRAILING_MIN_HEIGHT of a digit tall, is
+# text that goes on: a unit such as "µSCU" (#592). The mining readout has
+# nothing after it.
+TRAILING_GAP = 1.0
+TRAILING_MIN_HEIGHT = 0.4
+TRAILING_DROP = 0.4
 
 
 @dataclass(frozen=True)
@@ -349,9 +360,32 @@ def _candidate_rows(width, height, mask, digit_px, boxes=None):
                 for c in commas
             )
             if has_comma and 1 <= k + 1 <= 2 and len(chain) - (k + 1) >= 3:
-                rows.append((chain[:k + 4], top, base))
+                row = chain[:k + 4]
+                # The readout stands alone. Text after its last digit is a
+                # unit: a cargo size such as "12,000 µSCU" (#592).
+                if len(chain) == len(row) and not _has_trailing_text(row, top, base, boxes):
+                    rows.append((row, top, base))
                 break
     return rows
+
+
+def _has_trailing_text(row, top, base, boxes) -> bool:
+    """True when a glyph sits right after the row's last digit on its line.
+
+    Catches the "µ" of "µSCU", which is too short to chain as a digit. The
+    glyph must be glyph-sized and on the line (a µ's tail reaches below it,
+    by less than ``TRAILING_DROP``), so a bright patch of sky or snow
+    beside the readout does not hide it.
+    """
+    tall = base - top
+    right = max(b[0] + b[2] for b in row)
+    return any(
+        right - 1 <= b[0] <= right + TRAILING_GAP * tall
+        and TRAILING_MIN_HEIGHT * tall <= b[3] <= DIGIT_TALL_MAX * tall
+        and top - TRAILING_DROP * tall <= b[1] < base
+        and top + 0.5 * tall < b[1] + b[3] <= base + TRAILING_DROP * tall
+        for b in boxes
+    )
 
 
 def _rows_at_each_size(width, height, red, threshold, digit_px):

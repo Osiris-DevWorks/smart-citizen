@@ -5,9 +5,10 @@ Two windows, because they need opposite input behaviour:
 - ``ScanLabelWindow`` shows the decoded mining signature ("2 x Bexalite")
   just under the scanner's signature readout. Clicks pass straight through
   it to the game.
-- ``BlueprintDrawer`` is a stack of three icon tabs on a screen edge, one per
+- ``BlueprintDrawer`` is a stack of icon tabs on a screen edge, one per
   searchable section: blueprints with owned checkboxes, minerals by star
-  system and location, and crafting (mineral to items and back). A tab opens
+  system and location, crafting (mineral to items and back) and the Item
+  Finder (the shops that sell an item, from UEX). A tab opens
   the drawer straight to its section. It
   has to take clicks, so using it takes focus from the game; the player
   needs a free cursor. While Star Citizen is in front with its pointer
@@ -28,11 +29,15 @@ Citizen is in front, asks Windows whether its key and the modifier keys are
 down (``global_hotkey.py``); it never reads game memory or sends input, and
 no key press made in the game or another program reaches it. It also asks
 Windows which window is in front and whether the mouse pointer shows, never
-the game.
+the game. Both windows and the capture follow the screen the game window is
+on (``game_screen.py``, by window class and title only), the primary screen
+when the game is not found (#573).
 
 Data comes from ``MainWindow``: ``{name: BlueprintItem}`` metadata and the
 owned set, plus the Mining Compendium minerals and the crafting index
-(``src/utils/mining_catalog.py``). Owned changes made in the drawer go back out through
+(``src/utils/mining_catalog.py``), and the Item Finder's shop data
+(``src/utils/uex_shops.py``, loaded off the GUI thread by
+``workers.UexShopDataWorker``). Owned changes made in the drawer go back out through
 ``owned_toggled`` so ``MainWindow`` stays the one writer of the owned set.
 """
 from __future__ import annotations
@@ -52,24 +57,27 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from PyQt6.QtCore import (
-    QObject, QPoint, QPointF, QRect, QRectF, QRunnable, Qt, QThreadPool, QTimer,
+    QObject, QPoint, QPointF, QRect, QRectF, QRunnable, QSize, Qt, QThreadPool, QTimer,
     QVariantAnimation, pyqtSignal,
 )
 from PyQt6.QtGui import (
     QColor, QGuiApplication, QImage, QPainter, QPainterPath, QPalette, QPen,
-    QTransform,
+    QScreen, QTransform,
 )
 from PyQt6.QtWidgets import (
     QWIDGETSIZE_MAX, QApplication, QBoxLayout, QCheckBox, QFrame, QGraphicsDropShadowEffect,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
-    QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QStackedWidget, QStyledItemDelegate, QStyleOptionViewItem, QTreeWidget, QTreeWidgetItem,
+    QVBoxLayout, QWidget,
 )
 
+from src.gui.game_screen import game_screen
 from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
+from src.gui.sco_order import OrderSection
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
-    CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
+    SYSTEM_ORDER, CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
     ore_signature, star_system,
 )
 from src.utils.mining_signatures import (
@@ -77,11 +85,12 @@ from src.utils.mining_signatures import (
 )
 from src.utils.sco_digit_reader import DIGIT_HEIGHT_AT_1600, read_signature
 from src.utils.settings import AppSettings
+from src.utils.uex_shops import UEX_SITE, ShopData, ShopLocation
 
 logger = logging.getLogger(__name__)
 
-# Where the scanner's signature readout sits, as fractions of the primary
-# screen (x, y, w, h). Measured from 2560x1600 Drake Golem screenshots: the
+# Where the scanner's signature readout sits, as fractions of the screen
+# Star Citizen is on (x, y, w, h). Measured from 2560x1600 Drake Golem screenshots: the
 # pin + number sit in a small panel under the cockpit radar screen, top
 # centre. In-game checks found the area is the same across cockpits; the box is
 # padded for head movement (~115 px between the two samples). The panel is
@@ -90,6 +99,9 @@ logger = logging.getLogger(__name__)
 # down, so the box reaches 0.45 to keep room for head movement there (#546).
 SCAN_REGION = (0.38, 0.28, 0.24, 0.17)
 CAPTURE_INTERVAL_MS = 250
+# How often a running overlay looks for the screen Star Citizen is on, so the
+# drawer and the capture follow the game to another monitor (#573).
+GAME_SCREEN_CHECK_MS = 1000
 # For tuning the digit reader only: with this environment variable set (any
 # value) when the app starts, a crop of each distinct reading (named after the
 # text read) is kept so misreads can be fixed by adding reference glyphs
@@ -201,6 +213,8 @@ DRAWER_HANDLE_SELECTED_PEN = 1.8
 # open a tab: a click on the outline at the screen corner used to take focus
 # and open nothing.
 DRAWER_HANDLE_HIT_SLACK = DRAWER_HANDLE_SELECTED_PEN / 2 + math.sqrt(2)
+# Room a wrapping row keeps for the item view's own text margins and icon gap.
+WRAP_TEXT_MARGIN = 8
 DRAWER_PANEL_WIDTH = 340
 # Share of the screen an open drawer takes along its edge: the full side
 # for a left/right drawer, less for a top/bottom one, which sits over the
@@ -876,11 +890,32 @@ def _crafting_icon() -> QPainterPath:
     return path
 
 
+def _order_icon() -> QPainterPath:
+    """A clipboard with three ticked lines: the crafting order."""
+    path = QPainterPath()
+    _polyline(path, (6, 5), (18, 5), (18, 21), (6, 21), close=True)
+    _polyline(path, (9, 3), (15, 3), (15, 7), (9, 7), close=True)
+    for y in (11, 15, 19):
+        _polyline(path, (8.5, y - 1), (9.5, y), (11, y - 2))
+        _polyline(path, (13, y - 1), (16, y - 1))
+    return path
+
+
+def _finder_icon() -> QPainterPath:
+    """A magnifying glass, handle bottom right: the item finder."""
+    path = QPainterPath()
+    path.addEllipse(QPointF(10, 10), 6, 6)
+    _polyline(path, (14.5, 14.5), (20, 20))
+    return path
+
+
 # Drawer sections in handle order, each with its icon on a 24-unit grid.
 SECTION_ICONS = {
     "blueprints": _blueprints_icon,
     "minerals": _minerals_icon,
     "crafting": _crafting_icon,
+    "order": _order_icon,
+    "finder": _finder_icon,
 }
 
 
@@ -1072,9 +1107,48 @@ class DrawerSearch(QLineEdit):
         super().keyPressEvent(event)
 
 
+class WrappingRowDelegate(QStyledItemDelegate):
+    """Rows as tall as their wrapped text. A tree with word wrap paints the
+    text wrapped but sizes each row for one line, cutting the rest off, so
+    this works the height out for the width the row has: the view's, less
+    the row's indent and the item's text margins."""
+
+    def __init__(self, tree: QTreeWidget):
+        super().__init__(tree)
+        self._tree = tree
+
+    def sizeHint(self, option, index) -> QSize:
+        hint = super().sizeHint(option, index)
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        depth, parent = 1, index.parent()
+        while parent.isValid():
+            depth, parent = depth + 1, parent.parent()
+        tree = self._tree
+        width = tree.viewport().width() - tree.indentation() * depth - WRAP_TEXT_MARGIN
+        if width <= 0:
+            return hint
+        line = opt.fontMetrics.height()
+        text = opt.fontMetrics.boundingRect(
+            QRect(0, 0, width, 1 << 20), int(Qt.TextFlag.TextWordWrap), opt.text)
+        return QSize(hint.width(), max(hint.height(), hint.height() - line + text.height()))
+
+
+def shops_by_system(locations) -> dict[str, list[ShopLocation]]:
+    """Group an item's shops by star system, in :data:`SYSTEM_ORDER` and then
+    by name, keeping each system's shops cheapest first; shops UEX places in
+    no system go under ``""`` last."""
+    grouped: dict[str, list[ShopLocation]] = {}
+    for loc in locations:
+        grouped.setdefault(loc.system, []).append(loc)
+    known = [s for s in SYSTEM_ORDER if s in grouped]
+    others = sorted((s for s in grouped if s and s not in SYSTEM_ORDER), key=str.lower)
+    return {s: grouped[s] for s in known + others + ([""] if "" in grouped else [])}
+
+
 class BlueprintDrawer(QWidget):
     """A stack of section tabs on a screen edge (blueprints, minerals,
-    crafting). A tab opens the see-through panel straight to its section;
+    crafting, item finder). A tab opens the see-through panel straight to its section;
     the open section's tab closes it again."""
 
     owned_toggled = pyqtSignal(str, bool)
@@ -1159,9 +1233,31 @@ class BlueprintDrawer(QWidget):
         self._crafting_search, self._crafting_tree, crafting_page = self._search_page(
             self._render_crafting)
 
+        # Order (3.1.0): a crafting order and everything it needs.
+        self._order = OrderSection()
+        self._order.watch_requested.connect(self._watch_ores)
+
+        # Item Finder (3.1.0): the shops that sell an item, from UEX.
+        self._shops: Optional[ShopData] = None
+        self._shops_error = ""
+        self._finder_search, self._finder_tree, finder_page = self._search_page(
+            self._render_finder)
+        # Shop and place names run long: wrap them inside the panel's width
+        # rather than cut them off.
+        self._finder_tree.setWordWrap(True)
+        self._finder_tree.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self._finder_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._finder_tree.setItemDelegate(WrappingRowDelegate(self._finder_tree))
+        self._finder_source = QLabel(finder_page)
+        self._finder_source.setProperty("role", "secondary")
+        self._finder_source.setWordWrap(True)
+        finder_page.layout().addWidget(self._finder_source)
+
         # The tabs pick the page, so the panel only needs a stack of them.
         self._sections = QStackedWidget(self._panel)
-        self._section_pages = dict(zip(SECTION_ICONS, (bp_page, mineral_page, crafting_page)))
+        self._section_pages = dict(zip(
+            SECTION_ICONS,
+            (bp_page, mineral_page, crafting_page, self._order, finder_page)))
         for page in self._section_pages.values():
             self._sections.addWidget(page)
         self._current: Optional[str] = None
@@ -1184,6 +1280,9 @@ class BlueprintDrawer(QWidget):
         self._layout.setSpacing(0)
         self._layout.addWidget(self._handle)
         self._layout.addWidget(self._panel)
+        # The screen it docks to: the game's (ScoOverlay.set_screen), or the
+        # primary screen while none is set.
+        self._screen: Optional[QScreen] = None
         # Whether clicks pass through to the window below (set_pass_through).
         self.pass_through = False
         self._position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
@@ -1204,12 +1303,15 @@ class BlueprintDrawer(QWidget):
         self._owned_only.setText(tr("sco.drawer_owned_only"))
         self._mineral_search.setPlaceholderText(tr("sco.minerals_search_placeholder"))
         self._crafting_search.setPlaceholderText(tr("sco.crafting_search_placeholder"))
+        self._finder_search.setPlaceholderText(tr("sco.finder_search_placeholder"))
         self._decoder_check.setText(tr("overlay.scan_decoder"))
         self._decoder_check.setToolTip(tr("overlay.scan_decoder_hint"))
         self._clear_watched_btn.setText(tr("sco.clear_watched"))
         self._render()
         self._render_minerals()
         self._render_crafting()
+        self._order.retranslate_ui()
+        self._render_finder()
 
     def apply_colors(self, colors: OverlayColors) -> None:
         """Restyle the tab and panel, e.g. after the app theme changes."""
@@ -1222,6 +1324,7 @@ class BlueprintDrawer(QWidget):
                 border: 1px solid {colors.accent};
             }}
             QLabel, QCheckBox {{ color: {colors.text}; background: transparent; }}
+            QLabel[role="secondary"] {{ color: {colors.secondary}; }}
             QLineEdit {{
                 color: {colors.text}; background: {_rgba(colors.background, 120)};
                 border: 1px solid {colors.secondary}; border-radius: 3px; padding: 2px 4px;
@@ -1229,6 +1332,13 @@ class BlueprintDrawer(QWidget):
             QListWidget, QTreeWidget {{
                 color: {colors.text}; background: transparent; border: none;
             }}
+            QScrollArea, QScrollArea > QWidget > QWidget {{ background: transparent; }}
+            QFrame#scoOrderCard {{
+                border: 1px solid {colors.secondary}; border-radius: 3px;
+            }}
+            QLabel[role="secondary"] {{ color: {colors.secondary}; }}
+            QLabel:disabled {{ color: {colors.secondary}; }}
+            QToolButton {{ color: {colors.text}; background: transparent; border: none; }}
             QListWidget::item:selected, QTreeWidget::item:selected {{
                 background: {_rgba(colors.accent, 60)}; color: {colors.text};
             }}
@@ -1284,6 +1394,15 @@ class BlueprintDrawer(QWidget):
         self._watched = set(ores)
         self._render_minerals()
 
+    def _watch_ores(self, ores) -> None:
+        """The Order section's Watch minerals: add these ores to the watch list."""
+        added = set(ores) - self._watched
+        if not added:
+            return
+        self._watched |= added
+        self._render_minerals()
+        self.watched_changed.emit(set(self._watched))
+
     def _clear_watched(self) -> None:
         if not self._watched:
             return
@@ -1315,12 +1434,22 @@ class BlueprintDrawer(QWidget):
                 self._mineral_by_material.setdefault(key, info)
         self._render_minerals()
         self._render_crafting()
+        self._order.set_catalog(crafting, self._mineral_by_material,
+                                lambda info: mineral_tooltip(info, self._crafting))
+
+    def set_shop_data(self, shops: Optional[ShopData], error: str = "") -> None:
+        """The Item Finder's shop data (None while none has loaded) and,
+        when the last fetch failed, why."""
+        self._shops = shops
+        self._shops_error = error
+        self._render_finder()
 
     def set_items(self, meta: dict, owned: set) -> None:
         """Replace the list contents: ``{name: BlueprintItem}`` + owned names."""
         self._meta = dict(meta)
         self._owned = set(owned)
         self._render()
+        self._order.set_owned(self._owned)
 
     def notify_new(self, names: list[str]) -> None:
         """Flash the names of blueprints the live log watcher just found."""
@@ -1455,8 +1584,13 @@ class BlueprintDrawer(QWidget):
             Qt.AlignmentFlag.AlignVCenter if sideways else Qt.AlignmentFlag.AlignHCenter)
         self._dock()
 
+    def set_screen(self, screen: Optional[QScreen]) -> None:
+        """Dock to *screen* (None: the primary screen), moving there at once."""
+        self._screen = screen
+        self._dock()
+
     def _dock(self) -> None:
-        display = QGuiApplication.primaryScreen()
+        display = self._screen or QGuiApplication.primaryScreen()
         screen = display.availableGeometry()
         edge = drawer_edge(self._position)
         vertical, _, horizontal = self._position.partition("_")
@@ -1619,6 +1753,54 @@ class BlueprintDrawer(QWidget):
             tree.addTopLevelItem(node)
             node.setExpanded(True)
 
+    def _render_finder(self) -> None:
+        tree = self._finder_tree
+        tree.clear()
+        shops = self._shops
+        if shops is None or shops.is_empty():
+            self._finder_source.setText(tr("sco.finder_failed") if self._shops_error
+                                        else tr("sco.finder_loading"))
+            return
+        updated = datetime.fromtimestamp(shops.fetched_at).strftime("%Y-%m-%d %H:%M")
+        source = tr("sco.finder_source", site=UEX_SITE, updated=updated)
+        if self._shops_error:
+            source = f"{source}\n{tr('sco.finder_offline')}"
+        self._finder_source.setText(source)
+        if not self._finder_search.text().strip():
+            return
+        matches, total = shops.search(self._finder_search.text())
+        if not matches:
+            tree.addTopLevelItem(QTreeWidgetItem([tr("sco.finder_none")]))
+            return
+        for match in matches:
+            prices = [loc.price for loc in match.locations]
+            node = QTreeWidgetItem([tr("sco.finder_item", item=match.name,
+                                       count=len(match.locations))])
+            node.setToolTip(0, "\n".join((match.name, tr(
+                "sco.finder_price_range", low=f"{min(prices):,.0f}", high=f"{max(prices):,.0f}"))))
+            for system, locations in shops_by_system(match.locations).items():
+                sys_node = QTreeWidgetItem([system or tr("sco.system_other")])
+                for loc in locations:
+                    child = QTreeWidgetItem([tr("sco.finder_location", shop=loc.shop,
+                                                place=loc.place, price=f"{loc.price:,.0f}")])
+                    child.setToolTip(0, self._shop_tooltip(loc))
+                    sys_node.addChild(child)
+                node.addChild(sys_node)
+            tree.addTopLevelItem(node)
+        if len(matches) == 1:
+            node = tree.topLevelItem(0)
+            node.setExpanded(True)
+            for i in range(node.childCount()):
+                node.child(i).setExpanded(True)
+        if total > len(matches):
+            tree.addTopLevelItem(QTreeWidgetItem([tr("sco.finder_more",
+                                                     shown=len(matches), total=total)]))
+
+    @staticmethod
+    def _shop_tooltip(loc: ShopLocation) -> str:
+        where = ", ".join(part for part in (loc.place, loc.body, loc.system) if part)
+        return "\n".join((loc.shop, where, tr("sco.finder_price", price=f"{loc.price:,.0f}")))
+
     def _item_tooltip(self, item: str, category: str) -> str:
         lines = [item, category]
         materials = self._crafting.materials_for(item)
@@ -1633,6 +1815,7 @@ class BlueprintDrawer(QWidget):
             self._owned.add(name)
         else:
             self._owned.discard(name)
+        self._order.set_owned(self._owned)
         self.owned_toggled.emit(name, checked)
 
 
@@ -1779,6 +1962,15 @@ class ScoOverlay(QObject):
         self._running = False
         self._show_label = True
         self._show_drawer = True
+        # The screen the drawer docks to and the capture reads: Star
+        # Citizen's, or the primary screen when the game is not found.
+        self._screen: Optional[QScreen] = None
+        self._screen_timer = QTimer(self)
+        self._screen_timer.setInterval(GAME_SCREEN_CHECK_MS)
+        self._screen_timer.timeout.connect(self._follow_game_screen)
+        app = QGuiApplication.instance()
+        if app is not None:
+            app.screenRemoved.connect(self._on_screen_removed)
 
     def set_options(self, options: dict[str, bool]) -> None:
         """Apply the Overlay tab's switches (``AppSettings.SCO_OPTION_SETTING``
@@ -1845,11 +2037,14 @@ class ScoOverlay(QObject):
         colors = OverlayColors.from_theme()
         self.drawer.apply_colors(colors)
         self.label.set_glow_color(colors.accent)
+        self._follow_game_screen()
+        self._screen_timer.start()
         self._sync_windows()
 
     def stop(self) -> None:
         self._running = False
         self._timer.stop()
+        self._screen_timer.stop()
         self._pass_through_timer.stop()
         self._read_token += 1
         self._focus_before_drawer = 0
@@ -1857,6 +2052,35 @@ class ScoOverlay(QObject):
         self.label.hide()
         self.drawer.hide()
         self._sync_hotkey()
+
+    def screen(self) -> Optional[QScreen]:
+        """The screen the overlay works on (None until it first starts)."""
+        return self._screen
+
+    def _follow_game_screen(self) -> None:
+        """Move to the screen Star Citizen is on, if that changed: the drawer
+        docks there and the next capture reads it. A label still showing
+        belongs to the old screen, so it goes, with any pending reading."""
+        screen = game_screen()
+        if screen is self._screen:
+            return
+        if self._screen is not None:
+            logger.info("SCO: following the game to screen %s",
+                        screen.name() if screen else "none")
+        self._screen = screen
+        self.drawer.set_screen(screen)
+        self.label.hide()
+        self._candidate, self._candidate_count = None, 0
+        self._read_token += 1           # a capture of the old screen is void
+
+    def _on_screen_removed(self, screen: QScreen) -> None:
+        # Never keep a screen Qt is about to delete.
+        if screen is not self._screen:
+            return
+        self._screen = None
+        self.drawer.set_screen(None)
+        if self._running:
+            self._follow_game_screen()
 
     def _sync_windows(self) -> None:
         if self._show_drawer and self.drawer.has_sections():
@@ -2012,10 +2236,14 @@ class ScoOverlay(QObject):
         # A confirming capture queued just before a stop must not run either.
         if self._reading or self._reader is None or not self._timer.isActive():
             return
-        screen = QGuiApplication.primaryScreen()
-        region = scan_region_rect(screen.geometry())
+        screen = self._screen or QGuiApplication.primaryScreen()
+        geometry = screen.geometry()
+        region = scan_region_rect(geometry)
+        # With window 0, grabWindow's x and y count from the screen's own
+        # top-left; the region is in desktop coordinates.
         image = screen.grabWindow(
-            0, region.x(), region.y(), region.width(), region.height()).toImage()
+            0, region.x() - geometry.x(), region.y() - geometry.y(),
+            region.width(), region.height()).toImage()
         self._mask_own_label(image, region)
         self._reading = True
         self._pool.start(_ReadTask(self._reader, image, region, self._read_done, self._read_token))

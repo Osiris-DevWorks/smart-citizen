@@ -9,6 +9,7 @@ from typing import Callable, Dict, List, Optional
 from src.models.string_model import StringEntry
 from src.parser.ini_parser import parse_ini_file
 from src.utils.atomic_io import atomic_write_text, atomic_writer, sweep_stale_temps
+from src.utils.crafting_order import SAVED_ORDERS_FOLDER
 from src.utils.install_scanner import SC_CHANNELS
 from src.utils.perf import timed
 
@@ -16,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 # What Smart Citizen writes in its data folder's root since the 0.9.3 channel
 # layout: a folder per channel, and logs (crash dumps and log exports). The
-# installer's DeleteOwnedSubpaths knows the same folders.
-OWNED_DATA_FOLDERS = (*SC_CHANNELS, "logs")
+# installer's DeleteOwnedSubpaths knows the same folders, except the SCO Order
+# tab's saved orders (3.1.0), which its opt-in wipe does not delete yet.
+OWNED_DATA_FOLDERS = (*SC_CHANNELS, "logs", SAVED_ORDERS_FOLDER)
 
 
 def migrate_user_data_dir(

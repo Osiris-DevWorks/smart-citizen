@@ -15,6 +15,24 @@
       "at": ""
     }
   },
+  "tray": {
+    "show": {
+      "ht": "Show Smart Citizen",
+      "at": ""
+    },
+    "quit": {
+      "ht": "Quit",
+      "at": ""
+    },
+    "notice_title": {
+      "ht": "Smart Citizen is still running",
+      "at": ""
+    },
+    "notice_body": {
+      "ht": "It is in the system tray. Click its icon to bring the window back, or right-click it to quit. If you can't see the icon, it may be behind the ^ arrow by the clock.",
+      "at": ""
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "Switch to Advanced",
@@ -212,6 +230,10 @@
       "ht": "Open the Smart Citizen Discord channel for feedback, bug reports, and voting on upcoming features (requires joining the Osiris DevWorks Discord).",
       "at": ""
     },
+    "karolinger_tooltip": {
+      "ht": "Open the Smart Citizen guides on Karolinger Guides",
+      "at": ""
+    },
     "apply_enabled_tooltip": {
       "ht": "Write the merged table contents to the game's global.ini. A timestamped backup of the current global.ini is created first.",
       "at": ""
@@ -222,6 +244,10 @@
     },
     "feedback_fallback_text": {
       "ht": "Feedback, Bugs, & Feature Voting",
+      "at": ""
+    },
+    "karolinger_fallback_text": {
+      "ht": "Karolinger Guides",
       "at": ""
     },
     "paypal_fallback_text": {
@@ -822,6 +848,18 @@
       "ht": "When checked, the guided tour will not auto-launch on a new version. The Tutorial button in the toolbar still works.",
       "at": ""
     },
+    "minimize_to_tray_cb": {
+      "ht": "Minimize to Tray",
+      "at": ""
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "When checked, minimizing hides Smart Citizen in the system tray (the icons next to the clock) instead of on the taskbar. Click its tray icon to bring it back. While it is in the tray, starting Smart Citizen again brings that window back instead of opening a second copy.",
+      "at": ""
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "No system tray was found, so Smart Citizen minimizes to the taskbar.",
+      "at": ""
+    },
     "game_path_tooltip": {
       "ht": "Star Citizen install root — the directory that contains LIVE/, PTU/, EPTU/, HOTFIX/, and/or TECH-PREVIEW/. Auto-detected at install time; edit if your game lives elsewhere. The 'Channel' dropdown below picks which one the app reads and writes.",
       "at": ""
@@ -868,6 +906,50 @@
     },
     "reset_cache_tooltip": {
       "ht": "Clear the custom cache folder and use the platform default.",
+      "at": ""
+    },
+    "smart_sync_group": {
+      "ht": "Smart Sync",
+      "at": ""
+    },
+    "smart_sync_desc": {
+      "ht": "Keep your Owned blueprints the same on every PC you play on. Choose a folder your cloud app already syncs, such as one in Google Drive, OneDrive or Dropbox, then choose the same folder on your other PCs. Smart Citizen only reads and writes a few small files there, and your cloud app moves them.",
+      "at": ""
+    },
+    "smart_sync_placeholder": {
+      "ht": "Off. Choose a folder to turn it on.",
+      "at": ""
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "Choose a folder your cloud app syncs to your other PCs",
+      "at": ""
+    },
+    "smart_sync_off_btn": {
+      "ht": "Turn Off",
+      "at": ""
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "Stop syncing. The Owned blueprints on this PC stay as they are.",
+      "at": ""
+    },
+    "select_smart_sync_folder": {
+      "ht": "Choose the Smart Sync folder",
+      "at": ""
+    },
+    "smart_sync_status_off": {
+      "ht": "Smart Sync is off.",
+      "at": ""
+    },
+    "smart_sync_status_waiting": {
+      "ht": "Syncing...",
+      "at": ""
+    },
+    "smart_sync_status_ok": {
+      "ht": "Last synced at {time}. Other PCs in this folder: {count}.",
+      "at": ""
+    },
+    "smart_sync_status_failed": {
+      "ht": "Could not sync: {error}",
       "at": ""
     },
     "extract_tooltip": {
@@ -2256,6 +2338,10 @@
       "ht": "Couldn't load the {language} localization from the configured source, and no cached copy was found. Showing the English base instead. Check the URL or file in Map Language File, then try again.",
       "at": ""
     },
+    "language_updated_status": {
+      "ht": "A newer {language} translation was downloaded. Reloading with it.",
+      "at": ""
+    },
     "language_generating_enhancements": {
       "ht": "Generating {language} enhancements from DataForge…",
       "at": ""
@@ -2582,6 +2668,14 @@
     },
     "window_proportions_reset": {
       "ht": "Window proportions reset to defaults.",
+      "at": ""
+    },
+    "smart_sync_failed": {
+      "ht": "Smart Sync could not use its folder: {error}",
+      "at": ""
+    },
+    "smart_sync_updated": {
+      "ht": "Smart Sync updated {count} Owned blueprint(s) from your other PCs.",
       "at": ""
     }
   },
@@ -3343,6 +3437,290 @@
     "tooltip_minerals_here": {
       "ht": "Minerals here: {minerals}",
       "at": ""
+    },
+    "section_order": {
+      "ht": "Order",
+      "at": ""
+    },
+    "order_search_placeholder": {
+      "ht": "Add an item to the order...",
+      "at": ""
+    },
+    "order_summary": {
+      "ht": "Order summary: {items} items, {crafts} crafts",
+      "at": ""
+    },
+    "order_empty": {
+      "ht": "Nothing on the order yet. Search below to add an item.",
+      "at": ""
+    },
+    "order_no_data": {
+      "ht": "No order data yet. Extract DataForge, then generate enhancements with Commodities or Journal ticked.",
+      "at": ""
+    },
+    "order_material_total": {
+      "ht": "{material}: {amount}",
+      "at": ""
+    },
+    "order_band": {
+      "ht": "Quality {quality}+: {amount}",
+      "at": ""
+    },
+    "order_used_by": {
+      "ht": "Used by: {items}",
+      "at": ""
+    },
+    "order_show_scu": {
+      "ht": "Show SCU",
+      "at": ""
+    },
+    "order_show_cscu": {
+      "ht": "Show cSCU",
+      "at": ""
+    },
+    "order_volume_tooltip": {
+      "ht": "Show ore amounts in SCU or cSCU (a hundredth of an SCU, as in game)",
+      "at": ""
+    },
+    "order_copy": {
+      "ht": "Copy",
+      "at": ""
+    },
+    "order_copied": {
+      "ht": "Copied",
+      "at": ""
+    },
+    "order_copy_tooltip": {
+      "ht": "Copy the order and its materials as text, for Discord",
+      "at": ""
+    },
+    "order_watch": {
+      "ht": "Watch minerals",
+      "at": ""
+    },
+    "order_watch_tooltip": {
+      "ht": "Add the order's minerals to the scan watch list, so the scanner alerts you when it reads one",
+      "at": ""
+    },
+    "order_new": {
+      "ht": "New order",
+      "at": ""
+    },
+    "order_new_confirm": {
+      "ht": "Sure?",
+      "at": ""
+    },
+    "order_new_note": {
+      "ht": "Click New order again to empty this order. Saved orders are kept.",
+      "at": ""
+    },
+    "order_new_tooltip": {
+      "ht": "Start a new order: removes every item from this one. Saved orders are kept.",
+      "at": ""
+    },
+    "order_less": {
+      "ht": "One less",
+      "at": ""
+    },
+    "order_more": {
+      "ht": "One more",
+      "at": ""
+    },
+    "order_remove": {
+      "ht": "Remove from the order",
+      "at": ""
+    },
+    "order_not_owned": {
+      "ht": "Blueprint not owned yet",
+      "at": ""
+    },
+    "order_owned_only": {
+      "ht": "Owned only",
+      "at": ""
+    },
+    "order_owned_only_tooltip": {
+      "ht": "Search only the blueprints you own.",
+      "at": ""
+    },
+    "order_unknown_material": {
+      "ht": "Unknown material",
+      "at": ""
+    },
+    "order_save_placeholder": {
+      "ht": "Order name",
+      "at": ""
+    },
+    "order_save": {
+      "ht": "Save",
+      "at": ""
+    },
+    "order_save_tooltip": {
+      "ht": "Save this order under the name you typed.",
+      "at": ""
+    },
+    "order_save_replace": {
+      "ht": "Replace?",
+      "at": ""
+    },
+    "order_saved": {
+      "ht": "Saved",
+      "at": ""
+    },
+    "order_save_name_needed": {
+      "ht": "Type a name for the order first.",
+      "at": ""
+    },
+    "order_save_failed": {
+      "ht": "Could not save the order to:\n{file}",
+      "at": ""
+    },
+    "order_saved_orders": {
+      "ht": "Saved orders",
+      "at": ""
+    },
+    "order_load": {
+      "ht": "Load",
+      "at": ""
+    },
+    "order_load_tooltip": {
+      "ht": "Replace this order with the saved one picked in the list.",
+      "at": ""
+    },
+    "order_delete": {
+      "ht": "Delete",
+      "at": ""
+    },
+    "order_delete_confirm": {
+      "ht": "Sure?",
+      "at": ""
+    },
+    "order_delete_note": {
+      "ht": "Click Delete again to delete the saved order \"{name}\".",
+      "at": ""
+    },
+    "order_delete_tooltip": {
+      "ht": "Delete the saved order picked in the list. The order you are building stays.",
+      "at": ""
+    },
+    "order_delete_failed": {
+      "ht": "Could not delete the saved order \"{name}\".",
+      "at": ""
+    },
+    "order_load_empty": {
+      "ht": "\"{name}\" has no items this game data knows.",
+      "at": ""
+    },
+    "order_pick": {
+      "ht": "Uses {need} of these {of}:",
+      "at": ""
+    },
+    "order_pick_tooltip": {
+      "ht": "Use this slot. Ticking one past what the blueprint needs unticks another.",
+      "at": ""
+    },
+    "order_slot": {
+      "ht": "{slot}: {material}, {amount}",
+      "at": ""
+    },
+    "order_quality": {
+      "ht": "Q {quality}",
+      "at": ""
+    },
+    "order_quality_tooltip": {
+      "ht": "The quality of the material for this slot (0 to 1000)",
+      "at": ""
+    },
+    "order_quality_tier": {
+      "ht": "Q {quality} ({tier})",
+      "at": ""
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "{material} only comes at these qualities ({source} data): {tiers}. The slider stops at these and at 0, 500 and 1000.",
+      "at": ""
+    },
+    "order_min_quality": {
+      "ht": "Needs quality {quality} or better",
+      "at": ""
+    },
+    "order_item_bonus": {
+      "ht": "All slots: {bonuses}",
+      "at": ""
+    },
+    "order_no_bonus": {
+      "ht": "Material quality doesn't change this item's stats.",
+      "at": ""
+    },
+    "order_pips": {
+      "ht": "{value} pips",
+      "at": ""
+    },
+    "order_pieces": {
+      "ht": "{count} pcs",
+      "at": ""
+    },
+    "order_scu": {
+      "ht": "{amount} SCU",
+      "at": ""
+    },
+    "order_cscu": {
+      "ht": "{amount} cSCU",
+      "at": ""
+    },
+    "order_text_title": {
+      "ht": "Crafting order: {count} crafts",
+      "at": ""
+    },
+    "order_text_materials": {
+      "ht": "Materials:",
+      "at": ""
+    },
+    "order_text_band": {
+      "ht": "{amount} at quality {quality}+",
+      "at": ""
+    },
+    "finder_search_placeholder": {
+      "ht": "Type an item to see where to buy it...",
+      "at": ""
+    },
+    "finder_loading": {
+      "ht": "Loading shop data from UEX...",
+      "at": ""
+    },
+    "finder_failed": {
+      "ht": "Could not reach UEX for shop data. Check your internet connection. The overlay tries again in a few minutes.",
+      "at": ""
+    },
+    "finder_source": {
+      "ht": "Shop data from {site}, reported by players. Updated {updated}.",
+      "at": ""
+    },
+    "finder_offline": {
+      "ht": "UEX could not be reached, so this is the last saved copy.",
+      "at": ""
+    },
+    "finder_none": {
+      "ht": "No shop is known to sell an item with that name.",
+      "at": ""
+    },
+    "finder_item": {
+      "ht": "{item} ({count})",
+      "at": ""
+    },
+    "finder_location": {
+      "ht": "{shop}, {place}: {price} aUEC",
+      "at": ""
+    },
+    "finder_price_range": {
+      "ht": "{low} to {high} aUEC",
+      "at": ""
+    },
+    "finder_price": {
+      "ht": "{price} aUEC",
+      "at": ""
+    },
+    "finder_more": {
+      "ht": "Showing {shown} of {total} items. Type more to narrow it down.",
+      "at": ""
     }
   },
   "overlay": {
@@ -3562,6 +3940,14 @@
       "ht": "Type a mineral to see which items use it, or an item to see the minerals it needs. Needs a DataForge extraction.",
       "at": ""
     },
+    "drawer_finder": {
+      "ht": "Item Finder",
+      "at": ""
+    },
+    "drawer_finder_hint": {
+      "ht": "Type an item to see which shops sell it, where they are and the price. Shop data comes from UEX over the internet and is reported by players.",
+      "at": ""
+    },
     "drawer_position": {
       "ht": "Drawer position:",
       "at": ""
@@ -3616,6 +4002,14 @@
     },
     "hotkey_unsupported": {
       "ht": "This cannot be a hotkey. Hold Ctrl, Alt or Win with a letter, number, symbol, Space, Tab or navigation key (arrows, Home, End, Page Up/Down, Insert, Delete), and Shift too if you like. An F key or Pause also works on its own.",
+      "at": ""
+    },
+    "drawer_order": {
+      "ht": "Order",
+      "at": ""
+    },
+    "drawer_order_hint": {
+      "ht": "Build a crafting order and see every material it needs, by quality. Requires a DataForge extraction.",
       "at": ""
     }
   },

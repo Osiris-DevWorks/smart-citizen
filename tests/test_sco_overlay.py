@@ -182,11 +182,17 @@ def _tab_centre(bar, index):
     return QPointF(DRAWER_HANDLE_WIDTH * 0.75, index * step + DRAWER_HANDLE_HEIGHT / 2)
 
 
+def _stack_length():
+    """The tab stack's length: one tab per section, overlapping by their taper."""
+    return (len(SECTION_ICONS) * DRAWER_HANDLE_HEIGHT
+            - (len(SECTION_ICONS) - 1) * DRAWER_HANDLE_OVERLAP)
+
+
 def test_tabs_overlap_and_the_open_one_is_in_front(qapp):
     from PyQt6.QtCore import QPointF
 
     bar = SectionTabBar()
-    assert bar.height() == 3 * DRAWER_HANDLE_HEIGHT - 2 * DRAWER_HANDLE_OVERLAP
+    assert bar.height() == _stack_length()
     for i, name in enumerate(SECTION_ICONS):
         assert bar.tab_at(_tab_centre(bar, i)) == name
     # Along the edge, where Blueprints' and Minerals' tall sides overlap, the
@@ -216,7 +222,7 @@ def test_a_click_on_a_tab_opens_its_section(qapp):
 def test_tabs_run_along_each_edge(qapp, edge):
     bar = SectionTabBar()
     bar.set_edge(edge)
-    length = 3 * DRAWER_HANDLE_HEIGHT - 2 * DRAWER_HANDLE_OVERLAP
+    length = _stack_length()
     sideways = edge in ("left", "right")
     assert (bar.width(), bar.height()) == (
         (DRAWER_HANDLE_WIDTH, length) if sideways else (length, DRAWER_HANDLE_WIDTH))
@@ -226,7 +232,7 @@ def test_tabs_run_along_each_edge(qapp, edge):
     mid, near = DRAWER_HANDLE_WIDTH / 2, DRAWER_HANDLE_HEIGHT / 2
     far = length - DRAWER_HANDLE_HEIGHT / 2
     at = (lambda along: QPointF(mid, along)) if sideways else (lambda along: QPointF(along, mid))
-    assert bar.tab_at(at(near)) == "blueprints" and bar.tab_at(at(far)) == "crafting"
+    assert bar.tab_at(at(near)) == "blueprints" and bar.tab_at(at(far)) == list(SECTION_ICONS)[-1]
 
 
 def test_tab_bar_paints(qapp):
@@ -741,7 +747,7 @@ def test_sections_follow_the_options(qapp):
     overlay = ScoOverlay()
     overlay.drawer.open_section("minerals")
     overlay.set_options({"drawer_minerals": False})
-    assert overlay.drawer._handle.sections == ["blueprints", "crafting"]
+    assert overlay.drawer._handle.sections == ["blueprints", "crafting", "order", "finder"]
     # Switching off the open section closes the drawer.
     assert not overlay.drawer._panel.isVisibleTo(overlay.drawer)
     assert overlay.drawer.has_sections()
@@ -751,8 +757,7 @@ def test_no_sections_hides_the_drawer(qapp):
     overlay = ScoOverlay()
     overlay.start()
     try:
-        overlay.set_options({"drawer_blueprints": False, "drawer_minerals": False,
-                             "drawer_crafting": False})
+        overlay.set_options({f"drawer_{name}": False for name in SECTION_ICONS})
         assert not overlay.drawer.has_sections() and not overlay.drawer.isVisible()
     finally:
         overlay.stop()
@@ -2635,3 +2640,125 @@ def test_a_drawer_opened_without_focus_is_logged(qapp, monkeypatch, caplog):
             assert len(messages()) == 1
     finally:
         overlay.stop()
+
+
+def _shop_data():
+    from src.utils.uex_shops import build_shop_data
+    terminals = [
+        {"id": 1, "name": "CenterMass - Area 18", "city_name": "Area 18",
+         "planet_name": "ArcCorp", "star_system_name": "Stanton", "is_available_live": 1},
+        {"id": 2, "name": "Conscientious Objects - Levski", "city_name": "Levski",
+         "moon_name": "Delamar", "star_system_name": "Nyx", "is_available_live": 1},
+    ]
+    prices = [
+        {"id_item": 10, "id_terminal": 1, "item_name": "P4-AR Rifle", "price_buy": 4757,
+         "date_modified": 1_790_000_000},
+        {"id_item": 10, "id_terminal": 2, "item_name": "P4-AR Rifle", "price_buy": 4600,
+         "date_modified": 1_790_000_000},
+        {"id_item": 11, "id_terminal": 1, "item_name": "P4-AR Magazine", "price_buy": 198},
+    ]
+    return build_shop_data(prices, terminals, 1_800_000_000)
+
+
+def test_the_finder_has_a_magnifying_glass_tab_and_its_own_switch(qapp):
+    assert list(SECTION_ICONS)[-1] == "finder"
+    assert AppSettings.SCO_DRAWER_SECTION_PREFIX + "finder" in AppSettings.SCO_OPTION_SETTING
+    drawer = BlueprintDrawer()
+    drawer.open_section("finder")
+    assert drawer._sections.currentWidget() is drawer._finder_tree.parentWidget()
+
+
+def test_the_finder_says_it_is_loading_then_why_it_has_nothing(qapp):
+    drawer = BlueprintDrawer()
+    assert drawer._finder_source.text() == "Loading shop data from UEX..."
+    drawer.set_shop_data(None, "no network")
+    assert drawer._finder_source.text().startswith("Could not reach UEX")
+    drawer._finder_search.setText("p4")
+    assert _tree(drawer._finder_tree) == []
+
+
+def test_a_match_expands_to_the_shops_that_sell_it(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_shop_data(_shop_data())
+    assert "uexcorp.space" in drawer._finder_source.text()
+    drawer._finder_search.setText("p4-ar")
+    # Grouped by star system in the game's order, cheapest first in each.
+    assert _tree(drawer._finder_tree) == [
+        ["P4-AR Magazine (1)", [["Stanton", [["CenterMass, Area 18: 198 aUEC", []]]]]],
+        ["P4-AR Rifle (2)", [["Stanton", [["CenterMass, Area 18: 4,757 aUEC", []]]],
+                             ["Nyx", [["Conscientious Objects, Levski: 4,600 aUEC", []]]]]],
+    ]
+    # Collapsed until the player opens one, unless it is the only match.
+    assert not drawer._finder_tree.topLevelItem(0).isExpanded()
+    rifle = drawer._finder_tree.topLevelItem(1)
+    assert rifle.toolTip(0) == "P4-AR Rifle\n4,600 to 4,757 aUEC"
+    # The shop's tooltip gives its full place and its price, not a date.
+    assert rifle.child(1).child(0).toolTip(0) == (
+        "Conscientious Objects\nLevski, Delamar, Nyx\n4,600 aUEC")
+    drawer._finder_search.setText("rifle")
+    only = drawer._finder_tree.topLevelItem(0)
+    assert only.isExpanded()
+    assert all(only.child(i).isExpanded() for i in range(only.childCount()))
+
+
+def test_shops_are_grouped_by_system_in_the_games_order():
+    from src.gui.sco_overlay import shops_by_system
+    from src.utils.uex_shops import ShopLocation
+
+    def shop(system, price):
+        return ShopLocation("Shop", "Place", "", system, price, 0)
+
+    grouped = shops_by_system([shop("Nyx", 1), shop("", 2), shop("Castra", 3),
+                               shop("Stanton", 4), shop("Pyro", 5), shop("Stanton", 6)])
+    assert list(grouped) == ["Stanton", "Pyro", "Nyx", "Castra", ""]
+    assert [loc.price for loc in grouped["Stanton"]] == [4, 6]
+
+
+def test_a_long_shop_name_wraps_instead_of_being_cut_off(qapp):
+    from src.utils.uex_shops import build_shop_data
+    terminals = [
+        {"id": 1, "name": "Shop - Area 18", "city_name": "Area 18",
+         "star_system_name": "Stanton", "is_available_live": 1},
+        {"id": 2, "name": "Cubby Blast Weapons and Armor Emporium - " + "Long " * 12,
+         "city_name": "Lorville Business District Commercial Plaza " * 2,
+         "star_system_name": "Stanton", "is_available_live": 1},
+    ]
+    prices = [{"id_item": 1, "id_terminal": t, "item_name": "Gun", "price_buy": 10 * t}
+              for t in (1, 2)]
+    drawer = BlueprintDrawer()
+    drawer.set_shop_data(build_shop_data(prices, terminals, 1_800_000_000))
+    drawer.open_section("finder")
+    drawer.show()
+    tree = drawer._finder_tree
+    drawer._finder_search.setText("gun")
+    qapp.processEvents()
+    system = tree.topLevelItem(0).child(0)
+    short, long_ = (tree.visualItemRect(system.child(i)) for i in range(2))
+    assert long_.height() > short.height()
+    assert long_.right() <= tree.viewport().width()
+    assert tree.horizontalScrollBar().maximum() == 0
+    drawer.hide()
+
+
+def test_the_finder_says_when_nothing_matches_or_the_list_is_cut(qapp):
+    from src.utils.uex_shops import MATCH_LIMIT, build_shop_data
+    drawer = BlueprintDrawer()
+    drawer.set_shop_data(_shop_data())
+    drawer._finder_search.setText("zzz")
+    assert _tree(drawer._finder_tree) == [["No shop is known to sell an item with that name.", []]]
+    terminal = {"id": 1, "name": "Shop - Area 18", "city_name": "Area 18",
+                "star_system_name": "Stanton", "is_available_live": 1}
+    count = MATCH_LIMIT + 5
+    prices = [{"id_item": i, "id_terminal": 1, "item_name": f"Gun {i:03}", "price_buy": 10}
+              for i in range(count)]
+    drawer.set_shop_data(build_shop_data(prices, [terminal], 1_800_000_000))
+    drawer._finder_search.setText("gun")
+    rows = _tree(drawer._finder_tree)
+    assert len(rows) == MATCH_LIMIT + 1
+    assert rows[-1][0] == f"Showing {MATCH_LIMIT} of {count} items. Type more to narrow it down."
+
+
+def test_an_old_copy_shown_offline_says_so(qapp):
+    drawer = BlueprintDrawer()
+    drawer.set_shop_data(_shop_data(), "no network")
+    assert drawer._finder_source.text().endswith("this is the last saved copy.")

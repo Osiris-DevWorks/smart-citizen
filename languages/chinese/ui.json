@@ -15,6 +15,24 @@
       "at": "智慧公民 v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "显示 Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "退出"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen 仍在运行"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "它在系统托盘中。点击其图标即可恢复窗口，右键点击可退出。如果看不到图标，它可能在时钟旁的 ^ 箭头里。"
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "打开智慧公民 Discord 频道，反馈问题、报告 Bug，并为即将推出的功能投票（需要加入 Osiris DevWorks Discord）。"
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "打开 Karolinger Guides 上的智慧公民指南"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "将合并后的表格内容写入游戏的 global.ini。会先创建当前 global.ini 的带时间戳备份。"
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "反馈、错误报告与功能投票"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -798,6 +824,18 @@
       "ht": "",
       "at": "勾选后，引导教程将不会在新版本中自动启动。工具栏中的教程按钮仍然可用。"
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "最小化到系统托盘"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "勾选后，最小化 Smart Citizen 时会将其隐藏到系统托盘（时钟旁的图标）而不是任务栏。点击其托盘图标即可恢复。在托盘中时，再次启动 Smart Citizen 会恢复该窗口，而不是打开第二个副本。"
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "未找到系统托盘，因此 Smart Citizen 将最小化到任务栏。"
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "《星际公民》安装根目录——包含 LIVE/、PTU/、EPTU/、HOTFIX/ 和（或）TECH-PREVIEW/ 的目录。安装时会自动检测；如果你的游戏安装在其他位置，可在此编辑。下方的“频道”下拉菜单选择应用读写哪个频道。"
@@ -845,6 +883,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "清除自定义缓存文件夹，改用平台默认值。"
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "让你在每台游玩的电脑上拥有相同的已拥有蓝图。选择一个云应用已在同步的文件夹（例如 Google Drive、OneDrive 或 Dropbox 中的文件夹），然后在其他电脑上选择同一个文件夹。Smart Citizen 只在其中读写几个小文件，由你的云应用负责传输。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "已关闭。选择一个文件夹即可开启。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "选择云应用会同步到其他电脑的文件夹"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "关闭"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "停止同步。本机的已拥有蓝图保持不变。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "选择 Smart Sync 文件夹"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync 已关闭。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "正在同步..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "上次同步于 {time}。此文件夹中的其他电脑：{count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "无法同步：{error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2338,10 @@
       "ht": "",
       "at": "无法从所设置的来源加载 {language} 本地化内容，也未找到缓存副本。改为显示英文基础内容。请检查“映射语言文件”中的地址或文件，然后重试。"
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "已下载更新的 {language} 翻译，正在重新加载。"
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "正在从 DataForge 生成 {language} 增强内容…"
@@ -2583,6 +2669,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "窗口比例已恢复为默认值。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync 无法使用其文件夹：{error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync 已从其他电脑更新 {count} 个已拥有蓝图。"
     }
   },
   "import_flow": {
@@ -3241,7 +3335,7 @@
       },
       "description": {
         "ht": "",
-        "at": "选择应用主题（默认 / 浅色 / 深色 / ODW）和字体大小（小 / 中 / 大，重启后生效），并可选择在新版本时关闭自动教程。"
+        "at": "选择应用主题（默认 / 浅色 / 深色 / ODW）和字体大小（小 / 中 / 大，重启后生效），并可选择在新版本时关闭自动教程。勾选“最小化到系统托盘”后，窗口在最小化时会进入系统托盘。"
       }
     },
     "cfg_sc_install": {
@@ -3311,7 +3405,21 @@
       },
       "description": {
         "ht": "",
-        "at": "“帮助”按钮会打开一个侧边面板，其中包含完整指南、已知问题列表，以及智慧公民 Discord 频道的反馈链接。到这里，你需要了解的一切就都齐了——祝你好运，公民。"
+        "at": "“帮助”按钮会打开一个侧边面板，其中包含完整指南、已知问题列表，以及智慧公民 Discord 频道的反馈链接。"
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. 指南与视频教程"
+      },
+      "description": {
+        "ht": "",
+        "at": "窗口底部的 Karolinger Guides 标志会打开 Karolinger Guides 上的智慧公民指南。想看视频？视频教程会带你走完整个流程。到这里，你需要了解的一切就都齐了——祝你好运，公民。"
+      },
+      "link_text": {
+        "ht": "",
+        "at": "观看视频教程"
       }
     }
   },
@@ -3565,6 +3673,290 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "此处矿物：{minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "订单"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "向订单添加物品..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "订单汇总：{items} 种物品，{crafts} 次制造"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "订单还是空的。在下方搜索以添加物品。"
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "还没有订单数据。提取 DataForge，然后勾选 Commodities 或 Journal 生成增强内容。"
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}：{amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "品质 {quality}+：{amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "用于：{items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "显示 SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "显示 cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "以 SCU 或 cSCU（SCU 的百分之一，与游戏内一致）显示矿石数量"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "复制"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "已复制"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "将订单及其材料复制为文本，用于 Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "监视矿物"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "将订单的矿物加入扫描监视列表，扫描仪读到其中之一时会提醒你"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "新订单"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "确定？"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "再次点击“新订单”以清空此订单。已保存的订单会保留。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "开始新订单：移除当前订单中的所有物品。已保存的订单会保留。"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "减少一个"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "增加一个"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "从订单中移除"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "尚未拥有蓝图"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "仅已拥有"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "只搜索你已拥有的蓝图。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "未知材料"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "订单名称"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "保存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "以你输入的名称保存此订单。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "替换？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "已保存"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "请先输入订单名称。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "无法将订单保存到：\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "已保存的订单"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "加载"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "用列表中选中的已保存订单替换此订单。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "删除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "确定"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "再次点击“删除”以删除已保存的订单“{name}”。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "删除列表中选中的已保存订单。正在编辑的订单不受影响。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "无法删除已保存的订单“{name}”。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "“{name}”中没有当前游戏数据认识的物品。"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "从这 {of} 个中选用 {need} 个："
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "使用此槽位。勾选数超过蓝图所需时，会取消另一个的勾选。"
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}：{material}，{amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "此槽位所用材料的品质（0 到 1000）"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} 只有以下品质（{source} 数据）：{tiers}。滑块会停在这些值以及 0、500 和 1000 上。"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "需要品质 {quality} 或更高"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "所有槽位：{bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "材料品质不会改变此物品的属性。"
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} 点能量"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} 个"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "制造订单：{count} 次制造"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "材料："
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "品质 {quality}+ 的 {amount}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "输入物品名称，查看在哪里购买..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "正在从 UEX 加载商店数据..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "无法连接 UEX 获取商店数据。请检查网络连接。覆盖层会在几分钟后重试。"
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "商店数据来自 {site}，由玩家上报。更新于 {updated}。"
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "无法连接 UEX，因此显示的是上次保存的副本。"
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "没有已知商店出售该名称的物品。"
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item}（{count}）"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}，{place}：{price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} 至 {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "显示 {total} 个物品中的 {shown} 个。继续输入以缩小范围。"
     }
   },
   "overlay": {
@@ -3784,6 +4176,14 @@
       "ht": "",
       "at": "输入矿物可查看使用它的物品，输入物品可查看所需矿物。需要先提取 DataForge。"
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "物品查找"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "输入物品名称，查看哪些商店出售、商店位置和价格。商店数据通过互联网来自 UEX，由玩家上报。"
+    },
     "drawer_position": {
       "ht": "",
       "at": "抽屉位置："
@@ -3839,6 +4239,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "这个不能用作热键。请按住 Ctrl、Alt 或 Win，再加一个字母、数字、符号、空格、Tab 或导航键（方向键、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 键或 Pause 也可以单独使用。"
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "订单"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "创建制造订单，按品质查看所需的每种材料。需要提取 DataForge。"
     }
   },
   "shader_cache": {
