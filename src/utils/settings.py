@@ -103,6 +103,20 @@ def _is_valid_sc_root(path: str) -> bool:
         return False
 
 
+def _p4k_exists(path: Path) -> bool:
+    """Return True if *path* exists, False when it is missing or can't be read.
+
+    ``Path.exists()`` swallows only a few Windows errors. Any other OSError,
+    such as WinError 448 for an elevated process following a link a normal
+    user made (#595), reads as missing here instead of crashing the caller.
+    """
+    try:
+        return path.exists()
+    except OSError as exc:
+        logger.warning("Could not check %s: %s", path, exc)
+        return False
+
+
 def _path_ends_in_channel(path: str) -> bool:
     """Return True if *path*'s last component is a recognised channel name.
 
@@ -3103,6 +3117,11 @@ class AppSettings:
         can't actually switch to. When the root isn't configured yet we
         return all channels so the combo isn't empty — the user can still
         pick one before the path is set.
+
+        A channel whose Data.p4k can't be checked counts as missing rather
+        than crashing the app (#595): Windows raises WinError 448 when an
+        elevated process follows a link a normal user made, e.g. a PTU folder
+        linked to LIVE, and ``Path.exists()`` lets that error through.
         """
         root = AppSettings.get_sc_install_root()
         if not root:
@@ -3110,7 +3129,7 @@ class AppSettings:
         root_path = Path(root)
         return [
             channel for channel in AppSettings.AVAILABLE_CHANNELS
-            if (root_path / channel / "Data.p4k").exists()
+            if _p4k_exists(root_path / channel / "Data.p4k")
         ]
 
     @staticmethod

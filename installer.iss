@@ -75,7 +75,10 @@ Name: "{group}\{cm:UninstallProgram,Smart Citizen}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\Smart Citizen"; Filename: "{app}\SmartCitizen.exe"
 
 [Run]
-Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citizen}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citizen}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+; runasoriginaluser (#595): Setup runs as admin, and without it this launch
+; would too. Windows then refuses to follow a link a normal user made (a PTU
+; folder linked to LIVE), WinError 448, and the app also ran elevated.
 ; The #211 in-app auto-update relaunch is not a [Run] entry. Setup runs [Run]
 ; entries that are not postinstall BEFORE it signals ssPostInstall, and
 ; WriteInstallerChoicesToRegistry runs at ssPostInstall, so an entry here
