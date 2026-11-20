@@ -2256,6 +2256,10 @@
       "ht": "",
       "at": "Impossibile caricare la localizzazione {language} dalla fonte configurata, e non è stata trovata alcuna copia in cache. Viene mostrata la base inglese. Controlla l'URL o il file in Associa file lingua, poi riprova."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "È stata scaricata una traduzione {language} più recente. Ricaricamento in corso."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "Generazione dei miglioramenti {language} da DataForge…"

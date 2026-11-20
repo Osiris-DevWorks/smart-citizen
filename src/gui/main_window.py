@@ -749,6 +749,8 @@ class MainWindow(QMainWindow):
 
         # Per-language base.ini download worker (#30)
         self._lang_dl_worker: Optional[LanguageBaseDownloadWorker] = None
+        # The startup check for a newer community translation (#579)
+        self._lang_check_worker: Optional[LanguageBaseDownloadWorker] = None
 
         # P4K extraction worker and progress dialog
         self._p4k_worker: Optional[P4kExtractWorker] = None
@@ -4795,6 +4797,7 @@ class MainWindow(QMainWindow):
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
         self._maybe_auto_scan_blueprints()
+        self._check_language_translation_at_startup()
 
     def _maybe_auto_scan_blueprints(self) -> None:
         """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
@@ -5493,6 +5496,70 @@ class MainWindow(QMainWindow):
             lambda ok, lang=language, d=dest, dlg=dialog: self._on_language_base_ready(lang, d, dlg, ok)
         )
         self._lang_dl_worker.start()
+
+    def _check_language_translation_at_startup(self) -> None:
+        """Fetch the selected language's community translation again, once a
+        start, in the background (#579).
+
+        A language switch downloads it, but nothing else did, so after a game
+        patch the table kept the old translation until the user switched
+        language and back. Only a URL source is checked: the request is
+        conditional, so an unchanged file costs one round trip and changes
+        nothing. A file the user mapped by hand (Map Language File) is left
+        alone, as it only changes when they change it. A new file is acted
+        on in _on_language_translation_checked."""
+        language = AppSettings.get_selected_language()
+        if language == AppSettings.DEFAULT_LANGUAGE or self._close_committed:
+            return
+        if self._lang_check_worker is not None or self._lang_dl_worker is not None:
+            return
+        source = AppSettings.get_language_base_url(language)
+        if not source.startswith(("http://", "https://")):
+            return
+        dest = AppSettings.get_base_ini_path(language)
+        worker = LanguageBaseDownloadWorker(source, dest)
+        worker.finished.connect(
+            lambda ok, w=worker, lang=language, d=dest:
+            self._on_language_translation_checked(w, lang, d, ok)
+        )
+        self._lang_check_worker = worker
+        logger.info(f"Checking for a newer {language!r} translation")
+        worker.start()
+
+    def _on_language_translation_checked(self, worker, language: str, dest, ok: bool) -> None:
+        """A new translation makes the language's enhancements out of date
+        (their descriptions are its text), so its stamp is emptied and the
+        reload goes through _reload_with_language_enhancements, as a language
+        switch does: it generates them again first when there is a DataForge
+        cache. Put off while a load, a job, a Simple run or a modal box is
+        going (_ask_after_the_job), and dropped when the language changed
+        meanwhile, since that switch fetched its own."""
+        if worker is not self._lang_check_worker:
+            return
+        worker.quit()
+        worker.wait()
+        self._lang_check_worker = None
+        if not ok or not worker.changed or self._close_committed:
+            return
+        if not Path(dest).exists() or AppSettings.get_selected_language() != language:
+            return
+        logger.info(f"A newer {language!r} translation was downloaded; reloading with it")
+        AppSettings.invalidate_enhancements_stamp(AppSettings.get_enhancements_dir(language))
+        if hasattr(self, "enhancements_tab"):
+            self.enhancements_tab.refresh_enhancements_dirty_state()
+
+        def reload_with_it():
+            if self._close_committed or AppSettings.get_selected_language() != language:
+                return
+            if self._loader_worker is not None or self._job_running() or self._simple_run_active:
+                self._ask_after_the_job(reload_with_it)
+                return
+            AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, str(dest))
+            self.statusBar().showMessage(tr("dialogs.language_updated_status", language=language))
+            self._reload_with_language_enhancements(language)
+
+        self._ask_after_the_job(reload_with_it)
+        QTimer.singleShot(0, self._flush_asks_after_the_job)
 
     def _on_language_base_ready(self, language: str, dest, dialog, ok: bool) -> None:
         """Finish a language switch once its base.ini fetch (download or
@@ -7393,6 +7460,16 @@ class MainWindow(QMainWindow):
                 )
                 continue  # keep the reference so Qt doesn't destroy a live thread
             self._working_folder_deleters.remove(deleter)
+
+        # The startup translation check (#579): a conditional download with
+        # a 60 s timeout, so it ends on its own; Qt must not destroy it live.
+        checker = self._lang_check_worker
+        if checker is not None and checker.isRunning():
+            remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
+            if not checker.wait(remaining_ms):
+                logger.warning("The translation check was still running when Smart Citizen closed")
+                return
+        self._lang_check_worker = None
 
     def closeEvent(self, event):
         """Save state and overrides, and stop a running extraction (#471)

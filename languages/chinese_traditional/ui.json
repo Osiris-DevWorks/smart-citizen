@@ -2256,6 +2256,10 @@
       "ht": "",
       "at": "無法從所設定的來源載入 {language} 本地化內容，也未找到快取副本。改為顯示英文基礎內容。請檢查“對映語言檔案”中的地址或檔案，然後重試。"
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "已下載更新的 {language} 翻譯，正在重新載入。"
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "正在從 DataForge 生成 {language} 增強內容…"

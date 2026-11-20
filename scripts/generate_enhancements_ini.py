@@ -158,6 +158,53 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
     DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
     DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
 
+# ── Translated generated text (#579) ──────────────────────────────────────────
+# Every label, word and sentence this script adds goes through _t(), keyed by
+# its English text. main() fills _TEXT from languages/<language>/
+# enhancements.json for the language it generates (src/utils/
+# enhancement_text.py), so a German run writes "Max. TP" where an English run
+# writes "Max HP". A text with no translation stays English, and an English
+# run (or a CLI run, or a test that calls a generator directly) has an empty
+# table and writes exactly what it wrote before. The app loads this script
+# afresh for every run, so the table never outlives one. Only text made for
+# the INIs goes through _t: log lines, cache keys and anything matched later
+# (fire-mode and damage keys, mission flags, spawn buckets) stay English, and
+# are looked up only where a line is written.
+try:
+    from src.utils.enhancement_text import load_table as _load_text_table
+except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    def _load_text_table(language):  # type: ignore[misc]
+        return {}
+
+_TEXT: dict[str, str] = {}
+
+
+def _t(text: str, **values) -> str:
+    """*text* in the language being generated, English when it has no
+    translation. ``{name}`` placeholders are filled from *values*."""
+    out = _TEXT.get(text, text)
+    return out.format(**values) if values else out
+
+
+def _set_text_language(language: "str | None") -> None:
+    """Load the table _t() reads for *language* (None or English: none)."""
+    _TEXT.clear()
+    _TEXT.update(_load_text_table(language))
+
+
+# The two section labels. Code reads the English separators back (the
+# _SCItem sibling copy and the stats-prepend tests), so they stay English
+# until write_ini, which swaps in the translated label as each line is
+# written.
+_SEPARATOR_LABELS = ("--- STATS ---", "--- EFFECT ---")
+
+
+def _localize_separators(value: str) -> str:
+    for label in _SEPARATOR_LABELS:
+        if label in value and label in _TEXT:
+            value = value.replace(label, _TEXT[label])
+    return value
+
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -282,7 +329,7 @@ def write_ini(path: Path, entries: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     buf = io.StringIO()
     for k, v in sorted(entries.items()):
-        buf.write(f"{k}={v}\n")
+        buf.write(f"{k}={_localize_separators(v) if _TEXT else v}\n")
     # In one step, so a cut-off run leaves the old INI whole. Same bytes as
     # path.write_text: UTF-8, no BOM, CRLF on Windows.
     atomic_write_text(path, buf.getvalue())
@@ -798,18 +845,18 @@ def _synthesize_description(root: ET.Element, xml_file: Path, key: str) -> str:
         attrs: list[str] = []
         career = vpc.get("vehicleCareer", "")
         if career.startswith("@"):
-            attrs.append(f"Class: {career.lstrip('@')}")
+            attrs.append(f"{_t('Class')}: {career.lstrip('@')}")
         role = vpc.get("vehicleRole", "")
         if role.startswith("@"):
-            attrs.append(f"Role: {role.lstrip('@')}")
+            attrs.append(f"{_t('Role')}: {role.lstrip('@')}")
         crew = vpc.get("crewSize", "")
         if crew:
-            attrs.append(f"Crew: {crew}")
+            attrs.append(f"{_t('Crew')}: {crew}")
         bbox = _find(root, "maxBoundingBoxSize")
         if bbox is not None:
             length = bbox.get("y", "")
             if length:
-                attrs.append(f"Length: {length}m")
+                attrs.append(f"{_t('Length')}: {length}m")
         if attrs:
             parts.append(" | ".join(attrs))
 
@@ -818,14 +865,14 @@ def _synthesize_description(root: ET.Element, xml_file: Path, key: str) -> str:
     if icp is not None:
         item_type = icp.get("itemType", "")
         if item_type:
-            parts.append(f"Item Type: {item_type}")
+            parts.append(f"{_t('Item Type')}: {item_type}")
 
     # 4. Missile tracking signal type
     tp = _find(root, "targetingParams")
     if tp is not None:
         sig = tp.get("trackingSignalType", "")
         if sig:
-            parts.append(f"Tracking: {sig}")
+            parts.append(f"{_t('Tracking')}: {sig}")
 
     return "\n".join(parts) if parts else key.replace("_", " ")
 
@@ -1737,7 +1784,7 @@ def _fire_modes(root: ET.Element, loc: dict | None = None) -> list[str]:
         if "WeaponActionFire" in el.tag:
             # Prefer a clean label from the raw name attribute
             raw_name = (el.get("name") or "").strip()
-            label = _FIRE_MODE_LABELS.get(raw_name.lower())
+            label = _t(_FIRE_MODE_LABELS.get(raw_name.lower(), ""))
             if not label:
                 # Try localized name, stripping brackets. Skip CIG sentinel
                 # loc-keys (e.g. @LOC_PLACEHOLDER) — they resolve to literal
@@ -1855,10 +1902,10 @@ def enhancements_shield(root: ET.Element) -> str:
 
     lines = []
     if hp is not None or regen is not None:
-        lines.append(f"Max HP: {_fmt(hp)}  |  Regen: {_fmt(regen, ' HP/s')}")
+        lines.append(f"{_t('Max HP')}: {_fmt(hp)}  |  {_t('Regen')}: {_fmt(regen, ' HP/s')}")
     delays = []
-    if downed  is not None: delays.append(f"Downed Delay: {_fmt(downed, 's', 1)}")
-    if damaged is not None: delays.append(f"Damaged Delay: {_fmt(damaged, 's', 1)}")
+    if downed  is not None: delays.append(f"{_t('Downed Delay')}: {_fmt(downed, 's', 1)}")
+    if damaged is not None: delays.append(f"{_t('Damaged Delay')}: {_fmt(damaged, 's', 1)}")
     if delays:
         lines.append("  |  ".join(delays))
 
@@ -1866,20 +1913,20 @@ def enhancements_shield(root: ET.Element) -> str:
     energy_resist = _resist_pct(1)
     if phys_resist or energy_resist:
         parts = []
-        if phys_resist: parts.append(f"Phys: {phys_resist}")
-        if energy_resist: parts.append(f"Energy: {energy_resist}")
+        if phys_resist: parts.append(f"{_t('Phys')}: {phys_resist}")
+        if energy_resist: parts.append(f"{_t('Energy')}: {energy_resist}")
         lines.append("Resist:  " + "  |  ".join(parts))
 
     if em_sig is not None or ir_sig is not None:
         parts = []
-        if em_sig is not None: parts.append(f"EM: {_fmt(em_sig)}")
-        if ir_sig is not None: parts.append(f"IR: {_fmt(ir_sig)}")
+        if em_sig is not None: parts.append(f"{_t('EM')}: {_fmt(em_sig)}")
+        if ir_sig is not None: parts.append(f"{_t('IR')}: {_fmt(ir_sig)}")
         lines.append("Signatures:  " + "  |  ".join(parts))
 
     if pwr is not None:
-        lines.append(f"Power Draw: {_fmt(pwr, ' PU/s')}")
+        lines.append(f"{_t('Power Draw')}: {_fmt(pwr, ' PU/s')}")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     return "\\n".join(lines)
 
 
@@ -1900,7 +1947,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             vel_val = float(velocity)
                             if vel_val > 0:
-                                lines.append(f"Velocity: {vel_val:,.0f} m/s")
+                                lines.append(f"{_t('Velocity')}: {vel_val:,.0f} m/s")
                         except (ValueError, TypeError):
                             pass
 
@@ -1909,7 +1956,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             life_val = float(lifetime)
                             if life_val > 0:
-                                lines.append(f"Lifetime: {life_val:.2f}s")
+                                lines.append(f"{_t('Lifetime')}: {life_val:.2f}s")
                         except (ValueError, TypeError):
                             pass
 
@@ -1917,12 +1964,12 @@ def enhancements_missile(root: ET.Element) -> str:
                 if "guidance" in el.tag.lower() or "tracking" in el.tag.lower():
                     guidance_type = el.get("guidanceType") or el.get("type") or el.tag.replace("Guidance", "").replace("Tracking", "")
                     if guidance_type and "none" not in guidance_type.lower():
-                        lines.append(f"Guidance: {guidance_type}")
+                        lines.append(f"{_t('Guidance')}: {guidance_type}")
 
                     # Seeker type (passive vs active)
                     seeker_type = el.get("seekerType") or el.get("seekerMode")
                     if seeker_type and "none" not in seeker_type.lower():
-                        lines.append(f"Seeker: {seeker_type}")
+                        lines.append(f"{_t('Seeker')}: {seeker_type}")
 
                     # Lock-on time (how long to acquire lock)
                     lock_time = el.get("lockTime") or el.get("lockOnTime") or el.get("lockAcquisitionTime")
@@ -1930,7 +1977,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             time_val = float(lock_time)
                             if time_val > 0:
-                                lines.append(f"Lock Time: {time_val:.2f}s")
+                                lines.append(f"{_t('Lock Time')}: {time_val:.2f}s")
                         except (ValueError, TypeError):
                             pass
 
@@ -1940,7 +1987,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             min_val = float(min_lock) / 1000  # Convert to km
                             if min_val > 0:
-                                lines.append(f"Min Lock Range: {min_val:,.1f} km")
+                                lines.append(f"{_t('Min Lock Range')}: {min_val:,.1f} km")
                         except (ValueError, TypeError):
                             pass
 
@@ -1950,7 +1997,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             max_val = float(max_lock) / 1000  # Convert to km
                             if max_val > 0:
-                                lines.append(f"Max Lock Range: {max_val:,.1f} km")
+                                lines.append(f"{_t('Max Lock Range')}: {max_val:,.1f} km")
                         except (ValueError, TypeError):
                             pass
 
@@ -1960,7 +2007,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             track_val = float(track_range) / 1000  # Convert to km
                             if track_val > 0:
-                                lines.append(f"Tracking Range: {track_val:,.1f} km")
+                                lines.append(f"{_t('Tracking Range')}: {track_val:,.1f} km")
                         except (ValueError, TypeError):
                             pass
 
@@ -1970,7 +2017,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             prox_val = float(prox_range)
                             if prox_val > 0:
-                                lines.append(f"Proximity Range: {prox_val:,.0f} m")
+                                lines.append(f"{_t('Proximity Range')}: {prox_val:,.0f} m")
                         except (ValueError, TypeError):
                             pass
 
@@ -1980,7 +2027,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             g_val = float(max_g)
                             if g_val > 0:
-                                lines.append(f"Max G-Force: {g_val:.1f}G")
+                                lines.append(f"{_t('Max G-Force')}: {g_val:.1f}G")
                         except (ValueError, TypeError):
                             pass
 
@@ -1989,14 +2036,14 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             turn_val = float(turn_rate)
                             if turn_val > 0:
-                                lines.append(f"Turn Rate: {turn_val:.1f}°/s")
+                                lines.append(f"{_t('Turn Rate')}: {turn_val:.1f}°/s")
                         except (ValueError, TypeError):
                             pass
 
                     # Detonation mode
                     detonation = el.get("detonationMode") or el.get("fuseMode") or el.get("detonationType")
                     if detonation and "none" not in detonation.lower():
-                        lines.append(f"Detonation: {detonation}")
+                        lines.append(f"{_t('Detonation')}: {detonation}")
 
                 # Acceleration / Thrust
                 if "propulsion" in el.tag.lower() or "thruster" in el.tag.lower() or "engine" in el.tag.lower():
@@ -2005,7 +2052,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             accel_val = float(accel)
                             if accel_val > 0:
-                                lines.append(f"Acceleration: {accel_val:,.1f} m/s²")
+                                lines.append(f"{_t('Acceleration')}: {accel_val:,.1f} m/s²")
                         except (ValueError, TypeError):
                             pass
 
@@ -2016,7 +2063,7 @@ def enhancements_missile(root: ET.Element) -> str:
                         try:
                             fuel_val = float(fuel_amount)
                             if fuel_val > 0:
-                                lines.append(f"Fuel: {fuel_val:.1f}s")
+                                lines.append(f"{_t('Fuel')}: {fuel_val:.1f}s")
                         except (ValueError, TypeError):
                             pass
             except Exception:
@@ -2041,11 +2088,11 @@ def enhancements_missile(root: ET.Element) -> str:
             return f"{v / 1000:,.1f} km" if v >= 1000 else f"{v:,.0f} m"
 
         if lmn is not None and lmn > 0 and lmx is not None and lmx > 0:
-            lines.append(f"Lock Range: {_fmt_range_m(lmn)} – {_fmt_range_m(lmx)}")
+            lines.append(f"{_t('Lock Range')}: {_fmt_range_m(lmn)} – {_fmt_range_m(lmx)}")
         elif lmn is not None and lmn > 0:
-            lines.append(f"Min Lock Range: {_fmt_range_m(lmn)}")
+            lines.append(f"{_t('Min Lock Range')}: {_fmt_range_m(lmn)}")
         elif lmx is not None and lmx > 0:
-            lines.append(f"Max Lock Range: {_fmt_range_m(lmx)}")
+            lines.append(f"{_t('Max Lock Range')}: {_fmt_range_m(lmx)}")
 
         # Arming — `armTime` (seconds before warhead arms) and
         # `explosionSafetyDistance` (meters within which the missile won't
@@ -2072,12 +2119,12 @@ def enhancements_missile(root: ET.Element) -> str:
 
         arm_parts = []
         if arm_t and arm_t > 0:
-            arm_parts.append(f"Arm Time: {arm_t:.1f}s")
+            arm_parts.append(f"{_t('Arm Time')}: {arm_t:.1f}s")
         if arm_t and arm_t > 0 and speed and speed > 0:
             arm_dist = arm_t * speed
-            arm_parts.append(f"Arm Dist: {_fmt_range_m(arm_dist)}")
+            arm_parts.append(f"{_t('Arm Dist')}: {_fmt_range_m(arm_dist)}")
         if safety and safety > 0:
-            arm_parts.append(f"Min Detonate: {safety:,.0f} m")
+            arm_parts.append(f"{_t('Min Detonate')}: {safety:,.0f} m")
         if arm_parts:
             lines.append("  |  ".join(arm_parts))
 
@@ -2088,10 +2135,10 @@ def enhancements_missile(root: ET.Element) -> str:
             if total_dmg and total_dmg > 0:
                 type_str = ""
                 if breakdown and len(breakdown) == 1:
-                    type_str = f" ({list(breakdown.keys())[0]})"
+                    type_str = f" ({_t(list(breakdown.keys())[0])})"
                 elif breakdown and len(breakdown) > 1:
-                    type_str = " (" + " / ".join(f"{lbl}: {v:.1f}" for lbl, v in breakdown.items()) + ")"
-                lines.append(f"Damage: {_fmt(total_dmg, '', 1)}{type_str}")
+                    type_str = " (" + " / ".join(f"{_t(lbl)}: {v:.1f}" for lbl, v in breakdown.items()) + ")"
+                lines.append(f"{_t('Damage')}: {_fmt(total_dmg, '', 1)}{type_str}")
 
         # Blast radius (warhead explosion radius)
         blast = _attr(root, "ExplosionParams", "maxRadius")
@@ -2105,7 +2152,7 @@ def enhancements_missile(root: ET.Element) -> str:
             try:
                 blast_val = float(blast)
                 if blast_val > 0:
-                    lines.append(f"Blast Radius: {blast_val:,.0f} m")
+                    lines.append(f"{_t('Blast Radius')}: {blast_val:,.0f} m")
             except (ValueError, TypeError):
                 pass
 
@@ -2115,7 +2162,7 @@ def enhancements_missile(root: ET.Element) -> str:
             try:
                 eff_val = float(eff_range) / 1000  # Convert to km
                 if eff_val > 0:
-                    lines.append(f"Effective Range: {eff_val:,.1f} km")
+                    lines.append(f"{_t('Effective Range')}: {eff_val:,.1f} km")
             except (ValueError, TypeError):
                 pass
 
@@ -2125,7 +2172,7 @@ def enhancements_missile(root: ET.Element) -> str:
             try:
                 em_val = float(em_sig)
                 if em_val > 0:
-                    lines.append(f"EM Signature: {em_val:,.0f}")
+                    lines.append(f"{_t('EM Signature')}: {em_val:,.0f}")
             except (ValueError, TypeError):
                 pass
 
@@ -2134,14 +2181,14 @@ def enhancements_missile(root: ET.Element) -> str:
             try:
                 ir_val = float(ir_sig)
                 if ir_val > 0:
-                    lines.append(f"IR Signature: {ir_val:,.0f}")
+                    lines.append(f"{_t('IR Signature')}: {ir_val:,.0f}")
             except (ValueError, TypeError):
                 pass
 
         # Component HP
         comp_hp = _attr(root, "SHealthComponentParams", "Health")
         if comp_hp is not None:
-            lines.append(f"Component HP: {_fmt(comp_hp)}")
+            lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     except Exception:
         pass
 
@@ -2173,13 +2220,13 @@ def enhancements_bomb_rack(root: ET.Element) -> str:
 
     lines = []
     if size:
-        lines.append(f"Size: S{size}")
+        lines.append(f"{_t('Size')}: S{size}")
     if grade:
-        lines.append(f"Grade: {grade}")
+        lines.append(f"{_t('Grade')}: {grade}")
     if slot_count > 0:
-        lines.append(f"Bomb Slots: {slot_count}")
+        lines.append(f"{_t('Bomb Slots')}: {slot_count}")
     if comp_hp:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     return "\\n".join(lines) if lines else ""
 
 
@@ -2210,7 +2257,7 @@ def enhancements_radar(root: ET.Element) -> str:
         except (TypeError, ValueError):
             min_v = max_v = None
         if min_v is not None and max_v is not None and max_v > 0:
-            lines.append(f"Aim Assist Range: {min_v:,.0f}–{max_v:,.0f} m")
+            lines.append(f"{_t('Aim Assist Range')}: {min_v:,.0f}–{max_v:,.0f} m")
         break
 
     # Ping cooldown (seconds between active radar pings).
@@ -2219,7 +2266,7 @@ def enhancements_radar(root: ET.Element) -> str:
         if cd:
             try:
                 cd_v = float(cd)
-                lines.append(f"Ping Cooldown: {cd_v:.1f}s")
+                lines.append(f"{_t('Ping Cooldown')}: {cd_v:.1f}s")
             except (TypeError, ValueError):
                 pass
         break
@@ -2241,17 +2288,17 @@ def enhancements_radar(root: ET.Element) -> str:
     if active_capable:
         modes.append("Active")
     if modes:
-        lines.append(f"Detection Mode: {' / '.join(modes)}")
+        lines.append(f"{_t('Detection Mode')}: {' / '.join(modes)}")
 
     # Power consumption.
     pwr = _find_resource(root, "Power")
     if pwr is not None:
-        lines.append(f"Power Draw: {_fmt(pwr, ' PU/s')}")
+        lines.append(f"{_t('Power Draw')}: {_fmt(pwr, ' PU/s')}")
 
     # Component health.
     comp_hp = _attr(root, "SHealthComponentParams", "Health")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
 
     return "\\n".join(lines) if lines else ""
 
@@ -2266,22 +2313,22 @@ def enhancements_cooler(root: ET.Element) -> str:
 
     lines = []
     if cooling is not None:
-        lines.append(f"Cooling Rate: {_fmt(cooling, ' CR/s')}")
+        lines.append(f"{_t('Cooling Rate')}: {_fmt(cooling, ' CR/s')}")
     if pwr is not None:
-        lines.append(f"Power Draw: {_fmt(pwr, ' PU/s')}")
+        lines.append(f"{_t('Power Draw')}: {_fmt(pwr, ' PU/s')}")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     if em_sig is not None or ir_sig is not None:
         parts = []
-        if em_sig is not None: parts.append(f"EM: {_fmt(em_sig)}")
-        if ir_sig is not None: parts.append(f"IR: {_fmt(ir_sig)}")
+        if em_sig is not None: parts.append(f"{_t('EM')}: {_fmt(em_sig)}")
+        if ir_sig is not None: parts.append(f"{_t('IR')}: {_fmt(ir_sig)}")
         lines.append("Signatures:  " + "  |  ".join(parts))
     if overheat is not None:
         try:
             if float(overheat) < _OVERHEAT_PLACEHOLDER:
-                lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+                lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
         except (ValueError, TypeError):
-            lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+            lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
     return "\\n".join(lines)
 
 
@@ -2295,22 +2342,22 @@ def enhancements_powerplant(root: ET.Element) -> str:
 
     lines = []
     if gen is not None:
-        lines.append(f"Power Output: {_fmt(gen, ' PU/s')}")
+        lines.append(f"{_t('Power Output')}: {_fmt(gen, ' PU/s')}")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     if em_sig is not None or ir_sig is not None:
         parts = []
-        if em_sig is not None: parts.append(f"EM: {_fmt(em_sig)}")
-        if ir_sig is not None: parts.append(f"IR: {_fmt(ir_sig)}")
+        if em_sig is not None: parts.append(f"{_t('EM')}: {_fmt(em_sig)}")
+        if ir_sig is not None: parts.append(f"{_t('IR')}: {_fmt(ir_sig)}")
         lines.append("Signatures:  " + "  |  ".join(parts))
     if overheat is not None:
         try:
             if float(overheat) < _OVERHEAT_PLACEHOLDER:
-                lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+                lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
         except (ValueError, TypeError):
-            lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+            lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
     if distort is not None:
-        lines.append(f"Max Distortion: {_fmt(distort)}")
+        lines.append(f"{_t('Max Distortion')}: {_fmt(distort)}")
     return "\\n".join(lines)
 
 
@@ -2353,37 +2400,37 @@ def enhancements_quantum_drive(root: ET.Element) -> str:
         # Tenths, as Cooldown below: spool times are 4.4, 4.8, 5.3, 8.5... and
         # whole seconds showed 4.8 and 5.3 both as "5s" (#485).
         spool_str = _fmt(spool, "s", 1) if spool else "?"
-        lines.append(f"QT Speed: {speed_mm:,.0f} Mm/s  |  Spool: {spool_str}")
+        lines.append(f"{_t('QT Speed')}: {speed_mm:,.0f} Mm/s  |  {_t('Spool')}: {spool_str}")
     if cooldown is not None:
-        lines.append(f"Cooldown: {_fmt(cooldown, 's', 1)}")
+        lines.append(f"{_t('Cooldown')}: {_fmt(cooldown, 's', 1)}")
     if fuel_req is not None:
-        lines.append(f"Fuel/Gm: {float(fuel_req):.4f}")
+        lines.append(f"{_t('Fuel/Gm')}: {float(fuel_req):.4f}")
     if qt_fuel is not None:
-        lines.append(f"QT Fuel Use: {_fmt(qt_fuel)} μ/s")
+        lines.append(f"{_t('QT Fuel Use')}: {_fmt(qt_fuel)} μ/s")
     if accel1 is not None or accel2 is not None:
         parts = []
         if accel1: parts.append(f"S1: {_fmt(accel1)}")
         if accel2: parts.append(f"S2: {_fmt(accel2)}")
         lines.append("Accel:  " + "  |  ".join(parts))
     if cal_rate is not None:
-        lines.append(f"Cal Rate: {_fmt(cal_rate)}  |  Required: {_fmt(cal_min)}–{_fmt(cal_max)}")
+        lines.append(f"{_t('Cal Rate')}: {_fmt(cal_rate)}  |  {_t('Required')}: {_fmt(cal_min)}–{_fmt(cal_max)}")
     if pwr is not None:
-        lines.append(f"Power Draw: {_fmt(pwr, ' PU/s')}")
+        lines.append(f"{_t('Power Draw')}: {_fmt(pwr, ' PU/s')}")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     if em_sig is not None or ir_sig is not None:
         parts = []
-        if em_sig is not None: parts.append(f"EM: {_fmt(em_sig)}")
-        if ir_sig is not None: parts.append(f"IR: {_fmt(ir_sig)}")
+        if em_sig is not None: parts.append(f"{_t('EM')}: {_fmt(em_sig)}")
+        if ir_sig is not None: parts.append(f"{_t('IR')}: {_fmt(ir_sig)}")
         lines.append("Signatures:  " + "  |  ".join(parts))
     if overheat is not None:
         try:
             if float(overheat) < _OVERHEAT_PLACEHOLDER:
-                lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+                lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
         except (ValueError, TypeError):
-            lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+            lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
     if distort is not None:
-        lines.append(f"Max Distortion: {_fmt(distort)}")
+        lines.append(f"{_t('Max Distortion')}: {_fmt(distort)}")
     return "\\n".join(lines)
 
 
@@ -2426,7 +2473,7 @@ def enhancements_mining_laser(root: ET.Element) -> str:
         # Mode label from mannequinTag (laser/tractor) → human label.
         mannequin = fa.find("mannequinTag")
         mtag = mannequin.get("tag") if mannequin is not None else ""
-        mode = {"laser": "Fracture", "tractor": "Extraction"}.get(mtag, f"Beam {idx}")
+        mode = {"laser": _t("Fracture"), "tractor": _t("Extraction")}.get(mtag) or f"{_t('Beam')} {idx}"
 
         dps_el = fa.find("damagePerSecond/DamageInfo")
         dps = dps_el.get("DamageEnergy") if dps_el is not None else None
@@ -2446,23 +2493,23 @@ def enhancements_mining_laser(root: ET.Element) -> str:
             continue
         parts: list[str] = []
         if dps not in (None, "0", "0.0"):
-            parts.append(f"DPS: {_fmt(dps)}")
+            parts.append(f"{_t('DPS')}: {_fmt(dps)}")
         if full_r not in (None, "0", "0.0") or zero_r not in (None, "0", "0.0"):
             # En dash, not the arrow "→" this used to use — the in-game
             # Vehicle Loadout Manager's item-description font has no glyph
             # for it and renders a fallback box character instead (reported
             # on GitHub). The en dash is already used for Energy just below
             # and reads fine there, so it's a safe, tested-working choice.
-            parts.append(f"Range: {_fmt(full_r, 'm')}–{_fmt(zero_r, 'm')}")
+            parts.append(f"{_t('Range')}: {_fmt(full_r, 'm')}–{_fmt(zero_r, 'm')}")
         if e_max not in (None, "0", "0.0"):
             if e_min and e_min != e_max and e_min not in ("0", "0.0"):
-                parts.append(f"Energy: {_fmt(e_min)}–{_fmt(e_max)} PU/s")
+                parts.append(f"{_t('Energy')}: {_fmt(e_min)}–{_fmt(e_max)} PU/s")
             else:
-                parts.append(f"Energy: {_fmt(e_max)} PU/s")
+                parts.append(f"{_t('Energy')}: {_fmt(e_max)} PU/s")
         if heat_s not in (None, "0", "0.0"):
-            parts.append(f"Heat: {_fmt(heat_s)}/s")
+            parts.append(f"{_t('Heat')}: {_fmt(heat_s)}/s")
         if wear_s not in (None, "0", "0.0"):
-            parts.append(f"Wear: {wear_s}/s")
+            parts.append(f"{_t('Wear')}: {wear_s}/s")
         if parts:
             # Plain label, not <EM4>-wrapped — matches every other component
             # extractor (enhancements_shield etc.) and avoids the Vehicle
@@ -2495,7 +2542,7 @@ def enhancements_mining_laser(root: ET.Element) -> str:
                 fval = filter_fm.get("value")
                 if fval and fval not in ("0", "0.0"):
                     sign = "+" if float(fval) > 0 else ""
-                    mod_parts.append(f"Inert Filter: {sign}{fval}%")
+                    mod_parts.append(f"{_t('Inert Filter')}: {sign}{fval}%")
             if mod_parts:
                 lines.append("Modifiers:  " + "  |  ".join(mod_parts))
 
@@ -2503,18 +2550,18 @@ def enhancements_mining_laser(root: ET.Element) -> str:
     # signatures if they happen to be present on a ship-mountable laser.
     comp_hp = _attr(root, "SHealthComponentParams", "Health")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     distort = _attr(root, "SDistortionParams", "Maximum")
     if distort is not None and distort not in ("0", "0.0"):
-        lines.append(f"Max Distortion: {_fmt(distort)}")
+        lines.append(f"{_t('Max Distortion')}: {_fmt(distort)}")
     em_sig = _attr(root, "EMSignature", "nominalSignature")
     ir_sig = _attr(root, "IRSignature", "nominalSignature")
     if em_sig is not None or ir_sig is not None:
         sig_parts: list[str] = []
         if em_sig is not None and em_sig not in ("0", "0.0"):
-            sig_parts.append(f"EM: {_fmt(em_sig)}")
+            sig_parts.append(f"{_t('EM')}: {_fmt(em_sig)}")
         if ir_sig is not None and ir_sig not in ("0", "0.0"):
-            sig_parts.append(f"IR: {_fmt(ir_sig)}")
+            sig_parts.append(f"{_t('IR')}: {_fmt(ir_sig)}")
         if sig_parts:
             lines.append("Signatures:  " + "  |  ".join(sig_parts))
 
@@ -2557,30 +2604,30 @@ def enhancements_salvage_tool(root: ET.Element) -> str:
 
         parts: list[str] = []
         if hp_rate not in (None, "0", "0.0"):
-            parts.append(f"HP Rate: {_fmt(hp_rate)}/s")
+            parts.append(f"{_t('HP Rate')}: {_fmt(hp_rate)}/s")
         if dmg_rate not in (None, "0", "0.0"):
-            parts.append(f"Damage-Map Rate: {_fmt(dmg_rate)}/s")
+            parts.append(f"{_t('Damage-Map Rate')}: {_fmt(dmg_rate)}/s")
         if eff not in (None, "1", "1.0"):
             # 1.0 is the default no-op — only emit when CIG actually tunes
             # below unity (Renovar Salvage mode runs at 0.7 efficiency).
-            parts.append(f"Material Efficiency: {_fmt(eff, '', 2)}")
+            parts.append(f"{_t('Material Efficiency')}: {_fmt(eff, '', 2)}")
         if h2a not in (None, "0", "0.0"):
-            parts.append(f"HP/Ammo: {_fmt(h2a, '', 2)}")
+            parts.append(f"{_t('HP/Ammo')}: {_fmt(h2a, '', 2)}")
         if ramp_up not in (None, "0", "0.0") or ramp_dn not in (None, "0", "0.0"):
             # Plain "up"/"down" words, not the "↑"/"↓" arrows this used to
             # use — same missing-glyph issue as the mining-laser Range line
             # (see the note there): the in-game item-description font has
             # no glyph for them and shows a fallback box character instead.
-            parts.append(f"Ramp: {_fmt(ramp_up, 's', 1)} up, {_fmt(ramp_dn, 's', 1)} down")
+            parts.append(f"{_t('Ramp')}: {_fmt(ramp_up, 's', 1)} {_t('up')}, {_fmt(ramp_dn, 's', 1)} {_t('down')}")
         if e_max not in (None, "0", "0.0"):
             if e_min and e_min != e_max and e_min not in ("0", "0.0"):
-                parts.append(f"Energy: {_fmt(e_min)}–{_fmt(e_max)} PU/s")
+                parts.append(f"{_t('Energy')}: {_fmt(e_min)}–{_fmt(e_max)} PU/s")
             else:
-                parts.append(f"Energy: {_fmt(e_max)} PU/s")
+                parts.append(f"{_t('Energy')}: {_fmt(e_max)} PU/s")
         if heat_s not in (None, "0", "0.0"):
-            parts.append(f"Heat: {_fmt(heat_s)}/s")
+            parts.append(f"{_t('Heat')}: {_fmt(heat_s)}/s")
         if wear_s not in (None, "0", "0.0"):
-            parts.append(f"Wear: {wear_s}/s")
+            parts.append(f"{_t('Wear')}: {wear_s}/s")
         if parts:
             # Plain label — see the matching note in enhancements_mining_laser.
             lines.append(f"{mode}:  " + "  |  ".join(parts))
@@ -2588,10 +2635,10 @@ def enhancements_salvage_tool(root: ET.Element) -> str:
     # Structural stats (durability / wear) — same pattern as mining lasers.
     comp_hp = _attr(root, "SHealthComponentParams", "Health")
     if comp_hp is not None and comp_hp not in ("0", "0.0"):
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     wear_max = _attr(root, "SWearAccumulatorParams", "MaxLifetimeHours")
     if wear_max is not None and wear_max not in ("0", "0.0"):
-        lines.append(f"Max Lifetime: {_fmt(wear_max, 'h', 1)}")
+        lines.append(f"{_t('Max Lifetime')}: {_fmt(wear_max, 'h', 1)}")
 
     return "\\n".join(lines) if lines else ""
 
@@ -2988,8 +3035,10 @@ def _format_spawn_lines(breakdown: SpawnBreakdown) -> list[str]:
         items = breakdown.get(bucket) or {}
         if not items:
             continue
-        parts = [f"{lbl} x{cnt}" for lbl, cnt in sorted(items.items())]
-        lines.append(f"<EM4>{header}:</EM4> {', '.join(parts)}")
+        # Sorted by the English label, so the order is the same in every
+        # language and only the words change.
+        parts = [f"{_t(lbl)} x{cnt}" for lbl, cnt in sorted(items.items())]
+        lines.append(f"<EM4>{_t(header)}:</EM4> {', '.join(parts)}")
     return lines
 
 
@@ -3055,11 +3104,11 @@ def _extract_turret_info(root: ET.Element) -> str | None:
     if turret_count == 0 and explicit_hostility is None:
         return None
 
-    count_str = str(turret_count) if turret_count > 0 else "present"
+    count_str = str(turret_count) if turret_count > 0 else _t("present")
 
     if explicit_hostility is False:
-        return f"{count_str} (friendly)"
-    return f"{count_str} (hostile)"
+        return f"{count_str} ({_t('friendly')})"
+    return f"{count_str} ({_t('hostile')})"
 
 
 def _parse_difficulty_rating(value: str) -> int:
@@ -3093,13 +3142,13 @@ def _extract_difficulty(element: ET.Element) -> str:
         if any([combat, complexity, risk, knowledge]):
             parts = []
             if combat:
-                parts.append(f"Combat {combat}/7")
+                parts.append(f"{_t('Combat')} {combat}/7")
             if complexity:
-                parts.append(f"Complexity {complexity}/7")
+                parts.append(f"{_t('Complexity')} {complexity}/7")
             if risk:
-                parts.append(f"Risk {risk}/7")
+                parts.append(f"{_t('Risk')} {risk}/7")
             if knowledge:
-                parts.append(f"Knowledge {knowledge}/7")
+                parts.append(f"{_t('Knowledge')} {knowledge}/7")
             return " | ".join(parts)
 
     # Fallback: simple missionDifficulty attribute (pu_missions)
@@ -3183,15 +3232,15 @@ def enhancements_mission(root: ET.Element, reputation_lookup: dict[str, int] | N
 
     try:
         loc_key = _mission_loc_key(root) or _loc_key(root)
-        lines.append(f"<EM4>Engagement Type:</EM4> {_classify_mission_engagement(loc_key)}")
+        lines.append(f"<EM4>{_t('Engagement Type')}:</EM4> {_t(_classify_mission_engagement(loc_key))}")
 
         flags = _extract_mission_flags(root)
         if _show("mission_type"):
-            lines.append(f"<EM4>Mission Type:</EM4> {', '.join(flags) if flags else 'Standard'}")
+            lines.append(f"<EM4>{_t('Mission Type')}:</EM4> {', '.join(_t(f) for f in flags) if flags else _t('Standard')}")
 
         difficulty = _extract_difficulty(root)
         if difficulty and _show("difficulty"):
-            lines.append(f"<EM4>Difficulty (1-7):</EM4> {difficulty}")
+            lines.append(f"<EM4>{_t('Difficulty (1-7)')}:</EM4> {difficulty}")
 
         total_rep_xp = _extract_mission_xp(root, reputation_lookup)
         if total_rep_xp > 0 and _show("reputation"):
@@ -3221,7 +3270,7 @@ def enhancements_mission(root: ET.Element, reputation_lookup: dict[str, int] | N
         # adjacently in the MISSION DETAILS block.
         turret_info = _extract_turret_info(root)
         if turret_info:
-            lines.append(f"<EM4>Turrets:</EM4> {turret_info}")
+            lines.append(f"<EM4>{_t('Turrets')}:</EM4> {turret_info}")
 
     except Exception:
         pass
@@ -3294,10 +3343,10 @@ def _pool_rank_label(pool_name: str) -> str:
         return ""
     m = _POOL_RANK_RANGE_RE.search(pool_name)
     if m:
-        return f"Rank {m.group(1)}–{m.group(2)}"  # en-dash
+        return f"{_t('Rank')} {m.group(1)}–{m.group(2)}"  # en-dash
     m = _POOL_RANK_SINGLE_RE.search(pool_name)
     if m:
-        return f"Rank {m.group(1)}"
+        return f"{_t('Rank')} {m.group(1)}"
     return ""
 
 
@@ -3548,7 +3597,7 @@ def _build_blueprint_body_parts(unique_fps: dict,
     for header, fp in header_entries:
         if header_counts[header] > 1:
             representative = fp[0] if fp else "Unknown"
-            header = f"{header}, {representative} Set"
+            header = f"{header}, " + _t("{item} Set", item=representative)
         named_entries.append((header, fp))
 
     # Pass 2: safety net for the rare case where two colliding sets happen
@@ -3924,7 +3973,7 @@ def _format_rs_details_lines(ores: list[str], loc: dict) -> list[str]:
         lines.append(f"<EM4>{label}</EM4>: {' - '.join(str(v) for v in steps)}")
     if not lines:
         return []
-    return ["<EM4>Resource Signatures:</EM4>"] + lines
+    return [f"<EM4>{_t('Resource Signatures')}:</EM4>"] + lines
 
 
 def _build_mineable_rs_name_overrides(loc: dict) -> dict[str, str]:
@@ -4795,7 +4844,7 @@ def _humanize_craft_category(cat: str) -> str:
         return cat
     label = _CRAFT_CATEGORY_LABELS.get(parts[-1].lower())
     if label:
-        return label
+        return _t(label)
     if len(parts) >= 2:
         label = _CRAFT_CATEGORY_LABELS.get("/".join(parts[-2:]).lower())
         if label:
@@ -4907,8 +4956,10 @@ def _condense_crafted_items(items_list: list[tuple[str, str]]) -> list[str]:
         names = sorted(set(by_cat[cat]))
         parts = cat.split("/")
         if "ammo" in cat:
-            ammo_type = parts[-1].title() if len(parts) > 2 else "Ammo"
-            lines.append(f"{ammo_type} Ammo")
+            if len(parts) > 2:
+                lines.append(_t("{type} Ammo", type=parts[-1].title()))
+            else:
+                lines.append(_t("{type} Ammo", type=_t("Ammo")))
             continue
         if "weapons" in cat:
             base_names = set()
@@ -4920,11 +4971,11 @@ def _condense_crafted_items(items_list: list[tuple[str, str]]) -> list[str]:
                 lines.append(", ".join(sorted(base_names)))
             else:
                 weapon_type = parts[-1].title()
-                lines.append(f"{weapon_type}s ({len(base_names)} types)")
+                lines.append(f"{weapon_type}s (" + _t("{count} types", count=len(base_names)) + ")")
             continue
         if "armour" in cat:
             weight = parts[-1].title() if len(parts) > 2 else ""
-            armour_type = parts[-2].title() if len(parts) > 2 else "Armour"
+            armour_type = parts[-2].title() if len(parts) > 2 else _t("Armour")
             set_names = set()
             for n in names:
                 m2 = re.match(r'^([\w-]+(?:\s[\w-]+)?)\s+(?:Arms|Core|Legs|Helmet|Backpack|Suit|Armor)', n)
@@ -4935,7 +4986,7 @@ def _condense_crafted_items(items_list: list[tuple[str, str]]) -> list[str]:
             if len(set_names) <= 3:
                 label = ", ".join(sorted(set_names))
             else:
-                label = f"{len(set_names)} sets"
+                label = _t("{count} sets", count=len(set_names))
             if weight and armour_type != weight:
                 lines.append(f"{label} ({weight} {armour_type})")
             else:
@@ -4946,9 +4997,9 @@ def _condense_crafted_items(items_list: list[tuple[str, str]]) -> list[str]:
             qd_count += len(names)
             qd_sizes.append(int(qd.group(1)))
             continue
-        lines.append(f"{_humanize_craft_category(cat)}: {len(names)} items")
+        lines.append(f"{_humanize_craft_category(cat)}: " + _t("{count} items", count=len(names)))
     if qd_count:
-        lines.append(f"Quantum Drives: {qd_count} items ({_qd_size_range(qd_sizes)})")
+        lines.append(f"{_t('Quantum Drives')}: " + _t("{count} items", count=qd_count) + f" ({_qd_size_range(qd_sizes)})")
     lines.sort(key=str.lower)
     return lines
 
@@ -5243,7 +5294,7 @@ def scan_crafting_blueprints(
                 sections = []
                 loc_list = _lookup_commodity_locations(mineral_locations, base_name, commodity)
                 if loc_list:
-                    loc_block = (f"<{header_em_tag}>Locations:</{header_em_tag}>\\n"
+                    loc_block = (f"<{header_em_tag}>{_t('Locations')}:</{header_em_tag}>\\n"
                                  + "\\n".join(f"- {loc_}" for loc_ in loc_list))
                     sections.append(loc_block)
                 sections.append(enhancements_block)
@@ -5336,13 +5387,13 @@ def scan_crafting_blueprints(
                 ore_key = _MINING_COMPENDIUM_ORE_ALIASES.get(name.lower(), name.lower())
                 rs_value = MINEABLE_RS_VALUES.get(ore_key)
                 if rs_value is not None:
-                    block += [f"Base Resource Signature: <EM4>{rs_value}</EM4>", ""]
+                    block += [f"{_t('Base Resource Signature')}: <EM4>{rs_value}</EM4>", ""]
                     rs_ores_tagged += 1
-                block += ["<EM4>Locations:</EM4>"]
+                block += [f"<EM4>{_t('Locations')}:</EM4>"]
                 block += [f"- {loc_}" for loc_ in locations]
                 craft = mineral_crafting.get(name.lower())
                 if craft:
-                    block += ["", "<EM4>Used To Craft:</EM4>"]
+                    block += ["", f"<EM4>{_t('Used To Craft')}:</EM4>"]
                     block += [f"- {item}" for item in craft]
                 augmented_lines.append("\\n".join(block))
             else:
@@ -5487,31 +5538,31 @@ def enhancements_weapon(root: ET.Element, ammo_lookup: dict[str, ET.Element],
 
     lines = []
     if weight is not None and weight > 0:
-        lines.append(f"Weight: {weight:.1f} kg")
+        lines.append(f"{_t('Weight')}: {weight:.1f} kg")
     if fr:
-        lines.append(f"Fire Rate: {_fmt(fr, ' RPM')}")
+        lines.append(f"{_t('Fire Rate')}: {_fmt(fr, ' RPM')}")
     if modes:
-        lines.append(f"Fire Modes: {' / '.join(modes)}")
+        lines.append(f"{_t('Fire Modes')}: {' / '.join(modes)}")
 
     # Damage line with per-type breakdown
     if total_dmg is not None and total_dmg > 0:
         type_str = ""
         if breakdown and len(breakdown) == 1:
-            type_str = f" ({list(breakdown.keys())[0]})"
+            type_str = f" ({_t(list(breakdown.keys())[0])})"
         elif breakdown and len(breakdown) > 1:
-            type_str = " (" + " / ".join(f"{lbl}: {v:.1f}" for lbl, v in breakdown.items()) + ")"
+            type_str = " (" + " / ".join(f"{_t(lbl)}: {v:.1f}" for lbl, v in breakdown.items()) + ")"
         pellet_str = f" x{pellet_count}" if pellet_count > 1 else ""
-        dmg_part = f"Alpha Dmg: {_fmt(total_dmg, '', 1)}{pellet_str}{type_str}"
-        dps_part = f"DPS: {_fmt(dps, '', 1)}" if dps else ""
+        dmg_part = f"{_t('Alpha Dmg')}: {_fmt(total_dmg, '', 1)}{pellet_str}{type_str}"
+        dps_part = f"{_t('DPS')}: {_fmt(dps, '', 1)}" if dps else ""
         lines.append("  |  ".join(p for p in [dmg_part, dps_part] if p))
 
     if capacity:
-        lines.append(f"Ammo: {_fmt(capacity)}")
+        lines.append(f"{_t('Ammo')}: {_fmt(capacity)}")
     if regen_rate or regen_cooldown:
         parts = []
-        if regen_rate:    parts.append(f"Regen: {_fmt(regen_rate)}/s")
-        if regen_cooldown: parts.append(f"Cooldown: {_fmt(regen_cooldown, 's', 1)}")
-        if regen_cost:    parts.append(f"Cost/Shot: {_fmt(regen_cost)}")
+        if regen_rate:    parts.append(f"{_t('Regen')}: {_fmt(regen_rate)}/s")
+        if regen_cooldown: parts.append(f"{_t('Cooldown')}: {_fmt(regen_cooldown, 's', 1)}")
+        if regen_cost:    parts.append(f"{_t('Cost/Shot')}: {_fmt(regen_cost)}")
         lines.append("  |  ".join(parts))
     if proj_speed is not None:
         try:
@@ -5523,31 +5574,31 @@ def enhancements_weapon(root: ET.Element, ammo_lookup: dict[str, ET.Element],
             # range); ship weapons keep "Range" since the field has been
             # stable there for releases. magazine_lookup is the FPS
             # discriminator — only the FPS callsite passes it.
-            range_label = "Absolute Range" if magazine_lookup is not None else "Range"
+            range_label = _t("Absolute Range") if magazine_lookup is not None else _t("Range")
             if rng_m >= 1000:
-                lines.append(f"Velocity: {_fmt(proj_speed, ' m/s')}  |  {range_label}: {rng_m / 1000:,.1f} km")
+                lines.append(f"{_t('Velocity')}: {_fmt(proj_speed, ' m/s')}  |  {range_label}: {rng_m / 1000:,.1f} km")
             else:
-                lines.append(f"Velocity: {_fmt(proj_speed, ' m/s')}  |  {range_label}: {rng_m:,.0f} m")
+                lines.append(f"{_t('Velocity')}: {_fmt(proj_speed, ' m/s')}  |  {range_label}: {rng_m:,.0f} m")
         except (TypeError, ValueError):
             pass
 
     # Damage drop-off
     if dmg_drop_min_dist is not None and dmg_drop_min_dist > 0:
-        drop_parts = [f"Full Dmg to: {dmg_drop_min_dist:.0f} m"]
+        drop_parts = [f"{_t('Full Dmg to')}: {dmg_drop_min_dist:.0f} m"]
         if dmg_drop_per_m is not None and dmg_drop_per_m > 0:
-            drop_parts.append(f"Drop: -{dmg_drop_per_m:.2f}/m")
+            drop_parts.append(f"{_t('Drop')}: -{dmg_drop_per_m:.2f}/m")
         if dmg_drop_min is not None and dmg_drop_min > 0:
-            drop_parts.append(f"Min Dmg: {dmg_drop_min:.1f}")
+            drop_parts.append(f"{_t('Min Dmg')}: {dmg_drop_min:.1f}")
         lines.append("  |  ".join(drop_parts))
 
     if pwr:
-        lines.append(f"Power Draw: {_fmt(pwr, ' PU/s')}")
+        lines.append(f"{_t('Power Draw')}: {_fmt(pwr, ' PU/s')}")
     if comp_hp is not None:
-        lines.append(f"Component HP: {_fmt(comp_hp)}")
+        lines.append(f"{_t('Component HP')}: {_fmt(comp_hp)}")
     if em_sig is not None or ir_sig is not None:
         parts = []
-        if em_sig is not None: parts.append(f"EM: {_fmt(em_sig)}")
-        if ir_sig is not None: parts.append(f"IR: {_fmt(ir_sig)}")
+        if em_sig is not None: parts.append(f"{_t('EM')}: {_fmt(em_sig)}")
+        if ir_sig is not None: parts.append(f"{_t('IR')}: {_fmt(ir_sig)}")
         lines.append("Signatures:  " + "  |  ".join(parts))
     # Overheat temp is meaningful for ship weapons but not surfaced in-game
     # for FPS weapons; skip it on the FPS path (magazine_lookup is the FPS
@@ -5555,9 +5606,9 @@ def enhancements_weapon(root: ET.Element, ammo_lookup: dict[str, ET.Element],
     if overheat is not None and magazine_lookup is None:
         try:
             if float(overheat) < _OVERHEAT_PLACEHOLDER:
-                lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+                lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
         except (ValueError, TypeError):
-            lines.append(f"Overheat Temp: {_fmt(overheat, 'K')}")
+            lines.append(f"{_t('Overheat Temp')}: {_fmt(overheat, 'K')}")
     return "\\n".join(lines)
 
 
@@ -5641,7 +5692,7 @@ def _loadout_summary(root: ET.Element) -> tuple[str, str]:
             counts[key] = counts.get(key, 0) + 1
         parts = []
         for (sz, filled), cnt in sorted(counts.items()):
-            suffix = "" if filled else " (empty)"
+            suffix = "" if filled else f" ({_t('empty')})"
             if sz == "?":
                 # Unknown size: show just count (e.g. turrets with no size info)
                 parts.append(str(cnt))
@@ -5662,21 +5713,21 @@ def _loadout_summary(root: ET.Element) -> tuple[str, str]:
 
     weapon_parts = []
     if guns:
-        weapon_parts.append(f"Guns: {summarize_slots(guns)}")
+        weapon_parts.append(f"{_t('Guns')}: {summarize_slots(guns)}")
     if turrets:
-        weapon_parts.append(f"Turrets: {summarize_slots(turrets)}")
+        weapon_parts.append(f"{_t('Turrets')}: {summarize_slots(turrets)}")
     if mracks:
-        weapon_parts.append(f"MRacks: {summarize_slots(mracks)}")
+        weapon_parts.append(f"{_t('MRacks')}: {summarize_slots(mracks)}")
 
     core_parts = []
     if shields:
-        core_parts.append(f"Shields: {summarize_items(shields)}")
+        core_parts.append(f"{_t('Shields')}: {summarize_items(shields)}")
     if coolers:
-        core_parts.append(f"Coolers: {summarize_items(coolers)}")
+        core_parts.append(f"{_t('Coolers')}: {summarize_items(coolers)}")
     if powers:
-        core_parts.append(f"Power: {summarize_items(powers)}")
+        core_parts.append(f"{_t('Power')}: {summarize_items(powers)}")
     if qd:
-        core_parts.append(f"QD: {summarize_items(qd)}")
+        core_parts.append(f"{_t('QD')}: {summarize_items(qd)}")
 
     return "  |  ".join(weapon_parts), "  |  ".join(core_parts)
 
@@ -5799,13 +5850,13 @@ def _armor_stats_block(armor_stats: tuple) -> str:
     lines: list[str] = []
 
     if health is not None:
-        lines.append(f"Armor HP: {_fmt(health)}")
+        lines.append(f"{_t('Armor HP')}: {_fmt(health)}")
 
     if multipliers is not None:
         p, e, d, t = multipliers
         if any(v is not None for v in (p, e, d, t)):
             lines.append(
-                f"Dmg Mult: P {_fmt(p, 'x', 2)}  |  E {_fmt(e, 'x', 2)}"
+                f"{_t('Dmg Mult')}: P {_fmt(p, 'x', 2)}  |  E {_fmt(e, 'x', 2)}"
                 f"  |  D {_fmt(d, 'x', 2)}  |  T {_fmt(t, 'x', 2)}"
             )
 
@@ -5813,7 +5864,7 @@ def _armor_stats_block(armor_stats: tuple) -> str:
         p, e, d, t = deflection
         if any(v is not None for v in (p, e, d, t)):
             lines.append(
-                f"Deflect: P {_fmt(p)}  |  E {_fmt(e)}  |  D {_fmt(d)}  |  T {_fmt(t)}"
+                f"{_t('Deflect')}: P {_fmt(p)}  |  E {_fmt(e)}  |  D {_fmt(d)}  |  T {_fmt(t)}"
             )
 
     return "\\n".join(lines)
@@ -5924,19 +5975,19 @@ def enhancements_ship_dataforge(
     lines = []
 
     if scm is not None or max_spd is not None:
-        lines.append(f"SCM: {_fmt(scm, ' m/s')}  |  Max: {_fmt(max_spd, ' m/s')}")
+        lines.append(f"{_t('SCM')}: {_fmt(scm, ' m/s')}  |  {_t('Max')}: {_fmt(max_spd, ' m/s')}")
     if boost_fwd is not None or boost_bwd is not None:
-        lines.append(f"Boost: +{_fmt(boost_fwd, ' m/s')}  /  -{_fmt(boost_bwd, ' m/s')}")
+        lines.append(f"{_t('Boost')}: +{_fmt(boost_fwd, ' m/s')}  /  -{_fmt(boost_bwd, ' m/s')}")
     if pitch is not None:
         lines.append(
-            f"Pitch: {_fmt(pitch, '°/s')}  |  Roll: {_fmt(roll, '°/s')}  |  Yaw: {_fmt(yaw, '°/s')}"
+            f"{_t('Pitch')}: {_fmt(pitch, '°/s')}  |  {_t('Roll')}: {_fmt(roll, '°/s')}  |  {_t('Yaw')}: {_fmt(yaw, '°/s')}"
         )
 
     basics = []
-    if crew_size is not None: basics.append(f"Crew: {_fmt(crew_size)}")
-    if length    is not None: basics.append(f"Length: {_fmt(length, 'm', 1)}")
-    if career    is not None: basics.append(f"Class: {career}")
-    if role      is not None: basics.append(f"Role: {role}")
+    if crew_size is not None: basics.append(f"{_t('Crew')}: {_fmt(crew_size)}")
+    if length    is not None: basics.append(f"{_t('Length')}: {_fmt(length, 'm', 1)}")
+    if career    is not None: basics.append(f"{_t('Class')}: {career}")
+    if role      is not None: basics.append(f"{_t('Role')}: {role}")
     if basics:
         lines.append("  |  ".join(basics))
 
@@ -5949,7 +6000,7 @@ def enhancements_ship_dataforge(
 
     if ins_base is not None:
         lines.append(
-            f"Insurance: {_fmt(ins_base, ' min', 2)} base  |  {_fmt(ins_express, ' min', 2)} express"
+            f"{_t('Insurance')}: {_fmt(ins_base, ' min', 2)} {_t('base')}  |  {_fmt(ins_express, ' min', 2)} {_t('express')}"
         )
 
     return "\\n".join(lines)
@@ -6648,7 +6699,7 @@ def enhancements_medical_consumables(ctx: dict) -> dict[str, str]:
     for key, effect in MEDICAL_CONSUMABLE_EFFECTS.items():
         if key not in loc:
             continue
-        out[key] = append_enhancements(loc[key], effect, separator=EFFECT_SEPARATOR, prepend=prepend)
+        out[key] = append_enhancements(loc[key], _t(effect), separator=EFFECT_SEPARATOR, prepend=prepend)
     logger.info(f"Finished medical consumables ({len(out)} entries)")
     return out
 
@@ -7824,9 +7875,9 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
 
             details_lines = []
             if _show("mission_type"):
-                details_lines.append(f"<EM4>Mission Type:</EM4> {', '.join(all_flags) if all_flags else 'Standard'}")
+                details_lines.append(f"<EM4>{_t('Mission Type')}:</EM4> {', '.join(_t(f) for f in all_flags) if all_flags else _t('Standard')}")
             if _show("difficulty") and all_difficulties:
-                details_lines.append(f"<EM4>Difficulty (1-7):</EM4> {all_difficulties[0]}")
+                details_lines.append(f"<EM4>{_t('Difficulty (1-7)')}:</EM4> {all_difficulties[0]}")
             if _show("resource_signatures"):
                 _rs_ores = battaglia_mineable_rs_desc_ores.get(desc_key)
                 if _rs_ores:
@@ -7834,7 +7885,7 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
             if _show("spawns"):
                 details_lines.extend(_format_spawn_lines(agg_spawns))
             if _show("ace") and bool(agg_spawns.get(SPAWN_HOSTILE, {}).get("Ace Pilots", 0)):
-                details_lines.append("<EM4>Ace Pilot:</EM4> Yes")
+                details_lines.append(f"<EM4>{_t('Ace Pilot')}:</EM4> {_t('Yes')}")
             nonzero_tiers = [(s, f, rn, rt) for s, f, rn, rt in desc_seen_tiers if s > 0]
             if _show("reputation"):
                 if len(nonzero_tiers) == 1:
@@ -7842,13 +7893,13 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                     details_lines.append(_rep_reward_line(rn, f"{sxp:,}", rep_xp_label, rt))
                     if fxp < 0:
                         details_lines.append(
-                            _rep_reward_line("Failure Penalty", f"{fxp:,}", rep_xp_label)
+                            _rep_reward_line(_t("Failure Penalty"), f"{fxp:,}", rep_xp_label)
                         )
                 elif len(nonzero_tiers) > 1:
                     for i, (sxp, fxp, rn, rt) in enumerate(sorted(nonzero_tiers, key=lambda t: t[0]), 1):
-                        line = _rep_reward_line(rn if rn else f"Tier {i}", f"{sxp:,}", rep_xp_label, rt)
+                        line = _rep_reward_line(rn if rn else f"{_t('Tier')} {i}", f"{sxp:,}", rep_xp_label, rt)
                         if fxp < 0:
-                            line += f" (Failure: {fxp:,})"
+                            line += f" ({_t('Failure')}: {fxp:,})"
                         details_lines.append(line)
 
             sections: list[str] = [base_desc]
@@ -7856,12 +7907,13 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                 chance_pct = int(variant_bp_chance * 100)
                 if all_variants_have_bp:
                     bp_header = (
-                        f"<EM4>Blueprint Reward:</EM4> {chance_pct}% chance"
-                        if chance_pct < 100 else "<EM4>Blueprint Reward:</EM4> Guaranteed"
+                        f"<EM4>{_t('Blueprint Reward')}:</EM4> " + _t("{pct}% chance", pct=chance_pct)
+                        if chance_pct < 100 else f"<EM4>{_t('Blueprint Reward')}:</EM4> {_t('Guaranteed')}"
                     )
                 else:
-                    variant_note = ", ".join(bp_variant_names) if bp_variant_names else "select variants"
-                    bp_header = f"<EM4>Blueprint Reward:</EM4> {chance_pct}% chance ({variant_note} only)"
+                    variant_note = ", ".join(bp_variant_names) if bp_variant_names else _t("select variants")
+                    bp_header = (f"<EM4>{_t('Blueprint Reward')}:</EM4> "
+                                 + _t("{pct}% chance ({variants} only)", pct=chance_pct, variants=variant_note))
                 details_lines.append(bp_header)
 
                 pools_by_system = mission_blueprints.get(title_key, {})
@@ -8147,7 +8199,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
          standardize_earnable_ship_names: bool = False,
          rs_ore_name_annotations: bool = True,
          english_base_ini_path: Path | None = None,
-         should_cancel: Optional[Callable[[], bool]] = None) -> None:
+         should_cancel: Optional[Callable[[], bool]] = None,
+         language: str | None = None) -> None:
     """Generate the enhancement INIs for *categories* (None means all) beside
     *base_ini_path*.
 
@@ -8160,6 +8213,12 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     the one the GUI always takes (its worker passes max_workers=1); with a
     pool (CLI and tests) only the check before the write phase applies.
     None, the default, never stops.
+
+    *language* is the app folder name of the language the added text is
+    written in (``languages/<language>/enhancements.json``, #579). None, the
+    default, takes it from a ``cache/lang/<language>/base.ini`` path, so a
+    CLI run over a translated base.ini writes that language too, and English
+    otherwise.
     """
     import sys as sys_mod
     # Deferred import — the script is loaded by both the app worker (where
@@ -8197,6 +8256,12 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
             raise GenerationStopped(where)
 
     logger.info("=== SC Enhancements INI Generator (DataForge edition) ===")
+    # The generated text's language (#579): None or "english" writes English.
+    if language is None and Path(base_ini_path).parent.parent.name == "lang":
+        language = Path(base_ini_path).parent.name
+    _set_text_language(language)
+    if _TEXT:
+        logger.info(f"Generated text: {len(_TEXT):,} translated texts for {language}")
     if categories is not None:
         logger.info(f"Selective generation: {', '.join(sorted(categories))}")
     _flush()

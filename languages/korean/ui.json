@@ -2256,6 +2256,10 @@
       "ht": "",
       "at": "설정된 소스에서 {language} 현지화를 불러올 수 없었고, 캐시된 사본도 없습니다. 대신 영어 기본값을 표시합니다. 언어 파일 매핑의 URL 또는 파일을 확인한 후 다시 시도하세요."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "새 {language} 번역을 내려받았습니다. 다시 불러오는 중입니다."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge에서 {language} 강화 생성 중…"

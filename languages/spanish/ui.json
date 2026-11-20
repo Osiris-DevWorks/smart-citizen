@@ -2256,6 +2256,10 @@
       "ht": "No se pudo descargar la localización {language} y no se encontró ninguna copia en caché. Se mostrará la base inglesa. Revisa la URL en Asignar archivo de idioma y tu conexión, e inténtalo de nuevo.",
       "at": ""
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Se descargó una traducción {language} más reciente. Recargando con ella."
+    },
     "language_generating_enhancements": {
       "ht": "Generando mejoras de {language} desde DataForge...",
       "at": ""

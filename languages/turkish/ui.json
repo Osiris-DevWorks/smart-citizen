@@ -2256,6 +2256,10 @@
       "ht": "",
       "at": "{language} yerelleştirmesi yapılandırılan kaynaktan yüklenemedi ve önbelleğe alınmış bir kopya bulunamadı. Bunun yerine İngilizce temel gösteriliyor. Dil Dosyası Eşle'deki URL'yi veya dosyayı kontrol edip yeniden deneyin."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Daha yeni bir {language} çevirisi indirildi. Onunla yeniden yükleniyor."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge'dan {language} geliştirmeleri oluşturuluyor…"

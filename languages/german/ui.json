@@ -2256,6 +2256,10 @@
       "ht": "",
       "at": "Die {language}-Lokalisierung konnte nicht aus der konfigurierten Quelle geladen werden, und es wurde keine zwischengespeicherte Kopie gefunden. Stattdessen wird die englische Basis angezeigt. Überprüfe die URL oder Datei in Sprachdatei zuordnen und versuche es erneut."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Eine neuere {language}-Übersetzung wurde heruntergeladen. Wird neu geladen."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "{language}-Erweiterungen werden aus DataForge erstellt…"
