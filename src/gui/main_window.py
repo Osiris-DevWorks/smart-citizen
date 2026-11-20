@@ -1818,7 +1818,8 @@ class MainWindow(QMainWindow):
         # Smart Citizen guides on Karolinger Guides.
         footer_layout.addSpacing(10)
         self.karolinger_label = QLabel()
-        karolinger_pixmap = self._footer_pixmap("karolinger-guides.png")
+        karolinger_pixmap = self._footer_pixmap(
+            "karolinger-guides.png", self._KAROLINGER_IMAGE_HEIGHT)
         if karolinger_pixmap is not None:
             self.karolinger_label.setPixmap(karolinger_pixmap)
         else:
@@ -1891,19 +1892,22 @@ class MainWindow(QMainWindow):
 
     # Footer images are scaled to the Osiris logo's height.
     _FOOTER_IMAGE_HEIGHT = 40
+    # The Karolinger Guides logo is a little shorter (#602): at full height
+    # the footer grew wider than the window's 900 px narrow size and brought
+    # up the window-level scroll bar (tests/test_tab_scrollbar_placement.py).
+    _KAROLINGER_IMAGE_HEIGHT = 32
 
     @classmethod
-    def _footer_pixmap(cls, filename: str) -> "QPixmap | None":
-        """Load ``assets/<filename>`` for the footer, at most
-        _FOOTER_IMAGE_HEIGHT tall, or None when the file is missing (the
-        caller then shows its fallback text)."""
+    def _footer_pixmap(cls, filename: str, height: int = _FOOTER_IMAGE_HEIGHT) -> "QPixmap | None":
+        """Load ``assets/<filename>`` for the footer, at most *height* tall,
+        or None when the file is missing (the caller then shows its fallback
+        text)."""
         path = get_resource_path(os.path.join("assets", filename))
         if not os.path.exists(path):
             return None
         pixmap = QPixmap(path)
-        if pixmap.height() > cls._FOOTER_IMAGE_HEIGHT:
-            pixmap = pixmap.scaledToHeight(
-                cls._FOOTER_IMAGE_HEIGHT, Qt.TransformationMode.SmoothTransformation)
+        if pixmap.height() > height:
+            pixmap = pixmap.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
         return pixmap
 
     def open_karolinger_guides(self, event):
