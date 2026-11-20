@@ -3589,6 +3589,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "ここの鉱物：{minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "アイテム名を入力して購入場所を確認..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "UEXからショップデータを読み込み中..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "ショップデータのためにUEXに接続できませんでした。インターネット接続を確認してください。オーバーレイは数分後に再試行します。"
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "ショップデータ: {site}（プレイヤー報告）。更新: {updated}"
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEXに接続できないため、最後に保存したデータを表示しています。"
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "その名前のアイテムを販売している既知のショップはありません。"
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item}（{count}）"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}、{place}（{system}）: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low}～{high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{total}件中{shown}件を表示中。さらに入力して絞り込んでください。"
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "価格報告日: {date}"
     }
   },
   "overlay": {
@@ -3807,6 +3851,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "鉱物名を入力するとそれを使うアイテムを、アイテム名を入力すると必要な鉱物を表示します。DataForge の抽出が必要です。"
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "アイテム検索"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "アイテム名を入力すると、販売しているショップ、その場所、価格が表示されます。ショップデータはインターネット経由でUEXから取得され、プレイヤーによって報告されたものです。"
     },
     "drawer_position": {
       "ht": "",

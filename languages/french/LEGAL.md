@@ -43,11 +43,12 @@ Tout. Vos modifications de localisation, sauvegardes, réglages d'application et
 
 ### Ce qui passe par le réseau
 
-Smart Citizen n'effectue de requêtes réseau sortantes que dans trois cas :
+Smart Citizen n'effectue de requêtes réseau sortantes que dans quatre cas :
 
 - **Vérification de mise à jour** : une petite requête non authentifiée vers `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest` environ toutes les 6 heures pour comparer la version installée à la dernière version GitHub. Ne renvoie que des métadonnées de version (nom du tag, URL) ; aucun état de Smart Citizen n'est envoyé.
 - **Téléchargement des langues** : quand vous passez à une langue autre que l'anglais, Smart Citizen télécharge le `global.ini` traduit par la communauté pour cette langue depuis l'URL configurée (par défaut, le dépôt GitHub [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization)). Le téléchargement est mis en cache localement ; rien de votre machine n'est envoyé.
 - **Sources distantes configurées par l'utilisateur** : si vous avez configuré une source de données pointant vers une URL `http(s)://` dans l'onglet Paramètres, Smart Citizen consulte cette URL lors de l'actualisation des fichiers sources. Par défaut, cela ne concerne que la forme URL GitHub-raw de la source `global` ; la configuration standard depuis la v1.0 lit `base.ini` depuis votre extraction locale de Data.p4k.
+- **Liste des boutiques de la recherche d'objets SCO** — Tant que l'overlay tourne avec sa section Recherche d'objets activée, Smart Citizen télécharge la liste des boutiques et des prix depuis l'API [UEX](https://uexcorp.space) (`api.uexcorp.uk`), au plus toutes les 12 heures. Ce sont deux requêtes simples qui n'envoient que le nom et la version de l'application ; rien de votre machine n'est envoyé. La liste est mise en cache localement. Désactivez la Recherche d'objets dans l'onglet Overlay pour l'arrêter.
 
 ### Ce que Smart Citizen ne fait **pas**
 

@@ -3589,6 +3589,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Buradaki mineraller: {minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Nereden alınacağını görmek için bir eşya yazın..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Mağaza verileri UEX'ten yükleniyor..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "Mağaza verileri için UEX'e ulaşılamadı. İnternet bağlantınızı kontrol edin. Overlay birkaç dakika içinde yeniden dener."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Mağaza verileri {site} sitesinden, oyuncular tarafından bildirildi. Güncelleme: {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX'e ulaşılamadı, bu yüzden bu son kaydedilen kopya."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "Bu adda bir eşya satan bilinen bir mağaza yok."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place} ({system}): {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} - {high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{total} eşyadan {shown} tanesi gösteriliyor. Daraltmak için daha fazla yazın."
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "Fiyat bildirildi: {date}"
     }
   },
   "overlay": {
@@ -3807,6 +3851,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Bir mineral yazın, onu kullanan eşyaları görün; ya da bir eşya yazıp gereken mineralleri görün. DataForge çıkarımı gerekir."
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Eşya Bulucu"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Hangi mağazaların sattığını, nerede olduklarını ve fiyatını görmek için bir eşya yazın. Mağaza verileri internet üzerinden UEX'ten gelir ve oyuncular tarafından bildirilir."
     },
     "drawer_position": {
       "ht": "",

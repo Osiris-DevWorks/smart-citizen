@@ -373,6 +373,33 @@ class LanguageBaseDownloadWorker(QThread):
             self.finished.emit(False)
 
 
+class UexShopDataWorker(QThread):
+    """Load the SCO Item Finder's shop data (``src/utils/uex_shops.py``):
+    the cached copy when it is under 12 hours old, otherwise a fresh one
+    from UEX, falling back to the cached copy when UEX can't be reached.
+    The cache read and the download both stay off the GUI thread."""
+
+    # (ShopData or None, error text: "" when nothing went wrong)
+    finished = pyqtSignal(object, str)
+
+    def __init__(self, cache_path, *, force: bool = False):
+        super().__init__()
+        self._cache_path = cache_path
+        self._force = force
+
+    def run(self):
+        from src.utils.uex_shops import default_opener, load_shop_data
+        from src.utils.version import get_version
+        try:
+            data, error = load_shop_data(
+                self._cache_path, default_opener(f"SmartCitizen/{get_version()}"),
+                force=self._force)
+        except Exception as e:  # never let the finder take the app down
+            logger.exception(f"UEX shop data load failed: {e}")
+            data, error = None, str(e)
+        self.finished.emit(data, error)
+
+
 class ShaderCacheWorker(QThread):
     """Clean or remove one Star Citizen shader cache folder.
 
