@@ -19,7 +19,7 @@ import json
 
 # Each section is a title plus a flat list of one-line test items. Keep items
 # imperative and self-contained ("do X, confirm Y") so a tester needs no other
-# doc. This plan covers Smart Citizen 3.0.0 (the diff over its 2.4.0 base).
+# doc. This plan covers Smart Citizen 3.0.1 (the diff over its 3.0.0 base).
 #
 # Keep each item under ~190 characters. tests/test_test_plan.py chunks the
 # submitted report at a 200-char limit and asserts every line survives intact,
@@ -29,34 +29,25 @@ TEST_SECTIONS: list[dict] = [
         "title": "Core workflow (smoke)",
         "items": [
             "Launch the app: it opens to the strings table with no crash dialog.",
-            "Config tab: Extract from Data.p4k, then Generate Enhancements; the DataForge progress bar keeps moving start to finish and the table reloads.",
-            "Generate Enhancements, edit a string's Custom Value, then Apply to Game; confirm the change shows in-game.",
-            "Restore Backup (More menu): a previous global.ini is offered and restores cleanly.",
+            "Config tab: Extract from Data.p4k, then Generate Enhancements; the progress bar keeps moving and the table reloads.",
+            "Edit a string's Custom Value, then Apply to Game; confirm the change shows in game.",
+            "Upgrade over 3.0.0: settings, user.ini, owned blueprints and backups survive.",
         ],
     },
     {
-        "title": "Overlay: mining scan decoder (#474, #523)",
+        "title": "Play button reminder (#566)",
         "items": [
-            "Run the game borderless windowed. Overlay tab: Start Overlay. Scan a rock: the label under the radar shows the deposit (e.g. 3 × Lindinium).",
-            "Scan a ship wreck: the label shows Salvage. Scan an ROC or hand-mining deposit: it decodes too.",
-            "Try each Scan text size (Small to Extra large): the label resizes and stays centred under the scan number.",
-            "Drawer Minerals: tick a mineral, then scan it. The label glows and flashes; with Play a sound on, it chimes once, not again while it stays.",
-            "Overlay tab: tick Play a sound, pick each Alert sound and press Preview; each plays (Smart Citizen Default is the chime, the ten Voice entries speak). Scan a watched mineral: the picked sound plays.",
-            "Turn on Change text color and Bigger text: a watched scan shows green and larger. Tick Salvage at the bottom of the list: a wreck alerts too.",
-            "Set Font size Large (Config tab) and restart: the scan decoder still reads signatures.",
-            "Play 30 minutes with the overlay running: no Easy Anti-Cheat warning or kick.",
+            "Apply in English and start the game: the main menu's Play button has a second line, Run Smart Citizen after every patch, centred under the first.",
+            "Apply twice and start the game: the reminder shows once, not twice.",
+            "Apply in Japanese, Korean or Russian and start the game: both lines on the Play button are centred.",
         ],
     },
     {
-        "title": "Overlay: drawer (#474, #523)",
+        "title": "Blueprint scan in other languages (#564)",
         "items": [
-            "Click a drawer tab to open its section, click it again to close. Try a few Drawer position spots: the drawer moves there.",
-            "Set a Drawer hotkey (e.g. Ctrl+Alt+B). In game, press it: the drawer opens on the section used last; press again: it closes.",
-            "Blueprints: search an item, tick it owned. The Blueprint Tracker tab shows it under Owned.",
-            "Minerals: type a mineral: its locations show grouped by star system. Type a location: its minerals show.",
-            "Generate with Commodities ticked. Crafting: type a mineral to see items that use it, or an item to see its minerals.",
-            "Turn off one section on the Overlay tab: its tab leaves the drawer. Turn the drawer off: the drawer is gone.",
-            "Mark new blueprints as owned on: receive a blueprint in game while the overlay runs. It moves to Owned without a scan.",
+            "Select Spanish, apply, and receive a blueprint in game. Scan Logs for Owned Blueprints: it is added to Owned.",
+            "With the overlay running in Spanish and Mark new blueprints as owned on, receive a blueprint: it moves to Owned without a scan.",
+            "In English, Scan Logs for Owned Blueprints: it finds the same blueprints as 3.0.0 did.",
         ],
     },
     {
@@ -70,74 +61,69 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
-        "title": "Blueprints (#416, #527)",
+        "title": "Owned names after a language switch (#569, #570)",
         "items": [
-            "Scan Logs for Owned Blueprints: the P4-AR Rifle, S-38 Pistol, their magazines and the four Field Recon Suit pieces are added to Owned.",
-            "Their tooltip and the Mission filter show Default blueprint (every player has it), in the selected language.",
-            "Move a starter back to Available and scan again: it stays in Available.",
-            "When a scan ends, the status bar shows its result, not Finishing up….",
+            "Upgrade with an existing Owned list and open the Blueprint Tracker: no owned blueprint is lost.",
+            "With some blueprints owned, switch English to Spanish: Owned shows them under their Spanish names, none listed twice or back in Available.",
+            "Switch back to English: Owned shows the English names again.",
+            "A Spanish Owned list that showed the S-38 Pistol twice (English and Spanish) shows it once after the upgrade.",
+            "Export Owned Blueprints in English, switch to Spanish, Import it: every blueprint matches, none skipped.",
         ],
     },
     {
-        "title": "Extraction (#483, #507, #482, #490, #491, #494, #517, #484, #522, #529)",
+        "title": "Overlay: closing the drawer with its tab (#585)",
         "items": [
-            "Clear Cache (More menu), then Generate Enhancements: the DataForge extraction is noticeably faster than in 2.4, and the stats still appear.",
-            "During a DataForge extraction, press Esc and pick Run in Background: progress moves to the status bar and the folder, channel and language settings lock.",
-            "When that background run ends, the settings unlock and the table reloads. Pick Stop on another run: the previous cache still works.",
-            "Generate Enhancements, press Esc: the same Stop / Run in Background choice appears.",
-            "Point the DataForge cache folder at a nearly full drive and Generate: one message names the drive, what's free and what's needed.",
-            "Pick a DataForge cache folder Windows refuses (e.g. under C:\\Windows): one message says why and the old folder is kept.",
-            "Make the cache folder a junction to another folder and Generate: the extraction refuses, naming the link, and nothing is deleted.",
-            "While the RSI Launcher patches or verifies, click Extract from Data.p4k: it says Star Citizen is updating. With only the game running, it extracts.",
+            "In game, hold F, click a drawer tab, click an item in it, then click the same tab to close it: keys and a single click work in game at once.",
+            "In game, open the drawer with its hotkey, click an item with F held, then close it with the hotkey: keys and a single click work in game at once, as in 3.0.0.",
         ],
     },
     {
-        "title": "Generation, cache and closing (#476, #478, #479, #486)",
+        "title": "Overlay: scan decoder (#546, #563)",
         "items": [
-            "Close the app during Generate Enhancements: it closes without a hang. On the next start it offers to regenerate.",
-            "After a game patch, Extract from Data.p4k: when it finishes it asks whether to update the out-of-date DataForge cache.",
-            "More menu, Clear Cache: it finds the DataForge cache in its real folder and clears it.",
+            "Golem or Prospector, HDR off: scan rocks; the label shows the deposit as in 3.0.0.",
+            "Scan on a bright planet or in snow (e.g. Microtech), and with Windows HDR on if you have it: the label still reads.",
+            "Set the field of view to its maximum and scan: the label still reads.",
+            "Aurora at 1080p: scan a rock; the label reads. Note your ship and resolution if it does not.",
         ],
     },
     {
-        "title": "Edits and categories (#531, #532)",
+        "title": "Overlay: drawer while aiming (#582)",
         "items": [
-            "Clear a Custom Value you had set, then Generate Enhancements (which reloads): the value stays cleared.",
-            "Reset user.ini, then Restore user.ini: the overrides come back.",
-            "Tick a new category on the Enhancements tab without its small Apply, then Generate: the new category is included.",
-            "Tick a category, switch tabs and come back: the tick is still pending and Apply Enhancements is red.",
+            "Drawer at top right, in game: aim with the pointer hidden and shoot across the drawer and the screen corner. The game keeps focus and every shot fires.",
+            "Hold F (or open the mobiGlas) and click a drawer tab: it opens. Click back into the game, then aim and shoot over the drawer: the game keeps focus.",
+            "With the Smart Citizen window in front, click a drawer tab: it opens as in 3.0.0.",
+            "Windows scale at 125% or 150%, drawer at middle right: click the drawer's outermost edge pixels; a tab opens each time.",
+            "Two screens at different scales, the second to the right: open and close the drawer at middle right; it stays on the main screen at its usual size.",
         ],
     },
     {
-        "title": "Languages (#502, #514, #535)",
+        "title": "Overlay: drawer hotkey (#587)",
         "items": [
-            "Select French, then switch channel, or change the data folder: the game strings stay French, not English.",
-            "Select French, then Extract from Data.p4k: the game strings stay French.",
-            "Select Russian: the UI, Help and About are Russian and the game strings load. Apply and launch: Russian shows in game.",
-            "Apply Russian, then apply Korean: Korean replaces Russian in game (the two share one game slot).",
-            "In each other language, Help and About mention the Overlay tab, armor tags and Font size.",
+            "Set a drawer hotkey on the Overlay tab and start the overlay. In game, press it: the drawer opens. Hold F to use it, then press the hotkey again: it closes.",
+            "In game, press the hotkey's key alone, or with one modifier more than it has (Ctrl+Alt+8 for Alt+8): the drawer stays as it is.",
+            "With the Smart Citizen window in front, press the hotkey: the drawer opens in front. Press it again: it closes.",
+            "Set Pause as the drawer hotkey and start the overlay. In game, press Pause: the drawer opens. Press it again: it closes.",
+            "Alt-Tab into the game and at once press the hotkey, holding it a moment: the drawer opens.",
         ],
     },
     {
-        "title": "Armor tags and font size (#492, #475)",
+        "title": "Enhancements (#555, #561)",
         "items": [
-            "Enhancements tab, Tag Builder, Armor tab: the brackets list has no None. Generate with Gear: armor names carry [L], [M] or [H].",
-            "Scan Logs after receiving armor in game: the tagged armor still shows under Owned.",
-            "Config tab, Font size Small then Large: it offers to restart, and after the restart the whole window scales with nothing cut off.",
+            "Generate with Commodities ticked. Point a mining tool at an unfractured Aphorite, Dolivine or Hadanite rock: its HUD name carries the [CF] tag.",
+            "Generate with Ships ticked. Open the Carrack's map: room labels show no ship stats.",
+            "Generate with every category ticked: it finishes with no error and the mission contracts carry their details.",
         ],
     },
     {
-        "title": "Installer (#455)",
+        "title": "Guided tour (#545)",
         "items": [
-            "With the data folder on OneDrive, upgrade and answer YES to the OneDrive warning: on first start the data is in the new local folder.",
-            "Answer NO instead: the data stays on OneDrive and nothing moves.",
-            "Upgrade over 2.4.0: settings, user.ini, owned blueprints and backups survive.",
+            "Start the guided tour: it has 21 steps, including Settings Backup and Star Citizen Tools, and each step points at the right control.",
         ],
     },
     {
         "title": "Portable build",
         "items": [
-            "Unzip the portable build into a deep folder path (several nested folders), run it, extract, generate and apply: no path-length errors.",
+            "Unzip the portable build into a deep folder path, run it, extract, generate and apply: no path-length errors.",
             "Start the overlay from the portable build: it runs and the drawer works.",
         ],
     },

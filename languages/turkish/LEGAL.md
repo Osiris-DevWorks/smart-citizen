@@ -50,6 +50,17 @@ Smart Citizen yalnızca dört durumda giden ağ isteği yapar:
 - **Kullanıcı tarafından yapılandırılan uzak kaynaklar** — Yapılandırma sekmesinde bir `http(s)://` URL'sine işaret eden bir veri kaynağı yapılandırdıysanız Smart Citizen, kaynak dosyalarını yenilerken bu URL'yi alır. Kurulum sonrası varsayılan durumda bu yalnızca `global` kaynağının GitHub-raw URL biçimi için geçerlidir; v1.0'dan bu yana standart yapılandırma `base.ini` dosyasını bunun yerine yerel Data.p4k çıkarımınızdan okur.
 - **SCO Eşya Bulucu mağaza listesi** — Overlay, Eşya Bulucu bölümü açıkken çalıştığı sürece Smart Citizen mağaza ve eşya fiyatı listesini [UEX](https://uexcorp.space) API'sinden (`api.uexcorp.uk`) en fazla 12 saatte bir indirir. Bunlar yalnızca uygulamanın adını ve sürümünü taşıyan iki basit istektir; bilgisayarınızdan hiçbir şey gönderilmez. Liste yerel olarak önbelleğe alınır. Durdurmak için Overlay sekmesinde Eşya Bulucu'yu kapatın.
 
+### Smart Citizen Katmanı
+
+Katman siz başlatana kadar kapalıdır. Çalışırken okuduğu her şey bilgisayarınızda kalır:
+
+- **Ekran** — sinyal sayısını okumak için maden tarayıcısının göstergesinin çevresindeki küçük bir alanı yakalar. Yakalamalar bellekte okunur ve kaydedilmez.
+- **Game.log** — aldığınız planları bulmak için Star Citizen'ın günlüğünü okur.
+- **Windows** — nişan alırken çekmecenin tıklamalarınızı oyuna geçirmesi için Windows'a hangi pencerenin önde olduğunu ve fare işaretçisinin görünüp görünmediğini sorar.
+- **Çekmece kısayolu** — yalnızca bir kısayol ayarlarsanız. Star Citizen öndeyken Windows'a kısayolun tuşunun basılı olup olmadığını sorar; Ctrl, Alt, Shift ve Win tuşlarını yalnızca o tuş basılıyken sorar. Başka hiçbir tuşu sormaz ve yazdıklarınızı asla almaz.
+
+Oyunun belleğini asla okumaz, oyuna asla kanca atmaz veya enjekte olmaz ve oyuna asla girdi göndermez.
+
 ### Smart Citizen'ın **yapmadığı** şeyler
 
 - Hiçbir türde telemetri, analiz veya kullanım raporlaması yoktur.

@@ -103,6 +103,20 @@ def _is_valid_sc_root(path: str) -> bool:
         return False
 
 
+def _p4k_exists(path: Path) -> bool:
+    """Return True if *path* exists, False when it is missing or can't be read.
+
+    ``Path.exists()`` swallows only a few Windows errors. Any other OSError,
+    such as WinError 448 for an elevated process following a link a normal
+    user made (#595), reads as missing here instead of crashing the caller.
+    """
+    try:
+        return path.exists()
+    except OSError as exc:
+        logger.warning("Could not check %s: %s", path, exc)
+        return False
+
+
 def _path_ends_in_channel(path: str) -> bool:
     """Return True if *path*'s last component is a recognised channel name.
 
@@ -568,6 +582,15 @@ class AppSettings:
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
 
+    # Settings keys - Window
+    # Minimize to the system tray instead of the taskbar (Config tab,
+    # src/gui/tray.py). Off by default.
+    MINIMIZE_TO_TRAY = "minimize_to_tray"
+    # Whether the one-time "still running" notice has been shown, on the
+    # first trip to the tray (src/gui/tray.py). Per-install state, like the
+    # tour's completed version.
+    TRAY_NOTICE_SHOWN = "tray_notice_shown"
+
     # Settings keys - App self-update check
     # Settings keys - Star Citizen channel selection
     # Star Citizen ships multiple channels (LIVE/PTU/EPTU/HOTFIX/TECH-PREVIEW)
@@ -852,6 +875,8 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - tray_notice_shown: the same kind of state, for the one-time "still
+    #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
     #     set, so it is exported only when stored, the same way owned_items
     #     is, and import_values takes it from a backup only together with
@@ -863,6 +888,7 @@ class AppSettings:
         "owned_items",
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
@@ -1861,6 +1887,28 @@ class AppSettings:
     @staticmethod
     def set_tutorial_disabled(disabled: bool) -> None:
         AppSettings.settings().setValue(AppSettings.TUTORIAL_DISABLED, bool(disabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_minimize_to_tray() -> bool:
+        """When True, minimizing hides the window in the system tray instead
+        of the taskbar (Config tab opt-in, src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.MINIMIZE_TO_TRAY, False, type=bool)
+
+    @staticmethod
+    def set_minimize_to_tray(enabled: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.MINIMIZE_TO_TRAY, bool(enabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_tray_notice_shown() -> bool:
+        """Whether the one-time "still running" notice has been shown, so it
+        comes on the first trip to the tray only (src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.TRAY_NOTICE_SHOWN, False, type=bool)
+
+    @staticmethod
+    def set_tray_notice_shown(shown: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.TRAY_NOTICE_SHOWN, bool(shown))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3103,6 +3151,11 @@ class AppSettings:
         can't actually switch to. When the root isn't configured yet we
         return all channels so the combo isn't empty — the user can still
         pick one before the path is set.
+
+        A channel whose Data.p4k can't be checked counts as missing rather
+        than crashing the app (#595): Windows raises WinError 448 when an
+        elevated process follows a link a normal user made, e.g. a PTU folder
+        linked to LIVE, and ``Path.exists()`` lets that error through.
         """
         root = AppSettings.get_sc_install_root()
         if not root:
@@ -3110,7 +3163,7 @@ class AppSettings:
         root_path = Path(root)
         return [
             channel for channel in AppSettings.AVAILABLE_CHANNELS
-            if (root_path / channel / "Data.p4k").exists()
+            if _p4k_exists(root_path / channel / "Data.p4k")
         ]
 
     @staticmethod
@@ -3144,11 +3197,29 @@ class AppSettings:
     # caller channel-aware automatically.
 
     @staticmethod
+    def _channel_cache_dir(channel: str) -> Path:
+        r"""``…\{channel}\cache\`` for *channel*, named without making it.
+        The one place the channel's cache folder is spelled out, for
+        :meth:`get_cache_dir` and :meth:`get_cached_base_ini_paths`."""
+        return AppSettings.get_user_data_dir() / channel / "cache"
+
+    @staticmethod
     def get_cache_dir() -> Path:
         r"""Get the active channel's cache directory (``…\{channel}\cache\``)."""
-        cache_dir = AppSettings.get_channel_data_dir() / "cache"
+        cache_dir = AppSettings._channel_cache_dir(AppSettings.get_active_channel())
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
+
+    @staticmethod
+    def _base_ini_in(cache_dir: Path, language: str) -> Path:
+        r"""Where the cache folder *cache_dir* keeps *language*'s base.ini:
+        ``base.ini`` at its top for English, ``lang\{language}\base.ini``
+        for the others. Names the file only, nothing is read or made. The
+        one place the layout is spelled out, for :meth:`get_base_ini_path`
+        and :meth:`get_cached_base_ini_paths`."""
+        if language == AppSettings.DEFAULT_LANGUAGE:
+            return cache_dir / "base.ini"
+        return cache_dir / "lang" / language / "base.ini"
 
     @staticmethod
     def get_base_ini_path(language: "str | None" = None) -> Path:
@@ -3163,12 +3234,28 @@ class AppSettings:
         """
         if language is None:
             language = AppSettings.get_selected_language()
-        cache_dir = AppSettings.get_cache_dir()
+        path = AppSettings._base_ini_in(AppSettings.get_cache_dir(), language)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @staticmethod
+    def get_base_ini_leaf(language: "str | None" = None, channel: "str | None" = None) -> Path:
+        r"""The base.ini :meth:`get_base_ini_path` names for *language*, in
+        *channel*'s cache, without making the channel, cache or language
+        folder (#564). Both default to the selected language and the active
+        channel. For a read that must leave the disk alone, as
+        :meth:`get_dataforge_cache_leaf` is for the DataForge cache: a
+        blueprint scan reads LIVE's and HOTFIX's files whichever channel is
+        active, and must not make folders for a channel nobody selected.
+        """
+        if language is None:
+            language = AppSettings.get_selected_language()
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        cache_dir = AppSettings.get_user_data_dir() / channel / "cache"
         if language == AppSettings.DEFAULT_LANGUAGE:
             return cache_dir / "base.ini"
-        lang_dir = cache_dir / "lang" / language
-        lang_dir.mkdir(parents=True, exist_ok=True)
-        return lang_dir / "base.ini"
+        return cache_dir / "lang" / language / "base.ini"
 
     @staticmethod
     def get_global_source_base_ini(language: "str | None" = None) -> Path:
@@ -3189,6 +3276,53 @@ class AppSettings:
         if language != AppSettings.DEFAULT_LANGUAGE and not own.exists():
             return AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
         return own
+
+    @staticmethod
+    def get_cached_base_ini_paths() -> "list[tuple[str, str, Path]]":
+        r"""``(channel, language, base.ini)`` for every base.ini cached for
+        any channel, in any language the app ships (#569): the files
+        :meth:`get_base_ini_path` names, found by looking, so it makes no
+        folder, unlike that getter. In channel order, then language order.
+
+        Every channel, not only the active one, because the Blueprint
+        Tracker's Owned set is shared by all of them: a name saved while
+        another channel was loaded in another language can be traced
+        through that channel's file. The languages are the app's own
+        (:meth:`_shipped_languages`), offered in the selector or not, so a
+        language the selector has since hidden is still found, while a
+        folder of another name in the cache (a backup such as
+        ``spanish.bak``) is no language. A channel whose cache Windows
+        refuses or cannot reach is skipped with a WARNING (on Python 3.11,
+        which the release builds use, ``Path.is_file`` raises
+        ``PermissionError`` rather than answering False), so this raises
+        only when the data folder itself cannot be had.
+        """
+        languages = AppSettings._shipped_languages()
+        found: "list[tuple[str, str, Path]]" = []
+        for channel in AppSettings.AVAILABLE_CHANNELS:
+            cache_dir = AppSettings._channel_cache_dir(channel)
+            try:
+                for language in languages:
+                    path = AppSettings._base_ini_in(cache_dir, language)
+                    if path.is_file():
+                        found.append((channel, language, path))
+            except OSError as e:
+                logger.warning(f"Could not look for cached base.ini files in {cache_dir}: {e}")
+        return found
+
+    @staticmethod
+    def _shipped_languages() -> list:
+        """Every language the app ships a folder for in ``languages/``,
+        sorted, English always among them: the ones the selector offers and
+        the ones it hides (a stub ``ui.json``,
+        :meth:`get_available_languages`). Reads the folder's names only."""
+        try:
+            names = sorted(p.name for p in AppSettings.get_languages_dir().iterdir() if p.is_dir())
+        except OSError:
+            names = []
+        if AppSettings.DEFAULT_LANGUAGE not in names:
+            names.append(AppSettings.DEFAULT_LANGUAGE)
+        return names
 
     @staticmethod
     def sync_global_source_path(context: str) -> None:
@@ -3775,18 +3909,26 @@ class AppSettings:
         scattered ``if name == "LIVE"`` branches that don't cover the new
         channels.
         """
-        sc_lang = AppSettings.get_sc_language_id(language)
         channel_path = AppSettings.get_channel_install_path()
         if channel_path:
-            return Path(channel_path) / "data" / "Localization" / sc_lang / "global.ini"
+            return AppSettings.get_applied_global_ini(channel_path, language)
 
         game_path = Path(AppSettings.get_game_install_path())
         if game_path.name.upper() in {c.upper() for c in AppSettings.AVAILABLE_CHANNELS}:
-            return game_path / "data" / "Localization" / sc_lang / "global.ini"
-        return (
-            game_path / AppSettings.get_active_channel()
-            / "data" / "Localization" / sc_lang / "global.ini"
-        )
+            return AppSettings.get_applied_global_ini(game_path, language)
+        return AppSettings.get_applied_global_ini(
+            game_path / AppSettings.get_active_channel(), language)
+
+    @staticmethod
+    def get_applied_global_ini(channel_dir, language: str | None = None) -> Path:
+        r"""The applied ``global.ini`` in the channel install folder
+        *channel_dir*: ``{channel_dir}\data\Localization\{sc_language_id}\global.ini``,
+        for *language* (default: the selected one). :meth:`get_global_ini_path`
+        gives it for the active channel; a blueprint scan asks for the channel
+        it reads (#564). Names the file only, nothing is read or made.
+        """
+        sc_lang = AppSettings.get_sc_language_id(language)
+        return Path(channel_dir) / "data" / "Localization" / sc_lang / "global.ini"
 
     @staticmethod
     def is_local_source_same_as_apply_target(local_path: str, language: str) -> bool:
@@ -3896,6 +4038,7 @@ class AppSettings:
             AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
             AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
             AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.MINIMIZE_TO_TRAY: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,

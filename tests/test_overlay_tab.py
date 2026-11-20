@@ -178,8 +178,8 @@ def test_drawer_scan_decoder_switch_saves_and_mirrors(qapp, json_backend, tmp_pa
 class _RecordedWorker:
     started = []
 
-    def __init__(self, log_path, since):
-        self.log_path, self.since = log_path, since
+    def __init__(self, log_path, since, loc_files=()):
+        self.log_path, self.since, self.loc_files = log_path, since, loc_files
         self.blueprints_found = self
 
     def connect(self, _slot):
@@ -202,11 +202,17 @@ def test_live_watch_only_on_scanned_channels(json_backend, tmp_path, monkeypatch
     monkeypatch.setattr(AppSettings, "get_channel_install_path",
                         staticmethod(lambda: str(tmp_path / channel)))
     monkeypatch.setattr(main_window, "LiveBlueprintLogWorker", _RecordedWorker)
+    # #564: a record of what it was asked about. The real one reads the
+    # settings and names files in the data folder.
+    monkeypatch.setattr(main_window, "_blueprint_notification_files",
+                        lambda ch, ch_dir: ("loc files for", ch, str(ch_dir)))
     _RecordedWorker.started = []
     me = SimpleNamespace(_sco_log_worker=None, _on_sco_blueprints_found=lambda *a: None)
     main_window.MainWindow._start_sco_log_watcher(me)
     assert bool(_RecordedWorker.started) is watched
     assert (me._sco_log_worker is not None) is watched
+    expected = [("loc files for", channel, str(tmp_path / channel))] if watched else []
+    assert [w.loc_files for w in _RecordedWorker.started] == expected
 
 
 def test_live_watch_survives_an_unreadable_install_path(json_backend, monkeypatch):
