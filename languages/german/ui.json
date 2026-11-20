@@ -846,6 +846,50 @@
       "ht": "",
       "at": "Den benutzerdefinierten Cache-Ordner löschen und den Plattformstandard verwenden."
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Halte deine besessenen Baupläne auf jedem PC gleich, auf dem du spielst. Wähle einen Ordner, den deine Cloud-App bereits synchronisiert, etwa in Google Drive, OneDrive oder Dropbox, und wähle denselben Ordner auf deinen anderen PCs. Smart Citizen liest und schreibt dort nur ein paar kleine Dateien, und deine Cloud-App überträgt sie."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Aus. Wähle einen Ordner, um es einzuschalten."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Wähle einen Ordner, den deine Cloud-App mit deinen anderen PCs synchronisiert"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Ausschalten"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Synchronisierung beenden. Die besessenen Baupläne auf diesem PC bleiben, wie sie sind."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart-Sync-Ordner wählen"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync ist aus."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Synchronisiere..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Zuletzt synchronisiert um {time}. Andere PCs in diesem Ordner: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Synchronisierung fehlgeschlagen: {error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "Entpackt die Standard-Lokalisierung (base.ini) sowie die DataForge-Entitäts-XMLs aus deiner installierten Data.p4k. Nach jedem Star-Citizen-Patch ausführen — die Strings werden nach Abschluss der Extraktion automatisch in die Tabelle neu geladen."
@@ -2583,6 +2627,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Fensterproportionen auf Standardwerte zurückgesetzt."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync konnte seinen Ordner nicht verwenden: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync hat {count} besessene(n) Bauplan/Baupläne von deinen anderen PCs aktualisiert."
     }
   },
   "import_flow": {

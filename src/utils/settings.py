@@ -738,6 +738,15 @@ class AppSettings:
     # owned_items (see import_values): restoring an owned set from before 3.0
     # resets it, so the next scan adds the starters to that set.
     DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
+    # Smart Sync (#567): the folder the player picked (empty means off), this
+    # PC's random machine id, this PC's ledger of owned changes (JSON, see
+    # smart_sync.py) and the "updated" time this PC last wrote to its file.
+    # All four are this PC's own, so they are in PROFILE_EXCLUDE_KEYS: a
+    # settings backup restored on another PC must not bring this PC's id.
+    SMART_SYNC_FOLDER = "smart_sync/folder"
+    SMART_SYNC_MACHINE_ID = "smart_sync/machine_id"
+    SMART_SYNC_LEDGER = "smart_sync/owned_ledger"
+    SMART_SYNC_LAST_WRITTEN = "smart_sync/last_written"
 
     # Smart Citizen Overlay (SCO) switch names on the Overlay tab (3.0.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
@@ -837,6 +846,10 @@ class AppSettings:
         "vehicles_path",
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
+        SMART_SYNC_FOLDER,
+        SMART_SYNC_MACHINE_ID,
+        SMART_SYNC_LEDGER,
+        SMART_SYNC_LAST_WRITTEN,
     })
 
     # Keys that have a default but are deliberately NOT materialised into a
@@ -1595,11 +1608,95 @@ class AppSettings:
 
     @staticmethod
     def set_owned_items(names) -> None:
-        """Persist the owned blueprint item-name set (#157)."""
+        """Persist the owned blueprint item-name set (#157).
+
+        With Smart Sync on (#567), each name that changes is also stamped in
+        this PC's sync ledger, so the change carries its real time to the
+        other PCs. Every writer of the owned set comes through here; one that
+        does not (Import Settings writes the key itself) is caught at the
+        next sync, which records the same differences.
+        """
         import json
+        names = set(names)
+        if AppSettings.get_smart_sync_folder():
+            from src.utils import smart_sync
+            AppSettings.set_smart_sync_ledger(
+                smart_sync.record(AppSettings.get_smart_sync_ledger(), names)
+            )
         AppSettings.settings().setValue(
             AppSettings.OWNED_ITEMS, json.dumps(sorted(names))
         )
+        AppSettings.settings().sync()
+
+    # -- Smart Sync (#567) -------------------------------------------------
+
+    @staticmethod
+    def get_smart_sync_folder() -> str:
+        """The folder Smart Sync uses, or "" when it is off."""
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_FOLDER, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_folder(folder) -> None:
+        """Turn Smart Sync on with *folder*, or off with None or "".
+
+        Turning it on with no ledger yet shares what this PC owns as a
+        baseline that any real change wins over; turning it on again later
+        records what changed while it was off as changes made now.
+        """
+        from src.utils import smart_sync
+        folder = str(folder) if folder else ""
+        backend = AppSettings.settings()
+        if folder:
+            ledger = AppSettings.get_smart_sync_ledger()
+            owned = AppSettings.get_owned_items()
+            ledger = (smart_sync.record(ledger, owned) if ledger
+                      else smart_sync.baseline(ledger, owned))
+            AppSettings.set_smart_sync_ledger(ledger)
+            backend.setValue(AppSettings.SMART_SYNC_FOLDER, folder)
+        else:
+            backend.remove(AppSettings.SMART_SYNC_FOLDER)
+        backend.sync()
+
+    @staticmethod
+    def get_smart_sync_machine_id() -> str:
+        """This PC's random Smart Sync id, made the first time it is asked for."""
+        backend = AppSettings.settings()
+        machine_id = backend.value(AppSettings.SMART_SYNC_MACHINE_ID, "", type=str) or ""
+        if not machine_id:
+            from src.utils import smart_sync
+            machine_id = smart_sync.new_machine_id()
+            AppSettings.set_smart_sync_machine_id(machine_id)
+        return machine_id
+
+    @staticmethod
+    def set_smart_sync_machine_id(machine_id: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_MACHINE_ID, machine_id)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_ledger() -> dict:
+        """This PC's Smart Sync ledger (see smart_sync.py); {} when unset or unreadable."""
+        from src.utils import smart_sync
+        raw = AppSettings.settings().value(AppSettings.SMART_SYNC_LEDGER, "", type=str)
+        try:
+            return smart_sync.clean_ledger(json.loads(raw)) if raw else {}
+        except ValueError:
+            return {}
+
+    @staticmethod
+    def set_smart_sync_ledger(ledger: dict) -> None:
+        AppSettings.settings().setValue(
+            AppSettings.SMART_SYNC_LEDGER, json.dumps(ledger, sort_keys=True)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_last_written() -> str:
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_LAST_WRITTEN, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_last_written(updated: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_LAST_WRITTEN, updated)
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3993,6 +4090,12 @@ class AppSettings:
         adds the starters to the restored set instead of leaving them out for
         good. A backup with no owned set leaves both alone, so it can't undo
         the one-shot and bring back a starter the user moved out of Owned.
+
+        With Smart Sync on (#567) the backup's owned set is added to the
+        current one rather than replacing it, and recorded in the ledger as
+        it is added: replacing it would read as this PC moving every newer
+        blueprint back to Available, and the next sync would take them off
+        every other PC too.
         """
         backend = AppSettings.settings()
         applied = 0
@@ -4001,6 +4104,14 @@ class AppSettings:
                 continue
             if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
                 continue  # follows owned_items, below
+            if key == AppSettings.OWNED_ITEMS and AppSettings.get_smart_sync_folder():
+                try:
+                    imported = set(json.loads(value)) if value else set()
+                except (ValueError, TypeError):
+                    imported = set()
+                AppSettings.set_owned_items(AppSettings.get_owned_items() | imported)
+                applied += 1
+                continue
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)

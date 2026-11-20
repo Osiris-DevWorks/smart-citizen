@@ -456,6 +456,52 @@ class BlueprintLogScanWorker(QThread):
             self.finished.emit(None)
 
 
+class SmartSyncWorker(QThread):
+    """Run one Smart Sync (#567) off the GUI thread.
+
+    The sync folder is usually a cloud client's folder, and one on a NAS or
+    a OneDrive online-only folder can take a while to answer, so the read,
+    merge and write happen here. Everything it needs is handed in as plain
+    data captured on the main thread, and the merged result goes back in
+    ``finished``; the main-thread slot writes the settings, so the owned set
+    and the ledger are only ever changed on one thread.
+
+    Always emits ``finished`` once: a ``SyncResult``, or None when the folder
+    could not be used (the reason, logged at WARNING, goes in ``error``
+    first, so the global error dialog opens no box for it).
+    """
+
+    finished = pyqtSignal(object)   # smart_sync.SyncResult, or None
+    error = pyqtSignal(str)
+
+    def __init__(self, folder, machine_id, ledger, seeded, last_written):
+        super().__init__()
+        self._folder = folder
+        self._machine_id = machine_id
+        self._ledger = ledger
+        self._seeded = seeded
+        self._last_written = last_written
+
+    def run(self):
+        from src.utils import smart_sync
+        try:
+            result = smart_sync.sync(
+                self._folder, self._machine_id, self._ledger, self._seeded,
+                last_written=self._last_written,
+            )
+        except OSError as e:
+            logger.warning("Smart Sync: could not use %s: %s", self._folder, e)
+            self.error.emit(str(e))
+            self.finished.emit(None)
+            return
+        except Exception as e:
+            logger.warning("Smart Sync failed: %s", e, exc_info=True)
+            self.error.emit(str(e))
+            self.finished.emit(None)
+            return
+        self.finished.emit(result)
+
+
 class LiveBlueprintLogWorker(QThread):
     """Watch the active channel's live ``Game.log`` for new blueprints while
     the Smart Citizen Overlay runs.

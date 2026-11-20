@@ -870,6 +870,50 @@
       "ht": "Clear the custom cache folder and use the platform default.",
       "at": ""
     },
+    "smart_sync_group": {
+      "ht": "Smart Sync",
+      "at": ""
+    },
+    "smart_sync_desc": {
+      "ht": "Keep your Owned blueprints the same on every PC you play on. Choose a folder your cloud app already syncs, such as one in Google Drive, OneDrive or Dropbox, then choose the same folder on your other PCs. Smart Citizen only reads and writes a few small files there, and your cloud app moves them.",
+      "at": ""
+    },
+    "smart_sync_placeholder": {
+      "ht": "Off. Choose a folder to turn it on.",
+      "at": ""
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "Choose a folder your cloud app syncs to your other PCs",
+      "at": ""
+    },
+    "smart_sync_off_btn": {
+      "ht": "Turn Off",
+      "at": ""
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "Stop syncing. The Owned blueprints on this PC stay as they are.",
+      "at": ""
+    },
+    "select_smart_sync_folder": {
+      "ht": "Choose the Smart Sync folder",
+      "at": ""
+    },
+    "smart_sync_status_off": {
+      "ht": "Smart Sync is off.",
+      "at": ""
+    },
+    "smart_sync_status_waiting": {
+      "ht": "Syncing...",
+      "at": ""
+    },
+    "smart_sync_status_ok": {
+      "ht": "Last synced at {time}. Other PCs in this folder: {count}.",
+      "at": ""
+    },
+    "smart_sync_status_failed": {
+      "ht": "Could not sync: {error}",
+      "at": ""
+    },
     "extract_tooltip": {
       "ht": "Unpack stock localization (base.ini) plus the DataForge entity XMLs from your installed Data.p4k. Run after every Star Citizen patch — the strings reload into the table automatically when extraction finishes.",
       "at": ""
@@ -2582,6 +2626,14 @@
     },
     "window_proportions_reset": {
       "ht": "Window proportions reset to defaults.",
+      "at": ""
+    },
+    "smart_sync_failed": {
+      "ht": "Smart Sync could not use its folder: {error}",
+      "at": ""
+    },
+    "smart_sync_updated": {
+      "ht": "Smart Sync updated {count} Owned blueprint(s) from your other PCs.",
       "at": ""
     }
   },

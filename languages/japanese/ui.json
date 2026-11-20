@@ -846,6 +846,50 @@
       "ht": "",
       "at": "カスタムキャッシュフォルダーをクリアし、プラットフォームのデフォルトを使用します。"
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "プレイするすべての PC で所有済みブループリントを同じに保ちます。クラウドアプリがすでに同期しているフォルダー（Google Drive、OneDrive、Dropbox など）を選び、ほかの PC でも同じフォルダーを選んでください。Smart Citizen はそこで小さなファイルをいくつか読み書きするだけで、ファイルの移動はクラウドアプリが行います。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "オフ。フォルダーを選ぶとオンになります。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "クラウドアプリがほかの PC と同期しているフォルダーを選択"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "オフにする"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "同期を停止します。この PC の所有済みブループリントはそのまま残ります。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart Sync フォルダーを選択"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync はオフです。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "同期中..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "最終同期 {time}。このフォルダーのほかの PC: {count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "同期できませんでした: {error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "インストール済みの Data.p4k から、標準ローカライズ（base.ini）と DataForge エンティティ XML を展開します。Star Citizen のパッチごとに実行してください。抽出が完了すると、文字列は自動的にテーブルに再読み込みされます。"
@@ -2583,6 +2627,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "ウィンドウの比率を既定値に戻しました。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync がフォルダーを使用できませんでした: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync がほかの PC から所有済みブループリントを {count} 件更新しました。"
     }
   },
   "import_flow": {

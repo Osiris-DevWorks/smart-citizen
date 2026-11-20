@@ -870,6 +870,50 @@
       "ht": "",
       "at": "사용자 지정 캐시 폴더를 지우고 플랫폼 기본값을 사용합니다."
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "플레이하는 모든 PC에서 보유한 설계도를 똑같이 유지합니다. 클라우드 앱이 이미 동기화하는 폴더(Google Drive, OneDrive, Dropbox 등)를 고른 다음, 다른 PC에서도 같은 폴더를 고르세요. Smart Citizen은 그곳에서 작은 파일 몇 개만 읽고 쓰며, 파일 이동은 클라우드 앱이 합니다."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "꺼짐. 폴더를 고르면 켜집니다."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "클라우드 앱이 다른 PC와 동기화하는 폴더 선택"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "끄기"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "동기화를 멈춥니다. 이 PC의 보유한 설계도는 그대로 남습니다."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart Sync 폴더 선택"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync가 꺼져 있습니다."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "동기화 중..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "마지막 동기화 {time}. 이 폴더의 다른 PC: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "동기화할 수 없습니다: {error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "설치된 Data.p4k에서 기본 현지화(base.ini)와 DataForge 엔터티 XML을 추출합니다. Star Citizen 패치가 있을 때마다 실행하세요. 추출이 완료되면 텍스트가 테이블에 자동으로 다시 로드됩니다."
@@ -2583,6 +2627,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "창 비율이 기본값으로 재설정되었습니다."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync가 폴더를 사용할 수 없습니다: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync가 다른 PC에서 보유한 설계도 {count}개를 업데이트했습니다."
     }
   },
   "import_flow": {

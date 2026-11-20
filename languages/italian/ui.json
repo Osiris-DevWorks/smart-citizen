@@ -846,6 +846,50 @@
       "ht": "",
       "at": "Cancella la cartella cache personalizzata e usa il valore predefinito della piattaforma."
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Mantieni gli stessi blueprint posseduti su ogni PC su cui giochi. Scegli una cartella che la tua app cloud sincronizza già, per esempio in Google Drive, OneDrive o Dropbox, poi scegli la stessa cartella sugli altri PC. Smart Citizen vi legge e scrive solo pochi file piccoli, e la tua app cloud li sposta."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Disattivato. Scegli una cartella per attivarlo."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Scegli una cartella che la tua app cloud sincronizza con gli altri PC"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Disattiva"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Interrompi la sincronizzazione. I blueprint posseduti su questo PC restano come sono."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Scegli la cartella di Smart Sync"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync è disattivato."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Sincronizzazione..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Ultima sincronizzazione alle {time}. Altri PC in questa cartella: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Impossibile sincronizzare: {error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "Estrai la localizzazione originale (base.ini) insieme agli XML delle entità DataForge dal tuo Data.p4k installato. Eseguilo dopo ogni patch di Star Citizen — le stringhe si ricaricano automaticamente nella tabella al termine dell'estrazione."
@@ -2583,6 +2627,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Proporzioni della finestra reimpostate."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync non ha potuto usare la sua cartella: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync ha aggiornato {count} blueprint posseduti dagli altri PC."
     }
   },
   "import_flow": {
