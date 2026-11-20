@@ -43,11 +43,23 @@ Todo. Tus ediciones de localización, copias de seguridad, configuración de la 
 
 ### Lo que sale por la red
 
-Smart Citizen realiza peticiones de red salientes solo en tres circunstancias:
+Smart Citizen realiza peticiones de red salientes solo en cuatro circunstancias:
 
 - **Comprobación de actualizaciones**: una pequeña petición sin autenticación a `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest` aproximadamente cada 6 horas para comparar la versión instalada con la última publicada en GitHub. Devuelve solo metadatos de la versión (nombre de la etiqueta, URL de la versión); no se envía ningún estado de Smart Citizen.
 - **Descargas de idiomas**: al cambiar a un idioma distinto del inglés, Smart Citizen descarga el `global.ini` traducido por la comunidad para ese idioma desde la URL configurada (por defecto el repositorio de GitHub [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization)). La descarga se guarda en caché localmente; no se envía nada desde tu equipo.
 - **Fuentes remotas configuradas por el usuario**: si has configurado una fuente de datos apuntando a una URL `http(s)://` en la pestaña Configuración, Smart Citizen consulta esa URL al refrescar los archivos de origen. De fábrica esto solo aplica a la forma de URL «GitHub raw» de la fuente `global`; la configuración estándar desde la v1.0 lee `base.ini` de tu extracción local de Data.p4k.
+- **Lista de tiendas del buscador de objetos de SCO** — Mientras el overlay funciona con la sección Buscador de objetos activada, Smart Citizen descarga la lista de tiendas y precios desde la API de [UEX](https://uexcorp.space) (`api.uexcorp.uk`), como mucho cada 12 horas. Son dos peticiones simples que solo envían el nombre y la versión de la app; no se envía nada de tu equipo. La lista se guarda en caché localmente. Desactiva el Buscador de objetos en la pestaña Overlay para detenerlo.
+
+### La superposición de Smart Citizen
+
+La superposición está apagada hasta que la inicias. Mientras funciona, todo lo que lee se queda en tu equipo:
+
+- **Pantalla** — captura una pequeña zona alrededor del indicador del escáner minero para leer el número de la señal. Las capturas se leen en memoria y no se guardan.
+- **Game.log** — lee el registro de Star Citizen para encontrar los blueprints que recibes.
+- **Windows** — pregunta a Windows qué ventana está en primer plano y si el puntero del ratón está visible, para que el cajón deje pasar tus clics al juego mientras apuntas.
+- **Atajo del cajón** — solo si defines uno. Mientras Star Citizen está en primer plano, pregunta a Windows si la tecla del atajo está pulsada, y las teclas Ctrl, Alt, Mayús y Win solo cuando lo está. No pregunta por ninguna otra tecla y nunca recibe lo que escribes.
+
+Nunca lee la memoria del juego, nunca se engancha ni se inyecta en el juego y nunca le envía entradas.
 
 ### Lo que Smart Citizen **no** hace
 

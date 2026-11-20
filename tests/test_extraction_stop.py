@@ -24,7 +24,7 @@ extraction carried on unseen. This pins the Qt side of the fix:
   with its own warning. Its worker's stop is covered in
   test_enhancements_stale_startup.py, and the generator's stop points in
   test_generation_writes.py.
-* The perf proposal: a successful DataForge run's working folder is kept
+* #522: a successful DataForge run's working folder is kept
   by the worker (any other outcome deletes it before finished), deleted by
   the window on a WorkingFolderDeleteWorker of its own once the extraction
   thread is done, and waited for by closing within the same deadline.
@@ -552,7 +552,7 @@ class _Worker:
 
     def __init__(self, *args, running=True, finishes=True, **kwargs):
         self.args = args
-        self.kwargs = kwargs   # the DataForge worker's wait_for (perf proposal)
+        self.kwargs = kwargs   # the DataForge worker's wait_for (#522)
         self.running = running
         self.finishes = finishes
         self.interrupted = False
@@ -562,7 +562,7 @@ class _Worker:
         self.calls = []
         self.progress, self.progress_pct = _Signal(), _Signal()
         self.error, self.finished = _Signal(), _Signal()
-        # What a successful DataForge run kept (perf proposal).
+        # What a successful DataForge run kept (#522).
         self.working_folder = None
 
     def take_working_folder(self):
@@ -689,7 +689,7 @@ class TestStopWorkersForClose:
                     self.msleep(10)
 
             def take_working_folder(self):
-                return None   # a stopped run keeps none (perf proposal)
+                return None   # a stopped run keeps none (#522)
 
         thread = Spinning()
         thread.start()
@@ -1058,7 +1058,7 @@ class TestGenerationSlots:
         assert worker.progress_pct.slots == [dialog.set_progress]
 
 
-# ── the working folder deleted after the run (perf proposal) ────────────────
+# ── the working folder deleted after the run (#522) ─────────────────────────
 
 class _Folder:
     """Stands in for pak_extractor.WorkingFolder: records delete() and
@@ -1360,7 +1360,7 @@ class TestClosingWaitsForTheDelete:
         me.hide.assert_called_once_with()
 
     def test_a_sweep_is_stopped_not_waited_for(self, qapp, tmp_path):
-        """A sweep of leftovers stops when closing asks (perf proposal): one
+        """A sweep of leftovers stops when closing asks (#522): one
         still waiting on a delete that will not end in time ends at once, so
         closing does not sit out its deadline for a housekeeping job."""
         never = threading.Event()   # the done event of a delete that never ends
@@ -1510,7 +1510,7 @@ class TestTheDeletesFinishedSlot:
         extraction waiting on ``done`` sweeps beside it at once. The worker
         lets go of the WorkingFolder before it sets ``done``, so with the
         cyclic GC off and the worker itself still held, the marker is closed
-        by then and that sweep takes the folder (perf proposal review)."""
+        by then and that sweep takes the folder (#522 review)."""
         real_unlink = pe._unlink_files
 
         def boom(_paths):
@@ -1556,7 +1556,7 @@ def _gated_folder(parent: Path, gate):
 
 
 class TestANewRunWaitsForTheDelete:
-    """The user's choice (perf proposal review): a DataForge extraction
+    """The user's choice (#522 review): a DataForge extraction
     started while an earlier run's working folder is still being deleted in
     the background waits for that delete before extract_dataforge, whose
     sweep would skip the folder and whose free-space check would count it
@@ -1722,7 +1722,7 @@ def sweeps(monkeypatch):
 
 class TestLeftoversAreSweptAtStartup:
     """A crash or a kill during a successful run's background delete leaves
-    its working folder, with the old cache set aside in it (perf proposal),
+    its working folder, with the old cache set aside in it (#522),
     which only the next DataForge extraction beside the same cache folder
     used to sweep. Once a session at startup the window sweeps beside the
     active cache folder, on a thread of its own, with pak_extractor's own

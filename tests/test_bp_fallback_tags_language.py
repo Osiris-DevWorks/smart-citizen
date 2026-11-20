@@ -177,8 +177,8 @@ class TestMissingEnglishBaseIni:
     loc. Every pickle built from that loc (standings) is keyed apart, per
     language, so neither the next English run nor another language's
     fallback run reuses it. scitem_lookups and blueprint_pools hold XML
-    facts only and resolve their names through the loc on every run (perf
-    proposal), so one pickle serves every language and needs no mark."""
+    facts only and resolve their names through the loc on every run (#522),
+    so one pickle serves every language and needs no mark."""
 
     _LINK_UUID = "77777777-7777-7777-7777-777777777777"
     _LINK_BP_UUID = "88888888-8888-8888-8888-888888888888"

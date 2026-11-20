@@ -41,11 +41,23 @@ Smart Citizen은 **로컬 데스크톱 애플리케이션**입니다. 편집 내
 
 ### 네트워크로 전송되는 것
 
-Smart Citizen은 다음 세 가지 상황에서만 외부로 나가는 네트워크 요청을 보냅니다:
+Smart Citizen은 다음 네 가지 상황에서만 외부로 나가는 네트워크 요청을 보냅니다:
 
 - **업데이트 확인** — 설치된 버전을 최신 GitHub 릴리스와 비교하기 위해 약 6시간마다 `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest`로 작은 인증 없는 요청을 보냅니다. 릴리스 메타데이터(태그 이름, 릴리스 URL)만 반환되며, Smart Citizen 상태는 전송되지 않습니다.
 - **언어 다운로드** — 영어가 아닌 언어로 전환하면, Smart Citizen이 구성된 URL에서 해당 언어의 커뮤니티 번역 `global.ini`를 다운로드합니다(기본값은 [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) GitHub 저장소). 다운로드는 로컬에 캐시되며, 컴퓨터에서 아무것도 전송되지 않습니다.
 - **사용자 구성 원격 소스** — 설정 탭에서 `http(s)://` URL을 가리키는 데이터 소스를 구성한 경우, Smart Citizen은 소스 파일을 새로 고칠 때 해당 URL을 가져옵니다. 기본 설정에서는 이는 `global` 소스의 GitHub-raw URL 형태에만 적용되며, v1.0부터 표준 구성은 대신 로컬 Data.p4k 추출에서 `base.ini`를 읽습니다.
+- **SCO 아이템 찾기 상점 목록** — 아이템 찾기 섹션을 켠 상태로 오버레이가 실행되는 동안 Smart Citizen은 [UEX](https://uexcorp.space) API(`api.uexcorp.uk`)에서 상점과 아이템 가격 목록을 최대 12시간마다 내려받습니다. 앱 이름과 버전만 담은 단순한 요청 두 개이며, 컴퓨터의 정보는 전송되지 않습니다. 목록은 로컬에 캐시됩니다. 중지하려면 오버레이 탭에서 아이템 찾기를 끄세요.
+
+### Smart Citizen 오버레이
+
+오버레이는 직접 시작하기 전까지 꺼져 있습니다. 실행 중에 읽는 모든 것은 컴퓨터에 남습니다.
+
+- **화면** — 채굴 스캐너 표시 주변의 작은 영역을 캡처해 신호 숫자를 읽습니다. 캡처는 메모리에서만 읽고 저장하지 않습니다.
+- **Game.log** — 받은 설계도를 찾기 위해 Star Citizen의 로그를 읽습니다.
+- **Windows** — 어떤 창이 맨 앞에 있는지와 마우스 포인터가 보이는지를 Windows에 물어, 조준하는 동안 서랍이 클릭을 게임으로 통과시키게 합니다.
+- **서랍 단축키** — 설정한 경우에만. Star Citizen이 맨 앞에 있을 때 단축키의 키가 눌려 있는지 Windows에 묻고, 눌려 있을 때만 Ctrl, Alt, Shift, Win 키를 묻습니다. 다른 키는 묻지 않으며 입력한 내용을 받지 않습니다.
+
+게임 메모리를 읽거나, 게임에 후킹 또는 인젝션하거나, 게임에 입력을 보내는 일은 절대 없습니다.
 
 ### Smart Citizen이 **하지 않는** 것
 

@@ -1,4 +1,4 @@
-"""robust_rmtree, faster (perf proposal).
+"""robust_rmtree, faster (#522).
 
 Deleting the extraction's working folder took about 220 us a file one at a
 time (6.9 s for ~31k files), and a re-extract deletes the old cache's ~31k
@@ -427,7 +427,7 @@ def test_a_delete_threads_failure_keeps_no_marker_open(tmp_path, monkeypatch):
     folder's marker open until the cyclic GC ran, so a sweep straight after
     skipped the folder. With the cyclic GC off, the marker is closed as soon
     as the exception and the WorkingFolder holding the marker are dropped,
-    and the next sweep takes the folder (perf proposal review). The
+    and the next sweep takes the folder (#522 review). The
     background delete worker drops its WorkingFolder before it sets done
     (test_extraction_stop.py's TestTheDeletesFinishedSlot)."""
     real_unlink = pe._unlink_files

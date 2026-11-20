@@ -1,5 +1,6 @@
 """A system-wide hotkey for the SCO drawer (#523), through Windows'
-``RegisterHotKey`` and, for when a game has focus, Windows raw input.
+``RegisterHotKey`` and, while a game that keeps it away is in front, a look
+at the hotkey's own keys.
 
 ``RegisterHotKey`` is not a keyboard hook. Windows posts ``WM_HOTKEY`` to
 this thread when the one registered combination is pressed, and the app
@@ -11,14 +12,15 @@ never its process.
 
 A game that reads the keyboard through raw input can switch every other
 program's registered hotkeys off while it has focus (``RIDEV_NOHOTKEYS``),
-and in Star Citizen the hotkey never arrived (#523). So while a hotkey is
-held, a message-only window also takes the keyboard's raw input
-(``RIDEV_INPUTSINK``), the read-only way Windows tells a background program
-about key presses: not a hook, nothing is held up, changed or sent, and
-only the one combination is acted on. The game still gets those keys.
-Windows does not let a background program take focus from the game after
-such a press (found in testing), so the drawer opens on top without it and
-the player holds F, as usual, to use the mouse in it.
+and in Star Citizen the hotkey never arrived (#523). So while the game is in
+front, the overlay's tick has the hotkey look at its own keys
+(``GlobalHotkey.check_keys``; ``KeyCheck`` says what is asked and when). The
+game still gets those keys. Windows does not let a background program take
+focus from the game after such a press (found in testing), so the drawer
+opens on top without it and the player holds F, as usual, to use the mouse
+in it. Until #587 a hotkey took the keyboard's raw input instead
+(``RIDEV_INPUTSINK``), which sent the app every key press, whatever window
+had focus.
 """
 from __future__ import annotations
 
@@ -40,27 +42,20 @@ from PyQt6.QtGui import QKeySequence
 logger = logging.getLogger(__name__)
 
 WM_HOTKEY = 0x0312
-WM_INPUT = 0x00FF
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN = 0x1, 0x2, 0x4, 0x8
-RID_INPUT = 0x10000003
-RIM_TYPEKEYBOARD = 1
-RIDEV_REMOVE, RIDEV_INPUTSINK = 0x0001, 0x0100
-RI_KEY_BREAK = 0x0001
-# The parent that makes a window message-only: never shown, only there to
-# be sent the raw input.
-HWND_MESSAGE = -3
-# Each modifier's virtual keys (raw input names Ctrl, Alt and Shift by the
-# shared key, some keyboards by the left or right one) and its MOD_ flag.
-_MODIFIER_VKS = {
-    0x10: MOD_SHIFT, 0xA0: MOD_SHIFT, 0xA1: MOD_SHIFT,
-    0x11: MOD_CONTROL, 0xA2: MOD_CONTROL, 0xA3: MOD_CONTROL,
-    0x12: MOD_ALT, 0xA4: MOD_ALT, 0xA5: MOD_ALT,
-    0x5B: MOD_WIN, 0x5C: MOD_WIN,
-}
-# Outside a game one press arrives both ways. A raw-input sighting waits
-# this long for the press's WM_HOTKEY, which may bring the drawer to the
-# front where raw input may not, and acts only if none came.
-RAW_GRACE_MS = 80
+# The modifier keys a key check asks about, each with its MOD_ flag: Shift,
+# Ctrl and Alt by the code Windows gives either side of each, Win by its two
+# keys, since Windows has no such code for it.
+_MODIFIER_KEYS = ((MOD_SHIFT, (0x10,)), (MOD_CONTROL, (0x11,)), (MOD_ALT, (0x12,)),
+                  (MOD_WIN, (0x5B, 0x5C)))
+# GetAsyncKeyState's bits: the key is down now, and the key went down since
+# any program last asked about it.
+_KEY_DOWN, _PRESSED_SINCE = 0x8000, 0x0001
+# A press a key check finds waits this long before it toggles. Windows posts
+# WM_HOTKEY as the key goes down, so one for the same press, should the game
+# in front let it through, is already queued and is handled first, and it
+# can bring the drawer to the front where a key check cannot.
+KEY_GRACE_MS = 10
 # One press is one toggle, whichever way it arrived.
 SAME_PRESS_S = 0.3
 # Held down, the combination fires once, not again on every key repeat.
@@ -205,21 +200,8 @@ def _user32():
         dll.IsWindow.restype = wintypes.BOOL
         dll.AllowSetForegroundWindow.argtypes = [wintypes.DWORD]
         dll.AllowSetForegroundWindow.restype = wintypes.BOOL
-        dll.RegisterRawInputDevices.argtypes = [ctypes.POINTER(RAWINPUTDEVICE), wintypes.UINT,
-                                                wintypes.UINT]
-        dll.RegisterRawInputDevices.restype = wintypes.BOOL
-        dll.GetRawInputData.argtypes = [wintypes.HANDLE, wintypes.UINT, ctypes.c_void_p,
-                                        ctypes.POINTER(wintypes.UINT), wintypes.UINT]
-        dll.GetRawInputData.restype = wintypes.UINT
         dll.GetAsyncKeyState.argtypes = [ctypes.c_int]
         dll.GetAsyncKeyState.restype = ctypes.c_short
-        dll.CreateWindowExW.argtypes = [
-            wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int,
-            ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.HWND, wintypes.HMENU,
-            wintypes.HINSTANCE, wintypes.LPVOID]
-        dll.CreateWindowExW.restype = wintypes.HWND
-        dll.DestroyWindow.argtypes = [wintypes.HWND]
-        dll.DestroyWindow.restype = wintypes.BOOL
         dll.MapVirtualKeyW.argtypes = [wintypes.UINT, wintypes.UINT]
         dll.MapVirtualKeyW.restype = wintypes.UINT
         dll.VkKeyScanW.argtypes = [wintypes.WCHAR]
@@ -259,105 +241,59 @@ def layout_symbol_key(symbol: str) -> Optional[int]:
     return None
 
 
-class RAWINPUTDEVICE(ctypes.Structure):
-    _fields_ = [("usUsagePage", wintypes.USHORT), ("usUsage", wintypes.USHORT),
-                ("dwFlags", wintypes.DWORD), ("hwndTarget", wintypes.HWND)]
+class KeyCheck:
+    """One combination's keys, looked at on each tick while the game is in
+    front (``look``), for the moment the combination goes down: its key
+    going down with exactly its modifiers held.
 
+    Each look asks Windows about the combination's key (``GetAsyncKeyState``)
+    and, only on the look that finds it newly down, about the modifier keys
+    (``_MODIFIER_KEYS``), stopping at the first that settles the answer. No
+    other key is asked about and no key press is sent to the app (#587).
+    Asking clears the key's "pressed since" bit, which Windows keeps once for
+    the whole session, as any program that asks does.
 
-class RAWINPUTHEADER(ctypes.Structure):
-    _fields_ = [("dwType", wintypes.DWORD), ("dwSize", wintypes.DWORD),
-                ("hDevice", wintypes.HANDLE), ("wParam", wintypes.WPARAM)]
+    The modifiers are read at that look, up to a tick after the key went
+    down, so one let go or pressed within that tick can decide a press
+    otherwise than ``RegisterHotKey`` would, and a press that goes down and
+    up between two looks is not seen: in game the keys need a moment's hold.
+    Pause is the exception, since Windows reports a Pause press down and up
+    at once (the key sends no release): its "pressed since" bit counts as a
+    press, but only when the look before was this check's own, as after
+    ``forget`` the bit may be from a press made in another window.
 
-
-class RAWKEYBOARD(ctypes.Structure):
-    _fields_ = [("MakeCode", wintypes.USHORT), ("Flags", wintypes.USHORT),
-                ("Reserved", wintypes.USHORT), ("VKey", wintypes.USHORT),
-                ("Message", wintypes.UINT), ("ExtraInformation", wintypes.ULONG)]
-
-
-def _keyboard_device(flags: int, hwnd) -> RAWINPUTDEVICE:
-    return RAWINPUTDEVICE(0x01, 0x06, flags, hwnd)     # generic desktop page, keyboard
-
-
-def read_raw_key(user32, handle: int) -> Optional[tuple[int, bool]]:
-    """``(virtual key, released)`` from a ``WM_INPUT`` message's lParam, or
-    None when it is not keyboard input."""
-    header_size = ctypes.sizeof(RAWINPUTHEADER)
-    size = wintypes.UINT(0)
-    if user32.GetRawInputData(handle, RID_INPUT, None, ctypes.byref(size), header_size) != 0 \
-            or not size.value:
-        return None
-    buffer = (ctypes.c_ubyte * size.value)()
-    if user32.GetRawInputData(handle, RID_INPUT, buffer, ctypes.byref(size),
-                              header_size) != size.value:
-        return None
-    header = RAWINPUTHEADER.from_buffer(buffer)
-    if header.dwType != RIM_TYPEKEYBOARD or size.value < header_size + ctypes.sizeof(RAWKEYBOARD):
-        return None
-    keyboard = RAWKEYBOARD.from_buffer(buffer, header_size)
-    return keyboard.VKey, bool(keyboard.Flags & RI_KEY_BREAK)
-
-
-def modifiers_down_now() -> int:
-    """The MOD_ flags of the modifiers Windows says are down right now."""
-    user32 = _user32()
-    if not user32:
-        return 0
-    held = 0
-    for vk, flag in _MODIFIER_VKS.items():
-        if user32.GetAsyncKeyState(vk) & 0x8000:
-            held |= flag
-    return held
-
-
-class RawCombination:
-    """Turns the raw stream of key presses and releases into the moment one
-    combination goes down: its key pressed (not repeated) with exactly its
-    modifiers held, as ``RegisterHotKey`` matches.
-
-    The modifiers come from the same stream, in order: by the time a message
-    is handled, a quick Ctrl+Alt+O may already be over. A modifier held
-    longer than ``STALE_AFTER`` is checked with Windows, so a release that
-    never arrived (a lock screen, a secure desktop) does not leave it down.
-    For the same reason a press of the key last seen longer ago than that is
-    a new press, not a repeat: a held key repeats far more often.
+    A combination held when the hotkey is set is no press. One held at the
+    first look after ``forget`` (another window was in front) is, since it
+    may have gone down just as the game came back; the owner's one-press
+    rule keeps a press seen both ways to one toggle.
     """
 
-    STALE_AFTER = 3.0
-
-    def __init__(self, modifiers: int, key: int,
-                 modifiers_now: Callable[[], int] = modifiers_down_now,
-                 clock: Callable[[], float] = time.monotonic):
+    def __init__(self, modifiers: int, key: int, user32):
         self.modifiers, self.key = modifiers, key
-        self._modifiers_now, self._clock = modifiers_now, clock
-        self._held: dict[int, float] = {}       # virtual key -> when it went down
+        self._user32 = user32
+        self._was_down = True       # held when the hotkey is set: no press
+        self._own_look = False      # the look before was this check's own (Pause)
 
-    def feed(self, virtual_key: int, released: bool) -> bool:
-        if released:
-            self._held.pop(virtual_key, None)
-            return False
-        now = self._clock()
-        since = self._held.get(virtual_key)
-        repeat = since is not None and now - since < self.STALE_AFTER
-        self._held[virtual_key] = now
-        if virtual_key != self.key or repeat:
-            return False
-        return self._held_modifiers(now) == self.modifiers
+    def look(self) -> bool:
+        """Whether the combination went down since the last look."""
+        state = self._user32.GetAsyncKeyState(self.key)
+        down = bool(state & _KEY_DOWN)
+        went_down = down or (self.key == VK_PAUSE and self._own_look
+                             and bool(state & _PRESSED_SINCE))
+        was, self._was_down, self._own_look = self._was_down, down, True
+        return went_down and not was and self._modifiers_held()
 
-    def _held_modifiers(self, now: float) -> int:
-        held, windows_says = 0, None
-        for virtual_key, since in list(self._held.items()):
-            flag = _MODIFIER_VKS.get(virtual_key)
-            if not flag:
-                continue
-            if now - since >= self.STALE_AFTER:
-                if windows_says is None:
-                    windows_says = self._modifiers_now()
-                if not windows_says & flag:
-                    del self._held[virtual_key]
-                    continue
-            held |= flag
-        return held
+    def _modifiers_held(self) -> bool:
+        for flag, keys in _MODIFIER_KEYS:
+            held = any(self._user32.GetAsyncKeyState(key) & _KEY_DOWN for key in keys)
+            if held != bool(self.modifiers & flag):
+                return False
+        return True
+
+    def forget(self) -> None:
+        """Another window is in front: a combination held at the next look
+        counts as a press, and Pause's bit is left for that look to clear."""
+        self._was_down = self._own_look = False
 
 
 def foreground_window() -> int:
@@ -389,8 +325,7 @@ def allow_any_foreground() -> bool:
 
 
 class _HotkeyFilter(QAbstractNativeEventFilter):
-    """Hands this thread's ``WM_HOTKEY`` for one id, and the raw input for
-    its hidden window, to its GlobalHotkey."""
+    """Hands this thread's ``WM_HOTKEY`` for one id to its GlobalHotkey."""
 
     def __init__(self, owner: "GlobalHotkey"):
         super().__init__()
@@ -404,17 +339,14 @@ class _HotkeyFilter(QAbstractNativeEventFilter):
             if msg.message == WM_HOTKEY and msg.wParam == self._owner.hotkey_id:
                 self._owner.hotkey_message()
                 return True, 0
-            if (msg.message == WM_INPUT and self._owner.sink_hwnd
-                    and (msg.hWnd or 0) == self._owner.sink_hwnd):
-                self._owner.raw_message(msg.lParam)
-                # Windows needs WM_INPUT to reach the default handling to tidy up.
         return False, 0
 
 
 class GlobalHotkey(QObject):
     """One key combination, held with Windows while asked for, that emits
     ``activated`` when pressed anywhere, once per press: by ``WM_HOTKEY``,
-    or by raw input where a game with focus keeps ``WM_HOTKEY`` away.
+    or, where a game with focus keeps ``WM_HOTKEY`` away, by a key check its
+    owner runs on a tick while that game is in front (``check_keys``).
     Register and unregister it from the GUI thread: Windows posts the
     hotkey to the registering one."""
 
@@ -427,15 +359,13 @@ class GlobalHotkey(QObject):
         self.hotkey_id = next(_ids)
         self._registered: Optional[str] = None
         self._filter: Optional[_HotkeyFilter] = None
-        self.sink_hwnd = 0                        # the window raw input goes to, while on
-        self._raw_on = False
-        self._combination: Optional[RawCombination] = None
-        self._last_raw_message = None
+        self._check: Optional[KeyCheck] = None    # the registered combination's keys
+        self._told_checking = False               # the log says the keys are checked
         self._last_fired = -math.inf
-        self._raw_wait = QTimer(self)
-        self._raw_wait.setSingleShot(True)
-        self._raw_wait.setInterval(RAW_GRACE_MS)
-        self._raw_wait.timeout.connect(self._fire_from_raw)
+        self._key_wait = QTimer(self)
+        self._key_wait.setSingleShot(True)
+        self._key_wait.setInterval(KEY_GRACE_MS)
+        self._key_wait.timeout.connect(self._fire_from_keys)
 
     @property
     def registered(self) -> Optional[str]:
@@ -465,10 +395,9 @@ class GlobalHotkey(QObject):
             self._filter = _HotkeyFilter(self)
             QCoreApplication.instance().installNativeEventFilter(self._filter)
         self._registered = sequence
-        self._combination = RawCombination(modifiers, key)
-        self._raw_on = self._watch_raw_input(user32, True)
-        logger.info("SCO: drawer hotkey %s registered%s", sequence,
-                    "" if self._raw_on else " (raw input refused: not while a game has focus)")
+        self._check = KeyCheck(modifiers, key, user32)
+        self._told_checking = False
+        logger.info("SCO: drawer hotkey %s registered", sequence)
         return ""
 
     def unregister(self) -> None:
@@ -476,68 +405,43 @@ class GlobalHotkey(QObject):
             return
         user32 = self._dll or _user32()
         user32.UnregisterHotKey(None, self.hotkey_id)
-        if self._raw_on:
-            self._watch_raw_input(user32, False)
-            self._raw_on = False
-        self._raw_wait.stop()
-        self._combination = None
+        self._key_wait.stop()
+        self._check = None
         self._registered = None
         if self._filter is not None:
             QCoreApplication.instance().removeNativeEventFilter(self._filter)
             self._filter = None
 
-    def _watch_raw_input(self, user32, on: bool) -> bool:
-        """Have the keyboard's raw input sent to a message-only window of
-        this thread, whatever has focus (``RIDEV_INPUTSINK``), or stop it and
-        close the window. True when Windows agreed. The window is a plain
-        STATIC one, so Qt's event loop hands its messages to the filter and
-        Windows' own handling tidies each one up."""
-        size = ctypes.sizeof(RAWINPUTDEVICE)
-        if not on:
-            user32.RegisterRawInputDevices(
-                ctypes.byref(_keyboard_device(RIDEV_REMOVE, None)), 1, size)
-            if self.sink_hwnd:
-                user32.DestroyWindow(self.sink_hwnd)
-                self.sink_hwnd = 0
-            return False
-        self.sink_hwnd = int(user32.CreateWindowExW(
-            0, "STATIC", "Smart Citizen drawer hotkey", 0, 0, 0, 0, 0, HWND_MESSAGE,
-            None, None, None) or 0)
-        if not self.sink_hwnd:
-            return False
-        if user32.RegisterRawInputDevices(
-                ctypes.byref(_keyboard_device(RIDEV_INPUTSINK, self.sink_hwnd)), 1, size):
-            return True
-        user32.DestroyWindow(self.sink_hwnd)
-        self.sink_hwnd = 0
-        return False
-
     def hotkey_message(self) -> None:
-        """``WM_HOTKEY`` for this hotkey: toggle now, as this press's raw
-        input is then not acted on."""
-        self._raw_wait.stop()
+        """``WM_HOTKEY`` for this hotkey: toggle now, so a key check's find of
+        the same press is not acted on."""
+        self._key_wait.stop()
         if self._clock() - self._last_fired < SAME_PRESS_S:
-            return                                    # raw input already did
+            return                                    # a key check already did
         self._last_fired = self._clock()
         self.activated.emit()
 
-    def raw_message(self, handle: int) -> None:
-        """A ``WM_INPUT`` for the hidden window (it can come through Qt twice)."""
-        if handle == self._last_raw_message or self._combination is None:
+    def check_keys(self) -> None:
+        """Look at the hotkey's keys once (``KeyCheck``): the owner calls this
+        on its ticks while the game is in front, and ``forget_keys`` on the
+        others. Nothing is asked of Windows while no hotkey is held. The
+        first look after a registration is logged, so a log without that
+        line shows the game was never seen in front."""
+        if self._check is None:
             return
-        self._last_raw_message = handle
-        key = read_raw_key(self._dll or _user32(), handle)
-        if key is not None:
-            self.raw_key(*key)
+        if not self._told_checking:
+            self._told_checking = True
+            logger.info("SCO: the game is in front: the drawer hotkey's keys are checked")
+        if self._check.look() and self._clock() - self._last_fired >= SAME_PRESS_S:
+            self._key_wait.start()                    # give a queued WM_HOTKEY its turn
 
-    def raw_key(self, virtual_key: int, released: bool) -> None:
-        if self._combination is None or not self._combination.feed(virtual_key, released):
-            return
-        if self._clock() - self._last_fired >= SAME_PRESS_S:
-            self._raw_wait.start()                    # give WM_HOTKEY its chance first
+    def forget_keys(self) -> None:
+        """Another window is in front (``KeyCheck.forget``)."""
+        if self._check is not None:
+            self._check.forget()
 
-    def _fire_from_raw(self) -> None:
-        if self._clock() - self._last_fired < SAME_PRESS_S:
-            return
+    def _fire_from_keys(self) -> None:
+        # The wait started only past SAME_PRESS_S, and the WM_HOTKEY that
+        # resets the clock stops it, so the press is still a new one.
         self._last_fired = self._clock()
         self.activated.emit()
