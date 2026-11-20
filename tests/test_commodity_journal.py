@@ -84,7 +84,7 @@ class TestCraftingCostItemPickup:
             encoding="utf-8",
         )
         # The UUIDs scan_crafting_blueprints' blueprint pass hands to the
-        # carryable resolver (perf proposal: it collects them as it reads
+        # carryable resolver (#522: it collects them as it reads
         # each blueprint, so there is no separate UUID scan to call).
         with mock.patch.object(gen_module, "_build_uuid_to_commodity",
                                return_value={}) as resolve:
@@ -138,6 +138,41 @@ class TestCraftingCostItemPickup:
         assert "[CF]" in commodities["items_commodities_hadanite"]
         assert "items_commodities_hadanite_desc" in commodities
         assert "BLUEPRINT DATA" in commodities["items_commodities_hadanite_desc"]
+
+    def test_fps_rock_hud_names_get_the_gem_tag(self, gen_module, tmp_path):
+        """A gem rock not yet fractured shows its ``hud_mining_fps_rock_name_*``
+        string, so that name takes its commodity's tag; a HUD rock name that
+        is no crafting material stays out."""
+        gem_uuid = "1234abcd-1234-abcd-1234-1234abcd1234"
+        carryables = tmp_path / "carryables"
+        carryables.mkdir()
+        (carryables / "harvestable_mineral_1h_hadanite.xml").write_text(
+            f'<Entity __ref="{gem_uuid}"/>', encoding="utf-8"
+        )
+        bp_dir = tmp_path / "bp"
+        bp_dir.mkdir()
+        (bp_dir / "bp_craft_test_weapon.xml").write_text(
+            f'<CraftingBlueprintRecord>'
+            f'<CraftingCost_Item entityClass="{gem_uuid}" quantity="1"/>'
+            f'</CraftingBlueprintRecord>',
+            encoding="utf-8",
+        )
+        loc = {
+            "items_commodities_hadanite": "Hadanite",
+            "items_commodities_hadanite_desc": "A crystal oscillator.",
+            "hud_mining_fps_rock_name_1": "Aphorite",
+            "hud_mining_fps_rock_name_3": "Hadanite",
+        }
+        commodities, _journal = gen_module.scan_crafting_blueprints(
+            bp_dir=bp_dir,
+            carryables_dir=carryables,
+            entity_names={},
+            loc=loc,
+            tag_config=_enabled_commodities_config(),
+        )
+        assert commodities["hud_mining_fps_rock_name_3"] == commodities["items_commodities_hadanite"]
+        assert "[CF" in commodities["hud_mining_fps_rock_name_3"]
+        assert "hud_mining_fps_rock_name_1" not in commodities
 
     def test_resource_and_item_paths_unify(self, gen_module, tmp_path):
         """When a single blueprint uses both element types, BOTH commodities
@@ -219,7 +254,7 @@ class TestCraftingCostItemPickup:
     def test_the_crafting_index_order_does_not_change_between_runs(self, gen_module, tmp_path):
         """The materials of one blueprint were read from a set, so their
         order in crafting_index.json, the order they were first met in,
-        changed with every run's string hashing (found in the perf proposal's
+        changed with every run's string hashing (found in #522's
         review). Now each blueprint's materials are met in name order, so
         the index keeps them in the order they are first met, blueprint by
         blueprint, each blueprint's by name. All eight here are in one

@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen'ı Göster"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Çıkış"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen çalışmaya devam ediyor"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Sistem tepsisinde. Pencereyi geri getirmek için simgesine tıklayın, çıkmak için sağ tıklayın. Simgeyi göremiyorsanız saatin yanındaki ^ okunun içinde olabilir."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -821,6 +839,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "İşaretlendiğinde, rehberli tur yeni bir sürümde otomatik olarak başlatılmaz. Araç çubuğundaki Rehberli Tur düğmesi çalışmaya devam eder."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Sistem Tepsisine Küçült"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "İşaretlendiğinde, Smart Citizen küçültüldüğünde görev çubuğu yerine sistem tepsisine (saatin yanındaki simgeler) gizlenir. Geri getirmek için tepsideki simgesine tıklayın. Tepsideyken Smart Citizen'ı yeniden başlatmak, ikinci bir kopya açmak yerine o pencereyi geri getirir."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Sistem tepsisi bulunamadı, bu yüzden Smart Citizen görev çubuğuna küçültülür."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -2300,6 +2330,10 @@
       "ht": "",
       "at": "{language} yerelleştirmesi yapılandırılan kaynaktan yüklenemedi ve önbelleğe alınmış bir kopya bulunamadı. Bunun yerine İngilizce temel gösteriliyor. Dil Dosyası Eşle'deki URL'yi veya dosyayı kontrol edip yeniden deneyin."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Daha yeni bir {language} çevirisi indirildi. Onunla yeniden yükleniyor."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge'dan {language} geliştirmeleri oluşturuluyor…"
@@ -3044,6 +3078,14 @@
       "ht": "",
       "at": "Smart Citizen şu konumda bir çalışma klasörü kullanamadı:\n{folder}\n\n{reason}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "{total} sözleşmeden {skipped} tanesi okunamadığı için geliştirme oluşturma durduruldu. Mevcut geliştirmeleriniz değişmedi. Genellikle Smart Citizen hatası olduğundan lütfen bildirin.\n\nİlk sözleşme:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "Sözleşmeler okunurken bir hata oluştuğu için geliştirme oluşturma durduruldu. Mevcut geliştirmeleriniz değişmedi. Genellikle Smart Citizen hatası olduğundan lütfen bildirin.\n\nHata:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows, Smart Citizen'ın şu konumda DataForge önbelleğini oluşturma iznini reddetti:\n{folder}\n\nÇıkarma işlemi başlamadı, bu yüzden hiçbir şey değiştirilmedi."
@@ -3289,7 +3331,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Oluştur dediğinizde hangi geliştirme kategorilerinin çalışacağını seçin. Gemiler, bileşenler, gemi silahları, FPS silahları, görevler, görev ödülleri, emtia üretimi ve tıbbi sarf malzemelerinin her biri bağımsız olarak etkinleştirilebilir."
+        "at": "Oluştur'a basınca hangi geliştirme kategorilerinin çalışacağını seçin: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items bileşenleri, gemi silahlarını ve füzeleri; Gear FPS silahlarını ve zırh etiketlerini kapsar. Her kategori ayrı ayrı açılıp kapatılabilir."
       }
     },
     "enh_favorites": {
@@ -3322,16 +3364,6 @@
         "at": "Bileşenlere, füzelere, gemi silahlarına, emtialara ve zırhlara eklenen köşeli parantezli ad etiketlerini oluşturun. Öğeleri ▲/▼ ile yeniden sıralayın, hariç tutmak için işaretini kaldırın, kısaltma uzunluğunu değiştirin, ayırıcı ve parantez seçin veya etiketi adın önüne değil arkasına yerleştirin."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Smart Citizen Katmanı"
-      },
-      "description": {
-        "ht": "",
-        "at": "Katmanı buradan veya araç çubuğundaki Katman düğmesiyle başlatın. Oyunun üzerinde maden tarama imzalarını çözer, planlarınızı, minerallerinizi ve üretimi aramak için bir çekmece açar ve kazandığınız planları sahip olunan olarak işaretler. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3340,6 +3372,16 @@
       "description": {
         "ht": "",
         "at": "Sahip olduğunuz planları işaretleyin. Soldaki listede ada veya göreve göre arama yapın ya da bileşen Türü, Sınıfı, Boyutu ve Derecesine göre daraltın, ardından öğeleri sahip olunanlar listenize taşımak için okları kullanın. Sahip olunan planlar, bir görevin olası ödüllerinde göründükleri her yerde [Owned] etiketi alır; böylece neyin peşine düşmeye değer olduğunu bir bakışta görebilirsiniz."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Katmanı"
+      },
+      "description": {
+        "ht": "",
+        "at": "Katmanı buradan veya araç çubuğundaki Katman düğmesiyle başlatın. Oyunun üzerinde maden tarama imzalarını çözer, planlarınızı, minerallerinizi ve üretimi aramak için bir çekmece açar ve kazandığınız planları sahip olunan olarak işaretler. Oyunu ana ekranınızda kenarlıksız pencere modunda çalıştırın."
       }
     },
     "edit": {
@@ -3399,7 +3441,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Uygulama temasını seçin (Varsayılan / Açık / Koyu / ODW) ve isterseniz yeni sürümlerde otomatik turu devre dışı bırakın."
+        "at": "Uygulama temasını (Varsayılan / Açık / Koyu / ODW) ve yazı boyutunu (Küçük / Orta / Büyük, yeniden başlatınca uygulanır) seçin; isterseniz yeni sürümlerde otomatik turu kapatın. Küçültüldüğünde pencerenin sistem tepsisine gitmesi için Sistem Tepsisine Küçült seçeneğini işaretleyin."
       }
     },
     "cfg_sc_install": {
@@ -3439,13 +3481,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Çakışma çözme iletişim kutusu aracılığıyla harici bir INI dosyasını geçersiz kılmalarınıza aktarın veya etkin kanal için user.ini dosyanızı sıfırlayın (temizlenmeden önce otomatik olarak yedeklenir)."
+        "at": "Harici bir INI dosyasını çakışma çözme penceresiyle geçersiz kılmalarınıza aktarın. Etkin kanalın user.ini dosyasını sıfırlayın (önce yedeklenir) ya da user.ini Dosyasını Geri Yükle ile önceki bir kopyayı geri getirin. Önizleme Uygula'nın ne yazacağını gösterir, Güncellemeleri Denetle yeni sürüm arar."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Yapılandırma: Ayar Yedeği"
+      },
+      "description": {
+        "ht": "",
+        "at": "Ayarları Dışa Aktar tercihlerinizi, etiket ayarlarınızı, Star Citizen klasörünüzü ve tüm kanallardaki özel metinlerinizi tek bir dosyaya kaydeder. Ayarları İçe Aktar bunları yeni bir bilgisayarda ya da temiz kurulumdan sonra geri getirir."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Yapılandırma: Star Citizen Araçları"
+      },
+      "description": {
+        "ht": "",
+        "at": "Gölgelendirici Önbelleğini Temizle, oyunun gölgelendirici önbellek klasörlerini her oyun sürümü için bir tane olacak şekilde listeler. Temizle gölgelendiricileri siler ve grafik ayarlarınızı korur; Kaldır tüm klasörü siler. Önce Star Citizen'ı kapatın."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Yardım ve geri bildirim"
+        "at": "21. Yardım ve geri bildirim"
       },
       "description": {
         "ht": "",
@@ -3642,7 +3704,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur, bir çekmece kısayolu ayarlarsanız yalnızca o birleşim için tuş basışlarını izler; oyun işlemine asla dokunmaz."
+      "at": "Star Citizen'ın üzerine çizilen pencereler: maden tarama çözücüsü ve plan çekmecesi. Oyunu kenarlıksız pencere modunda çalıştırın. Katman yalnızca ekranınızı ve Game.log dosyasını okur, Windows'a hangi pencerenin önde olduğunu ve işaretçinin görünüp görünmediğini sorar, bir çekmece kısayolu ayarlarsanız kısayolun tuşunun ve Ctrl, Alt, Shift ve Win tuşlarının basılı olup olmadığını da sorar; oyun işlemine asla dokunmaz."
     },
     "start_btn": {
       "ht": "",

@@ -1,0 +1,833 @@
+{
+  "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
+  "strings": {
+    "--- EFFECT ---": {
+      "ht": "",
+      "at": "--- EFEITO ---"
+    },
+    "--- STATS ---": {
+      "ht": "",
+      "at": "--- ESTATÍSTICAS ---"
+    },
+    "Absolute Range": {
+      "ht": "",
+      "at": "Alcance absoluto"
+    },
+    "Acceleration": {
+      "ht": "",
+      "at": "Aceleração"
+    },
+    "Ace Pilot": {
+      "ht": "",
+      "at": "Piloto ás"
+    },
+    "Ace Pilots": {
+      "ht": "",
+      "at": "Pilotos ases"
+    },
+    "Aim Assist Range": {
+      "ht": "",
+      "at": "Alcance mira assist."
+    },
+    "Alpha Dmg": {
+      "ht": "",
+      "at": "Dano alfa"
+    },
+    "Ammo": {
+      "ht": "",
+      "at": "Munição"
+    },
+    "Arm Dist": {
+      "ht": "",
+      "at": "Dist. armação"
+    },
+    "Arm Time": {
+      "ht": "",
+      "at": "Tempo armação"
+    },
+    "Armor HP": {
+      "ht": "",
+      "at": "PV blindagem"
+    },
+    "Armour": {
+      "ht": "",
+      "at": "Armadura"
+    },
+    "Attackers": {
+      "ht": "",
+      "at": "Atacantes"
+    },
+    "Auto": {
+      "ht": "",
+      "at": "Auto"
+    },
+    "Backup": {
+      "ht": "",
+      "at": "Reforços"
+    },
+    "Bandits": {
+      "ht": "",
+      "at": "Bandidos"
+    },
+    "Base Resource Signature": {
+      "ht": "",
+      "at": "Assinatura base do recurso"
+    },
+    "Beam": {
+      "ht": "",
+      "at": "Feixe"
+    },
+    "Bio": {
+      "ht": "",
+      "at": "Bio"
+    },
+    "Blast Radius": {
+      "ht": "",
+      "at": "Raio de explosão"
+    },
+    "Blueprint Reward": {
+      "ht": "",
+      "at": "Recompensa de projeto"
+    },
+    "Bomb Slots": {
+      "ht": "",
+      "at": "Slots de bomba"
+    },
+    "Boost": {
+      "ht": "",
+      "at": "Impulso"
+    },
+    "Boss": {
+      "ht": "",
+      "at": "Chefe"
+    },
+    "Burst": {
+      "ht": "",
+      "at": "Rajada"
+    },
+    "CQC": {
+      "ht": "",
+      "at": "CQC"
+    },
+    "Cal Rate": {
+      "ht": "",
+      "at": "Vel. calibr."
+    },
+    "Captain": {
+      "ht": "",
+      "at": "Capitão"
+    },
+    "Chain": {
+      "ht": "",
+      "at": "Cadeia"
+    },
+    "Charge": {
+      "ht": "",
+      "at": "Carga"
+    },
+    "Civilians": {
+      "ht": "",
+      "at": "Civis"
+    },
+    "Class": {
+      "ht": "",
+      "at": "Classe"
+    },
+    "Combat": {
+      "ht": "",
+      "at": "Combate"
+    },
+    "Complexity": {
+      "ht": "",
+      "at": "Complexidade"
+    },
+    "Component HP": {
+      "ht": "",
+      "at": "PV do componente"
+    },
+    "Cooldown": {
+      "ht": "",
+      "at": "Recarga"
+    },
+    "Coolers": {
+      "ht": "",
+      "at": "Resfriadores"
+    },
+    "Cooling Rate": {
+      "ht": "",
+      "at": "Taxa de resfriamento"
+    },
+    "Cost/Shot": {
+      "ht": "",
+      "at": "Custo/tiro"
+    },
+    "Crew": {
+      "ht": "",
+      "at": "Tripulação"
+    },
+    "DPS": {
+      "ht": "",
+      "at": "DPS"
+    },
+    "Damage": {
+      "ht": "",
+      "at": "Dano"
+    },
+    "Damage-Map Rate": {
+      "ht": "",
+      "at": "Taxa mapa de danos"
+    },
+    "Damaged Delay": {
+      "ht": "",
+      "at": "Atraso se danificado"
+    },
+    "Defenders": {
+      "ht": "",
+      "at": "Defensores"
+    },
+    "Deflect": {
+      "ht": "",
+      "at": "Deflexão"
+    },
+    "Detection Mode": {
+      "ht": "",
+      "at": "Modo de detecção"
+    },
+    "Detonation": {
+      "ht": "",
+      "at": "Detonação"
+    },
+    "Difficulty (1-7)": {
+      "ht": "",
+      "at": "Dificuldade (1-7)"
+    },
+    "Distort": {
+      "ht": "",
+      "at": "Distorç."
+    },
+    "Dmg Mult": {
+      "ht": "",
+      "at": "Mult. dano"
+    },
+    "Downed Delay": {
+      "ht": "",
+      "at": "Atraso se abatido"
+    },
+    "Drop": {
+      "ht": "",
+      "at": "Queda"
+    },
+    "EM": {
+      "ht": "",
+      "at": "EM"
+    },
+    "EM Signature": {
+      "ht": "",
+      "at": "Assinatura EM"
+    },
+    "Effective Range": {
+      "ht": "",
+      "at": "Alcance efetivo"
+    },
+    "Energy": {
+      "ht": "",
+      "at": "Energia"
+    },
+    "Engagement Type": {
+      "ht": "",
+      "at": "Tipo de combate"
+    },
+    "Escort Wings": {
+      "ht": "",
+      "at": "Esquadrilhas de escolta"
+    },
+    "Escorts": {
+      "ht": "",
+      "at": "Escoltas"
+    },
+    "Extraction": {
+      "ht": "",
+      "at": "Extração"
+    },
+    "FPS": {
+      "ht": "",
+      "at": "FPS"
+    },
+    "FPS & Ship": {
+      "ht": "",
+      "at": "FPS e nave"
+    },
+    "Failure": {
+      "ht": "",
+      "at": "Falha"
+    },
+    "Failure Penalty": {
+      "ht": "",
+      "at": "Penalidade por falha"
+    },
+    "Fire Modes": {
+      "ht": "",
+      "at": "Modos de disparo"
+    },
+    "Fire Rate": {
+      "ht": "",
+      "at": "Cadência"
+    },
+    "Fracture": {
+      "ht": "",
+      "at": "Fratura"
+    },
+    "Friendlies": {
+      "ht": "",
+      "at": "Aliados"
+    },
+    "Fuel": {
+      "ht": "",
+      "at": "Combustível"
+    },
+    "Fuel/Gm": {
+      "ht": "",
+      "at": "Combustível/Gm"
+    },
+    "Full Dmg to": {
+      "ht": "",
+      "at": "Dano total até"
+    },
+    "Grade": {
+      "ht": "",
+      "at": "Grau"
+    },
+    "Grunts": {
+      "ht": "",
+      "at": "Capangas"
+    },
+    "Guaranteed": {
+      "ht": "",
+      "at": "Garantido"
+    },
+    "Guards": {
+      "ht": "",
+      "at": "Guardas"
+    },
+    "Guidance": {
+      "ht": "",
+      "at": "Guiagem"
+    },
+    "Guns": {
+      "ht": "",
+      "at": "Canhões"
+    },
+    "HP Rate": {
+      "ht": "",
+      "at": "Taxa de PV"
+    },
+    "HP/Ammo": {
+      "ht": "",
+      "at": "PV/munição"
+    },
+    "Heat": {
+      "ht": "",
+      "at": "Calor"
+    },
+    "Heist Target": {
+      "ht": "",
+      "at": "Alvo do assalto"
+    },
+    "Hostages": {
+      "ht": "",
+      "at": "Reféns"
+    },
+    "Hostile Allies": {
+      "ht": "",
+      "at": "Aliados hostis"
+    },
+    "Hostile Wave": {
+      "ht": "",
+      "at": "Onda hostil"
+    },
+    "Hostiles": {
+      "ht": "",
+      "at": "Hostis"
+    },
+    "IR": {
+      "ht": "",
+      "at": "IV"
+    },
+    "IR Signature": {
+      "ht": "",
+      "at": "Assinatura IV"
+    },
+    "Inert Filter": {
+      "ht": "",
+      "at": "Filtro inerte"
+    },
+    "Insurance": {
+      "ht": "",
+      "at": "Seguro"
+    },
+    "Interdiction Ships": {
+      "ht": "",
+      "at": "Naves de interdição"
+    },
+    "Item Type": {
+      "ht": "",
+      "at": "Tipo de item"
+    },
+    "Juggernauts": {
+      "ht": "",
+      "at": "Juggernauts"
+    },
+    "Jump Drives": {
+      "ht": "",
+      "at": "Motores de salto"
+    },
+    "Knowledge": {
+      "ht": "",
+      "at": "Conhecimento"
+    },
+    "Kopions": {
+      "ht": "",
+      "at": "Kopions"
+    },
+    "Length": {
+      "ht": "",
+      "at": "Comprimento"
+    },
+    "Lifetime": {
+      "ht": "",
+      "at": "Duração"
+    },
+    "Locations": {
+      "ht": "",
+      "at": "Locais"
+    },
+    "Lock Range": {
+      "ht": "",
+      "at": "Alcance de trava"
+    },
+    "Lock Time": {
+      "ht": "",
+      "at": "Tempo de trava"
+    },
+    "MRacks": {
+      "ht": "",
+      "at": "Lança-mísseis"
+    },
+    "Material Efficiency": {
+      "ht": "",
+      "at": "Eficiência de material"
+    },
+    "Maulers": {
+      "ht": "",
+      "at": "Maulers"
+    },
+    "Max": {
+      "ht": "",
+      "at": "Máx."
+    },
+    "Max Distortion": {
+      "ht": "",
+      "at": "Distorção máx."
+    },
+    "Max G-Force": {
+      "ht": "",
+      "at": "Força G máx."
+    },
+    "Max HP": {
+      "ht": "",
+      "at": "PV máx."
+    },
+    "Max Lifetime": {
+      "ht": "",
+      "at": "Duração máx."
+    },
+    "Max Lock Range": {
+      "ht": "",
+      "at": "Alcance trava máx."
+    },
+    "Min Detonate": {
+      "ht": "",
+      "at": "Detonação mín."
+    },
+    "Min Dmg": {
+      "ht": "",
+      "at": "Dano mín."
+    },
+    "Min Lock Range": {
+      "ht": "",
+      "at": "Alcance trava mín."
+    },
+    "Mission Type": {
+      "ht": "",
+      "at": "Tipo de missão"
+    },
+    "Nine Tails": {
+      "ht": "",
+      "at": "Nine Tails"
+    },
+    "Objectives": {
+      "ht": "",
+      "at": "Objetivos"
+    },
+    "Overheat Temp": {
+      "ht": "",
+      "at": "Temp. superaquec."
+    },
+    "Phys": {
+      "ht": "",
+      "at": "Fís."
+    },
+    "Ping Cooldown": {
+      "ht": "",
+      "at": "Recarga do ping"
+    },
+    "Pirates": {
+      "ht": "",
+      "at": "Piratas"
+    },
+    "Pitch": {
+      "ht": "",
+      "at": "Arfagem"
+    },
+    "Polaris": {
+      "ht": "",
+      "at": "Polaris"
+    },
+    "Power": {
+      "ht": "",
+      "at": "Energia"
+    },
+    "Power Draw": {
+      "ht": "",
+      "at": "Consumo"
+    },
+    "Power Output": {
+      "ht": "",
+      "at": "Geração de energia"
+    },
+    "Power Plants": {
+      "ht": "",
+      "at": "Geradores"
+    },
+    "Private Security": {
+      "ht": "",
+      "at": "Segurança privada"
+    },
+    "Probe": {
+      "ht": "",
+      "at": "Sonda"
+    },
+    "Prospectors": {
+      "ht": "",
+      "at": "Prospectors"
+    },
+    "Protected": {
+      "ht": "",
+      "at": "Protegidos"
+    },
+    "Proximity Range": {
+      "ht": "",
+      "at": "Alcance de proximidade"
+    },
+    "QD": {
+      "ht": "",
+      "at": "MQ"
+    },
+    "QT Fuel Use": {
+      "ht": "",
+      "at": "Consumo QT"
+    },
+    "QT Speed": {
+      "ht": "",
+      "at": "Velocidade QT"
+    },
+    "Quantum Drives": {
+      "ht": "",
+      "at": "Motores quânticos"
+    },
+    "Quantum Enforcement Devices": {
+      "ht": "",
+      "at": "Dispositivos de interdição quântica"
+    },
+    "Radars": {
+      "ht": "",
+      "at": "Radares"
+    },
+    "Ramp": {
+      "ht": "",
+      "at": "Rampa"
+    },
+    "Range": {
+      "ht": "",
+      "at": "Alcance"
+    },
+    "Rank": {
+      "ht": "",
+      "at": "Patente"
+    },
+    "Recharges Oxygen reserves of a suit.": {
+      "ht": "",
+      "at": "Recarrega as reservas de oxigênio de um traje."
+    },
+    "Recipient": {
+      "ht": "",
+      "at": "Destinatário"
+    },
+    "Reduces concussion symptoms, normalizes weapon handling and movement speed.": {
+      "ht": "",
+      "at": "Reduz sintomas de concussão, normaliza o manuseio de armas e a velocidade de movimento."
+    },
+    "Reduces injuries from radiation.": {
+      "ht": "",
+      "at": "Reduz lesões por radiação."
+    },
+    "Reduces pain symptoms, normalizes movement ability.": {
+      "ht": "",
+      "at": "Reduz a dor, normaliza a capacidade de movimento."
+    },
+    "Reduces vision and hearing symptoms, normalizes stamina.": {
+      "ht": "",
+      "at": "Reduz distúrbios de visão e audição, normaliza a resistência."
+    },
+    "Refuel Nozzles": {
+      "ht": "",
+      "at": "Bicos de reabastecimento"
+    },
+    "Regen": {
+      "ht": "",
+      "at": "Regen."
+    },
+    "Reinforcements": {
+      "ht": "",
+      "at": "Reforços"
+    },
+    "Required": {
+      "ht": "",
+      "at": "Necessário"
+    },
+    "Resource Signatures": {
+      "ht": "",
+      "at": "Assinaturas de recursos"
+    },
+    "Restores health and stops bleeding. When used on another person recovers from incapacitated state.": {
+      "ht": "",
+      "at": "Restaura a saúde e estanca sangramentos. Usado em outra pessoa, recupera-a da incapacitação."
+    },
+    "Revives an overdosed person (if not incapacitated), doubles decay rate of Blood Drug Level.": {
+      "ht": "",
+      "at": "Reanima uma pessoa com overdose (se não incapacitada), dobra a queda do nível de droga no sangue."
+    },
+    "Risk": {
+      "ht": "",
+      "at": "Risco"
+    },
+    "Role": {
+      "ht": "",
+      "at": "Função"
+    },
+    "Roll": {
+      "ht": "",
+      "at": "Rolagem"
+    },
+    "SCM": {
+      "ht": "",
+      "at": "SCM"
+    },
+    "Salvageable Ships": {
+      "ht": "",
+      "at": "Naves recuperáveis"
+    },
+    "Scanners": {
+      "ht": "",
+      "at": "Scanners"
+    },
+    "Security Forces": {
+      "ht": "",
+      "at": "Forças de segurança"
+    },
+    "Seeker": {
+      "ht": "",
+      "at": "Buscador"
+    },
+    "Semi-Auto": {
+      "ht": "",
+      "at": "Semiauto"
+    },
+    "Sentries": {
+      "ht": "",
+      "at": "Sentinelas"
+    },
+    "Shields": {
+      "ht": "",
+      "at": "Escudos"
+    },
+    "Ship": {
+      "ht": "",
+      "at": "Nave"
+    },
+    "Ships to Defend": {
+      "ht": "",
+      "at": "Naves a defender"
+    },
+    "Shotgun": {
+      "ht": "",
+      "at": "Espingarda"
+    },
+    "Size": {
+      "ht": "",
+      "at": "Tamanho"
+    },
+    "Snipers": {
+      "ht": "",
+      "at": "Atiradores"
+    },
+    "Soldiers": {
+      "ht": "",
+      "at": "Soldados"
+    },
+    "Spool": {
+      "ht": "",
+      "at": "Aquecimento"
+    },
+    "Standard": {
+      "ht": "",
+      "at": "Padrão"
+    },
+    "Starter": {
+      "ht": "",
+      "at": "Inicial"
+    },
+    "Stun": {
+      "ht": "",
+      "at": "Atord."
+    },
+    "Targets": {
+      "ht": "",
+      "at": "Alvos"
+    },
+    "Technicians": {
+      "ht": "",
+      "at": "Técnicos"
+    },
+    "Thermal": {
+      "ht": "",
+      "at": "Térmico"
+    },
+    "Tier": {
+      "ht": "",
+      "at": "Nível"
+    },
+    "Tracking": {
+      "ht": "",
+      "at": "Rastreamento"
+    },
+    "Tracking Range": {
+      "ht": "",
+      "at": "Alcance de rastreamento"
+    },
+    "Turn Rate": {
+      "ht": "",
+      "at": "Vel. de curva"
+    },
+    "Turrets": {
+      "ht": "",
+      "at": "Torretas"
+    },
+    "Unique": {
+      "ht": "",
+      "at": "Única"
+    },
+    "Used To Craft": {
+      "ht": "",
+      "at": "Usado para fabricar"
+    },
+    "Velocity": {
+      "ht": "",
+      "at": "Velocidade"
+    },
+    "Wear": {
+      "ht": "",
+      "at": "Desgaste"
+    },
+    "Weight": {
+      "ht": "",
+      "at": "Peso"
+    },
+    "Xeno Threat": {
+      "ht": "",
+      "at": "Xeno Threat"
+    },
+    "Yaw": {
+      "ht": "",
+      "at": "Guinada"
+    },
+    "Yes": {
+      "ht": "",
+      "at": "Sim"
+    },
+    "base": {
+      "ht": "",
+      "at": "base"
+    },
+    "down": {
+      "ht": "",
+      "at": "descida"
+    },
+    "empty": {
+      "ht": "",
+      "at": "vazio"
+    },
+    "express": {
+      "ht": "",
+      "at": "expresso"
+    },
+    "friendly": {
+      "ht": "",
+      "at": "amigáveis"
+    },
+    "hostile": {
+      "ht": "",
+      "at": "hostis"
+    },
+    "present": {
+      "ht": "",
+      "at": "presentes"
+    },
+    "select variants": {
+      "ht": "",
+      "at": "algumas variantes"
+    },
+    "up": {
+      "ht": "",
+      "at": "subida"
+    },
+    "{count} items": {
+      "ht": "",
+      "at": "{count} itens"
+    },
+    "{count} sets": {
+      "ht": "",
+      "at": "{count} conjuntos"
+    },
+    "{count} types": {
+      "ht": "",
+      "at": "{count} tipos"
+    },
+    "{item} Set": {
+      "ht": "",
+      "at": "Conjunto {item}"
+    },
+    "{pct}% chance": {
+      "ht": "",
+      "at": "{pct}% de chance"
+    },
+    "{pct}% chance ({variants} only)": {
+      "ht": "",
+      "at": "{pct}% de chance (só {variants})"
+    },
+    "{type} Ammo": {
+      "ht": "",
+      "at": "Munição {type}"
+    }
+  }
+}

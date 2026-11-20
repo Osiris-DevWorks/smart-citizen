@@ -1,0 +1,833 @@
+{
+  "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
+  "strings": {
+    "--- EFFECT ---": {
+      "ht": "",
+      "at": "--- 效果 ---"
+    },
+    "--- STATS ---": {
+      "ht": "",
+      "at": "--- 屬性 ---"
+    },
+    "Absolute Range": {
+      "ht": "",
+      "at": "絕對射程"
+    },
+    "Acceleration": {
+      "ht": "",
+      "at": "加速度"
+    },
+    "Ace Pilot": {
+      "ht": "",
+      "at": "王牌飛行員"
+    },
+    "Ace Pilots": {
+      "ht": "",
+      "at": "王牌飛行員"
+    },
+    "Aim Assist Range": {
+      "ht": "",
+      "at": "輔助瞄準範圍"
+    },
+    "Alpha Dmg": {
+      "ht": "",
+      "at": "單發傷害"
+    },
+    "Ammo": {
+      "ht": "",
+      "at": "彈藥"
+    },
+    "Arm Dist": {
+      "ht": "",
+      "at": "解保距離"
+    },
+    "Arm Time": {
+      "ht": "",
+      "at": "解保時間"
+    },
+    "Armor HP": {
+      "ht": "",
+      "at": "裝甲耐久"
+    },
+    "Armour": {
+      "ht": "",
+      "at": "護甲"
+    },
+    "Attackers": {
+      "ht": "",
+      "at": "進攻者"
+    },
+    "Auto": {
+      "ht": "",
+      "at": "全自動"
+    },
+    "Backup": {
+      "ht": "",
+      "at": "增援"
+    },
+    "Bandits": {
+      "ht": "",
+      "at": "強盜"
+    },
+    "Base Resource Signature": {
+      "ht": "",
+      "at": "基礎資源訊號"
+    },
+    "Beam": {
+      "ht": "",
+      "at": "光束"
+    },
+    "Bio": {
+      "ht": "",
+      "at": "生化"
+    },
+    "Blast Radius": {
+      "ht": "",
+      "at": "爆炸半徑"
+    },
+    "Blueprint Reward": {
+      "ht": "",
+      "at": "藍圖獎勵"
+    },
+    "Bomb Slots": {
+      "ht": "",
+      "at": "炸彈掛點"
+    },
+    "Boost": {
+      "ht": "",
+      "at": "加力"
+    },
+    "Boss": {
+      "ht": "",
+      "at": "首領"
+    },
+    "Burst": {
+      "ht": "",
+      "at": "點放"
+    },
+    "CQC": {
+      "ht": "",
+      "at": "近戰"
+    },
+    "Cal Rate": {
+      "ht": "",
+      "at": "校準速率"
+    },
+    "Captain": {
+      "ht": "",
+      "at": "艦長"
+    },
+    "Chain": {
+      "ht": "",
+      "at": "連續"
+    },
+    "Charge": {
+      "ht": "",
+      "at": "蓄力"
+    },
+    "Civilians": {
+      "ht": "",
+      "at": "平民"
+    },
+    "Class": {
+      "ht": "",
+      "at": "類別"
+    },
+    "Combat": {
+      "ht": "",
+      "at": "戰鬥"
+    },
+    "Complexity": {
+      "ht": "",
+      "at": "複雜度"
+    },
+    "Component HP": {
+      "ht": "",
+      "at": "組件耐久"
+    },
+    "Cooldown": {
+      "ht": "",
+      "at": "冷卻"
+    },
+    "Coolers": {
+      "ht": "",
+      "at": "冷卻器"
+    },
+    "Cooling Rate": {
+      "ht": "",
+      "at": "冷卻速率"
+    },
+    "Cost/Shot": {
+      "ht": "",
+      "at": "每發消耗"
+    },
+    "Crew": {
+      "ht": "",
+      "at": "乘員"
+    },
+    "DPS": {
+      "ht": "",
+      "at": "DPS"
+    },
+    "Damage": {
+      "ht": "",
+      "at": "傷害"
+    },
+    "Damage-Map Rate": {
+      "ht": "",
+      "at": "損傷修復速率"
+    },
+    "Damaged Delay": {
+      "ht": "",
+      "at": "受損延遲"
+    },
+    "Defenders": {
+      "ht": "",
+      "at": "防守者"
+    },
+    "Deflect": {
+      "ht": "",
+      "at": "偏轉"
+    },
+    "Detection Mode": {
+      "ht": "",
+      "at": "偵測模式"
+    },
+    "Detonation": {
+      "ht": "",
+      "at": "引爆"
+    },
+    "Difficulty (1-7)": {
+      "ht": "",
+      "at": "難度 (1-7)"
+    },
+    "Distort": {
+      "ht": "",
+      "at": "扭曲"
+    },
+    "Dmg Mult": {
+      "ht": "",
+      "at": "傷害倍率"
+    },
+    "Downed Delay": {
+      "ht": "",
+      "at": "停機延遲"
+    },
+    "Drop": {
+      "ht": "",
+      "at": "衰減"
+    },
+    "EM": {
+      "ht": "",
+      "at": "EM"
+    },
+    "EM Signature": {
+      "ht": "",
+      "at": "EM 訊號"
+    },
+    "Effective Range": {
+      "ht": "",
+      "at": "有效射程"
+    },
+    "Energy": {
+      "ht": "",
+      "at": "能量"
+    },
+    "Engagement Type": {
+      "ht": "",
+      "at": "交戰類型"
+    },
+    "Escort Wings": {
+      "ht": "",
+      "at": "護航編隊"
+    },
+    "Escorts": {
+      "ht": "",
+      "at": "護航"
+    },
+    "Extraction": {
+      "ht": "",
+      "at": "抽取"
+    },
+    "FPS": {
+      "ht": "",
+      "at": "FPS"
+    },
+    "FPS & Ship": {
+      "ht": "",
+      "at": "FPS 與艦船"
+    },
+    "Failure": {
+      "ht": "",
+      "at": "失敗"
+    },
+    "Failure Penalty": {
+      "ht": "",
+      "at": "失敗懲罰"
+    },
+    "Fire Modes": {
+      "ht": "",
+      "at": "射擊模式"
+    },
+    "Fire Rate": {
+      "ht": "",
+      "at": "射速"
+    },
+    "Fracture": {
+      "ht": "",
+      "at": "破碎"
+    },
+    "Friendlies": {
+      "ht": "",
+      "at": "友軍"
+    },
+    "Fuel": {
+      "ht": "",
+      "at": "燃料"
+    },
+    "Fuel/Gm": {
+      "ht": "",
+      "at": "燃料/Gm"
+    },
+    "Full Dmg to": {
+      "ht": "",
+      "at": "滿傷距離"
+    },
+    "Grade": {
+      "ht": "",
+      "at": "等級"
+    },
+    "Grunts": {
+      "ht": "",
+      "at": "嘍囉"
+    },
+    "Guaranteed": {
+      "ht": "",
+      "at": "必定獲得"
+    },
+    "Guards": {
+      "ht": "",
+      "at": "守衛"
+    },
+    "Guidance": {
+      "ht": "",
+      "at": "導引"
+    },
+    "Guns": {
+      "ht": "",
+      "at": "機砲"
+    },
+    "HP Rate": {
+      "ht": "",
+      "at": "耐久速率"
+    },
+    "HP/Ammo": {
+      "ht": "",
+      "at": "耐久/彈藥"
+    },
+    "Heat": {
+      "ht": "",
+      "at": "熱量"
+    },
+    "Heist Target": {
+      "ht": "",
+      "at": "劫掠目標"
+    },
+    "Hostages": {
+      "ht": "",
+      "at": "人質"
+    },
+    "Hostile Allies": {
+      "ht": "",
+      "at": "敵方援軍"
+    },
+    "Hostile Wave": {
+      "ht": "",
+      "at": "敵方波次"
+    },
+    "Hostiles": {
+      "ht": "",
+      "at": "敵人"
+    },
+    "IR": {
+      "ht": "",
+      "at": "IR"
+    },
+    "IR Signature": {
+      "ht": "",
+      "at": "IR 訊號"
+    },
+    "Inert Filter": {
+      "ht": "",
+      "at": "惰性過濾"
+    },
+    "Insurance": {
+      "ht": "",
+      "at": "保險"
+    },
+    "Interdiction Ships": {
+      "ht": "",
+      "at": "攔截艦"
+    },
+    "Item Type": {
+      "ht": "",
+      "at": "物品類型"
+    },
+    "Juggernauts": {
+      "ht": "",
+      "at": "重裝兵"
+    },
+    "Jump Drives": {
+      "ht": "",
+      "at": "跳躍引擎"
+    },
+    "Knowledge": {
+      "ht": "",
+      "at": "知識"
+    },
+    "Kopions": {
+      "ht": "",
+      "at": "科皮恩"
+    },
+    "Length": {
+      "ht": "",
+      "at": "長度"
+    },
+    "Lifetime": {
+      "ht": "",
+      "at": "存在時間"
+    },
+    "Locations": {
+      "ht": "",
+      "at": "地點"
+    },
+    "Lock Range": {
+      "ht": "",
+      "at": "鎖定範圍"
+    },
+    "Lock Time": {
+      "ht": "",
+      "at": "鎖定時間"
+    },
+    "MRacks": {
+      "ht": "",
+      "at": "飛彈架"
+    },
+    "Material Efficiency": {
+      "ht": "",
+      "at": "材料效率"
+    },
+    "Maulers": {
+      "ht": "",
+      "at": "Maulers"
+    },
+    "Max": {
+      "ht": "",
+      "at": "最大"
+    },
+    "Max Distortion": {
+      "ht": "",
+      "at": "最大扭曲"
+    },
+    "Max G-Force": {
+      "ht": "",
+      "at": "最大過載"
+    },
+    "Max HP": {
+      "ht": "",
+      "at": "最大耐久"
+    },
+    "Max Lifetime": {
+      "ht": "",
+      "at": "最大壽命"
+    },
+    "Max Lock Range": {
+      "ht": "",
+      "at": "最大鎖定距離"
+    },
+    "Min Detonate": {
+      "ht": "",
+      "at": "最小引爆距離"
+    },
+    "Min Dmg": {
+      "ht": "",
+      "at": "最小傷害"
+    },
+    "Min Lock Range": {
+      "ht": "",
+      "at": "最小鎖定距離"
+    },
+    "Mission Type": {
+      "ht": "",
+      "at": "任務類型"
+    },
+    "Nine Tails": {
+      "ht": "",
+      "at": "Nine Tails"
+    },
+    "Objectives": {
+      "ht": "",
+      "at": "目標"
+    },
+    "Overheat Temp": {
+      "ht": "",
+      "at": "過熱溫度"
+    },
+    "Phys": {
+      "ht": "",
+      "at": "物理"
+    },
+    "Ping Cooldown": {
+      "ht": "",
+      "at": "偵測冷卻"
+    },
+    "Pirates": {
+      "ht": "",
+      "at": "海盜"
+    },
+    "Pitch": {
+      "ht": "",
+      "at": "俯仰"
+    },
+    "Polaris": {
+      "ht": "",
+      "at": "Polaris"
+    },
+    "Power": {
+      "ht": "",
+      "at": "電源"
+    },
+    "Power Draw": {
+      "ht": "",
+      "at": "耗電"
+    },
+    "Power Output": {
+      "ht": "",
+      "at": "發電量"
+    },
+    "Power Plants": {
+      "ht": "",
+      "at": "發電機"
+    },
+    "Private Security": {
+      "ht": "",
+      "at": "私人保全"
+    },
+    "Probe": {
+      "ht": "",
+      "at": "探測器"
+    },
+    "Prospectors": {
+      "ht": "",
+      "at": "Prospector"
+    },
+    "Protected": {
+      "ht": "",
+      "at": "受保護者"
+    },
+    "Proximity Range": {
+      "ht": "",
+      "at": "近炸距離"
+    },
+    "QD": {
+      "ht": "",
+      "at": "量子"
+    },
+    "QT Fuel Use": {
+      "ht": "",
+      "at": "量子油耗"
+    },
+    "QT Speed": {
+      "ht": "",
+      "at": "量子速度"
+    },
+    "Quantum Drives": {
+      "ht": "",
+      "at": "量子引擎"
+    },
+    "Quantum Enforcement Devices": {
+      "ht": "",
+      "at": "量子攔截裝置"
+    },
+    "Radars": {
+      "ht": "",
+      "at": "雷達"
+    },
+    "Ramp": {
+      "ht": "",
+      "at": "爬升"
+    },
+    "Range": {
+      "ht": "",
+      "at": "射程"
+    },
+    "Rank": {
+      "ht": "",
+      "at": "等級"
+    },
+    "Recharges Oxygen reserves of a suit.": {
+      "ht": "",
+      "at": "為太空衣補充氧氣儲備。"
+    },
+    "Recipient": {
+      "ht": "",
+      "at": "收件人"
+    },
+    "Reduces concussion symptoms, normalizes weapon handling and movement speed.": {
+      "ht": "",
+      "at": "緩解腦震盪症狀，恢復武器操控與移動速度。"
+    },
+    "Reduces injuries from radiation.": {
+      "ht": "",
+      "at": "減輕輻射傷害。"
+    },
+    "Reduces pain symptoms, normalizes movement ability.": {
+      "ht": "",
+      "at": "緩解疼痛症狀，恢復行動能力。"
+    },
+    "Reduces vision and hearing symptoms, normalizes stamina.": {
+      "ht": "",
+      "at": "緩解視覺與聽覺症狀，恢復耐力。"
+    },
+    "Refuel Nozzles": {
+      "ht": "",
+      "at": "加油噴嘴"
+    },
+    "Regen": {
+      "ht": "",
+      "at": "恢復"
+    },
+    "Reinforcements": {
+      "ht": "",
+      "at": "增援"
+    },
+    "Required": {
+      "ht": "",
+      "at": "需求"
+    },
+    "Resource Signatures": {
+      "ht": "",
+      "at": "資源訊號"
+    },
+    "Restores health and stops bleeding. When used on another person recovers from incapacitated state.": {
+      "ht": "",
+      "at": "恢復生命並止血。對他人使用時可使其脫離失能狀態。"
+    },
+    "Revives an overdosed person (if not incapacitated), doubles decay rate of Blood Drug Level.": {
+      "ht": "",
+      "at": "救醒藥物過量者（未失能時），使血液藥物濃度下降速度加倍。"
+    },
+    "Risk": {
+      "ht": "",
+      "at": "風險"
+    },
+    "Role": {
+      "ht": "",
+      "at": "定位"
+    },
+    "Roll": {
+      "ht": "",
+      "at": "滾轉"
+    },
+    "SCM": {
+      "ht": "",
+      "at": "SCM"
+    },
+    "Salvageable Ships": {
+      "ht": "",
+      "at": "可打撈艦船"
+    },
+    "Scanners": {
+      "ht": "",
+      "at": "掃描器"
+    },
+    "Security Forces": {
+      "ht": "",
+      "at": "保安部隊"
+    },
+    "Seeker": {
+      "ht": "",
+      "at": "導引頭"
+    },
+    "Semi-Auto": {
+      "ht": "",
+      "at": "半自動"
+    },
+    "Sentries": {
+      "ht": "",
+      "at": "哨兵"
+    },
+    "Shields": {
+      "ht": "",
+      "at": "護盾"
+    },
+    "Ship": {
+      "ht": "",
+      "at": "艦船"
+    },
+    "Ships to Defend": {
+      "ht": "",
+      "at": "需保護的艦船"
+    },
+    "Shotgun": {
+      "ht": "",
+      "at": "霰彈"
+    },
+    "Size": {
+      "ht": "",
+      "at": "尺寸"
+    },
+    "Snipers": {
+      "ht": "",
+      "at": "狙擊手"
+    },
+    "Soldiers": {
+      "ht": "",
+      "at": "士兵"
+    },
+    "Spool": {
+      "ht": "",
+      "at": "啟動"
+    },
+    "Standard": {
+      "ht": "",
+      "at": "標準"
+    },
+    "Starter": {
+      "ht": "",
+      "at": "新手"
+    },
+    "Stun": {
+      "ht": "",
+      "at": "暈眩"
+    },
+    "Targets": {
+      "ht": "",
+      "at": "目標"
+    },
+    "Technicians": {
+      "ht": "",
+      "at": "技術員"
+    },
+    "Thermal": {
+      "ht": "",
+      "at": "熱能"
+    },
+    "Tier": {
+      "ht": "",
+      "at": "階段"
+    },
+    "Tracking": {
+      "ht": "",
+      "at": "追蹤"
+    },
+    "Tracking Range": {
+      "ht": "",
+      "at": "追蹤範圍"
+    },
+    "Turn Rate": {
+      "ht": "",
+      "at": "轉向速率"
+    },
+    "Turrets": {
+      "ht": "",
+      "at": "砲塔"
+    },
+    "Unique": {
+      "ht": "",
+      "at": "一次性"
+    },
+    "Used To Craft": {
+      "ht": "",
+      "at": "可製造"
+    },
+    "Velocity": {
+      "ht": "",
+      "at": "速度"
+    },
+    "Wear": {
+      "ht": "",
+      "at": "磨損"
+    },
+    "Weight": {
+      "ht": "",
+      "at": "重量"
+    },
+    "Xeno Threat": {
+      "ht": "",
+      "at": "Xeno Threat"
+    },
+    "Yaw": {
+      "ht": "",
+      "at": "偏航"
+    },
+    "Yes": {
+      "ht": "",
+      "at": "是"
+    },
+    "base": {
+      "ht": "",
+      "at": "基礎"
+    },
+    "down": {
+      "ht": "",
+      "at": "下降"
+    },
+    "empty": {
+      "ht": "",
+      "at": "空"
+    },
+    "express": {
+      "ht": "",
+      "at": "加急"
+    },
+    "friendly": {
+      "ht": "",
+      "at": "友方"
+    },
+    "hostile": {
+      "ht": "",
+      "at": "敵對"
+    },
+    "present": {
+      "ht": "",
+      "at": "存在"
+    },
+    "select variants": {
+      "ht": "",
+      "at": "部分變體"
+    },
+    "up": {
+      "ht": "",
+      "at": "上升"
+    },
+    "{count} items": {
+      "ht": "",
+      "at": "{count} 件物品"
+    },
+    "{count} sets": {
+      "ht": "",
+      "at": "{count} 套"
+    },
+    "{count} types": {
+      "ht": "",
+      "at": "{count} 種"
+    },
+    "{item} Set": {
+      "ht": "",
+      "at": "{item} 套裝"
+    },
+    "{pct}% chance": {
+      "ht": "",
+      "at": "{pct}% 機率"
+    },
+    "{pct}% chance ({variants} only)": {
+      "ht": "",
+      "at": "{pct}% 機率（僅 {variants}）"
+    },
+    "{type} Ammo": {
+      "ht": "",
+      "at": "{type} 彈藥"
+    }
+  }
+}

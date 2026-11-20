@@ -15,6 +15,24 @@
       "at": ""
     }
   },
+  "tray": {
+    "show": {
+      "ht": "Show Smart Citizen",
+      "at": ""
+    },
+    "quit": {
+      "ht": "Quit",
+      "at": ""
+    },
+    "notice_title": {
+      "ht": "Smart Citizen is still running",
+      "at": ""
+    },
+    "notice_body": {
+      "ht": "It is in the system tray. Click its icon to bring the window back, or right-click it to quit. If you can't see the icon, it may be behind the ^ arrow by the clock.",
+      "at": ""
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "Switch to Advanced",
@@ -820,6 +838,18 @@
     },
     "disable_tutorial_tooltip": {
       "ht": "When checked, the guided tour will not auto-launch on a new version. The Tutorial button in the toolbar still works.",
+      "at": ""
+    },
+    "minimize_to_tray_cb": {
+      "ht": "Minimize to Tray",
+      "at": ""
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "When checked, minimizing hides Smart Citizen in the system tray (the icons next to the clock) instead of on the taskbar. Click its tray icon to bring it back. While it is in the tray, starting Smart Citizen again brings that window back instead of opening a second copy.",
+      "at": ""
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "No system tray was found, so Smart Citizen minimizes to the taskbar.",
       "at": ""
     },
     "game_path_tooltip": {
@@ -2300,6 +2330,10 @@
       "ht": "Couldn't load the {language} localization from the configured source, and no cached copy was found. Showing the English base instead. Check the URL or file in Map Language File, then try again.",
       "at": ""
     },
+    "language_updated_status": {
+      "ht": "A newer {language} translation was downloaded. Reloading with it.",
+      "at": ""
+    },
     "language_generating_enhancements": {
       "ht": "Generating {language} enhancements from DataForge…",
       "at": ""
@@ -3044,6 +3078,14 @@
       "ht": "Smart Citizen could not use a working folder in:\n{folder}\n\n{reason}\n\nThe extraction did not start, so nothing was changed.",
       "at": ""
     },
+    "contract_scan_failed": {
+      "ht": "Enhancement generation stopped because {skipped} of {total} contracts could not be read. Your existing enhancements are unchanged. Please report this, as it is usually a fault in Smart Citizen.\n\nThe first contract:\n{first}",
+      "at": ""
+    },
+    "contract_scan_stopped": {
+      "ht": "Enhancement generation stopped because the contract scan ended with an error. Your existing enhancements are unchanged. Please report this, as it is usually a fault in Smart Citizen.\n\nThe error:\n{first}",
+      "at": ""
+    },
     "cache_folder_refused": {
       "ht": "Windows denied Smart Citizen permission to create the DataForge cache in:\n{folder}\n\nThe extraction did not start, so nothing was changed.",
       "at": ""
@@ -3439,7 +3481,7 @@
       "at": ""
     },
     "desc": {
-      "ht": "Windows drawn over Star Citizen: the mining scan decoder and the blueprint drawer. Run the game in borderless windowed mode. The overlay only reads your screen and Game.log and, if you set a drawer hotkey, watches key presses for that one combination; it never touches the game process.",
+      "ht": "Windows drawn over Star Citizen: the mining scan decoder and the blueprint drawer. Run the game in borderless windowed mode. The overlay only reads your screen and Game.log, asks Windows which window is in front and whether the pointer shows and, if you set a drawer hotkey, whether its key and the Ctrl, Alt, Shift and Win keys are down; it never touches the game process.",
       "at": ""
     },
     "start_btn": {

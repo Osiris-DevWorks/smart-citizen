@@ -1,0 +1,833 @@
+{
+  "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
+  "strings": {
+    "--- EFFECT ---": {
+      "ht": "",
+      "at": "--- 効果 ---"
+    },
+    "--- STATS ---": {
+      "ht": "",
+      "at": "--- ステータス ---"
+    },
+    "Absolute Range": {
+      "ht": "",
+      "at": "最大射程"
+    },
+    "Acceleration": {
+      "ht": "",
+      "at": "加速度"
+    },
+    "Ace Pilot": {
+      "ht": "",
+      "at": "エースパイロット"
+    },
+    "Ace Pilots": {
+      "ht": "",
+      "at": "エースパイロット"
+    },
+    "Aim Assist Range": {
+      "ht": "",
+      "at": "エイムアシスト範囲"
+    },
+    "Alpha Dmg": {
+      "ht": "",
+      "at": "単発ダメージ"
+    },
+    "Ammo": {
+      "ht": "",
+      "at": "弾薬"
+    },
+    "Arm Dist": {
+      "ht": "",
+      "at": "安全解除距離"
+    },
+    "Arm Time": {
+      "ht": "",
+      "at": "安全解除時間"
+    },
+    "Armor HP": {
+      "ht": "",
+      "at": "装甲HP"
+    },
+    "Armour": {
+      "ht": "",
+      "at": "アーマー"
+    },
+    "Attackers": {
+      "ht": "",
+      "at": "襲撃者"
+    },
+    "Auto": {
+      "ht": "",
+      "at": "フルオート"
+    },
+    "Backup": {
+      "ht": "",
+      "at": "増援"
+    },
+    "Bandits": {
+      "ht": "",
+      "at": "賊"
+    },
+    "Base Resource Signature": {
+      "ht": "",
+      "at": "基本リソースシグネチャ"
+    },
+    "Beam": {
+      "ht": "",
+      "at": "ビーム"
+    },
+    "Bio": {
+      "ht": "",
+      "at": "生物"
+    },
+    "Blast Radius": {
+      "ht": "",
+      "at": "爆発半径"
+    },
+    "Blueprint Reward": {
+      "ht": "",
+      "at": "設計図報酬"
+    },
+    "Bomb Slots": {
+      "ht": "",
+      "at": "爆弾スロット"
+    },
+    "Boost": {
+      "ht": "",
+      "at": "ブースト"
+    },
+    "Boss": {
+      "ht": "",
+      "at": "ボス"
+    },
+    "Burst": {
+      "ht": "",
+      "at": "バースト"
+    },
+    "CQC": {
+      "ht": "",
+      "at": "近接戦"
+    },
+    "Cal Rate": {
+      "ht": "",
+      "at": "較正速度"
+    },
+    "Captain": {
+      "ht": "",
+      "at": "艦長"
+    },
+    "Chain": {
+      "ht": "",
+      "at": "連続"
+    },
+    "Charge": {
+      "ht": "",
+      "at": "チャージ"
+    },
+    "Civilians": {
+      "ht": "",
+      "at": "民間人"
+    },
+    "Class": {
+      "ht": "",
+      "at": "クラス"
+    },
+    "Combat": {
+      "ht": "",
+      "at": "戦闘"
+    },
+    "Complexity": {
+      "ht": "",
+      "at": "複雑さ"
+    },
+    "Component HP": {
+      "ht": "",
+      "at": "コンポーネントHP"
+    },
+    "Cooldown": {
+      "ht": "",
+      "at": "クールダウン"
+    },
+    "Coolers": {
+      "ht": "",
+      "at": "クーラー"
+    },
+    "Cooling Rate": {
+      "ht": "",
+      "at": "冷却速度"
+    },
+    "Cost/Shot": {
+      "ht": "",
+      "at": "1発コスト"
+    },
+    "Crew": {
+      "ht": "",
+      "at": "乗員"
+    },
+    "DPS": {
+      "ht": "",
+      "at": "DPS"
+    },
+    "Damage": {
+      "ht": "",
+      "at": "ダメージ"
+    },
+    "Damage-Map Rate": {
+      "ht": "",
+      "at": "損傷マップ速度"
+    },
+    "Damaged Delay": {
+      "ht": "",
+      "at": "損傷時遅延"
+    },
+    "Defenders": {
+      "ht": "",
+      "at": "防衛者"
+    },
+    "Deflect": {
+      "ht": "",
+      "at": "偏向"
+    },
+    "Detection Mode": {
+      "ht": "",
+      "at": "探知モード"
+    },
+    "Detonation": {
+      "ht": "",
+      "at": "起爆"
+    },
+    "Difficulty (1-7)": {
+      "ht": "",
+      "at": "難易度 (1-7)"
+    },
+    "Distort": {
+      "ht": "",
+      "at": "ディストーション"
+    },
+    "Dmg Mult": {
+      "ht": "",
+      "at": "ダメージ倍率"
+    },
+    "Downed Delay": {
+      "ht": "",
+      "at": "停止時遅延"
+    },
+    "Drop": {
+      "ht": "",
+      "at": "減衰"
+    },
+    "EM": {
+      "ht": "",
+      "at": "EM"
+    },
+    "EM Signature": {
+      "ht": "",
+      "at": "EMシグネチャ"
+    },
+    "Effective Range": {
+      "ht": "",
+      "at": "有効射程"
+    },
+    "Energy": {
+      "ht": "",
+      "at": "エネルギー"
+    },
+    "Engagement Type": {
+      "ht": "",
+      "at": "交戦タイプ"
+    },
+    "Escort Wings": {
+      "ht": "",
+      "at": "護衛編隊"
+    },
+    "Escorts": {
+      "ht": "",
+      "at": "護衛"
+    },
+    "Extraction": {
+      "ht": "",
+      "at": "抽出"
+    },
+    "FPS": {
+      "ht": "",
+      "at": "FPS"
+    },
+    "FPS & Ship": {
+      "ht": "",
+      "at": "FPSと艦船"
+    },
+    "Failure": {
+      "ht": "",
+      "at": "失敗"
+    },
+    "Failure Penalty": {
+      "ht": "",
+      "at": "失敗ペナルティ"
+    },
+    "Fire Modes": {
+      "ht": "",
+      "at": "射撃モード"
+    },
+    "Fire Rate": {
+      "ht": "",
+      "at": "連射速度"
+    },
+    "Fracture": {
+      "ht": "",
+      "at": "破砕"
+    },
+    "Friendlies": {
+      "ht": "",
+      "at": "味方"
+    },
+    "Fuel": {
+      "ht": "",
+      "at": "燃料"
+    },
+    "Fuel/Gm": {
+      "ht": "",
+      "at": "燃料/Gm"
+    },
+    "Full Dmg to": {
+      "ht": "",
+      "at": "最大ダメージ距離"
+    },
+    "Grade": {
+      "ht": "",
+      "at": "グレード"
+    },
+    "Grunts": {
+      "ht": "",
+      "at": "雑兵"
+    },
+    "Guaranteed": {
+      "ht": "",
+      "at": "確定"
+    },
+    "Guards": {
+      "ht": "",
+      "at": "警備兵"
+    },
+    "Guidance": {
+      "ht": "",
+      "at": "誘導"
+    },
+    "Guns": {
+      "ht": "",
+      "at": "ガン"
+    },
+    "HP Rate": {
+      "ht": "",
+      "at": "HP速度"
+    },
+    "HP/Ammo": {
+      "ht": "",
+      "at": "HP/弾薬"
+    },
+    "Heat": {
+      "ht": "",
+      "at": "熱"
+    },
+    "Heist Target": {
+      "ht": "",
+      "at": "強奪対象"
+    },
+    "Hostages": {
+      "ht": "",
+      "at": "人質"
+    },
+    "Hostile Allies": {
+      "ht": "",
+      "at": "敵の援軍"
+    },
+    "Hostile Wave": {
+      "ht": "",
+      "at": "敵ウェーブ"
+    },
+    "Hostiles": {
+      "ht": "",
+      "at": "敵"
+    },
+    "IR": {
+      "ht": "",
+      "at": "IR"
+    },
+    "IR Signature": {
+      "ht": "",
+      "at": "IRシグネチャ"
+    },
+    "Inert Filter": {
+      "ht": "",
+      "at": "不活性フィルター"
+    },
+    "Insurance": {
+      "ht": "",
+      "at": "保険"
+    },
+    "Interdiction Ships": {
+      "ht": "",
+      "at": "妨害艦"
+    },
+    "Item Type": {
+      "ht": "",
+      "at": "アイテムタイプ"
+    },
+    "Juggernauts": {
+      "ht": "",
+      "at": "ジャガーノート"
+    },
+    "Jump Drives": {
+      "ht": "",
+      "at": "ジャンプドライブ"
+    },
+    "Knowledge": {
+      "ht": "",
+      "at": "知識"
+    },
+    "Kopions": {
+      "ht": "",
+      "at": "コピオン"
+    },
+    "Length": {
+      "ht": "",
+      "at": "全長"
+    },
+    "Lifetime": {
+      "ht": "",
+      "at": "存続時間"
+    },
+    "Locations": {
+      "ht": "",
+      "at": "場所"
+    },
+    "Lock Range": {
+      "ht": "",
+      "at": "ロック範囲"
+    },
+    "Lock Time": {
+      "ht": "",
+      "at": "ロック時間"
+    },
+    "MRacks": {
+      "ht": "",
+      "at": "ミサイルラック"
+    },
+    "Material Efficiency": {
+      "ht": "",
+      "at": "素材効率"
+    },
+    "Maulers": {
+      "ht": "",
+      "at": "Maulers"
+    },
+    "Max": {
+      "ht": "",
+      "at": "最大"
+    },
+    "Max Distortion": {
+      "ht": "",
+      "at": "最大ディストーション"
+    },
+    "Max G-Force": {
+      "ht": "",
+      "at": "最大G"
+    },
+    "Max HP": {
+      "ht": "",
+      "at": "最大HP"
+    },
+    "Max Lifetime": {
+      "ht": "",
+      "at": "最大寿命"
+    },
+    "Max Lock Range": {
+      "ht": "",
+      "at": "最大ロック距離"
+    },
+    "Min Detonate": {
+      "ht": "",
+      "at": "最小起爆距離"
+    },
+    "Min Dmg": {
+      "ht": "",
+      "at": "最小ダメージ"
+    },
+    "Min Lock Range": {
+      "ht": "",
+      "at": "最小ロック距離"
+    },
+    "Mission Type": {
+      "ht": "",
+      "at": "ミッションタイプ"
+    },
+    "Nine Tails": {
+      "ht": "",
+      "at": "Nine Tails"
+    },
+    "Objectives": {
+      "ht": "",
+      "at": "目標"
+    },
+    "Overheat Temp": {
+      "ht": "",
+      "at": "オーバーヒート温度"
+    },
+    "Phys": {
+      "ht": "",
+      "at": "物理"
+    },
+    "Ping Cooldown": {
+      "ht": "",
+      "at": "Pingクールダウン"
+    },
+    "Pirates": {
+      "ht": "",
+      "at": "海賊"
+    },
+    "Pitch": {
+      "ht": "",
+      "at": "ピッチ"
+    },
+    "Polaris": {
+      "ht": "",
+      "at": "Polaris"
+    },
+    "Power": {
+      "ht": "",
+      "at": "電源"
+    },
+    "Power Draw": {
+      "ht": "",
+      "at": "消費電力"
+    },
+    "Power Output": {
+      "ht": "",
+      "at": "発電量"
+    },
+    "Power Plants": {
+      "ht": "",
+      "at": "パワープラント"
+    },
+    "Private Security": {
+      "ht": "",
+      "at": "民間警備"
+    },
+    "Probe": {
+      "ht": "",
+      "at": "プローブ"
+    },
+    "Prospectors": {
+      "ht": "",
+      "at": "Prospector"
+    },
+    "Protected": {
+      "ht": "",
+      "at": "護衛対象"
+    },
+    "Proximity Range": {
+      "ht": "",
+      "at": "近接信管範囲"
+    },
+    "QD": {
+      "ht": "",
+      "at": "QD"
+    },
+    "QT Fuel Use": {
+      "ht": "",
+      "at": "QT燃料消費"
+    },
+    "QT Speed": {
+      "ht": "",
+      "at": "QT速度"
+    },
+    "Quantum Drives": {
+      "ht": "",
+      "at": "量子ドライブ"
+    },
+    "Quantum Enforcement Devices": {
+      "ht": "",
+      "at": "量子妨害装置"
+    },
+    "Radars": {
+      "ht": "",
+      "at": "レーダー"
+    },
+    "Ramp": {
+      "ht": "",
+      "at": "立ち上がり"
+    },
+    "Range": {
+      "ht": "",
+      "at": "射程"
+    },
+    "Rank": {
+      "ht": "",
+      "at": "ランク"
+    },
+    "Recharges Oxygen reserves of a suit.": {
+      "ht": "",
+      "at": "スーツの酸素残量を補充する。"
+    },
+    "Recipient": {
+      "ht": "",
+      "at": "受取人"
+    },
+    "Reduces concussion symptoms, normalizes weapon handling and movement speed.": {
+      "ht": "",
+      "at": "脳震盪の症状を和らげ、武器の扱いと移動速度を正常に戻す。"
+    },
+    "Reduces injuries from radiation.": {
+      "ht": "",
+      "at": "放射線による負傷を軽減する。"
+    },
+    "Reduces pain symptoms, normalizes movement ability.": {
+      "ht": "",
+      "at": "痛みの症状を和らげ、移動能力を正常に戻す。"
+    },
+    "Reduces vision and hearing symptoms, normalizes stamina.": {
+      "ht": "",
+      "at": "視覚と聴覚の症状を和らげ、スタミナを正常に戻す。"
+    },
+    "Refuel Nozzles": {
+      "ht": "",
+      "at": "給油ノズル"
+    },
+    "Regen": {
+      "ht": "",
+      "at": "回復"
+    },
+    "Reinforcements": {
+      "ht": "",
+      "at": "増援"
+    },
+    "Required": {
+      "ht": "",
+      "at": "必要値"
+    },
+    "Resource Signatures": {
+      "ht": "",
+      "at": "リソースシグネチャ"
+    },
+    "Restores health and stops bleeding. When used on another person recovers from incapacitated state.": {
+      "ht": "",
+      "at": "体力を回復し出血を止める。他人に使うと行動不能状態から回復させる。"
+    },
+    "Revives an overdosed person (if not incapacitated), doubles decay rate of Blood Drug Level.": {
+      "ht": "",
+      "at": "過剰摂取した人を蘇生する（行動不能でない場合）。血中薬物濃度の低下速度を2倍にする。"
+    },
+    "Risk": {
+      "ht": "",
+      "at": "リスク"
+    },
+    "Role": {
+      "ht": "",
+      "at": "役割"
+    },
+    "Roll": {
+      "ht": "",
+      "at": "ロール"
+    },
+    "SCM": {
+      "ht": "",
+      "at": "SCM"
+    },
+    "Salvageable Ships": {
+      "ht": "",
+      "at": "サルベージ可能な艦船"
+    },
+    "Scanners": {
+      "ht": "",
+      "at": "スキャナー"
+    },
+    "Security Forces": {
+      "ht": "",
+      "at": "警備部隊"
+    },
+    "Seeker": {
+      "ht": "",
+      "at": "シーカー"
+    },
+    "Semi-Auto": {
+      "ht": "",
+      "at": "セミオート"
+    },
+    "Sentries": {
+      "ht": "",
+      "at": "歩哨"
+    },
+    "Shields": {
+      "ht": "",
+      "at": "シールド"
+    },
+    "Ship": {
+      "ht": "",
+      "at": "艦船"
+    },
+    "Ships to Defend": {
+      "ht": "",
+      "at": "防衛対象の艦船"
+    },
+    "Shotgun": {
+      "ht": "",
+      "at": "ショットガン"
+    },
+    "Size": {
+      "ht": "",
+      "at": "サイズ"
+    },
+    "Snipers": {
+      "ht": "",
+      "at": "狙撃手"
+    },
+    "Soldiers": {
+      "ht": "",
+      "at": "兵士"
+    },
+    "Spool": {
+      "ht": "",
+      "at": "スプール"
+    },
+    "Standard": {
+      "ht": "",
+      "at": "通常"
+    },
+    "Starter": {
+      "ht": "",
+      "at": "初心者向け"
+    },
+    "Stun": {
+      "ht": "",
+      "at": "スタン"
+    },
+    "Targets": {
+      "ht": "",
+      "at": "標的"
+    },
+    "Technicians": {
+      "ht": "",
+      "at": "技術者"
+    },
+    "Thermal": {
+      "ht": "",
+      "at": "熱"
+    },
+    "Tier": {
+      "ht": "",
+      "at": "段階"
+    },
+    "Tracking": {
+      "ht": "",
+      "at": "追尾"
+    },
+    "Tracking Range": {
+      "ht": "",
+      "at": "追尾範囲"
+    },
+    "Turn Rate": {
+      "ht": "",
+      "at": "旋回速度"
+    },
+    "Turrets": {
+      "ht": "",
+      "at": "タレット"
+    },
+    "Unique": {
+      "ht": "",
+      "at": "一度限り"
+    },
+    "Used To Craft": {
+      "ht": "",
+      "at": "クラフト用途"
+    },
+    "Velocity": {
+      "ht": "",
+      "at": "弾速"
+    },
+    "Wear": {
+      "ht": "",
+      "at": "摩耗"
+    },
+    "Weight": {
+      "ht": "",
+      "at": "重量"
+    },
+    "Xeno Threat": {
+      "ht": "",
+      "at": "Xeno Threat"
+    },
+    "Yaw": {
+      "ht": "",
+      "at": "ヨー"
+    },
+    "Yes": {
+      "ht": "",
+      "at": "あり"
+    },
+    "base": {
+      "ht": "",
+      "at": "通常"
+    },
+    "down": {
+      "ht": "",
+      "at": "下降"
+    },
+    "empty": {
+      "ht": "",
+      "at": "空"
+    },
+    "express": {
+      "ht": "",
+      "at": "特急"
+    },
+    "friendly": {
+      "ht": "",
+      "at": "味方"
+    },
+    "hostile": {
+      "ht": "",
+      "at": "敵対"
+    },
+    "present": {
+      "ht": "",
+      "at": "あり"
+    },
+    "select variants": {
+      "ht": "",
+      "at": "一部のバリエーション"
+    },
+    "up": {
+      "ht": "",
+      "at": "上昇"
+    },
+    "{count} items": {
+      "ht": "",
+      "at": "{count} アイテム"
+    },
+    "{count} sets": {
+      "ht": "",
+      "at": "{count} セット"
+    },
+    "{count} types": {
+      "ht": "",
+      "at": "{count} 種類"
+    },
+    "{item} Set": {
+      "ht": "",
+      "at": "{item} セット"
+    },
+    "{pct}% chance": {
+      "ht": "",
+      "at": "{pct}% の確率"
+    },
+    "{pct}% chance ({variants} only)": {
+      "ht": "",
+      "at": "{pct}% の確率（{variants} のみ）"
+    },
+    "{type} Ammo": {
+      "ht": "",
+      "at": "{type} 弾薬"
+    }
+  }
+}
