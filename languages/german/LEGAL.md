@@ -41,11 +41,23 @@ Alles. Deine Lokalisierungsbearbeitungen, Sicherungen, Anwendungseinstellungen u
 
 ### Was über das Netzwerk läuft
 
-Smart Citizen stellt ausgehende Netzwerkanfragen nur in drei Fällen:
+Smart Citizen stellt ausgehende Netzwerkanfragen nur in vier Fällen:
 
 - **Update-Prüfung** — Eine kleine, nicht authentifizierte Anfrage an `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest` etwa alle 6 Stunden, um die installierte Version mit dem neuesten GitHub-Release zu vergleichen. Liefert nur Release-Metadaten (Tag-Name, Release-URL); es wird kein Smart-Citizen-Zustand gesendet.
 - **Sprach-Downloads** — Wenn du zu einer nicht-englischen Sprache wechselst, lädt Smart Citizen die von der Community übersetzte `global.ini` dieser Sprache von der konfigurierten URL herunter (standardmäßig das GitHub-Repository [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) für einige Sprachen, andere Sprachen verwenden ihre eigene konfigurierte Quelle — siehe `languages/sources.json`). Der Download wird lokal zwischengespeichert; nichts von deinem Rechner wird gesendet.
 - **Benutzerdefinierte Remote-Quellen** — Wenn du im Konfiguration-Tab eine Datenquelle konfiguriert hast, die auf eine `http(s)://`-URL verweist, ruft Smart Citizen diese URL beim Aktualisieren von Quelldateien ab. Standardmäßig gilt dies nur für die GitHub-Raw-URL-Form der `global`-Quelle; die Standardkonfiguration liest seit v1.0 stattdessen `base.ini` aus deiner lokalen Data.p4k-Extraktion.
+- **Shopliste der SCO-Gegenstandssuche** — Solange das Overlay mit eingeschalteter Gegenstandssuche läuft, lädt Smart Citizen die Liste der Shops und Gegenstandspreise von der [UEX](https://uexcorp.space)-API (`api.uexcorp.uk`), höchstens alle 12 Stunden. Es sind zwei einfache Anfragen, die nur den Namen und die Version der App mitsenden; nichts von deinem Rechner wird gesendet. Die Liste wird lokal zwischengespeichert. Schalte die Gegenstandssuche im Overlay-Tab aus, um das zu beenden.
+
+### Das Smart-Citizen-Overlay
+
+Das Overlay ist aus, bis du es startest. Während es läuft, bleibt alles, was es liest, auf deinem Computer:
+
+- **Bildschirm** — es nimmt einen kleinen Bereich um die Anzeige des Bergbau-Scanners auf, um die Signalzahl zu lesen. Die Aufnahmen werden im Speicher gelesen und nicht gespeichert.
+- **Game.log** — es liest das Log von Star Citizen, um Baupläne zu finden, die du erhältst.
+- **Windows** — es fragt Windows, welches Fenster im Vordergrund ist und ob der Mauszeiger sichtbar ist, damit die Schublade deine Klicks beim Zielen zum Spiel durchlässt.
+- **Tastenkürzel der Schublade** — nur wenn du eins festlegst. Während Star Citizen im Vordergrund ist, fragt es Windows, ob die Taste des Kürzels gedrückt ist, und die Tasten Strg, Alt, Umschalt und Win nur dann, wenn sie es ist. Es fragt nach keiner anderen Taste und empfängt nie, was du tippst.
+
+Es liest nie den Speicher des Spiels, hängt sich nie ins Spiel ein und schleust nichts ein, und es sendet nie Eingaben an das Spiel.
 
 ### Was Smart Citizen **nicht** tut
 

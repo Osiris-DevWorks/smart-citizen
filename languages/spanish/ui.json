@@ -2992,6 +2992,14 @@
       "ht": "",
       "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "La generación de mejoras se detuvo porque no se pudieron leer {skipped} de {total} contratos. Tus mejoras actuales no han cambiado. Infórmalo, ya que suele ser un error de Smart Citizen.\n\nPrimer contrato:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "La generación de mejoras se detuvo porque la lectura de contratos falló. Tus mejoras actuales no han cambiado. Infórmalo, ya que suele ser un error de Smart Citizen.\n\nEl error:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows le denegó a Smart Citizen el permiso para crear la caché de DataForge en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
@@ -3123,7 +3131,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige qué categorías de mejoras se ejecutan al Generar. Naves, componentes, armas de nave, armas FPS, misiones, recompensas de misión, fabricación de mercancías y consumibles médicos pueden activarse de forma independiente."
+        "at": "Elige qué categorías de mejoras se ejecutan al Generar: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items incluye componentes, armas de nave y misiles; Gear incluye armas FPS y etiquetas de armadura. Cada categoría se activa o desactiva por separado."
       }
     },
     "enh_favorites": {
@@ -3156,16 +3164,6 @@
         "at": "Construye las etiquetas entre corchetes añadidas a componentes, misiles, armas de nave, mercancías y armaduras. Reordena elementos con ▲/▼, desmarca para excluir, cambia la longitud de abreviatura, elige separador y corchetes, o coloca la etiqueta después del nombre en lugar de antes."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Superposición de Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3172,16 @@
       "description": {
         "ht": "",
         "at": "Marca los blueprints que posees. Busca en la lista izquierda por nombre o misión, o acótala por Tipo, Clase, Tamaño y Grado de componente, y usa las flechas para mover objetos a tu lista de adquiridos. Los blueprints adquiridos reciben una etiqueta [Owned] allí donde aparezcan entre las recompensas potenciales de una misión, para ver de un vistazo qué merece la pena perseguir."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Superposición de Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
       }
     },
     "edit": {
@@ -3233,7 +3241,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y desactiva, si quieres, el recorrido automático en versiones nuevas."
+        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas."
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3281,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Importa un INI externo a tus modificaciones mediante el diálogo de resolución de conflictos, o restablece tu user.ini del canal activo (con copia de seguridad automática antes de borrarlo)."
+        "at": "Importa un INI externo a tus modificaciones mediante el diálogo de resolución de conflictos. Restablece tu user.ini del canal activo (con copia de seguridad previa) o recupera una copia anterior con Restaurar user.ini. Vista previa muestra lo que escribiría Aplicar, y Buscar actualizaciones comprueba si hay una versión nueva."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Config: Copia de seguridad de ajustes"
+      },
+      "description": {
+        "ht": "",
+        "at": "Exportar ajustes guarda tus preferencias, configuraciones de etiquetas, carpeta de Star Citizen y textos personalizados de todos los canales en un solo archivo. Importar ajustes los recupera, en un PC nuevo o tras una instalación limpia."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Config: Herramientas de Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Borrar caché de shaders muestra las carpetas de caché de shaders del juego, una por versión. Limpiar borra los shaders y conserva tus ajustes gráficos; Eliminar borra la carpeta entera. Cierra Star Citizen antes."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Ayuda y comentarios"
+        "at": "21. Ayuda y comentarios"
       },
       "description": {
         "ht": "",
@@ -3537,6 +3565,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Minerales aquí: {minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Escribe un objeto para ver dónde comprarlo..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Cargando datos de tiendas desde UEX..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "No se pudo conectar con UEX para los datos de tiendas. Revisa tu conexión a Internet. El overlay lo intentará de nuevo en unos minutos."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Datos de tiendas de {site}, informados por jugadores. Actualizado {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "No se pudo conectar con UEX, así que esta es la última copia guardada."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "No se conoce ninguna tienda que venda un objeto con ese nombre."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place} ({system}): {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "de {low} a {high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "Mostrando {shown} de {total} objetos. Escribe más para acotar."
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "Precio informado el {date}"
     }
   },
   "overlay": {
@@ -3546,7 +3618,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log y, si defines un atajo para el cajón, observa las teclas pulsadas solo para esa combinación; nunca toca el proceso del juego."
+      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log, pregunta a Windows qué ventana está en primer plano y si el puntero está visible y, si defines un atajo para el cajón, si su tecla y las teclas Ctrl, Alt, Mayús y Win están pulsadas; nunca toca el proceso del juego."
     },
     "start_btn": {
       "ht": "",
@@ -3755,6 +3827,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Escribe un mineral para ver qué objetos lo usan, o un objeto para ver los minerales que necesita. Requiere una extracción de DataForge."
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Buscador de objetos"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Escribe un objeto para ver qué tiendas lo venden, dónde están y su precio. Los datos de tiendas vienen de UEX por Internet y los informan los jugadores."
     },
     "drawer_position": {
       "ht": "",

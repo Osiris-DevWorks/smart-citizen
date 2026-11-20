@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -47,6 +48,7 @@ from src.gui.workers import (
     EnhancementsGeneratorWorker,
     FileLoaderWorker,
     LanguageBaseDownloadWorker,
+    LanguageNameTablesRead,
     LiveBlueprintLogWorker,
     OrderSpinBoxDelegate,
     P4kExtractWorker,
@@ -87,6 +89,10 @@ from src.utils.win_paths import win_plain_path
 
 logger = logging.getLogger(__name__)
 
+# The loc-string line break: a backslash and an n, two characters that
+# global.ini holds as they are and the game draws as a new line.
+_LOC_LINE_BREAK = "\\n"
+
 
 # Preview-pane token translation — turns the raw loc-string format the game
 # reads into styled HTML that mirrors the in-game feel. Patterns:
@@ -107,8 +113,11 @@ _MISSION_TOKEN_RE = _re_mod.compile(r"~mission\(([^|)]+)(?:\|[^)]*)?\)")
 # leading separators the loc-string format uses for line breaks). Stripped
 # from prior values before re-stamping so successive applies don't
 # accumulate tags and a version bump rolls the stamp forward cleanly.
+# _LOC_LINE_BREAK_PATTERN is the line break as a regex, for this pattern and
+# the two below that strip a line along with the line breaks before it.
+_LOC_LINE_BREAK_PATTERN = _re_mod.escape(_LOC_LINE_BREAK)
 _JOURNAL_STAMP_RE = _re_mod.compile(
-    r"(?:\\n)*\[Edited with Smart Citizen v[^\]]+\]\s*$"
+    "(?:" + _LOC_LINE_BREAK_PATTERN + r")*\[Edited with Smart Citizen v[^\]]+\]\s*$"
 )
 
 # Title-like journal keys we should NOT stamp — the stamp belongs at the
@@ -138,9 +147,90 @@ _JOURNAL_TITLE_KEY_RE = _re_mod.compile(
 # on-disk watermark generation rolls forward cleanly on the next apply.
 _FRONTEND_VERSION_KEY = "Frontend_PU_Version"
 _FRONTEND_VERSION_STAMP_RE = _re_mod.compile(
-    r"\s*(?:\|\s*|(?:\\n)+\s*)"
+    r"\s*(?:\|\s*|(?:" + _LOC_LINE_BREAK_PATTERN + r")+\s*)"
     r"(?:Localizations Enhanced (?:with|by)|Enhanced with <3 by)\s+Smart Citizen\s+v?[^\s|]+\s*$"
 )
+
+# Main-menu Play button reminder. A game patch leaves the applied global.ini
+# in place, but that file has none of the keys the patch added, and the game
+# shows those as raw @key names until Smart Citizen is run again. The Play
+# button takes its label from the same file, so a second line on it is still
+# there the first time the game starts after a patch. It uses the watermark's
+# literal-\n line break and its idempotency: _PLAY_BUTTON_REMINDER_RE strips
+# an earlier reminder, on a line of its own, before the current one is added,
+# so applies don't stack it. If the wording changes, make the regex strip the
+# old wording too, as _FRONTEND_VERSION_STAMP_RE does for the watermark's old
+# phrasings.
+_PLAY_BUTTON_KEY = "Frontend_play_star_citizen"
+_PLAY_BUTTON_REMINDER = "Run Smart Citizen after every patch"
+_PLAY_BUTTON_REMINDER_RE = _re_mod.compile(
+    r"(?:^|\s*(?:" + _LOC_LINE_BREAK_PATTERN + r")+)\s*"
+    + _re_mod.escape(_PLAY_BUTTON_REMINDER) + r"\s*$"
+)
+
+
+# The game draws the Play button's lines left-aligned and in capitals, so
+# _centre_menu_lines pushes each shorter line right with no-break spaces (as
+# wide as a space, and never trimmed or collapsed as a plain space can be)
+# until it sits centred under the widest. The widths are the advances, in
+# 1/20480 em, of the font the button is drawn in, read from Data.p4k. Most
+# language slots draw it in Blender Pro Medium (Data/UI/fonts/Shared/
+# fonts_en.swf) with no letter spacing. The four slots whose own
+# Data/Localization/<slot>/UI/fonts/Shared/FontConfig.xml maps that font to
+# Noto Sans SC, TC, JP or KR draw it in Noto Sans, and all four have the same
+# space, no-break space, Latin and Cyrillic advances, so Russian, which
+# borrows the Korean slot, is measured in it too. A character with no advance
+# here counts as an average capital and an accented capital as its letter,
+# while in Noto Sans a wide East Asian character is a full em and a Hangul
+# syllable 0.92 em, as their glyphs are. The English label needs 19 spaces
+# (19.3). A screenshot of the 4.10 menu agreed with Blender Pro's widths:
+# under an earlier, longer wording it measured 25.9 spaces, where they give 26.0.
+@dataclass(frozen=True)
+class _MenuFont:
+    """A font the Play button is drawn in, by its advances in 1/20480 em."""
+
+    advances: dict  # the space and the capitals
+    other: int  # any other character: the average capital
+    wide: int = 0  # a wide East Asian character, in a font that draws them
+    hangul: int = 0  # a Hangul syllable
+
+
+_BLENDER_PRO_MEDIUM = _MenuFont(
+    advances={
+        " ": 4760,
+        "A": 11600, "B": 11360, "C": 11080, "D": 11540, "E": 10460, "F": 10020,
+        "G": 12120, "H": 11580, "I": 4560, "J": 9560, "K": 10700, "L": 9720,
+        "M": 13720, "N": 11700, "O": 11860, "P": 11020, "Q": 11880, "R": 11780,
+        "S": 11680, "T": 10320, "U": 11340, "V": 11080, "W": 15040, "X": 10520,
+        "Y": 10240, "Z": 10260,
+    },
+    other=11030,
+)
+_NOTO_SANS = _MenuFont(
+    advances={
+        " ": 4580,
+        "A": 12440, "B": 13460, "C": 13060, "D": 14060, "E": 12040, "F": 11300,
+        "G": 14120, "H": 14900, "I": 6000, "J": 10980, "K": 13240, "L": 11120,
+        "M": 16620, "N": 14780, "O": 15200, "P": 12940, "Q": 15200, "R": 13020,
+        "S": 12220, "T": 12260, "U": 14760, "V": 11780, "W": 17980, "X": 11740,
+        "Y": 10880, "Z": 12340,
+        # The Cyrillic capitals U+0410 to U+042F, by code point, since they
+        # look the same as Latin ones as text.
+        **dict(zip((chr(code) for code in range(0x410, 0x430)), (
+            12440, 13280, 13460, 11400, 14580, 12040, 18400, 12680, 15020, 15020, 13280,
+            14420, 16620, 14900, 15200, 14740, 12940, 13060, 12260, 11760, 16740, 11740,
+            14680, 13660, 19780, 19980, 16460, 18240, 13280, 13060, 20760, 13320,
+        ))),
+    },
+    other=13020,
+    wide=20480,
+    hangul=18840,
+)
+_NOTO_SANS_SLOTS = frozenset(
+    SC_LANGUAGE_IDS[language]
+    for language in ("chinese", "chinese_traditional", "japanese", "korean")
+)
+_MENU_PAD = "\u00a0"
 
 # #268, #446: "Scan Logs for Owned Blueprints" reads LIVE, and HOTFIX when it is
 # present. HOTFIX is a same-account emergency-patch channel on the same server
@@ -267,6 +357,51 @@ def _scan_queue_for_root(root) -> list:
     return _channels_to_scan(present)
 
 
+# The last "data folder could not be reached" line _blueprint_notification_files
+# logged at WARNING. The same line again (the run's next channel, the next
+# scan, the overlay's start) goes to DEBUG, so one failure is one WARNING, and
+# a data folder that answers again clears it, so a later failure warns again.
+_data_folder_warning = ""
+
+
+def _blueprint_notification_files(channel: str, channel_dir) -> tuple:
+    """The loc files a read of *channel*'s logs takes the "Received
+    Blueprint" notification's text from, besides the English text it always
+    looks for (#564). The game logs the notification in the language it
+    shows, so these are that channel's own files, whichever channel is
+    active: its base.ini for the selected language as the table reads it
+    (the English one until the language's own is fetched), and the
+    global.ini applied to the game in its install folder *channel_dir*, which
+    holds what the game shows (an override once applied, or another tool's
+    file).
+
+    Named on the main thread without making any folder (one check sees
+    whether the language's own file is there), and read on the worker's,
+    since each can be about 11 MB. When the data folder cannot be reached
+    only the applied file is named: the read is of the install's logs and
+    must not fail on the data folder. That is one WARNING for as long as the
+    same failure lasts (``_data_folder_warning``)."""
+    global _data_folder_warning
+    language = AppSettings.get_selected_language()
+    files = []
+    try:
+        base_ini = AppSettings.get_base_ini_leaf(language, channel)
+        if language != AppSettings.DEFAULT_LANGUAGE and not base_ini.exists():
+            # What the table reads until the language's own file is fetched
+            # (AppSettings.get_global_source_base_ini, #502).
+            base_ini = AppSettings.get_base_ini_leaf(AppSettings.DEFAULT_LANGUAGE, channel)
+        files.append(base_ini)
+        _data_folder_warning = ""
+    except OSError as exc:
+        message = (f"Blueprint log read: the data folder could not be reached ({exc}), so "
+                   f"the notification's text comes from the game's applied global.ini alone")
+        logger.log(logging.DEBUG if message == _data_folder_warning else logging.WARNING,
+                   message)
+        _data_folder_warning = message
+    files.append(AppSettings.get_applied_global_ini(channel_dir, language))
+    return tuple(files)
+
+
 def _normalized_folder(path) -> str:
     """*path* as text two folders can be compared by (#486): absolute, without
     the ``\\\\?\\`` long-path prefix, one kind of separator, no trailing
@@ -327,7 +462,62 @@ def _stamp_frontend_version(merged: dict) -> dict:
         return merged
     from src.utils.version import get_version
     base = _FRONTEND_VERSION_STAMP_RE.sub("", merged[_FRONTEND_VERSION_KEY]).rstrip()
-    merged[_FRONTEND_VERSION_KEY] = f"{base}\\nLocalizations Enhanced with Smart Citizen v{get_version()}"
+    merged[_FRONTEND_VERSION_KEY] = (
+        f"{base}{_LOC_LINE_BREAK}Localizations Enhanced with Smart Citizen v{get_version()}"
+    )
+    return merged
+
+
+def _menu_text_width(text: str, font: _MenuFont = _BLENDER_PRO_MEDIUM) -> int:
+    """Estimated width of *text* on the main menu, in 1/20480 em of *font*."""
+    width = 0
+    for ch in text.upper():
+        if ch.isspace():
+            width += font.advances[" "]
+            continue
+        letter = unicodedata.normalize("NFD", ch)[0]  # an accented capital as its letter
+        if letter in font.advances:
+            width += font.advances[letter]
+        elif font.wide and unicodedata.east_asian_width(ch) in ("W", "F"):
+            hangul = unicodedata.name(ch, "").startswith("HANGUL SYLLABLE")
+            width += font.hangul if hangul else font.wide
+        else:
+            width += font.other
+    return width
+
+
+def _centre_menu_lines(lines: list[str], font: _MenuFont = _BLENDER_PRO_MEDIUM) -> list[str]:
+    """Pad the start of each line with no-break spaces so it sits centred
+    under the widest in *font*, since the game left-aligns the Play button's
+    lines."""
+    widths = [_menu_text_width(line, font) for line in lines]
+    widest = max(widths)
+    space = font.advances[" "]
+    return [_MENU_PAD * round((widest - width) / (2 * space)) + line
+            for line, width in zip(lines, widths)]
+
+
+def _add_play_button_reminder(merged: dict, sc_language_id: str = "") -> dict:
+    """Add the Play button reminder to Frontend_play_star_citizen in place, on
+    its own line (_LOC_LINE_BREAK, as the watermark uses), with every line
+    centred by _centre_menu_lines in the font the game draws the button in
+    for *sc_language_id* (the language slot the file is written to, as
+    SC_LANGUAGE_IDS names it). A blank label leaves the reminder as the
+    button's only line, with no empty line above it.
+
+    Skips if the key is not in *merged*, as _stamp_frontend_version does, so
+    the key is never added. Mutates and returns *merged*.
+    """
+    if _PLAY_BUTTON_KEY not in merged:
+        return merged
+    label = _PLAY_BUTTON_REMINDER_RE.sub("", merged[_PLAY_BUTTON_KEY])
+    lines = [line.strip() for line in label.split(_LOC_LINE_BREAK)]
+    if not any(lines):
+        lines = []
+    font = _NOTO_SANS if sc_language_id in _NOTO_SANS_SLOTS else _BLENDER_PRO_MEDIUM
+    merged[_PLAY_BUTTON_KEY] = _LOC_LINE_BREAK.join(
+        _centre_menu_lines(lines + [_PLAY_BUTTON_REMINDER], font)
+    )
     return merged
 
 
@@ -350,7 +540,7 @@ def _stamp_journal_entries(merged: dict, stock: dict | None = None) -> dict:
     """
     from src.utils.version import get_version
     version = get_version()
-    new_stamp = f"\\n\\n[Edited with Smart Citizen v{version}]"
+    new_stamp = f"{_LOC_LINE_BREAK * 2}[Edited with Smart Citizen v{version}]"
     stock = stock or {}
     out: dict = {}
     for key, value in merged.items():
@@ -394,6 +584,11 @@ class _ApplyMergeInputs:
     owned: set
     enclosings: tuple
     bp_header: "str | None"
+    # The game's language slot the file is written to (SC_LANGUAGE_IDS), which
+    # picks the font the Play button reminder is centred in. No default, so a
+    # place that builds these inputs without it fails instead of centring
+    # every language in Blender Pro.
+    sc_language_id: str
 
 
 def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
@@ -439,6 +634,11 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     # write-time and idempotent across re-applies.
     stock_dict = sources_dict.get(AppSettings.SOURCE_GLOBAL, {})
     merged_dict = _stamp_journal_entries(merged_dict, stock_dict)
+
+    # Add the Play button reminder to run Smart Citizen after every patch,
+    # centred in the font of the language slot the file is written to.
+    # Idempotent across re-applies, and skipped if stock doesn't ship the key.
+    _add_play_button_reminder(merged_dict, inputs.sc_language_id)
 
     # Stamp the main-menu version chip so the game shows that
     # Smart Citizen is active. Idempotent across re-applies and
@@ -554,7 +754,7 @@ def _render_preview_html(key: str, raw: str, stamp: str | None = None) -> str:
     # Append the stamp on the raw side, before HTML rendering, so the
     # standard `\n` → `<br>` transform handles the spacing in lockstep.
     if stamp:
-        raw = (raw or "") + "\\n\\n" + stamp
+        raw = (raw or "") + _LOC_LINE_BREAK * 2 + stamp
     if not raw:
         body = "<em style='color:#888;'>(empty)</em>"
     else:
@@ -562,7 +762,7 @@ def _render_preview_html(key: str, raw: str, stamp: str | None = None) -> str:
         # Literal backslash-n in the INI → actual line break. Handle the
         # escape sequence as two characters, not a Python newline — the
         # parser reads lines verbatim.
-        escaped = escaped.replace("\\n", "<br>")
+        escaped = escaped.replace(_LOC_LINE_BREAK, "<br>")
         escaped = _EM3_RE.sub(
             r'<span style="text-decoration:underline;">\1</span>',
             escaped,
@@ -802,7 +1002,7 @@ class MainWindow(QMainWindow):
         self._forge_worker: Optional[DataForgeExtractWorker] = None
         self._forge_progress_dialog: Optional[AnimatedProgressDialog] = None
         # Threads deleting a finished extraction's working folder, or
-        # sweeping the ones a crash left, in the background (perf proposal).
+        # sweeping the ones a crash left, in the background (#522).
         # Closing waits for them, and so does a new DataForge extraction.
         self._working_folder_deleters: list[WorkingFolderDeleteWorker] = []
         # The startup sweep of leftover working folders runs once a session.
@@ -837,6 +1037,20 @@ class MainWindow(QMainWindow):
         # pool would misread as unmatched and could be resolved into an
         # unrelated shorter owned item).
         self._known_item_names: set[str] = set()
+        # #570: items' short labels that are no item's own name and no
+        # blueprint the tracker offers, which an older #372 repair could save
+        # in the owned set. _repair_foreign_owned_names drops them on load.
+        self._short_label_names: set[str] = set()
+        # #569: each item's loc key (lower-cased) to its name in the loaded
+        # strings, built with _known_item_names. An owned name saved in
+        # another language is renamed through it.
+        self._item_names_by_key: dict[str, str] = {}
+        # #569: the other languages' item names, read from one cached
+        # base.ini per language by each load (never on the GUI thread, see
+        # workers.read_language_name_tables) and kept for the session, each
+        # file read again only once it changes:
+        # {path: ((size, mtime_ns), {name: loc keys})}.
+        self._language_name_tables: dict = {}
         # #157 follow-up: per-blueprint-item metadata (mission names + ship
         # component type/class/size/grade) for the Blueprints shuttle filters.
         # Built once per load (pure function of the loaded strings), so
@@ -1002,6 +1216,9 @@ class MainWindow(QMainWindow):
 
         # Blueprint Tracker tab (#222: split out of the Enhancements tab)
         self.blueprint_tracker_tab = BlueprintTrackerTab()
+        # #569: Import Owned Blueprints renames names saved in another
+        # language, as the load does with the Owned set.
+        self.blueprint_tracker_tab.set_name_renamer(self._rename_imported_names)
         self.blueprint_tracker_tab.owned_items_changed.connect(self._recompute_owned)
         self.blueprint_tracker_tab.scan_logs_requested.connect(self._run_blueprint_log_scan)
         self.blueprint_tracker_tab.apply_owned_requested.connect(self._on_apply_owned_tags_clicked)
@@ -1021,6 +1238,12 @@ class MainWindow(QMainWindow):
         # Game.log watcher runs only while the overlay is on.
         self._sco_overlay = None
         self._sco_log_worker = None
+        # The Item Finder's shop data load (UEX, 3.1.0), and the data and
+        # error it last gave, kept for a drawer built after it finished.
+        self._uex_shop_worker = None
+        self._uex_shops = None
+        self._uex_shops_error = ""
+        self._uex_shops_tried_at = None   # time.monotonic() of the last load
         # (base.ini, crafting index) paths and mtimes last fed to the drawer.
         self._sco_catalog_key = None
         # #268/#308: multi-channel scan state. _bp_scan_queue holds channels
@@ -2630,6 +2853,7 @@ class MainWindow(QMainWindow):
             owned=owned,
             enclosings=enclosings,
             bp_header=self._bp_header(),
+            sc_language_id=AppSettings.get_sc_language_id(),
         )
 
     def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
@@ -3371,6 +3595,10 @@ class MainWindow(QMainWindow):
         sources, merges them in hierarchy order, and updates the table display.
         """
         pending_edits = self._snapshot_pending_user_edits()
+        # #569: the other languages' item names are read on a thread of their
+        # own while this reload reads and merges the sources here, and taken
+        # just before the rebuild renames the Owned set through them.
+        language_tables = LanguageNameTablesRead(self._language_name_tables)
         try:
             # Load all configured sources
             sources_dict, hierarchy, enhancements_key_categories = load_sources_from_settings()
@@ -3402,6 +3630,8 @@ class MainWindow(QMainWindow):
                     AppSettings.get_favorite_prefix(),
                 )
                 self.apply_filters()
+                # #569, before the rebuild's rename
+                self._language_name_tables = language_tables.result()
                 self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
                 self._recompute_owned()  # #157
                 # Same as an async reload: _recompute_owned marked it red, and
@@ -4547,7 +4777,7 @@ class MainWindow(QMainWindow):
         # Show real newlines while editing, even though the loc-string
         # format stores them as the literal two-char escape "\n".
         raw = entry.custom_value if entry.custom_value else entry.original_value
-        visual = (raw or "").replace("\\n", "\n")
+        visual = (raw or "").replace(_LOC_LINE_BREAK, "\n")
         self._editor_dock_loading = True
         try:
             self.editor_dock_text.setPlainText(visual)
@@ -4568,7 +4798,7 @@ class MainWindow(QMainWindow):
         # QTextCursor uses U+2029 as paragraph separator in some APIs; the
         # plain-text path here returns "\n" so a direct conversion is safe.
         visual = self.editor_dock_text.toPlainText()
-        new_value = visual.replace("\n", "\\n")
+        new_value = visual.replace("\n", _LOC_LINE_BREAK)
         if new_value == entry.custom_value:
             return
         entry.custom_value = new_value
@@ -4656,6 +4886,8 @@ class MainWindow(QMainWindow):
             "cfg_data_folder":       {"target": lambda: self.config_tab._data_group,                           "pre_action": _switch_to(config_tab)},
             "cfg_p4k_extraction":    {"target": lambda: self.config_tab._p4k_group,                            "pre_action": _switch_to(config_tab)},
             "cfg_tools":             {"target": lambda: self.config_tab._tools_group,                          "pre_action": _switch_to(config_tab)},
+            "cfg_backup":            {"target": lambda: self.config_tab._backup_group,                         "pre_action": _switch_to(config_tab)},
+            "cfg_sc_tools":          {"target": lambda: self.config_tab._sc_tools_group,                       "pre_action": _switch_to(config_tab)},
             "help":                  {"target": lambda: self.help_btn,                                         "pre_action": _switch_to(strings_tab)},
         }
 
@@ -5668,7 +5900,7 @@ class MainWindow(QMainWindow):
 
         A folder that is not in use also has the working folders a crash or
         a kill left beside it swept, in the background, whether it is still
-        there or not (perf proposal).
+        there or not (#522).
         """
         queued = AppSettings.get_pending_cache_cleanup()
         if not queued:
@@ -5699,7 +5931,7 @@ class MainWindow(QMainWindow):
             )
             return
         # A working folder a crash or a kill left beside the old cache folder
-        # (perf proposal: with the old cache set aside in it, it lives on
+        # (#522: with the old cache set aside in it, it lives on
         # while enhancements are generated). The extractions sweep only
         # beside the cache folder in use, so nothing else ever would.
         self._sweep_working_folders_in_background(old_path.parent)
@@ -5908,8 +6140,8 @@ class MainWindow(QMainWindow):
 
         base_missing = not base_ini.exists()
         # Data.p4k's size says whether the game changed, not its modified
-        # time, which the launcher's file check moves on a game launch (perf
-        # proposal, the rule #209 gave the DataForge cache).
+        # time, which the launcher's file check moves on a game launch (#522,
+        # the rule #209 gave the DataForge cache).
         p4k_changed = (not base_missing) and not base_ini_is_fresh(p4k_path, base_ini)
 
         if not base_missing and not p4k_changed:
@@ -6224,8 +6456,10 @@ class MainWindow(QMainWindow):
             self._loading_progress.close()
             self._loading_progress = None
 
-        # Load sources in background worker thread
-        self._loader_worker = FileLoaderWorker()
+        # Load sources in background worker thread. It also reads the other
+        # languages' item names for the Owned set's rename (#569), reusing
+        # the tables already read this session.
+        self._loader_worker = FileLoaderWorker(language_tables=self._language_name_tables)
 
         # Create reusable animated progress dialog
         self._loading_progress = AnimatedProgressDialog(message, parent=self, title="Loading")
@@ -6237,15 +6471,20 @@ class MainWindow(QMainWindow):
         self._loader_worker.progress_pct.connect(self._loading_progress.set_progress)
         self._loader_worker.start()
 
-    @pyqtSlot(list, dict, list)
+    @pyqtSlot(list, dict, list, object)
     @timed
-    def _on_loading_finished(self, entries: list, default_values: dict, sort_keys: list):
+    def _on_loading_finished(
+        self, entries: list, default_values: dict, sort_keys: list,
+        language_tables: "dict | None" = None,
+    ):
         """Handle file loading completion.
 
         Args:
             entries: Merged StringEntry list.
             default_values: Global source key→value dict (for the Default Value column).
             sort_keys: Pre-computed grouped sort keys (one per entry).
+            language_tables: The other languages' item name tables the worker
+                read (#569), or None to keep the window's.
         """
         # Close modal progress dialog and clean up worker FIRST so the modal
         # event loop exits before heavy synchronous UI work.
@@ -6292,6 +6531,9 @@ class MainWindow(QMainWindow):
             sort_keys=model_sort_keys,
         )
         self.apply_filters()
+        if language_tables is not None:
+            # Before the rebuild, whose Owned-set repair renames through them.
+            self._language_name_tables = language_tables
         self._rebuild_blueprint_metadata()  # #157 follow-up: filter data
         self._recompute_owned()  # #157: weave [Owned] tags + populate Owned stars
         if self._reload_follows_clean_apply:
@@ -6708,7 +6950,7 @@ class MainWindow(QMainWindow):
 
         # The run waits on its own thread for any background delete of an
         # earlier run's working folder, or sweep of leftover ones, still
-        # going (perf proposal): its sweep would skip that folder and its
+        # going (#522): its sweep would skip that folder and its
         # free-space check count it as used.
         worker = DataForgeExtractWorker(
             p4k_path, unp4k_exe, unforge_exe, forge_dir,
@@ -6925,7 +7167,7 @@ class MainWindow(QMainWindow):
     def _on_dataforge_extract_finished(self, success: bool, worker):
         worker.quit()
         worker.wait()
-        # The working folder a successful run kept (perf proposal), taken
+        # The working folder a successful run kept (#522), taken
         # once the thread is done.
         working_folder = worker.take_working_folder()
         # As _on_applied_state_ready does: frees the thread and the lambda
@@ -6954,8 +7196,8 @@ class MainWindow(QMainWindow):
             return
 
         if working_folder is not None:
-            # Deleted while enhancements are generated, not before (perf
-            # proposal). Started first, so the queued cleanup below runs
+            # Deleted while enhancements are generated, not before (#522).
+            # Started first, so the queued cleanup below runs
             # beside it; the two never share a folder.
             self._delete_working_folder_in_background(working_folder)
 
@@ -7175,7 +7417,7 @@ class MainWindow(QMainWindow):
 
     def _delete_working_folder_in_background(self, working_folder) -> None:
         """Delete a finished DataForge extraction's working folder on a
-        thread of its own (perf proposal), which generation no longer waits
+        thread of its own (#522), which generation no longer waits
         for: on a re-extract beside the cache the ~31,000 files of the old
         cache set aside there (and ~31,000 more that an unforge without
         --exclude-file wrote and the cache does not keep), and all of
@@ -7195,7 +7437,7 @@ class MainWindow(QMainWindow):
 
     def _sweep_working_folders_in_background(self, parent) -> None:
         """Sweep the DataForge working folders a crash or a kill left in
-        *parent* on a thread of its own (perf proposal), never the GUI
+        *parent* on a thread of its own (#522), never the GUI
         thread: such a folder can hold an old cache of about 31,000 files.
         The sweep leaves a folder whose marker is still held. It first waits
         for the background deletes already running, and is kept with them
@@ -7210,7 +7452,7 @@ class MainWindow(QMainWindow):
 
     def _sweep_stale_working_folders_at_startup(self) -> None:
         """Once a session, sweep the DataForge working folders a crash or a
-        kill left beside the active cache folder (perf proposal).
+        kill left beside the active cache folder (#522).
 
         A successful run's working folder, with the old cache set aside in
         it, now lives on while enhancements are generated, and a crash
@@ -7260,7 +7502,7 @@ class MainWindow(QMainWindow):
 
     def _closing_would_wait(self) -> bool:
         """True while a job runs (#483) or a finished DataForge run's working
-        folder is still being deleted in the background (perf proposal).
+        folder is still being deleted in the background (#522).
         Import Settings and an update's install start the new copy before
         this one closes, and closing waits for such a delete with the window
         hidden (_stop_workers_for_close), so they wait for it as they do for
@@ -7324,7 +7566,7 @@ class MainWindow(QMainWindow):
         queued.
 
         The background deletes of finished extractions' working folders
-        (perf proposal) are waited for too, within the same deadline, with a
+        (#522) are waited for too, within the same deadline, with a
         DataForge run's own folder when it finished before its finished slot
         ran. Each holds its folder's marker, so past the deadline another
         window's sweep still leaves it alone until the process ends, and
@@ -7367,8 +7609,8 @@ class MainWindow(QMainWindow):
                 continue  # keep the reference so Qt doesn't destroy a live thread
             setattr(self, worker_attr, None)
             if worker_attr == "_forge_worker":
-                # Only a DataForge run keeps its working folder (perf
-                # proposal): one that succeeded just before the close.
+                # Only a DataForge run keeps its working folder (#522):
+                # one that succeeded just before the close.
                 working_folder = worker.take_working_folder()
                 if working_folder is not None:
                     self._delete_working_folder_in_background(working_folder)
@@ -7380,7 +7622,7 @@ class MainWindow(QMainWindow):
             self.hide()
         for deleter in deleting:
             # Only a sweep of leftovers stops here, before its next folder
-            # (perf proposal): the folder in hand is finished. A working
+            # (#522): the folder in hand is finished. A working
             # folder's own delete has no stop and finishes, or its marker
             # stays held for the next sweep.
             deleter.requestInterruption()
@@ -7475,6 +7717,10 @@ class MainWindow(QMainWindow):
         self._stop_sco_overlay()
         if self._sco_overlay is not None:
             self._sco_overlay.wait_for_reader(2000)
+        # A shop data fetch ends within its request timeouts; a QThread
+        # dropped while it runs would abort the exit.
+        if self._uex_shop_worker is not None:
+            self._uex_shop_worker.wait()
 
         # Clean up workers. The close is committed from here: every prompt
         # that could call it off has been answered, so nothing new may start
@@ -7601,7 +7847,7 @@ class MainWindow(QMainWindow):
             if dock_row is None or top_left.row() <= dock_row <= bottom_right.row():
                 entry = self.entries[self._editor_dock_entry_idx]
                 raw = entry.custom_value if entry.custom_value else entry.original_value
-                visual = (raw or "").replace("\\n", "\n")
+                visual = (raw or "").replace(_LOC_LINE_BREAK, "\n")
                 if visual != self.editor_dock_text.toPlainText():
                     self._editor_dock_loading = True
                     try:
@@ -7835,7 +8081,7 @@ class MainWindow(QMainWindow):
         Blueprints shuttle filters on. Pure function of the loaded strings, so
         it runs on load — not on every owned-toggle (that path re-partitions
         the cached result)."""
-        from src.utils.blueprint_meta import build_blueprint_metadata, known_item_names
+        from src.utils.blueprint_meta import build_blueprint_metadata, item_name_sets
         from src.utils.owned_items import enclosings_from_tag_configs
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
@@ -7848,10 +8094,13 @@ class MainWindow(QMainWindow):
         # this install knows about, not just ones currently offered as a
         # mission reward. See known_item_names' and repair_foreign_owned_
         # names' docstrings for why recovery must anchor on this wider set.
-        self._known_item_names = known_item_names(
+        self._known_item_names, short_labels, self._item_names_by_key = item_name_sets(
             self.entries, enclosings=enclosings,
             default_values=self.default_values,
         )
+        # #570: a label's text that the Blueprint Tracker offers as a
+        # blueprint stays, since the user can mark that owned.
+        self._short_label_names = short_labels - self._bp_item_names
         if hasattr(self, "blueprint_tracker_tab"):
             self.blueprint_tracker_tab.set_known_item_names(self._known_item_names)
         self._repair_foreign_owned_names()
@@ -8011,7 +8260,9 @@ class MainWindow(QMainWindow):
             return set()
 
     def _repair_foreign_owned_names(self) -> None:
-        """One-shot cleanup of owned entries left by another editor (#372).
+        """Clean up the owned set's names on every load: names another editor
+        left (#372), items' short labels (#570) and names saved in another
+        language (#569).
 
         The scan-time fix only helps the next scan. A user who already imported
         foreign-formatted names has them sitting in the owned set, and
@@ -8031,6 +8282,23 @@ class MainWindow(QMainWindow):
         now, and silently deleting a user's owned marks is worse than
         leaving one unmatched.
 
+        The one name it drops without a match is an item's short label
+        (#570, ``self._short_label_names``): before #570 the catalogue held
+        the labels, so this repair, a scan or an import could save an old
+        logged name as one (an armour set's name on its own), and a label is
+        no item anyone owns. That runs first, before the #372 repair.
+
+        Then a name saved in another language is renamed to its name in the
+        loaded strings, through its loc key (#569,
+        ``owned_items.rename_across_languages``), which is how a language
+        switch renames the Owned set: the load after the switch runs this.
+        It comes before the #372 repair, which would otherwise read an old
+        language's name as decorated and could fold it into a shorter item
+        whose name it happens to end with. The label drop keeps a label's
+        text that another language uses as an item's own name, for this
+        rename: the Spanish file keeps the S-38's short label as "S-38
+        Pistol", the pistol's English name.
+
         Wrapped defensively: by the time this runs, ``self.entries`` has
         already loaded successfully, so a failure in this ancillary cleanup
         step must never surface as a load/merge failure to the caller -- it
@@ -8040,12 +8308,32 @@ class MainWindow(QMainWindow):
         if not catalogue:
             return
         try:
-            from src.utils.owned_items import repair_foreign_owned_names
+            from src.utils.owned_items import drop_short_labels, repair_foreign_owned_names
 
             owned = AppSettings.get_owned_items()
-            repaired, renamed = repair_foreign_owned_names(owned, catalogue)
-            if not renamed:
+            # A label's text another language uses as an item's own name is
+            # kept for the rename below (#569, drop_short_labels), and while
+            # a language's file went unread, every label waits for a load
+            # that reads it.
+            complete = self._language_tables_complete()
+            kept, dropped = drop_short_labels(
+                owned, self._short_label_names,
+                self._other_language_item_keys() if complete else None,
+            )
+            if not complete and owned & self._short_label_names:
+                logger.info(
+                    "Owned set: short labels kept for a later load, since another "
+                    "language's base.ini was not read (#569, #570)"
+                )
+            kept, moved = self._rename_from_other_languages(kept, "Owned set")
+            repaired, renamed = repair_foreign_owned_names(kept, catalogue)
+            if not dropped and not moved and not renamed:
                 return
+            for nm in sorted(dropped):
+                logger.info(
+                    f"Owned set: dropped {nm!r}, an item's short label that an earlier "
+                    f"name repair saved (#570)"
+                )
             for nm, real in renamed.items():
                 if real is not None:
                     logger.info(
@@ -8058,10 +8346,66 @@ class MainWindow(QMainWindow):
                     )
             AppSettings.set_owned_items(repaired)
             logger.info(
-                f"Owned set: {len(owned)} entries repaired to {len(repaired)} (#372)"
+                f"Owned set: {len(owned)} entries repaired to {len(repaired)} (#372, #569, #570)"
             )
         except Exception:
-            logger.exception("Owned-set repair failed (#372); leaving owned set untouched")
+            logger.exception(
+                "Owned-set repair failed (#372, #569, #570); leaving owned set untouched"
+            )
+
+    def _other_language_item_keys(self) -> list:
+        """The other languages' item names, each mapped to its loc keys
+        (``blueprint_meta.item_keys_by_name``), which
+        ``owned_items.rename_across_languages`` traces an owned name back
+        through (#569): one cached base.ini per language but the loaded one
+        (``blueprint_meta.other_language_files``), as the last load read
+        them into ``_language_name_tables``.
+
+        Reads no file. The async load reads them on its worker's thread
+        (``FileLoaderWorker``) and a synchronous reload on a thread of their
+        own (``workers.LanguageNameTablesRead``), each only once a session
+        per file unless the file changes, so neither a load, a scan, an
+        import nor the overlay's live watch reads one on the GUI thread.
+        """
+        return [table for _stamp, table in self._language_name_tables.values()]
+
+    def _language_tables_complete(self) -> bool:
+        """True when the last load read every other language's file it chose
+        (#569). A file it could not read, or a failure that left unknown which
+        files to read, has an entry with no stamp: whether an owned short
+        label is that language's item name is then unknown, so the #570 label
+        drop waits for a load that reads it (a Spanish load would otherwise
+        drop "S-38 Pistol", the pistol's English name, whenever the English
+        file was held by another program at the session's first load)."""
+        return all(stamp is not None for stamp, _table in self._language_name_tables.values())
+
+    def _rename_from_other_languages(self, names, what: str) -> "tuple[set, dict]":
+        """*names* with each one the loaded strings do not know renamed to its
+        name in them through its loc key (#569,
+        ``owned_items.rename_across_languages``), each rename logged at INFO
+        under *what*. Returns ``(names, {old: new})``. Shared by the load's
+        Owned-set repair, a scan's log names and Import Owned Blueprints, so
+        all three rename alike."""
+        from src.utils.owned_items import rename_across_languages
+
+        result, renamed = rename_across_languages(
+            set(names), self._known_item_names, self._other_language_item_keys(),
+            self._item_names_by_key,
+        )
+        for nm, new in renamed.items():
+            logger.info(
+                f"{what}: renamed {nm!r} -> {new!r}, its name in the loaded language (#569)"
+            )
+        return result, renamed
+
+    def _rename_imported_names(self, names) -> "tuple[set, dict]":
+        """Import Owned Blueprints' names, renamed as a load renames the Owned
+        set (#569), so a list exported while another language was loaded
+        matches the loaded language's blueprints. Returns ``(names, {old:
+        new})``: the tab lists a name it still cannot match as the file
+        spells it. Handed to the Blueprint Tracker tab, which cannot see the
+        loaded strings."""
+        return self._rename_from_other_languages(names, "Import Owned Blueprints")
 
     def _recompute_owned(self):
         """#157: weave/strip [Owned] tags on blueprint-list bullets to match the
@@ -8174,11 +8518,48 @@ class MainWindow(QMainWindow):
         self._sco_overlay.set_drawer_hotkey(AppSettings.get_sco_drawer_hotkey())
         if not self._sco_overlay.is_running():
             return
+        self._refresh_sco_shops()
         if AppSettings.get_sco_option(AppSettings.SCO_LIVE_BLUEPRINT_WATCH):
             if self._sco_log_worker is None:
                 self._start_sco_log_watcher()
         else:
             self._stop_sco_log_watcher()
+
+    def _refresh_sco_shops(self):
+        """Load the Item Finder's shop data when the finder is shown and
+        none is loaded or it is over UEX's 12 hours old. The worker reads the
+        cache and asks UEX off the GUI thread (``uex_shops.load_shop_data``)."""
+        import time
+
+        from src.utils.uex_shops import MAX_AGE_S, SHOP_CACHE_FILE, UEX_RETRY_S
+        drawer = self._sco_overlay.drawer
+        drawer.set_shop_data(self._uex_shops, self._uex_shops_error)
+        if self._uex_shop_worker is not None or self._close_committed:
+            return
+        if not (AppSettings.get_sco_option(AppSettings.SCO_DRAWER) and AppSettings.get_sco_option(
+                AppSettings.SCO_DRAWER_SECTION_PREFIX + "finder")):
+            return
+        shops = self._uex_shops
+        if shops is not None and 0 <= time.time() - shops.fetched_at < MAX_AGE_S:
+            return
+        # Offline, every option change would ask UEX again: wait a while.
+        tried = self._uex_shops_tried_at
+        if tried is not None and time.monotonic() - tried < UEX_RETRY_S:
+            return
+        self._uex_shops_tried_at = time.monotonic()
+        from src.gui.workers import UexShopDataWorker
+        self._uex_shop_worker = UexShopDataWorker(AppSettings.get_cache_dir() / SHOP_CACHE_FILE)
+        self._uex_shop_worker.finished.connect(self._on_uex_shops_loaded)
+        self._uex_shop_worker.start()
+
+    def _on_uex_shops_loaded(self, shops, error: str):
+        self._reap_worker(self._uex_shop_worker)
+        self._uex_shop_worker = None
+        if shops is not None:
+            self._uex_shops = shops
+        self._uex_shops_error = error
+        if self._sco_overlay is not None:
+            self._sco_overlay.drawer.set_shop_data(self._uex_shops, error)
 
     def _stop_sco_log_watcher(self):
         if self._sco_log_worker is not None:
@@ -8193,7 +8574,10 @@ class MainWindow(QMainWindow):
         so a blueprint earned on a test server must not be marked owned.
         Skipped quietly for other channels and without a valid install path:
         the drawer still works, it just won't pick up new blueprints on its
-        own. ``_on_channel_changed`` restarts it for the new channel.
+        own. ``_on_channel_changed`` restarts it for the new channel. A
+        language switch does not: the running game keeps the language it was
+        started in, so the watch keeps the notification texts it started
+        with (#564).
         """
         from src.utils.blueprint_log_scanner import LIVE_LOG_NAME
         channel = AppSettings.get_active_channel()
@@ -8205,7 +8589,9 @@ class MainWindow(QMainWindow):
             logger.warning("SCO: no valid channel install path; live blueprint watch off")
             return
         since = AppSettings.get_blueprint_log_watermark(channel=channel)
-        self._sco_log_worker = LiveBlueprintLogWorker(Path(channel_path) / LIVE_LOG_NAME, since)
+        self._sco_log_worker = LiveBlueprintLogWorker(
+            Path(channel_path) / LIVE_LOG_NAME, since,
+            _blueprint_notification_files(channel, channel_path))
         self._sco_log_worker.blueprints_found.connect(self._on_sco_blueprints_found)
         self._sco_log_worker.start()
 
@@ -8347,7 +8733,8 @@ class MainWindow(QMainWindow):
         since = _blueprint_scan_since(
             self._bp_scan_force_rescan, AppSettings.get_blueprint_log_watermark(channel=channel)
         )
-        self._bp_log_scan_worker = BlueprintLogScanWorker(channel_path, since)
+        self._bp_log_scan_worker = BlueprintLogScanWorker(
+            channel_path, since, _blueprint_notification_files(channel, channel_path))
         # #386: a silent (startup auto-scan) run gets no progress dialog --
         # it's a background operation, not something the user launched, so
         # popping a window the moment the app starts would defeat the point.
@@ -8395,6 +8782,17 @@ class MainWindow(QMainWindow):
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         scanned = {normalize_item_name(n, enclosings=enclosings) for n in raw_names}
         scanned.discard("")
+
+        # #569: a log holds each name as the game showed it, in the language
+        # the game was set to then, so an older log can name a blueprint in
+        # another language. It is renamed through its loc key, as the load
+        # does with the owned set, or the scan would add a second entry for
+        # an item already owned. Before the #372 recovery below, which could
+        # fold such a name into a shorter item whose name it ends with. Not
+        # tied to the Config channel as that recovery is (#446): it matches
+        # loc keys exactly, never a shorter name, and the next load would
+        # rename the name in any channel anyway.
+        scanned, _renamed = self._rename_from_other_languages(scanned, "BP scan")
 
         # #372: Star Citizen logs whatever name it was DISPLAYING, so a
         # player who previously ran a different localization editor has
