@@ -2286,6 +2286,10 @@
       "ht": "",
       "at": "設定されたソースから {language} のローカライズを読み込めず、キャッシュされたコピーも見つかりませんでした。代わりに英語のベースを表示します。「言語ファイルをマッピング」の URL またはファイルを確認してから、再試行してください。"
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "新しい {language} の翻訳をダウンロードしました。再読み込みしています。"
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge から {language} の拡張を生成しています…"

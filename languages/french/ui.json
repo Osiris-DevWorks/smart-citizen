@@ -2286,6 +2286,10 @@
       "ht": "",
       "at": "Impossible de charger la localisation {language} depuis la source configurée, et aucune copie en cache n'a été trouvée. Affichage du texte anglais de base à la place. Vérifiez l'URL ou le fichier dans Associer un fichier de langue, puis réessayez."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Une traduction {language} plus récente a été téléchargée. Rechargement en cours."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "Génération des enrichissements {language} depuis DataForge…"

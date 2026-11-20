@@ -428,12 +428,17 @@ class LanguageBaseDownloadWorker(QThread):
         super().__init__()
         self._source = source
         self._dest = dest_path
+        # True once a fetch wrote a new base.ini (a URL that changed, or a
+        # local copy), False for an unchanged URL or a failure (#579: the
+        # startup check reloads only after a change).
+        self.changed = False
 
     def run(self):
         from src.utils.updater import fetch_language_base
         is_url = self._source.startswith(("http://", "https://"))
         try:
             changed = fetch_language_base(self._source, self._dest)
+            self.changed = bool(changed)
             if is_url:
                 logger.info(
                     f"Language base.ini ready: {self._dest} "
@@ -818,7 +823,11 @@ class EnhancementsGeneratorWorker(QThread):
             # lookup pickles).
             forge_dir    = AppSettings.get_dataforge_cache_leaf()
             english_base = AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
-            build_key    = AppSettings.get_dataforge_build_key(forge_dir)
+            # With the language's generated-text table in it (#579), so a
+            # table an update changes makes the set read as out of date.
+            text_language = self.language or AppSettings.get_selected_language()
+            build_key    = AppSettings.enhancements_stamp_value(
+                AppSettings.get_dataforge_build_key(forge_dir), text_language)
             tag_stamp    = tag_config_fingerprint(self.tag_configs, self.annotate_mission_descs)
             # Temp files a hard kill left between a write and its swap
             # (atomic_io): the INI folder and the generator's lookup pickle
@@ -902,7 +911,8 @@ class EnhancementsGeneratorWorker(QThread):
                      standardize_earnable_ship_names=self.standardize_earnable_ship_names,
                      rs_ore_name_annotations=self.rs_ore_name_annotations,
                      english_base_ini_path=english_base,
-                     should_cancel=self.isInterruptionRequested)
+                     should_cancel=self.isInterruptionRequested,
+                     language=text_language)
             logger.info("Enhancements generation worker: mod.main() completed successfully")
 
             # Record which Tag Builder config these INIs were generated

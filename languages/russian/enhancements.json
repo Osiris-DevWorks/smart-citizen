@@ -1,0 +1,833 @@
+{
+  "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
+  "strings": {
+    "--- EFFECT ---": {
+      "ht": "",
+      "at": "--- ЭФФЕКТ ---"
+    },
+    "--- STATS ---": {
+      "ht": "",
+      "at": "--- ХАРАКТЕРИСТИКИ ---"
+    },
+    "Absolute Range": {
+      "ht": "",
+      "at": "Предельная дальность"
+    },
+    "Acceleration": {
+      "ht": "",
+      "at": "Ускорение"
+    },
+    "Ace Pilot": {
+      "ht": "",
+      "at": "Ас"
+    },
+    "Ace Pilots": {
+      "ht": "",
+      "at": "Асы"
+    },
+    "Aim Assist Range": {
+      "ht": "",
+      "at": "Дальность помощи прицел."
+    },
+    "Alpha Dmg": {
+      "ht": "",
+      "at": "Урон залпа"
+    },
+    "Ammo": {
+      "ht": "",
+      "at": "Боезапас"
+    },
+    "Arm Dist": {
+      "ht": "",
+      "at": "Дист. взвода"
+    },
+    "Arm Time": {
+      "ht": "",
+      "at": "Время взвода"
+    },
+    "Armor HP": {
+      "ht": "",
+      "at": "ОЗ брони"
+    },
+    "Armour": {
+      "ht": "",
+      "at": "Броня"
+    },
+    "Attackers": {
+      "ht": "",
+      "at": "Нападающие"
+    },
+    "Auto": {
+      "ht": "",
+      "at": "Авто"
+    },
+    "Backup": {
+      "ht": "",
+      "at": "Подкрепление"
+    },
+    "Bandits": {
+      "ht": "",
+      "at": "Бандиты"
+    },
+    "Base Resource Signature": {
+      "ht": "",
+      "at": "Базовая сигнатура ресурса"
+    },
+    "Beam": {
+      "ht": "",
+      "at": "Луч"
+    },
+    "Bio": {
+      "ht": "",
+      "at": "Био"
+    },
+    "Blast Radius": {
+      "ht": "",
+      "at": "Радиус взрыва"
+    },
+    "Blueprint Reward": {
+      "ht": "",
+      "at": "Чертёж в награду"
+    },
+    "Bomb Slots": {
+      "ht": "",
+      "at": "Слоты бомб"
+    },
+    "Boost": {
+      "ht": "",
+      "at": "Форсаж"
+    },
+    "Boss": {
+      "ht": "",
+      "at": "Босс"
+    },
+    "Burst": {
+      "ht": "",
+      "at": "Очередь"
+    },
+    "CQC": {
+      "ht": "",
+      "at": "Ближний бой"
+    },
+    "Cal Rate": {
+      "ht": "",
+      "at": "Скор. калибр."
+    },
+    "Captain": {
+      "ht": "",
+      "at": "Капитан"
+    },
+    "Chain": {
+      "ht": "",
+      "at": "Цепочка"
+    },
+    "Charge": {
+      "ht": "",
+      "at": "Заряд"
+    },
+    "Civilians": {
+      "ht": "",
+      "at": "Гражданские"
+    },
+    "Class": {
+      "ht": "",
+      "at": "Класс"
+    },
+    "Combat": {
+      "ht": "",
+      "at": "Бой"
+    },
+    "Complexity": {
+      "ht": "",
+      "at": "Сложность"
+    },
+    "Component HP": {
+      "ht": "",
+      "at": "ОЗ компонента"
+    },
+    "Cooldown": {
+      "ht": "",
+      "at": "Перезарядка"
+    },
+    "Coolers": {
+      "ht": "",
+      "at": "Охладители"
+    },
+    "Cooling Rate": {
+      "ht": "",
+      "at": "Скорость охлаждения"
+    },
+    "Cost/Shot": {
+      "ht": "",
+      "at": "Расход/выстрел"
+    },
+    "Crew": {
+      "ht": "",
+      "at": "Экипаж"
+    },
+    "DPS": {
+      "ht": "",
+      "at": "УВС"
+    },
+    "Damage": {
+      "ht": "",
+      "at": "Урон"
+    },
+    "Damage-Map Rate": {
+      "ht": "",
+      "at": "Скорость карты повреждений"
+    },
+    "Damaged Delay": {
+      "ht": "",
+      "at": "Задержка при уроне"
+    },
+    "Defenders": {
+      "ht": "",
+      "at": "Защитники"
+    },
+    "Deflect": {
+      "ht": "",
+      "at": "Отражение"
+    },
+    "Detection Mode": {
+      "ht": "",
+      "at": "Режим обнаружения"
+    },
+    "Detonation": {
+      "ht": "",
+      "at": "Детонация"
+    },
+    "Difficulty (1-7)": {
+      "ht": "",
+      "at": "Сложность (1-7)"
+    },
+    "Distort": {
+      "ht": "",
+      "at": "Искаж."
+    },
+    "Dmg Mult": {
+      "ht": "",
+      "at": "Множ. урона"
+    },
+    "Downed Delay": {
+      "ht": "",
+      "at": "Задержка при отказе"
+    },
+    "Drop": {
+      "ht": "",
+      "at": "Спад"
+    },
+    "EM": {
+      "ht": "",
+      "at": "ЭМ"
+    },
+    "EM Signature": {
+      "ht": "",
+      "at": "ЭМ-сигнатура"
+    },
+    "Effective Range": {
+      "ht": "",
+      "at": "Эффективная дальность"
+    },
+    "Energy": {
+      "ht": "",
+      "at": "Энергия"
+    },
+    "Engagement Type": {
+      "ht": "",
+      "at": "Тип боя"
+    },
+    "Escort Wings": {
+      "ht": "",
+      "at": "Звенья сопровождения"
+    },
+    "Escorts": {
+      "ht": "",
+      "at": "Сопровождение"
+    },
+    "Extraction": {
+      "ht": "",
+      "at": "Извлечение"
+    },
+    "FPS": {
+      "ht": "",
+      "at": "Пеший бой"
+    },
+    "FPS & Ship": {
+      "ht": "",
+      "at": "Пеший бой и корабль"
+    },
+    "Failure": {
+      "ht": "",
+      "at": "Провал"
+    },
+    "Failure Penalty": {
+      "ht": "",
+      "at": "Штраф за провал"
+    },
+    "Fire Modes": {
+      "ht": "",
+      "at": "Режимы огня"
+    },
+    "Fire Rate": {
+      "ht": "",
+      "at": "Скорострельность"
+    },
+    "Fracture": {
+      "ht": "",
+      "at": "Раскол"
+    },
+    "Friendlies": {
+      "ht": "",
+      "at": "Союзники"
+    },
+    "Fuel": {
+      "ht": "",
+      "at": "Топливо"
+    },
+    "Fuel/Gm": {
+      "ht": "",
+      "at": "Топливо/Гм"
+    },
+    "Full Dmg to": {
+      "ht": "",
+      "at": "Полный урон до"
+    },
+    "Grade": {
+      "ht": "",
+      "at": "Класс кач."
+    },
+    "Grunts": {
+      "ht": "",
+      "at": "Рядовые"
+    },
+    "Guaranteed": {
+      "ht": "",
+      "at": "Гарантирован"
+    },
+    "Guards": {
+      "ht": "",
+      "at": "Охрана"
+    },
+    "Guidance": {
+      "ht": "",
+      "at": "Наведение"
+    },
+    "Guns": {
+      "ht": "",
+      "at": "Орудия"
+    },
+    "HP Rate": {
+      "ht": "",
+      "at": "Скорость ОЗ"
+    },
+    "HP/Ammo": {
+      "ht": "",
+      "at": "ОЗ/заряд"
+    },
+    "Heat": {
+      "ht": "",
+      "at": "Нагрев"
+    },
+    "Heist Target": {
+      "ht": "",
+      "at": "Цель ограбления"
+    },
+    "Hostages": {
+      "ht": "",
+      "at": "Заложники"
+    },
+    "Hostile Allies": {
+      "ht": "",
+      "at": "Враждебные союзники"
+    },
+    "Hostile Wave": {
+      "ht": "",
+      "at": "Вражеская волна"
+    },
+    "Hostiles": {
+      "ht": "",
+      "at": "Враги"
+    },
+    "IR": {
+      "ht": "",
+      "at": "ИК"
+    },
+    "IR Signature": {
+      "ht": "",
+      "at": "ИК-сигнатура"
+    },
+    "Inert Filter": {
+      "ht": "",
+      "at": "Фильтр инертных"
+    },
+    "Insurance": {
+      "ht": "",
+      "at": "Страховка"
+    },
+    "Interdiction Ships": {
+      "ht": "",
+      "at": "Корабли перехвата"
+    },
+    "Item Type": {
+      "ht": "",
+      "at": "Тип предмета"
+    },
+    "Juggernauts": {
+      "ht": "",
+      "at": "Джаггернауты"
+    },
+    "Jump Drives": {
+      "ht": "",
+      "at": "Прыжковые двигатели"
+    },
+    "Knowledge": {
+      "ht": "",
+      "at": "Знания"
+    },
+    "Kopions": {
+      "ht": "",
+      "at": "Копионы"
+    },
+    "Length": {
+      "ht": "",
+      "at": "Длина"
+    },
+    "Lifetime": {
+      "ht": "",
+      "at": "Время жизни"
+    },
+    "Locations": {
+      "ht": "",
+      "at": "Места"
+    },
+    "Lock Range": {
+      "ht": "",
+      "at": "Дальность захвата"
+    },
+    "Lock Time": {
+      "ht": "",
+      "at": "Время захвата"
+    },
+    "MRacks": {
+      "ht": "",
+      "at": "Ракетные пилоны"
+    },
+    "Material Efficiency": {
+      "ht": "",
+      "at": "Эффективность материала"
+    },
+    "Maulers": {
+      "ht": "",
+      "at": "Maulers"
+    },
+    "Max": {
+      "ht": "",
+      "at": "Макс."
+    },
+    "Max Distortion": {
+      "ht": "",
+      "at": "Макс. искажение"
+    },
+    "Max G-Force": {
+      "ht": "",
+      "at": "Макс. перегрузка"
+    },
+    "Max HP": {
+      "ht": "",
+      "at": "Макс. ОЗ"
+    },
+    "Max Lifetime": {
+      "ht": "",
+      "at": "Макс. срок службы"
+    },
+    "Max Lock Range": {
+      "ht": "",
+      "at": "Макс. дальн. захвата"
+    },
+    "Min Detonate": {
+      "ht": "",
+      "at": "Мин. дист. подрыва"
+    },
+    "Min Dmg": {
+      "ht": "",
+      "at": "Мин. урон"
+    },
+    "Min Lock Range": {
+      "ht": "",
+      "at": "Мин. дальн. захвата"
+    },
+    "Mission Type": {
+      "ht": "",
+      "at": "Тип миссии"
+    },
+    "Nine Tails": {
+      "ht": "",
+      "at": "Nine Tails"
+    },
+    "Objectives": {
+      "ht": "",
+      "at": "Цели"
+    },
+    "Overheat Temp": {
+      "ht": "",
+      "at": "Темп. перегрева"
+    },
+    "Phys": {
+      "ht": "",
+      "at": "Физ."
+    },
+    "Ping Cooldown": {
+      "ht": "",
+      "at": "Перезарядка пинга"
+    },
+    "Pirates": {
+      "ht": "",
+      "at": "Пираты"
+    },
+    "Pitch": {
+      "ht": "",
+      "at": "Тангаж"
+    },
+    "Polaris": {
+      "ht": "",
+      "at": "Polaris"
+    },
+    "Power": {
+      "ht": "",
+      "at": "Энергия"
+    },
+    "Power Draw": {
+      "ht": "",
+      "at": "Потребление"
+    },
+    "Power Output": {
+      "ht": "",
+      "at": "Выработка энергии"
+    },
+    "Power Plants": {
+      "ht": "",
+      "at": "Генераторы"
+    },
+    "Private Security": {
+      "ht": "",
+      "at": "Частная охрана"
+    },
+    "Probe": {
+      "ht": "",
+      "at": "Зонд"
+    },
+    "Prospectors": {
+      "ht": "",
+      "at": "Prospectors"
+    },
+    "Protected": {
+      "ht": "",
+      "at": "Охраняемые"
+    },
+    "Proximity Range": {
+      "ht": "",
+      "at": "Дальность взрывателя"
+    },
+    "QD": {
+      "ht": "",
+      "at": "КД"
+    },
+    "QT Fuel Use": {
+      "ht": "",
+      "at": "Расход QT"
+    },
+    "QT Speed": {
+      "ht": "",
+      "at": "Скорость QT"
+    },
+    "Quantum Drives": {
+      "ht": "",
+      "at": "Квантовые двигатели"
+    },
+    "Quantum Enforcement Devices": {
+      "ht": "",
+      "at": "Квантовые блокираторы"
+    },
+    "Radars": {
+      "ht": "",
+      "at": "Радары"
+    },
+    "Ramp": {
+      "ht": "",
+      "at": "Разгон"
+    },
+    "Range": {
+      "ht": "",
+      "at": "Дальность"
+    },
+    "Rank": {
+      "ht": "",
+      "at": "Ранг"
+    },
+    "Recharges Oxygen reserves of a suit.": {
+      "ht": "",
+      "at": "Восполняет запас кислорода в скафандре."
+    },
+    "Recipient": {
+      "ht": "",
+      "at": "Получатель"
+    },
+    "Reduces concussion symptoms, normalizes weapon handling and movement speed.": {
+      "ht": "",
+      "at": "Снимает симптомы сотрясения, восстанавливает обращение с оружием и скорость движения."
+    },
+    "Reduces injuries from radiation.": {
+      "ht": "",
+      "at": "Снижает лучевые поражения."
+    },
+    "Reduces pain symptoms, normalizes movement ability.": {
+      "ht": "",
+      "at": "Снимает боль, восстанавливает подвижность."
+    },
+    "Reduces vision and hearing symptoms, normalizes stamina.": {
+      "ht": "",
+      "at": "Снимает нарушения зрения и слуха, восстанавливает выносливость."
+    },
+    "Refuel Nozzles": {
+      "ht": "",
+      "at": "Заправочные насадки"
+    },
+    "Regen": {
+      "ht": "",
+      "at": "Регенерация"
+    },
+    "Reinforcements": {
+      "ht": "",
+      "at": "Подкрепление"
+    },
+    "Required": {
+      "ht": "",
+      "at": "Требуется"
+    },
+    "Resource Signatures": {
+      "ht": "",
+      "at": "Сигнатуры ресурсов"
+    },
+    "Restores health and stops bleeding. When used on another person recovers from incapacitated state.": {
+      "ht": "",
+      "at": "Восстанавливает здоровье и останавливает кровотечение. Применённое к другому человеку, выводит его из недееспособности."
+    },
+    "Revives an overdosed person (if not incapacitated), doubles decay rate of Blood Drug Level.": {
+      "ht": "",
+      "at": "Оживляет человека с передозировкой (если он не недееспособен), вдвое ускоряет снижение уровня препарата в крови."
+    },
+    "Risk": {
+      "ht": "",
+      "at": "Риск"
+    },
+    "Role": {
+      "ht": "",
+      "at": "Роль"
+    },
+    "Roll": {
+      "ht": "",
+      "at": "Крен"
+    },
+    "SCM": {
+      "ht": "",
+      "at": "SCM"
+    },
+    "Salvageable Ships": {
+      "ht": "",
+      "at": "Корабли на разбор"
+    },
+    "Scanners": {
+      "ht": "",
+      "at": "Сканеры"
+    },
+    "Security Forces": {
+      "ht": "",
+      "at": "Силы безопасности"
+    },
+    "Seeker": {
+      "ht": "",
+      "at": "ГСН"
+    },
+    "Semi-Auto": {
+      "ht": "",
+      "at": "Полуавтомат"
+    },
+    "Sentries": {
+      "ht": "",
+      "at": "Часовые"
+    },
+    "Shields": {
+      "ht": "",
+      "at": "Щиты"
+    },
+    "Ship": {
+      "ht": "",
+      "at": "Корабль"
+    },
+    "Ships to Defend": {
+      "ht": "",
+      "at": "Защищаемые корабли"
+    },
+    "Shotgun": {
+      "ht": "",
+      "at": "Дробовик"
+    },
+    "Size": {
+      "ht": "",
+      "at": "Размер"
+    },
+    "Snipers": {
+      "ht": "",
+      "at": "Снайперы"
+    },
+    "Soldiers": {
+      "ht": "",
+      "at": "Солдаты"
+    },
+    "Spool": {
+      "ht": "",
+      "at": "Раскрутка"
+    },
+    "Standard": {
+      "ht": "",
+      "at": "Обычная"
+    },
+    "Starter": {
+      "ht": "",
+      "at": "Стартовая"
+    },
+    "Stun": {
+      "ht": "",
+      "at": "Оглуш."
+    },
+    "Targets": {
+      "ht": "",
+      "at": "Цели"
+    },
+    "Technicians": {
+      "ht": "",
+      "at": "Техники"
+    },
+    "Thermal": {
+      "ht": "",
+      "at": "Терм."
+    },
+    "Tier": {
+      "ht": "",
+      "at": "Уровень"
+    },
+    "Tracking": {
+      "ht": "",
+      "at": "Отслеживание"
+    },
+    "Tracking Range": {
+      "ht": "",
+      "at": "Дальность сопровождения"
+    },
+    "Turn Rate": {
+      "ht": "",
+      "at": "Скорость поворота"
+    },
+    "Turrets": {
+      "ht": "",
+      "at": "Турели"
+    },
+    "Unique": {
+      "ht": "",
+      "at": "Уникальная"
+    },
+    "Used To Craft": {
+      "ht": "",
+      "at": "Используется для"
+    },
+    "Velocity": {
+      "ht": "",
+      "at": "Скорость"
+    },
+    "Wear": {
+      "ht": "",
+      "at": "Износ"
+    },
+    "Weight": {
+      "ht": "",
+      "at": "Вес"
+    },
+    "Xeno Threat": {
+      "ht": "",
+      "at": "Xeno Threat"
+    },
+    "Yaw": {
+      "ht": "",
+      "at": "Рыскание"
+    },
+    "Yes": {
+      "ht": "",
+      "at": "Да"
+    },
+    "base": {
+      "ht": "",
+      "at": "базовая"
+    },
+    "down": {
+      "ht": "",
+      "at": "спад"
+    },
+    "empty": {
+      "ht": "",
+      "at": "пусто"
+    },
+    "express": {
+      "ht": "",
+      "at": "экспресс"
+    },
+    "friendly": {
+      "ht": "",
+      "at": "дружественные"
+    },
+    "hostile": {
+      "ht": "",
+      "at": "враждебные"
+    },
+    "present": {
+      "ht": "",
+      "at": "есть"
+    },
+    "select variants": {
+      "ht": "",
+      "at": "отдельные варианты"
+    },
+    "up": {
+      "ht": "",
+      "at": "разгон"
+    },
+    "{count} items": {
+      "ht": "",
+      "at": "{count} шт."
+    },
+    "{count} sets": {
+      "ht": "",
+      "at": "{count} комплектов"
+    },
+    "{count} types": {
+      "ht": "",
+      "at": "{count} типов"
+    },
+    "{item} Set": {
+      "ht": "",
+      "at": "Комплект {item}"
+    },
+    "{pct}% chance": {
+      "ht": "",
+      "at": "шанс {pct}%"
+    },
+    "{pct}% chance ({variants} only)": {
+      "ht": "",
+      "at": "шанс {pct}% (только {variants})"
+    },
+    "{type} Ammo": {
+      "ht": "",
+      "at": "Боеприпасы {type}"
+    }
+  }
+}

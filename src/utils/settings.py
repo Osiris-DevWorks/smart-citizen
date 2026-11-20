@@ -3417,7 +3417,25 @@ class AppSettings:
         :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
         """
         stamp = AppSettings.get_enhancements_stamp(language)
-        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+        return bool(stamp) and stamp == AppSettings.enhancements_stamp_value(
+            AppSettings.get_dataforge_build_key(), language)
+
+    @staticmethod
+    def enhancements_stamp_value(build_key: str, language: "str | None" = None) -> str:
+        """The ``.dataforge_stamp`` text for a set generated from *build_key*
+        in *language*.
+
+        A language with a table of translated generated text (#579,
+        ``languages/<language>/enhancements.json``) adds ``|text=`` and the
+        table's fingerprint, so an update that changes the table makes that
+        language's set read as out of date and the app offers to generate it
+        again. English has no table, so its stamp is the plain build key, as
+        before."""
+        from src.utils.enhancement_text import table_fingerprint
+        if language is None:
+            language = AppSettings.get_selected_language()
+        text = table_fingerprint(language)
+        return f"{build_key}|text={text}" if text else build_key
 
     @staticmethod
     def invalidate_enhancements_stamp(folder: Path) -> None:

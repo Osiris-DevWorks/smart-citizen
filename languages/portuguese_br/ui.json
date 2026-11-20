@@ -2286,6 +2286,10 @@
       "ht": "",
       "at": "Não foi possível carregar a localização {language} a partir da fonte configurada, e nenhuma cópia em cache foi encontrada. Exibindo a base em inglês. Verifique a URL ou o arquivo em Mapear Arquivo de Idioma e tente novamente."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Uma tradução {language} mais recente foi baixada. Recarregando com ela."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "Gerando aprimoramentos {language} a partir do DataForge…"

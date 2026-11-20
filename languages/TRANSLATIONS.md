@@ -1135,3 +1135,7 @@ them against the new source.
   one overwrites the other's `global.ini` in that folder. A Russian-speaking
   reviewer replacing the `at` strings with `ht` is the next step to promote
   it from AI-only to human-reviewed.
+
+## Generated text (`enhancements.json`, #579)
+
+The text Smart Citizen adds to the game strings (stat labels such as `Max HP`, mission details, journal lines) is translated in `languages/<lang>/enhancements.json`, beside `ui.json`. Its keys are the English texts, listed in `languages/english/enhancements.json`, and each leaf has the same `ht` / `at` fields with the same rules: `ht` wins, then `at`, and an empty leaf stays English. Keep every `{placeholder}` and `<EM4>`-style tag. Every non-English table was first written as AI drafts (`at`, with `ht` empty), so all of it is open for review. Item names, tags such as `[BP]`, the mission section headers and the Rep label are not in this file: names come from the community translation, and the headers and the label are settings on the Enhancements tab.

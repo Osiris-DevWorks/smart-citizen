@@ -2286,6 +2286,10 @@
       "ht": "",
       "at": "无法从所设置的来源加载 {language} 本地化内容，也未找到缓存副本。改为显示英文基础内容。请检查“映射语言文件”中的地址或文件，然后重试。"
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "已下载更新的 {language} 翻译，正在重新加载。"
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "正在从 DataForge 生成 {language} 增强内容…"
