@@ -3922,19 +3922,19 @@
     },
     "finder_location": {
       "ht": "",
-      "at": "{shop}, {place} ({system}): {price} aUEC"
+      "at": "{shop}, {place}: {price} aUEC"
     },
     "finder_price_range": {
       "ht": "",
       "at": "{low} bis {high} aUEC"
     },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
     "finder_more": {
       "ht": "",
       "at": "{shown} von {total} Gegenständen angezeigt. Gib mehr ein, um die Suche einzugrenzen."
-    },
-    "finder_reported": {
-      "ht": "",
-      "at": "Preis gemeldet am {date}"
     }
   },
   "overlay": {

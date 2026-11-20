@@ -2682,18 +2682,62 @@ def test_a_match_expands_to_the_shops_that_sell_it(qapp):
     drawer.set_shop_data(_shop_data())
     assert "uexcorp.space" in drawer._finder_source.text()
     drawer._finder_search.setText("p4-ar")
+    # Grouped by star system in the game's order, cheapest first in each.
     assert _tree(drawer._finder_tree) == [
-        ["P4-AR Magazine (1)", [["CenterMass, Area 18 (Stanton): 198 aUEC", []]]],
-        ["P4-AR Rifle (2)", [["Conscientious Objects, Levski (Nyx): 4,600 aUEC", []],
-                             ["CenterMass, Area 18 (Stanton): 4,757 aUEC", []]]],
+        ["P4-AR Magazine (1)", [["Stanton", [["CenterMass, Area 18: 198 aUEC", []]]]]],
+        ["P4-AR Rifle (2)", [["Stanton", [["CenterMass, Area 18: 4,757 aUEC", []]]],
+                             ["Nyx", [["Conscientious Objects, Levski: 4,600 aUEC", []]]]]],
     ]
     # Collapsed until the player opens one, unless it is the only match.
     assert not drawer._finder_tree.topLevelItem(0).isExpanded()
     rifle = drawer._finder_tree.topLevelItem(1)
     assert rifle.toolTip(0) == "P4-AR Rifle\n4,600 to 4,757 aUEC"
-    assert rifle.child(0).toolTip(0).startswith("Conscientious Objects\nLevski, Delamar, Nyx\n")
+    # The shop's tooltip gives its full place and its price, not a date.
+    assert rifle.child(1).child(0).toolTip(0) == (
+        "Conscientious Objects\nLevski, Delamar, Nyx\n4,600 aUEC")
     drawer._finder_search.setText("rifle")
-    assert drawer._finder_tree.topLevelItem(0).isExpanded()
+    only = drawer._finder_tree.topLevelItem(0)
+    assert only.isExpanded()
+    assert all(only.child(i).isExpanded() for i in range(only.childCount()))
+
+
+def test_shops_are_grouped_by_system_in_the_games_order():
+    from src.gui.sco_overlay import shops_by_system
+    from src.utils.uex_shops import ShopLocation
+
+    def shop(system, price):
+        return ShopLocation("Shop", "Place", "", system, price, 0)
+
+    grouped = shops_by_system([shop("Nyx", 1), shop("", 2), shop("Castra", 3),
+                               shop("Stanton", 4), shop("Pyro", 5), shop("Stanton", 6)])
+    assert list(grouped) == ["Stanton", "Pyro", "Nyx", "Castra", ""]
+    assert [loc.price for loc in grouped["Stanton"]] == [4, 6]
+
+
+def test_a_long_shop_name_wraps_instead_of_being_cut_off(qapp):
+    from src.utils.uex_shops import build_shop_data
+    terminals = [
+        {"id": 1, "name": "Shop - Area 18", "city_name": "Area 18",
+         "star_system_name": "Stanton", "is_available_live": 1},
+        {"id": 2, "name": "Cubby Blast Weapons and Armor Emporium - " + "Long " * 12,
+         "city_name": "Lorville Business District Commercial Plaza " * 2,
+         "star_system_name": "Stanton", "is_available_live": 1},
+    ]
+    prices = [{"id_item": 1, "id_terminal": t, "item_name": "Gun", "price_buy": 10 * t}
+              for t in (1, 2)]
+    drawer = BlueprintDrawer()
+    drawer.set_shop_data(build_shop_data(prices, terminals, 1_800_000_000))
+    drawer.open_section("finder")
+    drawer.show()
+    tree = drawer._finder_tree
+    drawer._finder_search.setText("gun")
+    qapp.processEvents()
+    system = tree.topLevelItem(0).child(0)
+    short, long_ = (tree.visualItemRect(system.child(i)) for i in range(2))
+    assert long_.height() > short.height()
+    assert long_.right() <= tree.viewport().width()
+    assert tree.horizontalScrollBar().maximum() == 0
+    drawer.hide()
 
 
 def test_the_finder_says_when_nothing_matches_or_the_list_is_cut(qapp):

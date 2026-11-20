@@ -3922,19 +3922,19 @@
     },
     "finder_location": {
       "ht": "",
-      "at": "{shop}, {place} ({system}): {price} aUEC"
+      "at": "{shop}, {place}: {price} aUEC"
     },
     "finder_price_range": {
       "ht": "",
       "at": "{low} - {high} aUEC"
     },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
     "finder_more": {
       "ht": "",
       "at": "{total} eşyadan {shown} tanesi gösteriliyor. Daraltmak için daha fazla yazın."
-    },
-    "finder_reported": {
-      "ht": "",
-      "at": "Fiyat bildirildi: {date}"
     }
   },
   "overlay": {

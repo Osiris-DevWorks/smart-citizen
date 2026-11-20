@@ -3700,19 +3700,19 @@
     },
     "finder_location": {
       "ht": "",
-      "at": "{shop}, {place} ({system}): {price} aUEC"
+      "at": "{shop}, {place}: {price} aUEC"
     },
     "finder_price_range": {
       "ht": "",
       "at": "от {low} до {high} aUEC"
     },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
     "finder_more": {
       "ht": "",
       "at": "Показано {shown} из {total} предметов. Введите больше, чтобы сузить поиск."
-    },
-    "finder_reported": {
-      "ht": "",
-      "at": "Цена сообщена {date}"
     }
   },
   "overlay": {

@@ -3922,19 +3922,19 @@
     },
     "finder_location": {
       "ht": "",
-      "at": "{shop}、{place}（{system}）: {price} aUEC"
+      "at": "{shop}、{place}: {price} aUEC"
     },
     "finder_price_range": {
       "ht": "",
       "at": "{low}～{high} aUEC"
     },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
     "finder_more": {
       "ht": "",
       "at": "{total}件中{shown}件を表示中。さらに入力して絞り込んでください。"
-    },
-    "finder_reported": {
-      "ht": "",
-      "at": "価格報告日: {date}"
     }
   },
   "overlay": {

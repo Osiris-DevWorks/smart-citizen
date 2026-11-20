@@ -71,7 +71,8 @@ TEST_SECTIONS: list[dict] = [
         "title": "Overlay: Item Finder (#606)",
         "items": [
             "Start the overlay and open the magnifying glass tab: the bottom line says where the shop data is from and when it was updated.",
-            "Type an item (e.g. P4-AR): matches show with a shop count. Expand one: each shop, its place, star system and price show, cheapest first.",
+            "Type an item (e.g. P4-AR): matches show with a shop count. Expand one: its shops are grouped by star system, cheapest first in each.",
+            "Hover a shop: the tooltip shows its full place and price. Long item and shop names wrap onto a second line, not cut off.",
             "Type a single exact item name: its match opens by itself. Type a nonsense name: the tab says no shop sells it.",
             "Turn off your internet and restart the app and overlay: the finder still works from the saved copy and says UEX could not be reached.",
             "Turn Item Finder off on the Overlay tab: its tab leaves the drawer.",

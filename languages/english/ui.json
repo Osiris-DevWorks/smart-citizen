@@ -3699,19 +3699,19 @@
       "at": ""
     },
     "finder_location": {
-      "ht": "{shop}, {place} ({system}): {price} aUEC",
+      "ht": "{shop}, {place}: {price} aUEC",
       "at": ""
     },
     "finder_price_range": {
       "ht": "{low} to {high} aUEC",
       "at": ""
     },
-    "finder_more": {
-      "ht": "Showing {shown} of {total} items. Type more to narrow it down.",
+    "finder_price": {
+      "ht": "{price} aUEC",
       "at": ""
     },
-    "finder_reported": {
-      "ht": "Price reported {date}",
+    "finder_more": {
+      "ht": "Showing {shown} of {total} items. Type more to narrow it down.",
       "at": ""
     }
   },
