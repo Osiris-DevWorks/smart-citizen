@@ -3565,6 +3565,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Mineralien hier: {minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Gegenstand eingeben, um zu sehen, wo man ihn kauft..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Shopdaten werden von UEX geladen..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "UEX war für die Shopdaten nicht erreichbar. Prüfe deine Internetverbindung. Das Overlay versucht es in ein paar Minuten erneut."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Shopdaten von {site}, von Spielern gemeldet. Aktualisiert {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX war nicht erreichbar, daher ist dies die zuletzt gespeicherte Kopie."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "Kein bekannter Shop verkauft einen Gegenstand mit diesem Namen."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place} ({system}): {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} bis {high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{shown} von {total} Gegenständen angezeigt. Gib mehr ein, um die Suche einzugrenzen."
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "Preis gemeldet am {date}"
     }
   },
   "overlay": {
@@ -3783,6 +3827,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Mineral eingeben, um die Gegenstände zu sehen, die es nutzen, oder einen Gegenstand, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Gegenstandssuche"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Gib einen Gegenstand ein, um zu sehen, welche Shops ihn verkaufen, wo sie sind und was er kostet. Die Shopdaten kommen über das Internet von UEX und werden von Spielern gemeldet."
     },
     "drawer_position": {
       "ht": "",

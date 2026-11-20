@@ -41,11 +41,12 @@
 
 ### 通过网络传输的内容
 
-智慧公民仅在以下三种情况下发出出站网络请求：
+智慧公民仅在以下四种情况下发出出站网络请求：
 
 - **更新检查** —— 大约每 6 小时向 `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest` 发送一次小型的未经身份验证的请求，以比较已安装版本与最新 GitHub 发布版本。仅返回发布元数据（标签名称、发布页面地址）；不会发送任何智慧公民的状态数据。
 - **语言下载** —— 当你切换到非英语语言时，智慧公民会从配置的地址下载该语言社区翻译的 `global.ini`（默认来自 [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) GitHub 仓库）。下载内容会在本地缓存；你机器上的任何内容都不会被发送出去。
 - **用户自定义的远程来源** —— 如果你在配置标签页中配置了指向 `http(s)://` 地址的数据来源，智慧公民会在刷新源文件时获取该地址。默认情况下，这仅适用于 `global` 来源的 GitHub-raw 地址形式；自 v1.0 起，标准配置改为从你本地的 Data.p4k 提取内容中读取 `base.ini`。
+- **SCO 物品查找商店列表** — 在开启物品查找分区并运行覆盖层时，Smart Citizen 会从 [UEX](https://uexcorp.space) 的 API（`api.uexcorp.uk`）下载商店和物品价格列表，最多每 12 小时一次。这只是两个仅携带应用名称和版本的简单请求，不会发送你电脑上的任何内容。列表会缓存在本地。在覆盖层标签页关闭物品查找即可停止。
 
 ### 智慧公民叠加层
 
