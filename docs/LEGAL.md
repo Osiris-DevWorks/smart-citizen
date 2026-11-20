@@ -48,6 +48,17 @@ Smart Citizen makes outbound network requests in only four circumstances:
 - **User-configured remote sources** — If you have configured a data source pointing at an `http(s)://` URL in the Config tab, Smart Citizen fetches that URL when refreshing source files. Out of the box this only applies to the `global` source's GitHub-raw URL form; the standard configuration since v1.0 reads `base.ini` from your local Data.p4k extraction instead.
 - **SCO Item Finder shop list** — While the overlay runs with its Item Finder section switched on, Smart Citizen downloads the list of shops and item prices from the [UEX](https://uexcorp.space) API (`api.uexcorp.uk`), at most once every 12 hours. It is two plain requests that carry only the app's name and version; nothing from your machine is sent. The list is cached locally. Switch the Item Finder off on the Overlay tab to stop it.
 
+### The Smart Citizen Overlay
+
+The overlay is off until you start it. While it runs, everything it reads stays on your computer:
+
+- **Screen** — it captures a small area around the mining scanner's readout to read the signal number. Captures are read in memory and not saved.
+- **Game.log** — it reads Star Citizen's log to find blueprints you receive.
+- **Windows** — it asks Windows which window is in front and whether the mouse pointer shows, so the drawer lets your clicks through to the game while you aim.
+- **Drawer hotkey** — only if you set one. While Star Citizen is in front, it asks Windows whether the hotkey's key is down, and the Ctrl, Alt, Shift and Win keys only when it is. It asks about no other key and never receives what you type.
+
+It never reads the game's memory, never hooks or injects into the game, and never sends input to it.
+
 ### What Smart Citizen does **not** do
 
 - No telemetry, analytics, or usage reporting of any kind.

@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Mostrar Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Sair"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "O Smart Citizen continua em execução"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Ele está na bandeja do sistema. Clique no ícone dele para trazer a janela de volta, ou clique com o botão direito para sair. Se não vir o ícone, ele pode estar atrás da seta ^ ao lado do relógio."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -798,6 +816,18 @@
       "ht": "",
       "at": "Quando marcado, o tour guiado não será iniciado automaticamente em uma nova versão. O botão Tutorial na barra de ferramentas continua funcionando."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Minimizar para a bandeja"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Quando marcado, minimizar o Smart Citizen o esconde na bandeja do sistema (os ícones ao lado do relógio) em vez da barra de tarefas. Clique no ícone dele para trazê-lo de volta. Enquanto ele estiver lá, abrir o Smart Citizen de novo traz essa janela de volta em vez de abrir uma segunda cópia."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Nenhuma bandeja do sistema foi encontrada, então o Smart Citizen é minimizado na barra de tarefas."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Raiz de instalação do Star Citizen — o diretório que contém LIVE/, PTU/, EPTU/, HOTFIX/ e/ou TECH-PREVIEW/. Detectado automaticamente na instalação; edite se o seu jogo estiver em outro local. O menu suspenso 'Canal' abaixo escolhe qual deles o aplicativo lê e grava."
@@ -845,6 +875,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Limpar a pasta de cache personalizada e usar o padrão da plataforma."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Mantenha os mesmos blueprints adquiridos em todos os PCs em que você joga. Escolha uma pasta que seu app de nuvem já sincroniza, como uma no Google Drive, OneDrive ou Dropbox, e depois escolha a mesma pasta nos seus outros PCs. O Smart Citizen só lê e grava alguns arquivos pequenos lá, e seu app de nuvem os transfere."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Desligado. Escolha uma pasta para ligar."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Escolha uma pasta que seu app de nuvem sincroniza com seus outros PCs"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Desligar"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Parar de sincronizar. Os blueprints adquiridos neste PC ficam como estão."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Escolher a pasta do Smart Sync"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "O Smart Sync está desligado."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Sincronizando..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Última sincronização às {time}. Outros PCs nesta pasta: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Não foi possível sincronizar: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2330,10 @@
       "ht": "",
       "at": "Não foi possível carregar a localização {language} a partir da fonte configurada, e nenhuma cópia em cache foi encontrada. Exibindo a base em inglês. Verifique a URL ou o arquivo em Mapear Arquivo de Idioma e tente novamente."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Uma tradução {language} mais recente foi baixada. Recarregando com ela."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "Gerando aprimoramentos {language} a partir do DataForge…"
@@ -2583,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Proporções da janela redefinidas."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "O Smart Sync não conseguiu usar a pasta: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "O Smart Sync atualizou {count} blueprint(s) adquirido(s) dos seus outros PCs."
     }
   },
   "import_flow": {
@@ -2992,6 +3078,14 @@
       "ht": "",
       "at": "O Smart Citizen não conseguiu usar uma pasta de trabalho em:\n{folder}\n\n{reason}\n\nA extração não foi iniciada, então nada foi alterado."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "A geração de aprimoramentos foi interrompida porque {skipped} de {total} contratos não puderam ser lidos. Seus aprimoramentos atuais não foram alterados. Informe isso, pois costuma ser um erro do Smart Citizen.\n\nPrimeiro contrato:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "A geração de aprimoramentos foi interrompida porque a leitura dos contratos parou com um erro. Seus aprimoramentos atuais não foram alterados. Informe isso, pois costuma ser um erro do Smart Citizen.\n\nO erro:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "O Windows negou ao Smart Citizen a permissão para criar o cache do DataForge em:\n{folder}\n\nA extração não foi iniciada, então nada foi alterado."
@@ -3123,7 +3217,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Escolha quais categorias de aprimoramentos rodam ao Gerar. Naves, componentes, armas de nave, armas FPS, missões, recompensas de missão, fabricação de mercadorias e consumíveis médicos podem ser ativados de forma independente."
+        "at": "Escolha quais categorias de aprimoramentos rodam ao Gerar: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items inclui componentes, armas de nave e mísseis; Gear inclui armas FPS e tags de armadura. Cada categoria pode ser ligada ou desligada separadamente."
       }
     },
     "enh_favorites": {
@@ -3154,6 +3248,26 @@
       "description": {
         "ht": "",
         "at": "Monte as tags entre colchetes adicionadas aos nomes de componentes, mísseis, armas de nave, commodities e armaduras. Reordene os elementos com ▲/▼, desmarque para excluir, mude o tamanho das abreviações, escolha o separador e os colchetes, ou coloque a tag depois do nome em vez de antes."
+      }
+    },
+    "blueprint_tracker": {
+      "title": {
+        "ht": "",
+        "at": "7. Rastreador de Blueprints"
+      },
+      "description": {
+        "ht": "",
+        "at": "Marque os blueprints que você possui. Busque na lista da esquerda por nome ou missão, ou refine por Tipo, Classe, Tamanho e Grau de componente, e então use as setas para mover itens para a sua lista de adquiridos. Blueprints adquiridos recebem uma tag [Owned] onde quer que apareçam nas recompensas potenciais de uma missão, para você ver de relance o que ainda vale caçar."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Sobreposição do Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Inicie a sobreposição aqui ou com o botão Sobreposição da barra de ferramentas. Sobre o jogo, ela decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
       }
     },
     "edit": {
@@ -3213,7 +3327,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Escolha o tema do app (Padrão / Claro / Escuro / ODW) e, se quiser, desative o tour automático a cada nova versão."
+        "at": "Escolha o tema do app (Padrão / Claro / Escuro / ODW) e o tamanho da fonte (Pequeno / Médio / Grande, aplicado após reiniciar) e, se quiser, desative o tour automático em novas versões. Marque Minimizar para a bandeja para que a janela vá para a bandeja do sistema ao ser minimizada."
       }
     },
     "cfg_sc_install": {
@@ -3253,37 +3367,37 @@
       },
       "description": {
         "ht": "",
-        "at": "Importe um INI externo para suas personalizações pela caixa de resolução de conflitos, ou redefina seu user.ini do canal ativo (com backup automático antes de limpar)."
+        "at": "Importe um INI externo para suas personalizações pela janela de resolução de conflitos. Redefina o user.ini do canal ativo (com backup antes) ou recupere uma cópia anterior com Restaurar user.ini. A prévia mostra o que Aplicar escreveria, e Verificar atualizações procura uma nova versão."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Config: Backup de Configurações"
+      },
+      "description": {
+        "ht": "",
+        "at": "Exportar Configurações salva suas preferências, ajustes de tags, pasta do Star Citizen e textos personalizados de todos os canais em um só arquivo. Importar Configurações os traz de volta, em um PC novo ou após uma instalação limpa."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Config: Ferramentas do Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Limpar cache de shaders lista as pastas de cache de shaders do jogo, uma por versão. Limpar apaga os shaders e mantém suas configurações gráficas; Remover apaga a pasta inteira. Feche o Star Citizen antes."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Ajuda e feedback"
+        "at": "21. Ajuda e feedback"
       },
       "description": {
         "ht": "",
         "at": "O botão Ajuda abre um painel lateral com o guia completo, a lista de Problemas Conhecidos e um link para o canal do Smart Citizen no Discord. Isso é tudo o que você precisa para começar: boa sorte, cidadão."
-      }
-    },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Sobreposição do Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Inicie a sobreposição aqui ou com o botão Sobreposição da barra de ferramentas. Sobre o jogo, ela decodifica assinaturas de escaneamento de mineração, abre uma gaveta para buscar seus blueprints, minerais e fabricação, e marca como possuídos os blueprints que você ganha. Rode o jogo em modo janela sem bordas na sua tela principal."
-      }
-    },
-    "blueprint_tracker": {
-      "title": {
-        "ht": "",
-        "at": "7. Rastreador de Blueprints"
-      },
-      "description": {
-        "ht": "",
-        "at": "Marque os blueprints que você possui. Busque na lista da esquerda por nome ou missão, ou refine por Tipo, Classe, Tamanho e Grau de componente, e então use as setas para mover itens para a sua lista de adquiridos. Blueprints adquiridos recebem uma tag [Owned] onde quer que apareçam nas recompensas potenciais de uma missão, para você ver de relance o que ainda vale caçar."
       }
     }
   },
@@ -3830,7 +3944,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log e, se você definir um atalho para a gaveta, observa as teclas pressionadas só para essa combinação; nunca toca no processo do jogo."
+      "at": "Janelas desenhadas sobre o Star Citizen: o decodificador de escaneamento de mineração e a gaveta de blueprints. Rode o jogo em modo janela sem bordas. A sobreposição só lê sua tela e o Game.log, pergunta ao Windows qual janela está em primeiro plano e se o ponteiro está visível e, se você definir um atalho para a gaveta, se a tecla do atalho e as teclas Ctrl, Alt, Shift e Win estão pressionadas; nunca toca no processo do jogo."
     },
     "start_btn": {
       "ht": "",

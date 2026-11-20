@@ -48,6 +48,17 @@ Smart Citizen stellt ausgehende Netzwerkanfragen nur in vier Fällen:
 - **Benutzerdefinierte Remote-Quellen** — Wenn du im Konfiguration-Tab eine Datenquelle konfiguriert hast, die auf eine `http(s)://`-URL verweist, ruft Smart Citizen diese URL beim Aktualisieren von Quelldateien ab. Standardmäßig gilt dies nur für die GitHub-Raw-URL-Form der `global`-Quelle; die Standardkonfiguration liest seit v1.0 stattdessen `base.ini` aus deiner lokalen Data.p4k-Extraktion.
 - **Shopliste der SCO-Gegenstandssuche** — Solange das Overlay mit eingeschalteter Gegenstandssuche läuft, lädt Smart Citizen die Liste der Shops und Gegenstandspreise von der [UEX](https://uexcorp.space)-API (`api.uexcorp.uk`), höchstens alle 12 Stunden. Es sind zwei einfache Anfragen, die nur den Namen und die Version der App mitsenden; nichts von deinem Rechner wird gesendet. Die Liste wird lokal zwischengespeichert. Schalte die Gegenstandssuche im Overlay-Tab aus, um das zu beenden.
 
+### Das Smart-Citizen-Overlay
+
+Das Overlay ist aus, bis du es startest. Während es läuft, bleibt alles, was es liest, auf deinem Computer:
+
+- **Bildschirm** — es nimmt einen kleinen Bereich um die Anzeige des Bergbau-Scanners auf, um die Signalzahl zu lesen. Die Aufnahmen werden im Speicher gelesen und nicht gespeichert.
+- **Game.log** — es liest das Log von Star Citizen, um Baupläne zu finden, die du erhältst.
+- **Windows** — es fragt Windows, welches Fenster im Vordergrund ist und ob der Mauszeiger sichtbar ist, damit die Schublade deine Klicks beim Zielen zum Spiel durchlässt.
+- **Tastenkürzel der Schublade** — nur wenn du eins festlegst. Während Star Citizen im Vordergrund ist, fragt es Windows, ob die Taste des Kürzels gedrückt ist, und die Tasten Strg, Alt, Umschalt und Win nur dann, wenn sie es ist. Es fragt nach keiner anderen Taste und empfängt nie, was du tippst.
+
+Es liest nie den Speicher des Spiels, hängt sich nie ins Spiel ein und schleust nichts ein, und es sendet nie Eingaben an das Spiel.
+
 ### Was Smart Citizen **nicht** tut
 
 - Keine Telemetrie, Analyse oder Nutzungsberichte jeglicher Art.

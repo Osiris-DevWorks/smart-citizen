@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen anzeigen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Beenden"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen läuft weiter"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Es ist jetzt im Infobereich. Ein Klick auf sein Symbol holt das Fenster zurück, ein Rechtsklick bietet Beenden an. Ist das Symbol nicht zu sehen, liegt es vielleicht hinter dem Pfeil ^ neben der Uhr."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -798,6 +816,18 @@
       "ht": "",
       "at": "Wenn aktiviert, startet die geführte Tour bei einer neuen Version nicht automatisch. Der Tutorial-Knopf in der Symbolleiste funktioniert weiterhin."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "In den Infobereich minimieren"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Wenn aktiviert, verschwindet Smart Citizen beim Minimieren in den Infobereich (die Symbole neben der Uhr) statt in die Taskleiste. Ein Klick auf sein Symbol dort holt es zurück. Solange es dort ist, holt ein erneuter Start von Smart Citizen dieses Fenster zurück, statt eine zweite Kopie zu öffnen."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Es wurde kein Infobereich gefunden, daher wird Smart Citizen in die Taskleiste minimiert."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Star-Citizen-Installationsverzeichnis — das Verzeichnis, das LIVE/, PTU/, EPTU/, HOTFIX/ und/oder TECH-PREVIEW/ enthält. Wird bei der Installation automatisch erkannt; bearbeite es, falls dein Spiel woanders liegt. Das Dropdown-Menü „Kanal“ unten wählt aus, welchen die App liest und beschreibt."
@@ -845,6 +875,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Den benutzerdefinierten Cache-Ordner löschen und den Plattformstandard verwenden."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Halte deine besessenen Baupläne auf jedem PC gleich, auf dem du spielst. Wähle einen Ordner, den deine Cloud-App bereits synchronisiert, etwa in Google Drive, OneDrive oder Dropbox, und wähle denselben Ordner auf deinen anderen PCs. Smart Citizen liest und schreibt dort nur ein paar kleine Dateien, und deine Cloud-App überträgt sie."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Aus. Wähle einen Ordner, um es einzuschalten."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Wähle einen Ordner, den deine Cloud-App mit deinen anderen PCs synchronisiert"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Ausschalten"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Synchronisierung beenden. Die besessenen Baupläne auf diesem PC bleiben, wie sie sind."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart-Sync-Ordner wählen"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync ist aus."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Synchronisiere..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Zuletzt synchronisiert um {time}. Andere PCs in diesem Ordner: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Synchronisierung fehlgeschlagen: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2330,10 @@
       "ht": "",
       "at": "Die {language}-Lokalisierung konnte nicht aus der konfigurierten Quelle geladen werden, und es wurde keine zwischengespeicherte Kopie gefunden. Stattdessen wird die englische Basis angezeigt. Überprüfe die URL oder Datei in Sprachdatei zuordnen und versuche es erneut."
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Eine neuere {language}-Übersetzung wurde heruntergeladen. Wird neu geladen."
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "{language}-Erweiterungen werden aus DataForge erstellt…"
@@ -2583,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Fensterproportionen auf Standardwerte zurückgesetzt."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync konnte seinen Ordner nicht verwenden: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync hat {count} besessene(n) Bauplan/Baupläne von deinen anderen PCs aktualisiert."
     }
   },
   "import_flow": {
@@ -2992,6 +3078,14 @@
       "ht": "",
       "at": "Smart Citizen konnte in diesem Ordner keinen Arbeitsordner verwenden:\n{folder}\n\n{reason}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen wurde gestoppt, weil {skipped} von {total} Aufträgen nicht gelesen werden konnten. Deine vorhandenen Erweiterungen bleiben unverändert. Bitte melde das, denn meist liegt es an einem Fehler in Smart Citizen.\n\nDer erste Auftrag:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "Die Erzeugung der Erweiterungen wurde gestoppt, weil das Lesen der Aufträge mit einem Fehler abgebrochen ist. Deine vorhandenen Erweiterungen bleiben unverändert. Bitte melde das, denn meist liegt es an einem Fehler in Smart Citizen.\n\nDer Fehler:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows hat Smart Citizen die Berechtigung verweigert, den DataForge-Cache in diesem Ordner zu erstellen:\n{folder}\n\nDie Extraktion wurde nicht gestartet, daher wurde nichts geändert."
@@ -3123,7 +3217,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Schalte um, welche Erweiterungskategorien beim Erstellen ausgeführt werden. Schiffe, Komponenten, Schiffswaffen, FPS-Waffen, Missionen, Missionsbelohnungen, Rohstoffherstellung und medizinische Verbrauchsgüter können jeweils unabhängig aktiviert werden."
+        "at": "Schalte um, welche Erweiterungskategorien beim Erstellen laufen: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items umfasst Komponenten, Schiffswaffen und Raketen; Gear umfasst FPS-Waffen und Rüstungs-Tags. Jede Kategorie lässt sich einzeln ein- oder ausschalten."
       }
     },
     "enh_favorites": {
@@ -3156,16 +3250,6 @@
         "at": "Erstelle die eingeklammerten Namens-Tags für Komponenten, Raketen, Schiffswaffen, Rohstoffe und Rüstungen. Elemente mit ▲/▼ neu anordnen, zum Ausschließen deaktivieren, Abkürzungslänge ändern, Trennzeichen und Klammern wählen oder das Tag statt davor dahinter platzieren."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Smart Citizen Overlay"
-      },
-      "description": {
-        "ht": "",
-        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3258,16 @@
       "description": {
         "ht": "",
         "at": "Markiere die Baupläne, die du besitzt. Durchsuche die linke Liste nach Name oder Mission, oder grenze sie nach Komponententyp, Klasse, Größe und Grad ein, und verschiebe dann mit den Pfeilen Gegenstände in deine Besessen-Liste. Besessene Baupläne erhalten ein [Owned]-Tag, wo immer sie in den möglichen Belohnungen einer Mission erscheinen, damit du auf einen Blick siehst, was sich zu verfolgen lohnt."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen Overlay"
+      },
+      "description": {
+        "ht": "",
+        "at": "Starte das Overlay hier oder mit der Overlay-Schaltfläche in der Werkzeugleiste. Über dem Spiel entschlüsselt es Bergbau-Scan-Signaturen, öffnet eine Schublade zum Durchsuchen deiner Baupläne, Mineralien und Herstellung und markiert Baupläne, die du erhältst, als besessen. Starte das Spiel im randlosen Fenstermodus auf deinem Hauptbildschirm."
       }
     },
     "edit": {
@@ -3233,7 +3327,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und deaktiviere optional die automatische Tour bei neuen Versionen."
+        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und die Schriftgröße (Klein / Mittel / Groß, gilt nach einem Neustart) und deaktiviere optional die automatische Tour bei neuen Versionen. Aktiviere „In den Infobereich minimieren“, damit das Fenster beim Minimieren in den Infobereich geht."
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3367,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Importiere eine externe INI über den Konfliktlösungsdialog in deine Überschreibungen, oder setze deine user.ini für den aktiven Kanal zurück (wird vor dem Leeren automatisch gesichert)."
+        "at": "Importiere eine externe INI über den Konfliktdialog in deine Überschreibungen. Setze die user.ini des aktiven Kanals zurück (vorher gesichert) oder hole mit user.ini wiederherstellen eine frühere Kopie zurück. Die Vorschau zeigt, was Anwenden schreiben würde, und Nach Updates suchen prüft auf eine neue Version."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Konfiguration: Einstellungssicherung"
+      },
+      "description": {
+        "ht": "",
+        "at": "Einstellungen exportieren speichert deine Einstellungen, Tag-Konfigurationen, deinen Star Citizen-Ordner und deine eigenen Texte aller Kanäle in einer Datei. Einstellungen importieren holt sie zurück, auf einem neuen PC oder nach einer Neuinstallation."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Konfiguration: Star Citizen-Werkzeuge"
+      },
+      "description": {
+        "ht": "",
+        "at": "Shader-Cache leeren listet die Shader-Cache-Ordner des Spiels auf, einen pro Spielversion. Bereinigen löscht die Shader und behält deine Grafikeinstellungen; Entfernen löscht den ganzen Ordner. Schließe Star Citizen vorher."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Hilfe & Feedback"
+        "at": "21. Hilfe & Feedback"
       },
       "description": {
         "ht": "",
@@ -3830,7 +3944,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log und achtet, wenn du ein Tastenkürzel für die Schublade festlegst, auf Tastendrücke für genau diese Kombination; den Spielprozess berührt es nie."
+      "at": "Fenster über Star Citizen: der Bergbau-Scan-Decoder und die Bauplan-Schublade. Starte das Spiel im randlosen Fenstermodus. Das Overlay liest nur deinen Bildschirm und Game.log, fragt Windows, welches Fenster im Vordergrund ist und ob der Zeiger sichtbar ist, und, wenn du ein Tastenkürzel für die Schublade festlegst, ob seine Taste und die Tasten Strg, Alt, Umschalt und Win gedrückt sind; den Spielprozess berührt es nie."
     },
     "start_btn": {
       "ht": "",

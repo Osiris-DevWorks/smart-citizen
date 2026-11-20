@@ -103,6 +103,20 @@ def _is_valid_sc_root(path: str) -> bool:
         return False
 
 
+def _p4k_exists(path: Path) -> bool:
+    """Return True if *path* exists, False when it is missing or can't be read.
+
+    ``Path.exists()`` swallows only a few Windows errors. Any other OSError,
+    such as WinError 448 for an elevated process following a link a normal
+    user made (#595), reads as missing here instead of crashing the caller.
+    """
+    try:
+        return path.exists()
+    except OSError as exc:
+        logger.warning("Could not check %s: %s", path, exc)
+        return False
+
+
 def _path_ends_in_channel(path: str) -> bool:
     """Return True if *path*'s last component is a recognised channel name.
 
@@ -568,6 +582,15 @@ class AppSettings:
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
 
+    # Settings keys - Window
+    # Minimize to the system tray instead of the taskbar (Config tab,
+    # src/gui/tray.py). Off by default.
+    MINIMIZE_TO_TRAY = "minimize_to_tray"
+    # Whether the one-time "still running" notice has been shown, on the
+    # first trip to the tray (src/gui/tray.py). Per-install state, like the
+    # tour's completed version.
+    TRAY_NOTICE_SHOWN = "tray_notice_shown"
+
     # Settings keys - App self-update check
     # Settings keys - Star Citizen channel selection
     # Star Citizen ships multiple channels (LIVE/PTU/EPTU/HOTFIX/TECH-PREVIEW)
@@ -738,6 +761,15 @@ class AppSettings:
     # owned_items (see import_values): restoring an owned set from before 3.0
     # resets it, so the next scan adds the starters to that set.
     DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
+    # Smart Sync (#567): the folder the player picked (empty means off), this
+    # PC's random machine id, this PC's ledger of owned changes (JSON, see
+    # smart_sync.py) and the "updated" time this PC last wrote to its file.
+    # All four are this PC's own, so they are in PROFILE_EXCLUDE_KEYS: a
+    # settings backup restored on another PC must not bring this PC's id.
+    SMART_SYNC_FOLDER = "smart_sync/folder"
+    SMART_SYNC_MACHINE_ID = "smart_sync/machine_id"
+    SMART_SYNC_LEDGER = "smart_sync/owned_ledger"
+    SMART_SYNC_LAST_WRITTEN = "smart_sync/last_written"
 
     # Smart Citizen Overlay (SCO) switch names on the Overlay tab (3.0.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
@@ -849,6 +881,10 @@ class AppSettings:
         "vehicles_path",
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
+        SMART_SYNC_FOLDER,
+        SMART_SYNC_MACHINE_ID,
+        SMART_SYNC_LEDGER,
+        SMART_SYNC_LAST_WRITTEN,
     })
 
     # Keys that have a default but are deliberately NOT materialised into a
@@ -863,6 +899,8 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - tray_notice_shown: the same kind of state, for the one-time "still
+    #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
     #     set, so it is exported only when stored, the same way owned_items
     #     is, and import_values takes it from a backup only together with
@@ -875,6 +913,7 @@ class AppSettings:
         SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
@@ -1608,11 +1647,95 @@ class AppSettings:
 
     @staticmethod
     def set_owned_items(names) -> None:
-        """Persist the owned blueprint item-name set (#157)."""
+        """Persist the owned blueprint item-name set (#157).
+
+        With Smart Sync on (#567), each name that changes is also stamped in
+        this PC's sync ledger, so the change carries its real time to the
+        other PCs. Every writer of the owned set comes through here; one that
+        does not (Import Settings writes the key itself) is caught at the
+        next sync, which records the same differences.
+        """
         import json
+        names = set(names)
+        if AppSettings.get_smart_sync_folder():
+            from src.utils import smart_sync
+            AppSettings.set_smart_sync_ledger(
+                smart_sync.record(AppSettings.get_smart_sync_ledger(), names)
+            )
         AppSettings.settings().setValue(
             AppSettings.OWNED_ITEMS, json.dumps(sorted(names))
         )
+        AppSettings.settings().sync()
+
+    # -- Smart Sync (#567) -------------------------------------------------
+
+    @staticmethod
+    def get_smart_sync_folder() -> str:
+        """The folder Smart Sync uses, or "" when it is off."""
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_FOLDER, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_folder(folder) -> None:
+        """Turn Smart Sync on with *folder*, or off with None or "".
+
+        Turning it on with no ledger yet shares what this PC owns as a
+        baseline that any real change wins over; turning it on again later
+        records what changed while it was off as changes made now.
+        """
+        from src.utils import smart_sync
+        folder = str(folder) if folder else ""
+        backend = AppSettings.settings()
+        if folder:
+            ledger = AppSettings.get_smart_sync_ledger()
+            owned = AppSettings.get_owned_items()
+            ledger = (smart_sync.record(ledger, owned) if ledger
+                      else smart_sync.baseline(ledger, owned))
+            AppSettings.set_smart_sync_ledger(ledger)
+            backend.setValue(AppSettings.SMART_SYNC_FOLDER, folder)
+        else:
+            backend.remove(AppSettings.SMART_SYNC_FOLDER)
+        backend.sync()
+
+    @staticmethod
+    def get_smart_sync_machine_id() -> str:
+        """This PC's random Smart Sync id, made the first time it is asked for."""
+        backend = AppSettings.settings()
+        machine_id = backend.value(AppSettings.SMART_SYNC_MACHINE_ID, "", type=str) or ""
+        if not machine_id:
+            from src.utils import smart_sync
+            machine_id = smart_sync.new_machine_id()
+            AppSettings.set_smart_sync_machine_id(machine_id)
+        return machine_id
+
+    @staticmethod
+    def set_smart_sync_machine_id(machine_id: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_MACHINE_ID, machine_id)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_ledger() -> dict:
+        """This PC's Smart Sync ledger (see smart_sync.py); {} when unset or unreadable."""
+        from src.utils import smart_sync
+        raw = AppSettings.settings().value(AppSettings.SMART_SYNC_LEDGER, "", type=str)
+        try:
+            return smart_sync.clean_ledger(json.loads(raw)) if raw else {}
+        except ValueError:
+            return {}
+
+    @staticmethod
+    def set_smart_sync_ledger(ledger: dict) -> None:
+        AppSettings.settings().setValue(
+            AppSettings.SMART_SYNC_LEDGER, json.dumps(ledger, sort_keys=True)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_last_written() -> str:
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_LAST_WRITTEN, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_last_written(updated: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_LAST_WRITTEN, updated)
         AppSettings.settings().sync()
 
     @staticmethod
@@ -1913,6 +2036,28 @@ class AppSettings:
     @staticmethod
     def set_tutorial_disabled(disabled: bool) -> None:
         AppSettings.settings().setValue(AppSettings.TUTORIAL_DISABLED, bool(disabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_minimize_to_tray() -> bool:
+        """When True, minimizing hides the window in the system tray instead
+        of the taskbar (Config tab opt-in, src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.MINIMIZE_TO_TRAY, False, type=bool)
+
+    @staticmethod
+    def set_minimize_to_tray(enabled: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.MINIMIZE_TO_TRAY, bool(enabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_tray_notice_shown() -> bool:
+        """Whether the one-time "still running" notice has been shown, so it
+        comes on the first trip to the tray only (src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.TRAY_NOTICE_SHOWN, False, type=bool)
+
+    @staticmethod
+    def set_tray_notice_shown(shown: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.TRAY_NOTICE_SHOWN, bool(shown))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3155,6 +3300,11 @@ class AppSettings:
         can't actually switch to. When the root isn't configured yet we
         return all channels so the combo isn't empty — the user can still
         pick one before the path is set.
+
+        A channel whose Data.p4k can't be checked counts as missing rather
+        than crashing the app (#595): Windows raises WinError 448 when an
+        elevated process follows a link a normal user made, e.g. a PTU folder
+        linked to LIVE, and ``Path.exists()`` lets that error through.
         """
         root = AppSettings.get_sc_install_root()
         if not root:
@@ -3162,7 +3312,7 @@ class AppSettings:
         root_path = Path(root)
         return [
             channel for channel in AppSettings.AVAILABLE_CHANNELS
-            if (root_path / channel / "Data.p4k").exists()
+            if _p4k_exists(root_path / channel / "Data.p4k")
         ]
 
     @staticmethod
@@ -3196,11 +3346,29 @@ class AppSettings:
     # caller channel-aware automatically.
 
     @staticmethod
+    def _channel_cache_dir(channel: str) -> Path:
+        r"""``…\{channel}\cache\`` for *channel*, named without making it.
+        The one place the channel's cache folder is spelled out, for
+        :meth:`get_cache_dir` and :meth:`get_cached_base_ini_paths`."""
+        return AppSettings.get_user_data_dir() / channel / "cache"
+
+    @staticmethod
     def get_cache_dir() -> Path:
         r"""Get the active channel's cache directory (``…\{channel}\cache\``)."""
-        cache_dir = AppSettings.get_channel_data_dir() / "cache"
+        cache_dir = AppSettings._channel_cache_dir(AppSettings.get_active_channel())
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
+
+    @staticmethod
+    def _base_ini_in(cache_dir: Path, language: str) -> Path:
+        r"""Where the cache folder *cache_dir* keeps *language*'s base.ini:
+        ``base.ini`` at its top for English, ``lang\{language}\base.ini``
+        for the others. Names the file only, nothing is read or made. The
+        one place the layout is spelled out, for :meth:`get_base_ini_path`
+        and :meth:`get_cached_base_ini_paths`."""
+        if language == AppSettings.DEFAULT_LANGUAGE:
+            return cache_dir / "base.ini"
+        return cache_dir / "lang" / language / "base.ini"
 
     @staticmethod
     def get_base_ini_path(language: "str | None" = None) -> Path:
@@ -3215,12 +3383,28 @@ class AppSettings:
         """
         if language is None:
             language = AppSettings.get_selected_language()
-        cache_dir = AppSettings.get_cache_dir()
+        path = AppSettings._base_ini_in(AppSettings.get_cache_dir(), language)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @staticmethod
+    def get_base_ini_leaf(language: "str | None" = None, channel: "str | None" = None) -> Path:
+        r"""The base.ini :meth:`get_base_ini_path` names for *language*, in
+        *channel*'s cache, without making the channel, cache or language
+        folder (#564). Both default to the selected language and the active
+        channel. For a read that must leave the disk alone, as
+        :meth:`get_dataforge_cache_leaf` is for the DataForge cache: a
+        blueprint scan reads LIVE's and HOTFIX's files whichever channel is
+        active, and must not make folders for a channel nobody selected.
+        """
+        if language is None:
+            language = AppSettings.get_selected_language()
+        if channel is None:
+            channel = AppSettings.get_active_channel()
+        cache_dir = AppSettings.get_user_data_dir() / channel / "cache"
         if language == AppSettings.DEFAULT_LANGUAGE:
             return cache_dir / "base.ini"
-        lang_dir = cache_dir / "lang" / language
-        lang_dir.mkdir(parents=True, exist_ok=True)
-        return lang_dir / "base.ini"
+        return cache_dir / "lang" / language / "base.ini"
 
     @staticmethod
     def get_global_source_base_ini(language: "str | None" = None) -> Path:
@@ -3241,6 +3425,53 @@ class AppSettings:
         if language != AppSettings.DEFAULT_LANGUAGE and not own.exists():
             return AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
         return own
+
+    @staticmethod
+    def get_cached_base_ini_paths() -> "list[tuple[str, str, Path]]":
+        r"""``(channel, language, base.ini)`` for every base.ini cached for
+        any channel, in any language the app ships (#569): the files
+        :meth:`get_base_ini_path` names, found by looking, so it makes no
+        folder, unlike that getter. In channel order, then language order.
+
+        Every channel, not only the active one, because the Blueprint
+        Tracker's Owned set is shared by all of them: a name saved while
+        another channel was loaded in another language can be traced
+        through that channel's file. The languages are the app's own
+        (:meth:`_shipped_languages`), offered in the selector or not, so a
+        language the selector has since hidden is still found, while a
+        folder of another name in the cache (a backup such as
+        ``spanish.bak``) is no language. A channel whose cache Windows
+        refuses or cannot reach is skipped with a WARNING (on Python 3.11,
+        which the release builds use, ``Path.is_file`` raises
+        ``PermissionError`` rather than answering False), so this raises
+        only when the data folder itself cannot be had.
+        """
+        languages = AppSettings._shipped_languages()
+        found: "list[tuple[str, str, Path]]" = []
+        for channel in AppSettings.AVAILABLE_CHANNELS:
+            cache_dir = AppSettings._channel_cache_dir(channel)
+            try:
+                for language in languages:
+                    path = AppSettings._base_ini_in(cache_dir, language)
+                    if path.is_file():
+                        found.append((channel, language, path))
+            except OSError as e:
+                logger.warning(f"Could not look for cached base.ini files in {cache_dir}: {e}")
+        return found
+
+    @staticmethod
+    def _shipped_languages() -> list:
+        """Every language the app ships a folder for in ``languages/``,
+        sorted, English always among them: the ones the selector offers and
+        the ones it hides (a stub ``ui.json``,
+        :meth:`get_available_languages`). Reads the folder's names only."""
+        try:
+            names = sorted(p.name for p in AppSettings.get_languages_dir().iterdir() if p.is_dir())
+        except OSError:
+            names = []
+        if AppSettings.DEFAULT_LANGUAGE not in names:
+            names.append(AppSettings.DEFAULT_LANGUAGE)
+        return names
 
     @staticmethod
     def sync_global_source_path(context: str) -> None:
@@ -3335,7 +3566,25 @@ class AppSettings:
         :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
         """
         stamp = AppSettings.get_enhancements_stamp(language)
-        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+        return bool(stamp) and stamp == AppSettings.enhancements_stamp_value(
+            AppSettings.get_dataforge_build_key(), language)
+
+    @staticmethod
+    def enhancements_stamp_value(build_key: str, language: "str | None" = None) -> str:
+        """The ``.dataforge_stamp`` text for a set generated from *build_key*
+        in *language*.
+
+        A language with a table of translated generated text (#579,
+        ``languages/<language>/enhancements.json``) adds ``|text=`` and the
+        table's fingerprint, so an update that changes the table makes that
+        language's set read as out of date and the app offers to generate it
+        again. English has no table, so its stamp is the plain build key, as
+        before."""
+        from src.utils.enhancement_text import table_fingerprint
+        if language is None:
+            language = AppSettings.get_selected_language()
+        text = table_fingerprint(language)
+        return f"{build_key}|text={text}" if text else build_key
 
     @staticmethod
     def invalidate_enhancements_stamp(folder: Path) -> None:
@@ -3818,18 +4067,26 @@ class AppSettings:
         scattered ``if name == "LIVE"`` branches that don't cover the new
         channels.
         """
-        sc_lang = AppSettings.get_sc_language_id(language)
         channel_path = AppSettings.get_channel_install_path()
         if channel_path:
-            return Path(channel_path) / "data" / "Localization" / sc_lang / "global.ini"
+            return AppSettings.get_applied_global_ini(channel_path, language)
 
         game_path = Path(AppSettings.get_game_install_path())
         if game_path.name.upper() in {c.upper() for c in AppSettings.AVAILABLE_CHANNELS}:
-            return game_path / "data" / "Localization" / sc_lang / "global.ini"
-        return (
-            game_path / AppSettings.get_active_channel()
-            / "data" / "Localization" / sc_lang / "global.ini"
-        )
+            return AppSettings.get_applied_global_ini(game_path, language)
+        return AppSettings.get_applied_global_ini(
+            game_path / AppSettings.get_active_channel(), language)
+
+    @staticmethod
+    def get_applied_global_ini(channel_dir, language: str | None = None) -> Path:
+        r"""The applied ``global.ini`` in the channel install folder
+        *channel_dir*: ``{channel_dir}\data\Localization\{sc_language_id}\global.ini``,
+        for *language* (default: the selected one). :meth:`get_global_ini_path`
+        gives it for the active channel; a blueprint scan asks for the channel
+        it reads (#564). Names the file only, nothing is read or made.
+        """
+        sc_lang = AppSettings.get_sc_language_id(language)
+        return Path(channel_dir) / "data" / "Localization" / sc_lang / "global.ini"
 
     @staticmethod
     def is_local_source_same_as_apply_target(local_path: str, language: str) -> bool:
@@ -3939,6 +4196,7 @@ class AppSettings:
             AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
             AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
             AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.MINIMIZE_TO_TRAY: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
@@ -4057,6 +4315,12 @@ class AppSettings:
         adds the starters to the restored set instead of leaving them out for
         good. A backup with no owned set leaves both alone, so it can't undo
         the one-shot and bring back a starter the user moved out of Owned.
+
+        With Smart Sync on (#567) the backup's owned set is added to the
+        current one rather than replacing it, and recorded in the ledger as
+        it is added: replacing it would read as this PC moving every newer
+        blueprint back to Available, and the next sync would take them off
+        every other PC too.
         """
         backend = AppSettings.settings()
         applied = 0
@@ -4065,6 +4329,14 @@ class AppSettings:
                 continue
             if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
                 continue  # follows owned_items, below
+            if key == AppSettings.OWNED_ITEMS and AppSettings.get_smart_sync_folder():
+                try:
+                    imported = set(json.loads(value)) if value else set()
+                except (ValueError, TypeError):
+                    imported = set()
+                AppSettings.set_owned_items(AppSettings.get_owned_items() | imported)
+                applied += 1
+                continue
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)

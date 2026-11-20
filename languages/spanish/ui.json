@@ -15,6 +15,24 @@
       "at": ""
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Mostrar Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Salir"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen sigue en ejecución"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Está en la bandeja del sistema. Haz clic en su icono para que vuelva la ventana, o haz clic derecho para salir. Si no ves el icono, puede estar detrás de la flecha ^ junto al reloj."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -798,6 +816,18 @@
       "ht": "",
       "at": "Si está marcado, la visita guiada no se iniciará automáticamente en una nueva versión. El botón Tutorial de la barra de herramientas sigue funcionando."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Minimizar a la bandeja del sistema"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Si está marcado, al minimizar Smart Citizen se oculta en la bandeja del sistema (los iconos junto al reloj) en lugar de en la barra de tareas. Haz clic en su icono para que vuelva. Mientras esté allí, abrir Smart Citizen de nuevo trae esa ventana de vuelta en lugar de abrir una segunda copia."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "No se encontró la bandeja del sistema, así que Smart Citizen se minimiza en la barra de tareas."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Raíz de instalación de Star Citizen — el directorio que contiene LIVE/, PTU/, EPTU/, HOTFIX/ y/o TECH-PREVIEW/. Se detecta automáticamente al instalar; edítalo si tu juego está en otro lugar. El menú desplegable 'Canal' de abajo elige cuál lee y escribe la aplicación."
@@ -845,6 +875,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Borrar la carpeta de caché personalizada y usar la predeterminada de la plataforma."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Mantén los mismos blueprints adquiridos en todos los PC en los que juegas. Elige una carpeta que tu aplicación en la nube ya sincronice, por ejemplo en Google Drive, OneDrive o Dropbox, y luego elige la misma carpeta en tus otros PC. Smart Citizen solo lee y escribe allí unos pocos archivos pequeños, y tu aplicación en la nube los mueve."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Desactivado. Elige una carpeta para activarlo."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Elige una carpeta que tu aplicación en la nube sincronice con tus otros PC"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Desactivar"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Dejar de sincronizar. Los blueprints adquiridos en este PC se quedan como están."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Elegir la carpeta de Smart Sync"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync está desactivado."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Sincronizando..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Última sincronización a las {time}. Otros PC en esta carpeta: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "No se pudo sincronizar: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2330,10 @@
       "ht": "No se pudo descargar la localización {language} y no se encontró ninguna copia en caché. Se mostrará la base inglesa. Revisa la URL en Asignar archivo de idioma y tu conexión, e inténtalo de nuevo.",
       "at": ""
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Se descargó una traducción {language} más reciente. Recargando con ella."
+    },
     "language_generating_enhancements": {
       "ht": "Generando mejoras de {language} desde DataForge...",
       "at": ""
@@ -2583,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Proporciones de la ventana restablecidas."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync no pudo usar su carpeta: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync actualizó {count} blueprint(s) adquirido(s) desde tus otros PC."
     }
   },
   "import_flow": {
@@ -2992,6 +3078,14 @@
       "ht": "",
       "at": "Smart Citizen no pudo usar una carpeta de trabajo en:\n{folder}\n\n{reason}\n\nLa extracción no se inició, así que no se cambió nada."
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "La generación de mejoras se detuvo porque no se pudieron leer {skipped} de {total} contratos. Tus mejoras actuales no han cambiado. Infórmalo, ya que suele ser un error de Smart Citizen.\n\nPrimer contrato:\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "La generación de mejoras se detuvo porque la lectura de contratos falló. Tus mejoras actuales no han cambiado. Infórmalo, ya que suele ser un error de Smart Citizen.\n\nEl error:\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows le denegó a Smart Citizen el permiso para crear la caché de DataForge en:\n{folder}\n\nLa extracción no se inició, así que no se cambió nada."
@@ -3123,7 +3217,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige qué categorías de mejoras se ejecutan al Generar. Naves, componentes, armas de nave, armas FPS, misiones, recompensas de misión, fabricación de mercancías y consumibles médicos pueden activarse de forma independiente."
+        "at": "Elige qué categorías de mejoras se ejecutan al Generar: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items incluye componentes, armas de nave y misiles; Gear incluye armas FPS y etiquetas de armadura. Cada categoría se activa o desactiva por separado."
       }
     },
     "enh_favorites": {
@@ -3156,16 +3250,6 @@
         "at": "Construye las etiquetas entre corchetes añadidas a componentes, misiles, armas de nave, mercancías y armaduras. Reordena elementos con ▲/▼, desmarca para excluir, cambia la longitud de abreviatura, elige separador y corchetes, o coloca la etiqueta después del nombre en lugar de antes."
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Superposición de Smart Citizen"
-      },
-      "description": {
-        "ht": "",
-        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3258,16 @@
       "description": {
         "ht": "",
         "at": "Marca los blueprints que posees. Busca en la lista izquierda por nombre o misión, o acótala por Tipo, Clase, Tamaño y Grado de componente, y usa las flechas para mover objetos a tu lista de adquiridos. Los blueprints adquiridos reciben una etiqueta [Owned] allí donde aparezcan entre las recompensas potenciales de una misión, para ver de un vistazo qué merece la pena perseguir."
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Superposición de Smart Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Inicia la superposición aquí o con el botón Superposición de la barra de herramientas. Sobre el juego decodifica las firmas de escaneo minero, abre un cajón para buscar tus blueprints, minerales y fabricación, y marca como poseídos los blueprints que consigues. Ejecuta el juego en modo ventana sin bordes en tu pantalla principal."
       }
     },
     "edit": {
@@ -3233,7 +3327,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y desactiva, si quieres, el recorrido automático en versiones nuevas."
+        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas. Marca Minimizar a la bandeja del sistema para que la ventana vaya allí al minimizarla."
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3367,33 @@
       },
       "description": {
         "ht": "",
-        "at": "Importa un INI externo a tus modificaciones mediante el diálogo de resolución de conflictos, o restablece tu user.ini del canal activo (con copia de seguridad automática antes de borrarlo)."
+        "at": "Importa un INI externo a tus modificaciones mediante el diálogo de resolución de conflictos. Restablece tu user.ini del canal activo (con copia de seguridad previa) o recupera una copia anterior con Restaurar user.ini. Vista previa muestra lo que escribiría Aplicar, y Buscar actualizaciones comprueba si hay una versión nueva."
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. Config: Copia de seguridad de ajustes"
+      },
+      "description": {
+        "ht": "",
+        "at": "Exportar ajustes guarda tus preferencias, configuraciones de etiquetas, carpeta de Star Citizen y textos personalizados de todos los canales en un solo archivo. Importar ajustes los recupera, en un PC nuevo o tras una instalación limpia."
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. Config: Herramientas de Star Citizen"
+      },
+      "description": {
+        "ht": "",
+        "at": "Borrar caché de shaders muestra las carpetas de caché de shaders del juego, una por versión. Limpiar borra los shaders y conserva tus ajustes gráficos; Eliminar borra la carpeta entera. Cierra Star Citizen antes."
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. Ayuda y comentarios"
+        "at": "21. Ayuda y comentarios"
       },
       "description": {
         "ht": "",
@@ -3830,7 +3944,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log y, si defines un atajo para el cajón, observa las teclas pulsadas solo para esa combinación; nunca toca el proceso del juego."
+      "at": "Ventanas dibujadas sobre Star Citizen: el decodificador de escaneo minero y el cajón de blueprints. Ejecuta el juego en modo ventana sin bordes. La superposición solo lee tu pantalla y Game.log, pregunta a Windows qué ventana está en primer plano y si el puntero está visible y, si defines un atajo para el cajón, si su tecla y las teclas Ctrl, Alt, Mayús y Win están pulsadas; nunca toca el proceso del juego."
     },
     "start_btn": {
       "ht": "",

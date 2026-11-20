@@ -7,17 +7,21 @@ the default reader working on a real QImage.
 """
 from __future__ import annotations
 
+import ctypes
 import sys
 
 import pytest
 from PyQt6.QtCore import QPoint, QRect, Qt
 from PyQt6.QtGui import QColor
 
+from src.gui import sco_overlay as so
 from src.gui.sco_overlay import (
-    DEFAULT_OVERLAY_COLORS, DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_OVERLAP, DRAWER_HANDLE_WIDTH,
-    LABEL_GAP, SAVE_SAMPLES_ENV,
-    SCAN_REGION, SECTION_ICONS, BlueprintDrawer, OverlayColors, SectionTabBar, drawer_edge,
-    ScoOverlay, format_matches, hud_signature_reader, scan_region_rect,
+    DEFAULT_OVERLAY_COLORS, DRAWER_HANDLE_HEIGHT, DRAWER_HANDLE_OVERLAP,
+    DRAWER_HANDLE_WIDTH, LABEL_GAP, PASS_THROUGH_IDLE_POLL_MS, PASS_THROUGH_POLL_MS,
+    SAVE_SAMPLES_ENV, SCAN_REGION, SECTION_ICONS, WS_EX_TRANSPARENT, BlueprintDrawer,
+    OverlayColors, SectionTabBar, drawer_edge, ScoOverlay, device_end, format_matches,
+    game_in_front, hud_signature_reader, monitor_at, native_work_area, pointer_hidden,
+    qt_round, scan_region_rect, set_click_through, within_device_pixels,
 )
 from src.utils.blueprint_meta import BlueprintItem
 from src.utils.mining_catalog import CraftingIndex, MineralInfo
@@ -28,11 +32,14 @@ from src.utils.settings import AppSettings
 @pytest.fixture(autouse=True)
 def _hermetic_overlay(monkeypatch, tmp_path):
     """No real theme or samples-folder reads: the overlay takes its colours
-    from settings on every start and resolves the samples folder per save."""
+    from settings on every start and resolves the samples folder per save.
+    Nor is Windows asked which window is in front, which a running overlay
+    does every tick (tests that need it patch their own answer)."""
     monkeypatch.setattr(OverlayColors, "from_theme",
                         classmethod(lambda cls: DEFAULT_OVERLAY_COLORS))
     monkeypatch.setattr("src.gui.sco_overlay.AppSettings.get_sco_samples_dir",
                         staticmethod(lambda: tmp_path / "default_samples"))
+    monkeypatch.setattr(so, "game_in_front", lambda: False)
 
 
 @pytest.fixture
@@ -238,6 +245,150 @@ def test_tab_bar_paints(qapp):
     bar.render(image)
     assert any(image.pixelColor(x, y).alpha() for x in range(image.width())
                for y in range(image.height()))
+
+
+def _painted_pixels(bar, scale):
+    """The device pixels *bar* paints (any alpha) at *scale* device pixels
+    per logical one, as Windows hit-tests the drawer's see-through window.
+    Rendered without the window background, which render() draws by default
+    and the see-through drawer never does."""
+    from PyQt6.QtGui import QImage, QRegion
+    from PyQt6.QtWidgets import QWidget
+
+    image = QImage(bar.size() * scale, QImage.Format.Format_ARGB32_Premultiplied)
+    image.setDevicePixelRatio(scale)
+    image.fill(0)
+    bar.render(image, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)
+    return image, [(x, y) for x in range(image.width()) for y in range(image.height())
+                   if image.pixelColor(x, y).alpha()]
+
+
+@pytest.mark.parametrize("edge", ["right", "left", "top", "bottom"])
+@pytest.mark.parametrize("scale", [1.0, 1.25, 1.5, 2.0])
+@pytest.mark.parametrize("current", [None, "minerals"])
+def test_every_pixel_the_tabs_paint_opens_a_tab(qapp, edge, scale, current):
+    """Windows sends a click on any pixel the tabs paint to the drawer, which
+    then takes focus from the game, so every such pixel must open a tab. The
+    anti-aliased outline outside a tab's shape opened nothing: a game's hidden
+    pointer parked in the screen corner sat on such a pixel, and a click
+    there lost the game's focus with nothing to show for it."""
+    from PyQt6.QtCore import QPointF
+
+    bar = SectionTabBar()
+    bar.set_edge(edge)
+    bar.set_current(current)
+    image, painted = _painted_pixels(bar, scale)
+    # The render covers the bar at this scale, edge to edge.
+    assert max(x for x, _ in painted) == image.width() - 1
+    assert max(y for _, y in painted) == image.height() - 1
+    # A click on a device pixel reaches Qt at that pixel's top-left corner.
+    missed = [(x, y) for x, y in painted if bar.tab_at(QPointF(x / scale, y / scale)) is None]
+    assert not missed, missed[:10]
+
+
+def test_the_outline_pixel_in_the_corner_opens_the_first_tab(qapp):
+    """The top-right drawer's outermost pixel, the screen corner: painted by
+    the first tab's outline, outside its shape (player report, 2026-11-16)."""
+    from PyQt6.QtCore import QPointF
+
+    bar = SectionTabBar()
+    _, painted = _painted_pixels(bar, 1.0)
+    corner = (bar.width() - 1, 0)
+    assert corner in painted
+    assert not bar._tab_shape(0).contains(QPointF(*corner))
+    assert bar.tab_at(QPointF(*corner)) == "blueprints"
+
+
+@pytest.mark.parametrize("current, point, section", [
+    # Closed at 125%: device pixel (10, 55), painted by Blueprints' outline
+    # alone, 0.77 px from it and 1.72 px from Minerals, which is in front.
+    (None, (8.0, 44.0), "blueprints"),
+    # Closed at 200%: the last column beside Blueprints' lower corner.
+    (None, (21.5, 39.5), "blueprints"),
+    (None, (21.5, 41.0), "blueprints"),
+    # Minerals open at 100%: (8, 86) is painted by Crafting's outline alone.
+    # The open tab, tested first, used to take it and close the drawer.
+    ("minerals", (8.0, 86.0), "crafting"),
+    ("minerals", (21.6, 39.2), "blueprints"),
+])
+def test_an_outline_pixel_opens_the_nearest_tab(qapp, current, point, section):
+    """A press on no tab but on an outline opens the tab whose outline is
+    nearest, not the first one front to back (found in review)."""
+    from PyQt6.QtCore import QPointF
+
+    bar = SectionTabBar()
+    bar.set_current(current)
+    assert bar.tab_at(QPointF(*point)) == section
+
+
+def _click_through_qt(drawer, x, y):
+    """A left click at (x, y) in the drawer, handed to its window as Windows
+    hands it over, so Qt picks the widget that gets it (QWidget.childAt)."""
+    from PyQt6.QtCore import QCoreApplication, QEvent, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    local = QPointF(x, y)
+    screen_pos = QPointF(drawer.mapToGlobal(QPoint(0, 0))) + local
+    for kind, buttons in ((QEvent.Type.MouseButtonPress, Qt.MouseButton.LeftButton),
+                          (QEvent.Type.MouseButtonRelease, Qt.MouseButton.NoButton)):
+        QCoreApplication.sendEvent(drawer.windowHandle(), QMouseEvent(
+            kind, local, screen_pos, Qt.MouseButton.LeftButton, buttons,
+            Qt.KeyboardModifier.NoModifier))
+
+
+@pytest.fixture
+def docked_drawer(qapp):
+    """A drawer shown at its default place (middle right), hidden after."""
+    drawer = BlueprintDrawer()
+    drawer.show_docked()
+    yield drawer
+    drawer.hide()
+
+
+@pytest.mark.parametrize("position, point", [
+    ("top_right", (21.5, 0.0)),        # the screen's corner pixel at 200%
+    ("middle_right", (21.5, 10.0)),     # the bar's last device column at 200%
+    ("middle_right", (21.5, 65.0)),
+    ("middle_right", (21.5, 110.0)),
+    ("middle_right", (21.0, 10.0)),     # control: inside the bar's rectangle
+    ("top_center", (10.0, 21.5)),       # the bar's last device row at 200%
+])
+def test_a_click_on_the_bars_outermost_pixels_opens_its_tab(docked_drawer, slot_errors,
+                                                            position, point):
+    """Qt hands a click to the child under it by a rectangle a pixel short of
+    the child's right and bottom edges, so above 100% the tab bar's outermost
+    painted line reached the drawer, which opened nothing, though Windows had
+    given the drawer focus for it (found in review)."""
+    from PyQt6.QtCore import QPointF
+
+    drawer = docked_drawer
+    drawer.set_position(position)
+    expected = drawer._handle.tab_at(QPointF(*point))
+    assert expected
+    _click_through_qt(drawer, *point)
+    assert drawer.is_open() and drawer._current == expected
+    assert not slot_errors
+
+
+def test_a_click_on_the_open_drawers_bar_edge_switches_section(docked_drawer, slot_errors):
+    """Open, the bar sits inside the drawer beside the panel: its last column
+    still reaches the drawer, which finds the tab from the bar's own place."""
+    from PyQt6.QtCore import QPointF
+
+    drawer = docked_drawer
+    drawer.open_section("blueprints")
+    bar = drawer._handle.geometry()
+    assert bar.top() > 0                                       # the bar is set in the drawer
+    assert drawer._handle.tab_at(QPointF(21.5, 65.0)) == "minerals"
+    _click_through_qt(drawer, bar.left() + 21.5, bar.top() + 65.0)
+    assert drawer.is_open() and drawer._current == "minerals"
+    assert not slot_errors
+
+
+def test_a_click_between_the_tabs_opens_nothing(docked_drawer, slot_errors):
+    _click_through_qt(docked_drawer, 1.0, 44.5)        # the slanted gap between two tabs
+    assert not docked_drawer.is_open()
+    assert not slot_errors
 
 
 def test_drawer_takes_theme_colours(qapp):
@@ -663,6 +814,567 @@ def test_unknown_position_falls_back_to_middle_right(qapp):
     drawer = BlueprintDrawer()
     drawer.set_position("nowhere")
     assert drawer._handle.edge == "right"
+
+
+# --- the drawer inside its screen in device pixels -------------------------------
+
+class FakeScreen:
+    """A QScreen as Qt on Windows shows a 2560 x 1440 monitor with a 60 px
+    taskbar at *ratio*: the top-left in device pixels, the sizes divided by
+    the ratio and rounded."""
+
+    def __init__(self, ratio):
+        self._ratio = ratio
+        self._geometry = QRect(0, 0, qt_round(2560 / ratio), qt_round(1440 / ratio))
+        self._available = QRect(0, 0, qt_round(2560 / ratio), qt_round(1380 / ratio))
+        self.native_work_area = (0, 0, 2560, 1380)
+
+    def geometry(self):
+        return QRect(self._geometry)
+
+    def availableGeometry(self):
+        return QRect(self._available)
+
+    def devicePixelRatio(self):
+        return self._ratio
+
+
+def _fake_primary_screen(monkeypatch, ratio, monitor_beyond=True):
+    """A FakeScreen at *ratio* as the primary screen, its work area as
+    Windows names it, and a monitor (or none) just past every edge."""
+    screen = FakeScreen(ratio)
+    monkeypatch.setattr(so.QGuiApplication, "primaryScreen", staticmethod(lambda: screen))
+    monkeypatch.setattr(so, "native_work_area", lambda s: s.native_work_area)
+    monkeypatch.setattr(so, "monitor_at", lambda *rect: monitor_beyond)
+    return screen
+
+
+def test_qt_round_takes_a_half_away_from_zero():
+    # Python's round() takes a half to even; Qt 6 places windows with qRound,
+    # which takes it away from zero (measured: QPoint(-5, 0) * 0.5 is -3).
+    assert [qt_round(v) for v in (0.5, 1.5, 2.5, 27.5, 2532.5, 2.4, 2.6)] == \
+        [1, 2, 3, 28, 2533, 2, 3]
+    assert [qt_round(v) for v in (-0.5, -1.5, -2.5, -2.4, -2.6, 0.0, -0.0)] == \
+        [-1, -2, -3, -2, -3, 0, 0]
+
+
+def test_flush_in_logical_pixels_ended_past_the_edge():
+    """Why the fit is needed: at 125% and 150% the closed drawer flush with
+    the right edge in logical pixels ended one device pixel past it, as
+    measured on real windows (2533 to 2561 and 2528 to 2561)."""
+    for ratio in (1.25, 1.5):
+        screen = FakeScreen(ratio)
+        x = screen.availableGeometry().right() - DRAWER_HANDLE_WIDTH + 1
+        assert device_end(x, DRAWER_HANDLE_WIDTH, 0, ratio) == 2561
+
+
+@pytest.mark.parametrize("ratio", [1.25, 1.5, 1.75, 2.0, 2.25])
+@pytest.mark.parametrize("position", AppSettings.SCO_DRAWER_POSITIONS)
+def test_the_drawer_stays_on_its_screen_in_device_pixels(qapp, monkeypatch, ratio, position):
+    """In device pixels as Qt places the window, with a monitor (or the
+    taskbar) beyond every edge: inside the work area, flush with the edge it
+    docks to, or a logical pixel short of a right or bottom edge where Qt's
+    rounding would end it past the edge."""
+    screen = _fake_primary_screen(monkeypatch, ratio)
+    right, bottom = screen.native_work_area[2:]
+    area = screen.availableGeometry()
+    drawer = BlueprintDrawer()
+    drawer.set_position(position)
+    edge = drawer_edge(position)
+    for expanded in (False, True):
+        if expanded:
+            drawer.open_section("blueprints")
+        g = drawer.geometry()
+        assert qt_round(g.x() * ratio) >= 0 and qt_round(g.y() * ratio) >= 0, (expanded, g)
+        assert device_end(g.x(), g.width(), 0, ratio) <= right, (expanded, g)
+        assert device_end(g.y(), g.height(), 0, ratio) <= bottom, (expanded, g)
+        if edge == "left":
+            assert g.left() == area.left(), (expanded, g)
+        if edge == "top":
+            assert g.top() == area.top(), (expanded, g)
+        if edge == "right":
+            assert area.right() - 1 <= g.right() <= area.right(), (expanded, g)
+        if edge == "bottom":
+            assert area.bottom() - 1 <= g.bottom() <= area.bottom(), (expanded, g)
+
+
+@pytest.mark.parametrize("ratio", [1.25, 1.5, 1.75, 2.25])
+@pytest.mark.parametrize("position", ["middle_right", "top_right", "bottom_center"])
+def test_with_no_monitor_beyond_the_drawer_stays_flush(qapp, monkeypatch, ratio, position):
+    """A device pixel past an edge with no monitor beyond shows nowhere, and
+    moving back for it took the screen's last pixel, where a pointer pushed
+    to the edge clicks, from the drawer (found in review)."""
+    area = _fake_primary_screen(monkeypatch, ratio, monitor_beyond=False).availableGeometry()
+    drawer = BlueprintDrawer()
+    drawer.set_position(position)
+    for expanded in (False, True):
+        if expanded:
+            drawer.open_section("blueprints")
+        g = drawer.geometry()
+        if drawer_edge(position) == "right":
+            assert g.right() == area.right(), (expanded, g)
+        else:
+            assert g.bottom() == area.bottom(), (expanded, g)
+
+
+def test_at_100_percent_nothing_is_asked_and_the_drawer_is_flush(qapp, monkeypatch):
+    screen = _fake_primary_screen(monkeypatch, 1.0)
+
+    def no_lookup(_screen):
+        raise AssertionError("no monitor lookup at 100%")
+    monkeypatch.setattr(so, "native_work_area", no_lookup)
+    drawer = BlueprintDrawer()
+    drawer.set_position("middle_right")
+    assert drawer.geometry().right() == screen.availableGeometry().right()
+    drawer.set_position("middle_left")
+    assert drawer.geometry().left() == screen.availableGeometry().left()
+
+
+def test_without_a_work_area_from_windows_the_position_stands(monkeypatch):
+    screen = FakeScreen(1.25)
+    monkeypatch.setattr(so, "native_work_area", lambda s: None)
+    assert within_device_pixels(screen, 2026, 10, 22, 130) == (2026, 10)
+
+
+def test_the_fit_moves_the_drawer_only_where_it_reaches_the_edge(monkeypatch):
+    screen = FakeScreen(1.25)
+    monkeypatch.setattr(so, "native_work_area", lambda s: s.native_work_area)
+    monkeypatch.setattr(so, "monitor_at", lambda *rect: True)
+    # Flush right at 125% overran by one device pixel: one logical pixel back.
+    assert within_device_pixels(screen, 2026, 10, 22, 130) == (2025, 10)
+    # A window 23 px wide from 2025 ends exactly at the edge (2531 + 29 =
+    # 2560), on the screen: it stays.
+    assert device_end(2025, 23, 0, 1.25) == 2560
+    assert within_device_pixels(screen, 2025, 10, 23, 130) == (2025, 10)
+    # A left-docked drawer and one well inside the screen stay where they are.
+    assert within_device_pixels(screen, 0, 10, 22, 130) == (0, 10)
+    assert within_device_pixels(screen, 1000, 500, 22, 130) == (1000, 500)
+    # The bottom the same: flush with the work area's bottom (1104 logical,
+    # 1380 device) a 130 px window from 974 ends at 1218 + 163 = 1381.
+    assert device_end(974, 130, 0, 1.25) == 1381
+    assert within_device_pixels(screen, 500, 974, 22, 130) == (500, 973)
+
+
+def test_the_fit_asks_about_the_pixels_just_past_the_edge(monkeypatch):
+    """Windows is asked whether a monitor shows the column just past the right
+    edge, along the drawer's rows, and the row just past the bottom, along its
+    columns. With none there the drawer stays where it is."""
+    screen = FakeScreen(1.25)
+    asked = []
+    monkeypatch.setattr(so, "native_work_area", lambda s: s.native_work_area)
+    monkeypatch.setattr(so, "monitor_at", lambda *rect: asked.append(rect) or False)
+    # x 2026 starts at device 2533 (2532.5 rounded up), y 10 at 13 (12.5).
+    assert within_device_pixels(screen, 2026, 10, 22, 130) == (2026, 10)
+    assert asked == [(2560, 13, 2561, 176)]
+    asked.clear()
+    assert within_device_pixels(screen, 500, 974, 22, 130) == (500, 974)
+    assert asked == [(625, 1380, 653, 1381)]
+    asked.clear()
+    assert within_device_pixels(screen, 1000, 500, 22, 130) == (1000, 500)
+    assert asked == []                                  # nothing reaches an edge
+
+
+class FakeMonitorUser32:
+    """MonitorFromRect over one monitor's rectangle, and nothing else: any
+    other call raises, so only monitors are asked about, never a window or a
+    process (EAC)."""
+
+    def __init__(self, monitor=(0, 0, 2560, 1440)):
+        self.monitor, self.calls = monitor, []
+
+    def MonitorFromRect(self, pointer, flags):  # noqa: N802 (Windows' name)
+        rect = pointer._obj
+        self.calls.append(("MonitorFromRect", (rect.left, rect.top, rect.right, rect.bottom),
+                           flags))
+        left, top, right, bottom = self.monitor
+        overlaps = (rect.left < right and left < rect.right
+                    and rect.top < bottom and top < rect.bottom)
+        return 9 if overlaps else 0
+
+
+def test_a_monitor_is_found_only_where_one_shows_the_pixels():
+    user32 = FakeMonitorUser32()
+    assert monitor_at(2559, 10, 2560, 20, user32) is True
+    assert monitor_at(2560, 10, 2561, 20, user32) is False
+    assert user32.calls[0] == ("MonitorFromRect", (2559, 10, 2560, 20), so.MONITOR_DEFAULTTONULL)
+
+
+def test_off_windows_a_monitor_is_assumed(monkeypatch):
+    monkeypatch.setattr(so, "_user32", lambda: None)
+    assert monitor_at(0, 0, 1, 1) is True
+
+
+# --- the work area Windows gives a screen ------------------------------------------
+
+class FakeUser32:
+    """MonitorFromPoint / GetMonitorInfoW over a set table, and nothing else:
+    any other call raises, so only monitors are asked about, never a window
+    or a process (EAC)."""
+
+    def __init__(self, monitor=7, work=(2560, -491, 3640, 1381), info_ok=True):
+        self.monitor, self.work, self.info_ok = monitor, work, info_ok
+        self.calls = []
+
+    def MonitorFromPoint(self, point, flags):  # noqa: N802 (Windows' name)
+        self.calls.append(("MonitorFromPoint", (point.x, point.y), flags))
+        return self.monitor
+
+    def GetMonitorInfoW(self, monitor, pointer):  # noqa: N802 (Windows' name)
+        self.calls.append(("GetMonitorInfoW", monitor))
+        if not self.info_ok:
+            return 0
+        info = pointer._obj
+        assert info.cbSize == ctypes.sizeof(type(info))
+        info.rcWork.left, info.rcWork.top, info.rcWork.right, info.rcWork.bottom = self.work
+        return 1
+
+
+class _ScreenAt:
+    def __init__(self, x, y):
+        self._geometry = QRect(x, y, 864, 1536)
+
+    def geometry(self):
+        return QRect(self._geometry)
+
+
+def test_the_work_area_is_the_monitors_at_the_screens_top_left():
+    """Qt keeps a screen's top-left in device pixels (here a portrait monitor
+    right of a 2560 px one, at 125%), so its monitor is the one at that point."""
+    user32 = FakeUser32()
+    assert native_work_area(_ScreenAt(2560, -491), user32) == (2560, -491, 3640, 1381)
+    assert user32.calls[0] == ("MonitorFromPoint", (2560, -491), so.MONITOR_DEFAULTTONULL)
+
+
+@pytest.mark.parametrize("user32", [
+    FakeUser32(monitor=0),          # no monitor at that point
+    FakeUser32(info_ok=False),      # monitor info refused
+])
+def test_no_work_area_is_none(user32):
+    assert native_work_area(_ScreenAt(0, 0), user32) is None
+
+
+def test_off_windows_there_is_no_work_area(monkeypatch):
+    monkeypatch.setattr(so, "_user32", lambda: None)
+    assert native_work_area(_ScreenAt(0, 0)) is None
+
+
+# --- clicks pass through the drawer while the game hides its pointer -------------
+
+class FakePointerUser32:
+    """The window in front, its class and title, and whether the pointer shows."""
+
+    def __init__(self, front=0x51C, cls="CryENGINE", title="Star Citizen", showing=False,
+                 cursor_ok=True):
+        self.front, self.cls, self.title = front, cls, title
+        self.showing, self.cursor_ok = showing, cursor_ok
+        self.calls = []
+
+    def GetForegroundWindow(self):  # noqa: N802 (Windows' name)
+        self.calls.append("GetForegroundWindow")
+        return self.front
+
+    def GetClassNameW(self, hwnd, buf, size):  # noqa: N802 (Windows' name)
+        self.calls.append("GetClassNameW")
+        assert hwnd == self.front and size == len(buf)      # never past the buffer
+        buf.value = self.cls
+        return len(self.cls)
+
+    def GetWindowTextW(self, hwnd, buf, size):  # noqa: N802 (Windows' name)
+        self.calls.append("GetWindowTextW")
+        assert hwnd == self.front and size == len(buf)
+        buf.value = self.title
+        return len(self.title)
+
+    def GetCursorInfo(self, pointer):  # noqa: N802 (Windows' name)
+        self.calls.append("GetCursorInfo")
+        if not self.cursor_ok:
+            return 0
+        info = pointer._obj
+        assert info.cbSize == ctypes.sizeof(type(info))
+        info.flags = so.CURSOR_SHOWING if self.showing else 0
+        return 1
+
+
+def test_the_game_is_known_by_its_window_class():
+    user32 = FakePointerUser32()
+    assert game_in_front(user32) is True
+    # Only Windows is asked, about the window in front, never the game's
+    # process (EAC).
+    assert user32.calls == ["GetForegroundWindow", "GetClassNameW"]
+
+
+def test_the_game_is_known_by_its_title_too():
+    user32 = FakePointerUser32(cls="SomethingElse")
+    assert game_in_front(user32) is True
+    assert user32.calls == ["GetForegroundWindow", "GetClassNameW", "GetWindowTextW"]
+
+
+@pytest.mark.parametrize("user32", [
+    FakePointerUser32(cls="Chrome_WidgetWin_1", title="A video"),   # another program
+    FakePointerUser32(front=0),                                      # nothing in front
+])
+def test_anything_else_in_front_is_not_the_game(user32):
+    assert game_in_front(user32) is False
+
+
+def test_a_hidden_pointer_is_aiming():
+    """While aiming the game hides its pointer but lets it run over the whole
+    screen, so a shot fired as it crossed the drawer took the game's focus
+    (player report, 2026-11-16, measured in game)."""
+    user32 = FakePointerUser32()
+    assert pointer_hidden(user32) is True
+    assert user32.calls == ["GetCursorInfo"]
+
+
+@pytest.mark.parametrize("user32", [
+    FakePointerUser32(showing=True),    # F held or the mobiGlas open: meant to be clicked
+    FakePointerUser32(cursor_ok=False),  # Windows does not say
+])
+def test_a_showing_or_unknown_pointer_is_not_aiming(user32):
+    assert pointer_hidden(user32) is False
+
+
+def test_off_windows_nothing_is_in_front_or_hidden(monkeypatch):
+    monkeypatch.setattr(so, "_user32", lambda: None)
+    assert game_in_front() is False and pointer_hidden() is False
+
+
+class FakeStyleUser32:
+    """One window's extended style through GetWindowLongPtrW and
+    SetWindowLongPtrW, every write recorded."""
+
+    HWND = 0x7A0
+    STYLE = 0x80088                     # the drawer's: LAYERED, TOOLWINDOW, TOPMOST
+
+    def __init__(self, style=STYLE):
+        self.style, self.writes = style, []
+
+    def GetWindowLongPtrW(self, hwnd, index):  # noqa: N802 (Windows' name)
+        assert (hwnd, index) == (self.HWND, so.GWL_EXSTYLE)
+        return self.style
+
+    def SetWindowLongPtrW(self, hwnd, index, value):  # noqa: N802 (Windows' name)
+        assert (hwnd, index) == (self.HWND, so.GWL_EXSTYLE)
+        old, self.style = self.style, value
+        self.writes.append(value)
+        return old
+
+
+def test_click_through_sets_and_clears_its_own_bit_only_when_it_changes():
+    user32 = FakeStyleUser32()
+    hwnd, style = FakeStyleUser32.HWND, FakeStyleUser32.STYLE
+    assert set_click_through(hwnd, True, user32) is True
+    set_click_through(hwnd, True, user32)                       # asked again: nothing written
+    set_click_through(hwnd, False, user32)
+    set_click_through(hwnd, False, user32)                      # nor here
+    assert user32.writes == [style | WS_EX_TRANSPARENT, style]
+
+
+def test_click_through_puts_the_style_back_when_something_cleared_it():
+    user32 = FakeStyleUser32()
+    set_click_through(FakeStyleUser32.HWND, True, user32)
+    user32.style = FakeStyleUser32.STYLE                        # cleared behind its back
+    set_click_through(FakeStyleUser32.HWND, True, user32)
+    assert user32.style == FakeStyleUser32.STYLE | WS_EX_TRANSPARENT
+
+
+def test_click_through_needs_a_window_and_windows(monkeypatch):
+    user32 = FakeStyleUser32()
+    assert set_click_through(0, True, user32) is False and user32.writes == []
+    monkeypatch.setattr(so, "_user32", lambda: None)
+    assert set_click_through(FakeStyleUser32.HWND, True) is False
+
+
+def test_a_window_that_is_not_layered_is_warned_about_once(monkeypatch, caplog):
+    """Windows lets clicks through a WS_EX_TRANSPARENT window only when it is
+    layered too (measured). The drawer is, as a see-through frameless window,
+    and a change that took that away would bring the focus steal back with
+    every other test passing, so it is logged (found in review)."""
+    monkeypatch.setattr(so, "_warned_not_layered", False)
+    user32 = FakeStyleUser32(style=FakeStyleUser32.STYLE & ~so.WS_EX_LAYERED)
+    with caplog.at_level("WARNING", logger="src.gui.sco_overlay"):
+        set_click_through(FakeStyleUser32.HWND, True, user32)
+        set_click_through(FakeStyleUser32.HWND, False, user32)
+        set_click_through(FakeStyleUser32.HWND, True, user32)
+    assert [r.levelname for r in caplog.records] == ["WARNING"]
+    assert user32.style & WS_EX_TRANSPARENT                     # still set: never worse
+    caplog.clear()
+    monkeypatch.setattr(so, "_warned_not_layered", False)
+    with caplog.at_level("WARNING", logger="src.gui.sco_overlay"):
+        set_click_through(FakeStyleUser32.HWND, True, FakeStyleUser32())
+    assert not caplog.records                                   # layered: nothing to say
+
+
+def test_the_drawer_stays_a_layered_window(qapp):
+    """What makes Qt layer the drawer's window on Windows: no frame and a
+    see-through background. Without them clicks could not pass through it."""
+    drawer = BlueprintDrawer()
+    assert drawer.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert drawer.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+
+def test_the_structs_have_windows_layout():
+    """Windows refuses a struct of the wrong size (error 87), and the fakes
+    only compare a struct with itself, so the 64-bit layouts are pinned."""
+    assert ctypes.sizeof(so._CursorInfo) == 24
+    assert (so._CursorInfo.flags.offset, so._CursorInfo.hCursor.offset,
+            so._CursorInfo.ptScreenPos.offset) == (4, 8, 16)
+    assert ctypes.sizeof(so._MonitorInfo) == 40
+    assert (so._MonitorInfo.rcMonitor.offset, so._MonitorInfo.rcWork.offset,
+            so._MonitorInfo.dwFlags.offset) == (4, 20, 36)
+    assert ctypes.sizeof(so._Rect) == 16 and ctypes.sizeof(so._Point) == 8
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="user32 is Windows only")
+def test_the_real_calls_take_the_structs(monkeypatch):
+    """Once for real: Windows takes each struct (a wrong size fails with 87,
+    which the fakes cannot see), names the work area of the monitor at (0, 0),
+    finds a monitor there and none far away, and sets and clears the style on
+    a message-only window this test makes (never shown)."""
+    from ctypes import wintypes
+
+    user32 = so._user32()
+    for _ in range(2):          # Windows clears cbSize after a call: a fresh struct each time
+        info = so._CursorInfo()
+        info.cbSize = ctypes.sizeof(info)
+        ctypes.set_last_error(0)
+        assert user32.GetCursorInfo(ctypes.byref(info)) or ctypes.get_last_error() != 87
+    pointer_hidden()            # through the typed copy, which a wrong type makes raise
+    work = native_work_area(_ScreenAt(0, 0))
+    assert work is not None and work[0] <= 0 < work[2] and work[1] <= 0 < work[3]
+    assert monitor_at(0, 0, 1, 1) is True
+    assert monitor_at(-1000000, -1000000, -999999, -999999) is False
+
+    # A message-only window (its parent HWND_MESSAGE, (HWND)-3), typed on a
+    # copy of user32 of the test's own.
+    windows = ctypes.WinDLL("user32", use_last_error=True)
+    windows.CreateWindowExW.argtypes = [
+        wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.HWND, wintypes.HMENU,
+        wintypes.HINSTANCE, wintypes.LPVOID]
+    windows.CreateWindowExW.restype = wintypes.HWND
+    windows.DestroyWindow.argtypes = [wintypes.HWND]
+    windows.DestroyWindow.restype = wintypes.BOOL
+    hwnd = windows.CreateWindowExW(0, "STATIC", None, 0, 0, 0, 0, 0, -3, None, None, None)
+    assert hwnd
+    monkeypatch.setattr(so, "_warned_not_layered", True)    # this window is not layered
+    try:
+        assert set_click_through(hwnd, True)
+        assert user32.GetWindowLongPtrW(hwnd, so.GWL_EXSTYLE) & WS_EX_TRANSPARENT
+        assert set_click_through(hwnd, False)
+        assert not user32.GetWindowLongPtrW(hwnd, so.GWL_EXSTYLE) & WS_EX_TRANSPARENT
+    finally:
+        windows.DestroyWindow(hwnd)
+
+
+def test_the_drawer_sets_its_window_style_only_on_windows(qapp, monkeypatch):
+    calls = []
+    monkeypatch.setattr(so, "set_click_through", lambda hwnd, on: calls.append((hwnd, on)))
+    drawer = BlueprintDrawer()
+    drawer.set_pass_through(True)
+    # The tests' offscreen platform gives made-up window ids: none reaches user32.
+    assert drawer.pass_through is True and calls == []
+    monkeypatch.setattr(so.QGuiApplication, "platformName", staticmethod(lambda: "windows"))
+    drawer.set_pass_through(False)
+    assert drawer.pass_through is False and calls == [(int(drawer.winId()), False)]
+
+
+def test_clicks_pass_through_the_drawer_while_the_game_hides_its_pointer(qapp, monkeypatch,
+                                                                         slot_errors):
+    from tests.event_loop import pump_until
+
+    game = {"in_front": True, "hidden": True}
+    monkeypatch.setattr(so, "game_in_front", lambda: game["in_front"])
+    monkeypatch.setattr(so, "pointer_hidden", lambda: game["hidden"])
+    overlay = ScoOverlay()
+    overlay.set_reader(None)
+    drawer = overlay.drawer
+    timer = overlay._pass_through_timer
+    try:
+        assert not timer.isActive()                             # not running
+        overlay.start()
+        # Asked at once as the drawer shows, then every PASS_THROUGH_POLL_MS
+        # while the game is in front.
+        assert drawer.pass_through is True
+        assert timer.isActive() and timer.interval() == PASS_THROUGH_POLL_MS
+        game["hidden"] = False                                  # F held: the pointer shows
+        assert pump_until(lambda: drawer.pass_through is False, seconds=2)
+        game["hidden"] = True                                   # F let go
+        assert pump_until(lambda: drawer.pass_through is True, seconds=2)
+        # Another window in front: clicks are taken, and Windows is asked less
+        # often, since Qt runs a timer of 20 ms or less on a 1 ms Windows timer.
+        game["in_front"] = False
+        assert pump_until(lambda: timer.interval() == PASS_THROUGH_IDLE_POLL_MS, seconds=2)
+        assert drawer.pass_through is False and PASS_THROUGH_IDLE_POLL_MS > 20
+        game["in_front"] = True
+        assert pump_until(lambda: drawer.pass_through is True
+                          and timer.interval() == PASS_THROUGH_POLL_MS, seconds=2)
+        overlay.set_options({"drawer": False})                  # no drawer, nothing to ask
+        assert not timer.isActive()
+        game["hidden"] = False                                  # the pointer shows meanwhile
+        overlay.set_options({})
+        # Asked again at once on showing, not left as it was before the hide.
+        assert timer.isActive() and drawer.pass_through is False
+    finally:
+        overlay.stop()
+    assert not timer.isActive()
+    assert not slot_errors
+
+
+def test_clicks_starting_to_pass_through_close_a_tooltip(qapp):
+    """A tooltip is a window of its own that takes clicks, and Qt hides it
+    only 0.3 s after the pointer leaves, so one left up as the player lets go
+    of F and starts shooting could take a shot (found in review)."""
+    from PyQt6.QtWidgets import QApplication, QToolTip
+
+    def showing():
+        return [w for w in QApplication.topLevelWidgets()
+                if w.objectName() == so.TOOLTIP_OBJECT_NAME and w.isVisible()]
+
+    drawer = BlueprintDrawer()
+    drawer.show_docked()
+    try:
+        QToolTip.showText(QPoint(100, 100), "a tip", drawer)
+        assert showing()
+        drawer.set_pass_through(True)
+        assert not showing()
+        drawer.set_pass_through(False)
+        QToolTip.showText(QPoint(120, 120), "a later tip", drawer)
+        assert showing()                                        # tooltips still work after
+        drawer.set_pass_through(False)                          # taking clicks closes nothing
+        assert showing()
+    finally:
+        QToolTip.hideText()
+        drawer.hide()
+
+
+def test_the_drawer_takes_its_new_place_and_size_in_one_step(qapp, monkeypatch):
+    """Resized at its old place first, an opening right drawer lay mostly on
+    the monitor beyond, and with that monitor at another scale Qt moved the
+    window there mid-resize and rescaled it, so the move kept a wrong size
+    (found in review, from Qt 6.11's source)."""
+    drawer = BlueprintDrawer()
+    drawer.set_position("middle_right")
+    calls = []
+    for name in ("move", "resize", "setGeometry", "setFixedSize"):
+        original = getattr(drawer, name)
+
+        def record(*args, _name=name, _original=original):
+            calls.append((_name, args, drawer.geometry()))     # the geometry before the call
+            return _original(*args)
+        monkeypatch.setattr(drawer, name, record)
+    for change in (lambda: drawer.open_section("blueprints"), drawer.close_drawer):
+        calls.clear()
+        change()
+        g = drawer.geometry()
+        assert [call[:2] for call in calls] == [
+            ("setGeometry", (g.x(), g.y(), g.width(), g.height())),
+            ("setFixedSize", (g.width(), g.height()))]
+        # The one step gave the whole new geometry. Qt clamps a geometry to
+        # the fixed size, so without letting that go first the new size came
+        # only with setFixedSize, a second step at the new place.
+        assert calls[1][2] == g
+        assert drawer.minimumSize() == drawer.maximumSize() == g.size()
 
 
 def _deliver(overlay):
@@ -1285,11 +1997,13 @@ def test_play_alert_sound_is_quiet_off_windows(monkeypatch):
 
 
 class _FakeUser32:
-    """RegisterHotKey, UnregisterHotKey and the raw input switch, recorded
-    instead of called."""
+    """RegisterHotKey and UnregisterHotKey, recorded instead of called, and a
+    keyboard whose keys in ``down`` read as down, every key asked about
+    recorded in ``asked``."""
 
     def __init__(self, refuse=False):
-        self.calls, self.refuse, self.raw = [], refuse, []
+        self.calls, self.refuse = [], refuse
+        self.down, self.asked = set(), []
 
     def RegisterHotKey(self, hwnd, hotkey_id, modifiers, key):  # noqa: N802
         self.calls.append(("register", modifiers, key))
@@ -1299,15 +2013,9 @@ class _FakeUser32:
         self.calls.append(("unregister",))
         return True
 
-    def RegisterRawInputDevices(self, device, count, size):  # noqa: N802
-        self.raw.append(device._obj.dwFlags)
-        return True
-
-    def CreateWindowExW(self, *args):  # noqa: N802
-        return 0x5150
-
-    def DestroyWindow(self, hwnd):  # noqa: N802
-        return True
+    def GetAsyncKeyState(self, virtual_key):  # noqa: N802
+        self.asked.append(virtual_key)
+        return -0x8000 if virtual_key in self.down else 0      # the high bit: down now
 
 
 def _overlay_with_fake_hotkey(refuse=False):
@@ -1321,7 +2029,17 @@ def _overlay_with_fake_hotkey(refuse=False):
     return overlay, fake
 
 
-CTRL_SHIFT_O = ("register", 0x2 | 0x4 | 0x4000, 0x4F)
+# Windows' virtual-key codes, as the stand-in keyboard is asked for them.
+CTRL, SHIFT, ALT, LWIN, RWIN, O_KEY = 0x11, 0x10, 0x12, 0x5B, 0x5C, 0x4F
+CTRL_SHIFT_O = ("register", 0x2 | 0x4 | 0x4000, O_KEY)
+
+
+def _recording(handed):
+    """A give_focus_back stand-in: notes each window, and Windows agrees."""
+    def give_focus_back(window):
+        handed.append(window)
+        return True
+    return give_focus_back
 
 
 def test_the_hotkey_is_held_only_while_the_drawer_shows(qapp):
@@ -1367,7 +2085,7 @@ def test_the_hotkey_opens_the_drawer_on_its_last_section_and_hands_focus_back(qa
     from src.gui import sco_overlay
     monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)   # the game
     handed = []
-    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
     overlay, _fake = _overlay_with_fake_hotkey()
     overlay.start()
     drawer = overlay.drawer
@@ -1379,9 +2097,9 @@ def test_the_hotkey_opens_the_drawer_on_its_last_section_and_hands_focus_back(qa
         assert drawer.is_open() and drawer._current == "blueprints" and activated == [True]
         overlay._hotkey.activated.emit()
         assert not drawer.is_open() and handed == [4242]
-        drawer.open_section("crafting")                         # opened by a click
+        drawer.open_section("crafting")                         # no hotkey, no activating click
         drawer.close_drawer()
-        assert handed == [4242]                                 # the hotkey took nothing
+        assert handed == [4242]                                 # nothing took focus
         overlay.toggle_drawer()
         assert drawer._current == "crafting"                    # the section used last
         drawer.open_section("crafting")                         # its own tab closes it
@@ -1396,7 +2114,7 @@ def test_a_drawer_hidden_by_its_switch_forgets_the_window(qapp, monkeypatch):
     from src.gui import sco_overlay
     monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
     handed = []
-    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
     overlay, _fake = _overlay_with_fake_hotkey()
     overlay.start()
     drawer = overlay.drawer
@@ -1417,7 +2135,7 @@ def test_the_hotkey_leaves_focus_alone_once_the_player_moved_on(qapp, monkeypatc
     from src.gui import sco_overlay
     monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
     handed = []
-    monkeypatch.setattr(sco_overlay, "give_focus_back", handed.append)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
     overlay, _fake = _overlay_with_fake_hotkey()
     overlay.start()
     drawer = overlay.drawer
@@ -1434,24 +2152,463 @@ def test_the_hotkey_leaves_focus_alone_once_the_player_moved_on(qapp, monkeypatc
         overlay.stop()
 
 
-def test_the_hotkey_watches_raw_input_only_while_it_is_held(qapp):
-    from src.gui.global_hotkey import RIDEV_INPUTSINK, RIDEV_REMOVE
+def _native(drawer, message, event_type=b"windows_generic_MSG"):
+    """Hand the drawer a Windows message the way Qt does (offscreen, Qt sends
+    none): the event type and a pointer to a built ``MSG``."""
+    from ctypes import addressof, wintypes
 
+    from PyQt6 import sip
+
+    msg = wintypes.MSG()
+    msg.message = message
+    return drawer.nativeEvent(event_type, sip.voidptr(addressof(msg)))
+
+
+def test_only_a_click_about_to_activate_the_drawer_names_a_window(qapp, monkeypatch):
+    """Every native message is left to Qt (not handled), and only Windows'
+    WM_MOUSEACTIVATE, sent before a click activates the drawer, names the
+    window that has focus then."""
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
+    assert sco_overlay.WM_MOUSEACTIVATE == 0x0021                # Windows' own value
+    drawer = BlueprintDrawer()
+    named = []
+    drawer.taking_focus.connect(named.append)
+    for message in (0x0200, 0x0201, 0x0006):                    # mouse move, button down, activate
+        assert _native(drawer, message) == (False, 0)
+    assert _native(drawer, 0x0021, b"windows_dispatcher_MSG") == (False, 0)
+    assert drawer.nativeEvent(b"windows_generic_MSG", None) == (False, 0)
+    assert named == []
+    assert _native(drawer, 0x0021) == (False, 0)                # Qt still activates it
+    assert named == [4242]
+
+
+def test_a_click_names_the_window_in_front_while_the_pointer_was_over_it(qapp, monkeypatch):
+    """In game nothing is in front by the time Windows sends WM_MOUSEACTIVATE
+    (GetForegroundWindow gave none, logged in testing), so a click names the
+    window in front at the pointer's last move over the drawer, never the
+    drawer itself; a window in front at the click itself still comes first."""
+    from src.gui import sco_overlay
+    assert sco_overlay.WM_MOUSEMOVE == 0x0200                    # Windows' own values
+    assert sco_overlay.WM_MOUSELEAVE == 0x02A3
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    drawer = BlueprintDrawer()
+    named = []
+    drawer.taking_focus.connect(named.append)
+    _native(drawer, sco_overlay.WM_MOUSEMOVE)                   # the pointer comes over it
+    focus["window"] = int(drawer.winId())                       # the drawer in front: not noted
+    _native(drawer, sco_overlay.WM_MOUSEMOVE)
+    focus["window"] = 0                                         # nothing in front: not noted
+    _native(drawer, sco_overlay.WM_MOUSEMOVE)
+    assert named == []                                          # a move names nothing
+    _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+    assert named == [4242]
+    focus["window"] = 777
+    _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+    assert named == [4242, 777]
+    _native(drawer, sco_overlay.WM_MOUSELEAVE)                  # the pointer left: note dropped
+    focus["window"] = 0
+    _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+    assert named == [4242, 777, 0]
+
+
+def test_closing_after_a_click_in_game_hands_focus_back(qapp, monkeypatch, slot_errors):
+    """The tab path as logged in game: the pointer moves over the drawer
+    while the game is in front, nothing is in front at the click, the tab
+    closes the drawer with its button down, and focus goes back to the game
+    once the button comes up."""
+    from src.gui import sco_overlay
+    from tests.event_loop import pump_until
+
+    focus = {"window": 0x15057C}                                # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    held = {"button": False}
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: held["button"])
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEMOVE)               # over a tab, the game in front
+        focus["window"] = 0                                     # Windows took focus for the click
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        focus["window"] = int(drawer.winId())                   # the drawer has focus now
+        _native(drawer, sco_overlay.WM_MOUSEMOVE)               # on to an item and back
+        held["button"] = True
+        drawer.open_section("minerals")                         # its tab closes it, button down
+        assert handed == []
+        held["button"] = False
+        assert pump_until(lambda: handed == [0x15057C], seconds=2)
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_the_hotkey_takes_the_noted_window_when_the_drawer_is_in_front(qapp, monkeypatch,
+                                                                       slot_errors):
+    """A hand-back Windows refused leaves the closed drawer in front, so the
+    hotkey would remember the drawer itself: it takes the window noted under
+    the pointer instead, and closing hands focus back to that one. Once the
+    pointer has left the drawer that note is gone, so an old one is never
+    brought back."""
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEMOVE)               # the pointer over it, game in front
+        focus["window"] = int(drawer.winId())                   # the closed drawer kept focus
+        overlay.toggle_drawer()                                 # the hotkey opens it
+        overlay.toggle_drawer()                                 # and closes it
+        assert handed == [4242]
+        _native(drawer, sco_overlay.WM_MOUSELEAVE)              # the pointer left: note dropped
+        overlay.toggle_drawer()
+        overlay.toggle_drawer()
+        assert handed == [4242]                                 # no old window brought back
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_closing_after_a_click_gave_the_drawer_focus_hands_it_back(qapp, monkeypatch, slot_errors):
+    """A click gives the drawer focus as the hotkey can: Windows asks first,
+    while the game still has focus, so closing the drawer by its own tab or
+    the hotkey hands focus back to the game, unless the player clicked away."""
+    from src.gui import sco_overlay
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    active = {"drawer": True}
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: active["drawer"])
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)           # a click on a closed tab
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # its own tab closes it
+        assert not drawer.is_open() and handed == [4242]
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("crafting")
+        overlay.toggle_drawer()                                 # the hotkey closes it
+        assert not drawer.is_open() and handed == [4242, 4242]
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("crafting")
+        active["drawer"] = False                                # the player clicked the game
+        drawer.open_section("crafting")
+        assert handed == [4242, 4242]
+        active["drawer"] = True
+        focus["window"] = int(drawer.winId())                   # never the drawer itself
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("blueprints")
+        drawer.open_section("blueprints")
+        assert handed == [4242, 4242]
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def _clicked_overlay(monkeypatch, held, handed):
+    """A running overlay whose drawer a click gave focus (the game is window
+    4242), with the mouse button state and the hand-back recorded."""
+    from src.gui import sco_overlay
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: 4242)
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: held["button"])
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    monkeypatch.setattr(overlay.drawer, "isActiveWindow", lambda: True)
+    return overlay
+
+
+def test_a_tab_click_hands_focus_back_once_its_button_is_up(qapp, monkeypatch, slot_errors):
+    """A tab click closes the drawer with its mouse button still down, and
+    focus handed back then left the game needing a click before it took a
+    key, while the hotkey's did not (found in testing): the hand-back waits
+    for the button to come up, then goes at once, and once."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+    from tests.event_loop import pump_until
+
+    held, handed = {"button": True}, []
+    overlay = _clicked_overlay(monkeypatch, held, handed)
+    drawer = overlay.drawer
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # its tab closes it, button down
+        QTest.qWait(80)
+        assert not drawer.is_open() and handed == []            # not while it is held
+        held["button"] = False                                  # the button comes up
+        assert pump_until(lambda: handed == [4242], seconds=2)
+        QTest.qWait(80)
+        assert handed == [4242]
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_a_hand_back_still_waiting_goes_after_the_wait(qapp, monkeypatch, slot_errors):
+    """A button that never reads as up (a release Qt never saw) holds the
+    hand-back for HAND_BACK_WAIT_MS at most."""
+    from src.gui import sco_overlay
+    from tests.event_loop import pump_until
+
+    monkeypatch.setattr(sco_overlay, "HAND_BACK_WAIT_MS", 60)
+    held, handed = {"button": True}, []
+    overlay = _clicked_overlay(monkeypatch, held, handed)
+    drawer = overlay.drawer
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("crafting")
+        drawer.open_section("crafting")
+        assert handed == []
+        assert pump_until(lambda: handed == [4242], seconds=2)
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_a_waiting_hand_back_is_dropped_by_an_open_or_a_stop(qapp, monkeypatch, slot_errors):
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    held, handed = {"button": True}, []
+    overlay = _clicked_overlay(monkeypatch, held, handed)
+    drawer = overlay.drawer
+    try:
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # waits for the button
+        drawer.open_section("crafting")                         # opened again meanwhile
+        held["button"] = False
+        QTest.qWait(80)
+        assert handed == []
+        drawer.close_drawer()
+        held["button"] = True
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("blueprints")
+        drawer.open_section("blueprints")                       # waits for the button
+        overlay.stop()
+        held["button"] = False
+        QTest.qWait(80)
+        assert handed == []
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_a_hand_back_refused_or_not_kept_is_logged(qapp, monkeypatch, caplog, slot_errors):
+    """Windows refusing the hand-back, or another window in front
+    FOCUS_CHECK_MS after it, is logged at INFO; one that stays says nothing."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    focus, refused = {"window": 4242}, {"now": True}
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    monkeypatch.setattr(sco_overlay, "give_focus_back", lambda w: not refused["now"])
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    monkeypatch.setattr(sco_overlay, "FOCUS_CHECK_MS", 0)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+
+    def lines():
+        return [r.getMessage() for r in caplog.records if "back to window" in r.getMessage()]
+
+    def click_open_and_close():
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")
+
+    try:
+        with caplog.at_level("INFO", logger="src.gui.sco_overlay"):
+            click_open_and_close()                              # Windows refuses
+            assert lines() == ["SCO: Windows did not hand focus back to window 4242"]
+            refused["now"] = False
+            click_open_and_close()                              # handed back, and it stays
+            QTest.qWait(30)
+            assert len(lines()) == 1
+            click_open_and_close()
+            focus["window"] = 777                               # then another window has it
+            QTest.qWait(30)
+            assert lines()[1:] == ["SCO: 0 ms after focus went back to window 4242, "
+                                   "window 777 is in front"]
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_a_click_that_names_no_window_keeps_the_kept_one(qapp, monkeypatch, slot_errors):
+    """The hotkey keeps the game and Windows leaves focus on it, then a click
+    on the open panel comes with nothing in front and nothing noted (the
+    panel opened under a pointer that had not moved). The click names no
+    window, so the game stays kept and closing by the tab hands focus back."""
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}                                    # the game
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    handed = []
+    monkeypatch.setattr(sco_overlay, "give_focus_back", _recording(handed))
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "activateWindow", lambda: None)
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+    named = []
+    drawer.taking_focus.connect(named.append)
+    try:
+        overlay.toggle_drawer()                                 # the hotkey opens it
+        focus["window"] = 0                                     # mid-click, nothing in front
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)           # and no pointer move noted
+        assert named == [0] and drawer.is_open()
+        drawer.open_section(drawer._current)                    # its own tab closes it
+        assert handed == [4242]
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_a_hidden_drawer_forgets_the_window_noted_under_the_pointer(qapp, monkeypatch, slot_errors):
+    """Windows may send no WM_MOUSELEAVE for a window hidden under the
+    pointer, so hiding the drawer (the overlay stopped, or the drawer switched
+    off) drops the note: shown again, a click with nothing in front names no
+    window from before."""
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    named = []
+    drawer.taking_focus.connect(named.append)
+    hides = ((overlay.stop, overlay.start),
+             (lambda: overlay.set_options({"drawer": False}), lambda: overlay.set_options({})))
+    try:
+        for hide, show in hides:
+            focus["window"] = 4242
+            _native(drawer, sco_overlay.WM_MOUSEMOVE)           # noted under the pointer
+            hide()                                              # hidden with the pointer on it
+            show()
+            assert drawer.isVisible()
+            focus["window"] = 0                                 # mid-click, nothing in front
+            _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        assert named == [0, 0]
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_each_hand_back_is_checked_for_its_own_window(qapp, monkeypatch, caplog, slot_errors):
+    """Two hand-backs within FOCUS_CHECK_MS are each checked for their own
+    window (one shared check named the second window for both, then nothing),
+    and a check says nothing once the drawer opened again or the overlay
+    stopped."""
+    from PyQt6.QtTest import QTest
+    from src.gui import sco_overlay
+
+    focus = {"window": 4242}
+    monkeypatch.setattr(sco_overlay, "foreground_window", lambda: focus["window"])
+    monkeypatch.setattr(sco_overlay, "give_focus_back", lambda window: True)
+    monkeypatch.setattr(sco_overlay, "_mouse_button_held", lambda: False)
+    monkeypatch.setattr(sco_overlay, "FOCUS_CHECK_MS", 0)
+    overlay, _fake = _overlay_with_fake_hotkey()
+    overlay.start()
+    drawer = overlay.drawer
+    monkeypatch.setattr(drawer, "isActiveWindow", lambda: True)
+
+    def lines():
+        return [r.getMessage() for r in caplog.records if "went back" in r.getMessage()]
+
+    def hand_back_to(window):
+        focus["window"] = window                                # in front at the click
+        _native(drawer, sco_overlay.WM_MOUSEACTIVATE)
+        drawer.open_section("minerals")
+        drawer.open_section("minerals")                         # its tab closes it
+
+    try:
+        with caplog.at_level("INFO", logger="src.gui.sco_overlay"):
+            hand_back_to(4242)
+            hand_back_to(5151)                                  # before the first check ran
+            focus["window"] = 777                               # then another window has it
+            QTest.qWait(30)
+            assert lines() == [
+                "SCO: 0 ms after focus went back to window 4242, window 777 is in front",
+                "SCO: 0 ms after focus went back to window 5151, window 777 is in front"]
+            hand_back_to(4242)
+            drawer.open_section("crafting")                     # opened again before its check
+            focus["window"] = 777
+            QTest.qWait(30)
+            drawer.close_drawer()
+            hand_back_to(4242)
+            overlay.stop()                                      # stopped before its check
+            focus["window"] = 777
+            QTest.qWait(30)
+            assert len(lines()) == 2
+    finally:
+        overlay.stop()
+    assert not slot_errors
+
+
+def test_the_hotkeys_keys_are_looked_at_only_while_the_game_is_in_front(
+        qapp, monkeypatch, slot_errors):
+    """#587: Star Citizen keeps the hotkey's WM_HOTKEY away while it is in
+    front, so the pass-through tick looks at the hotkey's keys then, and
+    only then. With another window in front nothing on the keyboard is asked
+    about, and a combination down at the first tick after the game came back
+    is a press (it may have gone down just then)."""
+    from tests.event_loop import pump_until
+
+    game = {"in_front": True}
+    monkeypatch.setattr(so, "game_in_front", lambda: game["in_front"])
+    monkeypatch.setattr(so, "pointer_hidden", lambda: True)
+    monkeypatch.setattr(so, "foreground_window", lambda: 4242)       # the game
+    monkeypatch.setattr(so, "give_focus_back", _recording([]))
     overlay, fake = _overlay_with_fake_hotkey()
     overlay.set_drawer_hotkey("Ctrl+Shift+O")
-    assert fake.raw == []                                       # not running
-    overlay.start()
-    assert fake.raw == [RIDEV_INPUTSINK]
-    overlay.set_options({"drawer": False})
-    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE]
-    overlay.set_options({})
-    overlay.stop()
-    assert fake.raw == [RIDEV_INPUTSINK, RIDEV_REMOVE, RIDEV_INPUTSINK, RIDEV_REMOVE]
+    drawer = overlay.drawer
+    try:
+        overlay.start()
+        overlay._pass_through_timer.stop()                      # the test runs the ticks
+        fake.down = {CTRL, SHIFT, O_KEY}
+        overlay._sync_pass_through()                            # held as the hotkey was set
+        assert fake.asked == [O_KEY] and not drawer.is_open()   # no press, nothing more asked
+        game["in_front"] = False                                # another window in front
+        overlay._sync_pass_through()
+        assert fake.asked == [O_KEY]                            # nothing asked
+        game["in_front"] = True                                 # back, the keys still down:
+        overlay._sync_pass_through()                            # let go and pressed meanwhile?
+        assert pump_until(drawer.is_open, seconds=2)            # a press, after KEY_GRACE_MS
+        assert set(fake.asked) == {O_KEY, SHIFT, CTRL, ALT, LWIN, RWIN}
+        game["in_front"] = False
+        fake.asked.clear()
+        overlay._sync_pass_through()
+        assert fake.asked == []
+    finally:
+        overlay.stop()
+    assert not slot_errors
 
 
 def test_a_drawer_opened_without_focus_is_logged(qapp, monkeypatch, caplog):
-    """Raw input saw the hotkey but Windows kept focus on the game: the log
-    says so, once the check after the open has run."""
+    """A key check found the press but Windows kept focus on the game: the
+    log says so, once the check after the open has run."""
     from PyQt6.QtTest import QTest
     from src.gui import sco_overlay
 

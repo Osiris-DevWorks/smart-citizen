@@ -15,6 +15,24 @@
       "at": "智慧公民 v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "显示 Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "退出"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen 仍在运行"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "它在系统托盘中。点击其图标即可恢复窗口，右键点击可退出。如果看不到图标，它可能在时钟旁的 ^ 箭头里。"
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -798,6 +816,18 @@
       "ht": "",
       "at": "勾选后，引导教程将不会在新版本中自动启动。工具栏中的教程按钮仍然可用。"
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "最小化到系统托盘"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "勾选后，最小化 Smart Citizen 时会将其隐藏到系统托盘（时钟旁的图标）而不是任务栏。点击其托盘图标即可恢复。在托盘中时，再次启动 Smart Citizen 会恢复该窗口，而不是打开第二个副本。"
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "未找到系统托盘，因此 Smart Citizen 将最小化到任务栏。"
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "《星际公民》安装根目录——包含 LIVE/、PTU/、EPTU/、HOTFIX/ 和（或）TECH-PREVIEW/ 的目录。安装时会自动检测；如果你的游戏安装在其他位置，可在此编辑。下方的“频道”下拉菜单选择应用读写哪个频道。"
@@ -845,6 +875,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "清除自定义缓存文件夹，改用平台默认值。"
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "让你在每台游玩的电脑上拥有相同的已拥有蓝图。选择一个云应用已在同步的文件夹（例如 Google Drive、OneDrive 或 Dropbox 中的文件夹），然后在其他电脑上选择同一个文件夹。Smart Citizen 只在其中读写几个小文件，由你的云应用负责传输。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "已关闭。选择一个文件夹即可开启。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "选择云应用会同步到其他电脑的文件夹"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "关闭"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "停止同步。本机的已拥有蓝图保持不变。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "选择 Smart Sync 文件夹"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync 已关闭。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "正在同步..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "上次同步于 {time}。此文件夹中的其他电脑：{count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "无法同步：{error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2256,6 +2330,10 @@
       "ht": "",
       "at": "无法从所设置的来源加载 {language} 本地化内容，也未找到缓存副本。改为显示英文基础内容。请检查“映射语言文件”中的地址或文件，然后重试。"
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "已下载更新的 {language} 翻译，正在重新加载。"
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "正在从 DataForge 生成 {language} 增强内容…"
@@ -2583,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "窗口比例已恢复为默认值。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync 无法使用其文件夹：{error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync 已从其他电脑更新 {count} 个已拥有蓝图。"
     }
   },
   "import_flow": {
@@ -2992,6 +3078,14 @@
       "ht": "",
       "at": "Smart Citizen 无法在以下位置使用工作文件夹：\n{folder}\n\n{reason}\n\n提取未开始，因此未做任何更改。"
     },
+    "contract_scan_failed": {
+      "ht": "",
+      "at": "增强内容生成已停止，因为 {total} 份任务合约中有 {skipped} 份无法读取。你现有的增强内容保持不变。请报告此问题，这通常是 Smart Citizen 的错误。\n\n第一份合约：\n{first}"
+    },
+    "contract_scan_stopped": {
+      "ht": "",
+      "at": "增强内容生成已停止，因为任务合约扫描因错误而中断。你现有的增强内容保持不变。请报告此问题，这通常是 Smart Citizen 的错误。\n\n错误：\n{first}"
+    },
     "cache_folder_refused": {
       "ht": "",
       "at": "Windows 拒绝了 Smart Citizen 在以下位置创建 DataForge 缓存的权限：\n{folder}\n\n提取未开始，因此未做任何更改。"
@@ -3123,7 +3217,7 @@
       },
       "description": {
         "ht": "",
-        "at": "切换生成时运行的增强内容分类。飞船、组件、飞船武器、FPS 武器、任务、任务奖励、商品制作和医疗消耗品均可独立启用。"
+        "at": "选择点击生成时运行哪些增强类别：Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables。Ship Items 包含组件、舰船武器和导弹；Gear 包含 FPS 武器和护甲标签。每个类别都可以单独开启或关闭。"
       }
     },
     "enh_favorites": {
@@ -3156,16 +3250,6 @@
         "at": "构建添加到组件、导弹、飞船武器、商品和护甲上的括号名称标签。用 ▲/▼ 重新排序元素，取消勾选可排除，更改缩写长度，选择分隔符和括号，或将标签放在名称之后而不是之前。"
       }
     },
-    "overlay": {
-      "title": {
-        "ht": "",
-        "at": "8. Smart Citizen 叠加层"
-      },
-      "description": {
-        "ht": "",
-        "at": "在这里或用工具栏的“叠加层”按钮启动叠加层。它在游戏上方解码采矿扫描信号，打开一个抽屉来搜索你的蓝图、矿物和制作，并把你获得的蓝图标记为已拥有。请在主屏幕上以无边框窗口模式运行游戏。"
-      }
-    },
     "blueprint_tracker": {
       "title": {
         "ht": "",
@@ -3174,6 +3258,16 @@
       "description": {
         "ht": "",
         "at": "标记你拥有的蓝图。可按名称或任务搜索左侧列表，或按组件类型、等级、尺寸和品级缩小范围，然后用箭头将物品移动到你的已拥有列表。已拥有的蓝图在任务的潜在奖励中出现时会带有 [Owned] 标签，让你一眼就能看出哪些值得追求。"
+      }
+    },
+    "overlay": {
+      "title": {
+        "ht": "",
+        "at": "8. Smart Citizen 叠加层"
+      },
+      "description": {
+        "ht": "",
+        "at": "在这里或用工具栏的“叠加层”按钮启动叠加层。它在游戏上方解码采矿扫描信号，打开一个抽屉来搜索你的蓝图、矿物和制作，并把你获得的蓝图标记为已拥有。请在主屏幕上以无边框窗口模式运行游戏。"
       }
     },
     "edit": {
@@ -3233,7 +3327,7 @@
       },
       "description": {
         "ht": "",
-        "at": "选择应用主题（默认 / 浅色 / 深色 / ODW），并可选择禁用新版本的自动教程。"
+        "at": "选择应用主题（默认 / 浅色 / 深色 / ODW）和字体大小（小 / 中 / 大，重启后生效），并可选择在新版本时关闭自动教程。勾选“最小化到系统托盘”后，窗口在最小化时会进入系统托盘。"
       }
     },
     "cfg_sc_install": {
@@ -3273,13 +3367,33 @@
       },
       "description": {
         "ht": "",
-        "at": "通过冲突解决对话框将外部 INI 导入到你的覆盖项中，或重置当前频道的 user.ini（清除前会自动备份）。"
+        "at": "通过冲突处理对话框将外部 INI 导入你的覆盖项。重置当前频道的 user.ini（会先备份），或用“恢复 user.ini”找回之前的副本。预览会显示“应用”将写入的内容，“检查更新”会查找新版本。"
+      }
+    },
+    "cfg_backup": {
+      "title": {
+        "ht": "",
+        "at": "19. 配置：设置备份"
+      },
+      "description": {
+        "ht": "",
+        "at": "“导出设置”会把你的偏好、标签配置、Star Citizen 文件夹和所有频道的自定义字符串保存到一个文件中。“导入设置”可在新电脑上或全新安装后恢复它们。"
+      }
+    },
+    "cfg_sc_tools": {
+      "title": {
+        "ht": "",
+        "at": "20. 配置：Star Citizen 工具"
+      },
+      "description": {
+        "ht": "",
+        "at": "“清除着色器缓存”会列出游戏的着色器缓存文件夹，每个游戏版本一个。“清理”删除着色器并保留你的图形设置；“移除”删除整个文件夹。请先关闭 Star Citizen。"
       }
     },
     "help": {
       "title": {
         "ht": "",
-        "at": "19. 帮助与反馈"
+        "at": "21. 帮助与反馈"
       },
       "description": {
         "ht": "",
@@ -3830,7 +3944,7 @@
     },
     "desc": {
       "ht": "",
-      "at": "显示在 Star Citizen 之上的窗口：采矿扫描解码器和蓝图抽屉。请以无边框窗口模式运行游戏。叠加层只读取屏幕和 Game.log，并在你设置了抽屉热键时只为这一个组合键留意按键，从不接触游戏进程。"
+      "at": "显示在 Star Citizen 之上的窗口：采矿扫描解码器和蓝图抽屉。请以无边框窗口模式运行游戏。叠加层只读取屏幕和 Game.log，询问 Windows 哪个窗口在最前面以及指针是否显示，并在你设置了抽屉热键时还询问它的按键以及 Ctrl、Alt、Shift、Win 键是否被按下，从不接触游戏进程。"
     },
     "start_btn": {
       "ht": "",
