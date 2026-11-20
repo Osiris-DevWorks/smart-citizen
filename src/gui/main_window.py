@@ -1021,6 +1021,12 @@ class MainWindow(QMainWindow):
         # Game.log watcher runs only while the overlay is on.
         self._sco_overlay = None
         self._sco_log_worker = None
+        # The Item Finder's shop data load (UEX, 3.1.0), and the data and
+        # error it last gave, kept for a drawer built after it finished.
+        self._uex_shop_worker = None
+        self._uex_shops = None
+        self._uex_shops_error = ""
+        self._uex_shops_tried_at = None   # time.monotonic() of the last load
         # (base.ini, crafting index) paths and mtimes last fed to the drawer.
         self._sco_catalog_key = None
         # #268/#308: multi-channel scan state. _bp_scan_queue holds channels
@@ -7475,6 +7481,10 @@ class MainWindow(QMainWindow):
         self._stop_sco_overlay()
         if self._sco_overlay is not None:
             self._sco_overlay.wait_for_reader(2000)
+        # A shop data fetch ends within its request timeouts; a QThread
+        # dropped while it runs would abort the exit.
+        if self._uex_shop_worker is not None:
+            self._uex_shop_worker.wait()
 
         # Clean up workers. The close is committed from here: every prompt
         # that could call it off has been answered, so nothing new may start
@@ -8174,11 +8184,48 @@ class MainWindow(QMainWindow):
         self._sco_overlay.set_drawer_hotkey(AppSettings.get_sco_drawer_hotkey())
         if not self._sco_overlay.is_running():
             return
+        self._refresh_sco_shops()
         if AppSettings.get_sco_option(AppSettings.SCO_LIVE_BLUEPRINT_WATCH):
             if self._sco_log_worker is None:
                 self._start_sco_log_watcher()
         else:
             self._stop_sco_log_watcher()
+
+    def _refresh_sco_shops(self):
+        """Load the Item Finder's shop data when the finder is shown and
+        none is loaded or it is over UEX's 12 hours old. The worker reads the
+        cache and asks UEX off the GUI thread (``uex_shops.load_shop_data``)."""
+        import time
+
+        from src.utils.uex_shops import MAX_AGE_S, SHOP_CACHE_FILE, UEX_RETRY_S
+        drawer = self._sco_overlay.drawer
+        drawer.set_shop_data(self._uex_shops, self._uex_shops_error)
+        if self._uex_shop_worker is not None or self._close_committed:
+            return
+        if not (AppSettings.get_sco_option(AppSettings.SCO_DRAWER) and AppSettings.get_sco_option(
+                AppSettings.SCO_DRAWER_SECTION_PREFIX + "finder")):
+            return
+        shops = self._uex_shops
+        if shops is not None and 0 <= time.time() - shops.fetched_at < MAX_AGE_S:
+            return
+        # Offline, every option change would ask UEX again: wait a while.
+        tried = self._uex_shops_tried_at
+        if tried is not None and time.monotonic() - tried < UEX_RETRY_S:
+            return
+        self._uex_shops_tried_at = time.monotonic()
+        from src.gui.workers import UexShopDataWorker
+        self._uex_shop_worker = UexShopDataWorker(AppSettings.get_cache_dir() / SHOP_CACHE_FILE)
+        self._uex_shop_worker.finished.connect(self._on_uex_shops_loaded)
+        self._uex_shop_worker.start()
+
+    def _on_uex_shops_loaded(self, shops, error: str):
+        self._reap_worker(self._uex_shop_worker)
+        self._uex_shop_worker = None
+        if shops is not None:
+            self._uex_shops = shops
+        self._uex_shops_error = error
+        if self._sco_overlay is not None:
+            self._sco_overlay.drawer.set_shop_data(self._uex_shops, error)
 
     def _stop_sco_log_watcher(self):
         if self._sco_log_worker is not None:
