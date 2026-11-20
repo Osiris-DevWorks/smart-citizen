@@ -51,6 +51,23 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: Order tab (3.1.0)",
+        "items": [
+            "Extract DataForge, then generate with Commodities ticked. Drawer Order tab: search an item and click it. It shows as a line, and the Order summary at the top lists its materials.",
+            "Add the same item again: its count goes up, with no second line. Use - and + and the X: the count and the summary follow.",
+            "Open a line: each slot shows its material and amount. Drag a quality slider: the stat bonuses change, and the summary splits that material by quality.",
+            "Compare one blueprint with RK Crafting Central: same materials, amounts and stat bonuses at the same qualities.",
+            "Show SCU and Show cSCU switch the amounts. Copy, then paste in Discord: the order and its materials.",
+            "Watch minerals: the Minerals tab ticks the order's minerals. New order needs a second click, and its Sure? stays on screen.",
+            "Restart the app: the order is still there.",
+            "Search NDB-30 (and other items you know): they show whether you own them or not. Tick Owned only: only owned blueprints are listed.",
+            "With the overlay running, mark a blueprint owned in the Blueprint Tracker tab: the Order card's not-owned mark goes at once.",
+            "Type a name, click Save, then New order. Pick the name under Saved orders and click Load: the order comes back. The file is in your data folder under orders.",
+            "Pick a saved order and click Delete twice: the name leaves the list and the order you built stays.",
+            "Open an item made of an ore: its slider has tick marks and stops only on them, and the label shows the tier (e.g. Q 786 (C)).",
+        ],
+    },
+    {
         "title": "Overlay: Item Finder (#606)",
         "items": [
             "Start the overlay and open the magnifying glass tab: the bottom line says where the shop data is from and when it was updated.",

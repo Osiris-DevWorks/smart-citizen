@@ -449,6 +449,7 @@ GENERATOR_READ_SUBPATHS = (
     "contracts/contracttemplates",                       # template fallback in scan_contract_generators
     "crafting/blueprintrewards/blueprintmissionpools",   # blueprint_pools lookup
     "crafting/blueprints/crafting",                      # crafting blueprint scan
+    "crafting/craftedproperties",                        # SCO Order tab stat names
     "missionbroker/pu_missions",                         # mission XP augmentation
     # Guarded reads (may or may not exist in a given patch; extractor keeps
     # the parent subtree, generator guards with `if dir.exists()`):

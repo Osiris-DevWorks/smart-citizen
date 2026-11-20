@@ -3652,6 +3652,246 @@
       "ht": "",
       "at": "ここの鉱物：{minerals}"
     },
+    "section_order": {
+      "ht": "",
+      "at": "注文"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "注文にアイテムを追加..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "注文の概要：{items} アイテム、{crafts} 回のクラフト"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "注文はまだ空です。下で検索してアイテムを追加してください。"
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "注文データがまだありません。DataForge を抽出し、Commodities または Journal にチェックを入れて拡張を生成してください。"
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}：{amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "品質 {quality}+：{amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "使用先：{items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU で表示"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU で表示"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "鉱石の量を SCU または cSCU（ゲーム内と同じく SCU の 100 分の 1）で表示します"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "コピー"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "コピーしました"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "注文と素材をテキストとしてコピーします（Discord 用）"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "鉱物を監視"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "注文の鉱物をスキャン監視リストに追加し、スキャナーが読み取ったときに知らせます"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "新規注文"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "本当に？"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "もう一度「新規注文」をクリックするとこの注文を空にします。保存した注文は残ります。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "新しい注文を始めます：この注文のアイテムをすべて削除します。保存した注文は残ります。"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "1 つ減らす"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "1 つ増やす"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "注文から削除"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "未所持の設計図"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "所有済みのみ"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "所有しているブループリントだけを検索します。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "不明な素材"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "注文名"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "保存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "入力した名前でこの注文を保存します。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "上書きしますか？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "保存しました"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "先に注文の名前を入力してください。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "注文を保存できませんでした:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "保存した注文"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "読み込む"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "この注文を、リストで選んだ保存済みの注文に置き換えます。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "削除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "確認"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "もう一度「削除」をクリックすると保存した注文「{name}」を削除します。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "リストで選んだ保存済みの注文を削除します。作成中の注文はそのままです。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "保存した注文「{name}」を削除できませんでした。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "「{name}」には、このゲームデータにあるアイテムがありません。"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "この {of} 個のうち {need} 個を使用："
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "このスロットを使います。設計図が必要とする数より多くチェックすると、別のチェックが外れます。"
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}：{material}、{amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "このスロットに使う素材の品質（0〜1000）"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} の品質はこれだけです（{source} のデータ）：{tiers}。スライダーはこれらと 0、500、1000 で止まります。"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "品質 {quality} 以上が必要"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "全スロット：{bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "素材の品質はこのアイテムの性能を変えません。"
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} ピップ"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} 個"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "クラフト注文：{count} 回"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "素材："
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "品質 {quality}+ で {amount}"
+    },
     "finder_search_placeholder": {
       "ht": "",
       "at": "アイテム名を入力して購入場所を確認..."
@@ -3977,6 +4217,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "これはホットキーにできません。Ctrl、Alt、Win のいずれかを押しながら、英字、数字、記号、Space、Tab、または移動キー（矢印、Home、End、Page Up/Down、Insert、Delete）を押してください。Shift を加えてもかまいません。F キーや Pause は単独でも使えます。"
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "注文"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "クラフト注文を組み立て、必要な素材をすべて品質別に確認します。DataForge の抽出が必要です。"
     }
   },
   "shader_cache": {

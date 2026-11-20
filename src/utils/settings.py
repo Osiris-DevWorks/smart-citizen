@@ -794,6 +794,7 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_DRAWER_SECTION_PREFIX + "order":      ("sco/drawer_order", True),
         SCO_DRAWER_SECTION_PREFIX + "finder":     ("sco/drawer_finder", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
     }
@@ -828,6 +829,16 @@ class AppSettings:
     # decoded scan of one sets off the label's alerts. JSON list of
     # ORE_SIGNATURES keys and "salvage".
     SCO_WATCHED_MINERALS = "sco/watched_minerals"
+    # The SCO drawer's crafting order (3.1.0): a JSON list of
+    # crafting_order.OrderLine dicts. User data, like owned_items, so a
+    # backup's "unset" never empties it (PROFILE_DEFAULT_EXCLUDE_KEYS).
+    SCO_ORDER = "sco/order"
+    # How the Order tab shows ore volumes: "cscu" (as in game) or "scu".
+    SCO_ORDER_VOLUME = "sco/order_volume"
+    SCO_ORDER_VOLUMES = ("cscu", "scu")
+    SCO_ORDER_VOLUME_DEFAULT = "cscu"
+    # The Order tab's "Owned only" search filter (off: every blueprint).
+    SCO_ORDER_OWNED_ONLY = "sco/order_owned_only"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -899,6 +910,7 @@ class AppSettings:
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
         TRAY_NOTICE_SHOWN,
@@ -1893,6 +1905,46 @@ class AppSettings:
     def set_sco_watched_minerals(names) -> None:
         import json
         AppSettings.settings().setValue(AppSettings.SCO_WATCHED_MINERALS, json.dumps(sorted(names)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order() -> list:
+        """The SCO drawer's crafting order as stored: a list of line dicts
+        (``crafting_order.OrderLine.to_dict``), [] when none or unreadable.
+        ``crafting_order.load_order`` fits it to the blueprints there are."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_ORDER, "", type=str)
+        try:
+            lines = json.loads(raw) if raw else []
+        except (ValueError, TypeError):
+            return []
+        return lines if isinstance(lines, list) else []
+
+    @staticmethod
+    def set_sco_order(lines) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER, json.dumps(list(lines)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order_volume() -> str:
+        return AppSettings._get_choice(AppSettings.SCO_ORDER_VOLUME,
+                                       AppSettings.SCO_ORDER_VOLUMES,
+                                       AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def set_sco_order_volume(volume: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_ORDER_VOLUME, volume,
+                                AppSettings.SCO_ORDER_VOLUMES,
+                                AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def get_sco_order_owned_only() -> bool:
+        return AppSettings.settings().value(AppSettings.SCO_ORDER_OWNED_ONLY, False, type=bool)
+
+    @staticmethod
+    def set_sco_order_owned_only(owned_only: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER_OWNED_ONLY, bool(owned_only))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3660,6 +3712,15 @@ class AppSettings:
         return backups_dir
 
     @staticmethod
+    def get_sco_orders_dir() -> Path:
+        r"""Where the SCO Order tab's saved orders go
+        (``{user_data_dir}\orders\<name>.json``). Not per channel: an
+        order is the same on every channel. Not created here; saving makes
+        it."""
+        from src.utils.crafting_order import SAVED_ORDERS_FOLDER
+        return AppSettings.get_user_data_dir() / SAVED_ORDERS_FOLDER
+
+    @staticmethod
     def get_logs_dir() -> Path:
         r"""Get the logs directory (``{user_data_dir}\logs\``).
 
@@ -4145,6 +4206,8 @@ class AppSettings:
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
+            AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,
+            AppSettings.SCO_ORDER_OWNED_ONLY: False,
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({

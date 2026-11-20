@@ -24,6 +24,7 @@ Usage:
 """
 
 import io
+import json
 import logging
 import os
 import pickle
@@ -142,9 +143,10 @@ try:
     from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
     from src.utils.mining_catalog import (
         COMPENDIUM_ORE_ALIASES as _MINING_COMPENDIUM_ORE_ALIASES,
-        CRAFTING_INDEX_FILE, write_crafting_index,
+        CRAFTING_INDEX_FILE, ORDER_ITEM_MATERIAL, ORDER_UNKNOWN_MATERIAL, write_crafting_index,
     )
 except ImportError:  # pragma: no cover — only triggers if src/ is removed
+    ORDER_ITEM_MATERIAL, ORDER_UNKNOWN_MATERIAL = "item:", "unknown:"
     MINEABLE_RS_VALUES = {}  # type: ignore[assignment]
     ORE_SIGNATURES = {}  # type: ignore[assignment]
     _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
@@ -4762,6 +4764,196 @@ def _blueprint_material_uids(root: ET.Element) -> list[str]:
     return uids
 
 
+# A slot's quality ramp, by the element type that states it: "_Linear"
+# scales the stat, "_LinearIntegerAdditive" adds whole units (power plant
+# pips). Any other kind is left out rather than drawn wrong.
+_CRAFT_RAMP_KINDS = {
+    "CraftingGameplayPropertyModifierValueRange_Linear": False,
+    "CraftingGameplayPropertyModifierValueRange_LinearIntegerAdditive": True,
+}
+_ZERO_UUID = "00000000-0000-0000-0000-000000000000"
+
+
+def _float_attr(elem: ET.Element, *names: str) -> float | None:
+    for name in names:
+        raw = elem.get(name)
+        if raw not in (None, ""):
+            try:
+                return float(raw)
+            except ValueError:
+                return None
+    return None
+
+
+def _craft_cost_amount(cost: ET.Element) -> tuple[float, str]:
+    """A cost option's amount and unit: SCU for a ``CraftingCost_Resource``
+    (``quantity/SStandardCargoUnit@standardCargoUnits``, or a centi- or
+    micro-SCU unit should CIG use one), a count of pieces for a
+    ``CraftingCost_Item`` (a bare ``quantity``)."""
+    if _poly_type(cost) == "CraftingCost_Item":
+        return _float_attr(cost, "quantity") or 0.0, "unit"
+    quantity = cost.find("quantity")
+    for unit in (quantity if quantity is not None else []):
+        kind = _poly_type(unit)
+        if kind == "SStandardCargoUnit":
+            return _float_attr(unit, "standardCargoUnits") or 0.0, "scu"
+        if kind == "SCentiCargoUnit":
+            return (_float_attr(unit, "centiSCU") or 0.0) / 100, "scu"
+        if kind == "SMicroCargoUnit":
+            return (_float_attr(unit, "microSCU") or 0.0) / 1_000_000, "scu"
+    return _float_attr(cost, "quantity") or 0.0, "scu"
+
+
+def _craft_slot_modifiers(select: ET.Element) -> list[dict]:
+    """The stats one slot's quality moves: each as ``{"stat": record uuid,
+    "add": bool, "s": [[q_start, q_end, at_start, at_end], ...]}``.
+
+    Read from the slot's own ``context`` only, so a group never takes its
+    inner slots' ramps. A ramp can come in segments (0.95 to 1.0 over
+    0-499, then 1.0 to 1.05 over 500-1000), kept one row each."""
+    context = select.find("context")
+    if context is None:
+        return []
+    mods = []
+    for elem in context.iter():
+        if _poly_type(elem) != "CraftingGameplayPropertyModifierCommon":
+            continue
+        stat = elem.get("gameplayPropertyRecord", "")
+        ranges = elem.find("valueRanges")
+        if not stat or stat == _ZERO_UUID or ranges is None:
+            continue
+        for additive in (False, True):
+            segments = []
+            for rng in ranges:
+                if _CRAFT_RAMP_KINDS.get(_poly_type(rng)) is not additive:
+                    continue
+                prefix = "additiveModifier" if additive else "modifier"
+                start = _float_attr(rng, f"{prefix}AtStart", "modifierAtStart")
+                end = _float_attr(rng, f"{prefix}AtEnd", "modifierAtEnd")
+                if start is None or end is None:
+                    continue
+                segments.append([int(_float_attr(rng, "startQuality") or 0),
+                                 int(_float_attr(rng, "endQuality") or 1000),
+                                 round(start, 4), round(end, 4)])
+            if segments:
+                mods.append({"stat": stat, "add": additive, "s": segments})
+    return mods
+
+
+def _craft_name_info(select: ET.Element) -> tuple[str, str]:
+    """A select's ``nameInfo``: (displayName loc ref, debugName)."""
+    info = select.find("nameInfo")
+    if info is None:
+        return "", ""
+    return info.get("displayName", ""), info.get("debugName", "")
+
+
+def _blueprint_order_facts(root: ET.Element) -> dict | None:
+    """A blueprint's crafting slots for the SCO Order tab, or None.
+
+    Reads the first tier's ``mandatoryCost``: a ``CraftingCost_Select``
+    whose options are slots (a select holding materials) or groups (a select
+    holding selects). A group that needs fewer of its options than it has
+    ("any 2 of these 3") is a pick: its slots carry the pick's index in
+    ``"g"``. Each slot is ``{"name": loc ref, "debug": debugName, "mat":
+    material uuid, "u": "scu"|"unit", "q": amount, "min": lowest quality,
+    "mods": [...]}``. Every slot has one material today; a slot with several
+    ("choose one material") keeps the first.
+    """
+    tier = next((e for e in root.iter() if _poly_type(e) == "CraftingBlueprintTier"), None)
+    mandatory = (tier if tier is not None else root).find(".//mandatoryCost")
+    if mandatory is None:
+        return None
+    top = next((c for c in mandatory if _poly_type(c) == "CraftingCost_Select"), None)
+    if top is None:
+        return None
+    slots: list[dict] = []
+    picks: list[dict] = []
+
+    def walk(select: ET.Element, group: int | None) -> None:
+        options = select.find("options")
+        children = list(options) if options is not None else []
+        inner = [c for c in children if _poly_type(c) == "CraftingCost_Select"]
+        costs = [c for c in children
+                 if _poly_type(c) in ("CraftingCost_Resource", "CraftingCost_Item")]
+        if inner:
+            need = int(_float_attr(select, "count") or len(inner))
+            if 0 < need < len(inner):
+                picks.append({"n": len(inner), "k": need})
+                inner_group = len(picks) - 1
+            else:
+                inner_group = group
+            for child in inner:
+                walk(child, inner_group)
+        if not costs:
+            return
+        cost = costs[0]
+        ref = cost.get("resource") if _poly_type(cost) == "CraftingCost_Resource" \
+            else cost.get("entityClass")
+        if not ref or ref == _ZERO_UUID:
+            return
+        amount, unit = _craft_cost_amount(cost)
+        name, debug = _craft_name_info(select)
+        slot = {"name": name, "debug": debug, "mat": ref, "u": unit,
+                "q": round(amount, 6), "min": int(_float_attr(cost, "minQuality") or 0),
+                "mods": _craft_slot_modifiers(select)}
+        if group is not None:
+            slot["g"] = group
+        slots.append(slot)
+
+    walk(top, None)
+    if not slots:
+        return None
+    return {"slots": slots, "picks": picks}
+
+
+def _crafted_property_names(props_dir: Path, loc_index: dict[str, str],
+                            xml_path_index: dict | None = None,
+                            records_dir: Path | None = None) -> dict[str, tuple[str, str]]:
+    """Crafted stat record uuid -> (stat key, display name), from
+    ``crafting/craftedproperties``. The name comes from the record's
+    ``propertyName`` loc ref, else its file name."""
+    out: dict[str, tuple[str, str]] = {}
+    if not props_dir.exists():
+        return out
+    files = (_index_rglob(xml_path_index, props_dir, records_dir)
+             if xml_path_index is not None and records_dir is not None
+             else props_dir.rglob("*.xml"))
+    for xml_file in sorted(files):
+        try:
+            root = _parse_xml_file(xml_file)
+        except ET.ParseError:
+            continue
+        ref = root.get("__ref", "")
+        if not ref:
+            continue
+        key = xml_file.stem.lower()
+        name = _craft_loc(loc_index, root.get("propertyName", "")) or _humanize_debug_name(key)
+        out[ref] = (key, name)
+    return out
+
+
+def _craft_loc_index(loc: dict[str, str]) -> dict[str, str]:
+    """``loc`` keyed as the slot and stat refs are matched: ``,P`` suffix
+    stripped and lower case (an exact lookup misses CIG's slot names)."""
+    return {k.split(",")[0].lower(): v for k, v in loc.items()}
+
+
+def _craft_loc(loc_index: dict[str, str], ref: str) -> str:
+    """A ``@loc_key`` ref's text from :func:`_craft_loc_index`; "" when none."""
+    if not ref or not ref.startswith("@"):
+        return ""
+    return (loc_index.get(ref[1:].lower()) or "").strip()
+
+
+def _humanize_debug_name(name: str) -> str:
+    """``ARMOURED CARAPACE`` or ``wiring:`` or ``gpp_item_health`` as a label."""
+    words = re.sub(r"[^A-Za-z0-9]+", " ", name).split()
+    if words and words[0].lower() == "gpp":
+        words = words[1:]
+    return " ".join(words).capitalize()
+
+
 def _poly_type(elem: ET.Element) -> str:
     """Return the effective polymorphic type of a DataForge element.
 
@@ -5252,6 +5444,119 @@ def _lookup_commodity_locations(mineral_locations: dict, display: str,
     return None
 
 
+def _build_crafting_order(
+    order_records: list[tuple[str, str, str, dict]],
+    uuid_names: dict[str, str],
+    stat_names: dict[str, tuple[str, str]],
+    loc_index: dict[str, str],
+    entity_names: dict[str, str] | None = None,
+) -> dict:
+    """The SCO Order tab's half of ``crafting_index.json``.
+
+    ``{"blueprints": [{"k": key, "n": item, "c": category, "s": slots,
+    "p": picks}], "stats": {stat key: name}, "curves": [{"s": segments,
+    "add": bool}]}``. A slot is ``{"n": name, "mat": material key (the
+    ``materials`` keys), "u": "scu"|"unit", "q": amount, "min": lowest
+    quality, "m": [[stat key, curve index]], "g": pick index}``. Curves are
+    shared by index to keep the file small. A same-named variant with the
+    same recipe (one per paint, say) is left out.
+
+    Every other blueprint is kept, whatever its materials. A material no
+    carryable names is keyed by its uuid: ``item:<uuid>`` for an item cost
+    whose entity has a name (written to ``"mnames"``, key to display name,
+    since it is no commodity), ``unknown:<uuid>`` otherwise, which the
+    drawer shows as an unknown material. Dropping those blueprints hid most
+    of the catalogue (NDB-30 among them), which read as an owned-only
+    filter.
+    """
+    curves: list[dict] = []
+    curve_index: dict[str, int] = {}
+    stats: dict[str, str] = {}
+    blueprints: list[dict] = []
+    seen: dict[str, set[str]] = defaultdict(set)
+    entity_names = entity_names or {}
+    mnames: dict[str, str] = {}
+    unknown = 0
+    for key, category, item_name, facts in order_records:
+        if "$templates" in category.lower():
+            continue
+        slots = []
+        for raw in facts["slots"]:
+            material = uuid_names.get(raw["mat"])
+            if material is None:
+                item = entity_names.get(raw["mat"], "").strip()
+                if item:
+                    material = f"{ORDER_ITEM_MATERIAL}{raw['mat']}"
+                    mnames[material] = _strip_cig_size_prefix(item)
+                else:
+                    material = f"{ORDER_UNKNOWN_MATERIAL}{raw['mat']}"
+                    unknown += 1
+            mods = []
+            for mod in raw["mods"]:
+                stat = stat_names.get(mod["stat"])
+                if stat is None:
+                    continue
+                stats.setdefault(stat[0], stat[1])
+                curve = {"s": mod["s"], "add": mod["add"]}
+                curve_key = json.dumps(curve, sort_keys=True)
+                if curve_key not in curve_index:
+                    curve_index[curve_key] = len(curves)
+                    curves.append(curve)
+                mods.append([stat[0], curve_index[curve_key]])
+            slot = {
+                "n": (_craft_loc(loc_index, raw["name"])
+                      or _humanize_debug_name(raw["debug"]) or "Slot"),
+                "mat": material, "u": raw["u"], "q": raw["q"], "min": raw["min"], "m": mods,
+            }
+            if "g" in raw:
+                slot["g"] = raw["g"]
+            slots.append(slot)
+        entry = {"k": key, "n": item_name, "c": _humanize_craft_category(category),
+                 "s": slots, "p": facts["picks"]}
+        same = json.dumps([entry["c"], slots, entry["p"]], sort_keys=True)
+        if same in seen[item_name.casefold()]:
+            continue
+        seen[item_name.casefold()].add(same)
+        blueprints.append(entry)
+    logger.info(f"Crafting order: {len(blueprints)} blueprints, {len(mnames)} item materials, "
+                f"{unknown} slots with a material nothing names")
+    blueprints.sort(key=lambda b: (b["n"].casefold(), b["k"]))
+    return {"blueprints": blueprints, "stats": dict(sorted(stats.items())), "curves": curves,
+            "mnames": dict(sorted(mnames.items()))}
+
+
+def _looks_like_loc_key(name: str) -> bool:
+    """A name the loc did not resolve: _render_scitem_lookups keeps the key
+    itself (``item_NameMXOX_...``) when base.ini has no text for it."""
+    return not name or name.startswith("@") or name.lower().startswith("item_name")
+
+
+def _crafted_item_name(
+    root: ET.Element,
+    xml_file: Path,
+    entity_names: dict[str, str],
+    entity_names_by_filename: dict[str, str],
+) -> tuple[str, bool]:
+    """The display name of the item a blueprint makes, and whether one was
+    found. The same chain as the mission blueprint lists
+    (:func:`build_blueprint_pool_lookup`): the ``CraftingProcess_Creation``
+    entityClass, then the entity file named like the blueprint (CIG ships
+    some blueprints ahead of the entity link, so NDB-30 and others went
+    unnamed and the Order search could not find them), then the file name
+    minus ``bp_craft_``."""
+    stem = xml_file.stem.replace("bp_craft_", "")
+    for elem in root.iter():
+        if _poly_type(elem) == "CraftingProcess_Creation":
+            name = entity_names.get(elem.get("entityClass", ""), "")
+            if not _looks_like_loc_key(name):
+                return name, True
+            break
+    name = entity_names_by_filename.get(stem.lower(), "")
+    if not _looks_like_loc_key(name):
+        return _strip_cig_size_prefix(name), True
+    return stem, False
+
+
 def scan_crafting_blueprints(
     bp_dir: Path,
     carryables_dir: Path,
@@ -5263,6 +5568,8 @@ def scan_crafting_blueprints(
     blueprint_data_header: str = "BLUEPRINT DATA",
     header_em_tag: str = "EM3",
     crafting_index: dict | None = None,
+    crafting_order: dict | None = None,
+    entity_names_by_filename: dict[str, str] | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Scan crafting blueprints and produce commodity + journal entries.
 
@@ -5276,6 +5583,10 @@ def scan_crafting_blueprints(
     When *crafting_index* is given it is filled with every material's display
     names and the ``[category, item]`` pairs it goes into, for the SCO
     drawer's crafting search (``src/utils/mining_catalog.py``).
+
+    When *crafting_order* is given it is filled with what the SCO Order tab
+    needs (:func:`_build_crafting_order`): every blueprint's slots with
+    their amounts, lowest qualities and quality ramps, and the stat names.
     """
     import os
 
@@ -5288,6 +5599,12 @@ def scan_crafting_blueprints(
     # material UUIDs it names, collecting those UUIDs as it goes.
     resource_uuids: set[str] = set()
     bp_records: list[tuple[str, str, list[str]]] = []
+    # (blueprint key, category, item name, slot facts) for the Order tab.
+    order_records: list[tuple[str, str, str, dict]] = []
+    # Blueprints whose item has no name (the entity and its file both
+    # missed), logged so a tester's log shows why an item's search fails.
+    unnamed: list[str] = []
+    entity_names_by_filename = entity_names_by_filename or {}
     _bp_files = (
         sorted(_index_rglob(xml_path_index, bp_dir, records_dir))
         if xml_path_index is not None and records_dir is not None
@@ -5300,20 +5617,23 @@ def scan_crafting_blueprints(
             continue
         rel = xml_file.relative_to(bp_dir)
         category = str(rel.parent).replace(os.sep, "/")
-        item_name = xml_file.stem.replace("bp_craft_", "")
-        # Try to resolve display name from entity reference
-        for elem in root.iter():
-            if _poly_type(elem) == "CraftingProcess_Creation":
-                entity_ref = elem.get("entityClass", "")
-                if entity_ref in entity_names:
-                    item_name = entity_names[entity_ref]
-                break
+        item_name, named = _crafted_item_name(root, xml_file, entity_names,
+                                              entity_names_by_filename)
+        if not named:
+            unnamed.append(xml_file.stem)
         material_uids = _blueprint_material_uids(root)
         for uid in material_uids:
             if uid and uid != "00000000-0000-0000-0000-000000000000":
                 resource_uuids.add(uid)
         bp_records.append((category, item_name, material_uids))
+        if crafting_order is not None:
+            facts = _blueprint_order_facts(root)
+            if facts is not None:
+                order_records.append((xml_file.stem.lower(), category, item_name, facts))
     logger.info(f"Found {len(resource_uuids)} unique resource UUIDs in blueprints")
+    if unnamed:
+        logger.info(f"Crafting: {len(unnamed)} blueprints with no item name, shown by file name, "
+                    f"e.g. {', '.join(unnamed[:5])}")
 
     # Step 2: Resolve UUIDs to commodity names via carryables
     uuid_names = _build_uuid_to_commodity(resource_uuids, carryables_dir, xml_path_index=xml_path_index, records_dir=records_dir)
@@ -5352,6 +5672,15 @@ def scan_crafting_blueprints(
                 "items": sorted({(_humanize_craft_category(cat), item) for cat, item in pairs_
                                  if "$templates" not in cat.lower()}),
             }
+
+    if crafting_order is not None:
+        loc_index = _craft_loc_index(loc)
+        props_dir = (records_dir / "crafting" / "craftedproperties" if records_dir is not None
+                     else bp_dir.parent.parent / "craftedproperties")
+        stat_names = _crafted_property_names(props_dir, loc_index, xml_path_index, records_dir)
+        crafting_order.update(
+            _build_crafting_order(order_records, uuid_names, stat_names, loc_index,
+                                  entity_names))
 
     logger.info(
         f"Crafting: {len(commodity_items)} commodities discovered from blueprints; "
@@ -8294,7 +8623,9 @@ def _run_gen_commodity_journal(ctx: dict) -> tuple[dict[str, str], dict[str, str
                                     tag_config=tag_configs.get("commodities"),
                                     blueprint_data_header=mh.get("blueprint_data", _DEFAULT_MISSION_HEADERS["blueprint_data"]),
                                     header_em_tag=mh_em,
-                                    crafting_index=ctx.get("crafting_index"))
+                                    crafting_index=ctx.get("crafting_index"),
+                                    crafting_order=ctx.get("crafting_order"),
+                                    entity_names_by_filename=ctx.get("entity_names_by_filename"))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -8756,6 +9087,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "rs_ore_name_annotations": bool(rs_ore_name_annotations),
         # Filled by the commodity/journal generator for the SCO drawer.
         "crafting_index":    {},
+        "crafting_order":    {},
     }
 
     gen_jobs: dict[str, Callable] = {}
@@ -8878,7 +9210,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
     # Written whenever the job ran, empty or not, so a stale index never
     # outlives the INIs it was built with.
     if "commodity_journal" in gen_jobs and CRAFTING_INDEX_FILE:
-        write_crafting_index(output_dir / CRAFTING_INDEX_FILE, ctx["crafting_index"])
+        write_crafting_index(output_dir / CRAFTING_INDEX_FILE, ctx["crafting_index"],
+                             ctx["crafting_order"])
 
     total = (len(out_ships) + len(out_components) + len(out_ship_weapons) +
              len(out_fps_weapons) + len(out_armor) + len(out_missions) + len(out_commodities) +

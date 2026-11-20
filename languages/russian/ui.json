@@ -3430,6 +3430,246 @@
       "ht": "",
       "at": "Минералы здесь: {minerals}"
     },
+    "section_order": {
+      "ht": "",
+      "at": "Заказ"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Добавить предмет в заказ..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Сводка заказа: предметов {items}, крафтов {crafts}"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "В заказе пока ничего нет. Найдите предмет ниже, чтобы добавить его."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Данных для заказов пока нет. Извлеките DataForge, затем сгенерируйте улучшения с отмеченными категориями Commodities или Journal."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Качество {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Используется в: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "Показать SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "Показать cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Показывать количество руды в SCU или cSCU (сотая доля SCU, как в игре)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Копировать"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Скопировано"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Скопировать заказ и материалы текстом, для Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Отслеживать минералы"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Добавить минералы заказа в список отслеживания скана, чтобы сканер предупреждал, когда прочтёт один из них"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Новый заказ"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "Точно?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Нажмите «Новый заказ» ещё раз, чтобы очистить этот заказ. Сохранённые заказы останутся."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Начать новый заказ: убирает все предметы из текущего. Сохранённые заказы останутся."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "На один меньше"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "На один больше"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Убрать из заказа"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Чертёж ещё не получен"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Только имеющиеся"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Искать только среди ваших чертежей."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Неизвестный материал"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Название заказа"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Сохранить"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Сохранить этот заказ под введённым названием."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Заменить?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Сохранено"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Сначала введите название заказа."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Не удалось сохранить заказ в:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Сохранённые заказы"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Загрузить"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Заменить этот заказ сохранённым, выбранным в списке."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Удалить"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Точно?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Нажмите «Удалить» ещё раз, чтобы удалить сохранённый заказ «{name}»."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Удалить сохранённый заказ, выбранный в списке. Текущий заказ останется."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Не удалось удалить сохранённый заказ «{name}»."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "В «{name}» нет предметов, известных этим игровым данным."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Нужно {need} из этих {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Использовать этот слот. Если отметить больше, чем нужно чертежу, отметка снимется с другого."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "К {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "Качество материала для этого слота (от 0 до 1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} бывает только такого качества (данные {source}): {tiers}. Ползунок останавливается на этих значениях, а также на 0, 500 и 1000."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Нужно качество {quality} или выше"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Все слоты: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "Качество материалов не меняет характеристики этого предмета."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} ед. энергии"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} шт."
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Заказ на крафт: крафтов {count}"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Материалы:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} с качеством {quality}+"
+    },
     "finder_search_placeholder": {
       "ht": "",
       "at": "Введите предмет, чтобы узнать, где его купить..."
@@ -3755,6 +3995,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Это нельзя назначить горячей клавишей. Удерживайте Ctrl, Alt или Win вместе с буквой, цифрой, символом, пробелом, Tab или клавишей навигации (стрелки, Home, End, Page Up/Down, Insert, Delete), при желании и с Shift. Клавиша F или Pause работает и сама по себе."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Заказ"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Соберите заказ на крафт и посмотрите все нужные материалы по качеству. Требуется извлечение DataForge."
     }
   },
   "tutorial": {

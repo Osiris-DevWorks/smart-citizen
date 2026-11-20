@@ -747,7 +747,7 @@ def test_sections_follow_the_options(qapp):
     overlay = ScoOverlay()
     overlay.drawer.open_section("minerals")
     overlay.set_options({"drawer_minerals": False})
-    assert overlay.drawer._handle.sections == ["blueprints", "crafting", "finder"]
+    assert overlay.drawer._handle.sections == ["blueprints", "crafting", "order", "finder"]
     # Switching off the open section closes the drawer.
     assert not overlay.drawer._panel.isVisibleTo(overlay.drawer)
     assert overlay.drawer.has_sections()
@@ -757,8 +757,7 @@ def test_no_sections_hides_the_drawer(qapp):
     overlay = ScoOverlay()
     overlay.start()
     try:
-        overlay.set_options({"drawer_blueprints": False, "drawer_minerals": False,
-                             "drawer_crafting": False, "drawer_finder": False})
+        overlay.set_options({f"drawer_{name}": False for name in SECTION_ICONS})
         assert not overlay.drawer.has_sections() and not overlay.drawer.isVisible()
     finally:
         overlay.stop()

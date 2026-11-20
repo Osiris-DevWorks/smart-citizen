@@ -3652,6 +3652,246 @@
       "ht": "",
       "at": "Minerales aquí: {minerals}"
     },
+    "section_order": {
+      "ht": "",
+      "at": "Pedido"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Añadir un objeto al pedido..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Resumen del pedido: {items} objetos, {crafts} fabricaciones"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "El pedido está vacío. Busca abajo para añadir un objeto."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Aún no hay datos de pedidos. Extrae DataForge y genera las mejoras con Commodities o Journal marcado."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Calidad {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Lo usa: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "Ver SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "Ver cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Mostrar las cantidades de mineral en SCU o cSCU (una centésima de SCU, como en el juego)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Copiar"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Copiado"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Copiar el pedido y sus materiales como texto, para Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Vigilar minerales"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Añadir los minerales del pedido a la lista de vigilancia del escaneo, para que el escáner te avise cuando lea uno"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Nuevo pedido"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "¿Seguro?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Haz clic otra vez en Nuevo pedido para vaciar este pedido. Los pedidos guardados se conservan."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Empezar un pedido nuevo: quita todos los objetos de este. Los pedidos guardados se conservan."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Uno menos"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Uno más"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Quitar del pedido"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Plano aún no obtenido"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Solo los que tengo"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Buscar solo entre los planos que tienes."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Material desconocido"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nombre del pedido"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Guardar"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Guarda este pedido con el nombre que escribiste."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "¿Reemplazar?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Guardado"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Escribe primero un nombre para el pedido."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "No se pudo guardar el pedido en:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Pedidos guardados"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Cargar"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Reemplaza este pedido por el guardado que elegiste en la lista."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Eliminar"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "¿Seguro?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Haz clic otra vez en Eliminar para borrar el pedido guardado \"{name}\"."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Eliminar el pedido guardado elegido en la lista. El pedido que estás armando se queda."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "No se pudo eliminar el pedido guardado \"{name}\"."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "«{name}» no tiene objetos que estos datos del juego conozcan."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Usa {need} de estos {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Usar esta ranura. Marcar una más de las que necesita el plano desmarca otra."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "C {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "La calidad del material para esta ranura (0 a 1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} solo sale con estas calidades (datos de {source}): {tiers}. El control se detiene en ellas y en 0, 500 y 1000."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Necesita calidad {quality} o mejor"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Todas las ranuras: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "La calidad del material no cambia las estadísticas de este objeto."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pips"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} uds."
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Pedido de fabricación: {count} fabricaciones"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materiales:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} con calidad {quality}+"
+    },
     "finder_search_placeholder": {
       "ht": "",
       "at": "Escribe un objeto para ver dónde comprarlo..."
@@ -3977,6 +4217,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Esto no puede ser un atajo. Mantén pulsada Ctrl, Alt o Win con una letra, un número, un símbolo, Espacio, Tab o una tecla de navegación (flechas, Inicio, Fin, Re Pág/Av Pág, Insert, Supr), y también Mayús si quieres. Una tecla F o Pausa también sirve sola."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Pedido"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Arma un pedido de fabricación y mira cada material que necesita, por calidad. Requiere una extracción de DataForge."
     }
   },
   "shader_cache": {

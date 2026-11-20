@@ -3652,6 +3652,246 @@
       "ht": "",
       "at": "Mineralien hier: {minerals}"
     },
+    "section_order": {
+      "ht": "",
+      "at": "Auftrag"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Gegenstand zum Auftrag hinzufügen..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Auftragsübersicht: {items} Gegenstände, {crafts} Herstellungen"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "Noch nichts im Auftrag. Suche unten, um einen Gegenstand hinzuzufügen."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Noch keine Auftragsdaten. Extrahiere DataForge und erzeuge dann die Erweiterungen mit aktiviertem Commodities oder Journal."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Qualität {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Verwendet von: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU zeigen"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU zeigen"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Erzmengen in SCU oder cSCU anzeigen (ein Hundertstel SCU, wie im Spiel)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Kopieren"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Kopiert"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Auftrag und Materialien als Text kopieren, für Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Mineralien beobachten"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Die Mineralien des Auftrags zur Scan-Beobachtungsliste hinzufügen, damit der Scanner dich warnt, wenn er eines liest"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Neuer Auftrag"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "Sicher?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Klicke erneut auf Neuer Auftrag, um diesen Auftrag zu leeren. Gespeicherte Aufträge bleiben erhalten."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Einen neuen Auftrag beginnen: entfernt alle Gegenstände aus diesem. Gespeicherte Aufträge bleiben erhalten."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Einen weniger"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Einen mehr"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Aus dem Auftrag entfernen"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Blaupause noch nicht im Besitz"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Nur besessene"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Nur Blaupausen durchsuchen, die du besitzt."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Unbekanntes Material"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Auftragsname"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Speichern"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Diesen Auftrag unter dem eingegebenen Namen speichern."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Ersetzen?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Gespeichert"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Gib zuerst einen Namen für den Auftrag ein."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Der Auftrag konnte nicht gespeichert werden in:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Gespeicherte Aufträge"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Laden"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Diesen Auftrag durch den in der Liste gewählten gespeicherten ersetzen."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Löschen"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Sicher?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Klicke erneut auf Löschen, um den gespeicherten Auftrag „{name}“ zu löschen."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Den in der Liste gewählten gespeicherten Auftrag löschen. Der Auftrag, den du gerade baust, bleibt."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Der gespeicherte Auftrag „{name}“ konnte nicht gelöscht werden."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "„{name}“ enthält keine Gegenstände, die diese Spieldaten kennen."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Nutzt {need} von diesen {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Diesen Platz verwenden. Wird einer mehr angehakt, als die Blaupause braucht, wird ein anderer abgehakt."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "Die Qualität des Materials für diesen Platz (0 bis 1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} gibt es nur in diesen Qualitäten ({source}-Daten): {tiers}. Der Regler hält dort und bei 0, 500 und 1000."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Benötigt Qualität {quality} oder besser"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Alle Plätze: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "Die Materialqualität ändert die Werte dieses Gegenstands nicht."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} Pips"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} Stk."
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Herstellungsauftrag: {count} Herstellungen"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materialien:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} mit Qualität {quality}+"
+    },
     "finder_search_placeholder": {
       "ht": "",
       "at": "Gegenstand eingeben, um zu sehen, wo man ihn kauft..."
@@ -3977,6 +4217,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Das kann kein Tastenkürzel sein. Halte Strg, Alt oder Win mit einem Buchstaben, einer Ziffer, einem Symbol, der Leertaste, Tab oder einer Navigationstaste (Pfeile, Pos1, Ende, Bild auf/ab, Einfg, Entf), auf Wunsch auch Umschalt. Eine F-Taste oder Pause geht auch allein."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Auftrag"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Stelle einen Herstellungsauftrag zusammen und sieh jedes nötige Material, nach Qualität. Erfordert eine DataForge-Extraktion."
     }
   },
   "shader_cache": {

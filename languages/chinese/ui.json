@@ -3652,6 +3652,246 @@
       "ht": "",
       "at": "此处矿物：{minerals}"
     },
+    "section_order": {
+      "ht": "",
+      "at": "订单"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "向订单添加物品..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "订单汇总：{items} 种物品，{crafts} 次制造"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "订单还是空的。在下方搜索以添加物品。"
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "还没有订单数据。提取 DataForge，然后勾选 Commodities 或 Journal 生成增强内容。"
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}：{amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "品质 {quality}+：{amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "用于：{items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "显示 SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "显示 cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "以 SCU 或 cSCU（SCU 的百分之一，与游戏内一致）显示矿石数量"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "复制"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "已复制"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "将订单及其材料复制为文本，用于 Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "监视矿物"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "将订单的矿物加入扫描监视列表，扫描仪读到其中之一时会提醒你"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "新订单"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "确定？"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "再次点击“新订单”以清空此订单。已保存的订单会保留。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "开始新订单：移除当前订单中的所有物品。已保存的订单会保留。"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "减少一个"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "增加一个"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "从订单中移除"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "尚未拥有蓝图"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "仅已拥有"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "只搜索你已拥有的蓝图。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "未知材料"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "订单名称"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "保存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "以你输入的名称保存此订单。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "替换？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "已保存"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "请先输入订单名称。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "无法将订单保存到：\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "已保存的订单"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "加载"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "用列表中选中的已保存订单替换此订单。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "删除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "确定"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "再次点击“删除”以删除已保存的订单“{name}”。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "删除列表中选中的已保存订单。正在编辑的订单不受影响。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "无法删除已保存的订单“{name}”。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "“{name}”中没有当前游戏数据认识的物品。"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "从这 {of} 个中选用 {need} 个："
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "使用此槽位。勾选数超过蓝图所需时，会取消另一个的勾选。"
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}：{material}，{amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "此槽位所用材料的品质（0 到 1000）"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} 只有以下品质（{source} 数据）：{tiers}。滑块会停在这些值以及 0、500 和 1000 上。"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "需要品质 {quality} 或更高"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "所有槽位：{bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "材料品质不会改变此物品的属性。"
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} 点能量"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} 个"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "制造订单：{count} 次制造"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "材料："
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "品质 {quality}+ 的 {amount}"
+    },
     "finder_search_placeholder": {
       "ht": "",
       "at": "输入物品名称，查看在哪里购买..."
@@ -3977,6 +4217,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "这个不能用作热键。请按住 Ctrl、Alt 或 Win，再加一个字母、数字、符号、空格、Tab 或导航键（方向键、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 键或 Pause 也可以单独使用。"
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "订单"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "创建制造订单，按品质查看所需的每种材料。需要提取 DataForge。"
     }
   },
   "shader_cache": {

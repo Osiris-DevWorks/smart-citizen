@@ -72,6 +72,7 @@ from PyQt6.QtWidgets import (
 
 from src.gui.game_screen import game_screen
 from src.gui.global_hotkey import GlobalHotkey, foreground_window, give_focus_back
+from src.gui.sco_order import OrderSection
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
@@ -886,6 +887,17 @@ def _crafting_icon() -> QPainterPath:
     return path
 
 
+def _order_icon() -> QPainterPath:
+    """A clipboard with three ticked lines: the crafting order."""
+    path = QPainterPath()
+    _polyline(path, (6, 5), (18, 5), (18, 21), (6, 21), close=True)
+    _polyline(path, (9, 3), (15, 3), (15, 7), (9, 7), close=True)
+    for y in (11, 15, 19):
+        _polyline(path, (8.5, y - 1), (9.5, y), (11, y - 2))
+        _polyline(path, (13, y - 1), (16, y - 1))
+    return path
+
+
 def _finder_icon() -> QPainterPath:
     """A magnifying glass, handle bottom right: the item finder."""
     path = QPainterPath()
@@ -899,6 +911,7 @@ SECTION_ICONS = {
     "blueprints": _blueprints_icon,
     "minerals": _minerals_icon,
     "crafting": _crafting_icon,
+    "order": _order_icon,
     "finder": _finder_icon,
 }
 
@@ -1178,6 +1191,10 @@ class BlueprintDrawer(QWidget):
         self._crafting_search, self._crafting_tree, crafting_page = self._search_page(
             self._render_crafting)
 
+        # Order (3.1.0): a crafting order and everything it needs.
+        self._order = OrderSection()
+        self._order.watch_requested.connect(self._watch_ores)
+
         # Item Finder (3.1.0): the shops that sell an item, from UEX.
         self._shops: Optional[ShopData] = None
         self._shops_error = ""
@@ -1191,7 +1208,8 @@ class BlueprintDrawer(QWidget):
         # The tabs pick the page, so the panel only needs a stack of them.
         self._sections = QStackedWidget(self._panel)
         self._section_pages = dict(zip(
-            SECTION_ICONS, (bp_page, mineral_page, crafting_page, finder_page)))
+            SECTION_ICONS,
+            (bp_page, mineral_page, crafting_page, self._order, finder_page)))
         for page in self._section_pages.values():
             self._sections.addWidget(page)
         self._current: Optional[str] = None
@@ -1244,6 +1262,7 @@ class BlueprintDrawer(QWidget):
         self._render()
         self._render_minerals()
         self._render_crafting()
+        self._order.retranslate_ui()
         self._render_finder()
 
     def apply_colors(self, colors: OverlayColors) -> None:
@@ -1265,6 +1284,13 @@ class BlueprintDrawer(QWidget):
             QListWidget, QTreeWidget {{
                 color: {colors.text}; background: transparent; border: none;
             }}
+            QScrollArea, QScrollArea > QWidget > QWidget {{ background: transparent; }}
+            QFrame#scoOrderCard {{
+                border: 1px solid {colors.secondary}; border-radius: 3px;
+            }}
+            QLabel[role="secondary"] {{ color: {colors.secondary}; }}
+            QLabel:disabled {{ color: {colors.secondary}; }}
+            QToolButton {{ color: {colors.text}; background: transparent; border: none; }}
             QListWidget::item:selected, QTreeWidget::item:selected {{
                 background: {_rgba(colors.accent, 60)}; color: {colors.text};
             }}
@@ -1320,6 +1346,15 @@ class BlueprintDrawer(QWidget):
         self._watched = set(ores)
         self._render_minerals()
 
+    def _watch_ores(self, ores) -> None:
+        """The Order section's Watch minerals: add these ores to the watch list."""
+        added = set(ores) - self._watched
+        if not added:
+            return
+        self._watched |= added
+        self._render_minerals()
+        self.watched_changed.emit(set(self._watched))
+
     def _clear_watched(self) -> None:
         if not self._watched:
             return
@@ -1351,6 +1386,8 @@ class BlueprintDrawer(QWidget):
                 self._mineral_by_material.setdefault(key, info)
         self._render_minerals()
         self._render_crafting()
+        self._order.set_catalog(crafting, self._mineral_by_material,
+                                lambda info: mineral_tooltip(info, self._crafting))
 
     def set_shop_data(self, shops: Optional[ShopData], error: str = "") -> None:
         """The Item Finder's shop data (None while none has loaded) and,
@@ -1364,6 +1401,7 @@ class BlueprintDrawer(QWidget):
         self._meta = dict(meta)
         self._owned = set(owned)
         self._render()
+        self._order.set_owned(self._owned)
 
     def notify_new(self, names: list[str]) -> None:
         """Flash the names of blueprints the live log watcher just found."""
@@ -1728,6 +1766,7 @@ class BlueprintDrawer(QWidget):
             self._owned.add(name)
         else:
             self._owned.discard(name)
+        self._order.set_owned(self._owned)
         self.owned_toggled.emit(name, checked)
 
 
