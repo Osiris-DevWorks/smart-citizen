@@ -259,6 +259,10 @@ Some mission text anomalies originate in Star Citizen's own data — a wrong loc
 
 - **Refueling missions showing garbled nozzle names** (e.g. "Nozzle Fuelgiver Grin Nozzlefast" instead of "Norfield") in a mission's POTENTIAL BLUEPRINTS list. Fuel nozzle blueprint rewards don't link back to a resolvable entity name in CIG's data the way other craftables do, so our enhancement generator was falling back to a de-slugified version of the internal filename instead of the real product name. Fixed for all 8 known fuel nozzle variants (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) via a known-name correction in `scripts/generate_enhancements_ini.py`; re-run **Generate Enhancements** and **Apply to Game** to pick up the fix on missions you've already seen.
 
+## Guides
+
+Step-by-step guides for Smart Citizen, written with Karolinger Guides, are on the [Smart Citizen guides page]({KAROLINGER_GUIDES_URL}). The **Karolinger Guides** logo at the bottom of the window opens the same page, and the last step of the guided tour links to the video tutorial.
+
 ## Feedback, Bugs & Feature Voting
 
 - **Report bugs, share custom configs, and vote on upcoming features** in the dedicated Smart Citizen Discord channel: [Osiris DevWorks Discord — #smart-citizen feedback & voting](https://discord.com/channels/1438175448420057323/1472394204347895890) (requires joining the Osiris DevWorks Discord server first — [invite](https://discord.gg/BNzRegKZ7k)). Feature prioritization is driven by reactions/votes in that channel, so the more demand a request has, the sooner it lands.

@@ -230,6 +230,10 @@
       "ht": "",
       "at": "フィードバック、バグ報告、今後の機能への投票のために Smart Citizen の Discord チャンネルを開きます（Osiris DevWorks の Discord への参加が必要です）。"
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Karolinger Guides の Smart Citizen ガイドを開く"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "マージされたテーブルの内容をゲームの global.ini に書き込みます。最初に現在の global.ini のタイムスタンプ付きバックアップが作成されます。"
@@ -241,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "フィードバック・バグ報告・機能投票"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -3397,7 +3405,21 @@
       },
       "description": {
         "ht": "",
-        "at": "「ヘルプ」ボタンを押すと、完全なガイド、既知の問題の一覧、Smart Citizen の Discord チャンネルへのフィードバックリンクを備えたサイドパネルが開きます。始めるのに必要なことはこれで全部です — 幸運を、シチズン。"
+        "at": "「ヘルプ」ボタンを押すと、完全なガイド、既知の問題の一覧、Smart Citizen の Discord チャンネルへのフィードバックリンクを備えたサイドパネルが開きます。"
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. ガイドと動画チュートリアル"
+      },
+      "description": {
+        "ht": "",
+        "at": "ウィンドウ下部の Karolinger Guides のロゴを押すと、Karolinger Guides の Smart Citizen ガイドが開きます。動画で見たい場合は、動画チュートリアルで一通り確認できます。始めるのに必要なことはこれで全部です — 幸運を、シチズン。"
+      },
+      "link_text": {
+        "ht": "",
+        "at": "動画チュートリアルを見る"
       }
     }
   },

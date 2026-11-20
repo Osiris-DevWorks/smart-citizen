@@ -261,6 +261,10 @@ Algumas anomalias de texto têm origem nos próprios dados do Star Citizen: uma 
 
 - **Missões de reabastecimento mostrando nomes de bicos corrompidos** (ex.: "Nozzle Fuelgiver Grin Nozzlefast" em vez de "Norfield") na lista POTENTIAL BLUEPRINTS de uma missão. As recompensas de blueprint dos bicos de combustível não remetem a um nome de entidade resolvível nos dados da CIG como os outros itens fabricáveis, então nosso gerador de aprimoramentos caía de volta para uma versão "desmontada" do nome de arquivo interno em vez do nome real do produto. Corrigido para as 8 variantes de bico conhecidas (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) por meio de uma correção de nomes conhecidos em `scripts/generate_enhancements_ini.py`; rode **Gerar Aprimoramentos** e **Aplicar ao Jogo** novamente para aplicar a correção em missões que você já viu.
 
+## Guias
+
+Guias passo a passo do Smart Citizen, escritos com a Karolinger Guides, estão na [página de guias do Smart Citizen]({KAROLINGER_GUIDES_URL}). O logo da **Karolinger Guides** na parte de baixo da janela abre a mesma página, e o último passo do tour guiado leva ao tutorial em vídeo.
+
 ## Feedback, Bugs e Votação de Recursos
 
 - **Relate bugs, compartilhe configurações personalizadas e vote nos próximos recursos** no canal dedicado do Smart Citizen no Discord: [Discord da Osiris DevWorks, feedback e votação #smart-citizen](https://discord.com/channels/1438175448420057323/1472394204347895890) (é preciso entrar antes no servidor da Osiris DevWorks: [convite](https://discord.gg/BNzRegKZ7k)). A priorização de recursos é guiada pelas reações e votos nesse canal, então quanto mais demanda um pedido tem, mais cedo ele chega.

@@ -230,6 +230,10 @@
       "ht": "",
       "at": "Geri bildirim, hata bildirimi ve gelecek özelliklere oy vermek için Smart Citizen Discord kanalını açar (Osiris DevWorks Discord sunucusuna katılmayı gerektirir)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Karolinger Guides'daki Smart Citizen kılavuzlarını aç"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Birleştirilmiş tablo içeriğini oyunun global.ini dosyasına yazar. Önce mevcut global.ini dosyasının zaman damgalı bir yedeği oluşturulur."
@@ -241,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Geri Bildirim, Hatalar ve Özellik Oylaması"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -3511,7 +3519,21 @@
       },
       "description": {
         "ht": "",
-        "at": "Yardım düğmesi, tam kılavuzu, Bilinen Sorunlar listesini ve Smart Citizen Discord kanalına bir geri bildirim bağlantısını içeren bir yan panel açar. Başlamak için gereken her şey bu kadar — bol şans, vatandaş."
+        "at": "Yardım düğmesi, tam kılavuzu, Bilinen Sorunlar listesini ve Smart Citizen Discord kanalına bir geri bildirim bağlantısını içeren bir yan panel açar."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Kılavuzlar ve video eğitimi"
+      },
+      "description": {
+        "ht": "",
+        "at": "Pencerenin altındaki Karolinger Guides logosu, Karolinger Guides'daki Smart Citizen kılavuzlarını açar. İzlemeyi mi tercih edersin? Video eğitimi her şeyi adım adım gösterir. Başlamak için gereken her şey bu kadar — bol şans, vatandaş."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Video eğitimini izle"
       }
     }
   },

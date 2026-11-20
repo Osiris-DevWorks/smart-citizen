@@ -230,6 +230,10 @@
       "ht": "",
       "at": "開啟智慧公民 Discord 頻道，反饋問題、報告 Bug，並為即將推出的功能投票（需要加入 Osiris DevWorks Discord）。"
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "開啟 Karolinger Guides 上的智慧公民指南"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "將合併後的表格內容寫入遊戲的 global.ini。會先建立當前 global.ini 的帶時間戳備份。"
@@ -241,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "反饋、錯誤報告與功能投票"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -3397,7 +3405,21 @@
       },
       "description": {
         "ht": "",
-        "at": "“幫助”按鈕會開啟一個側邊面板，其中包含完整指南、已知問題列表，以及智慧公民 Discord 頻道的反饋連結。到這裡，你需要了解的一切就都齊了——祝你好運，公民。"
+        "at": "“幫助”按鈕會開啟一個側邊面板，其中包含完整指南、已知問題列表，以及智慧公民 Discord 頻道的反饋連結。"
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. 指南與影片教學"
+      },
+      "description": {
+        "ht": "",
+        "at": "視窗底部的 Karolinger Guides 標誌會開啟 Karolinger Guides 上的智慧公民指南。想看影片？影片教學會帶你走完整個流程。到這裡，你需要了解的一切就都齊了——祝你好運，公民。"
+      },
+      "link_text": {
+        "ht": "",
+        "at": "觀看影片教學"
       }
     }
   },

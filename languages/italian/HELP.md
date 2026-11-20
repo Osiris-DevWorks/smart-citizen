@@ -259,6 +259,10 @@ Alcune anomalie nei testi delle missioni hanno origine nei dati stessi di Star C
 
 - **Missioni di rifornimento che mostrano nomi di ugelli corrotti** (es. "Nozzle Fuelgiver Grin Nozzlefast" invece di "Norfield") nella lista POTENTIAL BLUEPRINTS di una missione. Le ricompense in blueprint degli ugelli di rifornimento non rimandano a un nome di entità risolvibile nei dati di CIG come fanno gli altri oggetti fabbricabili, quindi il nostro generatore di miglioramenti ricadeva su una versione "de-slugificata" del nome di file interno invece del vero nome del prodotto. Corretto per tutte le 8 varianti note di ugelli di rifornimento (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) tramite una correzione con nomi noti in `scripts/generate_enhancements_ini.py`; riesegui **Genera Miglioramenti** e **Applica al Gioco** per applicare la correzione alle missioni già viste.
 
+## Guide
+
+Le guide passo passo per Smart Citizen, scritte con Karolinger Guides, sono sulla [pagina delle guide di Smart Citizen]({KAROLINGER_GUIDES_URL}). Il logo **Karolinger Guides** in fondo alla finestra apre la stessa pagina, e l'ultimo passo del tour guidato porta al video tutorial.
+
 ## Feedback, bug e voto delle funzionalità
 
 - **Segnala bug, condividi configurazioni personalizzate e vota le prossime funzionalità** nel canale Discord dedicato a Smart Citizen: [Osiris DevWorks Discord — #smart-citizen feedback & voting](https://discord.com/channels/1438175448420057323/1472394204347895890) (richiede prima l'iscrizione al server Discord di Osiris DevWorks — [invito](https://discord.gg/BNzRegKZ7k)). La priorità delle funzionalità è guidata dalle reazioni/voti in quel canale, quindi più richiesta ha una proposta, prima verrà realizzata.

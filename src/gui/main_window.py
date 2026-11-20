@@ -78,6 +78,11 @@ from src.utils.applied_file_validator import validate_applied_file as _validate_
 from src.utils.build_mode import IS_PORTABLE
 from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices_impl
 from src.utils.install_scanner import channel_dirs
+from src.utils.karolinger import (
+    KAROLINGER_GUIDES_URL,
+    KAROLINGER_VIDEO_TUTORIAL_URL,
+    with_guides_url,
+)
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
 from src.utils.pak_extractor import base_ini_is_fresh, linked_cache_folder_error, windows_reason
@@ -1798,11 +1803,8 @@ class MainWindow(QMainWindow):
         # is missing.
         footer_layout.addSpacing(10)
         self.feedback_label = QLabel()
-        discord_image_path = get_resource_path(os.path.join("assets", "discord.png"))
-        if os.path.exists(discord_image_path):
-            discord_pixmap = QPixmap(discord_image_path)
-            if discord_pixmap.height() > 40:
-                discord_pixmap = discord_pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+        discord_pixmap = self._footer_pixmap("discord.png")
+        if discord_pixmap is not None:
             self.feedback_label.setPixmap(discord_pixmap)
         else:
             self.feedback_label.setText(tr("toolbar.feedback_fallback_text"))
@@ -1812,19 +1814,28 @@ class MainWindow(QMainWindow):
         self.feedback_label.mousePressEvent = self.open_feedback_link
         footer_layout.addWidget(self.feedback_label)
 
+        # Karolinger Guides logo (#602), right of the Discord link: opens the
+        # Smart Citizen guides on Karolinger Guides.
+        footer_layout.addSpacing(10)
+        self.karolinger_label = QLabel()
+        karolinger_pixmap = self._footer_pixmap("karolinger-guides.png")
+        if karolinger_pixmap is not None:
+            self.karolinger_label.setPixmap(karolinger_pixmap)
+        else:
+            self.karolinger_label.setText(tr("toolbar.karolinger_fallback_text"))
+            self.karolinger_label.setStyleSheet("font-size: 12px;")
+        self.karolinger_label.setToolTip(tr("toolbar.karolinger_tooltip"))
+        self.karolinger_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.karolinger_label.mousePressEvent = self.open_karolinger_guides
+        footer_layout.addWidget(self.karolinger_label)
+
         # Stretch to push the donation cluster to the right.
         footer_layout.addStretch()
 
         # PayPal button (right side)
         self.paypal_button = QLabel()
-        paypal_image_path = get_resource_path(os.path.join("assets", "paypal.png"))
-
-        # Try to load PayPal image, fall back to text if not found
-        if os.path.exists(paypal_image_path):
-            paypal_pixmap = QPixmap(paypal_image_path)
-            # Scale to match Osiris button (max height 40px)
-            if paypal_pixmap.height() > 40:
-                paypal_pixmap = paypal_pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+        paypal_pixmap = self._footer_pixmap("paypal.png")
+        if paypal_pixmap is not None:
             self.paypal_button.setPixmap(paypal_pixmap)
         else:
             # Fallback to styled text button
@@ -1852,14 +1863,8 @@ class MainWindow(QMainWindow):
 
         # Venmo button (right side)
         self.venmo_button = QLabel()
-        venmo_image_path = get_resource_path(os.path.join("assets", "venmo.png"))
-
-        # Try to load Venmo image, fall back to text button
-        if os.path.exists(venmo_image_path):
-            venmo_pixmap = QPixmap(venmo_image_path)
-            # Scale to match Osiris button (max height 40px)
-            if venmo_pixmap.height() > 40:
-                venmo_pixmap = venmo_pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+        venmo_pixmap = self._footer_pixmap("venmo.png")
+        if venmo_pixmap is not None:
             self.venmo_button.setPixmap(venmo_pixmap)
         else:
             # Fallback to styled text button
@@ -1883,6 +1888,27 @@ class MainWindow(QMainWindow):
         footer_layout.addWidget(self.venmo_button)
 
         return footer_layout
+
+    # Footer images are scaled to the Osiris logo's height.
+    _FOOTER_IMAGE_HEIGHT = 40
+
+    @classmethod
+    def _footer_pixmap(cls, filename: str) -> "QPixmap | None":
+        """Load ``assets/<filename>`` for the footer, at most
+        _FOOTER_IMAGE_HEIGHT tall, or None when the file is missing (the
+        caller then shows its fallback text)."""
+        path = get_resource_path(os.path.join("assets", filename))
+        if not os.path.exists(path):
+            return None
+        pixmap = QPixmap(path)
+        if pixmap.height() > cls._FOOTER_IMAGE_HEIGHT:
+            pixmap = pixmap.scaledToHeight(
+                cls._FOOTER_IMAGE_HEIGHT, Qt.TransformationMode.SmoothTransformation)
+        return pixmap
+
+    def open_karolinger_guides(self, event):
+        """Open the Smart Citizen guides on Karolinger Guides (#602)."""
+        QDesktopServices.openUrl(QUrl(KAROLINGER_GUIDES_URL))
 
     def open_osiris_github(self, event):
         """Open the Osiris DevWorks GitHub organization in browser."""
@@ -4580,7 +4606,7 @@ class MainWindow(QMainWindow):
         try:
             help_path = AppSettings.get_localized_doc_path("HELP.md")
             with open(help_path, "r", encoding="utf-8") as f:
-                help_markdown = f.read()
+                help_markdown = with_guides_url(f.read())
             self.help_browser.setHtml(self.markdown_to_html(help_markdown))
         except Exception as e:
             logger.error(f"Error loading HELP.md: {e}", exc_info=True)
@@ -4867,6 +4893,8 @@ class MainWindow(QMainWindow):
         Each value is a dict with:
             target:     Callable[[], QWidget | None]
             pre_action: Optional[Callable[[], None]]
+            link_url:   optional link shown under the description, its
+                        text from the step's ``link_text`` in the JSON
         """
         def _switch_to(tab_index: int):
             def _action():
@@ -4905,6 +4933,9 @@ class MainWindow(QMainWindow):
             "cfg_backup":            {"target": lambda: self.config_tab._backup_group,                         "pre_action": _switch_to(config_tab)},
             "cfg_sc_tools":          {"target": lambda: self.config_tab._sc_tools_group,                       "pre_action": _switch_to(config_tab)},
             "help":                  {"target": lambda: self.help_btn,                                         "pre_action": _switch_to(strings_tab)},
+            # Karolinger Guides (#602): the footer logo, with a link to the video tutorial.
+            "guides":                {"target": lambda: self.karolinger_label,                                 "pre_action": None,
+                                      "link_url": KAROLINGER_VIDEO_TUTORIAL_URL},
         }
 
     def _build_tutorial_steps(self) -> list[CoachMarkStep]:
@@ -4942,29 +4973,27 @@ class MainWindow(QMainWindow):
                     f"_tutorial_step_wiring(); skipped"
                 )
                 continue
-            title = raw.get("title", "")
-            description = raw.get("description", "")
-            if not title or not description:
+            if not raw.get("title") or not raw.get("description"):
                 logger.warning(f"Tutorial step {step_id!r} missing title/description; skipped")
                 continue
             # Language overlay (#30): a translation may carry this step's copy
-            # under tutorial.<id>.title / .description in its ui.json. tr()
-            # returns the bare key on a miss, so absent keys keep the English
-            # copy from this file (English ui.json has no tutorial section).
-            t_key = f"tutorial.{step_id}.title"
-            d_key = f"tutorial.{step_id}.description"
-            translated_title = tr(t_key)
-            if translated_title != t_key:
-                title = translated_title
-            translated_desc = tr(d_key)
-            if translated_desc != d_key:
-                description = translated_desc
+            # under tutorial.<id>.title / .description / .link_text in its
+            # ui.json. tr() returns the bare key on a miss, so absent keys keep
+            # the English copy from this file (English ui.json has no tutorial
+            # section).
+            text = {}
+            for field in ("title", "description", "link_text"):
+                key = f"tutorial.{step_id}.{field}"
+                translated = tr(key)
+                text[field] = translated if translated != key else raw.get(field, "")
             steps.append(CoachMarkStep(
                 target=w["target"],
-                title=title,
-                description=description,
+                title=text["title"],
+                description=text["description"],
                 pre_action=w.get("pre_action"),
                 preferred_side=raw.get("preferred_side", "auto"),
+                link_url=w.get("link_url", ""),
+                link_text=text["link_text"],
             ))
 
         return steps
@@ -5536,6 +5565,7 @@ class MainWindow(QMainWindow):
         # Footer
         self.osiris_button.setToolTip(tr("toolbar.osiris_github_tooltip"))
         self.feedback_label.setToolTip(tr("toolbar.feedback_tooltip"))
+        self.karolinger_label.setToolTip(tr("toolbar.karolinger_tooltip"))
 
         # Simple-mode page (#180)
         self.simple_page.retranslate_ui()
@@ -5623,6 +5653,8 @@ class MainWindow(QMainWindow):
         # to load — leave pixmap-backed buttons alone).
         if self.feedback_label.pixmap() is None or self.feedback_label.pixmap().isNull():
             self.feedback_label.setText(tr("toolbar.feedback_fallback_text"))
+        if self.karolinger_label.pixmap() is None or self.karolinger_label.pixmap().isNull():
+            self.karolinger_label.setText(tr("toolbar.karolinger_fallback_text"))
         if self.paypal_button.pixmap() is None or self.paypal_button.pixmap().isNull():
             self.paypal_button.setText(tr("toolbar.paypal_fallback_text"))
         if self.venmo_button.pixmap() is None or self.venmo_button.pixmap().isNull():

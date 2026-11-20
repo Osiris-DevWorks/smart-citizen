@@ -130,8 +130,15 @@
     {
       "id": "help",
       "title": "21. Help & feedback",
-      "description": "The Help button opens a side-panel with the full guide, a Known Issues list, and a feedback link to the Smart Citizen Discord channel. That's everything you need to get started — good luck, citizen.",
+      "description": "The Help button opens a side-panel with the full guide, a Known Issues list, and a feedback link to the Smart Citizen Discord channel.",
       "preferred_side": "below"
+    },
+    {
+      "id": "guides",
+      "title": "22. Guides & video tutorial",
+      "description": "The Karolinger Guides logo at the bottom of the window opens the Smart Citizen guides on Karolinger Guides. Prefer to watch? The video tutorial walks you through it all. That's everything you need to get started — good luck, citizen.",
+      "link_text": "Watch the video tutorial",
+      "preferred_side": "above"
     }
   ]
 }

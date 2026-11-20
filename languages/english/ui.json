@@ -230,6 +230,10 @@
       "ht": "Open the Smart Citizen Discord channel for feedback, bug reports, and voting on upcoming features (requires joining the Osiris DevWorks Discord).",
       "at": ""
     },
+    "karolinger_tooltip": {
+      "ht": "Open the Smart Citizen guides on Karolinger Guides",
+      "at": ""
+    },
     "apply_enabled_tooltip": {
       "ht": "Write the merged table contents to the game's global.ini. A timestamped backup of the current global.ini is created first.",
       "at": ""
@@ -240,6 +244,10 @@
     },
     "feedback_fallback_text": {
       "ht": "Feedback, Bugs, & Feature Voting",
+      "at": ""
+    },
+    "karolinger_fallback_text": {
+      "ht": "Karolinger Guides",
       "at": ""
     },
     "paypal_fallback_text": {

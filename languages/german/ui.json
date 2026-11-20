@@ -230,6 +230,10 @@
       "ht": "",
       "at": "Den Smart-Citizen-Discord-Kanal für Feedback, Fehlerberichte und Abstimmungen über kommende Funktionen öffnen (erfordert den Beitritt zum Osiris-DevWorks-Discord)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Die Smart-Citizen-Anleitungen auf Karolinger Guides öffnen"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Schreibt den zusammengeführten Tabelleninhalt in die global.ini des Spiels. Zuerst wird eine Sicherung der aktuellen global.ini mit Zeitstempel erstellt."
@@ -241,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Feedback, Fehler & Feature-Abstimmung"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -3397,7 +3405,21 @@
       },
       "description": {
         "ht": "",
-        "at": "Der Hilfe-Knopf öffnet ein Seitenpanel mit der vollständigen Anleitung, einer Liste bekannter Probleme und einem Feedback-Link zum Smart-Citizen-Discord-Kanal. Das war alles, was du für den Einstieg brauchst — viel Erfolg, Citizen."
+        "at": "Der Hilfe-Knopf öffnet ein Seitenpanel mit der vollständigen Anleitung, einer Liste bekannter Probleme und einem Feedback-Link zum Smart-Citizen-Discord-Kanal."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Anleitungen & Video-Tutorial"
+      },
+      "description": {
+        "ht": "",
+        "at": "Das Karolinger-Guides-Logo unten im Fenster öffnet die Smart-Citizen-Anleitungen auf Karolinger Guides. Lieber zuschauen? Das Video-Tutorial zeigt dir alles Schritt für Schritt. Das war alles, was du für den Einstieg brauchst — viel Erfolg, Citizen."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Video-Tutorial ansehen"
       }
     }
   },

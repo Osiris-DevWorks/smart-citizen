@@ -230,6 +230,10 @@
       "ht": "",
       "at": "Ouvrir le salon Discord de Smart Citizen pour les retours, rapports de bugs et votes sur les futures fonctionnalités (nécessite de rejoindre le Discord d'Osiris DevWorks)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Ouvrir les guides Smart Citizen sur Karolinger Guides"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Écrire le contenu fusionné de la table dans le global.ini du jeu. Une sauvegarde horodatée du global.ini actuel est créée au préalable."
@@ -241,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Retours, bugs et vote des fonctionnalités"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -3397,7 +3405,21 @@
       },
       "description": {
         "ht": "",
-        "at": "Le bouton Aide ouvre un panneau latéral avec le guide complet, la liste des problèmes connus et un lien vers le canal Discord de Smart Citizen pour vos retours. Vous avez tout ce qu'il faut pour démarrer : bonne chance, citoyen."
+        "at": "Le bouton Aide ouvre un panneau latéral avec le guide complet, la liste des problèmes connus et un lien vers le canal Discord de Smart Citizen pour vos retours."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Guides et tutoriel vidéo"
+      },
+      "description": {
+        "ht": "",
+        "at": "Le logo Karolinger Guides en bas de la fenêtre ouvre les guides Smart Citizen sur Karolinger Guides. Vous préférez regarder ? Le tutoriel vidéo vous montre tout pas à pas. Vous avez tout ce qu'il faut pour démarrer : bonne chance, citoyen."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Voir le tutoriel vidéo"
       }
     }
   },

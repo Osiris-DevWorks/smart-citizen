@@ -259,6 +259,10 @@ Smart Citizen은 재시작 후에도 창 크기, 도킹된 텍스트 편집기�
 
 - **급유 임무가 임무의 잠재적 설계도 목록에서 깨진 노즐 이름을 표시함**(예: "Norfield" 대신 "Nozzle Fuelgiver Grin Nozzlefast"). 연료 노즐 설계도 보상은 다른 제작 가능 아이템과 달리 CIG 데이터에서 해결 가능한 엔터티 이름으로 연결되지 않아, 강화 생성기가 실제 제품 이름 대신 내부 파일 이름을 그대로 풀어놓은 형태로 대체하고 있었습니다. 알려진 8개 연료 노즐 변형(Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) 모두에 대해 `scripts/generate_enhancements_ini.py`의 알려진 이름 보정을 통해 수정되었습니다. 이미 본 임무에서 수정 사항을 적용하려면 **강화 생성**과 **게임에 적용**을 다시 실행하세요.
 
+## 가이드
+
+Karolinger Guides와 함께 만든 Smart Citizen 단계별 가이드는 [Smart Citizen 가이드 페이지]({KAROLINGER_GUIDES_URL})에 있습니다. 창 아래쪽의 **Karolinger Guides** 로고도 같은 페이지를 열고, 둘러보기의 마지막 단계는 동영상 튜토리얼로 연결됩니다.
+
 ## 피드백, 버그 및 기능 투표
 
 - 전용 Smart Citizen Discord 채널에서 **버그를 보고하고, 사용자 지정 구성을 공유하고, 향후 기능에 투표**하세요: [Osiris DevWorks Discord — #smart-citizen 피드백 및 투표](https://discord.com/channels/1438175448420057323/1472394204347895890)(먼저 Osiris DevWorks Discord 서버에 가입해야 합니다 — [초대 링크](https://discord.gg/BNzRegKZ7k)). 기능 우선순위는 해당 채널의 반응/투표로 결정되므로, 요청이 많을수록 더 빨리 반영됩니다.
