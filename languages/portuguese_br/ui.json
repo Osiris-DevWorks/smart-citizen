@@ -876,6 +876,50 @@
       "ht": "",
       "at": "Limpar a pasta de cache personalizada e usar o padrão da plataforma."
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Mantenha os mesmos blueprints adquiridos em todos os PCs em que você joga. Escolha uma pasta que seu app de nuvem já sincroniza, como uma no Google Drive, OneDrive ou Dropbox, e depois escolha a mesma pasta nos seus outros PCs. O Smart Citizen só lê e grava alguns arquivos pequenos lá, e seu app de nuvem os transfere."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Desligado. Escolha uma pasta para ligar."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Escolha uma pasta que seu app de nuvem sincroniza com seus outros PCs"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Desligar"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Parar de sincronizar. Os blueprints adquiridos neste PC ficam como estão."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Escolher a pasta do Smart Sync"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "O Smart Sync está desligado."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Sincronizando..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Última sincronização às {time}. Outros PCs nesta pasta: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Não foi possível sincronizar: {error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "Extrair a localização original (base.ini) e os XMLs de entidades do DataForge do seu Data.p4k instalado. Execute após cada patch do Star Citizen — as strings recarregam automaticamente na tabela quando a extração terminar."
@@ -2617,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Proporções da janela redefinidas."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "O Smart Sync não conseguiu usar a pasta: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "O Smart Sync atualizou {count} blueprint(s) adquirido(s) dos seus outros PCs."
     }
   },
   "import_flow": {

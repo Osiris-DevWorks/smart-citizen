@@ -900,6 +900,50 @@
       "ht": "",
       "at": "Özel önbellek klasörünü temizleyin ve platform varsayılanını kullanın."
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Sahip olunan planlarınızı oynadığınız her bilgisayarda aynı tutun. Bulut uygulamanızın zaten eşitlediği bir klasör seçin (ör. Google Drive, OneDrive veya Dropbox içinde), ardından diğer bilgisayarlarınızda da aynı klasörü seçin. Smart Citizen orada yalnızca birkaç küçük dosya okur ve yazar, bunları bulut uygulamanız taşır."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Kapalı. Açmak için bir klasör seçin."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Bulut uygulamanızın diğer bilgisayarlarınızla eşitlediği bir klasör seçin"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Kapat"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Eşitlemeyi durdur. Bu bilgisayardaki sahip olunan planlar olduğu gibi kalır."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart Sync klasörünü seçin"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync kapalı."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Eşitleniyor..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Son eşitleme {time}. Bu klasördeki diğer bilgisayarlar: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Eşitlenemedi: {error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "Kurulu Data.p4k dosyanızdan orijinal yerelleştirmeyi (base.ini) ve DataForge varlık XML'lerini çıkarın. Her Star Citizen yamasından sonra çalıştırın — çıkarma bittiğinde metinler tabloya otomatik olarak yeniden yüklenir."
@@ -2617,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Pencere oranları varsayılanlara sıfırlandı."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync klasörünü kullanamadı: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync diğer bilgisayarlarınızdan {count} sahip olunan planı güncelledi."
     }
   },
   "import_flow": {

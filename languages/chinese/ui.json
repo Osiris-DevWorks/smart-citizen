@@ -876,6 +876,50 @@
       "ht": "",
       "at": "清除自定义缓存文件夹，改用平台默认值。"
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "让你在每台游玩的电脑上拥有相同的已拥有蓝图。选择一个云应用已在同步的文件夹（例如 Google Drive、OneDrive 或 Dropbox 中的文件夹），然后在其他电脑上选择同一个文件夹。Smart Citizen 只在其中读写几个小文件，由你的云应用负责传输。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "已关闭。选择一个文件夹即可开启。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "选择云应用会同步到其他电脑的文件夹"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "关闭"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "停止同步。本机的已拥有蓝图保持不变。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "选择 Smart Sync 文件夹"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync 已关闭。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "正在同步..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "上次同步于 {time}。此文件夹中的其他电脑：{count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "无法同步：{error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "从你已安装的 Data.p4k 中解包官方本地化内容（base.ini）以及 DataForge 实体 XML。每次《星际公民》更新后运行——提取完成后字符串会自动重新加载到表格中。"
@@ -2617,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "窗口比例已恢复为默认值。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync 无法使用其文件夹：{error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync 已从其他电脑更新 {count} 个已拥有蓝图。"
     }
   },
   "import_flow": {

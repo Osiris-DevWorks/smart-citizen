@@ -872,6 +872,50 @@
       "ht": "",
       "at": "清除自定義快取資料夾，改用平臺預設值。"
     },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "讓你在每台遊玩的電腦上擁有相同的已擁有藍圖。選擇一個雲端應用程式已在同步的資料夾（例如 Google Drive、OneDrive 或 Dropbox 中的資料夾），然後在其他電腦上選擇同一個資料夾。Smart Citizen 只在其中讀寫幾個小檔案，由你的雲端應用程式負責傳輸。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "已關閉。選擇一個資料夾即可開啟。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "選擇雲端應用程式會同步到其他電腦的資料夾"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "關閉"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "停止同步。本機的已擁有藍圖保持不變。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "選擇 Smart Sync 資料夾"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync 已關閉。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "正在同步..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "上次同步於 {time}。此資料夾中的其他電腦：{count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "無法同步：{error}"
+    },
     "extract_tooltip": {
       "ht": "",
       "at": "從你已安裝的 Data.p4k 中解包官方本地化內容（base.ini）以及 DataForge 實體 XML。每次《星際公民》更新後執行——提取完成後字串會自動重新載入到表格中。"
@@ -2617,6 +2661,14 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "視窗比例已恢復為預設值。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync 無法使用其資料夾：{error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync 已從其他電腦更新 {count} 個已擁有藍圖。"
     }
   },
   "import_flow": {

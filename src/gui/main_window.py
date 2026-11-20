@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
+from PyQt6.QtCore import (
+    Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent,
+    QFileSystemWatcher,
+)
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QCheckBox,
@@ -54,6 +57,7 @@ from src.gui.workers import (
     OrderSpinBoxDelegate,
     P4kExtractWorker,
     SelectAllDelegate,
+    SmartSyncWorker,
     StaleWorkingFolderSweepWorker,
     StartupSyncWorker,
     WorkingFolderDeleteWorker,
@@ -1211,6 +1215,7 @@ class MainWindow(QMainWindow):
         self.config_tab.cache_dir_changed.connect(self._on_cache_dir_changed)
         self.config_tab.export_settings_requested.connect(self._handle_export_settings)
         self.config_tab.import_settings_requested.connect(self._handle_import_settings)
+        self.config_tab.smart_sync_folder_changed.connect(self._on_smart_sync_folder_changed)
         self._config_tab_index = self.tabs.addTab(self.config_tab, tr("tabs.config"))
 
         # Enhancements tab
@@ -1237,6 +1242,7 @@ class MainWindow(QMainWindow):
         )
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
+        self._init_smart_sync()
         # Overlay tab (3.0.0): start/stop and options for the Smart Citizen
         # Overlay. Its start button drives the toolbar's Overlay button, so
         # both go through _toggle_sco_overlay.
@@ -5033,6 +5039,7 @@ class MainWindow(QMainWindow):
         # for it rather than sweeping beside it.
         self._sweep_stale_working_folders_at_startup()
         self._start_startup_sync()
+        self._start_smart_sync()
         self._report_installer_data_move()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
@@ -7798,6 +7805,10 @@ class MainWindow(QMainWindow):
         # Detach log handler before widgets are destroyed
         self.log_tab.remove_handler()
 
+        # Smart Sync (#567): push an Owned change still waiting for its sync,
+        # and let a sync in flight finish.
+        self._finish_smart_sync_for_close()
+
         # Smart Citizen Overlay: close its windows and the live log watcher,
         # and let a capture still with the reader finish (a read takes well
         # under a second) so its pool thread is gone before the overlay is.
@@ -8524,6 +8535,193 @@ class MainWindow(QMainWindow):
         # and language switches, import, restore) and every Owned-set change
         # — in every case Apply to Game's output could now differ.
         self._mark_apply_dirty()
+        # Every Owned change ends here, so this is where Smart Sync pushes it
+        # (#567). A sync that changes nothing writes nothing.
+        self._schedule_smart_sync()
+
+    # -- Smart Sync (#567) ----------------------------------------------------
+    #
+    # Owned blueprints shared through a folder the player's cloud app syncs
+    # (see src/utils/smart_sync.py). Pulled at startup and whenever another
+    # PC's file changes there, pushed a moment after every Owned change and
+    # at close. The read, merge and write run on SmartSyncWorker; the owned
+    # set, the ledger and the seed marker are written here, on the GUI
+    # thread, as every other owned-set writer does.
+
+    # How long after an Owned change, or a change in the sync folder, the
+    # sync starts: a scan or a click on several items is one sync, and so is
+    # a cloud client writing a file in several steps.
+    _SMART_SYNC_DELAY_MS = 3000
+    # How long closing waits for a sync in flight.
+    _SMART_SYNC_CLOSE_WAIT_MS = 10000
+
+    def _init_smart_sync(self) -> None:
+        self._smart_sync_worker = None
+        self._smart_sync_again = False
+        self._smart_sync_timer = QTimer(self)
+        self._smart_sync_timer.setSingleShot(True)
+        self._smart_sync_timer.setInterval(self._SMART_SYNC_DELAY_MS)
+        self._smart_sync_timer.timeout.connect(self._start_smart_sync)
+        self._smart_sync_watcher = QFileSystemWatcher(self)
+        self._smart_sync_watcher.directoryChanged.connect(self._schedule_smart_sync)
+        self._smart_sync_watcher.fileChanged.connect(self._schedule_smart_sync)
+        self._watch_smart_sync_folder()
+
+    def _watch_smart_sync_folder(self) -> None:
+        """Watch the sync folder and its files, so another PC's change is
+        pulled while the app runs. Only what exists can be watched, so this
+        runs again after every sync (the first one makes the folder)."""
+        from src.utils import smart_sync
+        watcher = self._smart_sync_watcher
+        watched = watcher.directories() + watcher.files()
+        if watched:
+            watcher.removePaths(watched)
+        folder = AppSettings.get_smart_sync_folder()
+        if not folder:
+            return
+        sync_dir = smart_sync.sync_dir(folder)
+        try:
+            if not sync_dir.is_dir():
+                return
+            paths = [str(sync_dir)] + [
+                str(p) for p in sync_dir.glob(
+                    f"{smart_sync.MACHINE_FILE_PREFIX}*{smart_sync.MACHINE_FILE_SUFFIX}")
+            ]
+        except OSError as e:
+            logger.info("Smart Sync: cannot watch %s: %s", sync_dir, e)
+            return
+        watcher.addPaths(paths)
+
+    def _schedule_smart_sync(self, *_args) -> None:
+        """Sync in a moment, once things have settled (restarts the wait)."""
+        timer = getattr(self, "_smart_sync_timer", None)  # _recompute_owned can run first
+        if timer is None or self._close_committed or not AppSettings.get_smart_sync_folder():
+            return
+        timer.start()
+
+    def _smart_sync_inputs(self):
+        """This PC's side of a sync, captured on the GUI thread: the ledger
+        brought in line with the owned set (which catches a writer that went
+        round set_owned_items, such as Import Settings), the seed marker, the
+        machine id and the last time this PC wrote its file."""
+        from src.utils import smart_sync
+        ledger = smart_sync.record(AppSettings.get_smart_sync_ledger(),
+                                   AppSettings.get_owned_items())
+        AppSettings.set_smart_sync_ledger(ledger)
+        seeded, _pending = AppSettings.get_default_blueprints_seed()
+        return (AppSettings.get_smart_sync_folder(), AppSettings.get_smart_sync_machine_id(),
+                ledger, seeded, AppSettings.get_smart_sync_last_written())
+
+    def _start_smart_sync(self) -> None:
+        """Start a sync now, or right after the one running."""
+        if self._close_committed or not AppSettings.get_smart_sync_folder():
+            return
+        self._smart_sync_timer.stop()
+        if self._smart_sync_worker is not None:
+            self._smart_sync_again = True
+            return
+        folder, machine_id, ledger, seeded, last_written = self._smart_sync_inputs()
+        worker = SmartSyncWorker(folder, machine_id, ledger, seeded, last_written)
+        worker.error.connect(self._on_smart_sync_error)
+        worker.finished.connect(
+            lambda result, w=worker: self._on_smart_sync_finished(w, result))
+        self._smart_sync_worker = worker
+        worker.start()
+
+    def _on_smart_sync_error(self, message: str) -> None:
+        self.config_tab.set_smart_sync_status("failed", error=message)
+        self.statusBar().showMessage(tr("status_bar.smart_sync_failed", error=message))
+
+    def _on_smart_sync_finished(self, worker, result) -> None:
+        if worker is not self._smart_sync_worker:
+            return
+        worker.quit()
+        worker.wait()
+        self._smart_sync_worker = None
+        if result is not None:
+            self._take_smart_sync_result(result)
+        if self._smart_sync_again and not self._close_committed:
+            self._smart_sync_again = False
+            self._start_smart_sync()
+
+    def _take_smart_sync_result(self, result) -> None:
+        """Make the merged ledger this PC's, and the owned set what it says.
+
+        An Owned change made while the sync ran is newer than anything the
+        sync read, so the ledger as it is now is merged in once more and
+        wins where it differs; the next sync pushes it.
+        """
+        from datetime import datetime
+        from src.utils import smart_sync
+        if result.id_changed:
+            AppSettings.set_smart_sync_machine_id(result.machine_id)
+        if result.updated:
+            AppSettings.set_smart_sync_last_written(result.updated)
+        ledger = smart_sync.merge([result.ledger, AppSettings.get_smart_sync_ledger()])
+        AppSettings.set_smart_sync_ledger(ledger)
+
+        seeded, pending = AppSettings.get_default_blueprints_seed()
+        if not result.seeded <= seeded:
+            AppSettings.set_default_blueprints_seed(seeded | result.seeded, pending)
+
+        self.config_tab.set_smart_sync_status(
+            "ok", time=datetime.now().strftime("%H:%M"), count=result.other_machines)
+        self._watch_smart_sync_folder()
+
+        owned = AppSettings.get_owned_items()
+        synced = smart_sync.owned_from_ledger(ledger)
+        if synced == owned:
+            return
+        changed = len(synced ^ owned)
+        logger.info("Smart Sync: %d blueprint(s) gained, %d moved back to Available, "
+                    "from other PCs", len(synced - owned), len(owned - synced))
+        AppSettings.set_owned_items(synced)
+        self._recompute_owned()
+        self.statusBar().showMessage(tr("status_bar.smart_sync_updated", count=changed))
+        # As after a log scan: let the background check say whether the game
+        # file needs another Apply, rather than leaving it red for a change
+        # (a starter blueprint) that no mission list shows.
+        if (not self._close_committed and self.entries
+                and self._loader_worker is None):
+            self._refresh_apply_dirty_after_reload()
+
+    def _on_smart_sync_folder_changed(self, folder: str) -> None:
+        self._watch_smart_sync_folder()
+        if folder:
+            self._start_smart_sync()
+        else:
+            self._smart_sync_timer.stop()
+
+    def _finish_smart_sync_for_close(self) -> None:
+        """At close: let a sync in flight finish (bounded), then push an
+        Owned change still waiting for its sync. The push runs here, on the
+        GUI thread, because nothing is left to run it later; it writes one
+        small file, and a folder it cannot use only logs a warning."""
+        worker = self._smart_sync_worker
+        if worker is not None:
+            if worker.wait(self._SMART_SYNC_CLOSE_WAIT_MS):
+                self._smart_sync_worker = None
+            else:
+                # Keep the reference (Qt aborts on a running QThread being
+                # destroyed) and skip the push: the worker owns the file.
+                logger.warning("Smart Sync: a sync was still running at close")
+                return
+        pending = self._smart_sync_timer.isActive() or self._smart_sync_again
+        self._smart_sync_timer.stop()
+        self._smart_sync_again = False
+        if not pending or not AppSettings.get_smart_sync_folder():
+            return
+        from src.utils import smart_sync
+        folder, machine_id, ledger, seeded, last_written = self._smart_sync_inputs()
+        try:
+            result = smart_sync.sync(folder, machine_id, ledger, seeded, last_written=last_written)
+        except Exception as e:
+            logger.warning("Smart Sync: could not push at close: %s", e)
+            return
+        if result.id_changed:
+            AppSettings.set_smart_sync_machine_id(result.machine_id)
+        if result.updated:
+            AppSettings.set_smart_sync_last_written(result.updated)
 
     # -- Smart Citizen Overlay (SCO) ------------------------------------------
 
