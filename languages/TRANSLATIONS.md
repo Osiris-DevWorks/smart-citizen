@@ -82,6 +82,65 @@ them against the new source.
 
 ## Backfill log
 
+- **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** pre-release, the Legal
+  tab's privacy section gained a "The Smart Citizen Overlay" subsection
+  (`docs/LEGAL.md`, before "What Smart Citizen does not do"): what the overlay
+  reads (a screen area around the scanner readout, Game.log), what it asks
+  Windows (the window in front, whether the pointer shows, and with a drawer
+  hotkey set its key and the modifier keys while Star Citizen is in front),
+  and what it never does. AI-written in all 11 translated `LEGAL.md` files,
+  with each `ui.json`'s names for the overlay, drawer and hotkey and the
+  modifier key names the #587 entry lists. No `ht` exists for LEGAL. Not
+  back-translated.
+- **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** #587, the drawer hotkey no
+  longer takes the keyboard's raw input: while Star Citizen is in front the
+  overlay asks Windows whether the hotkey's key and the modifier keys are
+  down. One English text changed, `overlay.desc` (with a drawer hotkey set,
+  the overlay asks whether its key and the Ctrl, Alt, Shift and Win keys are
+  down, where it said it watches key presses for that one combination), and
+  the overlay paragraph in `docs/HELP.md` and the overlay bullet in
+  `README.md` say the same. In `docs/FAQ.md` the privacy paragraph's two
+  sentences on raw input became two on the key check: the combination's key,
+  and the modifier keys only while it is down, no other key, and nothing
+  typed in the game or another program sent to the app. HELP's drawer hotkey
+  bullet gained two sentences: hold the keys a moment in game (a very quick
+  press can be missed), and run Smart Citizen as administrator when Star
+  Citizen runs that way. AI `at` in all 11 other languages. None had an `ht`
+  on `overlay.desc`, so nothing needs human re-review. The 11 translated
+  `HELP.md` and `FAQ.md` files gained the same words, naming the modifier
+  keys as each `ui.json` does (Strg and Umschalt in German, Maj in French,
+  Maiusc in Italian, Mayús in Spanish, Shift elsewhere), and
+  chinese_traditional's through OpenCC s2twp from chinese, keeping its
+  files' 快速鍵 for the hotkey where s2twp gives 熱鍵. Checked by a script: each
+  old text matched once and every line ending was kept. Not back-translated.
+- **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** #582, the overlay drawer
+  now lets clicks pass through to the game while the player aims (a player
+  lost the game's focus that way, 2026-11-16), and for it the overlay asks
+  Windows which window is in front and whether the mouse pointer shows. One English
+  text changed, `overlay.desc` (the overlay only reads the screen and
+  Game.log, asks Windows those two things and, with a drawer hotkey set,
+  watches key presses for that one combination), and the overlay paragraph
+  in `docs/HELP.md` and `docs/FAQ.md` and the overlay bullet in
+  `docs/ABOUT.md` say the same. AI `at` in all 11 other languages. None had
+  an `ht` on `overlay.desc`, so nothing needs human re-review. The 11
+  translated copies of the three docs gained the same words, with each
+  `ui.json`'s own names for the overlay, the drawer and the hotkey. Checked
+  by a script: each old text matched once and every line ending was kept.
+  Not back-translated.
+- **3.0.1 cycle (2026-11-13, Claude Opus 5.5):** #566, the Play button
+  reminder. HELP section 7 gains a paragraph after the watermark one in all
+  eleven translated `HELP.md` files, AI-translated: Apply also adds
+  `Run Smart Citizen after every patch` as a second line on the main menu's
+  Play button, because a patch leaves the applied `global.ini` without the
+  keys it added. The reminder and the `Frontend_play_star_citizen` key stay
+  in English, since the game shows the reminder in English in every
+  language, as it does the watermark. Each file's own words for patch, apply
+  and the watermark. Checked by a script against English: every paragraph
+  keeps the key, the reminder, `global.ini` and `@key` as code, runs 1.05 to
+  1.16 times the English length (0.47 to 0.64 in chinese,
+  chinese_traditional, japanese and korean), and the korean has no sentence
+  end run straight into the next syllable. Not back-translated. No
+  `ui.json` changed.
 - **3.0.0 cycle (2026-10-30, Claude Opus 5.5, pre-release language check):**
   two gaps filled. (1) New key `enhancements.blueprints_default_owned_mission`,
   the starter blueprints' mission label ("Default blueprint (every player has
@@ -390,6 +449,18 @@ them against the new source.
   cihazından" (the pack uses "üretici" for a manufacturer) and "mevcut
   listeye", and italian says "la loro ricezione" instead of "di averli
   ricevuti", which made the game the receiver.
+- **3.0.1 cycle (2026-11-04, Claude Opus 5.5):** the guided tour caught up
+  with 3.0.0. `tutorial.enh_categories`, `tutorial.cfg_appearance` and
+  `tutorial.cfg_tools` were reworded in `assets/tutorial.json` (the category
+  names as the checkboxes show them, which stay English; the font size; Restore
+  user.ini, Preview Apply and Check for Updates), and two steps were added
+  after Tools: `tutorial.cfg_backup` (Export / Import Settings) and
+  `tutorial.cfg_sc_tools` (Clear Shader Cache). The tour is now 21 steps, so
+  every title from 19 on was renumbered. AI `at` written or refreshed in all
+  eleven languages, none of which has a human `ht` for these keys; each
+  keeps its file's own words for the theme names, the font sizes and
+  overrides, and the new titles are built from its `config.backup_group` and
+  `config.sc_tools_group`.
 - **3.0.0 cycle (2026-10-15, Claude Opus 5.5):** #492 added
   `enhancements.tag_mapping_tooltip_weight` (the Edit mapping tooltip on the
   Tag Builder's Armor > Weight row) and reworded `enhancements.cat_desc_gear`.

@@ -5,8 +5,8 @@ A worker on a real thread reaches a slot on the GUI thread through a queued
 connection, which only the event loop delivers, so a test that waits for such
 a slot runs the loop meanwhile. test_applied_state_worker.py,
 test_extraction_stop.py, test_live_blueprint_log_worker.py and
-test_pending_cache_cleanup.py each had a copy of this loop (perf proposal
-review: the third copy is the signal to extract).
+test_pending_cache_cleanup.py each had a copy of this loop (#522 review:
+the third copy is the signal to extract).
 Import it as ``from tests.event_loop import pump_until``. It runs the session
 ``qapp``'s loop (tests/conftest.py), so a test that pumps requests ``qapp``.
 """

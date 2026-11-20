@@ -47,6 +47,17 @@ Smart Citizen stellt ausgehende Netzwerkanfragen nur in drei Fällen:
 - **Sprach-Downloads** — Wenn du zu einer nicht-englischen Sprache wechselst, lädt Smart Citizen die von der Community übersetzte `global.ini` dieser Sprache von der konfigurierten URL herunter (standardmäßig das GitHub-Repository [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) für einige Sprachen, andere Sprachen verwenden ihre eigene konfigurierte Quelle — siehe `languages/sources.json`). Der Download wird lokal zwischengespeichert; nichts von deinem Rechner wird gesendet.
 - **Benutzerdefinierte Remote-Quellen** — Wenn du im Konfiguration-Tab eine Datenquelle konfiguriert hast, die auf eine `http(s)://`-URL verweist, ruft Smart Citizen diese URL beim Aktualisieren von Quelldateien ab. Standardmäßig gilt dies nur für die GitHub-Raw-URL-Form der `global`-Quelle; die Standardkonfiguration liest seit v1.0 stattdessen `base.ini` aus deiner lokalen Data.p4k-Extraktion.
 
+### Das Smart-Citizen-Overlay
+
+Das Overlay ist aus, bis du es startest. Während es läuft, bleibt alles, was es liest, auf deinem Computer:
+
+- **Bildschirm** — es nimmt einen kleinen Bereich um die Anzeige des Bergbau-Scanners auf, um die Signalzahl zu lesen. Die Aufnahmen werden im Speicher gelesen und nicht gespeichert.
+- **Game.log** — es liest das Log von Star Citizen, um Baupläne zu finden, die du erhältst.
+- **Windows** — es fragt Windows, welches Fenster im Vordergrund ist und ob der Mauszeiger sichtbar ist, damit die Schublade deine Klicks beim Zielen zum Spiel durchlässt.
+- **Tastenkürzel der Schublade** — nur wenn du eins festlegst. Während Star Citizen im Vordergrund ist, fragt es Windows, ob die Taste des Kürzels gedrückt ist, und die Tasten Strg, Alt, Umschalt und Win nur dann, wenn sie es ist. Es fragt nach keiner anderen Taste und empfängt nie, was du tippst.
+
+Es liest nie den Speicher des Spiels, hängt sich nie ins Spiel ein und schleust nichts ein, und es sendet nie Eingaben an das Spiel.
+
 ### Was Smart Citizen **nicht** tut
 
 - Keine Telemetrie, Analyse oder Nutzungsberichte jeglicher Art.

@@ -96,7 +96,7 @@ def _generation_rs_tags(gen_module, contractgen_dir: Path):
     *contractgen_dir*: _run_gen_missions over the records tree it sits in,
     with both dicts read off its calls to _battaglia_mineable_rs_in. The
     generation runs that on the contractgen parse it shares with
-    scan_contract_generators (perf proposal), so there is no separate scan
+    scan_contract_generators (#522), so there is no separate scan
     to call."""
     records = contractgen_dir.parent.parent
     loc: dict[str, str] = {}
