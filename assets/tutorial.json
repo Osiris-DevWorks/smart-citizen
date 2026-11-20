@@ -22,7 +22,7 @@
     {
       "id": "enh_categories",
       "title": "3. Enhancements: Categories",
-      "description": "Toggle which enhancement categories run when you Generate. Ships, components, ship weapons, FPS weapons, missions, mission rewards, commodity crafting, and medical consumables can each be enabled independently.",
+      "description": "Toggle which enhancement categories run when you Generate: Ships, Ship Items, Gear, Missions, Commodities, Journal, Medical Consumables. Ship Items covers components, ship weapons and missiles; Gear covers FPS weapons and armor tags. Each category can be turned on or off on its own.",
       "preferred_side": "right"
     },
     {
@@ -88,7 +88,7 @@
     {
       "id": "cfg_appearance",
       "title": "14. Config: Appearance",
-      "description": "Pick the app theme (Default / Light / Dark / ODW) and optionally disable the auto-tour on new versions.",
+      "description": "Pick the app theme (Default / Light / Dark / ODW) and the font size (Small / Medium / Large, applied after a restart), and optionally turn off the auto-tour on new versions.",
       "preferred_side": "right"
     },
     {
@@ -112,12 +112,24 @@
     {
       "id": "cfg_tools",
       "title": "18. Config: Tools",
-      "description": "Import an external INI into your overrides via the conflict-resolution dialog, or reset your user.ini for the active channel (auto-backed-up before clearing).",
+      "description": "Import an external INI into your overrides through the conflict-resolution dialog. Reset your user.ini for the active channel (backed up first), or bring back an earlier copy with Restore user.ini. Preview Apply shows what Apply would write, and Check for Updates looks for a new version.",
+      "preferred_side": "right"
+    },
+    {
+      "id": "cfg_backup",
+      "title": "19. Config: Settings Backup",
+      "description": "Export Settings saves your preferences, tag setups, Star Citizen folder and custom strings for every channel into one file. Import Settings brings them back, on a new PC or after a fresh install.",
+      "preferred_side": "right"
+    },
+    {
+      "id": "cfg_sc_tools",
+      "title": "20. Config: Star Citizen Tools",
+      "description": "Clear Shader Cache lists the game's shader cache folders, one per game build. Clean deletes the shaders and keeps your graphics settings; Remove deletes the whole folder. Close Star Citizen first.",
       "preferred_side": "right"
     },
     {
       "id": "help",
-      "title": "19. Help & feedback",
+      "title": "21. Help & feedback",
       "description": "The Help button opens a side-panel with the full guide, a Known Issues list, and a feedback link to the Smart Citizen Discord channel. That's everything you need to get started — good luck, citizen.",
       "preferred_side": "below"
     }

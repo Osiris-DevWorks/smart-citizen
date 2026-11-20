@@ -50,6 +50,17 @@ Smart Citizen n'effectue de requêtes réseau sortantes que dans quatre cas :
 - **Sources distantes configurées par l'utilisateur** : si vous avez configuré une source de données pointant vers une URL `http(s)://` dans l'onglet Paramètres, Smart Citizen consulte cette URL lors de l'actualisation des fichiers sources. Par défaut, cela ne concerne que la forme URL GitHub-raw de la source `global` ; la configuration standard depuis la v1.0 lit `base.ini` depuis votre extraction locale de Data.p4k.
 - **Liste des boutiques de la recherche d'objets SCO** — Tant que l'overlay tourne avec sa section Recherche d'objets activée, Smart Citizen télécharge la liste des boutiques et des prix depuis l'API [UEX](https://uexcorp.space) (`api.uexcorp.uk`), au plus toutes les 12 heures. Ce sont deux requêtes simples qui n'envoient que le nom et la version de l'application ; rien de votre machine n'est envoyé. La liste est mise en cache localement. Désactivez la Recherche d'objets dans l'onglet Overlay pour l'arrêter.
 
+### La superposition Smart Citizen
+
+La superposition reste désactivée tant que vous ne la lancez pas. Pendant qu'elle tourne, tout ce qu'elle lit reste sur votre ordinateur :
+
+- **Écran** — elle capture une petite zone autour de l'affichage du scanner minier pour lire le nombre du signal. Les captures sont lues en mémoire et ne sont pas enregistrées.
+- **Game.log** — elle lit le journal de Star Citizen pour trouver les plans que vous recevez.
+- **Windows** — elle demande à Windows quelle fenêtre est au premier plan et si le pointeur de la souris est affiché, pour que le tiroir laisse passer vos clics vers le jeu pendant que vous visez.
+- **Raccourci du tiroir** — seulement si vous en définissez un. Quand Star Citizen est au premier plan, elle demande à Windows si la touche du raccourci est enfoncée, et les touches Ctrl, Alt, Maj et Win seulement quand elle l'est. Elle ne demande l'état d'aucune autre touche et ne reçoit jamais ce que vous tapez.
+
+Elle ne lit jamais la mémoire du jeu, ne s'y accroche ni ne s'y injecte jamais, et ne lui envoie jamais d'entrée.
+
 ### Ce que Smart Citizen ne fait **pas**
 
 - Aucune télémétrie, analyse d'usage ou rapport d'utilisation d'aucune sorte.
