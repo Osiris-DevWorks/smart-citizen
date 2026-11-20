@@ -762,6 +762,7 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_DRAWER_SECTION_PREFIX + "finder":     ("sco/drawer_finder", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",

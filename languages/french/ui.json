@@ -3565,6 +3565,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Minéraux ici : {minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Tapez un objet pour voir où l'acheter..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Chargement des données de boutiques depuis UEX..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "Impossible de joindre UEX pour les données de boutiques. Vérifiez votre connexion Internet. L'overlay réessaie dans quelques minutes."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Données de boutiques de {site}, signalées par les joueurs. Mises à jour le {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX est injoignable, voici donc la dernière copie enregistrée."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "Aucune boutique connue ne vend un objet de ce nom."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place} ({system}) : {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} à {high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{shown} objets sur {total} affichés. Tapez davantage pour affiner."
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "Prix signalé le {date}"
     }
   },
   "overlay": {
@@ -3783,6 +3827,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "Tapez un minéral pour voir les objets qui l'utilisent, ou un objet pour voir les minéraux requis. Nécessite une extraction DataForge."
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Recherche d'objets"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Tapez un objet pour voir quelles boutiques le vendent, où elles se trouvent et à quel prix. Les données de boutiques viennent d'UEX par Internet et sont signalées par les joueurs."
     },
     "drawer_position": {
       "ht": "",

@@ -3565,6 +3565,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "此處礦物：{minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "輸入物品名稱，查看在哪裡購買..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "正在從 UEX 載入商店資料..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "無法連線 UEX 取得商店資料。請檢查網路連線。覆蓋層會在幾分鐘後重試。"
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "商店資料來自 {site}，由玩家回報。更新於 {updated}。"
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "無法連線 UEX，因此顯示的是上次儲存的副本。"
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "沒有已知商店販售該名稱的物品。"
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item}（{count}）"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}，{place}（{system}）：{price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} 至 {high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "顯示 {total} 個物品中的 {shown} 個。繼續輸入以縮小範圍。"
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "價格回報於 {date}"
     }
   },
   "overlay": {
@@ -3783,6 +3827,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "輸入礦物可查看使用它的物品，輸入物品可查看所需礦物。需要先擷取 DataForge。"
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "物品搜尋"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "輸入物品名稱，查看哪些商店販售、商店位置和價格。商店資料透過網際網路來自 UEX，由玩家回報。"
     },
     "drawer_position": {
       "ht": "",
