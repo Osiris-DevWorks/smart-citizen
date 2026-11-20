@@ -3922,19 +3922,19 @@
     },
     "finder_location": {
       "ht": "",
-      "at": "{shop}，{place}（{system}）：{price} aUEC"
+      "at": "{shop}，{place}：{price} aUEC"
     },
     "finder_price_range": {
       "ht": "",
       "at": "{low} 至 {high} aUEC"
     },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
     "finder_more": {
       "ht": "",
       "at": "顯示 {total} 個物品中的 {shown} 個。繼續輸入以縮小範圍。"
-    },
-    "finder_reported": {
-      "ht": "",
-      "at": "價格回報於 {date}"
     }
   },
   "overlay": {

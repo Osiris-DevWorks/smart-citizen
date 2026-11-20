@@ -57,7 +57,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from PyQt6.QtCore import (
-    QObject, QPoint, QPointF, QRect, QRectF, QRunnable, Qt, QThreadPool, QTimer,
+    QObject, QPoint, QPointF, QRect, QRectF, QRunnable, QSize, Qt, QThreadPool, QTimer,
     QVariantAnimation, pyqtSignal,
 )
 from PyQt6.QtGui import (
@@ -67,7 +67,8 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QWIDGETSIZE_MAX, QApplication, QBoxLayout, QCheckBox, QFrame, QGraphicsDropShadowEffect,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
-    QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QStackedWidget, QStyledItemDelegate, QStyleOptionViewItem, QTreeWidget, QTreeWidgetItem,
+    QVBoxLayout, QWidget,
 )
 
 from src.gui.game_screen import game_screen
@@ -76,7 +77,7 @@ from src.gui.sco_order import OrderSection
 from src.utils.blueprint_meta import mission_display_name
 from src.utils.i18n import tr
 from src.utils.mining_catalog import (
-    CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
+    SYSTEM_ORDER, CraftingIndex, MineralInfo, locations_by_system, minerals_at, ore_key,
     ore_signature, star_system,
 )
 from src.utils.mining_signatures import (
@@ -212,6 +213,8 @@ DRAWER_HANDLE_SELECTED_PEN = 1.8
 # open a tab: a click on the outline at the screen corner used to take focus
 # and open nothing.
 DRAWER_HANDLE_HIT_SLACK = DRAWER_HANDLE_SELECTED_PEN / 2 + math.sqrt(2)
+# Room a wrapping row keeps for the item view's own text margins and icon gap.
+WRAP_TEXT_MARGIN = 8
 DRAWER_PANEL_WIDTH = 340
 # Share of the screen an open drawer takes along its edge: the full side
 # for a left/right drawer, less for a top/bottom one, which sits over the
@@ -1104,6 +1107,45 @@ class DrawerSearch(QLineEdit):
         super().keyPressEvent(event)
 
 
+class WrappingRowDelegate(QStyledItemDelegate):
+    """Rows as tall as their wrapped text. A tree with word wrap paints the
+    text wrapped but sizes each row for one line, cutting the rest off, so
+    this works the height out for the width the row has: the view's, less
+    the row's indent and the item's text margins."""
+
+    def __init__(self, tree: QTreeWidget):
+        super().__init__(tree)
+        self._tree = tree
+
+    def sizeHint(self, option, index) -> QSize:
+        hint = super().sizeHint(option, index)
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        depth, parent = 1, index.parent()
+        while parent.isValid():
+            depth, parent = depth + 1, parent.parent()
+        tree = self._tree
+        width = tree.viewport().width() - tree.indentation() * depth - WRAP_TEXT_MARGIN
+        if width <= 0:
+            return hint
+        line = opt.fontMetrics.height()
+        text = opt.fontMetrics.boundingRect(
+            QRect(0, 0, width, 1 << 20), int(Qt.TextFlag.TextWordWrap), opt.text)
+        return QSize(hint.width(), max(hint.height(), hint.height() - line + text.height()))
+
+
+def shops_by_system(locations) -> dict[str, list[ShopLocation]]:
+    """Group an item's shops by star system, in :data:`SYSTEM_ORDER` and then
+    by name, keeping each system's shops cheapest first; shops UEX places in
+    no system go under ``""`` last."""
+    grouped: dict[str, list[ShopLocation]] = {}
+    for loc in locations:
+        grouped.setdefault(loc.system, []).append(loc)
+    known = [s for s in SYSTEM_ORDER if s in grouped]
+    others = sorted((s for s in grouped if s and s not in SYSTEM_ORDER), key=str.lower)
+    return {s: grouped[s] for s in known + others + ([""] if "" in grouped else [])}
+
+
 class BlueprintDrawer(QWidget):
     """A stack of section tabs on a screen edge (blueprints, minerals,
     crafting, item finder). A tab opens the see-through panel straight to its section;
@@ -1200,6 +1242,12 @@ class BlueprintDrawer(QWidget):
         self._shops_error = ""
         self._finder_search, self._finder_tree, finder_page = self._search_page(
             self._render_finder)
+        # Shop and place names run long: wrap them inside the panel's width
+        # rather than cut them off.
+        self._finder_tree.setWordWrap(True)
+        self._finder_tree.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self._finder_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._finder_tree.setItemDelegate(WrappingRowDelegate(self._finder_tree))
         self._finder_source = QLabel(finder_page)
         self._finder_source.setProperty("role", "secondary")
         self._finder_source.setWordWrap(True)
@@ -1730,15 +1778,20 @@ class BlueprintDrawer(QWidget):
                                        count=len(match.locations))])
             node.setToolTip(0, "\n".join((match.name, tr(
                 "sco.finder_price_range", low=f"{min(prices):,.0f}", high=f"{max(prices):,.0f}"))))
-            for loc in match.locations:
-                child = QTreeWidgetItem([tr("sco.finder_location", shop=loc.shop,
-                                            place=loc.place, system=loc.system,
-                                            price=f"{loc.price:,.0f}")])
-                child.setToolTip(0, self._shop_tooltip(loc))
-                node.addChild(child)
+            for system, locations in shops_by_system(match.locations).items():
+                sys_node = QTreeWidgetItem([system or tr("sco.system_other")])
+                for loc in locations:
+                    child = QTreeWidgetItem([tr("sco.finder_location", shop=loc.shop,
+                                                place=loc.place, price=f"{loc.price:,.0f}")])
+                    child.setToolTip(0, self._shop_tooltip(loc))
+                    sys_node.addChild(child)
+                node.addChild(sys_node)
             tree.addTopLevelItem(node)
         if len(matches) == 1:
-            tree.topLevelItem(0).setExpanded(True)
+            node = tree.topLevelItem(0)
+            node.setExpanded(True)
+            for i in range(node.childCount()):
+                node.child(i).setExpanded(True)
         if total > len(matches):
             tree.addTopLevelItem(QTreeWidgetItem([tr("sco.finder_more",
                                                      shown=len(matches), total=total)]))
@@ -1746,11 +1799,7 @@ class BlueprintDrawer(QWidget):
     @staticmethod
     def _shop_tooltip(loc: ShopLocation) -> str:
         where = ", ".join(part for part in (loc.place, loc.body, loc.system) if part)
-        lines = [loc.shop, where]
-        if loc.reported:
-            lines.append(tr("sco.finder_reported", date=datetime.fromtimestamp(
-                loc.reported).strftime("%Y-%m-%d")))
-        return "\n".join(lines)
+        return "\n".join((loc.shop, where, tr("sco.finder_price", price=f"{loc.price:,.0f}")))
 
     def _item_tooltip(self, item: str, category: str) -> str:
         lines = [item, category]

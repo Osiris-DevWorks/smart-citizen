@@ -3922,19 +3922,19 @@
     },
     "finder_location": {
       "ht": "",
-      "at": "{shop}, {place} ({system}): {price} aUEC"
+      "at": "{shop}, {place}: {price} aUEC"
     },
     "finder_price_range": {
       "ht": "",
       "at": "{low} ~ {high} aUEC"
     },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
     "finder_more": {
       "ht": "",
       "at": "{total}개 중 {shown}개 아이템 표시. 더 입력해 범위를 좁히세요."
-    },
-    "finder_reported": {
-      "ht": "",
-      "at": "가격 제보일: {date}"
     }
   },
   "overlay": {
