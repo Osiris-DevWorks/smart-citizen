@@ -261,6 +261,10 @@ Certaines anomalies de texte proviennent des données de Star Citizen elles-mêm
 
 - **Missions de ravitaillement affichant des noms de buses corrompus** (par ex. « Nozzle Fuelgiver Grin Nozzlefast » au lieu de « Norfield ») dans la liste POTENTIAL BLUEPRINTS d'une mission. Les récompenses de plans pour les buses de ravitaillement ne renvoient à aucun nom d'entité résolvable dans les données de CIG, contrairement aux autres objets fabricables, donc notre générateur d'enrichissements revenait à une version « slugifiée » du nom de fichier interne au lieu du vrai nom du produit. Corrigé pour les 8 variantes de buses connues (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) via une correction de noms connus dans `scripts/generate_enhancements_ini.py` ; relancez **Générer les enrichissements** et **Appliquer au jeu** pour appliquer la correction aux missions déjà rencontrées.
 
+## Guides
+
+Des guides pas à pas pour Smart Citizen, écrits avec Karolinger Guides, se trouvent sur la [page des guides Smart Citizen]({KAROLINGER_GUIDES_URL}). Le logo **Karolinger Guides** en bas de la fenêtre ouvre la même page, et la dernière étape de la visite guidée mène au tutoriel vidéo.
+
 ## Retours, bugs et vote des fonctionnalités
 
 - **Signalez les bugs, partagez vos configurations et votez pour les prochaines fonctionnalités** dans le canal Discord dédié à Smart Citizen : [Discord Osiris DevWorks, retours et votes #smart-citizen](https://discord.com/channels/1438175448420057323/1472394204347895890) (il faut d'abord rejoindre le serveur Osiris DevWorks : [invitation](https://discord.gg/BNzRegKZ7k)). La priorisation des fonctionnalités est pilotée par les réactions et votes dans ce canal : plus une demande a de soutien, plus vite elle arrive.

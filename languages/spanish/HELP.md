@@ -261,6 +261,10 @@ Algunas anomalías de texto tienen su origen en los propios datos de Star Citize
 
 - **Misiones de repostaje que muestran nombres de boquillas corruptos** (p. ej. «Nozzle Fuelgiver Grin Nozzlefast» en lugar de «Norfield») en la lista POTENTIAL BLUEPRINTS de una misión. Las recompensas de blueprint de las boquillas de combustible no remiten a un nombre de entidad resoluble en los datos de CIG como el resto de objetos fabricables, así que nuestro generador de mejoras recurría a una versión «deslugificada» del nombre de archivo interno en lugar del nombre real del producto. Corregido para las 8 variantes de boquilla conocidas (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) mediante una corrección de nombres conocidos en `scripts/generate_enhancements_ini.py`; vuelve a ejecutar **Generar mejoras** y **Aplicar al juego** para aplicar la corrección a misiones que ya hayas visto.
 
+## Guías
+
+Las guías paso a paso de Smart Citizen, escritas con Karolinger Guides, están en la [página de guías de Smart Citizen]({KAROLINGER_GUIDES_URL}). El logo de **Karolinger Guides** en la parte inferior de la ventana abre la misma página, y el último paso del tour guiado enlaza al tutorial en vídeo.
+
 ## Comentarios, errores y votación de funciones
 
 - **Informa de errores, comparte configuraciones personalizadas y vota las próximas funciones** en el canal de Discord dedicado a Smart Citizen: [Discord de Osiris DevWorks, comentarios y votación #smart-citizen](https://discord.com/channels/1438175448420057323/1472394204347895890) (primero hay que unirse al servidor de Osiris DevWorks: [invitación](https://discord.gg/BNzRegKZ7k)). La priorización de funciones se guía por las reacciones y votos de ese canal: cuanta más demanda tiene una petición, antes llega.

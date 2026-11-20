@@ -259,6 +259,10 @@ Smart Citizen は、ウィンドウサイズ、ドッキングされた文字列
 
 - **燃料補給ミッションで文字化けしたノズル名が表示される**（ミッションの POTENTIAL BLUEPRINTS リストで「Norfield」の代わりに「Nozzle Fuelgiver Grin Nozzlefast」など）。燃料ノズルのブループリント報酬は、他のクラフト品のようには CIG のデータ内で解決可能なエンティティ名に結び付いていないため、私たちの拡張ジェネレーターは、実際の製品名ではなく内部ファイル名を読みやすく変換した版にフォールバックしていました。`scripts/generate_enhancements_ini.py` の既知名称による補正で、既知の 8 種の燃料ノズルバリアント（Marlin、Lindstrom、Bendix、Torrez、Ezra、Norfield、Harkin、RN-7s）すべてで修正済みです。すでに見たミッションに修正を反映するには、**拡張を生成** と **拡張を適用** を再実行してください。
 
+## ガイド
+
+Karolinger Guides と作成した Smart Citizen のステップごとのガイドは [Smart Citizen ガイドページ]({KAROLINGER_GUIDES_URL}) にあります。ウィンドウ下部の **Karolinger Guides** のロゴからも同じページが開き、ガイドツアーの最後のステップから動画チュートリアルを見られます。
+
 ## フィードバック、バグ、機能投票
 
 - 専用の Smart Citizen Discord チャンネルで、**バグの報告、カスタム設定の共有、今後の機能への投票**ができます：[Osiris DevWorks Discord — #smart-citizen feedback & voting](https://discord.com/channels/1438175448420057323/1472394204347895890)（先に Osiris DevWorks Discord サーバーへの参加が必要です — [招待](https://discord.gg/BNzRegKZ7k)）。機能の優先順位はそのチャンネルでのリアクション／投票によって決まるため、要望への需要が大きいほど早く実現します。

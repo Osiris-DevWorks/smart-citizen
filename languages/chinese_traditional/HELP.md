@@ -259,6 +259,10 @@
 
 - **加油任務顯示亂碼噴嘴名稱**（例如“Nozzle Fuelgiver Grin Nozzlefast”而不是“Norfield”），出現在任務的“潛在藍圖”列表中。燃料噴嘴的藍圖獎勵在 CIG 的資料中無法像其他可製作物品那樣關聯回可解析的實體名稱，因此我們的增強內容生成器曾回退使用內部檔名的去除下劃線版本，而不是真實的產品名稱。已針對全部 8 種已知燃料噴嘴變體（Marlin、Lindstrom、Bendix、Torrez、Ezra、Norfield、Harkin、RN-7s）在 `scripts/generate_enhancements_ini.py` 中透過已知名稱修正進行了修復；重新執行 **生成增強內容** 和 **應用到遊戲**，即可讓你已經見過的任務採用這一修復。
 
+## 指南
+
+與 Karolinger Guides 合作編寫的智慧公民分步指南在[智慧公民指南頁面]({KAROLINGER_GUIDES_URL})上。視窗底部的 **Karolinger Guides** 標誌會開啟同一頁面，導覽的最後一步連結到影片教學。
+
 ## 反饋、Bug 與功能投票
 
 - 在專門的智慧公民 Discord 頻道中 **報告 Bug、分享自定義配置，並為即將推出的功能投票**：[Osiris DevWorks Discord — #smart-citizen 反饋與投票](https://discord.com/channels/1438175448420057323/1472394204347895890)（需要先加入 Osiris DevWorks Discord 伺服器——[邀請連結](https://discord.gg/BNzRegKZ7k)）。功能優先順序由該頻道中的反應/投票驅動，因此一項需求的呼聲越高，它就越早實現。

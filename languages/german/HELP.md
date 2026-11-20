@@ -259,6 +259,10 @@ Manche Missionstext-Anomalien stammen aus den eigenen Daten von Star Citizen: ei
 
 - **Betankungsmissionen zeigen entstellte Düsennamen** (z. B. „Nozzle Fuelgiver Grin Nozzlefast“ statt „Norfield“) in der MÖGLICHE-BAUPLÄNE-Liste einer Mission. Treibstoffdüsen-Bauplan-Belohnungen verweisen in CIGs Daten nicht wie andere herstellbare Gegenstände auf einen auflösbaren Entitätsnamen zurück, daher fiel unser Erweiterungsgenerator auf eine aus dem internen Dateinamen abgeleitete Namensform statt auf den echten Produktnamen zurück. Für alle 8 bekannten Treibstoffdüsen-Varianten (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) über eine Korrektur bekannter Namen in `scripts/generate_enhancements_ini.py` behoben; führe **Erweiterungen erstellen** und **Erweiterungen anwenden** erneut aus, um die Korrektur auch bei Missionen zu übernehmen, die du bereits gesehen hast.
 
+## Anleitungen
+
+Schritt-für-Schritt-Anleitungen für Smart Citizen, geschrieben mit Karolinger Guides, findest du auf der [Smart-Citizen-Anleitungsseite]({KAROLINGER_GUIDES_URL}). Das **Karolinger Guides**-Logo unten im Fenster öffnet dieselbe Seite, und der letzte Schritt der geführten Tour verlinkt das Video-Tutorial.
+
 ## Feedback, Fehler & Funktionsabstimmung
 
 - **Melde Fehler, teile benutzerdefinierte Konfigurationen und stimme über kommende Funktionen ab** im eigenen Smart-Citizen-Discord-Kanal: [Osiris DevWorks Discord — #smart-citizen feedback & voting](https://discord.com/channels/1438175448420057323/1472394204347895890) (erfordert zuerst den Beitritt zum Osiris-DevWorks-Discord-Server — [Einladung](https://discord.gg/BNzRegKZ7k)). Die Priorisierung von Funktionen richtet sich nach Reaktionen/Abstimmungen in diesem Kanal, je mehr Nachfrage eine Anfrage hat, desto früher landet sie.

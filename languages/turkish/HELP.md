@@ -259,6 +259,10 @@ Bazı görev metni anormallikleri Star Citizen'ın kendi verilerinden kaynaklan�
 
 - **Yakıt ikmali görevleri bozuk nozul adları gösteriyor** (ör. bir görevin POTENTIAL BLUEPRINTS listesinde "Norfield" yerine "Nozzle Fuelgiver Grin Nozzlefast"). Yakıt nozulu plan ödülleri, CIG'nin verilerinde diğer üretilebilir öğeler gibi çözümlenebilir bir varlık adına bağlanmaz; bu nedenle geliştirme oluşturucumuz gerçek ürün adı yerine dahili dosya adının çözülmüş bir sürümüne düşüyordu. Bilinen 8 yakıt nozulu varyantının tümü (Marlin, Lindstrom, Bendix, Torrez, Ezra, Norfield, Harkin, RN-7s) için `scripts/generate_enhancements_ini.py` içindeki bilinen ad düzeltmesiyle giderildi; zaten gördüğünüz görevlerde düzeltmeyi almak için **Geliştirmeleri Oluştur** ve **Geliştirmeleri Uygula** işlemlerini yeniden çalıştırın.
 
+## Kılavuzlar
+
+Karolinger Guides ile yazılan adım adım Smart Citizen kılavuzları [Smart Citizen kılavuzlar sayfasında]({KAROLINGER_GUIDES_URL}). Pencerenin altındaki **Karolinger Guides** logosu aynı sayfayı açar ve rehberli turun son adımı video eğitimine bağlanır.
+
 ## Geri Bildirim, Hatalar ve Özellik Oylaması
 
 - Özel Smart Citizen Discord kanalında **hata bildirin, özel yapılandırmalarınızı paylaşın ve gelecek özelliklere oy verin**: [Osiris DevWorks Discord — #smart-citizen feedback & voting](https://discord.com/channels/1438175448420057323/1472394204347895890) (önce Osiris DevWorks Discord sunucusuna katılmayı gerektirir — [davet](https://discord.gg/BNzRegKZ7k)). Özellik önceliklendirmesi o kanaldaki tepkiler/oylarla belirlenir; bir istek ne kadar çok talep görürse o kadar erken gelir.
