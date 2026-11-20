@@ -174,6 +174,7 @@ The **Smart Citizen Overlay** draws two small windows over Star Citizen: a minin
   - **Blueprints**: search blueprints, see which missions reward them, and tick the ones you own (same owned list as the Blueprint Tracker tab).
   - **Minerals**: type a mineral to see where it is found, grouped by star system, or a location to see its minerals. Tick a mineral, or **Salvage** at the bottom of the list, to watch for it: the scan label alerts you when a scan finds it. The decoder can be switched on and off here too.
   - **Crafting**: type a mineral to see which items use it, or an item to see the minerals it needs. Filled when you generate enhancements with **Commodities** or **Journal** ticked.
+  - **Item Finder** (magnifying glass): type an item to see every shop that sells it, cheapest first. Click a match to see each shop, where it is and its price. The shop list comes from [UEX](https://uexcorp.space), a community site where players report prices, so it can be out of date. It needs the internet: Smart Citizen fetches it at most every 12 hours and keeps the last copy for when you are offline. Item names are in English.
   - Each section has its own switch; turning the drawer off hides all of them.
 - **Mark new blueprints as owned** watches `Game.log` while the overlay runs and marks blueprints you receive owned. Like Scan Logs, it only reads LIVE and HOTFIX: with PTU, EPTU or TECH-PREVIEW selected on the Config tab, it stays off.
 
