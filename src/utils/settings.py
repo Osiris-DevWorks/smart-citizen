@@ -582,6 +582,15 @@ class AppSettings:
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
 
+    # Settings keys - Window
+    # Minimize to the system tray instead of the taskbar (Config tab,
+    # src/gui/tray.py). Off by default.
+    MINIMIZE_TO_TRAY = "minimize_to_tray"
+    # Whether the one-time "still running" notice has been shown, on the
+    # first trip to the tray (src/gui/tray.py). Per-install state, like the
+    # tour's completed version.
+    TRAY_NOTICE_SHOWN = "tray_notice_shown"
+
     # Settings keys - App self-update check
     # Settings keys - Star Citizen channel selection
     # Star Citizen ships multiple channels (LIVE/PTU/EPTU/HOTFIX/TECH-PREVIEW)
@@ -866,6 +875,8 @@ class AppSettings:
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
     #   - tutorial_completed_version: per-install first-run state.
+    #   - tray_notice_shown: the same kind of state, for the one-time "still
+    #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
     #     set, so it is exported only when stored, the same way owned_items
     #     is, and import_values takes it from a backup only together with
@@ -877,6 +888,7 @@ class AppSettings:
         "owned_items",
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
@@ -1875,6 +1887,28 @@ class AppSettings:
     @staticmethod
     def set_tutorial_disabled(disabled: bool) -> None:
         AppSettings.settings().setValue(AppSettings.TUTORIAL_DISABLED, bool(disabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_minimize_to_tray() -> bool:
+        """When True, minimizing hides the window in the system tray instead
+        of the taskbar (Config tab opt-in, src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.MINIMIZE_TO_TRAY, False, type=bool)
+
+    @staticmethod
+    def set_minimize_to_tray(enabled: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.MINIMIZE_TO_TRAY, bool(enabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_tray_notice_shown() -> bool:
+        """Whether the one-time "still running" notice has been shown, so it
+        comes on the first trip to the tray only (src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.TRAY_NOTICE_SHOWN, False, type=bool)
+
+    @staticmethod
+    def set_tray_notice_shown(shown: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.TRAY_NOTICE_SHOWN, bool(shown))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3986,6 +4020,7 @@ class AppSettings:
             AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
             AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
             AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.MINIMIZE_TO_TRAY: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,

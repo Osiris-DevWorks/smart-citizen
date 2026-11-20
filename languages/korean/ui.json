@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen 표시"
+    },
+    "quit": {
+      "ht": "",
+      "at": "종료"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen이 계속 실행 중입니다"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "시스템 트레이에 있습니다. 아이콘을 클릭하면 창이 다시 나타나고, 마우스 오른쪽 버튼을 클릭하면 종료할 수 있습니다. 아이콘이 보이지 않으면 시계 옆 ^ 화살표 안에 있을 수 있습니다."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -821,6 +839,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "선택하면, 새 버전에서 가이드 투어가 자동으로 실행되지 않습니다. 도구 모음의 튜토리얼 버튼은 계속 작동합니다."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "시스템 트레이로 최소화"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "선택하면, Smart Citizen을 최소화할 때 작업 표시줄 대신 시스템 트레이(시계 옆 아이콘)에 숨깁니다. 트레이 아이콘을 클릭하면 다시 나타납니다. 트레이에 있는 동안 Smart Citizen을 다시 실행하면 두 번째 사본을 여는 대신 그 창이 다시 나타납니다."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "시스템 트레이를 찾을 수 없어 Smart Citizen이 작업 표시줄로 최소화됩니다."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3355,7 +3385,7 @@
       },
       "description": {
         "ht": "",
-        "at": "앱 테마(기본값 / 밝게 / 어둡게 / ODW)와 글꼴 크기(작게 / 보통 / 크게, 재시작 후 적용)를 고르고, 원하면 새 버전에서 자동 투어를 끌 수 있습니다."
+        "at": "앱 테마(기본값 / 밝게 / 어둡게 / ODW)와 글꼴 크기(작게 / 보통 / 크게, 재시작 후 적용)를 고르고, 원하면 새 버전에서 자동 투어를 끌 수 있습니다. 시스템 트레이로 최소화를 선택하면 최소화할 때 창이 시스템 트레이로 들어갑니다."
       }
     },
     "cfg_sc_install": {

@@ -15,6 +15,24 @@
       "at": ""
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Mostrar Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Salir"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen sigue en ejecución"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Está en la bandeja del sistema. Haz clic en su icono para que vuelva la ventana, o haz clic derecho para salir. Si no ves el icono, puede estar detrás de la flecha ^ junto al reloj."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -797,6 +815,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "Si está marcado, la visita guiada no se iniciará automáticamente en una nueva versión. El botón Tutorial de la barra de herramientas sigue funcionando."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Minimizar a la bandeja del sistema"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Si está marcado, al minimizar Smart Citizen se oculta en la bandeja del sistema (los iconos junto al reloj) en lugar de en la barra de tareas. Haz clic en su icono para que vuelva. Mientras esté allí, abrir Smart Citizen de nuevo trae esa ventana de vuelta en lugar de abrir una segunda copia."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "No se encontró la bandeja del sistema, así que Smart Citizen se minimiza en la barra de tareas."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3241,7 +3271,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas."
+        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas. Marca Minimizar a la bandeja del sistema para que la ventana vaya allí al minimizarla."
       }
     },
     "cfg_sc_install": {

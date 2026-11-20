@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen'ı Göster"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Çıkış"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen çalışmaya devam ediyor"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Sistem tepsisinde. Pencereyi geri getirmek için simgesine tıklayın, çıkmak için sağ tıklayın. Simgeyi göremiyorsanız saatin yanındaki ^ okunun içinde olabilir."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -821,6 +839,18 @@
     "disable_tutorial_tooltip": {
       "ht": "",
       "at": "İşaretlendiğinde, rehberli tur yeni bir sürümde otomatik olarak başlatılmaz. Araç çubuğundaki Rehberli Tur düğmesi çalışmaya devam eder."
+    },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Sistem Tepsisine Küçült"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "İşaretlendiğinde, Smart Citizen küçültüldüğünde görev çubuğu yerine sistem tepsisine (saatin yanındaki simgeler) gizlenir. Geri getirmek için tepsideki simgesine tıklayın. Tepsideyken Smart Citizen'ı yeniden başlatmak, ikinci bir kopya açmak yerine o pencereyi geri getirir."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Sistem tepsisi bulunamadı, bu yüzden Smart Citizen görev çubuğuna küçültülür."
     },
     "game_path_tooltip": {
       "ht": "",
@@ -3355,7 +3385,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Uygulama temasını (Varsayılan / Açık / Koyu / ODW) ve yazı boyutunu (Küçük / Orta / Büyük, yeniden başlatınca uygulanır) seçin; isterseniz yeni sürümlerde otomatik turu kapatın."
+        "at": "Uygulama temasını (Varsayılan / Açık / Koyu / ODW) ve yazı boyutunu (Küçük / Orta / Büyük, yeniden başlatınca uygulanır) seçin; isterseniz yeni sürümlerde otomatik turu kapatın. Küçültüldüğünde pencerenin sistem tepsisine gitmesi için Sistem Tepsisine Küçült seçeneğini işaretleyin."
       }
     },
     "cfg_sc_install": {
