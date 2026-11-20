@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} gibt es nur in diesen Qualitäten ({source}-Daten): {tiers}. Der Regler rastet dort ein."
+      "at": "{material} gibt es nur in diesen Qualitäten ({source}-Daten): {tiers}. Der Regler hält dort und bei 0, 500 und 1000."
     },
     "order_min_quality": {
       "ht": "",

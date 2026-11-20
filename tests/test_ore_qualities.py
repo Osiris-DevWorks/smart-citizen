@@ -89,8 +89,8 @@ class TestClampQuality:
     def test_new_and_loaded_lines_snap(self):
         bp = {"k": "x", "s": [{"mat": "gold", "min": 0}], "p": []}
         co.attach_quality_tiers([bp], lambda key: [key])
-        assert co.slot_steps(bp["s"][0]) == self.STEPS
-        assert co.new_line(bp).q == [553]
+        assert co.slot_steps(bp["s"][0]) == tuple(sorted(self.STEPS + (0, 500)))
+        assert co.new_line(bp).q == [500]
         lines = co.load_order([{"key": "x", "count": 1, "q": [900]}], {"x": bp})
         assert lines[0].q == [916]
 

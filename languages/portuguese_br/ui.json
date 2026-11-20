@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} só existe nestas qualidades (dados de {source}): {tiers}. O controle se ajusta a elas."
+      "at": "{material} só existe nestas qualidades (dados de {source}): {tiers}. O controle para nelas e em 0, 500 e 1000."
     },
     "order_min_quality": {
       "ht": "",

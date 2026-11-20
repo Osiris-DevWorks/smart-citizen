@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} esiste solo a queste qualità (dati {source}): {tiers}. Il cursore si ferma su di esse."
+      "at": "{material} esiste solo a queste qualità (dati {source}): {tiers}. Il cursore si ferma su queste e su 0, 500 e 1000."
     },
     "order_min_quality": {
       "ht": "",

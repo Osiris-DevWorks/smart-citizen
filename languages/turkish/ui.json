@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} yalnızca bu kalitelerde bulunur ({source} verisi): {tiers}. Kaydırıcı bu değerlere oturur."
+      "at": "{material} yalnızca bu kalitelerde bulunur ({source} verisi): {tiers}. Kaydırıcı bunlarda ve 0, 500 ve 1000'de durur."
     },
     "order_min_quality": {
       "ht": "",

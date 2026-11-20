@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} 只有以下品质（{source} 数据）：{tiers}。滑块会吸附到这些值。"
+      "at": "{material} 只有以下品质（{source} 数据）：{tiers}。滑块会停在这些值以及 0、500 和 1000 上。"
     },
     "order_min_quality": {
       "ht": "",

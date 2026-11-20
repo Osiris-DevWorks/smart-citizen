@@ -3533,7 +3533,7 @@
       "at": ""
     },
     "order_quality_tiers_tooltip": {
-      "ht": "{material} only comes at these qualities ({source} data): {tiers}. The slider snaps to them.",
+      "ht": "{material} only comes at these qualities ({source} data): {tiers}. The slider stops at these and at 0, 500 and 1000.",
       "at": ""
     },
     "order_min_quality": {

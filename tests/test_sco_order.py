@@ -104,7 +104,7 @@ def test_summary_totals_and_bands(section):
     section.add(ARMOR)
     assert _summary_rows(section) == ["Gold: 54 cSCU", "Tungsten: 12 cSCU"]
     gold = section._summary_tree.topLevelItem(0)
-    assert [gold.child(i).text(0) for i in range(gold.childCount())] == ["Quality 553+: 54 cSCU"]
+    assert [gold.child(i).text(0) for i in range(gold.childCount())] == ["Quality 500+: 54 cSCU"]
     assert "Test Armor, Test Rifle" in gold.toolTip(0)
     section._toggle_volume()
     assert _summary_rows(section) == ["Gold: 0.54 SCU", "Tungsten: 0.12 SCU"]
@@ -120,9 +120,9 @@ def test_slider_sets_quality_and_shows_the_bonus(section):
     assert all(s.focusPolicy() == Qt.FocusPolicy.NoFocus for s in sliders)
     sliders[0].setValue(1000)
     sliders[0].sliderReleased.emit()
-    # Gold snaps the default 500 to its E tier, 553 (ore_qualities).
-    assert section.lines()[0].q == [1000, 553]
-    assert AppSettings.get_sco_order()[0]["q"] == [1000, 553]
+    # 500 is a step for every material in the tier table (Amr).
+    assert section.lines()[0].q == [1000, 500]
+    assert AppSettings.get_sco_order()[0]["q"] == [1000, 500]
     assert "Integrity" in card._total_bonus.text() and "+10%" in card._total_bonus.text()
 
 
@@ -132,9 +132,11 @@ def test_quality_snaps_to_the_material_tiers(section):
     card = section._cards[0]
     card._toggle.click()
     tungsten, gold = card.findChildren(QSlider)
-    assert tungsten.steps() == (363, 530, 662, 787, 858, 902, 964, 1000)
-    # Gold needs 300 or better: every gold tier is above it.
-    assert gold.steps()[0] == 359
+    # Its tiers, plus 0, 500 and 1000 for every material (Amr).
+    assert tungsten.steps() == (0, 363, 500, 530, 662, 787, 858, 902, 964, 1000)
+    # Gold needs 300 or better, so 0 is never picked.
+    gold.setValue(0)
+    assert section.lines()[0].q[1] == 359
     tungsten.setValue(700)
     assert section.lines()[0].q[0] == 662 and tungsten.value() == 662
     assert card._slot_widgets[0]["quality"].text() == tr(

@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} 只有以下品質（{source} 資料）：{tiers}。滑桿會貼齊這些值。"
+      "at": "{material} 只有以下品質（{source} 資料）：{tiers}。滑桿會停在這些值以及 0、500 和 1000 上。"
     },
     "order_min_quality": {
       "ht": "",

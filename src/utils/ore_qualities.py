@@ -19,6 +19,9 @@ from typing import Iterable, Optional
 
 QUALITY_TABLE_SOURCE = "Alpha 4.9"
 TIER_NAMES = ("F", "E", "D", "C", "B", "A", "S", "Perfect")
+# Steps every material in the table has as well as its tiers (Amr): the
+# bottom, the neutral middle every stat curve is built around, and the top.
+ALWAYS_STEPS = (0, 500, 1000)
 
 QUALITY_TABLE = """
 Agricium 346 588 667 796 852 943 971 1000

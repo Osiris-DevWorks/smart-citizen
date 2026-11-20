@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} n'existe qu'à ces qualités (données {source}) : {tiers}. Le curseur s'y cale."
+      "at": "{material} n'existe qu'à ces qualités (données {source}) : {tiers}. Le curseur s'arrête sur celles-ci et sur 0, 500 et 1000."
     },
     "order_min_quality": {
       "ht": "",

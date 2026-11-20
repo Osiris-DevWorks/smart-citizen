@@ -27,7 +27,7 @@ from typing import Callable, Iterable, Optional
 
 from src.utils.atomic_io import atomic_write_text, read_bytes_retrying
 from src.utils.i18n import tr
-from src.utils.ore_qualities import quality_tiers
+from src.utils.ore_qualities import ALWAYS_STEPS, quality_tiers
 
 QUALITY_MIN = 0
 QUALITY_MAX = 1000
@@ -107,8 +107,12 @@ def clamp_quality(q, low: int = QUALITY_MIN, steps=None, current=None) -> int:
 
 def slot_steps(slot: dict) -> tuple[int, ...]:
     """The qualities a slot's material comes at (``slot["tiers"]``, which
-    :func:`attach_quality_tiers` sets), or () for any quality."""
-    return tuple(value for _tier, value in slot.get("tiers") or ())
+    :func:`attach_quality_tiers` sets) with 0, 500 and 1000 always among
+    them (``ore_qualities.ALWAYS_STEPS``), or () for any quality."""
+    tiers = slot.get("tiers")
+    if not tiers:
+        return ()
+    return tuple(sorted({value for _tier, value in tiers} | set(ALWAYS_STEPS)))
 
 
 def attach_quality_tiers(blueprints: Iterable[dict], names_for: Callable[[str], list]) -> None:

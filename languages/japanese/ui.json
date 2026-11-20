@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} の品質はこれだけです（{source} のデータ）：{tiers}。スライダーはこの値に合わせて止まります。"
+      "at": "{material} の品質はこれだけです（{source} のデータ）：{tiers}。スライダーはこれらと 0、500、1000 で止まります。"
     },
     "order_min_quality": {
       "ht": "",

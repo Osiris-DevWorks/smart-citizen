@@ -3736,7 +3736,7 @@
     },
     "order_quality_tiers_tooltip": {
       "ht": "",
-      "at": "{material} solo sale con estas calidades (datos de {source}): {tiers}. El control se ajusta a ellas."
+      "at": "{material} solo sale con estas calidades (datos de {source}): {tiers}. El control se detiene en ellas y en 0, 500 y 1000."
     },
     "order_min_quality": {
       "ht": "",
