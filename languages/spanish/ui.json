@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "La calidad del material para esta ranura (0 a 1000)"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} solo sale con estas calidades (datos de {source}): {tiers}. El control se ajusta a ellas."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Necesita calidad {quality} o mejor"

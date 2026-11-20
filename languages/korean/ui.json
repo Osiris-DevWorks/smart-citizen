@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "이 슬롯에 쓰는 재료의 품질(0~1000)"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material}은(는) 이 품질로만 나옵니다({source} 데이터): {tiers}. 슬라이더가 이 값에 맞춰집니다."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "품질 {quality} 이상 필요"

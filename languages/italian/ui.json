@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "La qualità del materiale per questo slot (da 0 a 1000)"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} esiste solo a queste qualità (dati {source}): {tiers}. Il cursore si ferma su di esse."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Richiede qualità {quality} o superiore"

@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "このスロットに使う素材の品質（0〜1000）"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} の品質はこれだけです（{source} のデータ）：{tiers}。スライダーはこの値に合わせて止まります。"
+    },
     "order_min_quality": {
       "ht": "",
       "at": "品質 {quality} 以上が必要"

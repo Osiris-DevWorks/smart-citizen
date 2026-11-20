@@ -3528,6 +3528,14 @@
       "ht": "",
       "at": "Качество материала для этого слота (от 0 до 1000)"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} бывает только такого качества (данные {source}): {tiers}. Ползунок встаёт на эти значения."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Нужно качество {quality} или выше"

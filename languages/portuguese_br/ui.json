@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "A qualidade do material para este espaço (0 a 1000)"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} só existe nestas qualidades (dados de {source}): {tiers}. O controle se ajusta a elas."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Precisa de qualidade {quality} ou melhor"

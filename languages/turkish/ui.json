@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "Bu yuva için malzemenin kalitesi (0 ile 1000 arası)"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} yalnızca bu kalitelerde bulunur ({source} verisi): {tiers}. Kaydırıcı bu değerlere oturur."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "En az {quality} kalite gerekir"

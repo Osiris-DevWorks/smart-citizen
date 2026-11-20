@@ -73,6 +73,7 @@ TEST_SECTIONS: list[dict] = [
             "With the overlay running, mark a blueprint owned in the Blueprint Tracker tab: the Order card's not-owned mark goes at once.",
             "Type a name, click Save, then New order. Pick the name under Saved orders and click Load: the order comes back. The file is in your data folder under orders.",
             "Pick a saved order and click Delete twice: the name leaves the list and the order you built stays.",
+            "Open an item made of an ore: its slider has tick marks and stops only on them, and the label shows the tier (e.g. Q 786 (C)).",
         ],
     },
     {

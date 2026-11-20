@@ -27,6 +27,7 @@ from typing import Callable, Iterable, Optional
 
 from src.utils.atomic_io import atomic_write_text, read_bytes_retrying
 from src.utils.i18n import tr
+from src.utils.ore_qualities import quality_tiers
 
 QUALITY_MIN = 0
 QUALITY_MAX = 1000
@@ -76,12 +77,54 @@ class MaterialTotal:
     items: list[str]
 
 
-def clamp_quality(q, low: int = QUALITY_MIN) -> int:
+def clamp_quality(q, low: int = QUALITY_MIN, steps=None, current=None) -> int:
+    """*q* as a quality the slot takes: 0 to 1000 and never under *low*.
+
+    With *steps* (the qualities the slot's material comes at,
+    :func:`slot_steps`) it is also snapped to the nearest step at or above
+    *low* (the higher one on a tie). With *current* too, a move that would
+    snap back to *current* goes to the next step that way instead, so a
+    click on the slider's groove still moves it."""
     try:
         value = round(float(q))
     except (TypeError, ValueError):
         value = QUALITY_DEFAULT
-    return max(max(QUALITY_MIN, int(low)), min(QUALITY_MAX, value))
+    floor = max(QUALITY_MIN, int(low))
+    value = max(floor, min(QUALITY_MAX, value))
+    allowed = (
+        sorted({int(v) for v in steps or () if v >= floor})
+        or sorted(int(v) for v in steps or ())[-1:]
+    )
+    if not allowed:
+        return value
+    best = min(allowed, key=lambda v: (abs(v - value), -v))
+    if current is not None and best == current and value != current:
+        ahead = [v for v in allowed if (v > current if value > current else v < current)]
+        if ahead:
+            best = min(ahead) if value > current else max(ahead)
+    return best
+
+
+def slot_steps(slot: dict) -> tuple[int, ...]:
+    """The qualities a slot's material comes at (``slot["tiers"]``, which
+    :func:`attach_quality_tiers` sets), or () for any quality."""
+    return tuple(value for _tier, value in slot.get("tiers") or ())
+
+
+def attach_quality_tiers(blueprints: Iterable[dict], names_for: Callable[[str], list]) -> None:
+    """Give each slot whose material is in the ore quality table its tiers
+    (``slot["tiers"]``, in memory only). *names_for* gives a material key's
+    names to look up, the key itself first."""
+    found: dict[str, object] = {}
+    for bp in blueprints:
+        for slot in bp.get("s", []):
+            mat = slot.get("mat", "")
+            if mat not in found:
+                found[mat] = quality_tiers(names_for(mat))
+            if found[mat]:
+                slot["tiers"] = found[mat]
+            else:
+                slot.pop("tiers", None)
 
 
 def blueprints_by_key(blueprints: Iterable[dict]) -> dict[str, dict]:
@@ -107,7 +150,9 @@ def new_line(bp: dict) -> OrderLine:
     return OrderLine(
         key=bp["k"],
         count=1,
-        q=[clamp_quality(QUALITY_DEFAULT, slot.get("min", 0)) for slot in bp["s"]],
+        q=[
+            clamp_quality(QUALITY_DEFAULT, slot.get("min", 0), slot_steps(slot)) for slot in bp["s"]
+        ],
         on=on,
     )
 
@@ -132,7 +177,11 @@ def fit_line(raw, bp: Optional[dict]) -> Optional[OrderLine]:
         count = 1
     stored_q = raw.get("q") if isinstance(raw.get("q"), list) else []
     q = [
-        clamp_quality(stored_q[i], slot.get("min", 0)) if i < len(stored_q) else fresh.q[i]
+        (
+            clamp_quality(stored_q[i], slot.get("min", 0), slot_steps(slot))
+            if i < len(stored_q)
+            else fresh.q[i]
+        )
         for i, slot in enumerate(bp["s"])
     ]
     stored_on = raw.get("on")

@@ -3528,6 +3528,14 @@
       "ht": "The quality of the material for this slot (0 to 1000)",
       "at": ""
     },
+    "order_quality_tier": {
+      "ht": "Q {quality} ({tier})",
+      "at": ""
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "{material} only comes at these qualities ({source} data): {tiers}. The slider snaps to them.",
+      "at": ""
+    },
     "order_min_quality": {
       "ht": "Needs quality {quality} or better",
       "at": ""

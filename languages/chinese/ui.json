@@ -3730,6 +3730,14 @@
       "ht": "",
       "at": "此槽位所用材料的品质（0 到 1000）"
     },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} 只有以下品质（{source} 数据）：{tiers}。滑块会吸附到这些值。"
+    },
     "order_min_quality": {
       "ht": "",
       "at": "需要品质 {quality} 或更高"

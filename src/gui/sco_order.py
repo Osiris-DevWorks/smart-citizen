@@ -28,6 +28,7 @@ import logging
 from typing import Callable, Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -41,6 +42,8 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSlider,
+    QStyle,
+    QStyleOptionSlider,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -51,14 +54,17 @@ from PyQt6.QtWidgets import (
 from src.utils import crafting_order as co
 from src.utils.i18n import tr
 from src.utils.mining_catalog import CraftingIndex, MineralInfo, is_unknown_material, ore_key
+from src.utils.ore_qualities import QUALITY_TABLE_SOURCE, tier_of
 from src.utils.owned_items import normalize_item_name
 from src.utils.settings import AppSettings
 
 # How many search results show at once, and how tall that list may get.
 SEARCH_LIMIT = 30
 SEARCH_LIST_HEIGHT = 140
-# Clear asks to be clicked again within this time.
+# New order, Save over a name and Delete ask to be clicked again within this time.
 CLEAR_CONFIRM_MS = 3000
+# How tall a quality slider's tier ticks are.
+TICK_HEIGHT = 4
 logger = logging.getLogger(__name__)
 
 # Bonus colours: better, worse (neutral takes the panel's secondary colour).
@@ -93,6 +99,55 @@ def _wrapped(text: str = "", secondary: bool = False) -> QLabel:
     if secondary:
         label.setProperty("role", "secondary")
     return label
+
+
+class StepSlider(QSlider):
+    """A quality slider that marks the qualities its material comes at with
+    a tick under the groove (only those can be picked, see
+    ``crafting_order.clamp_quality``)."""
+
+    def __init__(self, parent=None):
+        super().__init__(Qt.Orientation.Horizontal, parent)
+        self._steps: tuple[int, ...] = ()
+
+    def set_steps(self, steps) -> None:
+        self._steps = tuple(steps)
+        self.setMinimumHeight(self.sizeHint().height() + (TICK_HEIGHT if self._steps else 0))
+        self.update()
+
+    def steps(self) -> tuple[int, ...]:
+        return self._steps
+
+    def paintEvent(self, event):  # noqa: N802 (Qt's name)
+        super().paintEvent(event)
+        if not self._steps:
+            return
+        try:
+            opt = QStyleOptionSlider()
+            self.initStyleOption(opt)
+            style = self.style()
+            groove = style.subControlRect(
+                QStyle.ComplexControl.CC_Slider, opt, QStyle.SubControl.SC_SliderGroove, self
+            )
+            handle = style.subControlRect(
+                QStyle.ComplexControl.CC_Slider, opt, QStyle.SubControl.SC_SliderHandle, self
+            )
+            span = max(1, groove.width() - handle.width())
+            painter = QPainter(self)
+            painter.setPen(self.palette().color(self.foregroundRole()))
+            bottom = self.height() - 1
+            for value in self._steps:
+                if not self.minimum() <= value <= self.maximum():
+                    continue
+                x = (
+                    groove.x()
+                    + handle.width() // 2
+                    + QStyle.sliderPositionFromValue(self.minimum(), self.maximum(), value, span)
+                )
+                painter.drawLine(x, bottom - TICK_HEIGHT + 1, x, bottom)
+            painter.end()
+        except Exception as exc:  # a Qt override: an exception here ends the app
+            logger.warning(f"Could not draw the quality ticks: {exc}")
 
 
 class OrderLineCard(QFrame):
@@ -185,11 +240,11 @@ class OrderLineCard(QFrame):
         what = _wrapped()
         top.addWidget(what, 1)
         layout.addLayout(top)
-        slider = QSlider(Qt.Orientation.Horizontal)
+        slider = StepSlider()
         slider.setRange(max(co.QUALITY_MIN, int(slot.get("min", 0))), co.QUALITY_MAX)
+        slider.set_steps(co.slot_steps(slot))
         slider.setSingleStep(10)
         slider.setPageStep(100)
-        slider.setToolTip(tr("sco.order_quality_tooltip"))
         _no_focus(slider)
         quality = QLabel()
         quality.setMinimumWidth(48)
@@ -217,6 +272,18 @@ class OrderLineCard(QFrame):
         )
         return row
 
+    @staticmethod
+    def _quality_tooltip(slot: dict, material: str) -> str:
+        tiers = slot.get("tiers")
+        if not tiers:
+            return tr("sco.order_quality_tooltip")
+        return tr(
+            "sco.order_quality_tiers_tooltip",
+            material=material,
+            source=QUALITY_TABLE_SOURCE,
+            tiers=", ".join(f"{tier} {value}" for tier, value in tiers),
+        )
+
     def _on_toggle(self) -> None:
         show = self._body.isHidden()
         self._body.setVisible(show)
@@ -237,8 +304,16 @@ class OrderLineCard(QFrame):
         self.changed.emit()
 
     def _on_quality(self, index: int, value: int) -> None:
-        value = co.clamp_quality(value, self.bp["s"][index].get("min", 0))
+        slot = self.bp["s"][index]
+        value = co.clamp_quality(
+            value, slot.get("min", 0), co.slot_steps(slot), current=self.line.q[index]
+        )
         if self.line.q[index] == value:
+            slider = self._slot_widgets[index]["slider"]
+            if slider.value() != value:  # snapped back to where it was
+                slider.blockSignals(True)
+                slider.setValue(value)
+                slider.blockSignals(False)
             return
         self.line.q[index] = value
         self.refresh()
@@ -272,7 +347,13 @@ class OrderLineCard(QFrame):
                 slider.blockSignals(True)
                 slider.setValue(self.line.q[i])
                 slider.blockSignals(False)
-            widgets["quality"].setText(tr("sco.order_quality", quality=self.line.q[i]))
+            tier = tier_of(slot.get("tiers"), self.line.q[i])
+            widgets["quality"].setText(
+                tr("sco.order_quality_tier", quality=self.line.q[i], tier=tier)
+                if tier
+                else tr("sco.order_quality", quality=self.line.q[i])
+            )
+            slider.setToolTip(self._quality_tooltip(slot, material))
             mods = co.stat_modifiers(self.bp, section.index.curves, self.line.q, only=i)
             widgets["bonus"].setText(section.bonus_html(mods))
             widgets["bonus"].setVisible(bool(mods))
@@ -435,8 +516,10 @@ class OrderSection(QWidget):
         """The crafting index (its blueprints) and, for Where to mine and
         Watch minerals, each material's compendium mineral."""
         self.index = index
-        self._by_key = co.blueprints_by_key(index.blueprints)
         self._mineral_by_material = dict(mineral_by_material)
+        # Before the order loads, so its qualities snap to the real ones.
+        co.attach_quality_tiers(index.blueprints, self._quality_names)
+        self._by_key = co.blueprints_by_key(index.blueprints)
         self._tooltip_for = tooltip_for
         if self._by_key:
             self._lines = co.load_order(AppSettings.get_sco_order(), self._by_key)
@@ -466,6 +549,18 @@ class OrderSection(QWidget):
         if is_unknown_material(key):
             return tr("sco.order_unknown_material")
         return self.index.material_name(key)
+
+    def _quality_names(self, key: str) -> list[str]:
+        """Names to find a material in the ore quality table by: its key
+        (English), its compendium mineral (English), then its own names."""
+        names = [key]
+        info = self._mineral_by_material.get(key)
+        if info is not None:
+            names.append(info.name)
+        names.extend((self.index.materials.get(key) or {}).get("names", []))
+        if key in self.index.item_materials:
+            names.append(self.index.item_materials[key])
+        return names
 
     def _material_names(self) -> dict[str, str]:
         """Every slot material's display name, commodities and items alike."""
