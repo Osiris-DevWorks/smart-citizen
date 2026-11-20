@@ -3339,6 +3339,50 @@
     "tooltip_minerals_here": {
       "ht": "Minerals here: {minerals}",
       "at": ""
+    },
+    "finder_search_placeholder": {
+      "ht": "Type an item to see where to buy it...",
+      "at": ""
+    },
+    "finder_loading": {
+      "ht": "Loading shop data from UEX...",
+      "at": ""
+    },
+    "finder_failed": {
+      "ht": "Could not reach UEX for shop data. Check your internet connection. The overlay tries again in a few minutes.",
+      "at": ""
+    },
+    "finder_source": {
+      "ht": "Shop data from {site}, reported by players. Updated {updated}.",
+      "at": ""
+    },
+    "finder_offline": {
+      "ht": "UEX could not be reached, so this is the last saved copy.",
+      "at": ""
+    },
+    "finder_none": {
+      "ht": "No shop is known to sell an item with that name.",
+      "at": ""
+    },
+    "finder_item": {
+      "ht": "{item} ({count})",
+      "at": ""
+    },
+    "finder_location": {
+      "ht": "{shop}, {place} ({system}): {price} aUEC",
+      "at": ""
+    },
+    "finder_price_range": {
+      "ht": "{low} to {high} aUEC",
+      "at": ""
+    },
+    "finder_more": {
+      "ht": "Showing {shown} of {total} items. Type more to narrow it down.",
+      "at": ""
+    },
+    "finder_reported": {
+      "ht": "Price reported {date}",
+      "at": ""
     }
   },
   "overlay": {
@@ -3556,6 +3600,14 @@
     },
     "drawer_crafting_hint": {
       "ht": "Type a mineral to see which items use it, or an item to see the minerals it needs. Needs a DataForge extraction.",
+      "at": ""
+    },
+    "drawer_finder": {
+      "ht": "Item Finder",
+      "at": ""
+    },
+    "drawer_finder_hint": {
+      "ht": "Type an item to see which shops sell it, where they are and the price. Shop data comes from UEX over the internet and is reported by players.",
       "at": ""
     },
     "drawer_position": {

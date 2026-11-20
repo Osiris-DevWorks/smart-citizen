@@ -3541,6 +3541,50 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "이곳의 광물: {minerals}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "아이템을 입력해 구매 장소를 확인하세요..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "UEX에서 상점 데이터를 불러오는 중..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "상점 데이터를 위해 UEX에 연결할 수 없습니다. 인터넷 연결을 확인하세요. 오버레이가 몇 분 후 다시 시도합니다."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "상점 데이터: {site}, 플레이어 제보. 업데이트: {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX에 연결할 수 없어 마지막으로 저장된 사본을 표시합니다."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "그 이름의 아이템을 파는 알려진 상점이 없습니다."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place} ({system}): {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} ~ {high} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{total}개 중 {shown}개 아이템 표시. 더 입력해 범위를 좁히세요."
+    },
+    "finder_reported": {
+      "ht": "",
+      "at": "가격 제보일: {date}"
     }
   },
   "overlay": {
@@ -3759,6 +3803,14 @@
     "drawer_crafting_hint": {
       "ht": "",
       "at": "광물을 입력하면 그 광물을 쓰는 아이템을, 아이템을 입력하면 필요한 광물을 보여 줍니다. DataForge 추출이 필요합니다."
+    },
+    "drawer_finder": {
+      "ht": "",
+      "at": "아이템 찾기"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "아이템을 입력하면 어떤 상점이 팔고, 어디에 있으며, 가격이 얼마인지 볼 수 있습니다. 상점 데이터는 인터넷을 통해 UEX에서 가져오며 플레이어가 제보한 것입니다."
     },
     "drawer_position": {
       "ht": "",

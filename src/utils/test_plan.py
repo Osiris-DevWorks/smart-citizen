@@ -60,6 +60,16 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: Item Finder (#606)",
+        "items": [
+            "Start the overlay and open the magnifying glass tab: the bottom line says where the shop data is from and when it was updated.",
+            "Type an item (e.g. P4-AR): matches show with a shop count. Expand one: each shop, its place, star system and price show, cheapest first.",
+            "Type a single exact item name: its match opens by itself. Type a nonsense name: the tab says no shop sells it.",
+            "Turn off your internet and restart the app and overlay: the finder still works from the saved copy and says UEX could not be reached.",
+            "Turn Item Finder off on the Overlay tab: its tab leaves the drawer.",
+        ],
+    },
+    {
         "title": "Blueprints (#416, #527)",
         "items": [
             "Scan Logs for Owned Blueprints: the P4-AR Rifle, S-38 Pistol, their magazines and the four Field Recon Suit pieces are added to Owned.",
