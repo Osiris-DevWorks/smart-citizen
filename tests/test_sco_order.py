@@ -150,6 +150,41 @@ def test_quality_snaps_to_the_material_tiers(section):
     assert section.lines()[0].q[0] == 662
 
 
+def test_full_range_takes_any_quality_and_steps_snap_back(section):
+    """Amr: ores mixed together land between tiers, so a toggle lets the
+    slider take any quality; on by default, and saved."""
+    assert section._quality_steps.isChecked() and section.stepped
+    section.add(RIFLE)
+    section._cards[0]._toggle.click()
+    section._quality_steps.setChecked(False)
+    assert AppSettings.get_sco_order_quality_steps() is False
+    card = section._cards[0]
+    tungsten, gold = card.findChildren(QSlider)
+    assert tungsten.steps() == () and gold.steps() == ()
+    tungsten.setValue(700)
+    assert section.lines()[0].q[0] == 700 and tungsten.value() == 700
+    assert card._slot_widgets[0]["quality"].text() == tr("sco.order_quality", quality=700)
+    assert "D 662" in tungsten.toolTip()
+    assert tungsten.toolTip() != tr(
+        "sco.order_quality_tiers_tooltip", material="Tungsten", source="x", tiers="x"
+    )
+    # Still never under the slot's minimum.
+    gold.setValue(0)
+    assert section.lines()[0].q[1] == 300
+    assert AppSettings.get_sco_order()[0]["q"] == [700, 300]
+    # A new line is not snapped either, and the order loads unsnapped.
+    reloaded = OrderSection()
+    reloaded.set_catalog(_index(), {}, lambda info: "")
+    assert not reloaded._quality_steps.isChecked()
+    assert reloaded.lines()[0].q == [700, 300]
+    reloaded.deleteLater()
+    # Back on steps: every quality snaps to its nearest tier, and is saved.
+    section._quality_steps.setChecked(True)
+    assert section.lines()[0].q == [662, 359]
+    assert AppSettings.get_sco_order()[0]["q"] == [662, 359]
+    assert section._cards[0].findChildren(QSlider)[0].steps()
+
+
 def test_a_material_off_the_table_takes_any_quality(qapp, tmp_profile):
     bp = {
         "k": "gizmo",

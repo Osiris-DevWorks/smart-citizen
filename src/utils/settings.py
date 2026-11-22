@@ -839,6 +839,9 @@ class AppSettings:
     SCO_ORDER_VOLUME_DEFAULT = "cscu"
     # The Order tab's "Owned only" search filter (off: every blueprint).
     SCO_ORDER_OWNED_ONLY = "sco/order_owned_only"
+    # The Order tab's quality sliders stop at each ore's tier qualities (on)
+    # or take any quality (off, for ores mixed to a quality in between).
+    SCO_ORDER_QUALITY_STEPS = "sco/order_quality_steps"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -1945,6 +1948,15 @@ class AppSettings:
     @staticmethod
     def set_sco_order_owned_only(owned_only: bool) -> None:
         AppSettings.settings().setValue(AppSettings.SCO_ORDER_OWNED_ONLY, bool(owned_only))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order_quality_steps() -> bool:
+        return AppSettings.settings().value(AppSettings.SCO_ORDER_QUALITY_STEPS, True, type=bool)
+
+    @staticmethod
+    def set_sco_order_quality_steps(stepped: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER_QUALITY_STEPS, bool(stepped))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -4208,6 +4220,7 @@ class AppSettings:
             AppSettings.SCO_WATCHED_MINERALS: "[]",
             AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,
             AppSettings.SCO_ORDER_OWNED_ONLY: False,
+            AppSettings.SCO_ORDER_QUALITY_STEPS: True,
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({

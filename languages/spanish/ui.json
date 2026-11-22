@@ -3874,6 +3874,18 @@
       "ht": "",
       "at": "{material} solo sale con estas calidades (datos de {source}): {tiers}. El control se detiene en ellas y en 0, 500 y 1000."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Ajustar a las calidades del mineral"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Activado: los controles de calidad se detienen en las calidades con que sale cada mineral. Desactivado: aceptan cualquier calidad de 0 a 1000, para minerales mezclados a una calidad intermedia."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} sale con estas calidades (datos de {source}): {tiers}. Una mezcla puede quedar en medio, así que el control acepta cualquier calidad."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Necesita calidad {quality} o mejor"

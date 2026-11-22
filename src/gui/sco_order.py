@@ -242,7 +242,7 @@ class OrderLineCard(QFrame):
         layout.addLayout(top)
         slider = StepSlider()
         slider.setRange(max(co.QUALITY_MIN, int(slot.get("min", 0))), co.QUALITY_MAX)
-        slider.set_steps(co.slot_steps(slot))
+        slider.set_steps(co.slot_steps(slot, self._section.stepped))
         slider.setSingleStep(10)
         slider.setPageStep(100)
         _no_focus(slider)
@@ -272,13 +272,16 @@ class OrderLineCard(QFrame):
         )
         return row
 
-    @staticmethod
-    def _quality_tooltip(slot: dict, material: str) -> str:
+    def _quality_tooltip(self, slot: dict, material: str) -> str:
         tiers = slot.get("tiers")
         if not tiers:
             return tr("sco.order_quality_tooltip")
         return tr(
-            "sco.order_quality_tiers_tooltip",
+            (
+                "sco.order_quality_tiers_tooltip"
+                if self._section.stepped
+                else "sco.order_quality_range_tooltip"
+            ),
             material=material,
             source=QUALITY_TABLE_SOURCE,
             tiers=", ".join(f"{tier} {value}" for tier, value in tiers),
@@ -306,7 +309,10 @@ class OrderLineCard(QFrame):
     def _on_quality(self, index: int, value: int) -> None:
         slot = self.bp["s"][index]
         value = co.clamp_quality(
-            value, slot.get("min", 0), co.slot_steps(slot), current=self.line.q[index]
+            value,
+            slot.get("min", 0),
+            co.slot_steps(slot, self._section.stepped),
+            current=self.line.q[index],
         )
         if self.line.q[index] == value:
             slider = self._slot_widgets[index]["slider"]
@@ -389,6 +395,9 @@ class OrderSection(QWidget):
         self._expanded: set[str] = set()
         self._cards: list[OrderLineCard] = []
         self.volume = AppSettings.get_sco_order_volume()
+        # Quality sliders stop at each ore's tier qualities, or take any
+        # quality (off: ores mixed to a quality in between).
+        self.stepped = AppSettings.get_sco_order_quality_steps()
 
         # Summary: title + toggle, buttons, the materials tree.
         self._summary_toggle = QToolButton()
@@ -471,6 +480,10 @@ class OrderSection(QWidget):
         self._owned_only.setChecked(AppSettings.get_sco_order_owned_only())
         self._owned_only.toggled.connect(self._on_owned_only_toggled)
         _no_focus(self._owned_only)
+        self._quality_steps = QCheckBox()
+        self._quality_steps.setChecked(self.stepped)
+        self._quality_steps.toggled.connect(self._on_quality_steps_toggled)
+        _no_focus(self._quality_steps)
         self._results = QListWidget()
         self._results.setMaximumHeight(SEARCH_LIST_HEIGHT)
         self._results.itemClicked.connect(self._on_result_clicked)
@@ -489,6 +502,7 @@ class OrderSection(QWidget):
         content_layout.addWidget(self._status)
         content_layout.addWidget(self.search)
         content_layout.addWidget(self._owned_only)
+        content_layout.addWidget(self._quality_steps)
         content_layout.addWidget(self._results)
         content_layout.addLayout(self._lines_box)
         content_layout.addStretch()
@@ -522,7 +536,7 @@ class OrderSection(QWidget):
         self._by_key = co.blueprints_by_key(index.blueprints)
         self._tooltip_for = tooltip_for
         if self._by_key:
-            self._lines = co.load_order(AppSettings.get_sco_order(), self._by_key)
+            self._lines = co.load_order(AppSettings.get_sco_order(), self._by_key, self.stepped)
             self._loaded = True
         self._rebuild_cards()
         self._render_results()
@@ -592,7 +606,7 @@ class OrderSection(QWidget):
         if not self._loaded:
             return
         before = len(self._lines)
-        co.add_to_order(self._lines, bp, count)
+        co.add_to_order(self._lines, bp, count, self.stepped)
         if len(self._lines) == before:
             for card in self._cards:
                 if card.line.key == bp["k"]:
@@ -844,7 +858,7 @@ class OrderSection(QWidget):
         if not (self._loaded and name):
             return
         raw = co.read_saved_order(AppSettings.get_sco_orders_dir(), name)
-        lines = co.load_order(raw, self._by_key)
+        lines = co.load_order(raw, self._by_key, self.stepped)
         if not lines:
             self._show_status(tr("sco.order_load_empty", name=name))
             return
@@ -923,6 +937,19 @@ class OrderSection(QWidget):
         AppSettings.set_sco_order_owned_only(checked)
         self._render_results()
 
+    def _on_quality_steps_toggled(self, checked: bool) -> None:
+        """Switch the sliders between tier steps and the full range. Back on
+        steps, every quality snaps to its slot's nearest step; off, the
+        qualities stay where they are."""
+        AppSettings.set_sco_order_quality_steps(checked)
+        self.stepped = checked
+        if checked and self._loaded:
+            self._lines = co.load_order(
+                [line.to_dict() for line in self._lines], self._by_key, stepped=True
+            )
+        self._rebuild_cards()
+        self._save()
+
     def _on_result_clicked(self, item: QListWidgetItem) -> None:
         bp = self._by_key.get(item.data(Qt.ItemDataRole.UserRole))
         if bp is not None:
@@ -933,6 +960,8 @@ class OrderSection(QWidget):
         self.search.setPlaceholderText(tr("sco.order_search_placeholder"))
         self._owned_only.setText(tr("sco.order_owned_only"))
         self._owned_only.setToolTip(tr("sco.order_owned_only_tooltip"))
+        self._quality_steps.setText(tr("sco.order_quality_steps"))
+        self._quality_steps.setToolTip(tr("sco.order_quality_steps_tooltip"))
         self._volume_btn.setText(self._volume_text())
         self._volume_btn.setToolTip(tr("sco.order_volume_tooltip"))
         self._copy_btn.setText(tr("sco.order_copy"))
