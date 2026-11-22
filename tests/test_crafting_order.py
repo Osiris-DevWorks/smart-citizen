@@ -353,6 +353,19 @@ class TestOrderLines:
         assert co.clamp_quality(1200) == 1000 and co.clamp_quality(-5) == 0
         assert co.clamp_quality(100, 300) == 300
 
+    def test_full_range_does_not_snap(self):
+        slot = dict(BP["s"][0], tiers=[("F", 363), ("D", 662)])
+        bp = dict(BP, s=[slot])
+        assert co.slot_steps(slot) == (0, 363, 500, 662, 1000)
+        assert co.slot_steps(slot, stepped=False) == ()
+        by_key = co.blueprints_by_key([bp])
+        raw = [{"key": bp["k"], "q": [700]}]
+        assert co.load_order(raw, by_key)[0].q == [662]
+        assert co.load_order(raw, by_key, stepped=False)[0].q == [700]
+        lines: list[co.OrderLine] = []
+        co.add_to_order(lines, dict(bp, s=[dict(slot, tiers=[("F", 363)])]), stepped=False)
+        assert lines[0].q == [500]
+
     def test_adding_the_same_item_raises_its_count(self):
         lines: list[co.OrderLine] = []
         co.add_to_order(lines, BP)

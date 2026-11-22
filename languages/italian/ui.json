@@ -3874,6 +3874,18 @@
       "ht": "",
       "at": "{material} esiste solo a queste qualità (dati {source}): {tiers}. Il cursore si ferma su queste e su 0, 500 e 1000."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Aggancia alle qualità del minerale"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Attivo: i cursori di qualità si fermano sulle qualità in cui esiste ogni minerale. Disattivo: accettano qualsiasi qualità da 0 a 1000, per minerali mescolati a una qualità intermedia."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} esiste a queste qualità (dati {source}): {tiers}. Una miscela può cadere nel mezzo, quindi il cursore accetta qualsiasi qualità."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Richiede qualità {quality} o superiore"

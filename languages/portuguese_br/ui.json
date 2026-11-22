@@ -3874,6 +3874,18 @@
       "ht": "",
       "at": "{material} só existe nestas qualidades (dados de {source}): {tiers}. O controle para nelas e em 0, 500 e 1000."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Ajustar às qualidades do minério"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Ligado: os controles de qualidade param nas qualidades em que cada minério existe. Desligado: aceitam qualquer qualidade de 0 a 1000, para minérios misturados a uma qualidade intermediária."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} existe nestas qualidades (dados de {source}): {tiers}. Uma mistura pode ficar no meio, então o controle aceita qualquer qualidade."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Precisa de qualidade {quality} ou melhor"

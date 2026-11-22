@@ -3638,6 +3638,18 @@
       "ht": "{material} only comes at these qualities ({source} data): {tiers}. The slider stops at these and at 0, 500 and 1000.",
       "at": ""
     },
+    "order_quality_steps": {
+      "ht": "Snap to ore qualities",
+      "at": ""
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "On: the quality sliders stop at the qualities each ore comes at. Off: they take any quality from 0 to 1000, for ores mixed to a quality in between.",
+      "at": ""
+    },
+    "order_quality_range_tooltip": {
+      "ht": "{material} comes at these qualities ({source} data): {tiers}. Mixed ores can land in between, so the slider takes any quality.",
+      "at": ""
+    },
     "order_min_quality": {
       "ht": "Needs quality {quality} or better",
       "at": ""

@@ -3874,6 +3874,18 @@
       "ht": "",
       "at": "{material} yalnızca bu kalitelerde bulunur ({source} verisi): {tiers}. Kaydırıcı bunlarda ve 0, 500 ve 1000'de durur."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Cevher kalitelerine hizala"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Açık: kalite kaydırıcıları her cevherin bulunduğu kalitelerde durur. Kapalı: arada bir kaliteye karıştırılmış cevherler için 0 ile 1000 arasında her kaliteyi alır."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} şu kalitelerde bulunur ({source} verisi): {tiers}. Karışımlar arada kalabilir, bu yüzden kaydırıcı her kaliteyi alır."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "En az {quality} kalite gerekir"
