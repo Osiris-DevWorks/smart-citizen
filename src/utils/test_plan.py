@@ -65,6 +65,7 @@ TEST_SECTIONS: list[dict] = [
             "Type a name, click Save, then New order. Pick the name under Saved orders and click Load: the order comes back. The file is in your data folder under orders.",
             "Pick a saved order and click Delete twice: the name leaves the list and the order you built stays.",
             "Open an item made of an ore: its slider has tick marks and stops only on them, and the label shows the tier (e.g. Q 786 (C)).",
+            "Untick Snap to ore qualities: the ticks go and the slider takes any quality, e.g. Q 650. Tick it again: each slider snaps back to a tier. Restart: the choice is kept.",
         ],
     },
     {

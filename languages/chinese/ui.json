@@ -3882,6 +3882,18 @@
       "ht": "",
       "at": "{material} 只有以下品质（{source} 数据）：{tiers}。滑块会停在这些值以及 0、500 和 1000 上。"
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "对齐矿石品质"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "开启：品质滑块停在每种矿石的品质上。关闭：可选 0 到 1000 的任意品质，用于混合成中间品质的矿石。"
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} 的品质（{source} 数据）：{tiers}。混合后可能落在中间，因此滑块可选任意品质。"
+    },
     "order_min_quality": {
       "ht": "",
       "at": "需要品质 {quality} 或更高"

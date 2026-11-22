@@ -3882,6 +3882,18 @@
       "ht": "",
       "at": "{material} gibt es nur in diesen Qualitäten ({source}-Daten): {tiers}. Der Regler hält dort und bei 0, 500 und 1000."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "An Erzqualitäten einrasten"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "An: Die Qualitätsregler halten bei den Qualitäten, in denen es jedes Erz gibt. Aus: Sie nehmen jede Qualität von 0 bis 1000, für Erze, die zu einer Qualität dazwischen gemischt wurden."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} gibt es in diesen Qualitäten ({source}-Daten): {tiers}. Gemischte Erze können dazwischen liegen, daher nimmt der Regler jede Qualität."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Benötigt Qualität {quality} oder besser"

@@ -3882,6 +3882,18 @@
       "ht": "",
       "at": "{material} の品質はこれだけです（{source} のデータ）：{tiers}。スライダーはこれらと 0、500、1000 で止まります。"
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "鉱石の品質に合わせる"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "オン：品質スライダーは各鉱石の品質で止まります。オフ：混ぜて中間の品質になった鉱石のために、0〜1000 の任意の品質を選べます。"
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} の品質（{source} のデータ）：{tiers}。混ぜると中間の値になることがあるため、スライダーは任意の品質を選べます。"
+    },
     "order_min_quality": {
       "ht": "",
       "at": "品質 {quality} 以上が必要"

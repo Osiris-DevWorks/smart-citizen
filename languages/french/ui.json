@@ -3882,6 +3882,18 @@
       "ht": "",
       "at": "{material} n'existe qu'à ces qualités (données {source}) : {tiers}. Le curseur s'arrête sur celles-ci et sur 0, 500 et 1000."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Caler sur les qualités du minerai"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Activé : les curseurs de qualité s'arrêtent sur les qualités de chaque minerai. Désactivé : ils acceptent toute qualité de 0 à 1000, pour les minerais mélangés à une qualité intermédiaire."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} existe à ces qualités (données {source}) : {tiers}. Un mélange peut tomber entre les deux, donc le curseur accepte toute qualité."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "Qualité {quality} ou plus requise"

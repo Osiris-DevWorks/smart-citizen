@@ -3882,6 +3882,18 @@
       "ht": "",
       "at": "{material}은(는) 이 품질로만 나옵니다({source} 데이터): {tiers}. 슬라이더는 이 값들과 0, 500, 1000에서 멈춥니다."
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "광석 품질에 맞추기"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "켜기: 품질 슬라이더가 각 광석의 품질에서 멈춥니다. 끄기: 섞어서 중간 품질이 된 광석을 위해 0~1000의 모든 품질을 고를 수 있습니다."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material}의 품질({source} 데이터): {tiers}. 섞으면 그 사이 값이 될 수 있어 슬라이더는 모든 품질을 고를 수 있습니다."
+    },
     "order_min_quality": {
       "ht": "",
       "at": "품질 {quality} 이상 필요"

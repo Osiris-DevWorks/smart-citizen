@@ -3882,6 +3882,18 @@
       "ht": "",
       "at": "{material} 只有以下品質（{source} 資料）：{tiers}。滑桿會停在這些值以及 0、500 和 1000 上。"
     },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "對齊礦石品質"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "開啟：品質滑桿停在每種礦石的品質上。關閉：可選 0 到 1000 的任意品質，用於混合成中間品質的礦石。"
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} 的品質（{source} 資料）：{tiers}。混合後可能落在中間，因此滑桿可選任意品質。"
+    },
     "order_min_quality": {
       "ht": "",
       "at": "需要品質 {quality} 或更高"

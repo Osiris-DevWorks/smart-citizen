@@ -105,12 +105,14 @@ def clamp_quality(q, low: int = QUALITY_MIN, steps=None, current=None) -> int:
     return best
 
 
-def slot_steps(slot: dict) -> tuple[int, ...]:
+def slot_steps(slot: dict, stepped: bool = True) -> tuple[int, ...]:
     """The qualities a slot's material comes at (``slot["tiers"]``, which
     :func:`attach_quality_tiers` sets) with 0, 500 and 1000 always among
-    them (``ore_qualities.ALWAYS_STEPS``), or () for any quality."""
+    them (``ore_qualities.ALWAYS_STEPS``), or () for any quality. Not
+    *stepped* (the Order tab's full range, for ores mixed to a quality in
+    between) it is always ()."""
     tiers = slot.get("tiers")
-    if not tiers:
+    if not (stepped and tiers):
         return ()
     return tuple(sorted({value for _tier, value in tiers} | set(ALWAYS_STEPS)))
 
@@ -139,7 +141,7 @@ def _picks(bp: dict) -> list[dict]:
     return bp.get("p") or []
 
 
-def new_line(bp: dict) -> OrderLine:
+def new_line(bp: dict, stepped: bool = True) -> OrderLine:
     """A line at neutral quality, with each pick's first slots chosen."""
     taken: dict[int, int] = {}
     on = []
@@ -155,7 +157,8 @@ def new_line(bp: dict) -> OrderLine:
         key=bp["k"],
         count=1,
         q=[
-            clamp_quality(QUALITY_DEFAULT, slot.get("min", 0), slot_steps(slot)) for slot in bp["s"]
+            clamp_quality(QUALITY_DEFAULT, slot.get("min", 0), slot_steps(slot, stepped))
+            for slot in bp["s"]
         ],
         on=on,
     )
@@ -169,12 +172,13 @@ def picks_valid(bp: dict, on: list[bool]) -> bool:
     )
 
 
-def fit_line(raw, bp: Optional[dict]) -> Optional[OrderLine]:
+def fit_line(raw, bp: Optional[dict], stepped: bool = True) -> Optional[OrderLine]:
     """A stored line made to fit its blueprint again, or None when the
-    blueprint is gone (a patch can drop one). Lengths and ranges are repaired."""
+    blueprint is gone (a patch can drop one). Lengths and ranges are
+    repaired, and *stepped* qualities snapped to the slot's steps."""
     if bp is None or not isinstance(raw, dict):
         return None
-    fresh = new_line(bp)
+    fresh = new_line(bp, stepped)
     try:
         count = int(round(float(raw.get("count", 1))))
     except (TypeError, ValueError):
@@ -182,7 +186,7 @@ def fit_line(raw, bp: Optional[dict]) -> Optional[OrderLine]:
     stored_q = raw.get("q") if isinstance(raw.get("q"), list) else []
     q = [
         (
-            clamp_quality(stored_q[i], slot.get("min", 0), slot_steps(slot))
+            clamp_quality(stored_q[i], slot.get("min", 0), slot_steps(slot, stepped))
             if i < len(stored_q)
             else fresh.q[i]
         )
@@ -199,13 +203,14 @@ def fit_line(raw, bp: Optional[dict]) -> Optional[OrderLine]:
     return OrderLine(key=bp["k"], count=max(1, min(COUNT_MAX, count)), q=q, on=on)
 
 
-def load_order(raw_lines, by_key: dict[str, dict]) -> list[OrderLine]:
-    """The saved order fitted to the blueprints there are now. Lines whose
-    blueprint is gone are dropped; two lines for one item become one."""
+def load_order(raw_lines, by_key: dict[str, dict], stepped: bool = True) -> list[OrderLine]:
+    """The saved order fitted to the blueprints there are now (see
+    :func:`fit_line`). Lines whose blueprint is gone are dropped; two lines
+    for one item become one."""
     lines: list[OrderLine] = []
     seen: dict[str, OrderLine] = {}
     for raw in raw_lines if isinstance(raw_lines, list) else []:
-        line = fit_line(raw, by_key.get(raw.get("key")) if isinstance(raw, dict) else None)
+        line = fit_line(raw, by_key.get(raw.get("key")) if isinstance(raw, dict) else None, stepped)
         if line is None:
             continue
         if line.key in seen:
@@ -216,14 +221,16 @@ def load_order(raw_lines, by_key: dict[str, dict]) -> list[OrderLine]:
     return lines
 
 
-def add_to_order(lines: list[OrderLine], bp: dict, count: int = 1) -> OrderLine:
+def add_to_order(
+    lines: list[OrderLine], bp: dict, count: int = 1, stepped: bool = True
+) -> OrderLine:
     """Add *count* of *bp*: the item's line goes up when it is already on the
     order, otherwise a new line is added at the end. Returns the line."""
     for line in lines:
         if line.key == bp["k"]:
             line.count = min(COUNT_MAX, line.count + count)
             return line
-    line = new_line(bp)
+    line = new_line(bp, stepped)
     line.count = max(1, min(COUNT_MAX, count))
     lines.append(line)
     return line
