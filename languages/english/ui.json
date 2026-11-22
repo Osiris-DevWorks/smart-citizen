@@ -913,7 +913,7 @@
       "at": ""
     },
     "smart_sync_desc": {
-      "ht": "Keep your Owned blueprints the same on every PC you play on. Choose a folder your cloud app already syncs, such as one in Google Drive, OneDrive or Dropbox, then choose the same folder on your other PCs. Smart Citizen only reads and writes a few small files there, and your cloud app moves them.",
+      "ht": "Keep your Owned blueprints, string edits and settings the same on every PC you play on. Choose a folder your cloud app already syncs, such as one in Google Drive, OneDrive or Dropbox, then choose the same folder on your other PCs. A PC you add takes the settings and edits the others already share. Before a sync changes anything, Smart Citizen saves a backup you can bring back with Import Settings. Folder paths, the game's location and the window layout stay on each PC, and each PC builds its own global.ini.",
       "at": ""
     },
     "smart_sync_placeholder": {
@@ -929,7 +929,7 @@
       "at": ""
     },
     "smart_sync_off_tooltip": {
-      "ht": "Stop syncing. The Owned blueprints on this PC stay as they are.",
+      "ht": "Stop syncing. The blueprints, edits and settings on this PC stay as they are.",
       "at": ""
     },
     "select_smart_sync_folder": {
@@ -2676,6 +2676,14 @@
     },
     "smart_sync_updated": {
       "ht": "Smart Sync updated {count} Owned blueprint(s) from your other PCs.",
+      "at": ""
+    },
+    "smart_sync_no_backup": {
+      "ht": "Smart Sync could not save a backup, so nothing was synced to this PC: {error}",
+      "at": ""
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "Smart Sync got {count} setting(s) from your other PCs. Restart Smart Citizen to use them.",
       "at": ""
     }
   },

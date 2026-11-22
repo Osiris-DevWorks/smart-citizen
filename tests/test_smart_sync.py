@@ -112,7 +112,8 @@ class TestFiles:
 
     def test_holds_no_path_or_pc_name(self):
         text = smart_sync.encode("abcd1234", {"Agni": entry(True, T1)}, set(), T1)
-        assert set(json.loads(text)) == {"format", "machine", "updated", "owned", "starter_seeded"}
+        assert set(json.loads(text)) == {
+            "format", "machine", "updated", "owned", "starter_seeded", "settings", "user_ini"}
 
     @pytest.mark.parametrize("text", ["", "not json", "[]", '{"owned": []}', '{"machine": "x"}'])
     def test_not_a_machine_file(self, text):
@@ -376,3 +377,347 @@ class TestTheWindowTakesTheResult:
         self.take(self.stub(), self.result({}, seeded={"key_b"}, id_changed=True))
         assert settings.get_default_blueprints_seed() == ({"key_a", "key_b"}, True)
         assert settings.get_smart_sync_machine_id() == "aaaa0000"
+
+
+# -- format 2: settings and string edits ---------------------------------------
+
+from src.utils.smart_sync import JOIN_AT, VALUE  # noqa: E402
+
+
+def val(value, at):
+    return {VALUE: value, AT: at}
+
+
+class TestRecordValues:
+    def test_a_change_since_seen_is_stamped(self):
+        out = smart_sync.record_values({}, {"theme": "light"}, {"theme": "dark"}, at=T2)
+        assert out == {"theme": val("light", T2)}
+
+    def test_an_unchanged_value_keeps_its_entry(self):
+        ledger = {"theme": val("dark", T1)}
+        out = smart_sync.record_values(ledger, {"theme": "dark"}, {"theme": "dark"}, at=T2)
+        assert out == ledger
+
+    def test_a_key_gone_since_seen_is_a_removal(self):
+        out = smart_sync.record_values({"k": val("v", T1)}, {}, {"k": "v"}, at=T2)
+        assert out == {"k": val(None, T2)}
+
+    def test_a_setting_never_seen_joins_at_the_baseline(self):
+        out = smart_sync.record_values({}, {"new": 1}, {}, at=T2)
+        assert out == {"new": val(1, BASELINE_AT)}
+
+    def test_a_new_string_edit_is_a_change(self):
+        out = smart_sync.record_values({}, {"k": "v"}, {}, at=T2, new_keys_are_changes=True)
+        assert out == {"k": val("v", T2)}
+
+    def test_a_new_edit_matching_the_ledger_keeps_its_time(self):
+        ledger = {"k": val("v", T1)}
+        assert smart_sync.record_values(ledger, {"k": "v"}, {}, at=T2,
+                                        new_keys_are_changes=True) == ledger
+
+
+class TestMergeValues:
+    def test_newest_wins(self):
+        a = {"k": val("old", T1)}
+        b = {"k": val("new", T2)}
+        assert smart_sync.merge_values([a, b]) == smart_sync.merge_values([b, a]) == b
+
+    def test_a_newer_removal_wins(self):
+        assert smart_sync.merge_values([{"k": val("v", T1)}, {"k": val(None, T2)}]) == {
+            "k": val(None, T2)}
+
+    def test_a_tie_is_settled_the_same_on_every_pc(self):
+        a = {"k": val("alpha", BASELINE_AT)}
+        b = {"k": val("beta", BASELINE_AT)}
+        assert smart_sync.merge_values([a, b]) == smart_sync.merge_values([b, a])
+
+    def test_channels_merge_on_their_own(self):
+        out = smart_sync.merge_channels([{"LIVE": {"k": val("a", T1)}},
+                                         {"PTU": {"k": val("b", T1)}}])
+        assert out == {"LIVE": {"k": val("a", T1)}, "PTU": {"k": val("b", T1)}}
+
+
+class TestFormat2Files:
+    def test_round_trip_with_settings_and_user_ini(self):
+        text = smart_sync.encode("aaaa0000", {}, (), T1,
+                                 {"theme": val("dark", T1)},
+                                 {"LIVE": {"k": val("v", T1)}})
+        parsed = smart_sync.decode(text)
+        assert parsed.settings == {"theme": val("dark", T1)}
+        assert parsed.user_ini == {"LIVE": {"k": val("v", T1)}}
+
+    def test_a_format_1_file_still_reads(self):
+        text = json.dumps({"format": 1, "machine": "bbbb0000", "updated": T1,
+                           "owned": {"Agni": entry(True, T1)}, "starter_seeded": []})
+        parsed = smart_sync.decode(text)
+        assert parsed.ledger == {"Agni": entry(True, T1)}
+        assert parsed.settings == {} and parsed.user_ini == {}
+
+    def test_bad_value_entries_are_dropped(self):
+        assert smart_sync.clean_value_ledger({"a": {"at": T1}, "b": val(1, T1), 3: val(1, T1)}) == {
+            "b": val(1, T1)}
+        assert smart_sync.clean_channel_ledgers({"LIVE": {}, "PTU": {"k": val("v", T1)}}) == {
+            "PTU": {"k": val("v", T1)}}
+
+
+def write_machine_v2(folder, machine_id, settings=None, user_ini=None, updated=T1):
+    path = smart_sync.sync_dir(folder)
+    path.mkdir(parents=True, exist_ok=True)
+    (path / smart_sync.machine_file_name(machine_id)).write_text(
+        smart_sync.encode(machine_id, {}, (), updated, settings, user_ini), encoding="utf-8")
+
+
+class TestSyncValues:
+    def test_a_pc_that_joins_takes_what_the_others_share(self, tmp_path):
+        write_machine_v2(tmp_path, "bbbb0000", settings={"theme": val("light", BASELINE_AT)},
+                         user_ini={"LIVE": {"k": val("theirs", BASELINE_AT)}})
+        result = smart_sync.sync(tmp_path, "aaaa0000", {}, set(),
+                                 baseline_settings={"theme": "dark", "mine": 1},
+                                 baseline_user_ini={"LIVE": {"k": "mine", "x": "only here"}})
+        assert result.settings["theme"] == val("light", BASELINE_AT)
+        assert result.settings["mine"] == val(1, JOIN_AT)
+        assert smart_sync.values_from_ledger(result.user_ini["LIVE"]) == {
+            "k": "theirs", "x": "only here"}
+
+    def test_the_first_pc_baselines_at_the_epoch(self, tmp_path):
+        result = smart_sync.sync(tmp_path, "aaaa0000", {}, set(),
+                                 baseline_settings={"theme": "dark"},
+                                 baseline_user_ini={"PTU": {"k": "v"}})
+        assert result.settings == {"theme": val("dark", BASELINE_AT)}
+        assert result.user_ini == {"PTU": {"k": val("v", BASELINE_AT)}}
+        assert result.written
+
+    def test_a_real_change_spreads_and_nothing_new_writes_nothing(self, tmp_path):
+        write_machine_v2(tmp_path, "bbbb0000", settings={"theme": val("light", T1)})
+        first = smart_sync.sync(tmp_path, "aaaa0000", {}, set(),
+                                settings={"theme": val("dark", T2)}, at=T2)
+        assert first.settings["theme"] == val("dark", T2) and first.written
+        again = smart_sync.sync(tmp_path, "aaaa0000", {}, set(), last_written=first.updated,
+                                settings=first.settings)
+        assert not again.written
+
+
+class TestSettingsV2:
+    """Smart Sync's settings side, on a profile under tmp_path."""
+
+    @pytest.fixture
+    def settings(self, tmp_profile):
+        from src.utils.settings import AppSettings
+        AppSettings.set_smart_sync_folder(tmp_profile / "Drive")
+        return AppSettings
+
+    def test_local_keys_are_not_shared(self, settings):
+        values = settings.smart_sync_settings_values()
+        assert settings.FAVORITE_PREFIX in values
+        for key in (settings.SC_INSTALL_ROOT, settings.ACTIVE_CHANNEL, settings.FONT_SIZE,
+                    settings.OWNED_ITEMS):
+            assert key not in values
+        assert not any(k.startswith("smart_sync/") for k in values)
+
+    def test_user_ini_values_per_channel(self, settings):
+        path = settings.get_channel_user_ini_path("PTU")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("k=v \n", encoding="utf-8")
+        assert settings.smart_sync_user_ini_values() == {"PTU": {"k": "v "}}
+
+    def test_state_round_trips_and_turning_off_forgets_it(self, settings):
+        state = {settings.SYNC_STATE_SETTINGS: {"theme": val("dark", T1)},
+                 settings.SYNC_STATE_SETTINGS_SEEN: {"theme": "dark"},
+                 settings.SYNC_STATE_USER_INI: {"LIVE": {"k": val("v", T1)}},
+                 settings.SYNC_STATE_USER_INI_SEEN: {"LIVE": {"k": "v"}}}
+        settings.set_smart_sync_state(state)
+        assert settings.get_smart_sync_state() == state
+        settings.set_smart_sync_folder(None)
+        assert settings.get_smart_sync_state() == {}
+
+    def test_a_broken_state_file_reads_as_none(self, settings):
+        settings.get_smart_sync_state_path().write_text("{", encoding="utf-8")
+        assert settings.get_smart_sync_state() == {}
+
+    def test_backups_keep_the_newest_five(self, settings):
+        made = [settings.write_smart_sync_backup() for _ in range(7)]
+        kept = sorted(settings.get_smart_sync_backups_dir().glob("*.zip"))
+        assert kept == sorted(made[-5:])
+
+    def seed_state(self, settings):
+        values = settings.smart_sync_settings_values()
+        settings.set_smart_sync_state({
+            settings.SYNC_STATE_SETTINGS: smart_sync.baseline_values({}, values),
+            settings.SYNC_STATE_SETTINGS_SEEN: values,
+            settings.SYNC_STATE_USER_INI: {},
+            settings.SYNC_STATE_USER_INI_SEEN: {},
+        })
+
+    def test_startup_applies_another_pcs_setting_after_a_backup(self, settings):
+        self.seed_state(settings)
+        state = settings.get_smart_sync_state()
+        state[settings.SYNC_STATE_SETTINGS][settings.FAVORITE_PREFIX] = val("#", T2)
+        settings.set_smart_sync_state(state)
+        assert settings.apply_synced_settings_at_startup() == 1
+        assert settings.get_favorite_prefix() == "#"
+        assert len(list(settings.get_smart_sync_backups_dir().glob("*.zip"))) == 1
+        # Seen now holds it, so the next start changes nothing.
+        assert settings.apply_synced_settings_at_startup() == 0
+
+    def test_startup_keeps_a_change_made_here_since_the_last_sync(self, settings):
+        self.seed_state(settings)
+        settings.set_favorite_prefix("!")
+        assert settings.apply_synced_settings_at_startup() == 0
+        assert settings.get_favorite_prefix() == "!"
+        entry_ = settings.get_smart_sync_state()[settings.SYNC_STATE_SETTINGS][
+            settings.FAVORITE_PREFIX]
+        assert entry_[VALUE] == "!" and entry_[AT] > BASELINE_AT
+
+    def test_startup_changes_nothing_without_a_backup(self, settings, monkeypatch):
+        self.seed_state(settings)
+        state = settings.get_smart_sync_state()
+        state[settings.SYNC_STATE_SETTINGS][settings.FAVORITE_PREFIX] = val("#", T2)
+        settings.set_smart_sync_state(state)
+
+        def refuse():
+            raise OSError("disk full")
+        monkeypatch.setattr(settings, "write_smart_sync_backup", staticmethod(refuse))
+        assert settings.apply_synced_settings_at_startup() == 0
+        assert settings.get_favorite_prefix() == settings.DEFAULT_FAVORITE_PREFIX
+
+    def test_startup_never_touches_a_local_key(self, settings):
+        self.seed_state(settings)
+        state = settings.get_smart_sync_state()
+        state[settings.SYNC_STATE_SETTINGS][settings.ACTIVE_CHANNEL] = val("PTU", T2)
+        settings.set_smart_sync_state(state)
+        settings.apply_synced_settings_at_startup()
+        assert settings.get_active_channel() == "LIVE"
+
+    def test_off_applies_nothing(self, settings):
+        self.seed_state(settings)
+        settings.set_smart_sync_folder(None)
+        assert settings.apply_synced_settings_at_startup() == 0
+
+    def test_registry_strings_are_the_same_setting(self, settings):
+        assert settings._same_setting(True, "true")
+        assert settings._same_setting(3, "3")
+        assert not settings._same_setting("a", "b")
+
+
+class TestTheWindowTakesEdits:
+    """MainWindow._smart_sync_inputs / _take_synced_edits on a stub self."""
+
+    @pytest.fixture
+    def settings(self, tmp_profile):
+        from src.utils.settings import AppSettings
+        AppSettings.set_smart_sync_folder(tmp_profile / "Drive")
+        return AppSettings
+
+    def stub(self):
+        from unittest.mock import MagicMock
+        me = MagicMock()
+        me.entries = []
+        return me
+
+    def write_ini(self, settings, channel, text):
+        path = settings.get_channel_user_ini_path(channel)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def inputs(self, me):
+        from src.gui.main_window import MainWindow
+        return MainWindow._smart_sync_inputs(me)
+
+    def take(self, me, result):
+        from src.gui.main_window import MainWindow
+        return MainWindow._take_synced_edits(me, result, smart_sync.merge([result.ledger]))
+
+    def test_the_first_sync_passes_baselines(self, settings):
+        self.write_ini(settings, "LIVE", "k=v\n")
+        _args, extra, changed = self.inputs(self.stub())
+        assert changed
+        assert extra["baseline_user_ini"] == {"LIVE": {"k": "v"}}
+        assert settings.FAVORITE_PREFIX in extra["baseline_settings"]
+
+    def joined(self, settings, me):
+        """Run one sync so the state file exists, as after a first sync."""
+        _args, extra, _ = self.inputs(me)
+        result = smart_sync.sync(settings.get_smart_sync_folder(), "aaaa0000", {}, set(),
+                                 **extra)
+        assert self.take(me, result)
+        return result
+
+    def test_an_edit_saved_here_is_recorded(self, settings):
+        me = self.stub()
+        self.joined(settings, me)
+        self.write_ini(settings, "PTU", "k=mine\n")
+        _args, extra, changed = self.inputs(me)
+        assert changed
+        assert extra["user_ini"]["PTU"]["k"][VALUE] == "mine"
+
+    def test_another_pcs_edit_is_written_after_a_backup(self, settings):
+        me = self.stub()
+        first = self.joined(settings, me)
+        self.write_ini(settings, "LIVE", "keep=me\n")
+        incoming = smart_sync.SyncResult(
+            ledger={}, seeded=frozenset(), machine_id="aaaa0000",
+            settings=first.settings,
+            user_ini={"LIVE": {"k": val("theirs", T2)}, "PTU": {"p": val("ptu", T2)}})
+        # keep=me was saved here meanwhile and must survive.
+        assert self.take(me, incoming)
+        text = settings.get_channel_user_ini_path("LIVE").read_text(encoding="utf-8")
+        assert "k=theirs" in text and "keep=me" in text
+        assert "p=ptu" in settings.get_channel_user_ini_path("PTU").read_text(encoding="utf-8")
+        assert list(settings.get_smart_sync_backups_dir().glob("*.zip"))
+        me._take_synced_user_ini.assert_called_once()
+
+    def test_a_removal_from_another_pc_removes_the_edit(self, settings):
+        self.write_ini(settings, "LIVE", "k=v\nother=x\n")
+        me = self.stub()
+        first = self.joined(settings, me)
+        incoming = smart_sync.SyncResult(
+            ledger={}, seeded=frozenset(), machine_id="aaaa0000", settings=first.settings,
+            user_ini={"LIVE": {"k": val(None, T2), "other": val("x", BASELINE_AT)}})
+        assert self.take(me, incoming)
+        text = settings.get_channel_user_ini_path("LIVE").read_text(encoding="utf-8")
+        assert "k=" not in text and "other=x" in text
+
+    def test_no_backup_takes_nothing(self, settings, monkeypatch):
+        me = self.stub()
+        first = self.joined(settings, me)
+
+        def refuse():
+            raise OSError("disk full")
+        monkeypatch.setattr(settings, "write_smart_sync_backup", staticmethod(refuse))
+        incoming = smart_sync.SyncResult(
+            ledger={}, seeded=frozenset(), machine_id="aaaa0000", settings=first.settings,
+            user_ini={"LIVE": {"k": val("theirs", T2)}})
+        assert not self.take(me, incoming)
+        assert not settings.get_channel_user_ini_path("LIVE").exists()
+        me.statusBar.return_value.showMessage.assert_called_once()
+
+    def test_a_setting_from_another_pc_waits_for_the_next_start(self, settings):
+        me = self.stub()
+        first = self.joined(settings, me)
+        incoming_settings = dict(first.settings)
+        incoming_settings[settings.FAVORITE_PREFIX] = val("#", T2)
+        incoming = smart_sync.SyncResult(ledger={}, seeded=frozenset(), machine_id="aaaa0000",
+                                         settings=incoming_settings)
+        assert self.take(me, incoming)
+        assert settings.get_favorite_prefix() == settings.DEFAULT_FAVORITE_PREFIX
+        me.statusBar.return_value.showMessage.assert_called_once()
+        assert settings.apply_synced_settings_at_startup() == 1
+        assert settings.get_favorite_prefix() == "#"
+
+
+class TestTheTableTakesSyncedEdits:
+    def test_only_the_changed_rows_are_touched(self):
+        from unittest.mock import MagicMock
+        from src.gui.main_window import MainWindow
+        from src.models.string_model import StringEntry
+        me = MagicMock()
+        a = StringEntry("a", "global", "", "A", "", "Unmodified")
+        b = StringEntry("b", "global", "", "B", "mine", "Modified")
+        me.entries = [a, b]
+        me.default_values = {}
+        MainWindow._take_synced_user_ini(me, {"b": "mine"}, {"a": "theirs", "b": "mine"})
+        assert a.custom_value == "theirs" and a.status == "Modified"
+        assert b.custom_value == "mine"
+        me._model.notify_entry_changed.assert_called_once_with(0)
+        me._mark_apply_dirty.assert_called_once()

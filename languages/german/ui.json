@@ -890,7 +890,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "Halte deine besessenen Baupläne auf jedem PC gleich, auf dem du spielst. Wähle einen Ordner, den deine Cloud-App bereits synchronisiert, etwa in Google Drive, OneDrive oder Dropbox, und wähle denselben Ordner auf deinen anderen PCs. Smart Citizen liest und schreibt dort nur ein paar kleine Dateien, und deine Cloud-App überträgt sie."
+      "at": "Halte deine besessenen Blaupausen, Textänderungen und Einstellungen auf jedem PC gleich, auf dem du spielst. Wähle einen Ordner, den deine Cloud-App bereits synchronisiert, etwa in Google Drive, OneDrive oder Dropbox, und wähle denselben Ordner auf deinen anderen PCs. Ein neu hinzugefügter PC übernimmt die Einstellungen und Änderungen, die die anderen bereits teilen. Bevor eine Synchronisierung etwas ändert, speichert Smart Citizen eine Sicherung, die du mit Einstellungen importieren zurückholen kannst. Ordnerpfade, der Spielort und das Fensterlayout bleiben auf jedem PC, und jeder PC erstellt seine eigene global.ini."
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -906,7 +906,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "Synchronisierung beenden. Die besessenen Baupläne auf diesem PC bleiben, wie sie sind."
+      "at": "Synchronisierung beenden. Blaupausen, Änderungen und Einstellungen auf diesem PC bleiben, wie sie sind."
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync hat {count} besessene(n) Bauplan/Baupläne von deinen anderen PCs aktualisiert."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync konnte keine Sicherung speichern, daher wurde nichts auf diesen PC synchronisiert: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync hat {count} Einstellung(en) von deinen anderen PCs erhalten. Starte Smart Citizen neu, um sie zu verwenden."
     }
   },
   "import_flow": {

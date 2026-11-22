@@ -1694,6 +1694,13 @@ class AppSettings:
             backend.setValue(AppSettings.SMART_SYNC_FOLDER, folder)
         else:
             backend.remove(AppSettings.SMART_SYNC_FOLDER)
+            # Off forgets the settings and user.ini ledgers, so turning it on
+            # again joins afresh instead of reading every change made
+            # meanwhile against an old "seen".
+            try:
+                AppSettings.get_smart_sync_state_path().unlink(missing_ok=True)
+            except OSError as e:
+                logger.warning("Smart Sync: could not remove its state file: %s", e)
         backend.sync()
 
     @staticmethod
@@ -1737,6 +1744,215 @@ class AppSettings:
     def set_smart_sync_last_written(updated: str) -> None:
         AppSettings.settings().setValue(AppSettings.SMART_SYNC_LAST_WRITTEN, updated)
         AppSettings.settings().sync()
+
+    # Settings and string edits (Smart Sync v2). Their ledgers and what this
+    # PC last saw live in a state file beside the channel folders, not in the
+    # registry: a user.ini ledger holds every override of every channel.
+    SMART_SYNC_STATE_FILE = "smart-sync-state.json"
+    SMART_SYNC_BACKUPS_SUBDIR = "smart-sync"
+    SMART_SYNC_BACKUPS_KEEP = 5
+    SMART_SYNC_BACKUP_PREFIX = "SmartCitizen-SmartSync-Backup-"
+    # State file fields.
+    SYNC_STATE_SETTINGS = "settings"
+    SYNC_STATE_SETTINGS_SEEN = "settings_seen"
+    SYNC_STATE_USER_INI = "user_ini"
+    SYNC_STATE_USER_INI_SEEN = "user_ini_seen"
+
+    # Settings a backup carries that stay on each PC all the same: where the
+    # game is and which channel is open, the blueprint set (Smart Sync's own
+    # owned ledger shares it) and its scan positions, per-install first-run
+    # state, the merge sources (their paths are this PC's), the UI scale
+    # (it suits one screen, as column widths do) and the tester keys.
+    SMART_SYNC_LOCAL_KEYS = frozenset({
+        SC_INSTALL_ROOT,
+        GAME_INSTALL_PATH,
+        ACTIVE_CHANNEL,
+        "owned_items",
+        DEFAULT_BLUEPRINTS_SEED,
+        FONT_SIZE,
+        ONEDRIVE_WARNING_DISMISSED,
+        TUTORIAL_COMPLETED_VERSION,
+        TRAY_NOTICE_SHOWN,
+        MERGE_HIERARCHY,
+    })
+    SMART_SYNC_LOCAL_PREFIXES = (
+        BLUEPRINT_LOG_WATERMARK,
+        f"{DATA_SOURCES_PREFIX}/",
+        f"{SOURCE_AUTO_UPDATE_PREFIX}/",
+        "test_plan/",
+        "smart_sync/",
+    )
+
+    @staticmethod
+    def is_smart_sync_local_key(key: str) -> bool:
+        """True for a setting Smart Sync never shares (it stays on this PC)."""
+        return (key in AppSettings.SMART_SYNC_LOCAL_KEYS
+                or key.startswith(AppSettings.SMART_SYNC_LOCAL_PREFIXES))
+
+    @staticmethod
+    def smart_sync_settings_values() -> dict:
+        """The settings Smart Sync shares: what Export Settings saves, less
+        :meth:`is_smart_sync_local_key`."""
+        return {key: value for key, value in AppSettings.export_all_values().items()
+                if not AppSettings.is_smart_sync_local_key(key)}
+
+    @staticmethod
+    def smart_sync_user_ini_values() -> dict:
+        """``{channel: {key: value}}`` of every channel's user.ini, as Export
+        Settings reads them (values not stripped: a space can matter, #100)."""
+        from src.parser.ini_parser import parse_ini_text
+        out = {}
+        for channel, text in AppSettings.export_channel_overrides().items():
+            values = parse_ini_text(text, strip_values=False)
+            if values:
+                out[channel] = values
+        return out
+
+    @staticmethod
+    def get_smart_sync_state_path() -> Path:
+        return AppSettings.get_user_data_dir() / AppSettings.SMART_SYNC_STATE_FILE
+
+    @staticmethod
+    def get_smart_sync_state() -> dict:
+        """The settings and user.ini ledgers and what this PC last saw.
+
+        {} when sync has never shared them on this PC (or the file is gone
+        or unreadable): the next sync then joins with what the PC has.
+        """
+        from src.utils import smart_sync
+        from src.utils.atomic_io import read_bytes_retrying
+        path = AppSettings.get_smart_sync_state_path()
+        try:
+            data = json.loads(read_bytes_retrying(path).decode("utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, ValueError, UnicodeDecodeError) as e:
+            logger.warning("Smart Sync: could not read %s: %s", path, e)
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        seen = data.get(AppSettings.SYNC_STATE_SETTINGS_SEEN)
+        user_seen = data.get(AppSettings.SYNC_STATE_USER_INI_SEEN)
+        if not isinstance(seen, dict) or not isinstance(user_seen, dict):
+            return {}
+        return {
+            AppSettings.SYNC_STATE_SETTINGS:
+                smart_sync.clean_value_ledger(data.get(AppSettings.SYNC_STATE_SETTINGS)),
+            AppSettings.SYNC_STATE_SETTINGS_SEEN: seen,
+            AppSettings.SYNC_STATE_USER_INI:
+                smart_sync.clean_channel_ledgers(data.get(AppSettings.SYNC_STATE_USER_INI)),
+            AppSettings.SYNC_STATE_USER_INI_SEEN: {
+                ch: v for ch, v in user_seen.items()
+                if isinstance(ch, str) and isinstance(v, dict)},
+        }
+
+    @staticmethod
+    def set_smart_sync_state(state: dict) -> None:
+        """Write the state file in one step. Raises OSError."""
+        from src.utils.atomic_io import atomic_write_text
+        path = AppSettings.get_smart_sync_state_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_text(path, json.dumps(state, sort_keys=True, ensure_ascii=False))
+
+    @staticmethod
+    def get_smart_sync_backups_dir() -> Path:
+        return (AppSettings.get_user_data_dir() / "backups"
+                / AppSettings.SMART_SYNC_BACKUPS_SUBDIR)
+
+    @staticmethod
+    def write_smart_sync_backup() -> Path:
+        """Save an Export Settings zip before a sync changes anything here.
+
+        Into ``{data folder}\\backups\\smart-sync``, keeping the newest
+        :data:`SMART_SYNC_BACKUPS_KEEP`; Import Settings restores one. Raises
+        OSError when it cannot be written, and the caller then changes
+        nothing.
+        """
+        from datetime import datetime
+        from src.utils.build_mode import IS_PORTABLE
+        from src.utils.settings_profile import (
+            SOURCE_MODE_PORTABLE, SOURCE_MODE_REGISTRY, write_profile_zip,
+        )
+        from src.utils.version import get_version
+        folder = AppSettings.get_smart_sync_backups_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        path = folder / f"{AppSettings.SMART_SYNC_BACKUP_PREFIX}{stamp}.zip"
+        write_profile_zip(
+            path,
+            settings=AppSettings.export_all_values(),
+            overrides=AppSettings.export_channel_overrides(),
+            app_version=get_version(),
+            source_mode=SOURCE_MODE_PORTABLE if IS_PORTABLE else SOURCE_MODE_REGISTRY,
+        )
+        backups = sorted(folder.glob(f"{AppSettings.SMART_SYNC_BACKUP_PREFIX}*.zip"))
+        for old in backups[:-AppSettings.SMART_SYNC_BACKUPS_KEEP]:
+            try:
+                old.unlink()
+            except OSError as e:
+                logger.warning("Smart Sync: could not remove old backup %s: %s", old, e)
+        logger.info("Smart Sync: saved a backup before syncing: %s", path)
+        return path
+
+    @staticmethod
+    def _same_setting(a, b) -> bool:
+        """Equal, or equal as the registry hands them back ("true" for True)."""
+        return a == b or str(a).lower() == str(b).lower()
+
+    @staticmethod
+    def apply_synced_settings_at_startup() -> int:
+        """Take the settings other PCs changed, before anything reads them.
+
+        Runs in ``main()`` before the language is loaded and the window is
+        built, because settings from another PC apply at the next start
+        (some, the language or the theme, are read only then). Changes this
+        PC made since its last sync are recorded first, so they are not
+        taken for old values. A backup is saved before anything changes; when
+        it cannot be, nothing changes. Returns how many settings changed.
+        """
+        from src.utils import smart_sync
+        if not AppSettings.get_smart_sync_folder():
+            return 0
+        state = AppSettings.get_smart_sync_state()
+        if not state:
+            return 0
+        current = AppSettings.smart_sync_settings_values()
+        ledger = smart_sync.record_values(
+            state[AppSettings.SYNC_STATE_SETTINGS], current,
+            state[AppSettings.SYNC_STATE_SETTINGS_SEEN])
+        changes = {}
+        removals = []
+        for key, entry in ledger.items():
+            if AppSettings.is_smart_sync_local_key(key) or AppSettings.is_profile_excluded_key(key):
+                continue
+            value = entry[smart_sync.VALUE]
+            if value is None:
+                if key in current:
+                    removals.append(key)
+            elif key not in current or not AppSettings._same_setting(value, current[key]):
+                changes[key] = value
+        if changes or removals:
+            try:
+                AppSettings.write_smart_sync_backup()
+            except OSError as e:
+                logger.warning("Smart Sync: no backup could be saved, so the settings "
+                               "from other PCs were not applied: %s", e)
+                return 0
+            backend = AppSettings.settings()
+            for key, value in changes.items():
+                backend.setValue(key, value)
+            for key in removals:
+                backend.remove(key)
+            backend.sync()
+            logger.info("Smart Sync: applied %d setting(s) changed on other PCs: %s",
+                        len(changes) + len(removals), ", ".join(sorted(changes) + removals))
+        state[AppSettings.SYNC_STATE_SETTINGS] = ledger
+        state[AppSettings.SYNC_STATE_SETTINGS_SEEN] = AppSettings.smart_sync_settings_values()
+        try:
+            AppSettings.set_smart_sync_state(state)
+        except OSError as e:
+            logger.warning("Smart Sync: could not save its state: %s", e)
+        return len(changes) + len(removals)
 
     @staticmethod
     def get_blueprint_show_tags() -> bool:

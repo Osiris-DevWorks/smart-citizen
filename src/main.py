@@ -158,6 +158,11 @@ def main():
     # once. Runs in both build modes.
     AppSettings.migrate_title_tag_settings()
 
+    # Smart Sync: settings changed on another PC apply at the next start,
+    # before the language, the theme or any window reads them (a backup is
+    # saved first, and nothing changes without one).
+    AppSettings.apply_synced_settings_at_startup()
+
     # Always keep user source path in sync with canonical user.ini location
     AppSettings.set_source_path(AppSettings.SOURCE_USER, str(AppSettings.get_user_ini_path()))
 

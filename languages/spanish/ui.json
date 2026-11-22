@@ -890,7 +890,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "Mantén los mismos blueprints adquiridos en todos los PC en los que juegas. Elige una carpeta que tu aplicación en la nube ya sincronice, por ejemplo en Google Drive, OneDrive o Dropbox, y luego elige la misma carpeta en tus otros PC. Smart Citizen solo lee y escribe allí unos pocos archivos pequeños, y tu aplicación en la nube los mueve."
+      "at": "Mantén tus planos obtenidos, tus cambios de textos y tus ajustes iguales en cada PC donde juegas. Elige una carpeta que tu aplicación en la nube ya sincronice, por ejemplo en Google Drive, OneDrive o Dropbox, y luego elige la misma carpeta en tus otros PC. Un PC que añadas toma los ajustes y cambios que los demás ya comparten. Antes de que una sincronización cambie algo, Smart Citizen guarda una copia de seguridad que puedes recuperar con Importar ajustes. Las rutas de carpetas, la ubicación del juego y la disposición de la ventana se quedan en cada PC, y cada PC genera su propio global.ini."
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -906,7 +906,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "Dejar de sincronizar. Los blueprints adquiridos en este PC se quedan como están."
+      "at": "Dejar de sincronizar. Los planos, cambios y ajustes de este PC se quedan como están."
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync actualizó {count} blueprint(s) adquirido(s) desde tus otros PC."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync no pudo guardar una copia de seguridad, así que no se sincronizó nada en este PC: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync recibió {count} ajuste(s) de tus otros PC. Reinicia Smart Citizen para usarlos."
     }
   },
   "import_flow": {

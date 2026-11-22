@@ -890,7 +890,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "让你在每台游玩的电脑上拥有相同的已拥有蓝图。选择一个云应用已在同步的文件夹（例如 Google Drive、OneDrive 或 Dropbox 中的文件夹），然后在其他电脑上选择同一个文件夹。Smart Citizen 只在其中读写几个小文件，由你的云应用负责传输。"
+      "at": "让你拥有的蓝图、文本修改和设置在你玩游戏的每台电脑上保持一致。选择一个云应用已在同步的文件夹，例如 Google Drive、OneDrive 或 Dropbox 中的文件夹，然后在其他电脑上选择同一个文件夹。新加入的电脑会采用其他电脑已共享的设置和修改。同步改动任何内容之前，Smart Citizen 都会保存一份备份，你可以用“导入设置”恢复。文件夹路径、游戏位置和窗口布局保留在各自的电脑上，每台电脑生成自己的 global.ini。"
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -906,7 +906,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "停止同步。本机的已拥有蓝图保持不变。"
+      "at": "停止同步。此电脑上的蓝图、修改和设置保持不变。"
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync 已从其他电脑更新 {count} 个已拥有蓝图。"
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync 无法保存备份，因此没有向此电脑同步任何内容：{error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync 从你的其他电脑收到 {count} 项设置。重新启动 Smart Citizen 即可使用。"
     }
   },
   "import_flow": {

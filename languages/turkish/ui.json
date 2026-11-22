@@ -914,7 +914,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "Sahip olunan planlarınızı oynadığınız her bilgisayarda aynı tutun. Bulut uygulamanızın zaten eşitlediği bir klasör seçin (ör. Google Drive, OneDrive veya Dropbox içinde), ardından diğer bilgisayarlarınızda da aynı klasörü seçin. Smart Citizen orada yalnızca birkaç küçük dosya okur ve yazar, bunları bulut uygulamanız taşır."
+      "at": "Sahip olduğun planları, metin düzenlemelerini ve ayarlarını oynadığın her bilgisayarda aynı tut. Bulut uygulamanın zaten eşitlediği bir klasör seç, örneğin Google Drive, OneDrive veya Dropbox içinde, sonra diğer bilgisayarlarında da aynı klasörü seç. Eklediğin bir bilgisayar, diğerlerinin zaten paylaştığı ayarları ve düzenlemeleri alır. Bir eşitleme bir şeyi değiştirmeden önce Smart Citizen, Ayarları İçe Aktar ile geri getirebileceğin bir yedek kaydeder. Klasör yolları, oyunun konumu ve pencere düzeni her bilgisayarda kalır ve her bilgisayar kendi global.ini dosyasını oluşturur."
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -930,7 +930,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "Eşitlemeyi durdur. Bu bilgisayardaki sahip olunan planlar olduğu gibi kalır."
+      "at": "Eşitlemeyi durdur. Bu bilgisayardaki planlar, düzenlemeler ve ayarlar olduğu gibi kalır."
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync diğer bilgisayarlarınızdan {count} sahip olunan planı güncelledi."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync bir yedek kaydedemedi, bu yüzden bu bilgisayara hiçbir şey eşitlenmedi: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync diğer bilgisayarlarından {count} ayar aldı. Kullanmak için Smart Citizen'ı yeniden başlat."
     }
   },
   "import_flow": {

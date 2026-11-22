@@ -3053,6 +3053,8 @@ class MainWindow(QMainWindow):
         # What save_user_ini wrote, so the next reload counts none of it as
         # unsaved (#531).
         self._remember_saved_overrides(self.entries)
+        # Smart Sync shares the saved edits with the other PCs.
+        self._schedule_smart_sync()
 
         # Category ticks not yet saved count (#532): saved and the table
         # reloaded, as the category Apply button does, so the merge below and
@@ -8639,14 +8641,54 @@ class MainWindow(QMainWindow):
         """This PC's side of a sync, captured on the GUI thread: the ledger
         brought in line with the owned set (which catches a writer that went
         round set_owned_items, such as Import Settings), the seed marker, the
-        machine id and the last time this PC wrote its file."""
+        machine id and the last time this PC wrote its file, then the
+        settings and user.ini ledgers with this PC's changes since its last
+        sync recorded (or, the first time, what it has, to join with).
+
+        Returns ``(args, extra, changed)``: SmartSyncWorker's arguments, its
+        keyword arguments and whether anything here changed since the last
+        sync, which the close-time push asks.
+        """
         from src.utils import smart_sync
-        ledger = smart_sync.record(AppSettings.get_smart_sync_ledger(),
-                                   AppSettings.get_owned_items())
+        before = AppSettings.get_smart_sync_ledger()
+        ledger = smart_sync.record(before, AppSettings.get_owned_items())
         AppSettings.set_smart_sync_ledger(ledger)
+        changed = ledger != before
         seeded, _pending = AppSettings.get_default_blueprints_seed()
-        return (AppSettings.get_smart_sync_folder(), AppSettings.get_smart_sync_machine_id(),
+        args = (AppSettings.get_smart_sync_folder(), AppSettings.get_smart_sync_machine_id(),
                 ledger, seeded, AppSettings.get_smart_sync_last_written())
+
+        settings_now = AppSettings.smart_sync_settings_values()
+        user_now = AppSettings.smart_sync_user_ini_values()
+        state = AppSettings.get_smart_sync_state()
+        if not state:
+            return args, {"baseline_settings": settings_now,
+                          "baseline_user_ini": user_now}, True
+        settings_ledger = smart_sync.record_values(
+            state[AppSettings.SYNC_STATE_SETTINGS], settings_now,
+            state[AppSettings.SYNC_STATE_SETTINGS_SEEN])
+        user_ledgers = {}
+        old_user = state[AppSettings.SYNC_STATE_USER_INI]
+        user_seen = state[AppSettings.SYNC_STATE_USER_INI_SEEN]
+        for channel in set(old_user) | set(user_now) | set(user_seen):
+            channel_ledger = smart_sync.record_values(
+                old_user.get(channel, {}), user_now.get(channel, {}),
+                user_seen.get(channel, {}), new_keys_are_changes=True)
+            if channel_ledger:
+                user_ledgers[channel] = channel_ledger
+        changed = (changed or settings_ledger != state[AppSettings.SYNC_STATE_SETTINGS]
+                   or user_ledgers != old_user)
+        state = {
+            AppSettings.SYNC_STATE_SETTINGS: settings_ledger,
+            AppSettings.SYNC_STATE_SETTINGS_SEEN: settings_now,
+            AppSettings.SYNC_STATE_USER_INI: user_ledgers,
+            AppSettings.SYNC_STATE_USER_INI_SEEN: user_now,
+        }
+        try:
+            AppSettings.set_smart_sync_state(state)
+        except OSError as e:
+            logger.warning("Smart Sync: could not save its state: %s", e)
+        return args, {"settings": settings_ledger, "user_ini": user_ledgers}, changed
 
     def _start_smart_sync(self) -> None:
         """Start a sync now, or right after the one running."""
@@ -8656,8 +8698,8 @@ class MainWindow(QMainWindow):
         if self._smart_sync_worker is not None:
             self._smart_sync_again = True
             return
-        folder, machine_id, ledger, seeded, last_written = self._smart_sync_inputs()
-        worker = SmartSyncWorker(folder, machine_id, ledger, seeded, last_written)
+        args, extra, _changed = self._smart_sync_inputs()
+        worker = SmartSyncWorker(*args, **extra)
         worker.error.connect(self._on_smart_sync_error)
         worker.finished.connect(
             lambda result, w=worker: self._on_smart_sync_finished(w, result))
@@ -8694,6 +8736,8 @@ class MainWindow(QMainWindow):
         if result.updated:
             AppSettings.set_smart_sync_last_written(result.updated)
         ledger = smart_sync.merge([result.ledger, AppSettings.get_smart_sync_ledger()])
+        if not self._take_synced_edits(result, ledger):
+            return
         AppSettings.set_smart_sync_ledger(ledger)
 
         seeded, pending = AppSettings.get_default_blueprints_seed()
@@ -8721,6 +8765,125 @@ class MainWindow(QMainWindow):
                 and self._loader_worker is None):
             self._refresh_apply_dirty_after_reload()
 
+    def _take_synced_edits(self, result, ledger) -> bool:
+        """Back up, then write the string edits other PCs made, and note the
+        settings that wait for the next start.
+
+        Every change a sync makes here comes after a backup (Export
+        Settings' zip, in the data folder's backups\\smart-sync): when none
+        can be saved, nothing is taken, the status says why, and the next
+        sync tries again. Returns whether the caller may go on and take the
+        owned set too.
+        """
+        from src.utils import smart_sync
+        from src.utils.user_ini_manager import save_user_ini_dict
+        state = AppSettings.get_smart_sync_state()
+        settings_now = AppSettings.smart_sync_settings_values()
+        user_now = AppSettings.smart_sync_user_ini_values()
+        local_settings, local_user = {}, {}
+        if state:
+            # A change made here while the sync ran is newer than anything
+            # it read, so it is recorded now and wins where it differs.
+            local_settings = smart_sync.record_values(
+                state[AppSettings.SYNC_STATE_SETTINGS], settings_now,
+                state[AppSettings.SYNC_STATE_SETTINGS_SEEN])
+            seen = state[AppSettings.SYNC_STATE_USER_INI_SEEN]
+            old_user = state[AppSettings.SYNC_STATE_USER_INI]
+            for channel in set(old_user) | set(user_now) | set(seen):
+                local_user[channel] = smart_sync.record_values(
+                    old_user.get(channel, {}), user_now.get(channel, {}),
+                    seen.get(channel, {}), new_keys_are_changes=True)
+        settings_ledger = smart_sync.merge_values([result.settings, local_settings])
+        user_ledgers = smart_sync.merge_channels([result.user_ini, local_user])
+        user_ledgers = {ch: led for ch, led in user_ledgers.items() if led}
+        user_changes = {}
+        for channel, channel_ledger in user_ledgers.items():
+            have = user_now.get(channel, {})
+            wanted = {key: have[key] for key in have
+                      if channel_ledger.get(key, {}).get(smart_sync.VALUE, have[key]) is not None}
+            wanted.update(smart_sync.values_from_ledger(channel_ledger))
+            if wanted != have:
+                user_changes[channel] = (have, wanted)
+        owned_changed = smart_sync.owned_from_ledger(ledger) != AppSettings.get_owned_items()
+
+        if user_changes or owned_changed:
+            try:
+                AppSettings.write_smart_sync_backup()
+            except OSError as e:
+                logger.warning("Smart Sync: no backup could be saved, so nothing "
+                               "from the other PCs was taken: %s", e)
+                self.config_tab.set_smart_sync_status("failed", error=str(e))
+                self.statusBar().showMessage(tr("status_bar.smart_sync_no_backup", error=e))
+                return False
+
+        user_seen = dict(user_now)
+        active = AppSettings.get_active_channel()
+        for channel, (have, wanted) in user_changes.items():
+            try:
+                save_user_ini_dict(wanted, AppSettings.get_channel_user_ini_path(channel))
+            except Exception as e:
+                logger.warning("Smart Sync: could not write %s's user.ini: %s", channel, e)
+                continue
+            user_seen[channel] = wanted
+            logger.info("Smart Sync: %d string edit(s) in %s from other PCs",
+                        len(set(have.items()) ^ set(wanted.items())), channel)
+            if channel == active:
+                self._take_synced_user_ini(have, wanted)
+
+        state = {
+            AppSettings.SYNC_STATE_SETTINGS: settings_ledger,
+            AppSettings.SYNC_STATE_SETTINGS_SEEN: settings_now,
+            AppSettings.SYNC_STATE_USER_INI: user_ledgers,
+            AppSettings.SYNC_STATE_USER_INI_SEEN: user_seen,
+        }
+        try:
+            AppSettings.set_smart_sync_state(state)
+        except OSError as e:
+            logger.warning("Smart Sync: could not save its state: %s", e)
+
+        waiting = [
+            key for key, entry in settings_ledger.items()
+            if not AppSettings.is_smart_sync_local_key(key)
+            and not AppSettings.is_profile_excluded_key(key)
+            and (entry[smart_sync.VALUE] is None and key in settings_now
+                 or entry[smart_sync.VALUE] is not None
+                 and not AppSettings._same_setting(entry[smart_sync.VALUE],
+                                                    settings_now.get(key)))
+        ]
+        if waiting:
+            logger.info("Smart Sync: %d setting(s) from other PCs apply at the next "
+                        "start: %s", len(waiting), ", ".join(sorted(waiting)))
+            self.statusBar().showMessage(
+                tr("status_bar.smart_sync_settings_waiting", count=len(waiting)))
+        return True
+
+    def _take_synced_user_ini(self, have: dict, wanted: dict) -> None:
+        """Put the active channel's synced edits into the table, key by key.
+
+        Only the keys another PC changed are touched, so an edit not yet
+        applied here to another string stays; one to the same string loses
+        to the newer edit. What was written is recorded as saved (#531), and
+        Apply lights up, since the game file does not have it yet.
+        """
+        changed = {key for key in set(have) | set(wanted) if have.get(key) != wanted.get(key)}
+        if not changed or not self.entries:
+            return
+        touched = []
+        for idx, entry in enumerate(self.entries):
+            if entry.key not in changed:
+                continue
+            entry.custom_value = wanted.get(entry.key, "")
+            if entry.custom_value:
+                entry.status = ("Modified" if entry.custom_value != entry.original_value
+                                else "Unmodified")
+            else:
+                entry.status = status_without_override(entry, self.default_values)
+            touched.append(entry)
+            self._model.notify_entry_changed(idx)
+        self._remember_saved_overrides(touched)
+        if touched:
+            self._mark_apply_dirty()
+
     def _on_smart_sync_folder_changed(self, folder: str) -> None:
         self._watch_smart_sync_folder()
         if folder:
@@ -8745,12 +8908,18 @@ class MainWindow(QMainWindow):
         pending = self._smart_sync_timer.isActive() or self._smart_sync_again
         self._smart_sync_timer.stop()
         self._smart_sync_again = False
-        if not pending or not AppSettings.get_smart_sync_folder():
+        if not AppSettings.get_smart_sync_folder():
             return
         from src.utils import smart_sync
-        folder, machine_id, ledger, seeded, last_written = self._smart_sync_inputs()
+        # A setting changed or an edit saved since the last sync counts as
+        # pending too: nothing else triggers a sync for them.
+        args, extra, changed = self._smart_sync_inputs()
+        if not pending and not changed:
+            return
+        folder, machine_id, ledger, seeded, last_written = args
         try:
-            result = smart_sync.sync(folder, machine_id, ledger, seeded, last_written=last_written)
+            result = smart_sync.sync(folder, machine_id, ledger, seeded,
+                                     last_written=last_written, **extra)
         except Exception as e:
             logger.warning("Smart Sync: could not push at close: %s", e)
             return
