@@ -28,9 +28,24 @@ The starter-blueprint seed marker (#416) travels too: the loc keys seeded on
 any PC are seeded everywhere, so a starter moved back to Available on one PC
 is not seeded again by the next scan on another.
 
+Since format 2 a file also carries the player's settings (what Export
+Settings saves, less the keys ``AppSettings.is_smart_sync_local_key`` keeps on
+each PC) and their string edits (each channel's user.ini), in *value
+ledgers*: ``{key: {"value": v, "at": iso}}``, ``value`` None for a key that
+was removed, so a removal travels too. The newest change to each key wins,
+as for blueprints. A value ledger is recorded against what this PC last saw
+(:func:`record_values`), not against the ledger itself, because settings
+from another PC wait for the next start: until then the PC's own values
+differ from the ledger without being changes.
+
+A PC that turns sync on gives what it already has :data:`BASELINE_AT`, or
+:data:`JOIN_AT` when other PCs already share that section, so a PC that
+joins takes the shared settings and edits instead of handing its own to
+every other PC.
+
 Not synced, by design: the per-channel log-scan watermark (a position in this
-PC's own logs), paths, caches, user.ini and the generated global.ini (each PC
-builds its own from its own Data.p4k).
+PC's own logs), paths, caches and the generated global.ini (each PC builds its
+own from its own Data.p4k and the synced edits and settings).
 
 Qt-free and settings-free: ``AppSettings`` stores the ledger, the machine id
 and the folder, and ``SmartSyncWorker`` runs :func:`sync` off the GUI thread.
@@ -55,15 +70,25 @@ MACHINE_FILE_PREFIX = "machine-"
 MACHINE_FILE_SUFFIX = ".json"
 # 4 random bytes, 8 hex characters: no name, account or path goes in a file.
 MACHINE_ID_BYTES = 4
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 # The time a first ledger gives what the PC already owned: older than any real
 # change, so a real change on any PC wins over it.
 BASELINE_AT = "1970-01-01T00:00:00.000000Z"
 
+# The time a PC that joins gives what it already had: older still, so what
+# the PCs already sharing chose wins over it.
+JOIN_AT = "0000-01-01T00:00:00.000000Z"
+
 # Ledger entry fields.
 OWNED = "owned"
 AT = "at"
+VALUE = "value"
+
+# Machine file sections.
+SECTION_OWNED = "owned"
+SECTION_SETTINGS = "settings"
+SECTION_USER_INI = "user_ini"
 
 
 def now_iso() -> str:
@@ -173,6 +198,114 @@ def merge(ledgers) -> dict:
     return out
 
 
+# -- value ledgers (settings, user.ini) --------------------------------------
+#
+# ``{key: {"value": v, "at": iso}}``; ``value`` is None for a removed key.
+
+def _valid_value_entry(entry) -> bool:
+    return (isinstance(entry, dict) and VALUE in entry
+            and isinstance(entry.get(AT), str))
+
+
+def clean_value_ledger(raw) -> dict:
+    """The well-formed entries of *raw*; anything else is dropped."""
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        key: {VALUE: entry[VALUE], AT: entry[AT]}
+        for key, entry in raw.items()
+        if isinstance(key, str) and key and _valid_value_entry(entry)
+    }
+
+
+def clean_channel_ledgers(raw) -> dict:
+    """``{channel: value ledger}`` from *raw*, empty channels dropped."""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for channel, ledger in raw.items():
+        if isinstance(channel, str) and channel:
+            cleaned = clean_value_ledger(ledger)
+            if cleaned:
+                out[channel] = cleaned
+    return out
+
+
+def values_from_ledger(ledger: dict) -> dict:
+    """The keys the ledger holds a value for, with that value."""
+    return {key: entry[VALUE] for key, entry in ledger.items() if entry[VALUE] is not None}
+
+
+def baseline_values(ledger: dict, values: dict, at: str = BASELINE_AT) -> dict:
+    """Add each key of *values* the ledger has no word on, at *at*."""
+    out = dict(ledger)
+    for key, value in values.items():
+        if key not in out:
+            out[key] = {VALUE: value, AT: at}
+    return out
+
+
+def record_values(ledger: dict, values: dict, seen: dict, at: str | None = None,
+                  *, new_keys_are_changes: bool = False) -> dict:
+    """Stamp, at *at*, each change this PC made since it last saw *seen*.
+
+    A key whose value differs from *seen* changed here; a key *seen* had
+    that *values* lacks was removed here. A setting this PC never saw (one a
+    newer version adds with its default) is no change: it joins at
+    :data:`BASELINE_AT` when the ledger has no word on it, so it never wins
+    over another PC's real change. A string edit is never a default, so
+    user.ini passes *new_keys_are_changes* and a new key is a change.
+    """
+    at = at or now_iso()
+    out = dict(ledger)
+    for key, value in values.items():
+        if key in seen:
+            if seen[key] != value:
+                out[key] = {VALUE: value, AT: at}
+        elif new_keys_are_changes:
+            entry = out.get(key)
+            if entry is None or entry[VALUE] != value:
+                out[key] = {VALUE: value, AT: at}
+        elif key not in out:
+            out[key] = {VALUE: value, AT: BASELINE_AT}
+    for key in seen:
+        if key not in values:
+            out[key] = {VALUE: None, AT: at}
+    return out
+
+
+def _value_rank(entry: dict) -> str:
+    return json.dumps(entry[VALUE], sort_keys=True, ensure_ascii=False)
+
+
+def merge_values(ledgers) -> dict:
+    """One value ledger from many: per key, the newest entry wins.
+
+    Equal times (two PCs' baselines) are settled the same way on every PC,
+    by the value's JSON text, so all PCs end on one answer.
+    """
+    out: dict = {}
+    for ledger in ledgers:
+        for key, entry in ledger.items():
+            have = out.get(key)
+            if have is None:
+                out[key] = entry
+            elif entry[AT] != have[AT]:
+                out[key] = entry if entry[AT] > have[AT] else have
+            elif _value_rank(entry) > _value_rank(have):
+                out[key] = entry
+    return out
+
+
+def merge_channels(channel_ledgers) -> dict:
+    """:func:`merge_values` per channel."""
+    out: dict = {}
+    for ledgers in channel_ledgers:
+        for channel, ledger in ledgers.items():
+            out[channel] = merge_values([out.get(channel, {}), ledger])
+    return out
+
+
 # -- the files ---------------------------------------------------------------
 
 @dataclass
@@ -182,16 +315,25 @@ class MachineFile:
     ledger: dict
     seeded: frozenset = frozenset()
     updated: str = ""
+    settings: dict = field(default_factory=dict)
+    user_ini: dict = field(default_factory=dict)
 
 
-def encode(machine_id: str, ledger: dict, seeded, updated: str) -> str:
+def _sorted(ledger: dict) -> dict:
+    return {key: ledger[key] for key in sorted(ledger)}
+
+
+def encode(machine_id: str, ledger: dict, seeded, updated: str,
+           settings: dict | None = None, user_ini: dict | None = None) -> str:
     """The text of a machine file, stable for diffs."""
     return json.dumps({
         "format": FORMAT_VERSION,
         "machine": machine_id,
         "updated": updated,
-        "owned": {name: ledger[name] for name in sorted(ledger)},
+        SECTION_OWNED: _sorted(ledger),
         "starter_seeded": sorted(seeded),
+        SECTION_SETTINGS: _sorted(settings or {}),
+        SECTION_USER_INI: {ch: _sorted(led) for ch, led in sorted((user_ini or {}).items())},
     }, indent=1, ensure_ascii=False) + "\n"
 
 
@@ -211,6 +353,8 @@ def decode(text: str) -> MachineFile | None:
         ledger=clean_ledger(data.get("owned")),
         seeded=frozenset(k for k in seeded if isinstance(k, str)),
         updated=data.get("updated") if isinstance(data.get("updated"), str) else "",
+        settings=clean_value_ledger(data.get(SECTION_SETTINGS)),
+        user_ini=clean_channel_ledgers(data.get(SECTION_USER_INI)),
     )
 
 
@@ -248,10 +392,14 @@ class SyncResult:
     other_machines: int = 0               # files from other PCs that were read
     id_changed: bool = False              # another install had this PC's id
     notes: list = field(default_factory=list)
+    settings: dict = field(default_factory=dict)   # merged settings ledger
+    user_ini: dict = field(default_factory=dict)   # merged {channel: ledger}
 
 
 def sync(folder, machine_id: str, ledger: dict, seeded, last_written: str = "",
-         at: str | None = None) -> SyncResult:
+         at: str | None = None, *, settings: dict | None = None,
+         user_ini: dict | None = None, baseline_settings: dict | None = None,
+         baseline_user_ini: dict | None = None) -> SyncResult:
     """Merge this PC's ledger with every file in the sync folder, and write ours.
 
     *ledger* is this PC's ledger, already brought in line with its owned set
@@ -259,6 +407,13 @@ def sync(folder, machine_id: str, ledger: dict, seeded, last_written: str = "",
     last. If this PC's file holds a later one, another install has the same
     id (a copied portable folder): that file is still merged, and this PC
     takes a new id so the two stop writing over each other.
+
+    *settings* and *user_ini* are this PC's value ledgers. A PC that has
+    none yet (it just turned sync on, or just upgraded from format 1) passes
+    what it has as *baseline_settings* / *baseline_user_ini*
+    (``{channel: {key: value}}``) instead: it joins at :data:`JOIN_AT` when
+    another PC's file already shares that section (that channel, for
+    user.ini), and at :data:`BASELINE_AT` otherwise.
 
     The file is written only when what it would hold changed. Raises OSError
     when the folder cannot be made or the file cannot be written; reading
@@ -280,13 +435,30 @@ def sync(folder, machine_id: str, ledger: dict, seeded, last_written: str = "",
         own = files.get(own_name)
         id_changed = True
 
+    other_files = [f for name, f in files.items() if name != own_name]
+    settings = dict(settings or {})
+    user_ini = {ch: dict(led) for ch, led in (user_ini or {}).items()}
+    if baseline_settings is not None and not settings:
+        joined = any(f.settings for f in other_files)
+        settings = baseline_values({}, baseline_settings, JOIN_AT if joined else BASELINE_AT)
+    for channel, values in (baseline_user_ini or {}).items():
+        if user_ini.get(channel):
+            continue
+        joined = any(f.user_ini.get(channel) for f in other_files)
+        user_ini[channel] = baseline_values({}, values, JOIN_AT if joined else BASELINE_AT)
+
     merged = merge([ledger] + [f.ledger for f in files.values()])
     merged_seeded = frozenset(seeded).union(*(f.seeded for f in files.values()))
-    others = sum(1 for name in files if name != own_name)
+    merged_settings = merge_values([settings] + [f.settings for f in files.values()])
+    merged_user_ini = merge_channels([user_ini] + [f.user_ini for f in files.values()])
+    merged_user_ini = {ch: led for ch, led in merged_user_ini.items() if led}
+    others = len(other_files)
 
     result = SyncResult(ledger=merged, seeded=merged_seeded, machine_id=machine_id,
-                        other_machines=others, id_changed=id_changed)
-    if own is not None and own.ledger == merged and own.seeded == merged_seeded:
+                        other_machines=others, id_changed=id_changed,
+                        settings=merged_settings, user_ini=merged_user_ini)
+    if (own is not None and own.ledger == merged and own.seeded == merged_seeded
+            and own.settings == merged_settings and own.user_ini == merged_user_ini):
         result.updated = own.updated
         return result
     updated = at or now_iso()
@@ -294,7 +466,8 @@ def sync(folder, machine_id: str, ledger: dict, seeded, last_written: str = "",
     # would take this PC's own file for another install's.
     if own is not None and own.updated > updated:
         updated = own.updated
-    atomic_write_text(folder / own_name, encode(machine_id, merged, merged_seeded, updated))
+    atomic_write_text(folder / own_name, encode(machine_id, merged, merged_seeded, updated,
+                                                merged_settings, merged_user_ini))
     result.written = True
     result.updated = updated
     return result

@@ -890,7 +890,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "プレイするすべての PC で所有済みブループリントを同じに保ちます。クラウドアプリがすでに同期しているフォルダー（Google Drive、OneDrive、Dropbox など）を選び、ほかの PC でも同じフォルダーを選んでください。Smart Citizen はそこで小さなファイルをいくつか読み書きするだけで、ファイルの移動はクラウドアプリが行います。"
+      "at": "所有ブループリント、文字列の編集、設定を、プレイするすべてのPCで同じに保ちます。Google Drive、OneDrive、Dropbox など、クラウドアプリがすでに同期しているフォルダーを選び、他のPCでも同じフォルダーを選んでください。追加したPCは、他のPCがすでに共有している設定と編集を受け取ります。同期で何かが変わる前に、Smart Citizen は「設定をインポート」で戻せるバックアップを保存します。フォルダーのパス、ゲームの場所、ウィンドウのレイアウトは各PCに残り、global.ini は各PCがそれぞれ作成します。"
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -906,7 +906,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "同期を停止します。この PC の所有済みブループリントはそのまま残ります。"
+      "at": "同期を停止します。このPCのブループリント、編集、設定はそのまま残ります。"
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync がほかの PC から所有済みブループリントを {count} 件更新しました。"
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync はバックアップを保存できなかったため、このPCには何も同期されませんでした: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync が他のPCから {count} 件の設定を受け取りました。使うには Smart Citizen を再起動してください。"
     }
   },
   "import_flow": {

@@ -890,7 +890,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "Mantieni gli stessi blueprint posseduti su ogni PC su cui giochi. Scegli una cartella che la tua app cloud sincronizza già, per esempio in Google Drive, OneDrive o Dropbox, poi scegli la stessa cartella sugli altri PC. Smart Citizen vi legge e scrive solo pochi file piccoli, e la tua app cloud li sposta."
+      "at": "Mantieni i tuoi progetti posseduti, le modifiche ai testi e le impostazioni uguali su ogni PC su cui giochi. Scegli una cartella che la tua app cloud sincronizza già, ad esempio in Google Drive, OneDrive o Dropbox, poi scegli la stessa cartella sugli altri PC. Un PC che aggiungi prende le impostazioni e le modifiche che gli altri condividono già. Prima che una sincronizzazione cambi qualcosa, Smart Citizen salva un backup che puoi ripristinare con Importa impostazioni. I percorsi delle cartelle, la posizione del gioco e la disposizione della finestra restano su ogni PC, e ogni PC crea il proprio global.ini."
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -906,7 +906,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "Interrompi la sincronizzazione. I blueprint posseduti su questo PC restano come sono."
+      "at": "Interrompi la sincronizzazione. Progetti, modifiche e impostazioni su questo PC restano come sono."
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync ha aggiornato {count} blueprint posseduti dagli altri PC."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync non ha potuto salvare un backup, quindi niente è stato sincronizzato su questo PC: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync ha ricevuto {count} impostazione/i dagli altri PC. Riavvia Smart Citizen per usarle."
     }
   },
   "import_flow": {

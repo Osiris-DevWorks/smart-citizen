@@ -890,7 +890,7 @@
     },
     "smart_sync_desc": {
       "ht": "",
-      "at": "Gardez les mêmes plans possédés sur tous les PC où vous jouez. Choisissez un dossier que votre application cloud synchronise déjà, par exemple dans Google Drive, OneDrive ou Dropbox, puis choisissez le même dossier sur vos autres PC. Smart Citizen n'y lit et n'y écrit que quelques petits fichiers, et votre application cloud les déplace."
+      "at": "Gardez vos plans possédés, vos modifications de textes et vos paramètres identiques sur chaque PC où vous jouez. Choisissez un dossier que votre application cloud synchronise déjà, par exemple dans Google Drive, OneDrive ou Dropbox, puis choisissez le même dossier sur vos autres PC. Un PC que vous ajoutez reprend les paramètres et modifications que les autres partagent déjà. Avant qu'une synchronisation ne change quoi que ce soit, Smart Citizen enregistre une sauvegarde que vous pouvez restaurer avec Importer les paramètres. Les chemins de dossiers, l'emplacement du jeu et la disposition de la fenêtre restent sur chaque PC, et chaque PC génère son propre global.ini."
     },
     "smart_sync_placeholder": {
       "ht": "",
@@ -906,7 +906,7 @@
     },
     "smart_sync_off_tooltip": {
       "ht": "",
-      "at": "Arrêter la synchronisation. Les plans possédés sur ce PC restent tels quels."
+      "at": "Arrêter la synchronisation. Les plans, modifications et paramètres de ce PC restent tels quels."
     },
     "select_smart_sync_folder": {
       "ht": "",
@@ -2677,6 +2677,14 @@
     "smart_sync_updated": {
       "ht": "",
       "at": "Smart Sync a mis à jour {count} plan(s) possédé(s) depuis vos autres PC."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync n'a pas pu enregistrer de sauvegarde, donc rien n'a été synchronisé sur ce PC : {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync a reçu {count} paramètre(s) de vos autres PC. Redémarrez Smart Citizen pour les utiliser."
     }
   },
   "import_flow": {

@@ -591,20 +591,23 @@ class SmartSyncWorker(QThread):
     finished = pyqtSignal(object)   # smart_sync.SyncResult, or None
     error = pyqtSignal(str)
 
-    def __init__(self, folder, machine_id, ledger, seeded, last_written):
+    def __init__(self, folder, machine_id, ledger, seeded, last_written, **extra):
         super().__init__()
         self._folder = folder
         self._machine_id = machine_id
         self._ledger = ledger
         self._seeded = seeded
         self._last_written = last_written
+        # Settings and user.ini ledgers and baselines (smart_sync.sync's
+        # keyword arguments), captured on the main thread like the rest.
+        self._extra = extra
 
     def run(self):
         from src.utils import smart_sync
         try:
             result = smart_sync.sync(
                 self._folder, self._machine_id, self._ledger, self._seeded,
-                last_written=self._last_written,
+                last_written=self._last_written, **self._extra,
             )
         except OSError as e:
             logger.warning("Smart Sync: could not use %s: %s", self._folder, e)
