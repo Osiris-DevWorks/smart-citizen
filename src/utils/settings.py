@@ -451,6 +451,7 @@ class AppSettings:
     # Settings keys - Test Plan panel (#144)
     TEST_PLAN_CHECKS = "test_plan/checks"        # JSON: {"hash": ..., "checked": [...]}
     TEST_PLAN_TESTER = "test_plan/tester_name"
+    TEST_PLAN_ITEM_NOTES = "test_plan/item_notes"  # JSON: {"hash": ..., "notes": {key: text}}
     TEST_WEBHOOK_URL = "test_plan/webhook_url"   # falls back to env var when unset
     TEST_WEBHOOK_ENV = "SMART_CITIZEN_TEST_WEBHOOK_URL"
 
@@ -920,6 +921,7 @@ class AppSettings:
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
+        "test_plan/item_notes",
     })
     # Prefixes of the same, for per-channel keys whose full name is dynamic.
     PROFILE_DEFAULT_EXCLUDE_PREFIXES = ("blueprint_log_watermark",)
@@ -1237,6 +1239,36 @@ class AppSettings:
         from src.utils.test_plan import plan_hash
         payload = json.dumps({"hash": plan_hash(), "checked": sorted(checked)})
         AppSettings.settings().setValue(AppSettings.TEST_PLAN_CHECKS, payload)
+
+    @staticmethod
+    def get_test_plan_item_notes() -> dict:
+        """Return the tester's note per item key, or empty if the plan changed.
+
+        Kept against the plan hash like the check-marks, so a note never ends
+        up on a different item after TEST_SECTIONS changes.
+        """
+        from src.utils.test_plan import plan_hash
+        raw = AppSettings.settings().value(AppSettings.TEST_PLAN_ITEM_NOTES, "")
+        if not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return {}
+        if not isinstance(data, dict) or data.get("hash") != plan_hash():
+            return {}
+        notes = data.get("notes", {})
+        if not isinstance(notes, dict):
+            return {}
+        return {str(k): str(v) for k, v in notes.items() if str(v).strip()}
+
+    @staticmethod
+    def set_test_plan_item_notes(notes: dict) -> None:
+        """Persist the tester's per-item notes against the current plan hash."""
+        from src.utils.test_plan import plan_hash
+        kept = {k: v for k, v in notes.items() if v.strip()}
+        payload = json.dumps({"hash": plan_hash(), "notes": kept}, sort_keys=True)
+        AppSettings.settings().setValue(AppSettings.TEST_PLAN_ITEM_NOTES, payload)
 
     @staticmethod
     def get_tester_name() -> str:

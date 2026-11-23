@@ -3174,6 +3174,10 @@
       "ht": "",
       "at": "Descreva bugs, surpresas ou sugestões..."
     },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Observações (opcional)"
+    },
     "copied_status": {
       "ht": "",
       "at": "Relatório copiado para a área de transferência."

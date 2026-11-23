@@ -3174,6 +3174,10 @@
       "ht": "",
       "at": "Hataları, beklenmedik durumları veya önerileri açıklayın..."
     },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Notlar (isteğe bağlı)"
+    },
     "copied_status": {
       "ht": "",
       "at": "Rapor panoya kopyalandı."
