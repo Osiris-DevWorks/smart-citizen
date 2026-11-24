@@ -43,6 +43,14 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Apply when Windows blocks the game file",
+        "items": [
+            "Right-click the game's global.ini, tick Read-only, then Apply: it works, and the file is no longer read-only.",
+            "Start Star Citizen, then Apply: the box says the game is running and to close it.",
+            "With the game in Program Files, turn on Controlled folder access in Windows Security, then Apply: the box lists the steps to try instead of an Errno 13 error.",
+        ],
+    },
+    {
         "title": "Blueprint scan in other languages (#564)",
         "items": [
             "Select Spanish, apply, and receive a blueprint in game. Scan Logs for Owned Blueprints: it is added to Owned.",

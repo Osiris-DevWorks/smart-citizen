@@ -166,6 +166,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change table model | `src/gui/string_table_model.py`, `src/gui/main_window.py` | `StringTableModel`, `COL_*` constants, `setup_string_table()` |
 | Modify auto-update | `src/utils/updater.py` | `check_for_updates()`, `download_base_file()` |
 | Change backup behavior | `src/gui/main_window.py` | `manage_backups()` |
+| Change what Apply says when Windows refuses the game folder (Errno 13) | `src/gui/main_window.py`, `src/merger/ini_merger.py`, `src/utils/read_only.py` | the `except PermissionError` in `apply_to_game()` and `_show_game_folder_refused()` (`apply.refused_game_running_body` when `shader_cache.is_star_citizen_running()`, else `apply.refused_body`); `merge_ini_files` re-raises a `PermissionError` unwrapped; `clear_read_only()` before the write and on each backup |
 | Modify P4K extraction | `src/utils/pak_extractor.py` | `extract_dataforge()` |
 | Change the extraction free-space check | `src/utils/pak_extractor.py` | `_require_free_space()`, `_dataforge_needs()`, `_require_room_for_new_cache()`, the #482 constants |
 | Change how a folder tree is deleted (working folder, old cache, Clear Cache, queued cleanup) | `src/utils/pak_extractor.py` | `robust_rmtree()`, `_delete_files_first()` (the threaded file pass, #522), `_DELETE_THREADS` |

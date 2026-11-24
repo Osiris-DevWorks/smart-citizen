@@ -3135,6 +3135,18 @@
     "failed_body": {
       "ht": "",
       "at": "应用到游戏失败：{error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows 阻止了游戏文件夹"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen 无法写入：\n{path}\n\nStar Citizen 正在运行并打开了该文件。请关闭游戏，然后再次点击“应用”。"
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows 不允许 Smart Citizen 写入：\n{path}\n\n请尝试以下操作，然后再次点击“应用”：\n1. 关闭 Star Citizen 和 RSI Launcher。\n2. 在 Windows 安全中心打开“病毒和威胁防护”>“勒索软件防护”，在“受控文件夹访问”中允许 Smart Citizen。如有其他杀毒软件，也请在其中允许。\n3. 如果游戏安装在 Program Files 中，请右键点击 Smart Citizen 并选择“以管理员身份运行”。"
     }
   },
   "test_plan": {

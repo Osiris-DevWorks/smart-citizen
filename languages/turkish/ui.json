@@ -3135,6 +3135,18 @@
     "failed_body": {
       "ht": "",
       "at": "Oyuna uygulanamadı: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows oyun klasörünü engelledi"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen şuraya yazamadı:\n{path}\n\nStar Citizen çalışıyor ve dosyayı açık tutuyor. Oyunu kapatın, ardından Uygula'ya tekrar tıklayın."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şuraya yazmasına izin vermedi:\n{path}\n\nŞunları deneyin, ardından Uygula'ya tekrar tıklayın:\n1. Star Citizen'ı ve RSI Launcher'ı kapatın.\n2. Windows Güvenliği'nde Virüs ve tehdit koruması > Fidye yazılımı koruması'nı açın ve Denetimli klasör erişiminde Smart Citizen'a izin verin. Başka bir antivirüs kullanıyorsanız orada da izin verin.\n3. Oyun Program Files içindeyse Smart Citizen'a sağ tıklayıp Yönetici olarak çalıştır'ı seçin."
     }
   },
   "test_plan": {

@@ -3135,6 +3135,18 @@
     "failed_body": {
       "ht": "",
       "at": "應用到遊戲失敗：{error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows 封鎖了遊戲資料夾"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen 無法寫入：\n{path}\n\nStar Citizen 正在執行並開啟了該檔案。請關閉遊戲，然後再次點擊「套用」。"
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows 不允許 Smart Citizen 寫入：\n{path}\n\n請嘗試以下步驟，然後再次點擊「套用」：\n1. 關閉 Star Citizen 和 RSI Launcher。\n2. 在 Windows 安全性中開啟「病毒與威脅防護」>「勒索軟體防護」，在「受控制的資料夾存取權」中允許 Smart Citizen。如有其他防毒軟體，也請在其中允許。\n3. 如果遊戲安裝在 Program Files 中，請以滑鼠右鍵點擊 Smart Citizen 並選擇「以系統管理員身分執行」。"
     }
   },
   "test_plan": {
