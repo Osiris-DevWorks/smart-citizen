@@ -3155,6 +3155,18 @@
     "failed_body": {
       "ht": "",
       "at": "ゲームへの適用に失敗しました：{error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows がゲームフォルダーをブロックしました"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen は次の場所に書き込めませんでした:\n{path}\n\nStar Citizen が起動中で、ファイルを開いています。ゲームを閉じてから、もう一度「適用」をクリックしてください。"
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows が Smart Citizen による次の場所への書き込みを許可しませんでした:\n{path}\n\n次を試してから、もう一度「適用」をクリックしてください:\n1. Star Citizen と RSI Launcher を閉じます。\n2. Windows セキュリティで「ウイルスと脅威の防止」>「ランサムウェア防止」を開き、コントロールされたフォルダー アクセスで Smart Citizen を許可します。ほかのウイルス対策ソフトでも許可してください。\n3. ゲームが Program Files にある場合は、Smart Citizen を右クリックして「管理者として実行」を選びます。"
     }
   },
   "test_plan": {

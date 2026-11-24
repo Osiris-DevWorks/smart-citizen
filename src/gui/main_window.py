@@ -88,6 +88,7 @@ from src.utils.perf import timed
 from src.utils.release_notes import bundled_release_notes
 from src.utils.resource_path import get_resource_path
 from src.utils.pak_extractor import base_ini_is_fresh, linked_cache_folder_error, windows_reason
+from src.utils.read_only import clear_read_only
 from src.utils.settings import (
     AppSettings,
     CACHE_FOLDER_REFUSED,
@@ -3146,6 +3147,8 @@ class MainWindow(QMainWindow):
                 # Delete oldest backup if we already have 5
                 if len(backup_files) >= 5:
                     oldest_backup = backup_files[0]
+                    # copy2 carried a read-only global.ini's flag into it.
+                    clear_read_only(oldest_backup)
                     oldest_backup.unlink()
                     logger.info(f"Deleted oldest backup: {oldest_backup.name}")
 
@@ -3153,6 +3156,9 @@ class MainWindow(QMainWindow):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = backup_dir / f"global.ini.bak_{timestamp}"
                 shutil.copy2(target_path, backup_path)
+                # copy2 copies the read-only flag too, which would later stop
+                # the rotation above deleting this backup.
+                clear_read_only(backup_path)
                 logger.info(f"Backed up existing file to {backup_path}")
 
             # Re-load all sources fresh, so Apply uses the latest source
@@ -3214,6 +3220,9 @@ class MainWindow(QMainWindow):
             # below can deliver it, so drop it before writing.
             from src.merger.ini_merger import merge_ini_files
             self._invalidate_applied_check()
+            # Windows will not open a read-only file for writing, and some
+            # guides tell players to mark global.ini read-only.
+            clear_read_only(target_path)
             merge_ini_files(str(base_file), merged_dict, str(target_path))
 
             # Validate written file against stock base. Pass the already-parsed
@@ -3311,12 +3320,34 @@ class MainWindow(QMainWindow):
                    enhancement_block=enhancement_block),
             )
             return True
+        except PermissionError as e:
+            # Windows refused the game folder: the game holds the file open,
+            # the app is not allowed to write under Program Files, or
+            # Controlled folder access or an antivirus blocked it. All of them
+            # read "[Errno 13] Permission denied", so say what to try.
+            self._mark_apply_dirty()
+            logger.warning(f"Windows refused writing to the game folder: {e}")
+            self._show_game_folder_refused(Path(e.filename) if e.filename else target_path)
+            return False
         except Exception as e:
             # Mark first: the dialog's event loop can deliver a queued verdict.
             self._mark_apply_dirty()
             QMessageBox.critical(self, tr("dialogs.error_title"), tr("apply.failed_body", error=e))
             logger.error(f"Error applying to game: {e}")
             return False
+
+    def _show_game_folder_refused(self, path: Path) -> None:
+        """Explain an Apply that Windows refused with a permission error.
+
+        A running game is the common case and has its own one-line fix, so
+        it is asked about first (tasklist, only on this failure path)."""
+        from src.utils.shader_cache import is_star_citizen_running
+        if is_star_citizen_running():
+            body = tr("apply.refused_game_running_body", path=path)
+        else:
+            body = tr("apply.refused_body", path=path)
+        self.statusBar().showMessage(tr("dialogs.apply_failed_status"))
+        QMessageBox.critical(self, tr("apply.refused_title"), body)
 
     def _validate_applied_file(
         self,
@@ -3362,6 +3393,7 @@ class MainWindow(QMainWindow):
         try:
             # A file that is already gone (deleted outside the app while the
             # confirmation was open) is as cleared as one we delete.
+            clear_read_only(global_ini)
             global_ini.unlink(missing_ok=True)
             self._mark_game_file_changed()
             logger.info(f"Deleted {global_ini}")
@@ -4553,6 +4585,7 @@ class MainWindow(QMainWindow):
             # Localization marks only after its delete: a failed restore is no
             # revert, so it must not clear the close reminder. The except
             # branch below covers a copy that fails part-way.
+            clear_read_only(target_path)
             shutil.copy2(str(backup_file_path), str(target_path))
             self._mark_game_file_changed()
 

@@ -3155,6 +3155,18 @@
     "failed_body": {
       "ht": "",
       "at": "Échec de l'application au jeu : {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows a bloqué le dossier du jeu"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen n'a pas pu écrire dans :\n{path}\n\nStar Citizen est en cours d'exécution et a ouvert le fichier. Fermez le jeu, puis cliquez de nouveau sur Appliquer."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows n'a pas laissé Smart Citizen écrire dans :\n{path}\n\nEssayez ceci, puis cliquez de nouveau sur Appliquer :\n1. Fermez Star Citizen et le RSI Launcher.\n2. Dans Sécurité Windows, ouvrez Protection contre les virus et menaces > Protection contre les ransomware et autorisez Smart Citizen dans l'accès contrôlé aux dossiers. Autorisez-le aussi dans tout autre antivirus.\n3. Si le jeu est dans Program Files, faites un clic droit sur Smart Citizen et choisissez Exécuter en tant qu'administrateur."
     }
   },
   "test_plan": {

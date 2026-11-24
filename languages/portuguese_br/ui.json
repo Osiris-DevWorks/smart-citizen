@@ -3155,6 +3155,18 @@
     "failed_body": {
       "ht": "",
       "at": "Falha ao aplicar ao jogo: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "O Windows bloqueou a pasta do jogo"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu gravar em:\n{path}\n\nO Star Citizen está em execução e está com o arquivo aberto. Feche o jogo e clique em Aplicar novamente."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "O Windows não deixou o Smart Citizen gravar em:\n{path}\n\nTente isto e clique em Aplicar novamente:\n1. Feche o Star Citizen e o RSI Launcher.\n2. Na Segurança do Windows, abra Proteção contra vírus e ameaças > Proteção contra ransomware e permita o Smart Citizen no acesso controlado a pastas. Permita-o também em qualquer outro antivírus.\n3. Se o jogo estiver em Program Files, clique com o botão direito no Smart Citizen e escolha Executar como administrador."
     }
   },
   "test_plan": {
