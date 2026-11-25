@@ -3034,6 +3034,10 @@
       "ht": "",
       "at": "已应用到 {target_path}\n\n  用户编辑数：{user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "标记为 [BP Complete] 的任务：{count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "应用到游戏失败：{error}"

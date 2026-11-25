@@ -672,6 +672,22 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     return _stamp_frontend_version(merged_dict)
 
 
+def _enhancement_summary_block(categories, bp_complete_count: "int | None" = None) -> str:
+    """The Apply success box's enhancements lines: one per category, biggest
+    first. *bp_complete_count*, the titles carrying [BP Complete] in the file
+    just written, goes on its own line under Missions; None (the General Tags
+    switch off) leaves that line out."""
+    if not categories:
+        return "  Smart Citizen enhancements: 0"
+    lines = []
+    for cat, count in categories.most_common():
+        lines.append(f"    {cat}: {count:,}")
+        if cat == CATEGORY_MISSIONS and bp_complete_count is not None:
+            lines.append("      " + tr("apply.bp_complete_count", count=f"{bp_complete_count:,}"))
+    total = sum(categories.values())
+    return f"  Smart Citizen enhancements ({total:,} total):\n" + "\n".join(lines)
+
+
 @dataclass(frozen=True)
 class _AppliedStateSnapshot:
     """Everything _compute_already_applied needs, captured on the main thread
@@ -3215,17 +3231,15 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(
                 tr("dialogs.apply_status", user_count=user_count, enhancement_count=enhancement_count)
             )
-            if enhancement_categories:
-                breakdown = "\n".join(
-                    f"    {cat}: {count:,}"
-                    for cat, count in enhancement_categories.most_common()
-                )
-                enhancement_block = (
-                    f"  Smart Citizen enhancements ({enhancement_count:,} total):\n"
-                    f"{breakdown}"
-                )
-            else:
-                enhancement_block = "  Smart Citizen enhancements: 0"
+            # How many missions the file marks [BP Complete], shown while the
+            # General Tags switch is on.
+            bp_complete_count = None
+            if AppSettings.get_mission_title_tags()[AppSettings.MISSION_TITLE_TAG_BP_COMPLETE]:
+                from src.utils.owned_items import has_bp_complete_tag
+                bp_complete_count = sum(1 for v in merged_dict.values() if has_bp_complete_tag(v))
+                logger.info(f"[BP Complete]: {bp_complete_count} missions marked complete")
+            enhancement_block = _enhancement_summary_block(
+                enhancement_categories, bp_complete_count)
             # Mark before the success box, as Clear Localization does: its
             # event loop can deliver a change made after the merge above (a
             # blueprint scan finishing, #416), which marks Apply red. Marking

@@ -27,6 +27,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -36,7 +37,9 @@ from PyQt6.QtCore import QSettings
 
 REPO = Path(__file__).resolve().parent.parent
 
-from src.gui.main_window import MainWindow, _ApplyMergeInputs, _merge_for_apply  # noqa: E402
+from src.gui.main_window import (  # noqa: E402
+    MainWindow, _ApplyMergeInputs, _enhancement_summary_block, _merge_for_apply,
+)
 from src.models.string_model import CATEGORY_MISSIONS  # noqa: E402
 from src.utils.blueprint_meta import (  # noqa: E402
     MISSION_BLUEPRINT_DESCS_FILE,
@@ -593,6 +596,30 @@ class TestRecordMissingIsOutOfDate:
     def test_missions_off_needs_no_record(self, enh_dir, monkeypatch):
         self._missions(monkeypatch, False)
         assert AppSettings.enhancements_built_from_current_dataforge() is True
+
+
+# ── The Apply success box ───────────────────────────────────────────────────
+
+class TestApplySummary:
+    CATS = Counter({"Ship Items": 900, CATEGORY_MISSIONS: 1200, "Gear": 300})
+
+    def test_count_goes_right_under_missions(self):
+        lines = _enhancement_summary_block(self.CATS, 112).splitlines()
+        missions = lines.index(f"    {CATEGORY_MISSIONS}: 1,200")
+        assert lines[missions + 1] == "      Missions marked [BP Complete]: 112"
+        assert lines[0] == "  Smart Citizen enhancements (2,400 total):"
+
+    def test_switch_off_shows_no_count(self):
+        assert "[BP Complete]" not in _enhancement_summary_block(self.CATS, None)
+
+    def test_a_zero_count_is_still_shown(self):
+        assert "[BP Complete]: 0" in _enhancement_summary_block(self.CATS, 0)
+
+    def test_no_missions_category_no_count(self):
+        assert "[BP Complete]" not in _enhancement_summary_block(Counter({"Gear": 3}), 5)
+
+    def test_nothing_enhanced(self):
+        assert _enhancement_summary_block(Counter(), 5) == "  Smart Citizen enhancements: 0"
 
 
 # ── The Enhancements tab checkbox ───────────────────────────────────────────

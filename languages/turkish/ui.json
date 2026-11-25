@@ -3034,6 +3034,10 @@
       "ht": "",
       "at": "{target_path} konumuna uygulandı\n\n  Kullanıcı düzenlemeleri: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "[BP Complete] olarak işaretlenen görevler: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Oyuna uygulanamadı: {error}"

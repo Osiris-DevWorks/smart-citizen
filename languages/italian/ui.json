@@ -3034,6 +3034,10 @@
       "ht": "",
       "at": "Applicato a {target_path}\n\n  Modifiche utente: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Missioni contrassegnate [BP Complete]: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Applicazione al gioco fallita: {error}"

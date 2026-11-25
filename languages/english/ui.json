@@ -3034,6 +3034,10 @@
       "ht": "Applied to {target_path}\n\n  User edits: {user_count}\n\n{enhancement_block}",
       "at": ""
     },
+    "bp_complete_count": {
+      "ht": "Missions marked [BP Complete]: {count}",
+      "at": ""
+    },
     "failed_body": {
       "ht": "Failed to apply to game: {error}",
       "at": ""

@@ -82,6 +82,12 @@ them against the new source.
 
 ## Backfill log
 
+- **After 3.0.1 (2026-11-25, Claude Opus 5.5):** the Apply success box
+  now counts the missions it marked `[BP Complete]`, on a line under
+  Missions while the General Tags switch is on. One new key,
+  `apply.bp_complete_count` (`Missions marked [BP Complete]: {count}`), AI
+  `at` in all 11 other languages, `[BP Complete]` and `{count}` kept as is.
+  A new key, so nothing needs human re-review. Not back-translated.
 - **After 3.0.1 (2026-11-25, Claude Opus 5.5):** the `[BP Complete]` mission
   title tag. One new key, `enhancements.mt_tag_bp_complete_cb`
   (`BP Completed (adds "[BP Complete]")`, the General Tags checkbox, placed
