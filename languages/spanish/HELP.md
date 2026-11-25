@@ -10,7 +10,7 @@ Al iniciarse, Smart Citizen recarga las personalizaciones de tu sesión anterior
 
 Smart Citizen se abre en uno de dos modos, y puedes cambiar en cualquier momento.
 
-- El **modo simple** es una pantalla de dos botones: uno, **Aplicar mejoras**, ejecuta toda la cadena con tu configuración actual (extracción, generación y aplicación, con una copia de seguridad previa de tu archivo del juego); el otro cambia al **modo avanzado**. Es la vía rápida cuando solo quieres aplicar las mejoras sin editar textos a mano.
+- El **modo simple** es una pantalla de tres botones: uno, **Aplicar mejoras**, ejecuta toda la cadena con tu configuración actual (extracción, generación y aplicación, con una copia de seguridad previa de tu archivo del juego); **Iniciar superposición** inicia o detiene la superposición de Smart Citizen, igual que el botón **Superposición** de la barra de herramientas en el modo avanzado; el último cambia al **modo avanzado**. Es la vía rápida cuando solo quieres aplicar las mejoras sin editar textos a mano.
 - El **modo avanzado** es la aplicación completa: la tabla de textos, los filtros, la pestaña Mejoras, la pestaña Configuración y todo lo demás de esta guía.
 
 Elige tu modo predeterminado durante la instalación, o alterna entre ellos dentro de la aplicación. El modo simple usa la última configuración guardada en el avanzado.

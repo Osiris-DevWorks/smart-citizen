@@ -10,7 +10,7 @@ Ao iniciar, o Smart Citizen recarrega as personalizações da sessão anterior e
 
 O Smart Citizen abre em um de dois modos, e você pode alternar a qualquer momento.
 
-- O **Modo Simples** é uma tela de dois botões: um deles, **Aplicar Aprimoramentos**, executa toda a cadeia com suas configurações atuais (extração, geração e aplicação, com backup prévio do arquivo do jogo); o outro muda para o **Modo Avançado**. É o caminho rápido quando você só quer os aprimoramentos aplicados, sem editar strings à mão.
+- O **Modo Simples** é uma tela de três botões: um deles, **Aplicar Aprimoramentos**, executa toda a cadeia com suas configurações atuais (extração, geração e aplicação, com backup prévio do arquivo do jogo); **Iniciar sobreposição** inicia ou para a sobreposição do Smart Citizen, igual ao botão **Sobreposição** da barra de ferramentas no Modo Avançado; o último muda para o **Modo Avançado**. É o caminho rápido quando você só quer os aprimoramentos aplicados, sem editar strings à mão.
 - O **Modo Avançado** é o app completo: a tabela de strings, os filtros, a aba Aprimoramentos, a aba Config e todo o resto deste guia.
 
 Escolha seu modo padrão na instalação, ou alterne entre eles dentro do app. O Modo Simples usa as últimas configurações salvas no Avançado.

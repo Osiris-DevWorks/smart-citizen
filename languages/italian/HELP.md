@@ -8,7 +8,7 @@ All'avvio, Smart Citizen ricarica le personalizzazioni della sessione precedente
 
 Smart Citizen si apre in una di due modalità, e puoi passare dall'una all'altra in qualsiasi momento.
 
-- La **modalità Semplice** è una schermata a due pulsanti: uno, **Applica Miglioramenti**, esegue l'intera catena con le impostazioni correnti (estrazione, generazione, applicazione, con un backup del file di gioco eseguito prima); l'altro passa alla **modalità Avanzata**. È la via rapida quando vuoi semplicemente applicare i miglioramenti senza dover modificare i testi a mano.
+- La **modalità Semplice** è una schermata a tre pulsanti: uno, **Applica Miglioramenti**, esegue l'intera catena con le impostazioni correnti (estrazione, generazione, applicazione, con un backup del file di gioco eseguito prima); **Avvia overlay** avvia o ferma l'overlay di Smart Citizen, come il pulsante **Overlay** della barra degli strumenti in modalità Avanzata; l'ultimo passa alla **modalità Avanzata**. È la via rapida quando vuoi semplicemente applicare i miglioramenti senza dover modificare i testi a mano.
 - La **modalità Avanzata** è l'applicazione completa: la tabella dei testi, i filtri, la scheda Miglioramenti, la scheda Configurazione, e tutto il resto descritto in questa guida.
 
 Scegli la modalità predefinita durante l'installazione, oppure passa dall'una all'altra dall'interno dell'app. La modalità Semplice usa le ultime impostazioni salvate in modalità Avanzata.

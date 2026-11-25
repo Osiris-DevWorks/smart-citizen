@@ -8,7 +8,7 @@ Beim Start lädt Smart Citizen alle Anpassungen aus deiner vorherigen Sitzung ne
 
 Smart Citizen öffnet sich in einem von zwei Modi, und du kannst jederzeit wechseln.
 
-- Der **einfache Modus** ist ein Zwei-Knopf-Bildschirm: ein Knopf, **Erweiterungen anwenden**, führt die gesamte Kette mit deinen aktuellen Einstellungen aus (extrahieren, erstellen, anwenden, wobei zuerst eine Sicherung deiner Spieldatei erstellt wird); der andere wechselt zum **erweiterten Modus**. Das ist der schnelle Weg, wenn du nur die Erweiterungen angewendet haben möchtest und keine Strings von Hand bearbeiten musst.
+- Der **einfache Modus** ist ein Drei-Knopf-Bildschirm: ein Knopf, **Erweiterungen anwenden**, führt die gesamte Kette mit deinen aktuellen Einstellungen aus (extrahieren, erstellen, anwenden, wobei zuerst eine Sicherung deiner Spieldatei erstellt wird); **Overlay starten** startet oder beendet das Smart Citizen Overlay, genau wie der Knopf **Overlay** in der Werkzeugleiste des erweiterten Modus; der letzte wechselt zum **erweiterten Modus**. Das ist der schnelle Weg, wenn du nur die Erweiterungen angewendet haben möchtest und keine Strings von Hand bearbeiten musst.
 - Der **erweiterte Modus** ist die vollständige App: die String-Tabelle, Filter, der Erweiterungen-Tab, der Konfiguration-Tab und alles andere in dieser Anleitung.
 
 Wähle deinen Standard bei der Installation, oder wechsle innerhalb der App zwischen ihnen. Der einfache Modus verwendet die Einstellungen, die du zuletzt im erweiterten Modus gespeichert hast.

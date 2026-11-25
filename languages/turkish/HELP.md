@@ -8,7 +8,7 @@ Smart Citizen açılışta önceki oturumunuzdaki tüm özelleştirmeleri yenide
 
 Smart Citizen iki moddan birinde açılır ve istediğiniz zaman geçiş yapabilirsiniz.
 
-- **Basit mod** iki düğmeli bir ekrandır: **Geliştirmeleri Uygula** düğmesi tüm zinciri geçerli ayarlarınızla çalıştırır (çıkar, oluştur, uygula; önce oyun dosyanızın yedeği alınır); diğer düğme sizi **Gelişmiş moda** geçirir. Yalnızca geliştirmelerin uygulanmasını istiyorsanız ve metinleri elle düzenlemeniz gerekmiyorsa hızlı yol budur.
+- **Basit mod** üç düğmeli bir ekrandır: **Geliştirmeleri Uygula** düğmesi tüm zinciri geçerli ayarlarınızla çalıştırır (çıkar, oluştur, uygula; önce oyun dosyanızın yedeği alınır); **Katmanı Başlat** düğmesi, Gelişmiş moddaki araç çubuğunun **Katman** düğmesi gibi Smart Citizen katmanını başlatır veya durdurur; son düğme sizi **Gelişmiş moda** geçirir. Yalnızca geliştirmelerin uygulanmasını istiyorsanız ve metinleri elle düzenlemeniz gerekmiyorsa hızlı yol budur.
 - **Gelişmiş mod** uygulamanın tamamıdır: metin tablosu, filtreler, Geliştirmeler sekmesi, Yapılandırma sekmesi ve bu kılavuzdaki diğer her şey.
 
 Varsayılan modunuzu kurulum sırasında seçin veya uygulama içinden istediğiniz zaman geçiş yapın. Basit mod, Gelişmiş modda en son kaydettiğiniz ayarları kullanır.

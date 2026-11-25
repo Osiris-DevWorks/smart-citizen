@@ -10,7 +10,7 @@ Au lancement, Smart Citizen recharge les personnalisations de votre session pré
 
 Smart Citizen s'ouvre dans l'un de deux modes, et vous pouvez changer à tout moment.
 
-- Le **mode Simple** est un écran à deux boutons : le premier, **Appliquer les enrichissements**, exécute toute la chaîne avec vos réglages actuels (extraction, génération, application, avec une sauvegarde préalable de votre fichier de jeu) ; le second bascule en **mode Avancé**. C'est la voie rapide quand vous voulez simplement appliquer les enrichissements sans retoucher les textes à la main.
+- Le **mode Simple** est un écran à trois boutons : le premier, **Appliquer les enrichissements**, exécute toute la chaîne avec vos réglages actuels (extraction, génération, application, avec une sauvegarde préalable de votre fichier de jeu) ; **Démarrer la superposition** démarre ou arrête la superposition Smart Citizen, comme le bouton **Superposition** de la barre d'outils en mode Avancé ; le dernier bascule en **mode Avancé**. C'est la voie rapide quand vous voulez simplement appliquer les enrichissements sans retoucher les textes à la main.
 - Le **mode Avancé** est l'application complète : le tableau de textes, les filtres, l'onglet Enrichissements, l'onglet Paramètres, et tout le reste de ce guide.
 
 Choisissez votre mode par défaut à l'installation, ou basculez de l'un à l'autre depuis l'application. Le mode Simple utilise les derniers réglages enregistrés en mode Avancé.

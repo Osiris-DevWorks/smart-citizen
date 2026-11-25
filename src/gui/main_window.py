@@ -1330,6 +1330,10 @@ class MainWindow(QMainWindow):
         self.simple_page.switch_to_advanced_requested.connect(
             lambda: self._apply_ui_mode(AppSettings.UI_MODE_ADVANCED)
         )
+        # Start/Stop Overlay on the Simple page drives the toolbar's Overlay
+        # button, as the Overlay tab's does, so it goes through
+        # _toggle_sco_overlay too.
+        self.simple_page.overlay_toggled.connect(lambda on: self.sco_btn.setChecked(on))
         # Siblings swapped by visibility, deliberately not a QStackedWidget: a
         # stack reports its *tallest* page, so with Simple showing it would go
         # on reserving height for the Advanced tabs (323px against the 214 the
@@ -3745,6 +3749,8 @@ class MainWindow(QMainWindow):
         self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
         if hasattr(self, "overlay_tab"):
             self.overlay_tab.refresh_styles()
+        if hasattr(self, "simple_page"):
+            self.simple_page.refresh_styles()
         self._render_document_browsers()
         self._apply_editor_dock_canvas_tint()
 
@@ -8955,7 +8961,7 @@ class MainWindow(QMainWindow):
         self._refresh_sco_catalog()
         self._sco_overlay.start()
         self._apply_sco_options()
-        self.overlay_tab.set_running(True)
+        self._mirror_sco_running(True)
 
     def _refresh_sco_catalog(self):
         """Feed the drawer's Minerals and Crafting searches.
@@ -8995,9 +9001,17 @@ class MainWindow(QMainWindow):
         self._stop_sco_log_watcher()
         if self._sco_overlay is not None:
             self._sco_overlay.stop()
+        self._mirror_sco_running(False)
+
+    def _mirror_sco_running(self, running: bool):
+        """Show the overlay's state on the Overlay tab's and the Simple page's
+        start buttons (the toolbar's is the one that toggled)."""
         overlay_tab = getattr(self, "overlay_tab", None)  # closeEvent may run first
         if overlay_tab is not None:
-            overlay_tab.set_running(False)
+            overlay_tab.set_running(running)
+        simple_page = getattr(self, "simple_page", None)
+        if simple_page is not None:
+            simple_page.set_overlay_running(running)
 
     def _apply_sco_options(self):
         """Push the Overlay tab's switches to a running overlay."""
