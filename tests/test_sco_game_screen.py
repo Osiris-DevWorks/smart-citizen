@@ -259,7 +259,11 @@ def test_a_removed_screen_is_let_go(qapp, screens):
 # Only placing the drawer (it shows, opens, closes or moves) docked it, so a new
 # scale, resolution or taskbar left it partly off the screen or over the taskbar.
 # The expected place is where a drawer docked from scratch on the changed screen
-# goes, so these tests hold whatever _dock's own sums are.
+# goes, so these tests hold whatever _dock's own sums are. Each test that sends a
+# screen signal or lets the dock's timer run records what reaches sys.excepthook
+# (slot_errors), and each wait for a dock shows it when it times out: a slot that
+# raised with no hook stopped the whole run at that test, with no failure and no
+# summary (measured with _dock made to raise).
 
 def _followers(screen) -> int:
     """How many slots each change signal of *screen* reaches (the same for both)."""
@@ -342,7 +346,8 @@ def _wait_past_the_dock():
 
 @pytest.mark.parametrize("expanded", [False, True], ids=["closed", "open"])
 @pytest.mark.parametrize("change", list(CHANGES))
-def test_a_change_to_its_screen_docks_the_drawer_again(docked, screens, change, expanded):
+def test_a_change_to_its_screen_docks_the_drawer_again(docked, screens, change, expanded,
+                                                       slot_errors):
     drawer, screen = docked.drawer, screens["right"]
     if expanded:
         drawer.open_last_section()
@@ -353,14 +358,15 @@ def test_a_change_to_its_screen_docks_the_drawer_again(docked, screens, change, 
     signal.emit(value)
     # Not at once: the wait folds the signals one change sends into one dock.
     assert drawer.geometry() == before
-    assert pump_until(lambda: drawer.geometry() == expected, seconds=2)
+    assert pump_until(lambda: drawer.geometry() == expected, seconds=2), slot_errors
     assert screen.availableGeometry().contains(drawer.geometry())
     assert drawer.is_open() == expanded
+    assert not slot_errors
 
 
 @pytest.mark.parametrize("expanded", [False, True], ids=["closed", "open"])
 @pytest.mark.parametrize("position", AppSettings.SCO_DRAWER_POSITIONS)
-def test_every_position_is_placed_again(docked, screens, position, expanded):
+def test_every_position_is_placed_again(docked, screens, position, expanded, slot_errors):
     """A smaller resolution with the taskbar at the top (Windows 10) moves
     every position's place, corners and middles alike."""
     drawer, screen = docked.drawer, screens["right"]
@@ -375,11 +381,12 @@ def test_every_position_is_placed_again(docked, screens, position, expanded):
     assert expected != before
     screen.geometryChanged.emit(screen.geometry())
     screen.availableGeometryChanged.emit(screen.availableGeometry())
-    assert pump_until(lambda: drawer.geometry() == expected, seconds=2)
+    assert pump_until(lambda: drawer.geometry() == expected, seconds=2), slot_errors
     assert screen.availableGeometry().contains(drawer.geometry())
+    assert not slot_errors
 
 
-def test_one_change_docks_the_drawer_once(docked, screens, monkeypatch):
+def test_one_change_docks_the_drawer_once(docked, screens, monkeypatch, slot_errors):
     """A new scale reaches Qt as both signals (measured), and the drawer is
     placed once."""
     drawer, screen = docked.drawer, screens["right"]
@@ -390,13 +397,14 @@ def test_one_change_docks_the_drawer_once(docked, screens, monkeypatch):
     _rescale(screen)
     screen.geometryChanged.emit(screen.geometry())
     screen.availableGeometryChanged.emit(screen.availableGeometry())
-    assert pump_until(lambda: placed, seconds=2)
+    assert pump_until(lambda: placed, seconds=2), slot_errors
     _wait_past_the_dock()
     assert len(placed) == 1
+    assert not slot_errors
 
 
 @pytest.mark.parametrize("expanded", [False, True], ids=["closed", "open"])
-def test_a_size_the_drawer_did_not_set_docks_it_again(docked, screens, expanded):
+def test_a_size_the_drawer_did_not_set_docks_it_again(docked, screens, expanded, slot_errors):
     """After a new scale Qt can keep the drawer's window at its old size in
     device pixels and then resize the drawer to match: a closed drawer, the
     same logical size at every scale, went from 22 x 212 to 18 x 170 at 125%
@@ -409,12 +417,13 @@ def test_a_size_the_drawer_did_not_set_docks_it_again(docked, screens, expanded)
     drawer.windowHandle().resize(place.width() - 4, place.height() - 42)
     assert pump_until(lambda: drawer.size() != place.size(), seconds=1), \
         "the window's resize should reach the drawer"
-    assert pump_until(lambda: drawer.geometry() == place, seconds=2)
+    assert pump_until(lambda: drawer.geometry() == place, seconds=2), slot_errors
     assert drawer.windowHandle().geometry() == place
     assert drawer._size_fixes == 1
+    assert not slot_errors
 
 
-def test_a_size_the_window_keeps_refusing_stops_the_docks(docked, monkeypatch):
+def test_a_size_the_window_keeps_refusing_stops_the_docks(docked, monkeypatch, slot_errors):
     """A window that never takes the drawer's size docks it a few times, not
     forever."""
     drawer = docked.drawer
@@ -428,17 +437,18 @@ def test_a_size_the_window_keeps_refusing_stops_the_docks(docked, monkeypatch):
     drawer._dock()
     _wait_past_the_dock()
     pump_until(lambda: False, seconds=1)
-    assert len(docks) == 1 + so.SIZE_FIX_LIMIT
+    assert len(docks) == 1 + so.SIZE_FIX_LIMIT, slot_errors
     assert not drawer._screen_change_timer.isActive()
     # A new screen change gets its tries again.
     docks.clear()
     docked.drawer._on_screen_changed()
     _wait_past_the_dock()
     pump_until(lambda: False, seconds=1)
-    assert len(docks) == 1 + so.SIZE_FIX_LIMIT
+    assert len(docks) == 1 + so.SIZE_FIX_LIMIT, slot_errors
+    assert not slot_errors
 
 
-def test_a_screen_the_drawer_has_left_moves_it_no_more(docked, screens):
+def test_a_screen_the_drawer_has_left_moves_it_no_more(docked, screens, slot_errors):
     drawer, left, right = docked.drawer, screens["left"], screens["right"]
     assert (_followers(right), _followers(left)) == (1, 0)
     screens["game"] = left
@@ -454,7 +464,8 @@ def test_a_screen_the_drawer_has_left_moves_it_no_more(docked, screens):
     signal, value = _taskbar_on_the_right(left)
     expected = _docked_from_scratch(left, drawer._position, False)
     signal.emit(value)
-    assert pump_until(lambda: drawer.geometry() == expected, seconds=2)
+    assert pump_until(lambda: drawer.geometry() == expected, seconds=2), slot_errors
+    assert not slot_errors
 
 
 @pytest.fixture
@@ -479,7 +490,7 @@ def test_every_drawer_hooks_a_new_primary_screen(qapp):
         sip.delete(drawer)
 
 
-def test_with_no_screen_set_it_follows_the_primary_screen(qapp, screens, primary):
+def test_with_no_screen_set_it_follows_the_primary_screen(qapp, screens, primary, slot_errors):
     """The drawer's own fallback: docked to the primary screen while no screen
     is set, it follows that screen's changes and a new primary screen."""
     drawer = BlueprintDrawer(DEFAULT_OVERLAY_COLORS)
@@ -490,11 +501,13 @@ def test_with_no_screen_set_it_follows_the_primary_screen(qapp, screens, primary
         signal, value = _taskbar_on_the_right(left)
         expected = _docked_from_scratch(left, drawer._position, False)
         signal.emit(value)
-        assert pump_until(lambda: drawer.geometry() == expected, seconds=2)
+        assert pump_until(lambda: drawer.geometry() == expected, seconds=2), slot_errors
         primary["screen"] = right
         drawer._on_primary_screen_changed(right)
-        assert pump_until(lambda: right.geometry().contains(drawer.geometry()), seconds=2)
+        assert pump_until(lambda: right.geometry().contains(drawer.geometry()),
+                          seconds=2), slot_errors
         assert (_followers(left), _followers(right)) == (0, 1)
+        assert not slot_errors
     finally:
         sip.delete(drawer)
 
@@ -505,7 +518,7 @@ def test_a_new_primary_screen_leaves_a_drawer_on_the_games_screen(docked, screen
     assert not docked.drawer._screen_change_timer.isActive()
 
 
-def test_with_no_screen_at_all_the_drawer_waits_for_one(qapp, screens, primary):
+def test_with_no_screen_at_all_the_drawer_waits_for_one(qapp, screens, primary, slot_errors):
     """For a moment while Windows changes monitors Qt can have no screen, and
     primaryScreen() gives None: the dock does nothing and raises nothing, and
     the next primary screen docks it."""
@@ -518,12 +531,14 @@ def test_with_no_screen_at_all_the_drawer_waits_for_one(qapp, screens, primary):
         primary["screen"] = screens["right"]
         drawer._on_primary_screen_changed(screens["right"])
         assert pump_until(
-            lambda: screens["right"].geometry().contains(drawer.geometry()), seconds=2)
+            lambda: screens["right"].geometry().contains(drawer.geometry()),
+            seconds=2), slot_errors
+        assert not slot_errors
     finally:
         sip.delete(drawer)
 
 
-def test_a_new_primary_screen_gets_the_size_fixes_again(qapp, screens, primary):
+def test_a_new_primary_screen_gets_the_size_fixes_again(qapp, screens, primary, slot_errors):
     """With no screen at all for a moment, resizes Qt made then could use up
     the size fixes. The new primary screen's dock gets them again, so a size
     Qt then gives the drawer is put right."""
@@ -534,11 +549,13 @@ def test_a_new_primary_screen_gets_the_size_fixes_again(qapp, screens, primary):
         primary["screen"] = screens["right"]
         drawer._on_primary_screen_changed(screens["right"])
         assert pump_until(
-            lambda: screens["right"].geometry().contains(drawer.geometry()), seconds=2)
+            lambda: screens["right"].geometry().contains(drawer.geometry()),
+            seconds=2), slot_errors
         place = drawer.geometry()
         drawer.windowHandle().resize(place.width() - 4, place.height() - 42)
         assert pump_until(lambda: drawer.size() != place.size(), seconds=1)
-        assert pump_until(lambda: drawer.geometry() == place, seconds=2)
+        assert pump_until(lambda: drawer.geometry() == place, seconds=2), slot_errors
+        assert not slot_errors
     finally:
         drawer.hide()
         sip.delete(drawer)
