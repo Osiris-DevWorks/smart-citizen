@@ -613,13 +613,16 @@ class AppSettings:
     # languages/sources.json map. Keyed LANG_SOURCE_OVERRIDE_PREFIX/<language>.
     LANG_SOURCE_OVERRIDE_PREFIX = "language_source_url"
 
+    # The Missions checkbox's file key (ENHANCEMENTS_FILES, ENHANCEMENT_CATEGORY_FILES).
+    ENHANCEMENT_FILE_MISSIONS = "mission_rewards"
+
     # Enhancements cache filenames (written by generate_enhancements_ini.py into cache dir)
     ENHANCEMENTS_FILES = {
         "ship_descs":          "ships_desc_enhancements.ini",
         "component_descs":     "components_desc_enhancements.ini",
         "ship_weapon_descs":   "ship_weapons_desc_enhancements.ini",
         "fps_weapon_descs":    "fps_weapons_desc_enhancements.ini",
-        "mission_rewards":     "mission_rewards_enhancements.ini",
+        ENHANCEMENT_FILE_MISSIONS: "mission_rewards_enhancements.ini",
         "commodity_crafting":  "commodity_crafting_enhancements.ini",
         "journal":            "journal_enhancements.ini",
         "missile_enhancements": "missile_enhancements.ini",
@@ -642,7 +645,7 @@ class AppSettings:
         "ships":       ["ship_descs"],
         "ship_items":  ["component_descs", "ship_weapon_descs", "missile_enhancements"],
         "gear":        ["fps_weapon_descs"],
-        "missions":    ["mission_rewards"],
+        "missions":    [ENHANCEMENT_FILE_MISSIONS],
         "commodities": ["commodity_crafting"],
         "journal":     ["journal"],
         "medical_consumables": ["medical_consumables"],
@@ -3370,9 +3373,37 @@ class AppSettings:
         Generate button and the language switch. An empty stamp means a run
         was cut off or failed after it started (see
         :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
+
+        A set whose Missions file has no [BP Complete] mission record beside it
+        is not current either (:meth:`_mission_record_missing`).
         """
         stamp = AppSettings.get_enhancements_stamp(language)
-        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+        if not stamp or stamp != AppSettings.get_dataforge_build_key():
+            return False
+        return not AppSettings._mission_record_missing(language)
+
+    @staticmethod
+    def _mission_record_missing(language: "str | None" = None) -> bool:
+        """True when Missions is generated for *language* but the [BP Complete]
+        mission record (``blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE``) is not
+        beside it.
+
+        Only a generation writes the record, and a set generated before the
+        record existed still carries a stamp that matches the DataForge build,
+        so without this the app called it current: the startup check stayed
+        quiet, Generate stayed grey, and no title got the tag until a game
+        patch. Counting it as out of date makes the app offer that one
+        generation. It never starts one itself."""
+        missions = AppSettings.ENHANCEMENT_FILE_MISSIONS
+        if missions not in AppSettings.get_enabled_enhancement_categories():
+            return False
+        from src.utils.blueprint_meta import MISSION_BLUEPRINT_DESCS_FILE
+        folder = AppSettings.get_enhancements_dir(language)
+        try:
+            return ((folder / AppSettings.ENHANCEMENTS_FILES[missions]).is_file()
+                    and not (folder / MISSION_BLUEPRINT_DESCS_FILE).is_file())
+        except OSError:
+            return False
 
     @staticmethod
     def invalidate_enhancements_stamp(folder: Path) -> None:

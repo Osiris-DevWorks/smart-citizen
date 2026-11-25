@@ -883,6 +883,50 @@ def read_mission_blueprint_descs(path) -> "dict[str, tuple[str, ...]]":
     }
 
 
+@dataclass(frozen=True)
+class _LoadedString:
+    """The three fields build_blueprint_metadata reads from an entry."""
+    key: str
+    original_value: str
+    category: str
+
+
+def complete_titles_in_strings(
+    strings: "dict[str, str]",
+    title_descs: "dict[str, tuple[str, ...]]",
+    owned,
+    *,
+    enclosings=None,
+    default_values: "dict[str, str] | None" = None,
+    bp_header: "str | None" = None,
+) -> frozenset:
+    """[BP Complete] titles worked out from *strings* (``{key: value}``), the
+    strings Apply is about to write, not the last load's.
+
+    Simple mode applies straight after a generation and reloads only
+    afterwards, so the table's names (``MainWindow._bp_names_by_desc``) can be
+    from before the run that wrote the record: a first generation tagged
+    nothing in the file it applied. This scans *strings* the way the table's
+    load does (``build_blueprint_metadata``, about 0.15 s on LIVE), with the
+    record's descriptions counted as missions, as the loader counts every key
+    of the mission INI. *title_descs* is the record
+    (``read_mission_blueprint_descs``)."""
+    from src.models.string_model import StringEntry
+    from src.utils.owned_items import complete_mission_titles
+
+    if not owned or not title_descs:
+        return frozenset()
+    descs = {d for ds in title_descs.values() for d in ds}
+    entries = [
+        _LoadedString(k, v, CATEGORY_MISSIONS if k in descs else StringEntry.extract_category(k))
+        for k, v in strings.items()
+    ]
+    names_by_desc: dict = {}
+    build_blueprint_metadata(entries, enclosings=enclosings, default_values=default_values,
+                             bp_header=bp_header, names_by_desc=names_by_desc)
+    return complete_mission_titles(title_descs, names_by_desc, owned)
+
+
 def build_blueprint_metadata(
     entries,
     enclosings: "Sequence[tuple[str, str]] | None" = None,

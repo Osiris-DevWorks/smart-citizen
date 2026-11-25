@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -589,8 +589,10 @@ class _ApplyMergeInputs:
     # place that builds these inputs without it fails instead of centring
     # every language in Blender Pro.
     sc_language_id: str
-    # Title keys that get [BP Complete] (MainWindow._bp_complete_titles).
-    bp_complete_titles: frozenset = frozenset()
+    # The [BP Complete] mission record ({title key: desc keys}), empty while
+    # the General Tags switch is off. The merge works out which titles are
+    # complete from the strings it writes (blueprint_meta.complete_titles_in_strings).
+    bp_complete_record: dict = field(default_factory=dict)
 
 
 def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
@@ -615,6 +617,19 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     # Merge all sources in hierarchy order, with user edits on top
     merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, inputs.user_overrides)
 
+    # Which missions get [BP Complete], from these strings rather than the last
+    # load's: Simple mode applies straight after a generation, before the
+    # reload. Before the [Owned] weave, so the bullets are read as written.
+    bp_complete_titles: frozenset = frozenset()
+    if inputs.owned and inputs.bp_complete_record:
+        from src.utils.blueprint_meta import complete_titles_in_strings
+        bp_complete_titles = complete_titles_in_strings(
+            merged_dict, inputs.bp_complete_record, inputs.owned,
+            enclosings=inputs.enclosings,
+            default_values=sources_dict.get(AppSettings.SOURCE_GLOBAL, {}),
+            bp_header=inputs.bp_header,
+        )
+
     # #157: weave [Owned] into blueprint lists so the tag reaches the
     # applied game file (apply re-loads sources from disk, where the
     # live owned overlay isn't baked in). Idempotent.
@@ -627,12 +642,12 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
             if _nv != _v:
                 merged_dict[_k] = _nv
 
-    # [BP Complete] on the titles the table shows it on, for the same reason.
-    # Also strips one an override carries for a mission no longer complete,
-    # as the weave above does [Owned]. Idempotent.
+    # [BP Complete] on the complete titles, for the same reason. Also strips
+    # one an override carries for a mission no longer complete, as the weave
+    # above does [Owned]. Idempotent.
     from src.utils.owned_items import apply_bp_complete_to_title, has_bp_complete_tag
     for _k, _v in list(merged_dict.items()):
-        _complete = _k in inputs.bp_complete_titles
+        _complete = _k in bp_complete_titles
         if _complete or has_bp_complete_tag(_v):
             merged_dict[_k] = apply_bp_complete_to_title(_v, _complete)
 
@@ -2861,6 +2876,9 @@ class MainWindow(QMainWindow):
         if owned:
             from src.utils.owned_items import enclosings_from_tag_configs
             enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+        # Read again only if the file changed: Simple mode applies straight
+        # after the generation that wrote it, before the reload that would.
+        self._read_mission_bp_descs()
         return _ApplyMergeInputs(
             user_overrides=user_overrides,
             discarded_new_keys=frozenset(discarded_new_keys),
@@ -2868,7 +2886,7 @@ class MainWindow(QMainWindow):
             enclosings=enclosings,
             bp_header=self._bp_header(),
             sc_language_id=AppSettings.get_sc_language_id(),
-            bp_complete_titles=self._bp_complete_titles(owned),
+            bp_complete_record=self._bp_complete_record(owned),
         )
 
     def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
@@ -8454,19 +8472,29 @@ class MainWindow(QMainWindow):
         else:
             logger.info(f"[BP Complete]: no mission record at {path} until the next generation")
 
-    def _bp_complete_titles(self, owned) -> frozenset:
-        """Title keys that get [BP Complete]: missions whose every blueprint
-        is in *owned*, while the General Tags switch is on. Built from the
-        last load's strings (_rebuild_blueprint_metadata), so the table's
-        weave and Apply's merge tag the same titles. A set check over a few
-        hundred titles, cheap enough for every Owned change, which is why it
-        works from the generator's record and never from DataForge."""
+    def _bp_complete_record(self, owned) -> dict:
+        """The generator's mission record (_read_mission_bp_descs) while the
+        General Tags switch is on and something is owned, else empty: with
+        nothing to check, neither the table nor Apply scans for the tag."""
         if not owned or not self._mission_bp_descs:
-            return frozenset()
+            return {}
         if not AppSettings.get_mission_title_tags()[AppSettings.MISSION_TITLE_TAG_BP_COMPLETE]:
+            return {}
+        return self._mission_bp_descs
+
+    def _bp_complete_titles(self, owned) -> frozenset:
+        """Title keys the table tags [BP Complete]: missions whose every
+        blueprint is in *owned*, while the General Tags switch is on. Built
+        from the last load's strings (_rebuild_blueprint_metadata). A set
+        check over a few hundred titles, cheap enough for every Owned change,
+        which is why it works from the generator's record and never from
+        DataForge. Apply works the titles out again from the strings it
+        writes (_merge_for_apply), which match these once the load is current."""
+        record = self._bp_complete_record(owned)
+        if not record:
             return frozenset()
         from src.utils.owned_items import complete_mission_titles
-        return complete_mission_titles(self._mission_bp_descs, self._bp_names_by_desc, owned)
+        return complete_mission_titles(record, self._bp_names_by_desc, owned)
 
     def _recompute_owned(self):
         """#157: weave/strip [Owned] tags on blueprint-list bullets to match the

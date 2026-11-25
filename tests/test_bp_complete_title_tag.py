@@ -41,6 +41,7 @@ from src.models.string_model import CATEGORY_MISSIONS  # noqa: E402
 from src.utils.blueprint_meta import (  # noqa: E402
     MISSION_BLUEPRINT_DESCS_FILE,
     build_blueprint_metadata,
+    complete_titles_in_strings,
     read_mission_blueprint_descs,
     write_mission_blueprint_descs,
 )
@@ -324,6 +325,7 @@ class TestSetting:
 class _Window:
     """Carries what the [BP Complete] weave touches."""
 
+    _bp_complete_record = MainWindow._bp_complete_record
     _bp_complete_titles = MainWindow._bp_complete_titles
     _read_mission_bp_descs = MainWindow._read_mission_bp_descs
     _recompute_owned = MainWindow._recompute_owned
@@ -455,15 +457,41 @@ def _inputs(**overrides) -> _ApplyMergeInputs:
 
 
 class TestMergeForApply:
-    TITLE = "Clear <EM4>[BP]</EM4> <EM4>[100 Rep]</EM4>"
+    """Apply works the complete titles out from the strings it writes."""
 
-    def test_tags_the_complete_titles(self):
-        merged = _merge_for_apply(
-            {"global": {"M_Title_001": self.TITLE, "X": "x"}}, ["global"],
-            _inputs(bp_complete_titles=frozenset({"M_Title_001"})),
-        )
-        assert merged["M_Title_001"] == f"Clear <EM4>[BP]</EM4> {TAG} <EM4>[100 Rep]</EM4>"
+    TITLE = "Clear <EM4>[BP]</EM4> <EM4>[100 Rep]</EM4>"
+    TAGGED = f"Clear <EM4>[BP]</EM4> {TAG} <EM4>[100 Rep]</EM4>"
+
+    def _sources(self, *names):
+        return {"global": {"M_Title_001": self.TITLE, "X": "x"},
+                "enhancements": {"M_Desc_001": _desc(*names)}}
+
+    def _merge(self, sources, **inputs):
+        return _merge_for_apply(sources, ["global", "enhancements"],
+                                _inputs(bp_complete_record=_TITLES, **inputs))
+
+    def test_tags_a_mission_whose_every_blueprint_is_owned(self):
+        merged = self._merge(self._sources("Arrow", "Gladius"), owned={"Arrow", "Gladius"})
+        assert merged["M_Title_001"] == self.TAGGED
         assert merged["X"] == "x"
+
+    def test_one_blueprint_not_owned_leaves_it_off(self):
+        merged = self._merge(self._sources("Arrow", "Gladius"), owned={"Arrow"})
+        assert merged["M_Title_001"] == self.TITLE
+
+    def test_no_record_or_nothing_owned_scans_nothing(self):
+        with patch("src.utils.blueprint_meta.build_blueprint_metadata") as scan:
+            _merge_for_apply(self._sources("Arrow"), ["global", "enhancements"],
+                             _inputs(owned={"Arrow"}))
+            self._merge(self._sources("Arrow"), owned=set())
+        scan.assert_not_called()
+
+    def test_reads_the_bullets_the_user_wrote(self):
+        """A user override of the description is what the file gets, so it
+        is what the tag goes by."""
+        merged = self._merge(self._sources("Arrow"), owned={"Arrow"},
+                             user_overrides={"M_Desc_001": _desc("Arrow", "Gladius")})
+        assert merged["M_Title_001"] == self.TITLE
 
     def test_strips_an_override_for_a_mission_no_longer_complete(self):
         tagged = apply_bp_complete_to_title(self.TITLE, True)
@@ -473,10 +501,98 @@ class TestMergeForApply:
         )
         assert merged["M_Title_001"] == self.TITLE
 
-    def test_inputs_carry_the_windows_complete_titles(self, owned):
+
+class TestApplyStraightAfterAGeneration:
+    """Simple mode applies right after the generation that wrote the record,
+    before the reload that reads it, so the window's names are from before
+    the run. Apply must still tag the title in the file it writes."""
+
+    @pytest.fixture
+    def data_dir(self, owned, tmp_path):
+        saved = AppSettings._backend
+        AppSettings._backend = JsonSettings(tmp_path / "config.json")
+        AppSettings.set_user_data_dir(tmp_path / "data")
+        folder = AppSettings.get_base_ini_leaf().parent
+        folder.mkdir(parents=True)
+        yield folder
+        AppSettings._backend = saved
+
+    def test_a_record_written_after_the_load_is_used(self, owned, data_dir):
+        window = _Window()  # loaded before the run: no record, no names
+        window._read_mission_bp_descs()
+        assert window._mission_bp_descs == {}
+        write_mission_blueprint_descs(data_dir / MISSION_BLUEPRINT_DESCS_FILE,
+                                      {"M_Title_001": ["M_Desc_001"]})
         owned["owned"] = {"Arrow"}
-        window = _Window(titles=_TITLES, names=_NAMES)
-        assert window._apply_merge_inputs().bp_complete_titles == {"M_Title_001"}
+
+        merged = _merge_for_apply(
+            {"global": {"M_Title_001": TestMergeForApply.TITLE},
+             "enhancements": {"M_Desc_001": _desc("Arrow")}},
+            ["global", "enhancements"], window._apply_merge_inputs(),
+        )
+        assert merged["M_Title_001"] == TestMergeForApply.TAGGED
+
+    def test_switch_off_hands_apply_no_record(self, owned, data_dir):
+        write_mission_blueprint_descs(data_dir / MISSION_BLUEPRINT_DESCS_FILE,
+                                      {"M_Title_001": ["M_Desc_001"]})
+        owned["owned"] = {"Arrow"}
+        AppSettings.set_mission_title_tag(BP_COMPLETE, False)
+        assert _Window()._apply_merge_inputs().bp_complete_record == {}
+
+
+class TestCompleteTitlesInStrings:
+    def test_matches_the_tables_names(self):
+        """The same item resolution as the load: a bullet with a Tag Builder
+        tag resolves to the item's plain name, as the Owned set holds it."""
+        strings = {
+            "item_NameSHLD_Arrow": "Arrow [MIL-S1-A]",
+            "M_Desc_001": _desc("Arrow [MIL-S1-A]"),
+        }
+        assert complete_titles_in_strings(
+            strings, _TITLES, {"Arrow"}, default_values={"item_NameSHLD_Arrow": "Arrow"},
+        ) == {"M_Title_001"}
+
+    def test_empty_record_or_owned_set(self):
+        strings = {"M_Desc_001": _desc("Arrow")}
+        assert complete_titles_in_strings(strings, {}, {"Arrow"}) == frozenset()
+        assert complete_titles_in_strings(strings, _TITLES, set()) == frozenset()
+
+
+# ── A set generated before the record existed ───────────────────────────────
+
+class TestRecordMissingIsOutOfDate:
+    """Without the record no title can be tagged, and only a generation
+    writes it, so a set without one must not read as current."""
+
+    @pytest.fixture
+    def enh_dir(self, isolated_settings, tmp_path, monkeypatch):
+        AppSettings.set_user_data_dir(tmp_path / "data")
+        monkeypatch.setattr(AppSettings, "get_dataforge_build_key",
+                            staticmethod(lambda forge_dir=None: "build-1"))
+        folder = AppSettings.get_enhancements_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        AppSettings.set_enhancements_stamp("build-1")
+        (folder / AppSettings.ENHANCEMENTS_FILES[AppSettings.ENHANCEMENT_FILE_MISSIONS]
+         ).write_text("; generated\n", encoding="utf-8")
+        return folder
+
+    def _missions(self, monkeypatch, on):
+        cats = {AppSettings.ENHANCEMENT_FILE_MISSIONS} if on else {"ship_descs"}
+        monkeypatch.setattr(AppSettings, "get_enabled_enhancement_categories",
+                            staticmethod(lambda: set(cats)))
+
+    def test_missing_record_is_out_of_date(self, enh_dir, monkeypatch):
+        self._missions(monkeypatch, True)
+        assert AppSettings.enhancements_built_from_current_dataforge() is False
+
+    def test_with_the_record_it_is_current(self, enh_dir, monkeypatch):
+        self._missions(monkeypatch, True)
+        write_mission_blueprint_descs(enh_dir / MISSION_BLUEPRINT_DESCS_FILE, {})
+        assert AppSettings.enhancements_built_from_current_dataforge() is True
+
+    def test_missions_off_needs_no_record(self, enh_dir, monkeypatch):
+        self._missions(monkeypatch, False)
+        assert AppSettings.enhancements_built_from_current_dataforge() is True
 
 
 # ── The Enhancements tab checkbox ───────────────────────────────────────────
