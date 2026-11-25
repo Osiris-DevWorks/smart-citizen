@@ -102,6 +102,15 @@ CAPTURE_INTERVAL_MS = 250
 # How often a running overlay looks for the screen Star Citizen is on, so the
 # drawer and the capture follow the game to another monitor (#573).
 GAME_SCREEN_CHECK_MS = 1000
+# How long the drawer waits after the screen it docks to changes (a new scale,
+# resolution or work area) before it docks again (#583). One change in Windows
+# reaches Qt as several signals, and the wait folds them into one dock.
+SCREEN_CHANGE_DOCK_MS = 100
+# How many times in a row the drawer docks again for a size it did not set
+# (#583: after a new scale Qt can resize it to the window's old size in device
+# pixels) before it gives up, so a window that never takes its size cannot
+# keep it docking.
+SIZE_FIX_LIMIT = 2
 # For tuning the digit reader only: with this environment variable set (any
 # value) when the app starts, a crop of each distinct reading (named after the
 # text read) is kept so misreads can be fixed by adding reference glyphs
@@ -1146,6 +1155,15 @@ def shops_by_system(locations) -> dict[str, list[ShopLocation]]:
     return {s: grouped[s] for s in known + others + ([""] if "" in grouped else [])}
 
 
+def _screen_change_signals(screen: QScreen) -> tuple:
+    """The signals a screen sends when the drawer's place on it changes: its
+    size in logical pixels (a new resolution or scale) and its work area (the
+    taskbar moved, resized or set to hide). A new scale on Windows sends
+    geometryChanged and no logicalDotsPerInchChanged, which stays at 96 under
+    Qt 6's scaling (measured)."""
+    return (screen.geometryChanged, screen.availableGeometryChanged)
+
+
 class BlueprintDrawer(QWidget):
     """A stack of section tabs on a screen edge (blueprints, minerals,
     crafting, item finder). A tab opens the see-through panel straight to its section;
@@ -1283,6 +1301,20 @@ class BlueprintDrawer(QWidget):
         # The screen it docks to: the game's (ScoOverlay.set_screen), or the
         # primary screen while none is set.
         self._screen: Optional[QScreen] = None
+        # The screen it last docked to, whose changes it follows: a new scale,
+        # resolution or work area docks it again (#583, _follow_screen).
+        self._followed_screen: Optional[QScreen] = None
+        self._screen_change_timer = QTimer(self)
+        self._screen_change_timer.setSingleShot(True)
+        self._screen_change_timer.setInterval(SCREEN_CHANGE_DOCK_MS)
+        self._screen_change_timer.timeout.connect(self._dock)
+        # The size the last dock set, and how many docks in a row a size it
+        # did not set has asked for (resizeEvent).
+        self._docked_size: Optional[QSize] = None
+        self._size_fixes = 0
+        app = QGuiApplication.instance()
+        if app is not None:
+            app.primaryScreenChanged.connect(self._on_primary_screen_changed)
         # Whether clicks pass through to the window below (set_pass_through).
         self.pass_through = False
         self._position = AppSettings.SCO_DRAWER_POSITION_DEFAULT
@@ -1587,10 +1619,68 @@ class BlueprintDrawer(QWidget):
     def set_screen(self, screen: Optional[QScreen]) -> None:
         """Dock to *screen* (None: the primary screen), moving there at once."""
         self._screen = screen
+        self._size_fixes = 0
         self._dock()
+
+    def _follow_screen(self, screen: QScreen) -> None:
+        """Dock again whenever *screen*, the one the drawer docks to, changes
+        its size, work area or scale, and stop following the one before
+        (#583). Without this the drawer stayed where it was, partly off the
+        screen or over the taskbar, until it next opened, closed or moved."""
+        if screen is self._followed_screen:
+            return
+        old, self._followed_screen = self._followed_screen, screen
+        if old is not None:
+            try:
+                signals = _screen_change_signals(old)
+            except RuntimeError:
+                signals = ()  # Qt deleted the screen, and its connections with it
+            for signal in signals:
+                try:
+                    signal.disconnect(self._on_screen_changed)
+                except RuntimeError:
+                    pass  # deleted while being let go: its connections went with it
+        for signal in _screen_change_signals(screen):
+            signal.connect(self._on_screen_changed)
+
+    def _on_screen_changed(self, *_) -> None:
+        # Each signal starts the wait again, so one change docks once.
+        self._size_fixes = 0
+        self._screen_change_timer.start()
+
+    def resizeEvent(self, event):  # noqa: N802 (Qt's name)
+        # A size the last dock did not set. After a new scale Qt can keep the
+        # window at its old size in device pixels: a closed drawer, the same
+        # size in logical pixels at every scale, then took its dock for a move
+        # alone, and Qt resized it to the old device size (22 x 212 became
+        # 18 x 170 at 125%), off its edge (measured at 125%, 175% and 225%).
+        # Docking again sets the size for real. Only a new screen change starts
+        # the count again, so a dock that keeps ending at another size stops.
+        # The widget's own size is read, not the event's: a resize the window
+        # passes on can carry the size from before it (measured offscreen).
+        super().resizeEvent(event)
+        if (self._docked_size is not None and self.size() != self._docked_size
+                and self._size_fixes < SIZE_FIX_LIMIT):
+            self._size_fixes += 1
+            self._screen_change_timer.start()
+
+    def _on_primary_screen_changed(self, _screen) -> None:
+        # Only the fallback docks to the primary screen. While the overlay
+        # runs it names a screen, and its own check follows the game. A new
+        # primary screen is a new screen change, so the size fixes start again:
+        # with no screen at all for a moment, resizes Qt made then could have
+        # used them up.
+        if self._screen is None:
+            self._size_fixes = 0
+            self._screen_change_timer.start()
 
     def _dock(self) -> None:
         display = self._screen or QGuiApplication.primaryScreen()
+        if display is None:
+            # No screen at all, for a moment while Windows changes monitors:
+            # nothing to dock to. The new primary screen's signal docks it.
+            return
+        self._follow_screen(display)
         screen = display.availableGeometry()
         edge = drawer_edge(self._position)
         vertical, _, horizontal = self._position.partition("_")
@@ -1617,6 +1707,7 @@ class BlueprintDrawer(QWidget):
         # another scale Qt moved the window there and rescaled it, so the move
         # kept a wrong size (found in review). Qt clamps a geometry to the
         # fixed size, so that is let go for the step and set again after.
+        self._docked_size = QSize(width, height)
         self.setMinimumSize(0, 0)
         self.setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX)
         self.setGeometry(x, y, width, height)
@@ -2237,6 +2328,8 @@ class ScoOverlay(QObject):
         if self._reading or self._reader is None or not self._timer.isActive():
             return
         screen = self._screen or QGuiApplication.primaryScreen()
+        if screen is None:
+            return  # no screen at all for a moment: nothing to capture
         geometry = screen.geometry()
         region = scan_region_rect(geometry)
         # With window 0, grabWindow's x and y count from the screen's own
