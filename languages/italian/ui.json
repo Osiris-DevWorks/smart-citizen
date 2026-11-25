@@ -1588,6 +1588,10 @@
       "ht": "",
       "at": "Tag Traccia Reputazione (aggiunge \"(Security)\" / \"(Contractor)\" al tag Reputazione)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP completati (aggiunge \"[BP Complete]\")"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missioni di Scansione/Estrazione"

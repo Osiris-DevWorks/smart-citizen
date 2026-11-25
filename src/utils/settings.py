@@ -497,7 +497,10 @@ class AppSettings:
     # ace title tag and the rep/xp title tag were both unconditionally shown
     # before this split). migrate_title_tag_settings() carries a user's prior
     # blueprint_tag / ace choice forward once.
-    MISSION_TITLE_TAG_KEYS = ("rep", "blueprint", "ace", "rs", "rep_track")
+    MISSION_TITLE_TAG_BP_COMPLETE = "bp_complete"
+    MISSION_TITLE_TAG_KEYS = (
+        "rep", "blueprint", MISSION_TITLE_TAG_BP_COMPLETE, "ace", "rs", "rep_track",
+    )
     _MISSION_TITLE_TAG_SETTING = {
         "rep":       "mission_title_tag/rep",
         "blueprint": "mission_title_tag/blueprint",
@@ -513,6 +516,12 @@ class AppSettings:
         # suffix (MISSION DETAILS' Reputation field) is unconditional and
         # always on, independent of this toggle.
         "rep_track": "mission_title_tag/rep_track",
+        # [BP Complete] on a mission whose every blueprint is owned. Unlike
+        # the tags above, the generator does not write it: MainWindow weaves
+        # it in on every load and Owned change, as it weaves [Owned] into
+        # blueprint bullets (owned_items.apply_bp_complete_to_title), so a
+        # change needs no Generate. Read by MainWindow._bp_complete_titles.
+        MISSION_TITLE_TAG_BP_COMPLETE: "mission_title_tag/bp_complete",
     }
     # Per-field default for get_mission_title_tags() — every title tag
     # defaults on except where overridden here.
@@ -1319,7 +1328,7 @@ class AppSettings:
     @staticmethod
     def get_mission_title_tags() -> dict:
         """Return {field: enabled} for the mission TITLE tags (2.2.0, "General
-        Tags"): rep/xp, blueprint, ace, rep_track. Independent of
+        Tags"): rep/xp, blueprint, ace, rs, rep_track, bp_complete. Independent of
         get_mission_detail_fields() — see MISSION_TITLE_TAG_KEYS. Every field
         defaults to True (matching prior, unsplit behaviour) except where
         overridden in _MISSION_TITLE_TAG_DEFAULTS (currently just

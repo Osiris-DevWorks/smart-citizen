@@ -267,10 +267,13 @@ class _InputsWindow:
 
     _apply_merge_inputs = MainWindow._apply_merge_inputs
     _build_apply_merged_dict = MainWindow._build_apply_merged_dict
+    _bp_complete_titles = MainWindow._bp_complete_titles
 
-    def __init__(self, entries, bp_header=None):
+    def __init__(self, entries, bp_header=None, mission_bp_descs=None, bp_names_by_desc=None):
         self.entries = entries
         self._header = bp_header
+        self._mission_bp_descs = mission_bp_descs or {}
+        self._bp_names_by_desc = bp_names_by_desc or {}
 
     def _bp_header(self):
         return self._header

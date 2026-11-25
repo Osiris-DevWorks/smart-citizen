@@ -1588,6 +1588,10 @@
       "ht": "",
       "at": "Ruf-Track-Tag (fügt „(Security)“ / „(Contractor)“ zum Ruf-Tag hinzu)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP komplett (fügt „[BP Complete]“ hinzu)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Scan-/Abbaumissionen"

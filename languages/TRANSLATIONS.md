@@ -82,6 +82,20 @@ them against the new source.
 
 ## Backfill log
 
+- **After 3.0.1 (2026-11-25, Claude Opus 5.5):** the `[BP Complete]` mission
+  title tag. One new key, `enhancements.mt_tag_bp_complete_cb`
+  (`BP Completed (adds "[BP Complete]")`, the General Tags checkbox, placed
+  right after BP Tag), AI `at` in all 11 other languages, `[BP Complete]`
+  kept as is in every one because the tag itself is English. `docs/HELP.md`
+  gained a sentence after the General Tags passage (what the tag means, that
+  it follows the Owned set with no new generation but needs one generation
+  first, and that hiding POTENTIAL BLUEPRINTS hides it) and an Apply Owned
+  Tags note; `docs/ABOUT.md` and `README.md` gained one sentence in the
+  Blueprint Tracker entry. The 11 translated `HELP.md` and `ABOUT.md` files
+  gained the same words, naming General Tags, the checkbox and Generate
+  Enhancements as each `ui.json` does. A new key, so nothing needs human
+  re-review. Checked by a script: each anchor matched once and every line
+  ending was kept. Not back-translated.
 - **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** pre-release, the Legal
   tab's privacy section gained a "The Smart Citizen Overlay" subsection
   (`docs/LEGAL.md`, before "What Smart Citizen does not do"): what the overlay

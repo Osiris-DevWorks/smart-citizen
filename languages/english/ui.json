@@ -1600,6 +1600,10 @@
       "ht": "Rep Track Tag (adds \"(Security)\" / \"(Contractor)\" to the Rep tag)",
       "at": ""
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "BP Completed (adds \"[BP Complete]\")",
+      "at": ""
+    },
     "mt_scanning_group": {
       "ht": "Scanning/Mining Missions",
       "at": ""

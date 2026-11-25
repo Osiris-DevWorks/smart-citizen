@@ -589,6 +589,8 @@ class _ApplyMergeInputs:
     # place that builds these inputs without it fails instead of centring
     # every language in Blender Pro.
     sc_language_id: str
+    # Title keys that get [BP Complete] (MainWindow._bp_complete_titles).
+    bp_complete_titles: frozenset = frozenset()
 
 
 def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
@@ -624,6 +626,15 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
             )
             if _nv != _v:
                 merged_dict[_k] = _nv
+
+    # [BP Complete] on the titles the table shows it on, for the same reason.
+    # Also strips one an override carries for a mission no longer complete,
+    # as the weave above does [Owned]. Idempotent.
+    from src.utils.owned_items import apply_bp_complete_to_title, has_bp_complete_tag
+    for _k, _v in list(merged_dict.items()):
+        _complete = _k in inputs.bp_complete_titles
+        if _complete or has_bp_complete_tag(_v):
+            merged_dict[_k] = apply_bp_complete_to_title(_v, _complete)
 
     # Stamp Journal entries Smart Citizen produced or modified —
     # both user-edited journals AND auto-generated journal
@@ -1056,6 +1067,14 @@ class MainWindow(QMainWindow):
         # Built once per load (pure function of the loaded strings), so
         # owned-toggles only re-partition rather than rescan ~87k entries.
         self._blueprint_meta: dict = {}
+        # [BP Complete] title tag: each blueprint description's item names,
+        # built with _blueprint_meta, and the generator's record of each
+        # blueprint mission's descriptions (blueprint_meta.
+        # MISSION_BLUEPRINT_DESCS_FILE), read again only once the file
+        # changes (_mission_bp_descs_key: its path and stat).
+        self._bp_names_by_desc: dict = {}
+        self._mission_bp_descs: dict = {}
+        self._mission_bp_descs_key = None
 
         # The answer to the generate-enhancements question this session: None
         # until it is asked, then True (Generate) or False (Skip). Recorded
@@ -1209,6 +1228,7 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.enhancements_pipeline_requested.connect(self._run_enhancements_pipeline)
         self.enhancements_tab.favorite_prefix_changed.connect(self._on_favorite_prefix_changed)
         self.enhancements_tab.category_ticks_changed.connect(self._on_category_ticks_changed)
+        self.enhancements_tab.bp_complete_tag_changed.connect(self._recompute_owned)
         self.config_tab.preview_starting.connect(
             self.enhancements_tab.apply_pending_category_changes
         )
@@ -2848,6 +2868,7 @@ class MainWindow(QMainWindow):
             enclosings=enclosings,
             bp_header=self._bp_header(),
             sc_language_id=AppSettings.get_sc_language_id(),
+            bp_complete_titles=self._bp_complete_titles(owned),
         )
 
     def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
@@ -8075,10 +8096,13 @@ class MainWindow(QMainWindow):
         from src.utils.owned_items import enclosings_from_tag_configs
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
+        self._bp_names_by_desc = {}
         self._blueprint_meta = build_blueprint_metadata(
             self.entries, enclosings=enclosings,
             default_values=self.default_values, bp_header=bp_header,
+            names_by_desc=self._bp_names_by_desc,
         )
+        self._read_mission_bp_descs()
         self._bp_item_names = set(self._blueprint_meta)
         # Deliberately broader than _bp_item_names -- every real item name
         # this install knows about, not just ones currently offered as a
@@ -8397,18 +8421,74 @@ class MainWindow(QMainWindow):
         loaded strings."""
         return self._rename_from_other_languages(names, "Import Owned Blueprints")
 
+    def _read_mission_bp_descs(self) -> None:
+        """Read the generator's record of each blueprint mission's
+        descriptions (blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE) for the
+        [BP Complete] title tag, from the folder the loaded enhancements come
+        from, named without making it. A small file (a few hundred titles),
+        read again only when its size or modified time changed since the
+        last load. Missing until the first generation that writes it, which
+        leaves every title without the tag.
+
+        Only reads. A missing or old record is never filled in from here by
+        starting a generation or reading DataForge: this runs on every load,
+        and the record is right again after the user's next generation (see
+        MISSION_BLUEPRINT_DESCS_FILE for why the generator owns it)."""
+        from src.utils.blueprint_meta import (
+            MISSION_BLUEPRINT_DESCS_FILE, read_mission_blueprint_descs,
+        )
+        path = AppSettings.get_base_ini_leaf().parent / MISSION_BLUEPRINT_DESCS_FILE
+        try:
+            st = path.stat()
+            key = (str(path), st.st_size, st.st_mtime_ns)
+        except OSError:
+            key = (str(path), None, None)
+        if key == self._mission_bp_descs_key:
+            return
+        self._mission_bp_descs_key = key
+        self._mission_bp_descs = read_mission_blueprint_descs(path) if key[1] is not None else {}
+        if self._mission_bp_descs:
+            logger.info(
+                f"[BP Complete]: {len(self._mission_bp_descs)} blueprint missions from {path}"
+            )
+        else:
+            logger.info(f"[BP Complete]: no mission record at {path} until the next generation")
+
+    def _bp_complete_titles(self, owned) -> frozenset:
+        """Title keys that get [BP Complete]: missions whose every blueprint
+        is in *owned*, while the General Tags switch is on. Built from the
+        last load's strings (_rebuild_blueprint_metadata), so the table's
+        weave and Apply's merge tag the same titles. A set check over a few
+        hundred titles, cheap enough for every Owned change, which is why it
+        works from the generator's record and never from DataForge."""
+        if not owned or not self._mission_bp_descs:
+            return frozenset()
+        if not AppSettings.get_mission_title_tags()[AppSettings.MISSION_TITLE_TAG_BP_COMPLETE]:
+            return frozenset()
+        from src.utils.owned_items import complete_mission_titles
+        return complete_mission_titles(self._mission_bp_descs, self._bp_names_by_desc, owned)
+
     def _recompute_owned(self):
         """#157: weave/strip [Owned] tags on blueprint-list bullets to match the
         owned set and refresh the table. Called after every load and on every
         Owned change; the transform is idempotent so repeated runs never double
         the tag. The eligible-name set + filter metadata are built separately by
-        `_rebuild_blueprint_metadata` (cached, not rescanned here)."""
-        from src.utils.owned_items import apply_owned_to_value, enclosings_from_tag_configs
+        `_rebuild_blueprint_metadata` (cached, not rescanned here). Weaves the
+        [BP Complete] title tag the same way (`_bp_complete_titles`)."""
+        from src.utils.owned_items import (
+            apply_bp_complete_to_title, apply_owned_to_value, enclosings_from_tag_configs,
+            has_bp_complete_tag,
+        )
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
         owned = AppSettings.get_owned_items()
+        complete = self._bp_complete_titles(owned)
         for e in self.entries:
             new_val = apply_owned_to_value(e.original_value, owned, enclosings=enclosings, bp_header=bp_header)
+            # [BP Complete] on the title of a mission whose every blueprint
+            # is owned, and off again once one is not (or the switch is off).
+            if e.key in complete or has_bp_complete_tag(new_val):
+                new_val = apply_bp_complete_to_title(new_val, e.key in complete)
             if new_val != e.original_value:
                 e.original_value = new_val
         self._model.set_owned_state(self._bp_item_names, owned, enclosings=enclosings)

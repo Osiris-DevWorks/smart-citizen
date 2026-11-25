@@ -1600,6 +1600,10 @@
       "ht": "",
       "at": "Tag de trilha de reputação (adiciona \"(Security)\" / \"(Contractor)\" à tag Rep)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP concluídos (adiciona \"[BP Complete]\")"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missões de escaneamento/mineração"

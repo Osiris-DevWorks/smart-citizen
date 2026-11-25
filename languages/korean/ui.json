@@ -1600,6 +1600,10 @@
       "ht": "",
       "at": "평판 트랙 태그(평판 태그에 \"(Security)\" / \"(Contractor)\" 추가)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "설계도 완료(\"[BP Complete]\" 추가)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "스캔/채굴 임무"

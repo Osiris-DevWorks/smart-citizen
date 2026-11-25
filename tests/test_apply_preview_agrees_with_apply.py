@@ -97,7 +97,8 @@ def _apply_dialog():
     sources, hierarchy, key_categories = load_sources_from_settings()
     entries = load_source_files(sources, hierarchy, enhancements_key_categories=key_categories)
     inputs = main_window.MainWindow._apply_merge_inputs(
-        SimpleNamespace(entries=entries, _bp_header=lambda: None)
+        SimpleNamespace(entries=entries, _bp_header=lambda: None,
+                        _bp_complete_titles=lambda owned: frozenset())
     )
     main_window._merge_for_apply(sources, hierarchy, inputs)
     counted = main_window._count_enhancement_categories(sources, key_categories)
