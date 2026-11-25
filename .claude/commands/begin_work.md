@@ -1,12 +1,10 @@
 ---
-description: Start work on a GitHub issue — load context, get on the right release branch (creating it if needed), open a feature branch, then plan and implement step-by-step with check-ins
+description: Start work on a GitHub issue — get on the right release branch (creating it if needed), grill the idea until ready, build it, update the Test Plan, and push one squashed commit straight to the release branch
 ---
 
 # /begin_work
 
-Bootstrap a work session for a GitHub issue. Resolves which `release/X.Y.Z` integration branch holds the work — reusing an existing unmerged branch when one fits, otherwise opening a new one by following the `/start_release` procedure — then creates a feature branch off it for the issue. After setup, drives the work in chunks with checkpoints between each stage so the user stays in the loop.
-
-Work through every step in order. After each step, stop at the **CHECKPOINT** and wait for the user before proceeding.
+Take a GitHub issue from idea to a squashed commit on the right `release/X.Y.Z` integration branch, following the Osiris DevWorks pipeline (root `CLAUDE.md`, top section). It reuses an existing unmerged release branch when one fits, otherwise opens one with the `/start_release` procedure. There is no feature PR, and no check-ins after grilling.
 
 ## Arguments
 
@@ -33,8 +31,6 @@ gh issue view <NN> --json number,title,body,labels,state,url
 - If `state` is `closed`, warn the user.
 - Present a short summary: number, title, state, labels, and a one-paragraph summary of the body (keep it tight — the full body is in conversation context).
 
-**CHECKPOINT — confirm the issue summary captures the work, or correct it.** Wait for the user.
-
 ## 3. Resolve the target release branch
 
 Target is `release/X.Y.Z` (the version from step 1). Check the world in this order:
@@ -48,60 +44,30 @@ Target is `release/X.Y.Z` (the version from step 1). Check the world in this ord
 
 After this step you must be checked out on `release/X.Y.Z` with a clean working tree.
 
-**CHECKPOINT — confirm the release branch is correct (reused / newly created) before opening the feature branch.** Wait for the user.
+Report which release branch holds the work and whether it was reused or newly created. If it is a patch branch and the issue is feature work, raise the scope mismatch as a decision card.
 
-## 4. Create the feature branch
+## 4. Grill until ready
 
-- Slug the issue title: lowercase, replace non-alphanumerics with `-`, collapse repeats, trim to ~40 chars.
-- Branch name: `issue/<NN>-<slug>` (example: `issue/42-fix-channel-switch-race`).
-- Create it: `git checkout -b issue/<NN>-<slug>` from the release branch.
+- Pull the relevant per-directory `CLAUDE.md` into context (`src/gui/`, `src/utils/`, `src/parser/`, `src/merger/`, `src/models/`, `scripts/`, `tests/`) and read the code the issue touches.
+- Ask what the issue leaves open as multiple-choice decision cards, each with a recommended option. A few at a time is fine.
+- For any UI the work adds or changes, show an HTML Artifact mockup built from the app's real palette, fonts and layout (`src/gui/theme.py` and the widgets involved), the current screen next to the changed one.
+- Settle which tests will be written and which Test Plan items the feature gets.
+- Grilling ends when Amr says it is ready. That is the approval for everything below.
 
-Report:
-- `Issue: #<NN> — <title>` (with URL)
-- `Release branch: release/X.Y.Z` (note whether reused or newly created via /start_release)
-- `Feature branch: issue/<NN>-<slug>`
-- Scope reminder if `release/X.Y.Z` is a patch: *"Patch branches accept only bug fixes and minor polish — flag scope mismatch if this issue is feature work."*
+## 5. Build
 
-**CHECKPOINT — ready to plan the work?** Wait for the user.
+- Work on a local branch off the release branch: `git checkout -B issue/<NN>-<slug> origin/release/X.Y.Z`.
+- Implement with tests in `tests/`. Ask again only if the work hits a choice grilling did not settle.
+- Add the feature's section to `TEST_SECTIONS` in `src/utils/test_plan.py`: imperative, self-contained "do X, confirm Y" items under ~190 characters, for what a tester can observe.
+- Run `pytest tests/`, `flake8` and `black --check` on what you touched, then `/standards_check`, `/docs_sync_check` and `/test_coverage_check`. Fix every Critical/Major finding yourself.
 
-## 5. Plan the work
+## 6. Push to the release branch
 
-Before writing any code:
-
-1. Identify which layers this issue touches. Pull the relevant per-directory `CLAUDE.md` into context (`src/gui/`, `src/utils/`, `src/parser/`, `src/merger/`, `src/models/`, `scripts/`, `tests/` — see root `CLAUDE.md` → *Per-directory guides*).
-2. Propose the implementation in **manageable chunks**. One concept at a time per the root `CLAUDE.md` *Communication style* rule. For each chunk, present:
-   - What you'll change and why.
-   - The file(s) involved (with paths).
-   - Any trade-offs the user should decide on.
-   - **CHECKPOINT — wait for the user to confirm this chunk before moving to the next.**
-3. After every chunk is confirmed individually, ask the user to approve the full plan as a whole.
-
-**CHECKPOINT — full plan approved?** Wait for the user.
-
-## 6. Implement step-by-step
-
-Once the plan is approved:
-
-- Implement one chunk at a time, in the order from the plan.
-- After each chunk, show the diff for that chunk and pause.
-- **CHECKPOINT — wait for the user to confirm this chunk before moving to the next.**
-- Tests live in `tests/`. Run `pytest tests/` after any chunk that affects testable code and report the result.
-
-## 7. Final walkthrough
-
-When all chunks are implemented:
-
-1. Run `/standards_check`, `/docs_sync_check`, and `/test_coverage_check` in sequence. Walk the user through findings.
-2. Give a step-by-step walkthrough of everything that changed:
-   - Files modified, grouped by layer (GUI / utils / parser / tests / docs).
-   - Why each change was made (link back to the plan chunk).
-   - What tests were added or updated.
-   - Anything left intentionally untouched and why.
-
-**CHECKPOINT — ready to run `/pull_request`?** Wait for the user.
+- Squash to one commit: `git reset --soft origin/release/X.Y.Z && git commit`, message `#<NN>: <short summary>`, with `Fixes #<NN>` in the body when it closes the issue.
+- `git push origin HEAD:release/X.Y.Z`. If it is rejected because the branch moved, rebase onto it, re-run the tests, and push again. Never force-push a release branch.
+- Report the commit link in one line. No PR is opened: the work ships with the release PR (`/PRE_RELEASE`, then `/SHIP_RELEASE`).
 
 ## Notes
 
-- The release branch (if newly created) and the feature branch are both local-only. The user pushes when ready.
-- This command does not open a PR. `/pull_request` does — and now opens it as draft, so the user can keep iterating after the initial open.
+- Direct pushes need the "Protect release branches" ruleset to allow them (it blocks only force-pushes and deletion under the pipeline). If a push is refused by the ruleset, stop and tell Amr; don't open a PR to get around it.
 - If the issue requires an exploratory spike that will not ship, this is the wrong command — work on a personal branch off `main` instead.
