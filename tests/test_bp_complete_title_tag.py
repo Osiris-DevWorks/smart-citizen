@@ -52,6 +52,7 @@ from src.utils.json_settings import JsonSettings  # noqa: E402
 from src.utils.owned_items import (  # noqa: E402
     BULLET_NAME_ALIASES,
     apply_bp_complete_to_title,
+    bp_title_tag,
     complete_mission_titles,
     has_bp_complete_tag,
 )
@@ -83,17 +84,34 @@ def isolated_settings(tmp_path, monkeypatch):
 # ── apply_bp_complete_to_title ──────────────────────────────────────────────
 
 class TestApplyToTitle:
-    def test_goes_right_after_the_bp_tag(self):
+    def test_replaces_the_bp_tag(self):
         value = "Salvager Needed <EM4>[BP]</EM4> <EM4>[100 Rep]</EM4>"
         assert apply_bp_complete_to_title(value, True) == (
-            f"Salvager Needed <EM4>[BP]</EM4> {TAG} <EM4>[100 Rep]</EM4>"
+            f"Salvager Needed {TAG} <EM4>[100 Rep]</EM4>"
         )
 
-    def test_goes_right_after_an_uncertain_bp_tag(self):
+    def test_replaces_an_uncertain_bp_tag(self):
         value = "Haul <EM4>[BP?]</EM4> <EM4>[50 Rep]</EM4>"
-        assert apply_bp_complete_to_title(value, True) == (
-            f"Haul <EM4>[BP?]</EM4> {TAG} <EM4>[50 Rep]</EM4>"
+        assert apply_bp_complete_to_title(value, True) == f"Haul {TAG} <EM4>[50 Rep]</EM4>"
+
+    def test_puts_back_the_tag_it_replaced(self):
+        value = "Haul <EM4>[BP?]</EM4> <EM4>[50 Rep]</EM4>"
+        tagged = apply_bp_complete_to_title(value, True)
+        assert bp_title_tag(value) == "<EM4>[BP?]</EM4>"
+        assert apply_bp_complete_to_title(tagged, False, bp_title_tag(value)) == value
+
+    def test_unknown_replaced_tag_puts_back_bp(self):
+        """Apply merges fresh strings, so only a user's override carries the
+        tag there, with nothing to say what it replaced."""
+        assert apply_bp_complete_to_title(f"Haul {TAG} <EM4>[50 Rep]</EM4>", False) == (
+            "Haul <EM4>[BP]</EM4> <EM4>[50 Rep]</EM4>"
         )
+
+    def test_an_earlier_versions_tag_beside_bp(self):
+        """3.0.1's first build wrote it next to [BP]; that reads as one tag now."""
+        old = f"Haul <EM4>[BP]</EM4> {TAG} <EM4>[50 Rep]</EM4>"
+        assert apply_bp_complete_to_title(old, True) == f"Haul {TAG} <EM4>[50 Rep]</EM4>"
+        assert apply_bp_complete_to_title(old, False) == "Haul <EM4>[BP]</EM4> <EM4>[50 Rep]</EM4>"
 
     def test_goes_at_the_end_without_a_bp_tag(self):
         # The BP Tag switched off leaves no [BP] to follow.
@@ -111,6 +129,10 @@ class TestApplyToTitle:
         tagged = apply_bp_complete_to_title(value, True)
         assert apply_bp_complete_to_title(tagged, False) == value
         assert apply_bp_complete_to_title(value, False) == value
+        # Added at the end (no [BP] tag): comes off with nothing put back.
+        plain = "Haul <EM4>[50 Rep]</EM4>"
+        assert apply_bp_complete_to_title(
+            apply_bp_complete_to_title(plain, True), False, bp_title_tag(plain)) == plain
 
     def test_empty_value_stays_empty(self):
         assert apply_bp_complete_to_title("", True) == ""
@@ -287,7 +309,7 @@ class TestGenerator:
         assert complete_mission_titles(titles, names, {"Test Rifle"}) == {_TITLE_KEY}
         assert complete_mission_titles(titles, names, {"Other"}) == frozenset()
         tagged = apply_bp_complete_to_title(out[_TITLE_KEY], True)
-        assert "<EM4>[BP]</EM4> <EM4>[BP Complete]</EM4>" in tagged
+        assert "<EM4>[BP Complete]</EM4>" in tagged and "<EM4>[BP]</EM4>" not in tagged
 
     def test_main_writes_the_record_beside_the_mission_ini(self, gen, tmp_path):
         base_ini = tmp_path / "base.ini"
@@ -339,6 +361,7 @@ class _Window:
         self._mission_bp_descs = titles or {}
         self._bp_names_by_desc = names or {}
         self._mission_bp_descs_key = None
+        self._bp_tags_under_complete = {}
         self._bp_item_names = set()
         self._blueprint_meta = {}
         self._sco_overlay = None
@@ -390,9 +413,7 @@ class TestRecomputeOwned:
         owned["owned"] = {"Arrow"}
         window = self._window()
         window._recompute_owned()
-        assert window.entries[0].original_value == (
-            f"Clear <EM4>[BP]</EM4> {TAG} <EM4>[100 Rep]</EM4>"
-        )
+        assert window.entries[0].original_value == f"Clear {TAG} <EM4>[100 Rep]</EM4>"
         assert window.marked_dirty == 1
 
     def test_unowning_one_takes_the_tag_off(self, owned):
@@ -402,6 +423,23 @@ class TestRecomputeOwned:
         owned["owned"] = set()
         window._recompute_owned()
         assert window.entries[0].original_value == "Clear <EM4>[BP]</EM4> <EM4>[100 Rep]</EM4>"
+
+    def test_an_uncertain_bp_tag_comes_back_as_it_was(self, owned):
+        """The table edits values in place, so it remembers the tag it
+        replaced: [BP?] must not come back as [BP]."""
+        window = _Window(
+            [_entry("M_Title_001", "Haul <EM4>[BP?]</EM4> <EM4>[50 Rep]</EM4>"),
+             _entry("M_Desc_001", _desc("Arrow"))],
+            titles=_TITLES, names=_NAMES,
+        )
+        owned["owned"] = {"Arrow"}
+        window._recompute_owned()
+        window._recompute_owned()  # again while still complete
+        assert window.entries[0].original_value == f"Haul {TAG} <EM4>[50 Rep]</EM4>"
+        owned["owned"] = set()
+        window._recompute_owned()
+        assert window.entries[0].original_value == "Haul <EM4>[BP?]</EM4> <EM4>[50 Rep]</EM4>"
+        assert window._bp_tags_under_complete == {}
 
     def test_switching_off_takes_the_tag_off(self, owned):
         owned["owned"] = {"Arrow"}
@@ -463,7 +501,7 @@ class TestMergeForApply:
     """Apply works the complete titles out from the strings it writes."""
 
     TITLE = "Clear <EM4>[BP]</EM4> <EM4>[100 Rep]</EM4>"
-    TAGGED = f"Clear <EM4>[BP]</EM4> {TAG} <EM4>[100 Rep]</EM4>"
+    TAGGED = f"Clear {TAG} <EM4>[100 Rep]</EM4>"
 
     def _sources(self, *names):
         return {"global": {"M_Title_001": self.TITLE, "X": "x"},

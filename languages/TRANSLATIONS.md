@@ -82,6 +82,12 @@ them against the new source.
 
 ## Backfill log
 
+- **After 3.0.1 (2026-11-25, Claude Opus 5.5):** `[BP Complete]` now takes
+  the place of `[BP]` / `[BP?]` instead of following it. In `docs/HELP.md`
+  BP Completed "adds `[BP Complete]` after it" became "replaces it with
+  `[BP Complete]`", and the 11 translated `HELP.md` files say the same
+  (AI-written). Checked by a script: each old text matched once and every
+  line ending was kept. Not back-translated.
 - **After 3.0.1 (2026-11-25, Claude Opus 5.5):** the Apply success box
   now counts the missions it marked `[BP Complete]`, on a line under
   Missions while the General Tags switch is on. One new key,

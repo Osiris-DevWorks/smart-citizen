@@ -1106,6 +1106,10 @@ class MainWindow(QMainWindow):
         self._bp_names_by_desc: dict = {}
         self._mission_bp_descs: dict = {}
         self._mission_bp_descs_key = None
+        # Title key -> the [BP] / [BP?] tag (or "") its [BP Complete] took the
+        # place of, so _recompute_owned can put it back. A reload brings fresh
+        # values without the tag, so an entry left from before is never read.
+        self._bp_tags_under_complete: dict = {}
 
         # The answer to the generate-enhancements question this session: None
         # until it is asked, then True (Generate) or False (Skip). Recorded
@@ -8518,19 +8522,28 @@ class MainWindow(QMainWindow):
         `_rebuild_blueprint_metadata` (cached, not rescanned here). Weaves the
         [BP Complete] title tag the same way (`_bp_complete_titles`)."""
         from src.utils.owned_items import (
-            apply_bp_complete_to_title, apply_owned_to_value, enclosings_from_tag_configs,
-            has_bp_complete_tag,
+            BP_TITLE_TAG, apply_bp_complete_to_title, apply_owned_to_value, bp_title_tag,
+            enclosings_from_tag_configs, has_bp_complete_tag,
         )
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
         owned = AppSettings.get_owned_items()
         complete = self._bp_complete_titles(owned)
+        under = self._bp_tags_under_complete
         for e in self.entries:
             new_val = apply_owned_to_value(e.original_value, owned, enclosings=enclosings, bp_header=bp_header)
-            # [BP Complete] on the title of a mission whose every blueprint
-            # is owned, and off again once one is not (or the switch is off).
+            # [BP Complete] in place of the [BP] / [BP?] tag on the title of a
+            # mission whose every blueprint is owned, and that tag back once
+            # one is not (or the switch is off). The value is edited in place,
+            # so the tag it replaced is remembered to be put back.
             if e.key in complete or has_bp_complete_tag(new_val):
-                new_val = apply_bp_complete_to_title(new_val, e.key in complete)
+                new_val = apply_bp_complete_to_title(
+                    new_val, False, under.get(e.key, BP_TITLE_TAG))
+                if e.key in complete:
+                    under[e.key] = bp_title_tag(new_val)
+                    new_val = apply_bp_complete_to_title(new_val, True)
+                else:
+                    under.pop(e.key, None)
             if new_val != e.original_value:
                 e.original_value = new_val
         self._model.set_owned_state(self._bp_item_names, owned, enclosings=enclosings)
