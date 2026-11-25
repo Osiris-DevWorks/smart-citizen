@@ -8,7 +8,7 @@ On launch, Smart Citizen reloads any customizations from your previous session a
 
 Smart Citizen opens in one of two modes, and you can switch anytime.
 
-- **Simple mode** is a two-button screen: one button, **Apply Enhancements**, runs the whole chain with your current settings (extract, generate, apply, with a backup of your game file taken first); the other switches you to **Advanced mode**. It's the fast path when you just want the enhancements applied and don't need to hand-edit strings.
+- **Simple mode** is a three-button screen: one button, **Apply Enhancements**, runs the whole chain with your current settings (extract, generate, apply, with a backup of your game file taken first); **Start Overlay** starts or stops the Smart Citizen Overlay, the same as the toolbar's **Overlay** button in Advanced mode; the last switches you to **Advanced mode**. It's the fast path when you just want the enhancements applied and don't need to hand-edit strings.
 - **Advanced mode** is the full app: the strings table, filters, Enhancements tab, Config tab, and everything else in this guide.
 
 Pick your default during install, or flip between them from within the app. Simple mode uses whatever settings you last saved in Advanced.

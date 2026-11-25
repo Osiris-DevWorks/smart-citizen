@@ -2,7 +2,8 @@
 
 A deliberately near-empty screen for users who just want the result: one big
 **Apply Enhancements** button that runs the whole export with default
-settings, plus a way back to the full **Advanced** UI. The orchestration lives
+settings, a Start/Stop Overlay button for the Smart Citizen Overlay, plus a
+way back to the full **Advanced** UI. The orchestration lives
 on ``MainWindow`` (`_run_simple_apply`, `_apply_ui_mode`); this widget only
 emits intent.
 """
@@ -27,6 +28,9 @@ class SimpleModeWidget(QWidget):
 
     generate_and_apply_requested = pyqtSignal()
     switch_to_advanced_requested = pyqtSignal()
+    # The Overlay button drives the toolbar's Overlay button, as the Overlay
+    # tab's does, so all three go through MainWindow._toggle_sco_overlay.
+    overlay_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -64,17 +68,24 @@ class SimpleModeWidget(QWidget):
         self.advanced_btn.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self.advanced_btn.setStyleSheet(
-            f"background-color: {get_button_color('open')}; "
-            f"color: {get_button_text_color()}; font-weight: bold; "
-            f"font-size: 14px; padding: 10px 20px;"
-        )
         self.advanced_btn.clicked.connect(self.switch_to_advanced_requested)
+
+        # Start/Stop Overlay: the same texts as the Overlay tab's button.
+        self.overlay_btn = QPushButton()
+        self.overlay_btn.setCheckable(True)
+        self.overlay_btn.setMinimumHeight(44)
+        self.overlay_btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.overlay_btn.toggled.connect(self.overlay_toggled)
+        self.overlay_btn.toggled.connect(self._sync_overlay_text)
+        self.refresh_styles()
 
         btn_col = QVBoxLayout()
         btn_col.setSpacing(12)
         btn_col.addWidget(self.generate_apply_btn)   # Apply Enhancements on top
-        btn_col.addWidget(self.advanced_btn)         # Switch to Advanced below
+        btn_col.addWidget(self.overlay_btn)          # Start/Stop Overlay
+        btn_col.addWidget(self.advanced_btn)         # Switch to Advanced last
         btn_wrap = QWidget()
         btn_wrap.setLayout(btn_col)
         btn_wrap.setMaximumWidth(320)
@@ -93,6 +104,30 @@ class SimpleModeWidget(QWidget):
         layout.addStretch(2)
 
         self._refresh_apply_button()
+        self._sync_overlay_text()
+
+    def refresh_styles(self) -> None:
+        """Re-apply the theme's colours to the Overlay and Switch to Advanced
+        buttons (MainWindow calls this after a live theme swap)."""
+        style = (
+            f"background-color: {get_button_color('open')}; "
+            f"color: {get_button_text_color()}; font-weight: bold; "
+            f"font-size: 14px; padding: 10px 20px;"
+        )
+        self.advanced_btn.setStyleSheet(style)
+        self.overlay_btn.setStyleSheet(style)
+
+    def set_overlay_running(self, running: bool) -> None:
+        """Mirror the overlay's state without asking for a change."""
+        self.overlay_btn.blockSignals(True)
+        self.overlay_btn.setChecked(running)
+        self.overlay_btn.blockSignals(False)
+        self._sync_overlay_text()
+
+    def _sync_overlay_text(self, *_args) -> None:
+        running = self.overlay_btn.isChecked()
+        self.overlay_btn.setText(tr("overlay.stop_btn" if running else "overlay.start_btn"))
+        self.overlay_btn.setToolTip(tr("toolbar.sco_tooltip"))
 
     def set_busy(self, busy: bool, reason: str = "") -> None:
         """Disable the action button while a run is in progress. *reason*,
@@ -154,4 +189,5 @@ class SimpleModeWidget(QWidget):
         self.advanced_btn.setToolTip(tr("simple_mode.switch_to_advanced_tip"))
         self.generate_apply_btn.setText(tr("simple_mode.generate_apply_btn"))
         self.hint_label.setText(tr("simple_mode.defaults_hint"))
+        self._sync_overlay_text()
         self._refresh_apply_button()  # re-picks the right tooltip variant too

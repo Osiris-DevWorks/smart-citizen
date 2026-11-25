@@ -83,6 +83,57 @@ def test_simple_widget_signals(qapp):
     assert hits == ["generate", "advanced"]
 
 
+def test_simple_widget_overlay_button(qapp):
+    """The Overlay button asks for a start or a stop, and set_overlay_running
+    mirrors the overlay without asking again. Its texts are the Overlay tab's
+    start and stop texts, so every language already has them."""
+    from src.gui.simple_mode_widget import SimpleModeWidget
+    from src.utils.i18n import tr
+
+    w = SimpleModeWidget()
+    asked = []
+    w.overlay_toggled.connect(asked.append)
+    assert w.overlay_btn.isCheckable()
+    assert w.overlay_btn.text() == tr("overlay.start_btn")
+    assert w.overlay_btn.toolTip() == tr("toolbar.sco_tooltip")
+    w.overlay_btn.click()
+    assert asked == [True]
+    assert w.overlay_btn.text() == tr("overlay.stop_btn")
+    w.set_overlay_running(False)
+    assert asked == [True]
+    assert not w.overlay_btn.isChecked()
+    assert w.overlay_btn.text() == tr("overlay.start_btn")
+    w.set_overlay_running(True)
+    assert asked == [True]
+    assert w.overlay_btn.text() == tr("overlay.stop_btn")
+    # Busy only greys the Apply button: the overlay runs beside a job.
+    w.set_busy(True)
+    assert w.overlay_btn.isEnabled()
+
+
+def test_main_window_mirrors_the_overlay_on_the_simple_page(qapp):
+    """Starting or stopping the overlay from any button shows on the Overlay
+    tab's and the Simple page's buttons; a window still being built (no
+    Overlay tab or Simple page yet) must not raise."""
+    from unittest.mock import MagicMock
+
+    from src.gui.main_window import MainWindow
+    from src.gui.simple_mode_widget import SimpleModeWidget
+
+    class _Stub:
+        _mirror_sco_running = MainWindow._mirror_sco_running
+
+    stub = _Stub()
+    stub.overlay_tab = MagicMock()
+    stub.simple_page = SimpleModeWidget()
+    stub._mirror_sco_running(True)
+    stub.overlay_tab.set_running.assert_called_once_with(True)
+    assert stub.simple_page.overlay_btn.isChecked()
+    stub._mirror_sco_running(False)
+    assert not stub.simple_page.overlay_btn.isChecked()
+    _Stub()._mirror_sco_running(False)  # construction order guard
+
+
 def test_simple_widget_set_busy(qapp):
     from src.gui.simple_mode_widget import SimpleModeWidget
 
