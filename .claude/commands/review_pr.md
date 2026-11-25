@@ -4,7 +4,7 @@ description: Review a single GitHub PR with checkpoints between summary, file-by
 
 # /review_pr
 
-Drive a structured review of one PR with human-in-the-loop checkpoints. Adapted from the team's `review_all.md` pattern but scoped to a single PR and tailored to Smart Citizen's layer ordering and standards.
+Drive a structured review of one PR with human-in-the-loop checkpoints. Scoped to a single PR and tailored to Smart Citizen's layer ordering and standards.
 
 Work through every step in order. After each step, stop at the **CHECKPOINT** and wait for the user before continuing.
 
@@ -40,7 +40,7 @@ Present a concise summary:
 
 - **What** — scope in plain language.
 - **Why** — linked GitHub issue summary if present; otherwise note "no linked issue."
-- **Base / head** — target branch and source branch. **Flag if base is not the active `release/X.Y.Z`** — per root `CLAUDE.md` → *Version & Release → Branching model*, PRs target the active integration branch, not `main`.
+- **Base / head** — target branch and source branch. Under the pipeline the normal review targets are the `release/X.Y.Z` → `main` release PR, a hotfix PR into `main`, and contributor PRs into the active `release/X.Y.Z`. Flag a non-hotfix PR from any other branch into `main`.
 - **CI status** — pass / fail / pending (from `statusCheckRollup`).
 - **Existing comments** — short summary of any prior review comments or conversation.
 - **Files changed (N)** — list each file with a one-line description of what it does.

@@ -3,6 +3,10 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+    # Review runs once per release (Osiris DevWorks pipeline): only on PRs
+    # into production, i.e. the release PR and hotfix PRs. Contributor PRs
+    # into release/* get CI only.
+    branches: [main, master]
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"
@@ -18,7 +22,9 @@ jobs:
     # Skip those cleanly instead of reporting a red X on every external
     # PR. Branches pushed to this repo still run, which is the normal
     # flow -- every regular contributor here has write access.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot'
 
     # Optional: Filter by PR author
     # if: |

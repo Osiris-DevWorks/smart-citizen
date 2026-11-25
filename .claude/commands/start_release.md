@@ -76,7 +76,7 @@ Print:
   - `patch` → *"Patch branches accept only bug fixes and minor polish. Flag any feature work as scope-mismatch."*
   - `minor` → *"Minor branches accept features and polish."*
   - `major` → *"Major branches accept breaking changes."*
-- *"Branch is local only — push with `git push -u origin NEW_BRANCH` when ready. PRs target this branch, not main."*
+- *"Branch is local only — push with `git push -u origin NEW_BRANCH` when ready. Features are pushed straight to this branch (no feature PRs); only the release PR goes to main."*
 
 ## Notes
 

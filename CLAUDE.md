@@ -4,6 +4,23 @@ This file guides Claude Code (claude.ai/code) when working in this repo.
 
 > **Before editing files under `src/<dir>/`, `scripts/`, or `tests/`, read that directory's `CLAUDE.md` first.** See *Per-directory guides* below for the list.
 
+## Osiris DevWorks development pipeline (universal)
+
+This section is identical in every Osiris DevWorks repo's CLAUDE.md. Change it in all of them at once. The line just below it says how this repo applies it. Where an older section of this file conflicts with it, this section wins.
+
+The goal is little friction and few GitHub Actions runs: checks and code review run once per release, not once per feature.
+
+1. **Grill the idea.** When Amr brings a new idea, ask questions until it is ready to build. Ask every question as a multiple-choice decision card (`request_decision`, or `AskUserQuestion` in the CLI) with a recommended option, never as questions in prose. A few cards at a time is fine.
+2. **Mock up any UI.** When a feature adds or changes UI, show an HTML Artifact mockup during grilling. Build it from the app's real colors, fonts, spacing and layout, read from the source, and show the current screen next to the changed one. Grilling isn't done until Amr approves the mockup.
+3. **Grilling sign-off is the approval.** Once Amr says the idea is ready, build it without further check-ins: no step-by-step plan approvals, no code-block reviews, and no commit-message review. Ask again only if the work hits a choice that grilling did not settle.
+4. **Push straight to the integration branch, with no feature PR.** Run the repo's tests, lint and type check in your own session. Update this repo's test plan, if it has one, with concrete pass/fail items for the feature. Then push **one squashed commit per feature** to the integration branch, with a message like `#123: short summary` (`Fixes #123` in the body when it closes the issue). A feature branch is fine while you work; only the squashed result lands. Never force-push the integration branch.
+5. **Release: one PR, all checks, one review.** When Amr calls a release, open one PR from the integration branch to production. Every pre-release check and the code review run on that PR, once. Fix what they find with more commits on the integration branch. Amr runs the test plan (on preview builds or staging) and merges, or tells you to merge.
+6. **Hotfixes.** For an urgent production fix, branch off production, open a PR straight to production (full checks and review run on it), and once it merges, merge production back into the integration branch.
+7. **Outside PRs.** Contributor and Dependabot PRs get CI only, with no Claude review bot. Dependabot is grouped and runs monthly.
+8. **Workflow triggers.** Keep workflows off feature work: no `push` triggers on integration branches except where a deploy needs one, and the Claude review workflow runs only on PRs into production. Don't add a workflow that runs on every push without Amr's OK.
+
+**How this repo applies it: desktop app.** The integration branch is the active `release/X.Y.Z` and production is `main`. Each feature push also adds its section to the in-app tester Test Plan (`TEST_SECTIONS` in `src/utils/test_plan.py`). Amr runs the plan on the `build-installer` / `build-portable` preview builds of the release PR before it merges. `/begin_work` drives a feature; `/PRE_RELEASE` and `/SHIP_RELEASE` drive the release. See *Version & Release* below.
+
 ## Communication style
 
 - **Plain words, short sentences.** Cut adjectives, hedges, and throat-clearing. If a sentence isn't earning its weight, drop it.
@@ -248,21 +265,21 @@ Smart Citizen uses **long-lived release branches as integration targets**, not f
 
 - After a release ships, the next `release/X.Y.Z` branch opens off `main` and `VERSION.TXT` bumps on it. That branch becomes the integration target until it ships.
 - **The version in the branch name signals scope.** A patch bump (e.g. `release/1.4.1`) is reserved for **bug fixes and minor polish** — anything bigger waits for the next minor or major. Use the branch version as a scope filter when reviewing or proposing changes: don't land a new feature on a patch branch without flagging the mismatch.
-- **PRs target the active `release/X.Y.Z`, not `main`.** `main` only receives the release-branch merge.
-- When the integration branch is feature-complete and stable, **the user adds the `build-installer` label to a PR** to produce a tester installer artifact (see *Tester pre-release installers*). Tests run against those artifacts before any merge to `main`.
+- **Features are pushed straight to the active `release/X.Y.Z`**, one squashed commit each, with no feature PR. Contributor PRs also target it. `main` only receives the release PR's merge and hotfix PRs.
+- When the integration branch is feature-complete and stable, **the `build-installer` / `build-portable` labels go on the release PR** to produce tester artifacts (see *Tester pre-release installers*). Tests run against those artifacts before any merge to `main`.
 - **Merging `release/X.Y.Z` → `main` is the release trigger.** That merge runs the per-release checklist below (tag, GitHub release, Discord webhook). Until then, no commit on the release branch is "released."
 
-Don't propose tagging, drafting release notes, or merging to `main` mid-integration — the user drives that handoff. During integration, normal work is just landing PRs on the release branch.
+Don't propose tagging, drafting release notes, or merging to `main` mid-integration — the user drives that handoff. During integration, normal work is just pushing squashed feature commits to the release branch.
 
 ### Branch protection
 
 The branching model above is enforced by GitHub settings, not just convention. Don't propose workflows that fight these rules.
 
-- **`release/*` is governed by the "Protect release branches" ruleset** (active; targets `refs/heads/release/*`). It requires every change to land via a pull request (no direct pushes), requires **one approving review from the code owner** (`@Osiris-DevWorks` via `.github/CODEOWNERS`, which owns `*`), forbids the author's own last push from being the approval, and blocks force-pushes and branch deletion. Net effect: a contributor can open a PR against a release branch, but only the owner's review can clear it to merge.
+- **`release/*` is governed by the "Protect release branches" ruleset** (targets `refs/heads/release/*`). It blocks force-pushes and branch deletion. Under the pipeline, Amr's and Claude's feature pushes must be allowed straight onto the branch, either because the ruleset no longer requires a PR or because they are bypass actors. Contributors still go through a PR, which needs **one approving review from the code owner** (`@Osiris-DevWorks` via `.github/CODEOWNERS`, which owns `*`). If a push is refused by the ruleset, stop and tell Amr; don't open a PR to get around it.
 - **`.github/CODEOWNERS` lives on `main`** so every `release/X.Y.Z` cut from `main` inherits the owner gate automatically. A release branch created before the file existed needs it added directly (that's why `release/2.1.0` carries its own copy).
 - **`main` has classic branch protection** (PR required, 0 approvals, admins included) — the release-branch merge still goes through a PR.
-- **The repo owner (admin) bypasses the ruleset.** That's how the owner runs `start_release` (the initial `VERSION.TXT` bump is a direct push to the new branch), lands hotfixes, and merges PRs with `gh pr merge --admin`. Contributors have no bypass.
-- **Process violations get reverted.** A direct push to a release branch that slips through (e.g. before protection existed) should be backed out via a revert PR, not left in place. The work returns through a normal PR.
+- **The repo owner (admin) bypasses the ruleset.** That's how the owner runs `start_release` (the initial `VERSION.TXT` bump is a direct push to the new branch) and merges PRs with `gh pr merge --admin`. Contributors have no bypass.
+- **Hotfixes** branch off `main` and go through a PR into `main` (CI and the Claude review run on it); once merged, `main` is merged back into the active release branch.
 - **Platform limit:** this is a personal (non-org) repo, so GitHub can't restrict the literal merge-button click to one user. The code-owner approval is the real gate; nothing merges without the owner's review even though the final click isn't account-restricted. Tightening that further would require moving the repo under an org.
 
 ### Release checklist (release/X.Y.Z → main)
