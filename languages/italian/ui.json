@@ -2286,6 +2286,18 @@
       "ht": "",
       "at": "Impossibile controllare la presenza di aggiornamenti:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Novità"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} è installato. Ecco cosa è cambiato."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Chiudi"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Niente da ripristinare"

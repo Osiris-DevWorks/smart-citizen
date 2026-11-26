@@ -2286,6 +2286,18 @@
       "ht": "",
       "at": "アップデートを確認できませんでした：\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "新機能"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} がインストールされました。変更内容は次のとおりです。"
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "閉じる"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "リセットするものがありません"

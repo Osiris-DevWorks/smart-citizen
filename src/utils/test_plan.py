@@ -134,6 +134,16 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "What's New pop-up (3.1.0)",
+        "items": [
+            "Install over 3.0.1 and start the app: once the update check is done, What's New opens with the 3.1.0 notes, no download or Windows blocks text at the top.",
+            "Close it and restart the app: What's New does not open again.",
+            "Fresh install on a PC that never had Smart Citizen: What's New opens once on the first start.",
+            "Select German and restart after a fresh install: the title, line and button are in German; the notes stay English.",
+            "When it offers an update, take it: after the update, What's New shows the new version's notes.",
+        ],
+    },
+    {
         "title": "Guided tour (#545)",
         "items": [
             "Start the guided tour: it has 21 steps, including Settings Backup and Star Citizen Tools, and each step points at the right control.",

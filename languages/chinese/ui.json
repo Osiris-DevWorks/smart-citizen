@@ -2286,6 +2286,18 @@
       "ht": "",
       "at": "无法检查更新：\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "新功能"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} 已安装。以下是更新内容。"
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "关闭"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "没有可重置的内容"

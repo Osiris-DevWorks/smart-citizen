@@ -1,5 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for Smart Citizen
+import os
+
+# This version's release notes, for the What's New dialog after an install or
+# update; left out when not written yet. Mirrors scripts/build/build_exe.py.
+with open(os.path.join(SPECPATH, 'VERSION.TXT')) as _f:
+    _version = _f.read().strip()
+_release_notes = f'docs/{_version}-RELEASE-NOTES.md'
+_extra_docs = [(_release_notes, 'docs')] if os.path.isfile(os.path.join(SPECPATH, _release_notes)) else []
 
 a = Analysis(
     ['src/main.py'],
@@ -15,7 +23,7 @@ a = Analysis(
         ('patches', 'patches'),
         ('languages', 'languages'),
         ('scripts/generate_enhancements_ini.py', 'scripts'),
-    ],
+    ] + _extra_docs,
     # `scripts/generate_enhancements_ini.py` is bundled as a data file (not
     # analyzed as a Python module), so PyInstaller doesn't follow its
     # imports. Without this hint its `from src.utils.progress_sink import

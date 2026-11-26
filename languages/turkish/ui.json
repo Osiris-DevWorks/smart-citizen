@@ -2286,6 +2286,18 @@
       "ht": "",
       "at": "Güncellemeler denetlenemedi:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Yenilikler"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} yüklendi. Değişenler şunlar."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Kapat"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Sıfırlanacak Bir Şey Yok"

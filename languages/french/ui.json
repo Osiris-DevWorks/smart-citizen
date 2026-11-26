@@ -2286,6 +2286,18 @@
       "ht": "Impossible de vérifier les mises à jour :\n\n{message}",
       "at": "Impossible de vérifier les mises à jour :\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Nouveautés"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} est installé. Voici ce qui a changé."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Fermer"
+    },
     "nothing_to_reset_title": {
       "ht": "Rien à réinitialiser",
       "at": "Rien à réinitialiser"

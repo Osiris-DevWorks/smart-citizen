@@ -2286,6 +2286,18 @@
       "ht": "Não foi possível verificar se há atualizações:\n\n{message}",
       "at": "Não foi possível verificar se há atualizações:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Novidades"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "O Smart Citizen v{version} está instalado. Veja o que mudou."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Fechar"
+    },
     "nothing_to_reset_title": {
       "ht": "Nada para Reiniciar",
       "at": "Nada para Reiniciar"

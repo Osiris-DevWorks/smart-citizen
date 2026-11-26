@@ -2286,6 +2286,18 @@
       "ht": "",
       "at": "無法檢查更新：\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "新功能"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} 已安裝。以下是更新內容。"
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "關閉"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "沒有可重置的內容"

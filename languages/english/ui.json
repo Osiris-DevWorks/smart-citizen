@@ -2286,6 +2286,18 @@
       "ht": "Could not check for updates:\n\n{message}",
       "at": ""
     },
+    "whats_new_title": {
+      "ht": "What's New",
+      "at": ""
+    },
+    "whats_new_body": {
+      "ht": "Smart Citizen v{version} is installed. Here is what changed.",
+      "at": ""
+    },
+    "whats_new_close": {
+      "ht": "Close",
+      "at": ""
+    },
     "nothing_to_reset_title": {
       "ht": "Nothing to Reset",
       "at": ""

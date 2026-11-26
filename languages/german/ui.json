@@ -2286,6 +2286,18 @@
       "ht": "",
       "at": "Es konnte nicht nach Updates gesucht werden:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Neuigkeiten"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} ist installiert. Das hat sich geändert."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Schließen"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Nichts zurückzusetzen"

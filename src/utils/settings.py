@@ -581,6 +581,9 @@ class AppSettings:
     # new steps worth showing again. Empty string means "never shown".
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
+    # The app version whose What's New dialog was last shown, so it shows
+    # once after an install or an update. Empty means never shown.
+    WHATS_NEW_SEEN_VERSION = "whats_new_seen_version"
 
     # Settings keys - Window
     # Minimize to the system tray instead of the taskbar (Config tab,
@@ -901,7 +904,8 @@ class AppSettings:
     #   - the blueprint log watermark: scan position, per-channel, and
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
-    #   - tutorial_completed_version: per-install first-run state.
+    #   - tutorial_completed_version and whats_new_seen_version: per-install
+    #     first-run state.
     #   - tray_notice_shown: the same kind of state, for the one-time "still
     #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
@@ -916,6 +920,7 @@ class AppSettings:
         SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        WHATS_NEW_SEEN_VERSION,
         TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
@@ -1775,6 +1780,7 @@ class AppSettings:
         FONT_SIZE,
         ONEDRIVE_WARNING_DISMISSED,
         TUTORIAL_COMPLETED_VERSION,
+        WHATS_NEW_SEEN_VERSION,
         TRAY_NOTICE_SHOWN,
         MERGE_HIERARCHY,
     })
@@ -2254,6 +2260,17 @@ class AppSettings:
     def set_tutorial_completed_version(version: str) -> None:
         """Record that the guided tour was completed for *version*."""
         AppSettings.settings().setValue(AppSettings.TUTORIAL_COMPLETED_VERSION, version)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_whats_new_seen_version() -> str:
+        """App version whose What's New dialog was last shown, or '' if never."""
+        return AppSettings.settings().value(AppSettings.WHATS_NEW_SEEN_VERSION, "")
+
+    @staticmethod
+    def set_whats_new_seen_version(version: str) -> None:
+        """Record that the What's New dialog was shown for *version*."""
+        AppSettings.settings().setValue(AppSettings.WHATS_NEW_SEEN_VERSION, version)
         AppSettings.settings().sync()
 
     @staticmethod

@@ -73,6 +73,7 @@ from src.parser.ini_parser import (
 # Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
 from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
+from src.gui.whats_new_dialog import WhatsNewDialog
 from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
 from src.utils.build_mode import IS_PORTABLE
@@ -84,6 +85,7 @@ from src.utils.karolinger import (
     with_guides_url,
 )
 from src.utils.perf import timed
+from src.utils.release_notes import bundled_release_notes
 from src.utils.resource_path import get_resource_path
 from src.utils.pak_extractor import base_ini_is_fresh, linked_cache_folder_error, windows_reason
 from src.utils.settings import (
@@ -5079,6 +5081,7 @@ class MainWindow(QMainWindow):
         # First, so a DataForge extraction the startup prompts start waits
         # for it rather than sweeping beside it.
         self._sweep_stale_working_folders_at_startup()
+        self._maybe_show_whats_new()
         self._start_startup_sync()
         self._start_smart_sync()
         self._report_installer_data_move()
@@ -5086,6 +5089,24 @@ class MainWindow(QMainWindow):
         self._maybe_prompt_post_import_apply()
         self._maybe_auto_scan_blueprints()
         self._check_language_translation_at_startup()
+
+    def _maybe_show_whats_new(self) -> None:
+        """Show this version's release notes once, after an install or update.
+
+        Runs after the update check, so an update taken there shows the new
+        version's notes on its own first launch, not this one's. A build with
+        no notes bundled shows nothing and records nothing, so the release
+        build that has them still shows them.
+        """
+        current = get_version()
+        if AppSettings.get_whats_new_seen_version() == current:
+            return
+        notes = bundled_release_notes(current)
+        if not notes:
+            return
+        WhatsNewDialog(self, version=current,
+                       notes_html=self.markdown_to_html(notes)).exec()
+        AppSettings.set_whats_new_seen_version(current)
 
     def _maybe_auto_scan_blueprints(self) -> None:
         """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
