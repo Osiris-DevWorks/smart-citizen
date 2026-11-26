@@ -1518,6 +1518,18 @@
       "ht": "Hostiles",
       "at": ""
     },
+    "hostiles_detail_simple": {
+      "ht": "Simple",
+      "at": ""
+    },
+    "hostiles_detail_all": {
+      "ht": "All Ship Details",
+      "at": ""
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "How the Hostiles and Friendlies lines list ships. Simple shows a pool of more than 10 ships as its type, with how many there are and the biggest and smallest; All Ship Details lists every ship. Takes effect on the next Generate Enhancements.",
+      "at": ""
+    },
     "mission_field_reputation": {
       "ht": "Reputation",
       "at": ""

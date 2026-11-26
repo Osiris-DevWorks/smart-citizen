@@ -1514,6 +1514,18 @@
       "ht": "",
       "at": "敵對數量"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "簡潔"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "全部艦船詳情"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "敵對與友方行如何列出艦船。簡潔會將超過10艘的候選顯示為其類型，並附上數量以及最大和最小的艦船；全部艦船詳情列出每一艘艦船。下次產生增強時生效。"
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "聲望"

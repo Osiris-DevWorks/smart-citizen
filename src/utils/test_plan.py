@@ -137,8 +137,10 @@ TEST_SECTIONS: list[dict] = [
         "title": "Mission ships and cooldowns (3.1.0)",
         "items": [
             "Upgrade from 3.0.x and start the app: it asks to extract DataForge again. Say Yes and let it generate.",
+            "Enhancements tab: beside Hostiles a dropdown reads Simple. Unticking Hostiles greys it out.",
             "Find an Eckhart Ship Ambush (Medium): Hostiles lists ships by name, one heading per variant, e.g. Targets: 1x of Argo RAFT, Drake Cutlass Black, or MISC Freelancer MIS.",
-            "Find a Headhunters Ship Ambush (Very Hard): the Hostile Wave reads one of:, a choice per line, then and one of: with its own choices, each indented.",
+            "With Simple, find a Headhunters Ship Ambush (Very Hard): each big pool reads as its type, e.g. 3x Very Hard Criminal ship (23 ships: Aegis Idris-P … Drake Buccaneer), one choice per line.",
+            "Pick All Ship Details and generate: the same mission lists every ship in each pool instead.",
             "Find Tactical Strike Group Needed: its waves read Wave 1 to Wave 8, each on one line, and name the RSI Constellation Mk IV Andromeda.",
             "Find Gilly's Combat Gauntlet part 7: its wave names the Aegis Hammerhead.",
             "Find a Headhunters claim sweep: a ship no real model matches reads as a kind, e.g. 1x Very Easy Ninetails ship, with no brackets.",

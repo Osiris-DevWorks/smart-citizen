@@ -857,6 +857,10 @@
       "ht": "",
       "at": "{item} Seti"
     },
+    "{kind} ({count} ships: {first} … {last})": {
+      "ht": "",
+      "at": "{kind} ({count} gemi: {first} … {last})"
+    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind} gemisi"

@@ -1518,6 +1518,18 @@
       "ht": "",
       "at": "Düşmanlar"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "Basit"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "Tüm gemi ayrıntıları"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "Düşmanlar ve Dostlar satırlarının gemileri nasıl listelediği. Basit, 10'dan fazla gemilik bir grubu türüyle, sayısıyla ve en büyük ile en küçük gemisiyle gösterir; Tüm gemi ayrıntıları her gemiyi listeler. Bir sonraki iyileştirme oluşturmada geçerli olur."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "İtibar"

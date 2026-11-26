@@ -153,14 +153,19 @@ def _npc(name: str, count: int) -> str:
 
 class TestShipSpawnIndex:
     def test_a_parent_tag_matches_its_children(self, index):
-        names, label = index.pick([FACTION, EASY], [])
-        assert (
-            names == ("Anvil Arrow", "Anvil Gladiator", "Vanduul Blade") and label == ""
-        )
+        names, _label = index.pick([FACTION, EASY], [])
+        assert names == ("Anvil Arrow", "Anvil Gladiator", "Vanduul Blade")
 
     def test_negative_tags_and_each_name_once(self, index):
-        assert index.pick([CRIMINAL], [GLADIATOR]) == (("Anvil Arrow",), "")
-        assert index.pick([ARROW], []) == (("Anvil Arrow",), "")
+        assert index.pick([CRIMINAL], [GLADIATOR])[0] == ("Anvil Arrow",)
+        assert index.pick([ARROW], [])[0] == ("Anvil Arrow",)
+
+    def test_every_pick_carries_its_type(self, index):
+        # The label a Simple summary shows, also when ships match.
+        assert index.pick([CRIMINAL, EASY], []) == (
+            ("Anvil Arrow", "Anvil Gladiator"),
+            "Easy Criminal",
+        )
 
     def test_set_up_tags_pick_nothing(self, index):
         # A group identifier is on no ship and a pilot skill sets the pilot up.
@@ -190,7 +195,7 @@ class TestShipSpawnIndex:
             {},
             {"vehicle_NameANVL_Arrow": "Anvil Arrow"},
         )
-        assert index.pick([ARROW], []) == (("Anvil Arrow",), "")
+        assert index.pick([ARROW], [])[0] == ("Anvil Arrow",)
 
 
 class TestShipSpawnFacts:
@@ -217,7 +222,23 @@ class TestShipSpawnFacts:
         )
         (ships / "broken.xml").write_text("<E><tags>", encoding="utf-8")
         assert gen.build_ship_spawn_facts(ships) == [
-            (["a", "b"], "vehicle_NameANVL_Arrow", "anvl_arrow_pu_ai_crim")
+            (["a", "b"], "vehicle_NameANVL_Arrow", "anvl_arrow_pu_ai_crim", 0.0)
+        ]
+
+
+class TestShipSize:
+    def test_the_bounding_box_volume(self, gen, tmp_path):
+        ships = tmp_path / "spaceships"
+        ships.mkdir()
+        (ships / "big.xml").write_text(
+            '<E><tags><Reference value="a" /></tags><Components>'
+            '<VehicleComponentParams vehicleName="@vehicle_NameBig">'
+            '<maxBoundingBoxSize x="2" y="3" z="4" /></VehicleComponentParams>'
+            "</Components></E>",
+            encoding="utf-8",
+        )
+        assert gen.build_ship_spawn_facts(ships) == [
+            (["a"], "vehicle_NameBig", "big", 24.0)
         ]
 
 
@@ -380,6 +401,80 @@ class TestLayout:
         ]
 
 
+class TestSimple:
+    """The Hostiles dropdown's Simple: a pool of more than 10 ships is its
+    type, with how many and the biggest and smallest by bounding box."""
+
+    POOL = "00000000-0000-0000-0000-0000000000e1"
+
+    def _index(self, gen, count, simple=True):
+        tags = dict(TAGS)
+        tags[self.POOL] = ("Pool", FACTION)
+        ships = [
+            ([self.POOL, EASY], f"vehicle_Name{i:02}", f"ship{i:02}", float(i))
+            for i in range(count)
+        ]
+        loc = {f"vehicle_Name{i:02}": f"Ship {i:02}" for i in range(count)}
+        return gen.ShipSpawnIndex(tags, ships, loc, simple=simple)
+
+    def _text(self, gen, index):
+        names, label = index.pick([self.POOL, EASY], [])
+        gen._set_ship_spawns(index)
+        try:
+            return gen._format_roster_group(
+                (gen.SPAWN_HOSTILE, "Targets", (((2, names, label),),))
+            )
+        finally:
+            gen._set_ship_spawns(None)
+
+    def test_a_big_pool_is_its_type_biggest_and_smallest(self, gen):
+        assert self._text(gen, self._index(gen, 11)) == (
+            "- Targets: 2x Easy Pool ship (11 ships: Ship 10 \u2026 Ship 00)"
+        )
+
+    def test_ten_ships_are_still_listed(self, gen):
+        assert self._text(gen, self._index(gen, 10)).startswith(
+            "- Targets: 2x of Ship 00, Ship 01,"
+        )
+
+    def test_all_ship_details_lists_every_ship(self, gen):
+        text = self._text(gen, self._index(gen, 11, simple=False))
+        assert text.startswith("- Targets: 2x of Ship 00,") and "Ship 10" in text
+
+    def test_the_summary_counts_as_one_name_for_the_one_line_rule(self, gen):
+        index = self._index(gen, 11)
+        names, label = index.pick([self.POOL, EASY], [])
+        gen._set_ship_spawns(index)
+        try:
+            text = gen._format_roster_group(
+                (
+                    gen.SPAWN_HOSTILE,
+                    "Hostile Wave",
+                    (((2, names, label),), ((1, ("Ship 03",), ""),)),
+                )
+            )
+        finally:
+            gen._set_ship_spawns(None)
+        assert text == (
+            "- Hostile Wave: 2x Easy Pool ship (11 ships: Ship 10 \u2026 Ship 00)"
+            " and 1x Ship 03"
+        )
+
+    def test_the_generation_takes_the_setting(self, gen, tmp_path):
+        records, forge = _records(tmp_path)
+        ctx = {
+            "records": records,
+            "forge_dir": forge,
+            "loc": LOC,
+            "tag_loc": LOC,
+            "hostiles_detail": "all",
+        }
+        assert gen._load_ship_spawns(ctx).simple is False
+        assert gen._load_ship_spawns(dict(ctx, hostiles_detail="simple")).simple is True
+        del ctx["hostiles_detail"]
+        assert gen._load_ship_spawns(ctx).simple is True  # the app's default
+
+
 class TestModelFallback:
     """A mission that asks for a model tag the newer AI ships do not carry
     (they carry only their series) still names the ship, through the model
@@ -400,7 +495,7 @@ class TestModelFallback:
 
     def test_the_file_name_names_the_model(self, gen):
         index = self._index(gen, "aegs_hammerhead_gs_pu_ai_crim")
-        assert index.pick([self.HAMMER, CRIMINAL], []) == (("Aegis Hammerhead",), "")
+        assert index.pick([self.HAMMER, CRIMINAL], [])[0] == ("Aegis Hammerhead",)
 
     def test_the_other_tags_still_count(self, gen):
         index = self._index(gen, "aegs_hammerhead_gs_pu_ai_crim")

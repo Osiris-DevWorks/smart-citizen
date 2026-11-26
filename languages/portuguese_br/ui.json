@@ -1518,6 +1518,18 @@
       "ht": "",
       "at": "Hostis"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "Simples"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "Todas as naves"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "Como as linhas Hostis e Aliados listam as naves. Simples mostra um grupo de mais de 10 naves pelo tipo, com quantas são e a maior e a menor; Todas as naves lista todas. Vale na próxima geração de melhorias."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Reputação"

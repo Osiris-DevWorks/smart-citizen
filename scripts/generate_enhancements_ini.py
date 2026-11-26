@@ -516,8 +516,9 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     "blueprint_pools": "v16",
     "scitem_lookups": "v11",
     # Each ship entity's own tags, name loc key and file stem
-    # (build_ship_spawn_facts). v2: the stem, for the model fallback.
-    "ship_spawn_tags": "v2",
+    # (build_ship_spawn_facts). v2: the stem, for the model fallback. v3: the
+    # bounding-box size, for the Simple summary's order.
+    "ship_spawn_tags": "v3",
     "standings": "v3",
     "wearables": "v1",
     "xml_path_index": "v2",
@@ -3135,21 +3136,32 @@ class ShipSpawnIndex:
     """The ships a spawn option's tags can pick, by their in-game names.
 
     *tags* is the tag tree (``dcb_tags.load_tag_database``), *ships* each ship
-    entity's own tags, name loc key and file stem (``build_ship_spawn_facts``;
-    the stem may be left off), *loc* the strings of the language being
-    generated and *fallback_loc* the English ones, for a name *loc* lacks.
+    entity's own tags, name loc key, file stem and size
+    (``build_ship_spawn_facts``; the stem and size may be left off), *loc*
+    the strings of the language being generated and *fallback_loc* the
+    English ones, for a name *loc* lacks. *simple* shortens a pool of more
+    than _SIMPLE_MAX_SHIPS ships to its type (the Hostiles dropdown's Simple).
     False when either is empty, which leaves the spawn lines as counts.
     """
 
-    def __init__(self, tags: dict, ships: list, loc: dict, fallback_loc: dict | None = None):
+    def __init__(self, tags: dict, ships: list, loc: dict, fallback_loc: dict | None = None,
+                 simple: bool = False):
         self._paths = tag_paths(tags)
         self._ships: list[tuple[frozenset, str, str]] = []
-        for own, key, *stem in ships:
+        self._sizes: dict[str, float] = {}
+        self.simple = simple
+        for own, key, *rest in ships:
             name = " ".join((loc.get(key) or (fallback_loc or {}).get(key) or "").split())
             if name:
-                stem_text = f"_{stem[0].lower()}_" if stem else ""
+                stem_text = f"_{rest[0].lower()}_" if rest else ""
                 self._ships.append((with_ancestors(own, tags), name, stem_text))
+                size = float(rest[1]) if len(rest) > 1 else 0.0
+                self._sizes[name] = max(size, self._sizes.get(name, 0.0))
         self._picks: dict = {}
+
+    def biggest_first(self, names) -> list[str]:
+        """*names* by size, biggest first; equal sizes by name."""
+        return sorted(names, key=lambda n: (-self._sizes.get(n, 0.0), n.casefold()))
 
     def _match(self, wanted, refused, stem_part: str = "") -> tuple[str, ...]:
         found = {name for ship_tags, name, stem in self._ships
@@ -3162,11 +3174,11 @@ class ShipSpawnIndex:
 
     def pick(self, positive, negative) -> tuple[tuple[str, ...], str]:
         """``(names, label)`` for one spawn option: the names of the ships it
-        can give, sorted and each once, or no names and a label made from its
-        tags when no ship has them. Both empty when it asks for no tag that
-        picks a ship. An option whose model tag no ship carries is matched
-        again by the model's name in the entity file names (see
-        _MODEL_TAG_PREFIXES)."""
+        can give, sorted and each once, and the label its tags make (its type,
+        which names it when no ship matches and which a Simple summary of a
+        big pool shows). Both empty when it asks for no tag that picks a ship.
+        An option whose model tag no ship carries is matched again by the
+        model's name in the entity file names (see _MODEL_TAG_PREFIXES)."""
         key = (tuple(positive), tuple(negative))
         if key in self._picks:
             return self._picks[key]
@@ -3182,8 +3194,7 @@ class ShipSpawnIndex:
                 model = self._paths[models[0]].rsplit("/", 1)[-1].lower()
                 names = self._match([g for g in wanted if g not in models], refused,
                                     f"_{model}_")
-            if not names:
-                label = self._label(wanted)
+            label = self._label(wanted)
         self._picks[key] = (names, label)
         return names, label
 
@@ -3201,32 +3212,46 @@ class ShipSpawnIndex:
         return " ".join(words)
 
 
-def _ship_spawn_fact(xml_file) -> tuple[list[str], str]:
-    """A ship entity's own tags (the root's ``<tags>``) and its name loc key
-    (``VehicleComponentParams`` ``vehicleName``), read only as far as
-    ``VehicleComponentParams``, which sits near the top of every ship file."""
+def _ship_spawn_fact(xml_file) -> tuple[list[str], str, float]:
+    """A ship entity's own tags (the root's ``<tags>``), its name loc key
+    (``VehicleComponentParams`` ``vehicleName``) and its size, the volume of
+    ``VehicleComponentParams``' ``maxBoundingBoxSize`` (0 without one), read
+    only as far as that box, which sits near the top of every ship file."""
     own: list[str] = []
+    key = ""
     depth = 0
+    in_params = False
     with open(xml_file, "rb") as f:
         for event, el in ET.iterparse(f, events=("start", "end")):
             if event == "start":
                 depth += 1
                 if el.tag == "VehicleComponentParams":
-                    return own, el.get("vehicleName", "")
+                    key = el.get("vehicleName", "")
+                    in_params = True
+                elif in_params and el.tag == "maxBoundingBoxSize":
+                    size = 1.0
+                    for axis in ("x", "y", "z"):
+                        try:
+                            size *= max(float(el.get(axis, "0")), 0.0)
+                        except ValueError:
+                            size = 0.0
+                    return own, key, size
             else:
                 depth -= 1
+                if el.tag == "VehicleComponentParams":
+                    return own, key, 0.0
                 if depth == 1 and el.tag == "tags":
                     own = [r.get("value", "") for r in el.findall("Reference")]
-    return own, ""
+    return own, key, 0.0
 
 
 def build_ship_spawn_facts(spaceships_dir: Path, xml_path_index: dict | None = None,
-                           records_dir: Path | None = None) -> list[tuple[list[str], str, str]]:
-    """``(own tags, name loc key, file stem)`` for every ship entity a spawn
-    could pick: AI and player versions alike, templates and ships with no
-    name left out. The stem names the model where the tags do not (see
-    _MODEL_TAG_PREFIXES). XML facts only, so ``_cached_lookup`` keeps it per
-    DataForge build."""
+                           records_dir: Path | None = None) -> list[tuple]:
+    """``(own tags, name loc key, file stem, size)`` for every ship entity a
+    spawn could pick: AI and player versions alike, templates and ships with
+    no name left out. The stem names the model where the tags do not (see
+    _MODEL_TAG_PREFIXES), and the size orders a Simple summary's ships.
+    XML facts only, so ``_cached_lookup`` keeps it per DataForge build."""
     if xml_path_index is not None and records_dir is not None:
         key = spaceships_dir.relative_to(records_dir).as_posix()
         files = sorted(Path(p) for p in xml_path_index.get(key, []))
@@ -3237,12 +3262,12 @@ def build_ship_spawn_facts(spaceships_dir: Path, xml_path_index: dict | None = N
         if "_template" in xml_file.stem.lower():
             continue
         try:
-            own, ref = _ship_spawn_fact(xml_file)
+            own, ref, size = _ship_spawn_fact(xml_file)
         except (ET.Error, OSError) as e:
             logger.debug(f"Ship spawn tags: skipped {xml_file.name}: {e}")
             continue
         if own and ref.startswith("@") and not _is_sentinel_loc_ref(ref):
-            facts.append((own, ref[1:], xml_file.stem))
+            facts.append((own, ref[1:], xml_file.stem, size))
     logger.info(f"Ship spawn tags: {len(facts)} ships")
     return facts
 
@@ -3394,6 +3419,12 @@ _WAVE_LABEL = "Hostile Wave"
 # A wave stays on one line only while no part of it names this many ships:
 # a long list would run into the part after it.
 _ONE_LINE_MAX_NAMES = 3
+# With the Hostiles dropdown on Simple, a pool of more than this many ships
+# is shown as its type and size range instead of every name.
+_SIMPLE_MAX_SHIPS = 10
+# The Hostiles dropdown's values (AppSettings.HOSTILES_DETAILS), as main()
+# takes them; Simple is the app's default.
+_HOSTILES_SIMPLE = "simple"
 
 
 def _join_words(parts: list[str], kind: str) -> str:
@@ -3413,11 +3444,23 @@ def _ship_kind(label: str) -> str:
     return _t("{kind} ship", kind=label)
 
 
+def _pool_summary(names: tuple, label: str) -> str:
+    """A big pool in the Simple ship lists: its type and its size range,
+    ``Hard Criminal ship (24 ships: Aegis Idris-P … Anvil Arrow)``, biggest
+    and smallest by bounding box."""
+    ordered = _SHIP_SPAWNS.biggest_first(names) if _SHIP_SPAWNS else sorted(names)
+    return _t("{kind} ({count} ships: {first} … {last})", kind=_ship_kind(label),
+              count=len(names), first=ordered[0], last=ordered[-1])
+
+
 def _slot_choices(slot: tuple) -> list[tuple[str, int]]:
     """A slot's choices as ``(text, how many ships it names)``: equal ships at
     different amounts become a range, choices at one amount share one list,
     and a list reads ``2-3x of A, B, or C`` so the count is not taken for a
-    count of each. A choice no ship matches names its kind of ship."""
+    count of each. A choice no ship matches names its kind of ship, and with
+    Simple a pool of more than _SIMPLE_MAX_SHIPS ships is its type with its
+    size range (_pool_summary), which counts as one name."""
+    simple = bool(_SHIP_SPAWNS and _SHIP_SPAWNS.simple)
     ranges: dict[tuple, list[int]] = {}
     for amount, names, label in slot:
         low_high = ranges.setdefault((names, label), [amount, amount])
@@ -3426,12 +3469,18 @@ def _slot_choices(slot: tuple) -> list[tuple[str, int]]:
     by_amount: dict[tuple[int, int], tuple[list[str], list[str]]] = {}
     for (names, label), (low, high) in ranges.items():
         named, kinds = by_amount.setdefault((low, high), ([], []))
-        named.extend(n for n in names if n not in named)
-        if not names and label and label not in kinds:
-            kinds.append(label)
+        if not names:
+            kind = _ship_kind(label) if label else ""
+        elif simple and label and len(names) > _SIMPLE_MAX_SHIPS:
+            kind = _pool_summary(names, label)
+        else:
+            named.extend(n for n in names if n not in named)
+            continue
+        if kind and kind not in kinds:
+            kinds.append(kind)
     out = []
     for (low, high), (named, kinds) in by_amount.items():
-        items = sorted(named, key=str.casefold) + [_ship_kind(k) for k in kinds]
+        items = sorted(named, key=str.casefold) + kinds
         amount = f"{low}" if low == high else f"{low}-{high}"
         what = _join_words(items, "names")
         text = _t("{count}x of {ships}", count=amount, ships=what) if len(items) > 1 \
@@ -8404,7 +8453,8 @@ def _load_ship_spawns(ctx: dict) -> "ShipSpawnIndex | None":
     records = ctx["records"]
     facts = _cached_lookup(forge_dir, "ship_spawn_tags", lambda: build_ship_spawn_facts(
         records / "entities" / "spaceships", ctx.get("xml_path_index"), records))
-    index = ShipSpawnIndex(tags, facts, ctx["loc"], ctx.get("tag_loc"))
+    index = ShipSpawnIndex(tags, facts, ctx["loc"], ctx.get("tag_loc"),
+                           simple=ctx.get("hostiles_detail", _HOSTILES_SIMPLE) == _HOSTILES_SIMPLE)
     return index if index else None
 
 
@@ -9264,6 +9314,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
          mission_headers: dict[str, str] | None = None,
          mission_header_em_tag: str = _DEFAULT_MISSION_HEADER_EM_TAG,
          mission_detail_fields: dict | None = None,
+         hostiles_detail: str = _HOSTILES_SIMPLE,
          mission_title_tags: dict | None = None,
          stats_prepend: bool = False,
          standardize_earnable_ship_names: bool = False,
@@ -9672,6 +9723,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "mission_headers":   mission_headers or dict(_DEFAULT_MISSION_HEADERS),
         "mission_header_em": mission_header_em_tag or _DEFAULT_MISSION_HEADER_EM_TAG,
         "mission_detail_fields": mission_detail_fields or {},
+        "hostiles_detail": hostiles_detail,
         "mission_title_tags": mission_title_tags or {},
         "stats_prepend":     bool(stats_prepend),
         "rs_ore_name_annotations": bool(rs_ore_name_annotations),

@@ -268,6 +268,8 @@ class EnhancementsTab(QWidget):
             cb.toggled.connect(self._mark_enhancements_dirty)
             mf_row.addWidget(cb)
             self._mission_field_checkboxes[_field] = cb
+            if _field == "spawns":
+                mf_row.addWidget(self._build_hostiles_detail_combo(cb))
         mf_row.addStretch()
         gl.addLayout(mf_row)
 
@@ -782,6 +784,35 @@ class EnhancementsTab(QWidget):
         time, so the change shows up after the next Generate Enhancements."""
         AppSettings.set_mission_detail_field(field, checked)
 
+    # The Hostiles dropdown's choices, in AppSettings.HOSTILES_DETAILS order,
+    # with each one's text key.
+    _HOSTILES_DETAIL_TEXTS = (
+        ("simple", "enhancements.hostiles_detail_simple"),
+        ("all", "enhancements.hostiles_detail_all"),
+    )
+
+    def _build_hostiles_detail_combo(self, hostiles_box: QCheckBox) -> NoScrollComboBox:
+        """The dropdown beside the Hostiles box: Simple shortens a pool of
+        more than 10 ships to its type, All Ship Details lists every ship.
+        Greyed out while Hostiles is unticked, since it has nothing to shape."""
+        combo = NoScrollComboBox()
+        combo.setStyleSheet("font-size: 11px;")
+        combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        for value, key in self._HOSTILES_DETAIL_TEXTS:
+            combo.addItem(tr(key), userData=value)
+        saved = AppSettings.get_hostiles_detail()
+        combo.setCurrentIndex(max(combo.findData(saved), 0))
+        combo.setToolTip(tr("enhancements.hostiles_detail_tooltip"))
+        combo.setEnabled(hostiles_box.isChecked())
+        hostiles_box.toggled.connect(combo.setEnabled)
+        combo.currentIndexChanged.connect(self._on_hostiles_detail_changed)
+        self._hostiles_detail_combo = combo
+        return combo
+
+    def _on_hostiles_detail_changed(self, index: int) -> None:
+        AppSettings.set_hostiles_detail(self._hostiles_detail_combo.itemData(index))
+        self._mark_enhancements_dirty()
+
     # ── Favorites ─────────────────────────────────────────────────────────────
 
     def _build_favorites_group(self) -> QGroupBox:
@@ -1166,6 +1197,9 @@ class EnhancementsTab(QWidget):
             label = _mf_label_by_field.get(field, field)
             cb.setText(label)
             cb.setToolTip(self._mission_field_tooltip(field, label))
+        for i, (_value, key) in enumerate(self._HOSTILES_DETAIL_TEXTS):
+            self._hostiles_detail_combo.setItemText(i, tr(key))
+        self._hostiles_detail_combo.setToolTip(tr("enhancements.hostiles_detail_tooltip"))
         self._mf_note.setText(tr("enhancements.mission_detail_fields_note"))
         self._stats_prepend_check.setText(tr("enhancements.stats_prepend_cb"))
         self._stats_prepend_check.setToolTip(tr("enhancements.stats_prepend_tooltip"))

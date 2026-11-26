@@ -1518,6 +1518,18 @@
       "ht": "",
       "at": "Hostiles"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "Simple"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "Tous les vaisseaux"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "Comment les lignes Hostiles et Alliés listent les vaisseaux. Simple affiche un groupe de plus de 10 vaisseaux par son type, avec leur nombre et le plus grand et le plus petit ; Tous les vaisseaux les liste tous. Prend effet à la prochaine génération des améliorations."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Réputation"

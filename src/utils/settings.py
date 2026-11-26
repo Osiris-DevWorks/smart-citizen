@@ -506,6 +506,13 @@ class AppSettings:
         # cooldown when it differs), read from each contract's availability.
         "cooldown": "mission_field/cooldown",
     }
+    # How the Hostiles and Friendlies ship lists read: "simple" shortens a
+    # pool of more than 10 ships to its type ("3x Hard Criminal ship (24 ships:
+    # biggest ... smallest)"), "all" lists every ship. The Enhancements tab's
+    # dropdown beside the Hostiles box.
+    HOSTILES_DETAIL = "mission_field/hostiles_detail"
+    HOSTILES_DETAILS = ("simple", "all")
+    HOSTILES_DETAIL_DEFAULT = "simple"
 
     # Mission TITLE tags (2.2.0, "General Tags" section): independent of the
     # mission-detail body fields above — these gate the [BP]/[ACE]/[REP]
@@ -1390,6 +1397,18 @@ class AppSettings:
         reg_key = AppSettings._MISSION_FIELD_SETTING.get(field)
         if reg_key:
             AppSettings.settings().setValue(reg_key, enabled)
+
+    @staticmethod
+    def get_hostiles_detail() -> str:
+        """How the mission ship lists read (one of ``HOSTILES_DETAILS``)."""
+        return AppSettings._get_choice(AppSettings.HOSTILES_DETAIL, AppSettings.HOSTILES_DETAILS,
+                                       AppSettings.HOSTILES_DETAIL_DEFAULT)
+
+    @staticmethod
+    def set_hostiles_detail(detail: str) -> None:
+        AppSettings._set_choice(AppSettings.HOSTILES_DETAIL, detail,
+                                AppSettings.HOSTILES_DETAILS,
+                                AppSettings.HOSTILES_DETAIL_DEFAULT)
 
     @staticmethod
     def get_mission_title_tags() -> dict:
@@ -4492,6 +4511,7 @@ class AppSettings:
             AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
             AppSettings.SCO_DRAWER_HOTKEY: "",
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
+            AppSettings.HOSTILES_DETAIL: AppSettings.HOSTILES_DETAIL_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
             AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,

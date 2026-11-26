@@ -857,6 +857,10 @@
       "ht": "",
       "at": "Conjunto {item}"
     },
+    "{kind} ({count} ships: {first} … {last})": {
+      "ht": "",
+      "at": "{kind} ({count} naves: {first} … {last})"
+    },
     "{kind} ship": {
       "ht": "",
       "at": "nave {kind}"

@@ -1514,6 +1514,18 @@
       "ht": "",
       "at": "敵対勢力"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "簡易"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "全艦船の詳細"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "敵と味方の行で艦船をどう表示するか。簡易は10隻を超える候補を種類として、隻数と最大・最小の艦船付きで表示し、全艦船の詳細はすべての艦船を一覧表示します。次回の強化生成から反映されます。"
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "評判"

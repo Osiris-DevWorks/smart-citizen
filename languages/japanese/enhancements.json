@@ -857,6 +857,10 @@
       "ht": "",
       "at": "{item} セット"
     },
+    "{kind} ({count} ships: {first} … {last})": {
+      "ht": "",
+      "at": "{kind}（{count}隻：{first} … {last}）"
+    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind}の艦船"

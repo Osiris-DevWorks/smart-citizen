@@ -857,6 +857,10 @@
       "ht": "",
       "at": "{item}-Set"
     },
+    "{kind} ({count} ships: {first} … {last})": {
+      "ht": "",
+      "at": "{kind} ({count} Schiffe: {first} … {last})"
+    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind}-Schiff"

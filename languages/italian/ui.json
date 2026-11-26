@@ -1514,6 +1514,18 @@
       "ht": "",
       "at": "Ostili"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "Semplice"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "Tutte le navi"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "Come le righe Ostili e Alleati elencano le navi. Semplice mostra un gruppo di più di 10 navi con il suo tipo, quante sono e la più grande e la più piccola; Tutte le navi le elenca tutte. Ha effetto alla prossima generazione dei miglioramenti."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Reputazione"

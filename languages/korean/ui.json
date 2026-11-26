@@ -1518,6 +1518,18 @@
       "ht": "",
       "at": "적대 세력"
     },
+    "hostiles_detail_simple": {
+      "ht": "",
+      "at": "간단히"
+    },
+    "hostiles_detail_all": {
+      "ht": "",
+      "at": "모든 함선 정보"
+    },
+    "hostiles_detail_tooltip": {
+      "ht": "",
+      "at": "적대 세력과 아군 줄에 함선을 표시하는 방식입니다. 간단히는 10척이 넘는 후보를 유형으로, 척수와 가장 큰 함선과 가장 작은 함선과 함께 표시하고, 모든 함선 정보는 모든 함선을 나열합니다. 다음 강화 생성부터 적용됩니다."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "평판"

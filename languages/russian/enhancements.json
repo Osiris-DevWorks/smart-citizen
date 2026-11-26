@@ -857,6 +857,10 @@
       "ht": "",
       "at": "Комплект {item}"
     },
+    "{kind} ({count} ships: {first} … {last})": {
+      "ht": "",
+      "at": "{kind} ({count} кораблей: {first} … {last})"
+    },
     "{kind} ship": {
       "ht": "",
       "at": "корабль {kind}"
