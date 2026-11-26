@@ -15,6 +15,24 @@
       "at": ""
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Mostrar Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Salir"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen sigue en ejecución"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Está en la bandeja del sistema. Haz clic en su icono para que vuelva la ventana, o haz clic derecho para salir. Si no ves el icono, puede estar detrás de la flecha ^ junto al reloj."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "Abrir el canal de Discord de Smart Citizen para comentarios, informes de errores y votación de próximas funciones (requiere unirse al Discord de Osiris DevWorks)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Abrir las guías de Smart Citizen en Karolinger Guides"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Escribir el contenido combinado de la tabla en el global.ini del juego. Primero se crea una copia de seguridad con marca de tiempo del global.ini actual."
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Comentarios, errores y votación de funciones"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -798,6 +824,18 @@
       "ht": "",
       "at": "Si está marcado, la visita guiada no se iniciará automáticamente en una nueva versión. El botón Tutorial de la barra de herramientas sigue funcionando."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Minimizar a la bandeja del sistema"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Si está marcado, al minimizar Smart Citizen se oculta en la bandeja del sistema (los iconos junto al reloj) en lugar de en la barra de tareas. Haz clic en su icono para que vuelva. Mientras esté allí, abrir Smart Citizen de nuevo trae esa ventana de vuelta en lugar de abrir una segunda copia."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "No se encontró la bandeja del sistema, así que Smart Citizen se minimiza en la barra de tareas."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Raíz de instalación de Star Citizen — el directorio que contiene LIVE/, PTU/, EPTU/, HOTFIX/ y/o TECH-PREVIEW/. Se detecta automáticamente al instalar; edítalo si tu juego está en otro lugar. El menú desplegable 'Canal' de abajo elige cuál lee y escribe la aplicación."
@@ -845,6 +883,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Borrar la carpeta de caché personalizada y usar la predeterminada de la plataforma."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Mantén tus planos obtenidos, tus cambios de textos y tus ajustes iguales en cada PC donde juegas. Elige una carpeta que tu aplicación en la nube ya sincronice, por ejemplo en Google Drive, OneDrive o Dropbox, y luego elige la misma carpeta en tus otros PC. Un PC que añadas toma los ajustes y cambios que los demás ya comparten. Antes de que una sincronización cambie algo, Smart Citizen guarda una copia de seguridad que puedes recuperar con Importar ajustes. Las rutas de carpetas, la ubicación del juego y la disposición de la ventana se quedan en cada PC, y cada PC genera su propio global.ini."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Desactivado. Elige una carpeta para activarlo."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Elige una carpeta que tu aplicación en la nube sincronice con tus otros PC"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Desactivar"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Dejar de sincronizar. Los planos, cambios y ajustes de este PC se quedan como están."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Elegir la carpeta de Smart Sync"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync está desactivado."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Sincronizando..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Última sincronización a las {time}. Otros PC en esta carpeta: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "No se pudo sincronizar: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2260,6 +2342,10 @@
       "ht": "No se pudo descargar la localización {language} y no se encontró ninguna copia en caché. Se mostrará la base inglesa. Revisa la URL en Asignar archivo de idioma y tu conexión, e inténtalo de nuevo.",
       "at": ""
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Se descargó una traducción {language} más reciente. Recargando con ella."
+    },
     "language_generating_enhancements": {
       "ht": "Generando mejoras de {language} desde DataForge...",
       "at": ""
@@ -2587,6 +2673,22 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Proporciones de la ventana restablecidas."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync no pudo usar su carpeta: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync actualizó {count} blueprint(s) adquirido(s) desde tus otros PC."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync no pudo guardar una copia de seguridad, así que no se sincronizó nada en este PC: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync recibió {count} ajuste(s) de tus otros PC. Reinicia Smart Citizen para usarlos."
     }
   },
   "import_flow": {
@@ -3249,7 +3351,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas."
+        "at": "Elige el tema de la app (Default / Light / Dark / ODW) y el tamaño de letra (Pequeño / Mediano / Grande, se aplica tras reiniciar), y desactiva, si quieres, el recorrido automático en versiones nuevas. Marca Minimizar a la bandeja del sistema para que la ventana vaya allí al minimizarla."
       }
     },
     "cfg_sc_install": {
@@ -3319,7 +3421,21 @@
       },
       "description": {
         "ht": "",
-        "at": "El botón Ayuda abre un panel lateral con la guía completa, una lista de problemas conocidos y un enlace de comentarios al canal de Discord de Smart Citizen. Eso es todo lo que necesitas para empezar. ¡Buena suerte, ciudadano!"
+        "at": "El botón Ayuda abre un panel lateral con la guía completa, una lista de problemas conocidos y un enlace de comentarios al canal de Discord de Smart Citizen."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Guías y tutorial en vídeo"
+      },
+      "description": {
+        "ht": "",
+        "at": "El logo de Karolinger Guides en la parte inferior de la ventana abre las guías de Smart Citizen en Karolinger Guides. ¿Prefieres verlo? El tutorial en vídeo te lo enseña todo paso a paso. Eso es todo lo que necesitas para empezar. ¡Buena suerte, ciudadano!"
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Ver el tutorial en vídeo"
       }
     }
   },
@@ -3573,6 +3689,302 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Minerales aquí: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Pedido"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Añadir un objeto al pedido..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Resumen del pedido: {items} objetos, {crafts} fabricaciones"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "El pedido está vacío. Busca abajo para añadir un objeto."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Aún no hay datos de pedidos. Extrae DataForge y genera las mejoras con Commodities o Journal marcado."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Calidad {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Lo usa: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "Ver SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "Ver cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Mostrar las cantidades de mineral en SCU o cSCU (una centésima de SCU, como en el juego)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Copiar"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Copiado"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Copiar el pedido y sus materiales como texto, para Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Vigilar minerales"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Añadir los minerales del pedido a la lista de vigilancia del escaneo, para que el escáner te avise cuando lea uno"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Nuevo pedido"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "¿Seguro?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Haz clic otra vez en Nuevo pedido para vaciar este pedido. Los pedidos guardados se conservan."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Empezar un pedido nuevo: quita todos los objetos de este. Los pedidos guardados se conservan."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Uno menos"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Uno más"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Quitar del pedido"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Plano aún no obtenido"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Solo los que tengo"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Buscar solo entre los planos que tienes."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Material desconocido"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nombre del pedido"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Guardar"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Guarda este pedido con el nombre que escribiste."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "¿Reemplazar?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Guardado"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Escribe primero un nombre para el pedido."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "No se pudo guardar el pedido en:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Pedidos guardados"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Cargar"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Reemplaza este pedido por el guardado que elegiste en la lista."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Eliminar"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "¿Seguro?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Haz clic otra vez en Eliminar para borrar el pedido guardado \"{name}\"."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Eliminar el pedido guardado elegido en la lista. El pedido que estás armando se queda."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "No se pudo eliminar el pedido guardado \"{name}\"."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "«{name}» no tiene objetos que estos datos del juego conozcan."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Usa {need} de estos {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Usar esta ranura. Marcar una más de las que necesita el plano desmarca otra."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "C {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "La calidad del material para esta ranura (0 a 1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} solo sale con estas calidades (datos de {source}): {tiers}. El control se detiene en ellas y en 0, 500 y 1000."
+    },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Ajustar a las calidades del mineral"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Activado: los controles de calidad se detienen en las calidades con que sale cada mineral. Desactivado: aceptan cualquier calidad de 0 a 1000, para minerales mezclados a una calidad intermedia."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} sale con estas calidades (datos de {source}): {tiers}. Una mezcla puede quedar en medio, así que el control acepta cualquier calidad."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Necesita calidad {quality} o mejor"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Todas las ranuras: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "La calidad del material no cambia las estadísticas de este objeto."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pips"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} uds."
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Pedido de fabricación: {count} fabricaciones"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materiales:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} con calidad {quality}+"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Escribe un objeto para ver dónde comprarlo..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Cargando datos de tiendas desde UEX..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "No se pudo conectar con UEX para los datos de tiendas. Revisa tu conexión a Internet. El overlay lo intentará de nuevo en unos minutos."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Datos de tiendas de {site}, informados por jugadores. Actualizado {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "No se pudo conectar con UEX, así que esta es la última copia guardada."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "No se conoce ninguna tienda que venda un objeto con ese nombre."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place}: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "de {low} a {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "Mostrando {shown} de {total} objetos. Escribe más para acotar."
     }
   },
   "overlay": {
@@ -3792,6 +4204,14 @@
       "ht": "",
       "at": "Escribe un mineral para ver qué objetos lo usan, o un objeto para ver los minerales que necesita. Requiere una extracción de DataForge."
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Buscador de objetos"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Escribe un objeto para ver qué tiendas lo venden, dónde están y su precio. Los datos de tiendas vienen de UEX por Internet y los informan los jugadores."
+    },
     "drawer_position": {
       "ht": "",
       "at": "Posición del cajón:"
@@ -3847,6 +4267,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Esto no puede ser un atajo. Mantén pulsada Ctrl, Alt o Win con una letra, un número, un símbolo, Espacio, Tab o una tecla de navegación (flechas, Inicio, Fin, Re Pág/Av Pág, Insert, Supr), y también Mayús si quieres. Una tecla F o Pausa también sirve sola."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Pedido"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Arma un pedido de fabricación y mira cada material que necesita, por calidad. Requiere una extracción de DataForge."
     }
   },
   "shader_cache": {

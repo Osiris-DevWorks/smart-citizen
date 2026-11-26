@@ -156,7 +156,10 @@ def _write_set(language: str) -> None:
 def _stamp(language: str, state: str) -> None:
     """Set *language*'s .dataforge_stamp: "current", "older" or "empty"."""
     if state == "current":
-        AppSettings.set_enhancements_stamp(AppSettings.get_dataforge_build_key(), language)
+        # What a run writes: a translated language's stamp carries its
+        # enhancements.json too (#579).
+        AppSettings.set_enhancements_stamp(AppSettings.enhancements_stamp_value(
+            AppSettings.get_dataforge_build_key(), language), language)
     elif state == "older":
         AppSettings.set_enhancements_stamp("1600000000.0", language)
     else:

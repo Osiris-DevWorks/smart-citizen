@@ -4,9 +4,11 @@ unforge.exe is handed these with ``--exclude-file`` (odw-fast-unp4k ad7c6a7),
 under ``libs/foundry/records/``, so it never builds or writes them, and the
 DataForge cache keeps everything else it writes. On LIVE's game build of
 23 Oct 2026 (62,623 records) they are every record outside
-``pak_extractor.DATAFORGE_KEEP_SUBPATHS``: 274 folders and 264 loose files
+``pak_extractor.DATAFORGE_KEEP_SUBPATHS``: 273 folders and 264 loose files
 beside the kept subtrees and beside the folders above them, 31,424 records
-in all, so unforge writes the 31,199 the generator reads.
+in all, so unforge writes the 31,199 the generator reads. Since 3.1.0
+``crafting/craftedproperties`` (the 29 stats a crafting slot's quality
+moves, for the SCO Order tab) is kept rather than excluded.
 
 It is an exclude list, not a keep list, on purpose. A record folder a game
 patch adds is in neither list, so unforge writes it and the cache keeps it
@@ -21,7 +23,7 @@ list, splitting the entry that holds it when that holds more. Entries
 are lower case (unforge compares them ignoring case), relative to
 ``libs/foundry/records/``, one record folder or ``.xml`` file each, and one
 holds a space (``entities/restricted areas``). unforge gets them in a file,
-one per line, rather than as ``--exclude`` arguments, which these 538
+one per line, rather than as ``--exclude`` arguments, which these 537
 entries would take past 20,000 characters of command line.
 """
 
@@ -239,7 +241,6 @@ DATAFORGE_EXCLUDE_SUBPATHS: tuple[str, ...] = (
     "contracts/moduledeclarations",
     "contracts/modulehierarchy",
     "crafting/blueprintcategories",
-    "crafting/craftedproperties",
     "crafting/globalparams",
     "crafting/legacy",
     "crafting/qualitydistribution",

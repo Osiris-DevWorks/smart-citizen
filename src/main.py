@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import QApplication
 
 from src.gui.main_window import MainWindow
 from src.gui.theme import apply_theme, load_application_fonts
+from src.gui.tray import bring_back_hidden_copy, instance_name
 from src.utils.version import get_version
 from src.utils.settings import AppSettings
 from src.utils import i18n
@@ -70,6 +71,18 @@ def main():
     # vanishing into the swallowed stderr of the frozen build).
     from src.utils.crash_handler import install_crash_handler
     install_crash_handler(AppSettings.get_logs_dir())
+
+    # A copy minimized to the tray comes back instead of a second copy
+    # opening (src/gui/tray.py). Asked before anything below runs, so a start
+    # that ends here runs no migrator, writes no setting and builds no
+    # window. A copy on screen does not listen, so this one then opens beside
+    # it, as before. Its own Windows pipe calls need no QApplication.
+    if bring_back_hidden_copy(instance_name()):
+        logger.info(
+            "Smart Citizen is already running in the system tray: "
+            "brought it back instead of opening a second copy"
+        )
+        return
 
     # Skip all registry migrators in portable mode — they migrate
     # state in HKEY_CURRENT_USER, which a portable build never reads.
@@ -144,6 +157,11 @@ def main():
     # Tags" group. Carries a user's prior blueprint_tag/ace choice forward
     # once. Runs in both build modes.
     AppSettings.migrate_title_tag_settings()
+
+    # Smart Sync: settings changed on another PC apply at the next start,
+    # before the language, the theme or any window reads them (a backup is
+    # saved first, and nothing changes without one).
+    AppSettings.apply_synced_settings_at_startup()
 
     # Always keep user source path in sync with canonical user.ini location
     AppSettings.set_source_path(AppSettings.SOURCE_USER, str(AppSettings.get_user_ini_path()))

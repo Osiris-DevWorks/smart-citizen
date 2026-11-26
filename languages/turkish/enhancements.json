@@ -1,0 +1,833 @@
+{
+  "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
+  "strings": {
+    "--- EFFECT ---": {
+      "ht": "",
+      "at": "--- ETKİ ---"
+    },
+    "--- STATS ---": {
+      "ht": "",
+      "at": "--- İSTATİSTİKLER ---"
+    },
+    "Absolute Range": {
+      "ht": "",
+      "at": "Mutlak menzil"
+    },
+    "Acceleration": {
+      "ht": "",
+      "at": "İvme"
+    },
+    "Ace Pilot": {
+      "ht": "",
+      "at": "As pilot"
+    },
+    "Ace Pilots": {
+      "ht": "",
+      "at": "As pilotlar"
+    },
+    "Aim Assist Range": {
+      "ht": "",
+      "at": "Nişan yardımı menzili"
+    },
+    "Alpha Dmg": {
+      "ht": "",
+      "at": "Alfa hasar"
+    },
+    "Ammo": {
+      "ht": "",
+      "at": "Mühimmat"
+    },
+    "Arm Dist": {
+      "ht": "",
+      "at": "Kurma mesafesi"
+    },
+    "Arm Time": {
+      "ht": "",
+      "at": "Kurma süresi"
+    },
+    "Armor HP": {
+      "ht": "",
+      "at": "Zırh CP"
+    },
+    "Armour": {
+      "ht": "",
+      "at": "Zırh"
+    },
+    "Attackers": {
+      "ht": "",
+      "at": "Saldırganlar"
+    },
+    "Auto": {
+      "ht": "",
+      "at": "Otomatik"
+    },
+    "Backup": {
+      "ht": "",
+      "at": "Destek"
+    },
+    "Bandits": {
+      "ht": "",
+      "at": "Haydutlar"
+    },
+    "Base Resource Signature": {
+      "ht": "",
+      "at": "Temel kaynak imzası"
+    },
+    "Beam": {
+      "ht": "",
+      "at": "Işın"
+    },
+    "Bio": {
+      "ht": "",
+      "at": "Biyo"
+    },
+    "Blast Radius": {
+      "ht": "",
+      "at": "Patlama yarıçapı"
+    },
+    "Blueprint Reward": {
+      "ht": "",
+      "at": "Plan ödülü"
+    },
+    "Bomb Slots": {
+      "ht": "",
+      "at": "Bomba yuvaları"
+    },
+    "Boost": {
+      "ht": "",
+      "at": "Takviye"
+    },
+    "Boss": {
+      "ht": "",
+      "at": "Patron"
+    },
+    "Burst": {
+      "ht": "",
+      "at": "Seri atış"
+    },
+    "CQC": {
+      "ht": "",
+      "at": "Yakın dövüş"
+    },
+    "Cal Rate": {
+      "ht": "",
+      "at": "Kalibr. hızı"
+    },
+    "Captain": {
+      "ht": "",
+      "at": "Kaptan"
+    },
+    "Chain": {
+      "ht": "",
+      "at": "Zincir"
+    },
+    "Charge": {
+      "ht": "",
+      "at": "Şarj"
+    },
+    "Civilians": {
+      "ht": "",
+      "at": "Siviller"
+    },
+    "Class": {
+      "ht": "",
+      "at": "Sınıf"
+    },
+    "Combat": {
+      "ht": "",
+      "at": "Çatışma"
+    },
+    "Complexity": {
+      "ht": "",
+      "at": "Karmaşıklık"
+    },
+    "Component HP": {
+      "ht": "",
+      "at": "Bileşen CP"
+    },
+    "Cooldown": {
+      "ht": "",
+      "at": "Bekleme"
+    },
+    "Coolers": {
+      "ht": "",
+      "at": "Soğutucular"
+    },
+    "Cooling Rate": {
+      "ht": "",
+      "at": "Soğutma hızı"
+    },
+    "Cost/Shot": {
+      "ht": "",
+      "at": "Maliyet/atış"
+    },
+    "Crew": {
+      "ht": "",
+      "at": "Mürettebat"
+    },
+    "DPS": {
+      "ht": "",
+      "at": "SBH"
+    },
+    "Damage": {
+      "ht": "",
+      "at": "Hasar"
+    },
+    "Damage-Map Rate": {
+      "ht": "",
+      "at": "Hasar haritası hızı"
+    },
+    "Damaged Delay": {
+      "ht": "",
+      "at": "Hasarlıyken gecikme"
+    },
+    "Defenders": {
+      "ht": "",
+      "at": "Savunucular"
+    },
+    "Deflect": {
+      "ht": "",
+      "at": "Saptırma"
+    },
+    "Detection Mode": {
+      "ht": "",
+      "at": "Algılama modu"
+    },
+    "Detonation": {
+      "ht": "",
+      "at": "Patlatma"
+    },
+    "Difficulty (1-7)": {
+      "ht": "",
+      "at": "Zorluk (1-7)"
+    },
+    "Distort": {
+      "ht": "",
+      "at": "Bozulma"
+    },
+    "Dmg Mult": {
+      "ht": "",
+      "at": "Hasar çarpanı"
+    },
+    "Downed Delay": {
+      "ht": "",
+      "at": "Düşünce gecikme"
+    },
+    "Drop": {
+      "ht": "",
+      "at": "Düşüş"
+    },
+    "EM": {
+      "ht": "",
+      "at": "EM"
+    },
+    "EM Signature": {
+      "ht": "",
+      "at": "EM imzası"
+    },
+    "Effective Range": {
+      "ht": "",
+      "at": "Etkili menzil"
+    },
+    "Energy": {
+      "ht": "",
+      "at": "Enerji"
+    },
+    "Engagement Type": {
+      "ht": "",
+      "at": "Çatışma türü"
+    },
+    "Escort Wings": {
+      "ht": "",
+      "at": "Eskort filoları"
+    },
+    "Escorts": {
+      "ht": "",
+      "at": "Eskortlar"
+    },
+    "Extraction": {
+      "ht": "",
+      "at": "Çıkarma"
+    },
+    "FPS": {
+      "ht": "",
+      "at": "FPS"
+    },
+    "FPS & Ship": {
+      "ht": "",
+      "at": "FPS ve gemi"
+    },
+    "Failure": {
+      "ht": "",
+      "at": "Başarısızlık"
+    },
+    "Failure Penalty": {
+      "ht": "",
+      "at": "Başarısızlık cezası"
+    },
+    "Fire Modes": {
+      "ht": "",
+      "at": "Atış modları"
+    },
+    "Fire Rate": {
+      "ht": "",
+      "at": "Atış hızı"
+    },
+    "Fracture": {
+      "ht": "",
+      "at": "Kırma"
+    },
+    "Friendlies": {
+      "ht": "",
+      "at": "Dostlar"
+    },
+    "Fuel": {
+      "ht": "",
+      "at": "Yakıt"
+    },
+    "Fuel/Gm": {
+      "ht": "",
+      "at": "Yakıt/Gm"
+    },
+    "Full Dmg to": {
+      "ht": "",
+      "at": "Tam hasar mesafesi"
+    },
+    "Grade": {
+      "ht": "",
+      "at": "Derece"
+    },
+    "Grunts": {
+      "ht": "",
+      "at": "Erler"
+    },
+    "Guaranteed": {
+      "ht": "",
+      "at": "Garantili"
+    },
+    "Guards": {
+      "ht": "",
+      "at": "Muhafızlar"
+    },
+    "Guidance": {
+      "ht": "",
+      "at": "Güdüm"
+    },
+    "Guns": {
+      "ht": "",
+      "at": "Toplar"
+    },
+    "HP Rate": {
+      "ht": "",
+      "at": "CP hızı"
+    },
+    "HP/Ammo": {
+      "ht": "",
+      "at": "CP/mühimmat"
+    },
+    "Heat": {
+      "ht": "",
+      "at": "Isı"
+    },
+    "Heist Target": {
+      "ht": "",
+      "at": "Soygun hedefi"
+    },
+    "Hostages": {
+      "ht": "",
+      "at": "Rehineler"
+    },
+    "Hostile Allies": {
+      "ht": "",
+      "at": "Düşman müttefikler"
+    },
+    "Hostile Wave": {
+      "ht": "",
+      "at": "Düşman dalgası"
+    },
+    "Hostiles": {
+      "ht": "",
+      "at": "Düşmanlar"
+    },
+    "IR": {
+      "ht": "",
+      "at": "IR"
+    },
+    "IR Signature": {
+      "ht": "",
+      "at": "IR imzası"
+    },
+    "Inert Filter": {
+      "ht": "",
+      "at": "İnert filtre"
+    },
+    "Insurance": {
+      "ht": "",
+      "at": "Sigorta"
+    },
+    "Interdiction Ships": {
+      "ht": "",
+      "at": "Önleme gemileri"
+    },
+    "Item Type": {
+      "ht": "",
+      "at": "Eşya türü"
+    },
+    "Juggernauts": {
+      "ht": "",
+      "at": "Juggernautlar"
+    },
+    "Jump Drives": {
+      "ht": "",
+      "at": "Atlama motorları"
+    },
+    "Knowledge": {
+      "ht": "",
+      "at": "Bilgi"
+    },
+    "Kopions": {
+      "ht": "",
+      "at": "Kopionlar"
+    },
+    "Length": {
+      "ht": "",
+      "at": "Uzunluk"
+    },
+    "Lifetime": {
+      "ht": "",
+      "at": "Ömür"
+    },
+    "Locations": {
+      "ht": "",
+      "at": "Konumlar"
+    },
+    "Lock Range": {
+      "ht": "",
+      "at": "Kilit menzili"
+    },
+    "Lock Time": {
+      "ht": "",
+      "at": "Kilit süresi"
+    },
+    "MRacks": {
+      "ht": "",
+      "at": "Füze rafları"
+    },
+    "Material Efficiency": {
+      "ht": "",
+      "at": "Malzeme verimi"
+    },
+    "Maulers": {
+      "ht": "",
+      "at": "Maulers"
+    },
+    "Max": {
+      "ht": "",
+      "at": "Maks."
+    },
+    "Max Distortion": {
+      "ht": "",
+      "at": "Maks. bozulma"
+    },
+    "Max G-Force": {
+      "ht": "",
+      "at": "Maks. G kuvveti"
+    },
+    "Max HP": {
+      "ht": "",
+      "at": "Maks. CP"
+    },
+    "Max Lifetime": {
+      "ht": "",
+      "at": "Maks. ömür"
+    },
+    "Max Lock Range": {
+      "ht": "",
+      "at": "Maks. kilit menzili"
+    },
+    "Min Detonate": {
+      "ht": "",
+      "at": "Min. patlama"
+    },
+    "Min Dmg": {
+      "ht": "",
+      "at": "Min. hasar"
+    },
+    "Min Lock Range": {
+      "ht": "",
+      "at": "Min. kilit menzili"
+    },
+    "Mission Type": {
+      "ht": "",
+      "at": "Görev türü"
+    },
+    "Nine Tails": {
+      "ht": "",
+      "at": "Nine Tails"
+    },
+    "Objectives": {
+      "ht": "",
+      "at": "Hedefler"
+    },
+    "Overheat Temp": {
+      "ht": "",
+      "at": "Aşırı ısınma sıc."
+    },
+    "Phys": {
+      "ht": "",
+      "at": "Fiz."
+    },
+    "Ping Cooldown": {
+      "ht": "",
+      "at": "Ping bekleme"
+    },
+    "Pirates": {
+      "ht": "",
+      "at": "Korsanlar"
+    },
+    "Pitch": {
+      "ht": "",
+      "at": "Yunuslama"
+    },
+    "Polaris": {
+      "ht": "",
+      "at": "Polaris"
+    },
+    "Power": {
+      "ht": "",
+      "at": "Güç"
+    },
+    "Power Draw": {
+      "ht": "",
+      "at": "Güç tüketimi"
+    },
+    "Power Output": {
+      "ht": "",
+      "at": "Güç üretimi"
+    },
+    "Power Plants": {
+      "ht": "",
+      "at": "Jeneratörler"
+    },
+    "Private Security": {
+      "ht": "",
+      "at": "Özel güvenlik"
+    },
+    "Probe": {
+      "ht": "",
+      "at": "Sonda"
+    },
+    "Prospectors": {
+      "ht": "",
+      "at": "Prospectorlar"
+    },
+    "Protected": {
+      "ht": "",
+      "at": "Korunanlar"
+    },
+    "Proximity Range": {
+      "ht": "",
+      "at": "Yakınlık menzili"
+    },
+    "QD": {
+      "ht": "",
+      "at": "KM"
+    },
+    "QT Fuel Use": {
+      "ht": "",
+      "at": "QT yakıt tük."
+    },
+    "QT Speed": {
+      "ht": "",
+      "at": "QT hızı"
+    },
+    "Quantum Drives": {
+      "ht": "",
+      "at": "Kuantum motorları"
+    },
+    "Quantum Enforcement Devices": {
+      "ht": "",
+      "at": "Kuantum önleme cihazları"
+    },
+    "Radars": {
+      "ht": "",
+      "at": "Radarlar"
+    },
+    "Ramp": {
+      "ht": "",
+      "at": "Rampa"
+    },
+    "Range": {
+      "ht": "",
+      "at": "Menzil"
+    },
+    "Rank": {
+      "ht": "",
+      "at": "Rütbe"
+    },
+    "Recharges Oxygen reserves of a suit.": {
+      "ht": "",
+      "at": "Bir giysinin oksijen rezervlerini doldurur."
+    },
+    "Recipient": {
+      "ht": "",
+      "at": "Alıcı"
+    },
+    "Reduces concussion symptoms, normalizes weapon handling and movement speed.": {
+      "ht": "",
+      "at": "Sarsıntı belirtilerini azaltır, silah kullanımını ve hareket hızını normale döndürür."
+    },
+    "Reduces injuries from radiation.": {
+      "ht": "",
+      "at": "Radyasyon yaralanmalarını azaltır."
+    },
+    "Reduces pain symptoms, normalizes movement ability.": {
+      "ht": "",
+      "at": "Ağrı belirtilerini azaltır, hareket yeteneğini normale döndürür."
+    },
+    "Reduces vision and hearing symptoms, normalizes stamina.": {
+      "ht": "",
+      "at": "Görme ve işitme belirtilerini azaltır, dayanıklılığı normale döndürür."
+    },
+    "Refuel Nozzles": {
+      "ht": "",
+      "at": "Yakıt nozulları"
+    },
+    "Regen": {
+      "ht": "",
+      "at": "Yenilenme"
+    },
+    "Reinforcements": {
+      "ht": "",
+      "at": "Takviyeler"
+    },
+    "Required": {
+      "ht": "",
+      "at": "Gerekli"
+    },
+    "Resource Signatures": {
+      "ht": "",
+      "at": "Kaynak imzaları"
+    },
+    "Restores health and stops bleeding. When used on another person recovers from incapacitated state.": {
+      "ht": "",
+      "at": "Sağlığı geri kazandırır ve kanamayı durdurur. Başka birine kullanıldığında onu etkisiz durumdan kurtarır."
+    },
+    "Revives an overdosed person (if not incapacitated), doubles decay rate of Blood Drug Level.": {
+      "ht": "",
+      "at": "Aşırı doz almış birini canlandırır (etkisiz değilse), kandaki ilaç seviyesinin düşüşünü iki katına çıkarır."
+    },
+    "Risk": {
+      "ht": "",
+      "at": "Risk"
+    },
+    "Role": {
+      "ht": "",
+      "at": "Rol"
+    },
+    "Roll": {
+      "ht": "",
+      "at": "Yuvarlanma"
+    },
+    "SCM": {
+      "ht": "",
+      "at": "SCM"
+    },
+    "Salvageable Ships": {
+      "ht": "",
+      "at": "Kurtarılabilir gemiler"
+    },
+    "Scanners": {
+      "ht": "",
+      "at": "Tarayıcılar"
+    },
+    "Security Forces": {
+      "ht": "",
+      "at": "Güvenlik güçleri"
+    },
+    "Seeker": {
+      "ht": "",
+      "at": "Arayıcı"
+    },
+    "Semi-Auto": {
+      "ht": "",
+      "at": "Yarı otomatik"
+    },
+    "Sentries": {
+      "ht": "",
+      "at": "Nöbetçiler"
+    },
+    "Shields": {
+      "ht": "",
+      "at": "Kalkanlar"
+    },
+    "Ship": {
+      "ht": "",
+      "at": "Gemi"
+    },
+    "Ships to Defend": {
+      "ht": "",
+      "at": "Korunacak gemiler"
+    },
+    "Shotgun": {
+      "ht": "",
+      "at": "Pompalı"
+    },
+    "Size": {
+      "ht": "",
+      "at": "Boyut"
+    },
+    "Snipers": {
+      "ht": "",
+      "at": "Keskin nişancılar"
+    },
+    "Soldiers": {
+      "ht": "",
+      "at": "Askerler"
+    },
+    "Spool": {
+      "ht": "",
+      "at": "Hazırlanma"
+    },
+    "Standard": {
+      "ht": "",
+      "at": "Standart"
+    },
+    "Starter": {
+      "ht": "",
+      "at": "Başlangıç"
+    },
+    "Stun": {
+      "ht": "",
+      "at": "Sersem."
+    },
+    "Targets": {
+      "ht": "",
+      "at": "Hedefler"
+    },
+    "Technicians": {
+      "ht": "",
+      "at": "Teknisyenler"
+    },
+    "Thermal": {
+      "ht": "",
+      "at": "Termal"
+    },
+    "Tier": {
+      "ht": "",
+      "at": "Kademe"
+    },
+    "Tracking": {
+      "ht": "",
+      "at": "İzleme"
+    },
+    "Tracking Range": {
+      "ht": "",
+      "at": "İzleme menzili"
+    },
+    "Turn Rate": {
+      "ht": "",
+      "at": "Dönüş hızı"
+    },
+    "Turrets": {
+      "ht": "",
+      "at": "Taretler"
+    },
+    "Unique": {
+      "ht": "",
+      "at": "Tek seferlik"
+    },
+    "Used To Craft": {
+      "ht": "",
+      "at": "Üretimde kullanılır"
+    },
+    "Velocity": {
+      "ht": "",
+      "at": "Hız"
+    },
+    "Wear": {
+      "ht": "",
+      "at": "Aşınma"
+    },
+    "Weight": {
+      "ht": "",
+      "at": "Ağırlık"
+    },
+    "Xeno Threat": {
+      "ht": "",
+      "at": "Xeno Threat"
+    },
+    "Yaw": {
+      "ht": "",
+      "at": "Sapma"
+    },
+    "Yes": {
+      "ht": "",
+      "at": "Evet"
+    },
+    "base": {
+      "ht": "",
+      "at": "temel"
+    },
+    "down": {
+      "ht": "",
+      "at": "iniş"
+    },
+    "empty": {
+      "ht": "",
+      "at": "boş"
+    },
+    "express": {
+      "ht": "",
+      "at": "ekspres"
+    },
+    "friendly": {
+      "ht": "",
+      "at": "dost"
+    },
+    "hostile": {
+      "ht": "",
+      "at": "düşman"
+    },
+    "present": {
+      "ht": "",
+      "at": "var"
+    },
+    "select variants": {
+      "ht": "",
+      "at": "bazı varyantlar"
+    },
+    "up": {
+      "ht": "",
+      "at": "çıkış"
+    },
+    "{count} items": {
+      "ht": "",
+      "at": "{count} eşya"
+    },
+    "{count} sets": {
+      "ht": "",
+      "at": "{count} set"
+    },
+    "{count} types": {
+      "ht": "",
+      "at": "{count} tür"
+    },
+    "{item} Set": {
+      "ht": "",
+      "at": "{item} Seti"
+    },
+    "{pct}% chance": {
+      "ht": "",
+      "at": "%{pct} şans"
+    },
+    "{pct}% chance ({variants} only)": {
+      "ht": "",
+      "at": "%{pct} şans (yalnızca {variants})"
+    },
+    "{type} Ammo": {
+      "ht": "",
+      "at": "{type} Mühimmatı"
+    }
+  }
+}

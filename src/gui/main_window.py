@@ -7,7 +7,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent
+from PyQt6.QtCore import (
+    Qt, QTimer, pyqtSlot, QModelIndex, QPropertyAnimation, QEasingCurve, QSize, QEvent,
+    QFileSystemWatcher,
+)
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QCheckBox,
@@ -31,6 +34,7 @@ from src.gui.filter_header import FilterHeaderView
 from src.gui.log_tab import LogTab
 from src.gui.overlay_tab import OverlayTab, hotkey_problem_text
 from src.gui.simple_mode_widget import SimpleModeWidget
+from src.gui.tray import TrayController
 from src.gui.markdown_renderer import markdown_to_html as _md_to_html
 from src.gui.string_table_model import (
     StringTableModel, COL_CATEGORY, COL_KEY, COL_DEFAULT, COL_CURRENT,
@@ -53,6 +57,7 @@ from src.gui.workers import (
     OrderSpinBoxDelegate,
     P4kExtractWorker,
     SelectAllDelegate,
+    SmartSyncWorker,
     StaleWorkingFolderSweepWorker,
     StartupSyncWorker,
     WorkingFolderDeleteWorker,
@@ -73,6 +78,11 @@ from src.utils.applied_file_validator import validate_applied_file as _validate_
 from src.utils.build_mode import IS_PORTABLE
 from src.utils.entry_filter import filter_entry_indices as _filter_entry_indices_impl
 from src.utils.install_scanner import channel_dirs
+from src.utils.karolinger import (
+    KAROLINGER_GUIDES_URL,
+    KAROLINGER_VIDEO_TUTORIAL_URL,
+    with_guides_url,
+)
 from src.utils.perf import timed
 from src.utils.resource_path import get_resource_path
 from src.utils.pak_extractor import base_ini_is_fresh, linked_cache_folder_error, windows_reason
@@ -991,6 +1001,8 @@ class MainWindow(QMainWindow):
 
         # Per-language base.ini download worker (#30)
         self._lang_dl_worker: Optional[LanguageBaseDownloadWorker] = None
+        # The startup check for a newer community translation (#579)
+        self._lang_check_worker: Optional[LanguageBaseDownloadWorker] = None
 
         # P4K extraction worker and progress dialog
         self._p4k_worker: Optional[P4kExtractWorker] = None
@@ -1157,6 +1169,13 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(0, 0)
         self.restore_window_state()
 
+        # Minimize to tray (the Config tab's tick box) and the second start
+        # that brings a copy in the tray back (src/gui/tray.py). Built after
+        # setup_ui, which sets the window icon the tray icon shows.
+        self._tray = TrayController(self)
+        self._tray.set_enabled(AppSettings.get_minimize_to_tray())
+        self.config_tab.minimize_to_tray_changed.connect(self._tray.set_enabled)
+
         # Ensure cache directory exists
         AppSettings.get_cache_dir()
 
@@ -1255,6 +1274,7 @@ class MainWindow(QMainWindow):
         self.config_tab.cache_dir_changed.connect(self._on_cache_dir_changed)
         self.config_tab.export_settings_requested.connect(self._handle_export_settings)
         self.config_tab.import_settings_requested.connect(self._handle_import_settings)
+        self.config_tab.smart_sync_folder_changed.connect(self._on_smart_sync_folder_changed)
         self._config_tab_index = self.tabs.addTab(self.config_tab, tr("tabs.config"))
 
         # Enhancements tab
@@ -1282,6 +1302,7 @@ class MainWindow(QMainWindow):
         )
         self._bp_log_scan_worker = None
         self._bp_log_scan_progress = None
+        self._init_smart_sync()
         # Overlay tab (3.0.0): start/stop and options for the Smart Citizen
         # Overlay. Its start button drives the toolbar's Overlay button, so
         # both go through _toggle_sco_overlay.
@@ -1293,6 +1314,12 @@ class MainWindow(QMainWindow):
         # Game.log watcher runs only while the overlay is on.
         self._sco_overlay = None
         self._sco_log_worker = None
+        # The Item Finder's shop data load (UEX, 3.1.0), and the data and
+        # error it last gave, kept for a drawer built after it finished.
+        self._uex_shop_worker = None
+        self._uex_shops = None
+        self._uex_shops_error = ""
+        self._uex_shops_tried_at = None   # time.monotonic() of the last load
         # (base.ini, crafting index) paths and mtimes last fed to the drawer.
         self._sco_catalog_key = None
         # #268/#308: multi-channel scan state. _bp_scan_queue holds channels
@@ -1358,6 +1385,10 @@ class MainWindow(QMainWindow):
         self.simple_page.switch_to_advanced_requested.connect(
             lambda: self._apply_ui_mode(AppSettings.UI_MODE_ADVANCED)
         )
+        # Start/Stop Overlay on the Simple page drives the toolbar's Overlay
+        # button, as the Overlay tab's does, so it goes through
+        # _toggle_sco_overlay too.
+        self.simple_page.overlay_toggled.connect(lambda on: self.sco_btn.setChecked(on))
         # Siblings swapped by visibility, deliberately not a QStackedWidget: a
         # stack reports its *tallest* page, so with Simple showing it would go
         # on reserving height for the Advanced tabs (323px against the 214 the
@@ -1831,11 +1862,8 @@ class MainWindow(QMainWindow):
         # is missing.
         footer_layout.addSpacing(10)
         self.feedback_label = QLabel()
-        discord_image_path = get_resource_path(os.path.join("assets", "discord.png"))
-        if os.path.exists(discord_image_path):
-            discord_pixmap = QPixmap(discord_image_path)
-            if discord_pixmap.height() > 40:
-                discord_pixmap = discord_pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+        discord_pixmap = self._footer_pixmap("discord.png")
+        if discord_pixmap is not None:
             self.feedback_label.setPixmap(discord_pixmap)
         else:
             self.feedback_label.setText(tr("toolbar.feedback_fallback_text"))
@@ -1845,19 +1873,29 @@ class MainWindow(QMainWindow):
         self.feedback_label.mousePressEvent = self.open_feedback_link
         footer_layout.addWidget(self.feedback_label)
 
+        # Karolinger Guides logo (#602), right of the Discord link: opens the
+        # Smart Citizen guides on Karolinger Guides.
+        footer_layout.addSpacing(10)
+        self.karolinger_label = QLabel()
+        karolinger_pixmap = self._footer_pixmap(
+            "karolinger-guides.png", self._KAROLINGER_IMAGE_HEIGHT)
+        if karolinger_pixmap is not None:
+            self.karolinger_label.setPixmap(karolinger_pixmap)
+        else:
+            self.karolinger_label.setText(tr("toolbar.karolinger_fallback_text"))
+            self.karolinger_label.setStyleSheet("font-size: 12px;")
+        self.karolinger_label.setToolTip(tr("toolbar.karolinger_tooltip"))
+        self.karolinger_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.karolinger_label.mousePressEvent = self.open_karolinger_guides
+        footer_layout.addWidget(self.karolinger_label)
+
         # Stretch to push the donation cluster to the right.
         footer_layout.addStretch()
 
         # PayPal button (right side)
         self.paypal_button = QLabel()
-        paypal_image_path = get_resource_path(os.path.join("assets", "paypal.png"))
-
-        # Try to load PayPal image, fall back to text if not found
-        if os.path.exists(paypal_image_path):
-            paypal_pixmap = QPixmap(paypal_image_path)
-            # Scale to match Osiris button (max height 40px)
-            if paypal_pixmap.height() > 40:
-                paypal_pixmap = paypal_pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+        paypal_pixmap = self._footer_pixmap("paypal.png")
+        if paypal_pixmap is not None:
             self.paypal_button.setPixmap(paypal_pixmap)
         else:
             # Fallback to styled text button
@@ -1885,14 +1923,8 @@ class MainWindow(QMainWindow):
 
         # Venmo button (right side)
         self.venmo_button = QLabel()
-        venmo_image_path = get_resource_path(os.path.join("assets", "venmo.png"))
-
-        # Try to load Venmo image, fall back to text button
-        if os.path.exists(venmo_image_path):
-            venmo_pixmap = QPixmap(venmo_image_path)
-            # Scale to match Osiris button (max height 40px)
-            if venmo_pixmap.height() > 40:
-                venmo_pixmap = venmo_pixmap.scaledToHeight(40, Qt.TransformationMode.SmoothTransformation)
+        venmo_pixmap = self._footer_pixmap("venmo.png")
+        if venmo_pixmap is not None:
             self.venmo_button.setPixmap(venmo_pixmap)
         else:
             # Fallback to styled text button
@@ -1916,6 +1948,30 @@ class MainWindow(QMainWindow):
         footer_layout.addWidget(self.venmo_button)
 
         return footer_layout
+
+    # Footer images are scaled to the Osiris logo's height.
+    _FOOTER_IMAGE_HEIGHT = 40
+    # The Karolinger Guides logo is a little shorter (#602): at full height
+    # the footer grew wider than the window's 900 px narrow size and brought
+    # up the window-level scroll bar (tests/test_tab_scrollbar_placement.py).
+    _KAROLINGER_IMAGE_HEIGHT = 32
+
+    @classmethod
+    def _footer_pixmap(cls, filename: str, height: int = _FOOTER_IMAGE_HEIGHT) -> "QPixmap | None":
+        """Load ``assets/<filename>`` for the footer, at most *height* tall,
+        or None when the file is missing (the caller then shows its fallback
+        text)."""
+        path = get_resource_path(os.path.join("assets", filename))
+        if not os.path.exists(path):
+            return None
+        pixmap = QPixmap(path)
+        if pixmap.height() > height:
+            pixmap = pixmap.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
+        return pixmap
+
+    def open_karolinger_guides(self, event):
+        """Open the Smart Citizen guides on Karolinger Guides (#602)."""
+        QDesktopServices.openUrl(QUrl(KAROLINGER_GUIDES_URL))
 
     def open_osiris_github(self, event):
         """Open the Osiris DevWorks GitHub organization in browser."""
@@ -3060,6 +3116,8 @@ class MainWindow(QMainWindow):
         # What save_user_ini wrote, so the next reload counts none of it as
         # unsaved (#531).
         self._remember_saved_overrides(self.entries)
+        # Smart Sync shares the saved edits with the other PCs.
+        self._schedule_smart_sync()
 
         # Category ticks not yet saved count (#532): saved and the table
         # reloaded, as the category Apply button does, so the merge below and
@@ -3748,6 +3806,8 @@ class MainWindow(QMainWindow):
         self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
         if hasattr(self, "overlay_tab"):
             self.overlay_tab.refresh_styles()
+        if hasattr(self, "simple_page"):
+            self.simple_page.refresh_styles()
         self._render_document_browsers()
         self._apply_editor_dock_canvas_tint()
 
@@ -4615,7 +4675,7 @@ class MainWindow(QMainWindow):
         try:
             help_path = AppSettings.get_localized_doc_path("HELP.md")
             with open(help_path, "r", encoding="utf-8") as f:
-                help_markdown = f.read()
+                help_markdown = with_guides_url(f.read())
             self.help_browser.setHtml(self.markdown_to_html(help_markdown))
         except Exception as e:
             logger.error(f"Error loading HELP.md: {e}", exc_info=True)
@@ -4902,6 +4962,8 @@ class MainWindow(QMainWindow):
         Each value is a dict with:
             target:     Callable[[], QWidget | None]
             pre_action: Optional[Callable[[], None]]
+            link_url:   optional link shown under the description, its
+                        text from the step's ``link_text`` in the JSON
         """
         def _switch_to(tab_index: int):
             def _action():
@@ -4940,6 +5002,9 @@ class MainWindow(QMainWindow):
             "cfg_backup":            {"target": lambda: self.config_tab._backup_group,                         "pre_action": _switch_to(config_tab)},
             "cfg_sc_tools":          {"target": lambda: self.config_tab._sc_tools_group,                       "pre_action": _switch_to(config_tab)},
             "help":                  {"target": lambda: self.help_btn,                                         "pre_action": _switch_to(strings_tab)},
+            # Karolinger Guides (#602): the footer logo, with a link to the video tutorial.
+            "guides":                {"target": lambda: self.karolinger_label,                                 "pre_action": None,
+                                      "link_url": KAROLINGER_VIDEO_TUTORIAL_URL},
         }
 
     def _build_tutorial_steps(self) -> list[CoachMarkStep]:
@@ -4977,29 +5042,27 @@ class MainWindow(QMainWindow):
                     f"_tutorial_step_wiring(); skipped"
                 )
                 continue
-            title = raw.get("title", "")
-            description = raw.get("description", "")
-            if not title or not description:
+            if not raw.get("title") or not raw.get("description"):
                 logger.warning(f"Tutorial step {step_id!r} missing title/description; skipped")
                 continue
             # Language overlay (#30): a translation may carry this step's copy
-            # under tutorial.<id>.title / .description in its ui.json. tr()
-            # returns the bare key on a miss, so absent keys keep the English
-            # copy from this file (English ui.json has no tutorial section).
-            t_key = f"tutorial.{step_id}.title"
-            d_key = f"tutorial.{step_id}.description"
-            translated_title = tr(t_key)
-            if translated_title != t_key:
-                title = translated_title
-            translated_desc = tr(d_key)
-            if translated_desc != d_key:
-                description = translated_desc
+            # under tutorial.<id>.title / .description / .link_text in its
+            # ui.json. tr() returns the bare key on a miss, so absent keys keep
+            # the English copy from this file (English ui.json has no tutorial
+            # section).
+            text = {}
+            for field in ("title", "description", "link_text"):
+                key = f"tutorial.{step_id}.{field}"
+                translated = tr(key)
+                text[field] = translated if translated != key else raw.get(field, "")
             steps.append(CoachMarkStep(
                 target=w["target"],
-                title=title,
-                description=description,
+                title=text["title"],
+                description=text["description"],
                 pre_action=w.get("pre_action"),
                 preferred_side=raw.get("preferred_side", "auto"),
+                link_url=w.get("link_url", ""),
+                link_text=text["link_text"],
             ))
 
         return steps
@@ -5074,10 +5137,12 @@ class MainWindow(QMainWindow):
         # for it rather than sweeping beside it.
         self._sweep_stale_working_folders_at_startup()
         self._start_startup_sync()
+        self._start_smart_sync()
         self._report_installer_data_move()
         self._maybe_warn_onedrive_data_dir()
         self._maybe_prompt_post_import_apply()
         self._maybe_auto_scan_blueprints()
+        self._check_language_translation_at_startup()
 
     def _maybe_auto_scan_blueprints(self) -> None:
         """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
@@ -5521,6 +5586,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tr("window.title", version=get_version()))
         self.title_label.setText(tr("branding.title"))
         self.tagline_label.setText(tr("branding.tagline"))
+        # The tray icon's menu, and its tooltip, the window title just set.
+        self._tray.retranslate_ui()
 
         # Tab bar
         self.tabs.setTabText(self._strings_tab_index, tr("tabs.string_editor"))
@@ -5567,6 +5634,7 @@ class MainWindow(QMainWindow):
         # Footer
         self.osiris_button.setToolTip(tr("toolbar.osiris_github_tooltip"))
         self.feedback_label.setToolTip(tr("toolbar.feedback_tooltip"))
+        self.karolinger_label.setToolTip(tr("toolbar.karolinger_tooltip"))
 
         # Simple-mode page (#180)
         self.simple_page.retranslate_ui()
@@ -5654,6 +5722,8 @@ class MainWindow(QMainWindow):
         # to load — leave pixmap-backed buttons alone).
         if self.feedback_label.pixmap() is None or self.feedback_label.pixmap().isNull():
             self.feedback_label.setText(tr("toolbar.feedback_fallback_text"))
+        if self.karolinger_label.pixmap() is None or self.karolinger_label.pixmap().isNull():
+            self.karolinger_label.setText(tr("toolbar.karolinger_fallback_text"))
         if self.paypal_button.pixmap() is None or self.paypal_button.pixmap().isNull():
             self.paypal_button.setText(tr("toolbar.paypal_fallback_text"))
         if self.venmo_button.pixmap() is None or self.venmo_button.pixmap().isNull():
@@ -5776,6 +5846,70 @@ class MainWindow(QMainWindow):
             lambda ok, lang=language, d=dest, dlg=dialog: self._on_language_base_ready(lang, d, dlg, ok)
         )
         self._lang_dl_worker.start()
+
+    def _check_language_translation_at_startup(self) -> None:
+        """Fetch the selected language's community translation again, once a
+        start, in the background (#579).
+
+        A language switch downloads it, but nothing else did, so after a game
+        patch the table kept the old translation until the user switched
+        language and back. Only a URL source is checked: the request is
+        conditional, so an unchanged file costs one round trip and changes
+        nothing. A file the user mapped by hand (Map Language File) is left
+        alone, as it only changes when they change it. A new file is acted
+        on in _on_language_translation_checked."""
+        language = AppSettings.get_selected_language()
+        if language == AppSettings.DEFAULT_LANGUAGE or self._close_committed:
+            return
+        if self._lang_check_worker is not None or self._lang_dl_worker is not None:
+            return
+        source = AppSettings.get_language_base_url(language)
+        if not source.startswith(("http://", "https://")):
+            return
+        dest = AppSettings.get_base_ini_path(language)
+        worker = LanguageBaseDownloadWorker(source, dest)
+        worker.finished.connect(
+            lambda ok, w=worker, lang=language, d=dest:
+            self._on_language_translation_checked(w, lang, d, ok)
+        )
+        self._lang_check_worker = worker
+        logger.info(f"Checking for a newer {language!r} translation")
+        worker.start()
+
+    def _on_language_translation_checked(self, worker, language: str, dest, ok: bool) -> None:
+        """A new translation makes the language's enhancements out of date
+        (their descriptions are its text), so its stamp is emptied and the
+        reload goes through _reload_with_language_enhancements, as a language
+        switch does: it generates them again first when there is a DataForge
+        cache. Put off while a load, a job, a Simple run or a modal box is
+        going (_ask_after_the_job), and dropped when the language changed
+        meanwhile, since that switch fetched its own."""
+        if worker is not self._lang_check_worker:
+            return
+        worker.quit()
+        worker.wait()
+        self._lang_check_worker = None
+        if not ok or not worker.changed or self._close_committed:
+            return
+        if not Path(dest).exists() or AppSettings.get_selected_language() != language:
+            return
+        logger.info(f"A newer {language!r} translation was downloaded; reloading with it")
+        AppSettings.invalidate_enhancements_stamp(AppSettings.get_enhancements_dir(language))
+        if hasattr(self, "enhancements_tab"):
+            self.enhancements_tab.refresh_enhancements_dirty_state()
+
+        def reload_with_it():
+            if self._close_committed or AppSettings.get_selected_language() != language:
+                return
+            if self._loader_worker is not None or self._job_running() or self._simple_run_active:
+                self._ask_after_the_job(reload_with_it)
+                return
+            AppSettings.set_source_path(AppSettings.SOURCE_GLOBAL, str(dest))
+            self.statusBar().showMessage(tr("dialogs.language_updated_status", language=language))
+            self._reload_with_language_enhancements(language)
+
+        self._ask_after_the_job(reload_with_it)
+        QTimer.singleShot(0, self._flush_asks_after_the_job)
 
     def _on_language_base_ready(self, language: str, dest, dialog, ok: bool) -> None:
         """Finish a language switch once its base.ini fetch (download or
@@ -7687,6 +7821,16 @@ class MainWindow(QMainWindow):
                 continue  # keep the reference so Qt doesn't destroy a live thread
             self._working_folder_deleters.remove(deleter)
 
+        # The startup translation check (#579): a conditional download with
+        # a 60 s timeout, so it ends on its own; Qt must not destroy it live.
+        checker = self._lang_check_worker
+        if checker is not None and checker.isRunning():
+            remaining_ms = max(0, int((deadline - time.monotonic()) * 1000))
+            if not checker.wait(remaining_ms):
+                logger.warning("The translation check was still running when Smart Citizen closed")
+                return
+        self._lang_check_worker = None
+
     def closeEvent(self, event):
         """Save state and overrides, and stop a running extraction (#471)
         or enhancement generation, before closing."""
@@ -7762,12 +7906,20 @@ class MainWindow(QMainWindow):
         # Detach log handler before widgets are destroyed
         self.log_tab.remove_handler()
 
+        # Smart Sync (#567): push an Owned change still waiting for its sync,
+        # and let a sync in flight finish.
+        self._finish_smart_sync_for_close()
+
         # Smart Citizen Overlay: close its windows and the live log watcher,
         # and let a capture still with the reader finish (a read takes well
         # under a second) so its pool thread is gone before the overlay is.
         self._stop_sco_overlay()
         if self._sco_overlay is not None:
             self._sco_overlay.wait_for_reader(2000)
+        # A shop data fetch ends within its request timeouts; a QThread
+        # dropped while it runs would abort the exit.
+        if self._uex_shop_worker is not None:
+            self._uex_shop_worker.wait()
 
         # Clean up workers. The close is committed from here: every prompt
         # that could call it off has been answered, so nothing new may start
@@ -7775,6 +7927,9 @@ class MainWindow(QMainWindow):
         # now, ahead of the unbounded loader wait below, so its tool dies at
         # once; _stop_workers_for_close waits for it last.
         self._close_committed = True
+        # The tray icon goes now, so a click on it cannot bring the window
+        # back while the close waits for the workers with it hidden.
+        self._tray.shut_down()
         self._request_stops_for_close()
         if self._loader_worker:
             self._loader_worker.quit()
@@ -8559,6 +8714,360 @@ class MainWindow(QMainWindow):
         # and language switches, import, restore) and every Owned-set change
         # — in every case Apply to Game's output could now differ.
         self._mark_apply_dirty()
+        # Every Owned change ends here, so this is where Smart Sync pushes it
+        # (#567). A sync that changes nothing writes nothing.
+        self._schedule_smart_sync()
+
+    # -- Smart Sync (#567) ----------------------------------------------------
+    #
+    # Owned blueprints shared through a folder the player's cloud app syncs
+    # (see src/utils/smart_sync.py). Pulled at startup and whenever another
+    # PC's file changes there, pushed a moment after every Owned change and
+    # at close. The read, merge and write run on SmartSyncWorker; the owned
+    # set, the ledger and the seed marker are written here, on the GUI
+    # thread, as every other owned-set writer does.
+
+    # How long after an Owned change, or a change in the sync folder, the
+    # sync starts: a scan or a click on several items is one sync, and so is
+    # a cloud client writing a file in several steps.
+    _SMART_SYNC_DELAY_MS = 3000
+    # How long closing waits for a sync in flight.
+    _SMART_SYNC_CLOSE_WAIT_MS = 10000
+
+    def _init_smart_sync(self) -> None:
+        self._smart_sync_worker = None
+        self._smart_sync_again = False
+        self._smart_sync_timer = QTimer(self)
+        self._smart_sync_timer.setSingleShot(True)
+        self._smart_sync_timer.setInterval(self._SMART_SYNC_DELAY_MS)
+        self._smart_sync_timer.timeout.connect(self._start_smart_sync)
+        self._smart_sync_watcher = QFileSystemWatcher(self)
+        self._smart_sync_watcher.directoryChanged.connect(self._schedule_smart_sync)
+        self._smart_sync_watcher.fileChanged.connect(self._schedule_smart_sync)
+        self._watch_smart_sync_folder()
+
+    def _watch_smart_sync_folder(self) -> None:
+        """Watch the sync folder and its files, so another PC's change is
+        pulled while the app runs. Only what exists can be watched, so this
+        runs again after every sync (the first one makes the folder)."""
+        from src.utils import smart_sync
+        watcher = self._smart_sync_watcher
+        watched = watcher.directories() + watcher.files()
+        if watched:
+            watcher.removePaths(watched)
+        folder = AppSettings.get_smart_sync_folder()
+        if not folder:
+            return
+        sync_dir = smart_sync.sync_dir(folder)
+        try:
+            if not sync_dir.is_dir():
+                return
+            paths = [str(sync_dir)] + [
+                str(p) for p in sync_dir.glob(
+                    f"{smart_sync.MACHINE_FILE_PREFIX}*{smart_sync.MACHINE_FILE_SUFFIX}")
+            ]
+        except OSError as e:
+            logger.info("Smart Sync: cannot watch %s: %s", sync_dir, e)
+            return
+        watcher.addPaths(paths)
+
+    def _schedule_smart_sync(self, *_args) -> None:
+        """Sync in a moment, once things have settled (restarts the wait)."""
+        timer = getattr(self, "_smart_sync_timer", None)  # _recompute_owned can run first
+        if timer is None or self._close_committed or not AppSettings.get_smart_sync_folder():
+            return
+        timer.start()
+
+    def _smart_sync_inputs(self):
+        """This PC's side of a sync, captured on the GUI thread: the ledger
+        brought in line with the owned set (which catches a writer that went
+        round set_owned_items, such as Import Settings), the seed marker, the
+        machine id and the last time this PC wrote its file, then the
+        settings and user.ini ledgers with this PC's changes since its last
+        sync recorded (or, the first time, what it has, to join with).
+
+        Returns ``(args, extra, changed)``: SmartSyncWorker's arguments, its
+        keyword arguments and whether anything here changed since the last
+        sync, which the close-time push asks.
+        """
+        from src.utils import smart_sync
+        before = AppSettings.get_smart_sync_ledger()
+        ledger = smart_sync.record(before, AppSettings.get_owned_items())
+        AppSettings.set_smart_sync_ledger(ledger)
+        changed = ledger != before
+        seeded, _pending = AppSettings.get_default_blueprints_seed()
+        args = (AppSettings.get_smart_sync_folder(), AppSettings.get_smart_sync_machine_id(),
+                ledger, seeded, AppSettings.get_smart_sync_last_written())
+
+        settings_now = AppSettings.smart_sync_settings_values()
+        user_now = AppSettings.smart_sync_user_ini_values()
+        state = AppSettings.get_smart_sync_state()
+        if not state:
+            return args, {"baseline_settings": settings_now,
+                          "baseline_user_ini": user_now}, True
+        settings_ledger = smart_sync.record_values(
+            state[AppSettings.SYNC_STATE_SETTINGS], settings_now,
+            state[AppSettings.SYNC_STATE_SETTINGS_SEEN])
+        user_ledgers = {}
+        old_user = state[AppSettings.SYNC_STATE_USER_INI]
+        user_seen = state[AppSettings.SYNC_STATE_USER_INI_SEEN]
+        for channel in set(old_user) | set(user_now) | set(user_seen):
+            channel_ledger = smart_sync.record_values(
+                old_user.get(channel, {}), user_now.get(channel, {}),
+                user_seen.get(channel, {}), new_keys_are_changes=True)
+            if channel_ledger:
+                user_ledgers[channel] = channel_ledger
+        changed = (changed or settings_ledger != state[AppSettings.SYNC_STATE_SETTINGS]
+                   or user_ledgers != old_user)
+        state = {
+            AppSettings.SYNC_STATE_SETTINGS: settings_ledger,
+            AppSettings.SYNC_STATE_SETTINGS_SEEN: settings_now,
+            AppSettings.SYNC_STATE_USER_INI: user_ledgers,
+            AppSettings.SYNC_STATE_USER_INI_SEEN: user_now,
+        }
+        try:
+            AppSettings.set_smart_sync_state(state)
+        except OSError as e:
+            logger.warning("Smart Sync: could not save its state: %s", e)
+        return args, {"settings": settings_ledger, "user_ini": user_ledgers}, changed
+
+    def _start_smart_sync(self) -> None:
+        """Start a sync now, or right after the one running."""
+        if self._close_committed or not AppSettings.get_smart_sync_folder():
+            return
+        self._smart_sync_timer.stop()
+        if self._smart_sync_worker is not None:
+            self._smart_sync_again = True
+            return
+        args, extra, _changed = self._smart_sync_inputs()
+        worker = SmartSyncWorker(*args, **extra)
+        worker.error.connect(self._on_smart_sync_error)
+        worker.finished.connect(
+            lambda result, w=worker: self._on_smart_sync_finished(w, result))
+        self._smart_sync_worker = worker
+        worker.start()
+
+    def _on_smart_sync_error(self, message: str) -> None:
+        self.config_tab.set_smart_sync_status("failed", error=message)
+        self.statusBar().showMessage(tr("status_bar.smart_sync_failed", error=message))
+
+    def _on_smart_sync_finished(self, worker, result) -> None:
+        if worker is not self._smart_sync_worker:
+            return
+        worker.quit()
+        worker.wait()
+        self._smart_sync_worker = None
+        if result is not None:
+            self._take_smart_sync_result(result)
+        if self._smart_sync_again and not self._close_committed:
+            self._smart_sync_again = False
+            self._start_smart_sync()
+
+    def _take_smart_sync_result(self, result) -> None:
+        """Make the merged ledger this PC's, and the owned set what it says.
+
+        An Owned change made while the sync ran is newer than anything the
+        sync read, so the ledger as it is now is merged in once more and
+        wins where it differs; the next sync pushes it.
+        """
+        from datetime import datetime
+        from src.utils import smart_sync
+        if result.id_changed:
+            AppSettings.set_smart_sync_machine_id(result.machine_id)
+        if result.updated:
+            AppSettings.set_smart_sync_last_written(result.updated)
+        ledger = smart_sync.merge([result.ledger, AppSettings.get_smart_sync_ledger()])
+        if not self._take_synced_edits(result, ledger):
+            return
+        AppSettings.set_smart_sync_ledger(ledger)
+
+        seeded, pending = AppSettings.get_default_blueprints_seed()
+        if not result.seeded <= seeded:
+            AppSettings.set_default_blueprints_seed(seeded | result.seeded, pending)
+
+        self.config_tab.set_smart_sync_status(
+            "ok", time=datetime.now().strftime("%H:%M"), count=result.other_machines)
+        self._watch_smart_sync_folder()
+
+        owned = AppSettings.get_owned_items()
+        synced = smart_sync.owned_from_ledger(ledger)
+        if synced == owned:
+            return
+        changed = len(synced ^ owned)
+        logger.info("Smart Sync: %d blueprint(s) gained, %d moved back to Available, "
+                    "from other PCs", len(synced - owned), len(owned - synced))
+        AppSettings.set_owned_items(synced)
+        self._recompute_owned()
+        self.statusBar().showMessage(tr("status_bar.smart_sync_updated", count=changed))
+        # As after a log scan: let the background check say whether the game
+        # file needs another Apply, rather than leaving it red for a change
+        # (a starter blueprint) that no mission list shows.
+        if (not self._close_committed and self.entries
+                and self._loader_worker is None):
+            self._refresh_apply_dirty_after_reload()
+
+    def _take_synced_edits(self, result, ledger) -> bool:
+        """Back up, then write the string edits other PCs made, and note the
+        settings that wait for the next start.
+
+        Every change a sync makes here comes after a backup (Export
+        Settings' zip, in the data folder's backups\\smart-sync): when none
+        can be saved, nothing is taken, the status says why, and the next
+        sync tries again. Returns whether the caller may go on and take the
+        owned set too.
+        """
+        from src.utils import smart_sync
+        from src.utils.user_ini_manager import save_user_ini_dict
+        state = AppSettings.get_smart_sync_state()
+        settings_now = AppSettings.smart_sync_settings_values()
+        user_now = AppSettings.smart_sync_user_ini_values()
+        local_settings, local_user = {}, {}
+        if state:
+            # A change made here while the sync ran is newer than anything
+            # it read, so it is recorded now and wins where it differs.
+            local_settings = smart_sync.record_values(
+                state[AppSettings.SYNC_STATE_SETTINGS], settings_now,
+                state[AppSettings.SYNC_STATE_SETTINGS_SEEN])
+            seen = state[AppSettings.SYNC_STATE_USER_INI_SEEN]
+            old_user = state[AppSettings.SYNC_STATE_USER_INI]
+            for channel in set(old_user) | set(user_now) | set(seen):
+                local_user[channel] = smart_sync.record_values(
+                    old_user.get(channel, {}), user_now.get(channel, {}),
+                    seen.get(channel, {}), new_keys_are_changes=True)
+        settings_ledger = smart_sync.merge_values([result.settings, local_settings])
+        user_ledgers = smart_sync.merge_channels([result.user_ini, local_user])
+        user_ledgers = {ch: led for ch, led in user_ledgers.items() if led}
+        user_changes = {}
+        for channel, channel_ledger in user_ledgers.items():
+            have = user_now.get(channel, {})
+            wanted = {key: have[key] for key in have
+                      if channel_ledger.get(key, {}).get(smart_sync.VALUE, have[key]) is not None}
+            wanted.update(smart_sync.values_from_ledger(channel_ledger))
+            if wanted != have:
+                user_changes[channel] = (have, wanted)
+        owned_changed = smart_sync.owned_from_ledger(ledger) != AppSettings.get_owned_items()
+
+        if user_changes or owned_changed:
+            try:
+                AppSettings.write_smart_sync_backup()
+            except OSError as e:
+                logger.warning("Smart Sync: no backup could be saved, so nothing "
+                               "from the other PCs was taken: %s", e)
+                self.config_tab.set_smart_sync_status("failed", error=str(e))
+                self.statusBar().showMessage(tr("status_bar.smart_sync_no_backup", error=e))
+                return False
+
+        user_seen = dict(user_now)
+        active = AppSettings.get_active_channel()
+        for channel, (have, wanted) in user_changes.items():
+            try:
+                save_user_ini_dict(wanted, AppSettings.get_channel_user_ini_path(channel))
+            except Exception as e:
+                logger.warning("Smart Sync: could not write %s's user.ini: %s", channel, e)
+                continue
+            user_seen[channel] = wanted
+            logger.info("Smart Sync: %d string edit(s) in %s from other PCs",
+                        len(set(have.items()) ^ set(wanted.items())), channel)
+            if channel == active:
+                self._take_synced_user_ini(have, wanted)
+
+        state = {
+            AppSettings.SYNC_STATE_SETTINGS: settings_ledger,
+            AppSettings.SYNC_STATE_SETTINGS_SEEN: settings_now,
+            AppSettings.SYNC_STATE_USER_INI: user_ledgers,
+            AppSettings.SYNC_STATE_USER_INI_SEEN: user_seen,
+        }
+        try:
+            AppSettings.set_smart_sync_state(state)
+        except OSError as e:
+            logger.warning("Smart Sync: could not save its state: %s", e)
+
+        waiting = [
+            key for key, entry in settings_ledger.items()
+            if not AppSettings.is_smart_sync_local_key(key)
+            and not AppSettings.is_profile_excluded_key(key)
+            and (entry[smart_sync.VALUE] is None and key in settings_now
+                 or entry[smart_sync.VALUE] is not None
+                 and not AppSettings._same_setting(entry[smart_sync.VALUE],
+                                                    settings_now.get(key)))
+        ]
+        if waiting:
+            logger.info("Smart Sync: %d setting(s) from other PCs apply at the next "
+                        "start: %s", len(waiting), ", ".join(sorted(waiting)))
+            self.statusBar().showMessage(
+                tr("status_bar.smart_sync_settings_waiting", count=len(waiting)))
+        return True
+
+    def _take_synced_user_ini(self, have: dict, wanted: dict) -> None:
+        """Put the active channel's synced edits into the table, key by key.
+
+        Only the keys another PC changed are touched, so an edit not yet
+        applied here to another string stays; one to the same string loses
+        to the newer edit. What was written is recorded as saved (#531), and
+        Apply lights up, since the game file does not have it yet.
+        """
+        changed = {key for key in set(have) | set(wanted) if have.get(key) != wanted.get(key)}
+        if not changed or not self.entries:
+            return
+        touched = []
+        for idx, entry in enumerate(self.entries):
+            if entry.key not in changed:
+                continue
+            entry.custom_value = wanted.get(entry.key, "")
+            if entry.custom_value:
+                entry.status = ("Modified" if entry.custom_value != entry.original_value
+                                else "Unmodified")
+            else:
+                entry.status = status_without_override(entry, self.default_values)
+            touched.append(entry)
+            self._model.notify_entry_changed(idx)
+        self._remember_saved_overrides(touched)
+        if touched:
+            self._mark_apply_dirty()
+
+    def _on_smart_sync_folder_changed(self, folder: str) -> None:
+        self._watch_smart_sync_folder()
+        if folder:
+            self._start_smart_sync()
+        else:
+            self._smart_sync_timer.stop()
+
+    def _finish_smart_sync_for_close(self) -> None:
+        """At close: let a sync in flight finish (bounded), then push an
+        Owned change still waiting for its sync. The push runs here, on the
+        GUI thread, because nothing is left to run it later; it writes one
+        small file, and a folder it cannot use only logs a warning."""
+        worker = self._smart_sync_worker
+        if worker is not None:
+            if worker.wait(self._SMART_SYNC_CLOSE_WAIT_MS):
+                self._smart_sync_worker = None
+            else:
+                # Keep the reference (Qt aborts on a running QThread being
+                # destroyed) and skip the push: the worker owns the file.
+                logger.warning("Smart Sync: a sync was still running at close")
+                return
+        pending = self._smart_sync_timer.isActive() or self._smart_sync_again
+        self._smart_sync_timer.stop()
+        self._smart_sync_again = False
+        if not AppSettings.get_smart_sync_folder():
+            return
+        from src.utils import smart_sync
+        # A setting changed or an edit saved since the last sync counts as
+        # pending too: nothing else triggers a sync for them.
+        args, extra, changed = self._smart_sync_inputs()
+        if not pending and not changed:
+            return
+        folder, machine_id, ledger, seeded, last_written = args
+        try:
+            result = smart_sync.sync(folder, machine_id, ledger, seeded,
+                                     last_written=last_written, **extra)
+        except Exception as e:
+            logger.warning("Smart Sync: could not push at close: %s", e)
+            return
+        if result.id_changed:
+            AppSettings.set_smart_sync_machine_id(result.machine_id)
+        if result.updated:
+            AppSettings.set_smart_sync_last_written(result.updated)
 
     # -- Smart Citizen Overlay (SCO) ------------------------------------------
 
@@ -8587,7 +9096,7 @@ class MainWindow(QMainWindow):
         self._refresh_sco_catalog()
         self._sco_overlay.start()
         self._apply_sco_options()
-        self.overlay_tab.set_running(True)
+        self._mirror_sco_running(True)
 
     def _refresh_sco_catalog(self):
         """Feed the drawer's Minerals and Crafting searches.
@@ -8627,9 +9136,17 @@ class MainWindow(QMainWindow):
         self._stop_sco_log_watcher()
         if self._sco_overlay is not None:
             self._sco_overlay.stop()
+        self._mirror_sco_running(False)
+
+    def _mirror_sco_running(self, running: bool):
+        """Show the overlay's state on the Overlay tab's and the Simple page's
+        start buttons (the toolbar's is the one that toggled)."""
         overlay_tab = getattr(self, "overlay_tab", None)  # closeEvent may run first
         if overlay_tab is not None:
-            overlay_tab.set_running(False)
+            overlay_tab.set_running(running)
+        simple_page = getattr(self, "simple_page", None)
+        if simple_page is not None:
+            simple_page.set_overlay_running(running)
 
     def _apply_sco_options(self):
         """Push the Overlay tab's switches to a running overlay."""
@@ -8643,11 +9160,48 @@ class MainWindow(QMainWindow):
         self._sco_overlay.set_drawer_hotkey(AppSettings.get_sco_drawer_hotkey())
         if not self._sco_overlay.is_running():
             return
+        self._refresh_sco_shops()
         if AppSettings.get_sco_option(AppSettings.SCO_LIVE_BLUEPRINT_WATCH):
             if self._sco_log_worker is None:
                 self._start_sco_log_watcher()
         else:
             self._stop_sco_log_watcher()
+
+    def _refresh_sco_shops(self):
+        """Load the Item Finder's shop data when the finder is shown and
+        none is loaded or it is over UEX's 12 hours old. The worker reads the
+        cache and asks UEX off the GUI thread (``uex_shops.load_shop_data``)."""
+        import time
+
+        from src.utils.uex_shops import MAX_AGE_S, SHOP_CACHE_FILE, UEX_RETRY_S
+        drawer = self._sco_overlay.drawer
+        drawer.set_shop_data(self._uex_shops, self._uex_shops_error)
+        if self._uex_shop_worker is not None or self._close_committed:
+            return
+        if not (AppSettings.get_sco_option(AppSettings.SCO_DRAWER) and AppSettings.get_sco_option(
+                AppSettings.SCO_DRAWER_SECTION_PREFIX + "finder")):
+            return
+        shops = self._uex_shops
+        if shops is not None and 0 <= time.time() - shops.fetched_at < MAX_AGE_S:
+            return
+        # Offline, every option change would ask UEX again: wait a while.
+        tried = self._uex_shops_tried_at
+        if tried is not None and time.monotonic() - tried < UEX_RETRY_S:
+            return
+        self._uex_shops_tried_at = time.monotonic()
+        from src.gui.workers import UexShopDataWorker
+        self._uex_shop_worker = UexShopDataWorker(AppSettings.get_cache_dir() / SHOP_CACHE_FILE)
+        self._uex_shop_worker.finished.connect(self._on_uex_shops_loaded)
+        self._uex_shop_worker.start()
+
+    def _on_uex_shops_loaded(self, shops, error: str):
+        self._reap_worker(self._uex_shop_worker)
+        self._uex_shop_worker = None
+        if shops is not None:
+            self._uex_shops = shops
+        self._uex_shops_error = error
+        if self._sco_overlay is not None:
+            self._sco_overlay.drawer.set_shop_data(self._uex_shops, error)
 
     def _stop_sco_log_watcher(self):
         if self._sco_log_worker is not None:

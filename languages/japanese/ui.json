@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen を表示"
+    },
+    "quit": {
+      "ht": "",
+      "at": "終了"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen は実行中です"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "システムトレイに格納されています。アイコンをクリックするとウィンドウが元に戻り、右クリックで終了できます。アイコンが見えない場合は、時計の横の ^ の中にあるかもしれません。"
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "フィードバック、バグ報告、今後の機能への投票のために Smart Citizen の Discord チャンネルを開きます（Osiris DevWorks の Discord への参加が必要です）。"
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Karolinger Guides の Smart Citizen ガイドを開く"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "マージされたテーブルの内容をゲームの global.ini に書き込みます。最初に現在の global.ini のタイムスタンプ付きバックアップが作成されます。"
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "フィードバック・バグ報告・機能投票"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -798,6 +824,18 @@
       "ht": "",
       "at": "チェックすると、新しいバージョンでガイドツアーが自動起動しなくなります。ツールバーのチュートリアルボタンは引き続き機能します。"
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "システムトレイに最小化"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "チェックすると、Smart Citizen を最小化したときにタスクバーではなくシステムトレイ（時計の横のアイコン）に格納します。トレイのアイコンをクリックすると元に戻ります。トレイにある間に Smart Citizen をもう一度起動すると、2 つ目を開かずにそのウィンドウが元に戻ります。"
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "システムトレイが見つからないため、Smart Citizen はタスクバーに最小化されます。"
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Star Citizen のインストールルート — LIVE/、PTU/、EPTU/、HOTFIX/、TECH-PREVIEW/ を含むディレクトリです。インストール時に自動検出されます。ゲームが別の場所にある場合は編集してください。下の「チャンネル」ドロップダウンで、アプリが読み書きする対象を選択します。"
@@ -845,6 +883,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "カスタムキャッシュフォルダーをクリアし、プラットフォームのデフォルトを使用します。"
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "所有ブループリント、文字列の編集、設定を、プレイするすべてのPCで同じに保ちます。Google Drive、OneDrive、Dropbox など、クラウドアプリがすでに同期しているフォルダーを選び、他のPCでも同じフォルダーを選んでください。追加したPCは、他のPCがすでに共有している設定と編集を受け取ります。同期で何かが変わる前に、Smart Citizen は「設定をインポート」で戻せるバックアップを保存します。フォルダーのパス、ゲームの場所、ウィンドウのレイアウトは各PCに残り、global.ini は各PCがそれぞれ作成します。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "オフ。フォルダーを選ぶとオンになります。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "クラウドアプリがほかの PC と同期しているフォルダーを選択"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "オフにする"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "同期を停止します。このPCのブループリント、編集、設定はそのまま残ります。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart Sync フォルダーを選択"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync はオフです。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "同期中..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "最終同期 {time}。このフォルダーのほかの PC: {count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "同期できませんでした: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -2260,6 +2342,10 @@
       "ht": "",
       "at": "設定されたソースから {language} のローカライズを読み込めず、キャッシュされたコピーも見つかりませんでした。代わりに英語のベースを表示します。「言語ファイルをマッピング」の URL またはファイルを確認してから、再試行してください。"
     },
+    "language_updated_status": {
+      "ht": "",
+      "at": "新しい {language} の翻訳をダウンロードしました。再読み込みしています。"
+    },
     "language_generating_enhancements": {
       "ht": "",
       "at": "DataForge から {language} の拡張を生成しています…"
@@ -2587,6 +2673,22 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "ウィンドウの比率を既定値に戻しました。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync がフォルダーを使用できませんでした: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync がほかの PC から所有済みブループリントを {count} 件更新しました。"
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync はバックアップを保存できなかったため、このPCには何も同期されませんでした: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync が他のPCから {count} 件の設定を受け取りました。使うには Smart Citizen を再起動してください。"
     }
   },
   "import_flow": {
@@ -3249,7 +3351,7 @@
       },
       "description": {
         "ht": "",
-        "at": "アプリのテーマ（Default / Light / Dark / ODW）と文字サイズ（小 / 中 / 大、再起動後に反映）を選び、任意で新バージョン時の自動ツアーを無効にできます。"
+        "at": "アプリのテーマ（Default / Light / Dark / ODW）と文字サイズ（小 / 中 / 大、再起動後に反映）を選び、任意で新バージョン時の自動ツアーを無効にできます。「システムトレイに最小化」をオンにすると、最小化したときにウィンドウがシステムトレイに格納されます。"
       }
     },
     "cfg_sc_install": {
@@ -3319,7 +3421,21 @@
       },
       "description": {
         "ht": "",
-        "at": "「ヘルプ」ボタンを押すと、完全なガイド、既知の問題の一覧、Smart Citizen の Discord チャンネルへのフィードバックリンクを備えたサイドパネルが開きます。始めるのに必要なことはこれで全部です — 幸運を、シチズン。"
+        "at": "「ヘルプ」ボタンを押すと、完全なガイド、既知の問題の一覧、Smart Citizen の Discord チャンネルへのフィードバックリンクを備えたサイドパネルが開きます。"
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. ガイドと動画チュートリアル"
+      },
+      "description": {
+        "ht": "",
+        "at": "ウィンドウ下部の Karolinger Guides のロゴを押すと、Karolinger Guides の Smart Citizen ガイドが開きます。動画で見たい場合は、動画チュートリアルで一通り確認できます。始めるのに必要なことはこれで全部です — 幸運を、シチズン。"
+      },
+      "link_text": {
+        "ht": "",
+        "at": "動画チュートリアルを見る"
       }
     }
   },
@@ -3573,6 +3689,302 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "ここの鉱物：{minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "注文"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "注文にアイテムを追加..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "注文の概要：{items} アイテム、{crafts} 回のクラフト"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "注文はまだ空です。下で検索してアイテムを追加してください。"
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "注文データがまだありません。DataForge を抽出し、Commodities または Journal にチェックを入れて拡張を生成してください。"
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}：{amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "品質 {quality}+：{amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "使用先：{items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU で表示"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU で表示"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "鉱石の量を SCU または cSCU（ゲーム内と同じく SCU の 100 分の 1）で表示します"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "コピー"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "コピーしました"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "注文と素材をテキストとしてコピーします（Discord 用）"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "鉱物を監視"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "注文の鉱物をスキャン監視リストに追加し、スキャナーが読み取ったときに知らせます"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "新規注文"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "本当に？"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "もう一度「新規注文」をクリックするとこの注文を空にします。保存した注文は残ります。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "新しい注文を始めます：この注文のアイテムをすべて削除します。保存した注文は残ります。"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "1 つ減らす"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "1 つ増やす"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "注文から削除"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "未所持の設計図"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "所有済みのみ"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "所有しているブループリントだけを検索します。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "不明な素材"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "注文名"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "保存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "入力した名前でこの注文を保存します。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "上書きしますか？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "保存しました"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "先に注文の名前を入力してください。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "注文を保存できませんでした:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "保存した注文"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "読み込む"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "この注文を、リストで選んだ保存済みの注文に置き換えます。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "削除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "確認"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "もう一度「削除」をクリックすると保存した注文「{name}」を削除します。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "リストで選んだ保存済みの注文を削除します。作成中の注文はそのままです。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "保存した注文「{name}」を削除できませんでした。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "「{name}」には、このゲームデータにあるアイテムがありません。"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "この {of} 個のうち {need} 個を使用："
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "このスロットを使います。設計図が必要とする数より多くチェックすると、別のチェックが外れます。"
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}：{material}、{amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "このスロットに使う素材の品質（0〜1000）"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} の品質はこれだけです（{source} のデータ）：{tiers}。スライダーはこれらと 0、500、1000 で止まります。"
+    },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "鉱石の品質に合わせる"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "オン：品質スライダーは各鉱石の品質で止まります。オフ：混ぜて中間の品質になった鉱石のために、0〜1000 の任意の品質を選べます。"
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} の品質（{source} のデータ）：{tiers}。混ぜると中間の値になることがあるため、スライダーは任意の品質を選べます。"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "品質 {quality} 以上が必要"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "全スロット：{bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "素材の品質はこのアイテムの性能を変えません。"
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} ピップ"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} 個"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "クラフト注文：{count} 回"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "素材："
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "品質 {quality}+ で {amount}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "アイテム名を入力して購入場所を確認..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "UEXからショップデータを読み込み中..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "ショップデータのためにUEXに接続できませんでした。インターネット接続を確認してください。オーバーレイは数分後に再試行します。"
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "ショップデータ: {site}（プレイヤー報告）。更新: {updated}"
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEXに接続できないため、最後に保存したデータを表示しています。"
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "その名前のアイテムを販売している既知のショップはありません。"
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item}（{count}）"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}、{place}: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low}～{high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{total}件中{shown}件を表示中。さらに入力して絞り込んでください。"
     }
   },
   "overlay": {
@@ -3792,6 +4204,14 @@
       "ht": "",
       "at": "鉱物名を入力するとそれを使うアイテムを、アイテム名を入力すると必要な鉱物を表示します。DataForge の抽出が必要です。"
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "アイテム検索"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "アイテム名を入力すると、販売しているショップ、その場所、価格が表示されます。ショップデータはインターネット経由でUEXから取得され、プレイヤーによって報告されたものです。"
+    },
     "drawer_position": {
       "ht": "",
       "at": "ドロワーの位置："
@@ -3847,6 +4267,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "これはホットキーにできません。Ctrl、Alt、Win のいずれかを押しながら、英字、数字、記号、Space、Tab、または移動キー（矢印、Home、End、Page Up/Down、Insert、Delete）を押してください。Shift を加えてもかまいません。F キーや Pause は単独でも使えます。"
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "注文"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "クラフト注文を組み立て、必要な素材をすべて品質別に確認します。DataForge の抽出が必要です。"
     }
   },
   "shader_cache": {

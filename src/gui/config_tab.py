@@ -15,6 +15,7 @@ from src.gui.theme import (
     AVAILABLE_THEMES, THEME_LIGHT, THEME_DARK, THEME_SCLE, THEME_ODW, host_in_scroll_area,
     needs_apply_style,
 )
+from src.gui.tray import tray_available
 from src.utils.i18n import tr
 from src.utils.pak_extractor import base_ini_is_fresh, windows_reason
 from src.utils.settings import (
@@ -80,6 +81,8 @@ class ConfigTab(QWidget):
     # Emitted by the Settings Backup buttons. MainWindow owns the file
     # dialogs, the zip I/O (src/utils/settings_profile.py), and the
     # post-import restart flow so this tab stays presentation-only.
+    # Smart Sync (#567): the folder was chosen (its path) or turned off ("").
+    smart_sync_folder_changed = pyqtSignal(str)
     export_settings_requested = pyqtSignal()
     import_settings_requested = pyqtSignal()
     # Emitted when Preview Apply is clicked, before the preview reads
@@ -88,6 +91,9 @@ class ConfigTab(QWidget):
     # what Apply would write (#532). A direct connection, so it runs before
     # the preview goes on.
     preview_starting = pyqtSignal()
+    # Emitted when Minimize to Tray is ticked or unticked, once the setting is
+    # saved. MainWindow hands it to its TrayController (src/gui/tray.py).
+    minimize_to_tray_changed = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -227,6 +233,14 @@ class ConfigTab(QWidget):
         self.disable_tutorial_cb.setChecked(AppSettings.get_tutorial_disabled())
         self.disable_tutorial_cb.toggled.connect(AppSettings.set_tutorial_disabled)
         appearance_layout.addWidget(self.disable_tutorial_cb)
+
+        # Greyed out while the desktop has no system tray to minimize to.
+        appearance_layout.addSpacing(20)
+        self.minimize_to_tray_cb = QCheckBox(tr("config.minimize_to_tray_cb"))
+        self.minimize_to_tray_cb.setChecked(AppSettings.get_minimize_to_tray())
+        self._refresh_minimize_to_tray_box()
+        self.minimize_to_tray_cb.toggled.connect(self._on_minimize_to_tray_toggled)
+        appearance_layout.addWidget(self.minimize_to_tray_cb)
 
         appearance_layout.addStretch()
         layout.addWidget(self._appearance_group)
@@ -405,6 +419,48 @@ class ConfigTab(QWidget):
         data_layout.addLayout(cache_input_layout)
         layout.addWidget(self._data_group)
 
+        # ── Smart Sync (#567) ────────────────────────────────────────────
+        # Owned blueprints shared through a folder the player's cloud app
+        # already syncs. Off until a folder is chosen.
+        self._smart_sync_group = QGroupBox(tr("config.smart_sync_group"))
+        sync_layout = QVBoxLayout(self._smart_sync_group)
+        self._smart_sync_desc_label = QLabel(tr("config.smart_sync_desc"))
+        self._smart_sync_desc_label.setProperty("role", "secondary")
+        self._smart_sync_desc_label.setStyleSheet("font-size: 11px; margin-bottom: 5px;")
+        self._smart_sync_desc_label.setWordWrap(True)
+        sync_layout.addWidget(self._smart_sync_desc_label)
+
+        sync_input_layout = QHBoxLayout()
+        self.smart_sync_input = QLineEdit()
+        self.smart_sync_input.setReadOnly(True)
+        self.smart_sync_input.setPlaceholderText(tr("config.smart_sync_placeholder"))
+        self.smart_sync_input.setText(self._shown_smart_sync_folder())
+        sync_input_layout.addWidget(self.smart_sync_input)
+
+        self._smart_sync_browse_btn = QPushButton(tr("config.browse_btn"))
+        self._smart_sync_browse_btn.setMaximumWidth(100)
+        self._smart_sync_browse_btn.setToolTip(tr("config.smart_sync_browse_tooltip"))
+        self._smart_sync_browse_btn.clicked.connect(self._browse_smart_sync_folder)
+        sync_input_layout.addWidget(self._smart_sync_browse_btn)
+
+        self._smart_sync_off_btn = QPushButton(tr("config.smart_sync_off_btn"))
+        self._smart_sync_off_btn.setMaximumWidth(100)
+        self._smart_sync_off_btn.setToolTip(tr("config.smart_sync_off_tooltip"))
+        self._smart_sync_off_btn.clicked.connect(self._turn_smart_sync_off)
+        sync_input_layout.addWidget(self._smart_sync_off_btn)
+        sync_layout.addLayout(sync_input_layout)
+
+        self._smart_sync_status_label = QLabel()
+        self._smart_sync_status_label.setProperty("role", "secondary")
+        self._smart_sync_status_label.setStyleSheet("font-size: 11px;")
+        self._smart_sync_status_label.setWordWrap(True)
+        sync_layout.addWidget(self._smart_sync_status_label)
+        # What the label says, kept so a language switch can say it again.
+        self._smart_sync_state = ""
+        self._smart_sync_values: dict = {}
+        self.set_smart_sync_status()
+        layout.addWidget(self._smart_sync_group)
+
         # ── P4K Extraction ───────────────────────────────────────────────────
         self._p4k_group = QGroupBox(tr("config.p4k_group"))
         p4k_layout = QVBoxLayout(self._p4k_group)
@@ -545,6 +601,8 @@ class ConfigTab(QWidget):
             self.font_size_combo.blockSignals(False)
         self.disable_tutorial_cb.setText(tr("config.disable_tutorial_cb"))
         self.disable_tutorial_cb.setToolTip(tr("config.disable_tutorial_tooltip"))
+        self.minimize_to_tray_cb.setText(tr("config.minimize_to_tray_cb"))
+        self._refresh_minimize_to_tray_box()
         self._loc_group.setTitle(tr("config.star_citizen_group"))
         self._install_label.setText(tr("config.installation_label"))
         self._game_desc_label.setText(tr("config.installation_desc"))
@@ -576,6 +634,14 @@ class ConfigTab(QWidget):
         self._cache_browse_btn.setToolTip(tr("config.browse_cache_tooltip"))
         self._cache_reset_btn.setText(tr("config.reset_btn"))
         self._cache_reset_btn.setToolTip(tr("config.reset_cache_tooltip"))
+        self._smart_sync_group.setTitle(tr("config.smart_sync_group"))
+        self._smart_sync_desc_label.setText(tr("config.smart_sync_desc"))
+        self.smart_sync_input.setPlaceholderText(tr("config.smart_sync_placeholder"))
+        self._smart_sync_browse_btn.setText(tr("config.browse_btn"))
+        self._smart_sync_browse_btn.setToolTip(tr("config.smart_sync_browse_tooltip"))
+        self._smart_sync_off_btn.setText(tr("config.smart_sync_off_btn"))
+        self._smart_sync_off_btn.setToolTip(tr("config.smart_sync_off_tooltip"))
+        self.set_smart_sync_status(self._smart_sync_state, **self._smart_sync_values)
         self._p4k_group.setTitle(tr("config.p4k_group"))
         self._p4k_desc_label.setText(tr("config.p4k_desc"))
         # These two write the channel list's not-installed tooltips and hint
@@ -643,6 +709,28 @@ class ConfigTab(QWidget):
 
     def _on_include_new_toggled(self, checked: bool):
         AppSettings.set_include_new_lines(checked)
+
+    def _on_minimize_to_tray_toggled(self, checked: bool):
+        """Save Minimize to Tray and tell MainWindow, which turns its tray
+        icon on or off at once (src/gui/tray.py)."""
+        AppSettings.set_minimize_to_tray(checked)
+        self.minimize_to_tray_changed.emit(checked)
+
+    def _refresh_minimize_to_tray_box(self) -> None:
+        """Grey Minimize to Tray out, with a tooltip that says why, while the
+        desktop has no system tray. The build, a language switch and every
+        showing of the tab ask, so a switch shows what a restart shows and a
+        tray that appeared after the start (a start before the taskbar was
+        up) makes the box usable without a restart."""
+        available = tray_available()
+        self.minimize_to_tray_cb.setEnabled(available)
+        self.minimize_to_tray_cb.setToolTip(
+            tr("config.minimize_to_tray_tooltip") if available
+            else tr("config.minimize_to_tray_unavailable_tooltip"))
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._refresh_minimize_to_tray_box()
 
     # ── Game path ────────────────────────────────────────────────────────────
 
@@ -993,6 +1081,57 @@ class ConfigTab(QWidget):
             self._maybe_migrate_data(current_dir, new_dir)
             self._refresh_p4k_status()
             self.data_dir_changed.emit(str(new_dir))
+
+    # ── Smart Sync (#567) ────────────────────────────────────────────────────
+
+    @staticmethod
+    def _shown_smart_sync_folder() -> str:
+        folder = AppSettings.get_smart_sync_folder()
+        return os.path.normpath(folder) if folder else ""
+
+    def _browse_smart_sync_folder(self):
+        start_dir = AppSettings.get_smart_sync_folder() or str(Path.home())
+        path = QFileDialog.getExistingDirectory(
+            self, tr("config.select_smart_sync_folder"), start_dir
+        )
+        if not path:
+            return
+        path = os.path.normpath(path)
+        if path == os.path.normpath(AppSettings.get_smart_sync_folder() or ""):
+            return
+        AppSettings.set_smart_sync_folder(path)
+        logger.info("Smart Sync folder set to %s", path)
+        self.smart_sync_input.setText(path)
+        self.set_smart_sync_status("waiting")
+        self.smart_sync_folder_changed.emit(path)
+
+    def _turn_smart_sync_off(self):
+        if not AppSettings.get_smart_sync_folder():
+            return
+        AppSettings.set_smart_sync_folder(None)
+        logger.info("Smart Sync turned off")
+        self.smart_sync_input.setText("")
+        self.set_smart_sync_status()
+        self.smart_sync_folder_changed.emit("")
+
+    def set_smart_sync_status(self, state: str = "", **values) -> None:
+        """Show how the last sync went: "waiting", "ok" (``time``, ``count``)
+        or "failed" (``error``); anything else reads as on or off from the
+        saved folder."""
+        self._smart_sync_state = state
+        self._smart_sync_values = values
+        if state == "waiting":
+            text = tr("config.smart_sync_status_waiting")
+        elif state == "ok":
+            text = tr("config.smart_sync_status_ok", **values)
+        elif state == "failed":
+            text = tr("config.smart_sync_status_failed", **values)
+        elif AppSettings.get_smart_sync_folder():
+            text = tr("config.smart_sync_status_waiting")
+        else:
+            text = tr("config.smart_sync_status_off")
+        self._smart_sync_status_label.setText(text)
+        self._smart_sync_off_btn.setEnabled(bool(AppSettings.get_smart_sync_folder()))
 
     # ── DataForge cache folder ───────────────────────────────────────────────
     # The cache path is independent of the app-data path so users can target

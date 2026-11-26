@@ -41,11 +41,12 @@ Everything. Your localization edits, backups, application settings, and DataForg
 
 ### What goes over the network
 
-Smart Citizen makes outbound network requests in only three circumstances:
+Smart Citizen makes outbound network requests in only four circumstances:
 
 - **Update check** — A small unauthenticated request to `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest` approximately once every 6 hours to compare the installed version against the latest GitHub release. Returns release metadata only (tag name, release URL); no Smart Citizen state is sent.
 - **Language downloads** — When you switch to a non-English language, Smart Citizen downloads that language's community-translated `global.ini` from the configured URL (by default the [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) GitHub repository). The download is cached locally; nothing from your machine is sent.
 - **User-configured remote sources** — If you have configured a data source pointing at an `http(s)://` URL in the Config tab, Smart Citizen fetches that URL when refreshing source files. Out of the box this only applies to the `global` source's GitHub-raw URL form; the standard configuration since v1.0 reads `base.ini` from your local Data.p4k extraction instead.
+- **SCO Item Finder shop list** — While the overlay runs with its Item Finder section switched on, Smart Citizen downloads the list of shops and item prices from the [UEX](https://uexcorp.space) API (`api.uexcorp.uk`), at most once every 12 hours. It is two plain requests that carry only the app's name and version; nothing from your machine is sent. The list is cached locally. Switch the Item Finder off on the Overlay tab to stop it.
 
 ### The Smart Citizen Overlay
 

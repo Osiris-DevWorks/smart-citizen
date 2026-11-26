@@ -82,32 +82,49 @@ them against the new source.
 
 ## Backfill log
 
-- **After 3.0.1 (2026-11-25, Claude Opus 5.5):** `[BP Complete]` now takes
-  the place of `[BP]` / `[BP?]` instead of following it. In `docs/HELP.md`
-  BP Completed "adds `[BP Complete]` after it" became "replaces it with
-  `[BP Complete]`", and the 11 translated `HELP.md` files say the same
-  (AI-written). Checked by a script: each old text matched once and every
-  line ending was kept. Not back-translated.
-- **After 3.0.1 (2026-11-25, Claude Opus 5.5):** the Apply success box
-  now counts the missions it marked `[BP Complete]`, on a line under
-  Missions while the General Tags switch is on. One new key,
+- **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):**
+  `[BP Complete]` now takes the place of `[BP]` / `[BP?]` instead of following
+  it. In `docs/HELP.md` BP Completed "adds `[BP Complete]` after it" became
+  "replaces it with `[BP Complete]`", and the 11 translated `HELP.md` files
+  say the same (AI-written). Checked by a script: each old text matched once
+  and every line ending was kept. Not back-translated.
+- **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):** the Apply
+  success box now counts the missions it marked `[BP Complete]`, on a line
+  under Missions while the General Tags switch is on. One new key,
   `apply.bp_complete_count` (`Missions marked [BP Complete]: {count}`), AI
-  `at` in all 11 other languages, `[BP Complete]` and `{count}` kept as is.
-  A new key, so nothing needs human re-review. Not back-translated.
-- **After 3.0.1 (2026-11-25, Claude Opus 5.5):** the `[BP Complete]` mission
-  title tag. One new key, `enhancements.mt_tag_bp_complete_cb`
-  (`BP Completed (adds "[BP Complete]")`, the General Tags checkbox, placed
-  right after BP Tag), AI `at` in all 11 other languages, `[BP Complete]`
-  kept as is in every one because the tag itself is English. `docs/HELP.md`
-  gained a sentence after the General Tags passage (what the tag means, that
-  it follows the Owned set with no new generation but needs one generation
-  first, and that hiding POTENTIAL BLUEPRINTS hides it) and an Apply Owned
-  Tags note; `docs/ABOUT.md` and `README.md` gained one sentence in the
-  Blueprint Tracker entry. The 11 translated `HELP.md` and `ABOUT.md` files
-  gained the same words, naming General Tags, the checkbox and Generate
-  Enhancements as each `ui.json` does. A new key, so nothing needs human
-  re-review. Checked by a script: each anchor matched once and every line
-  ending was kept. Not back-translated.
+  `at` in all 11 other languages, `[BP Complete]` and `{count}` kept as is. A
+  new key, so nothing needs human re-review. Not back-translated.
+- **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):** the
+  `[BP Complete]` mission title tag. One new key,
+  `enhancements.mt_tag_bp_complete_cb` (`BP Completed (adds "[BP Complete]")`,
+  the General Tags checkbox, placed right after BP Tag), AI `at` in all 11
+  other languages, `[BP Complete]` kept as is in every one because the tag
+  itself is English. `docs/HELP.md` gained a sentence after the General Tags
+  passage (what the tag means, that it follows the Owned set with no new
+  generation but needs one generation first, and that hiding POTENTIAL
+  BLUEPRINTS hides it) and an Apply Owned Tags note; `docs/ABOUT.md` and
+  `README.md` gained one sentence in the Blueprint Tracker entry. The 11
+  translated `HELP.md` and `ABOUT.md` files gained the same words, naming
+  General Tags, the checkbox and Generate Enhancements as each `ui.json` does.
+  A new key, so nothing needs human re-review. Checked by a script: each
+  anchor matched once and every line ending was kept. Not back-translated.
+- **3.1.0 cycle (2026-11-15, Claude Opus 5.5, minimize to tray):** seven new
+  keys for the Config tab's **Minimize to Tray**, the tray icon's menu and
+  its one-time "still running" notice: `config.minimize_to_tray_cb`,
+  `config.minimize_to_tray_tooltip`,
+  `config.minimize_to_tray_unavailable_tooltip`, `tray.show`, `tray.quit`,
+  `tray.notice_title` and `tray.notice_body` (Windows cuts a notice's title
+  at 63 characters and its body at 255, which every language keeps to).
+  `ht` in english, `at` in the other eleven (chinese_traditional through
+  OpenCC `s2twp` from chinese, as that language is made). HELP's
+  **Appearance** bullet gains three sentences about it in all eleven translated
+  `HELP.md` files, AI-translated, each naming the tick box with its own
+  `ui.json` text. The guided tour's Appearance step names the tick box too,
+  in a sentence added after the step's text as `release/3.0.1` has it (with
+  the font size): `assets/tutorial.json` in English and
+  `tutorial.cfg_appearance.description` (`at` only in every language, no `ht`
+  touched) in the other eleven, each quoting the box the way that language's
+  tour quotes a control.
 - **3.0.1 cycle (2026-11-17, Claude Opus 5.5):** pre-release, the Legal
   tab's privacy section gained a "The Smart Citizen Overlay" subsection
   (`docs/LEGAL.md`, before "What Smart Citizen does not do"): what the overlay
@@ -1144,3 +1161,7 @@ them against the new source.
   one overwrites the other's `global.ini` in that folder. A Russian-speaking
   reviewer replacing the `at` strings with `ht` is the next step to promote
   it from AI-only to human-reviewed.
+
+## Generated text (`enhancements.json`, #579)
+
+The text Smart Citizen adds to the game strings (stat labels such as `Max HP`, mission details, journal lines) is translated in `languages/<lang>/enhancements.json`, beside `ui.json`. Its keys are the English texts, listed in `languages/english/enhancements.json`, and each leaf has the same `ht` / `at` fields with the same rules: `ht` wins, then `at`, and an empty leaf stays English. Keep every `{placeholder}` and `<EM4>`-style tag. Every non-English table was first written as AI drafts (`at`, with `ht` empty), so all of it is open for review. Item names, tags such as `[BP]`, the mission section headers and the Rep label are not in this file: names come from the community translation, and the headers and the label are settings on the Enhancements tab.

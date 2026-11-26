@@ -1682,6 +1682,7 @@ DATAFORGE_KEEP_SUBPATHS: tuple[str, ...] = (
     "contracts/contracttemplates",
     "crafting/blueprintrewards",
     "crafting/blueprints/crafting",
+    "crafting/craftedproperties",
     "missionbroker/pu_missions",
     "ammoparams/vehicle",
     "ammoparams/fps",
@@ -1796,7 +1797,7 @@ def _write_unforge_exclude_list(run_dir: Path) -> Path:
     One record path per line, in UTF-8, as unforge names its records:
     under the folder of the dcb (``libs/foundry/records/actor``). unforge
     leaves out each record at or under one, comparing whole path segments
-    and ignoring case. A file, not ``--exclude`` arguments: 538 of those
+    and ignoring case. A file, not ``--exclude`` arguments: 537 of those
     would take the command line past 20,000 characters."""
     records = f"{_UNFORGE_LIBS_DIR}/{DATAFORGE_RECORDS_UNDER_LIBS.as_posix()}"
     target = Path(win_plain_path(run_dir)) / _UNFORGE_EXCLUDE_LIST_NAME

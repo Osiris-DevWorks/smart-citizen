@@ -1,7 +1,9 @@
 name: CI
 
-# Runs on every PR targeting main / master / 1.3.0 / any release/* branch,
-# plus every push to 1.3.0. Validates that the test suite passes and that
+# Runs on every PR targeting main / master / any release/* branch: under the
+# Osiris DevWorks pipeline that is the release PR, hotfix PRs, and
+# contributor PRs. Feature work is pushed straight to the release branch and
+# runs no CI until its release PR. Validates that the test suite passes and that
 # the PyInstaller onedir build succeeds. Inno Setup installer compilation
 # is deliberately scoped out of CI — that step lives in release.yml
 # because it adds ~3 minutes of toolchain install per run and produces an
@@ -23,10 +25,8 @@ on:
   # Running CI in parallel on main-push would duplicate test work and
   # produce a confusing dual status. PRs *to* main still run CI here,
   # just the post-merge push doesn't.
-  push:
-    branches: ["1.3.0"]
   pull_request:
-    branches: [main, master, "1.3.0", "release/**"]
+    branches: [main, master, "release/**"]
   # Manual trigger for one-off debugging without pushing.
   workflow_dispatch:
 

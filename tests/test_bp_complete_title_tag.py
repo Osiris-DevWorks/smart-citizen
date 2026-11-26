@@ -374,6 +374,9 @@ class _Window:
     def _mark_apply_dirty(self):
         self.marked_dirty += 1
 
+    def _schedule_smart_sync(self, *_args):
+        """3.1.0's Smart Sync timer, which _recompute_owned starts."""
+
 
 _TITLES = {"M_Title_001": ("M_Desc_001",)}
 _NAMES = {"M_Desc_001": frozenset({"Arrow"})}
