@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Smart Citizen Overlay (SCO) starten oder beenden: Entschlüsselung von Bergbau-Signaturen und eine Blaupausen-Schublade über dem Spiel. Benötigt den randlosen Fenstermodus."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "CSV importieren…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "CSV exportieren…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Bearbeitete Texte aus einer CSV-Datei übernehmen"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Die angezeigten Zeilen in einer CSV-Datei speichern"
     }
   },
   "filters": {
@@ -2465,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Fenstergröße, Panel-Layout und die Spaltenbreiten des String-Editors auf die Standardwerte zurücksetzen?\n\nIhre gespeicherten Größen gehen verloren. Einstellungen und Lokalisierungsdaten sind nicht betroffen."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "CSV exportieren"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "Die Tabelle zeigt keine Zeilen zum Exportieren. Entferne einen Filter und versuche es erneut."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} Zeilen gespeichert in:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "Die CSV-Datei konnte nicht gespeichert werden:\n{error}"
     }
   },
   "progress": {
@@ -2787,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "INI-Datei konnte nicht importiert werden:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "CSV-Datei wählen"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV-Dateien (*.csv);;Alle Dateien (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Diese CSV kann nicht gelesen werden"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "Die Datei braucht eine Spalte Key und eine Spalte Custom Value. Exportiere eine CSV aus Smart Citizen, um den Aufbau zu sehen."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} übersprungen (leer oder gleich dem Originaltext)."
     }
   },
   "restore_backup": {

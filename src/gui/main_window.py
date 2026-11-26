@@ -1625,6 +1625,15 @@ class MainWindow(QMainWindow):
         more_menu.addSeparator()
         self._action_import_ini = more_menu.addAction(tr("toolbar.menu_import_ini"), self._handle_import_ini)
         self._action_export_ini = more_menu.addAction(tr("toolbar.menu_export_ini"), self.export_locpack)
+        # #565: the rows the table shows, out to a CSV and back.
+        self._action_import_csv = more_menu.addAction(
+            tr("toolbar.menu_import_csv"), self._handle_import_csv
+        )
+        self._action_import_csv.setToolTip(tr("toolbar.import_csv_tooltip"))
+        self._action_export_csv = more_menu.addAction(
+            tr("toolbar.menu_export_csv"), self._export_csv
+        )
+        self._action_export_csv.setToolTip(tr("toolbar.export_csv_tooltip"))
         more_menu.addSeparator()
         self._action_open_loc_dir = more_menu.addAction(
             tr("toolbar.open_loc_dir_btn"), self.open_localization_dir
@@ -4376,9 +4385,7 @@ class MainWindow(QMainWindow):
 
     def _handle_import_ini(self):
         """Handle Import INI button: get source, validate, resolve conflicts, merge."""
-        from PyQt6.QtWidgets import QDialog
         from src.parser.ini_parser import parse_ini_file
-        from src.utils.user_ini_manager import save_user_ini_dict
         import tempfile
         import urllib.request
 
@@ -4420,99 +4427,179 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, tr("dialogs.empty_file_title"), tr("dialogs.empty_file_body"))
                 return
 
-            # Step 4: Validate against base.ini keys
-            if not self.default_values:
-                QMessageBox.warning(
-                    self, tr("import_flow.no_base_data_title"),
-                    tr("import_flow.no_base_data_body"),
-                )
-                return
-
-            valid_keys = {k: v for k, v in imported.items() if k in self.default_values}
-            excluded_count = len(imported) - len(valid_keys)
-
-            if not valid_keys:
-                QMessageBox.warning(
-                    self, tr("import_flow.no_valid_keys_title"),
-                    tr("import_flow.no_valid_keys_body", count=len(imported)),
-                )
-                return
-
-            # Step 5: Load current user.ini (strip_values=False so leading-space
-            # favourite prefixes round-trip verbatim — see issue #100).
-            user_ini_path = AppSettings.get_user_ini_path()
-            current_user = parse_ini_file(user_ini_path, strip_values=False) if user_ini_path.exists() else {}
-
-            # Step 6: Categorize keys
-            auto_add = {}
-            conflicts = {}
-            for key, imported_value in valid_keys.items():
-                current_value = current_user.get(key)
-                if current_value is None:
-                    auto_add[key] = imported_value
-                elif current_value != imported_value:
-                    conflicts[key] = (current_value, imported_value)
-                # else: identical, skip
-
-            # Step 7: Handle cases
-            if not auto_add and not conflicts:
-                QMessageBox.information(
-                    self, tr("import_flow.nothing_to_import_title"),
-                    tr("import_flow.nothing_to_import_body"),
-                )
-                return
-
-            if not conflicts:
-                reply = QMessageBox.question(
-                    self, tr("import_flow.confirm_title"),
-                    tr("import_flow.confirm_body", new_count=len(auto_add), excluded_count=excluded_count),
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                if reply != QMessageBox.StandardButton.Yes:
-                    return
-                resolutions = {}
-            else:
-                from src.gui.import_dialog import ImportConflictDialog
-                dialog = ImportConflictDialog(conflicts, len(auto_add), excluded_count, self)
-                if dialog.exec() != QDialog.DialogCode.Accepted:
-                    return
-                resolutions = dialog.get_resolutions()
-
-            # Step 8: Merge
-            final = dict(current_user)
-            final.update(auto_add)
-            final.update(resolutions)
-
-            # Step 9: Save
-            save_user_ini_dict(final, user_ini_path)
-
-            # Step 10: Reload. The table takes the values the import changed
-            # first, so the reload keeps them rather than an unapplied change
-            # to the same key, such as a Reset to Original (#531). A
-            # conflict kept as it is (Keep Current) changed nothing, so the
-            # table's own change of that key stays.
-            imported = {key: value for key, value in {**auto_add, **resolutions}.items()
-                        if current_user.get(key) != value}
-            for entry in self.entries:
-                if entry.key in imported:
-                    entry.custom_value = imported[entry.key]
-            self._show_loading_progress(tr("import_flow.reload_status"))
-
-            # Step 11: Summary
-            QMessageBox.information(
-                self, tr("import_flow.complete_title"),
-                tr("import_flow.complete_body", added=len(auto_add),
-                   resolved=len(resolutions), excluded=excluded_count),
-            )
+            self._import_override_values(imported)
 
         except Exception as e:
             logger.exception(f"Import failed: {e}")
-            QMessageBox.critical(self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e))
+            QMessageBox.critical(
+                self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e)
+            )
         finally:
             if temp_file:
                 try:
                     Path(temp_file.name).unlink(missing_ok=True)
                 except Exception:
                     pass
+
+    def _import_override_values(self, imported: dict) -> None:
+        """Add imported values to user.ini, asking about conflicts (#565).
+
+        Shared by Import INI and Import CSV. A value that is empty or the same
+        as the row's Default or Current text is skipped
+        (``strings_csv.plan_override_import``), so a full exported global.ini
+        or CSV only adds what was really changed, and an enhanced row keeps
+        updating after a game patch.
+        """
+        from PyQt6.QtWidgets import QDialog
+        from src.parser.ini_parser import parse_ini_file
+        from src.utils.strings_csv import plan_override_import
+        from src.utils.user_ini_manager import save_user_ini_dict
+
+        if not self.default_values:
+            QMessageBox.warning(
+                self, tr("import_flow.no_base_data_title"),
+                tr("import_flow.no_base_data_body"),
+            )
+            return
+
+        # strip_values=False so leading-space favourite prefixes round-trip
+        # verbatim (issue #100).
+        user_ini_path = AppSettings.get_user_ini_path()
+        current_user = (
+            parse_ini_file(user_ini_path, strip_values=False) if user_ini_path.exists() else {}
+        )
+        current_values = {entry.key: entry.original_value for entry in self.entries}
+        plan = plan_override_import(imported, self.default_values, current_values, current_user)
+
+        if plan.unknown == len(imported):
+            QMessageBox.warning(
+                self, tr("import_flow.no_valid_keys_title"),
+                tr("import_flow.no_valid_keys_body", count=len(imported)),
+            )
+            return
+
+        skipped_line = ("\n" + tr("import_flow.unchanged_skipped", count=plan.unchanged)
+                        if plan.unchanged else "")
+        if not plan.has_work:
+            QMessageBox.information(
+                self, tr("import_flow.nothing_to_import_title"),
+                tr("import_flow.nothing_to_import_body") + skipped_line,
+            )
+            return
+
+        if not plan.conflicts:
+            reply = QMessageBox.question(
+                self, tr("import_flow.confirm_title"),
+                tr("import_flow.confirm_body", new_count=len(plan.auto_add),
+                   excluded_count=plan.unknown) + skipped_line,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            resolutions = {}
+        else:
+            from src.gui.import_dialog import ImportConflictDialog
+            dialog = ImportConflictDialog(plan.conflicts, len(plan.auto_add), plan.unknown, self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            resolutions = dialog.get_resolutions()
+
+        final = dict(current_user)
+        final.update(plan.auto_add)
+        final.update(resolutions)
+        save_user_ini_dict(final, user_ini_path)
+
+        # The table takes the values the import changed first, so the reload
+        # keeps them rather than an unapplied change to the same key, such as
+        # a Reset to Original (#531). A conflict kept as it is (Keep Current)
+        # changed nothing, so the table's own change of that key stays.
+        changed = {key: value for key, value in {**plan.auto_add, **resolutions}.items()
+                   if current_user.get(key) != value}
+        for entry in self.entries:
+            if entry.key in changed:
+                entry.custom_value = changed[entry.key]
+        self._show_loading_progress(tr("import_flow.reload_status"))
+
+        QMessageBox.information(
+            self, tr("import_flow.complete_title"),
+            tr("import_flow.complete_body", added=len(plan.auto_add),
+               resolved=len(resolutions), excluded=plan.unknown) + skipped_line,
+        )
+
+    def _handle_import_csv(self):
+        """More > Import CSV: read Key and Custom Value back from a CSV (#565)."""
+        import csv
+        from src.utils.strings_csv import CsvColumnsMissing, read_strings_csv
+
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("import_flow.select_csv_file_title"), "", tr("import_flow.csv_file_filter"))
+        if not path:
+            return
+        try:
+            imported = read_strings_csv(path)
+        except CsvColumnsMissing:
+            QMessageBox.warning(
+                self, tr("import_flow.csv_columns_missing_title"),
+                tr("import_flow.csv_columns_missing_body"),
+            )
+            return
+        except (OSError, csv.Error) as e:
+            logger.warning("Import CSV could not read %s: %s", path, e)
+            QMessageBox.critical(
+                self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e)
+            )
+            return
+        if not imported:
+            QMessageBox.warning(self, tr("dialogs.empty_file_title"), tr("dialogs.empty_file_body"))
+            return
+        try:
+            self._import_override_values(imported)
+        except Exception as e:
+            logger.exception(f"Import failed: {e}")
+            QMessageBox.critical(
+                self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e)
+            )
+
+    def _export_csv(self):
+        """More > Export CSV: the rows the table shows, in its order (#565)."""
+        from src.utils.strings_csv import CsvRow, default_csv_filename, write_strings_csv
+
+        rows = []
+        for row in range(self._model.rowCount()):
+            entry = self.entries[self._model.entry_index_for_row(row)]
+            rows.append(CsvRow(
+                key=entry.key,
+                category=entry.category,
+                default_value=self.default_values.get(entry.key, ""),
+                current_value=entry.original_value,
+                custom_value=entry.custom_value,
+                status=entry.status,
+            ))
+        if not rows:
+            QMessageBox.information(
+                self, tr("dialogs.export_csv_title"), tr("dialogs.export_csv_empty_body"))
+            return
+
+        downloads_dir = Path.home() / "Downloads"
+        if not downloads_dir.exists():
+            downloads_dir = Path.home()
+        default_path = str(downloads_dir / default_csv_filename(AppSettings.get_active_channel()))
+        out_path_str, _ = QFileDialog.getSaveFileName(
+            self, tr("dialogs.export_csv_title"), default_path, tr("import_flow.csv_file_filter"))
+        if not out_path_str:
+            return
+        try:
+            count = write_strings_csv(out_path_str, rows)
+        except OSError as e:
+            logger.warning("Export CSV could not write %s: %s", out_path_str, e)
+            QMessageBox.critical(
+                self, tr("dialogs.export_failed_title"),
+                tr("dialogs.export_csv_failed_body", error=e),
+            )
+            return
+        QMessageBox.information(
+            self, tr("dialogs.export_complete_title"),
+            tr("dialogs.export_csv_done_body", count=count, path=out_path_str),
+        )
 
     def _get_import_source(self) -> str | None:
         """Show dialog to get a file path or URL for import."""
@@ -5671,6 +5758,10 @@ class MainWindow(QMainWindow):
         self._action_clear_cache.setText(tr("toolbar.menu_clear_cache"))
         self._action_import_ini.setText(tr("toolbar.menu_import_ini"))
         self._action_export_ini.setText(tr("toolbar.menu_export_ini"))
+        self._action_import_csv.setText(tr("toolbar.menu_import_csv"))
+        self._action_import_csv.setToolTip(tr("toolbar.import_csv_tooltip"))
+        self._action_export_csv.setText(tr("toolbar.menu_export_csv"))
+        self._action_export_csv.setToolTip(tr("toolbar.export_csv_tooltip"))
         self._action_open_loc_dir.setText(tr("toolbar.open_loc_dir_btn"))
         self._action_test_plan.setText(tr("toolbar.menu_test_plan"))
         self._action_test_plan.setToolTip(tr("toolbar.test_plan_tooltip"))

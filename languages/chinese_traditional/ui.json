@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "啟動或停止 Smart Citizen 疊加層 (SCO)：在遊戲畫面上解碼採礦訊號並顯示藍圖抽屜。需要無邊框視窗模式。"
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "匯入 CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "匯出 CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "從 CSV 檔案匯入編輯過的文字"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "將表格目前顯示的列儲存為 CSV 檔案"
     }
   },
   "filters": {
@@ -2465,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "是否將視窗大小、面板佈局和字串編輯器的列寬恢復為預設值？\n\n已儲存的尺寸將被清除。您的設定和本地化資料不會受到影響。"
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "匯出 CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "表格中沒有可匯出的列。請清除篩選後再試一次。"
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "已將 {count} 列儲存到：\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "無法儲存 CSV 檔案：\n{error}"
     }
   },
   "progress": {
@@ -2787,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "匯入 INI 檔案失敗：\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "選擇 CSV 檔案"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV 檔案 (*.csv);;所有檔案 (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "無法讀取此 CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "檔案需要包含 Key 欄和 Custom Value 欄。從 Smart Citizen 匯出一個 CSV 即可查看格式。"
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "已略過 {count} 項（為空或與原文相同）。"
     }
   },
   "restore_backup": {

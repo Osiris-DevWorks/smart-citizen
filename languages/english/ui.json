@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "Start or stop the Smart Citizen Overlay (SCO): mining signature decoding and a blueprint drawer over the game. Needs borderless windowed mode.",
       "at": ""
+    },
+    "menu_import_csv": {
+      "ht": "Import CSV…",
+      "at": ""
+    },
+    "menu_export_csv": {
+      "ht": "Export CSV…",
+      "at": ""
+    },
+    "import_csv_tooltip": {
+      "ht": "Bring edited strings back from a CSV file",
+      "at": ""
+    },
+    "export_csv_tooltip": {
+      "ht": "Save the rows the table shows to a CSV file",
+      "at": ""
     }
   },
   "filters": {
@@ -2465,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "Reset the window size, panel layout and String Editor column widths back to their defaults?\n\nYour saved sizes will be forgotten. Your settings and localization data are not affected.",
       "at": ""
+    },
+    "export_csv_title": {
+      "ht": "Export CSV",
+      "at": ""
+    },
+    "export_csv_empty_body": {
+      "ht": "The table shows no rows to export. Clear a filter and try again.",
+      "at": ""
+    },
+    "export_csv_done_body": {
+      "ht": "Saved {count} rows to:\n{path}",
+      "at": ""
+    },
+    "export_csv_failed_body": {
+      "ht": "Could not save the CSV file:\n{error}",
+      "at": ""
     }
   },
   "progress": {
@@ -2786,6 +2818,26 @@
     },
     "error_body": {
       "ht": "Failed to import INI file:\n{error}",
+      "at": ""
+    },
+    "select_csv_file_title": {
+      "ht": "Choose a CSV file",
+      "at": ""
+    },
+    "csv_file_filter": {
+      "ht": "CSV files (*.csv);;All files (*)",
+      "at": ""
+    },
+    "csv_columns_missing_title": {
+      "ht": "Can't Read This CSV",
+      "at": ""
+    },
+    "csv_columns_missing_body": {
+      "ht": "The file needs a Key column and a Custom Value column. Export a CSV from Smart Citizen to see the layout.",
+      "at": ""
+    },
+    "unchanged_skipped": {
+      "ht": "{count} skipped (empty, or the same as the original text).",
       "at": ""
     }
   },

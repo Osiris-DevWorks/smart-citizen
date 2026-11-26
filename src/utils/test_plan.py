@@ -167,6 +167,20 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "CSV export and import (#565)",
+        "items": [
+            "Filter the String Editor to Missions, then More > Export CSV: the saved file holds only the rows the table showed, in the same order.",
+            "Open the CSV in Excel: accents and other scripts show right, and the columns are Key, Category, Default Value, Current Value, Custom Value, Status.",
+            "Fill in Custom Value on a few rows, save as CSV, then More > Import CSV: the box counts the new keys and the skipped rows; after Yes those rows show Modified.",
+            "Save the CSV from Excel as plain CSV (not CSV UTF-8) with a ; separator and import it: it still reads.",
+            "Import a CSV whose Custom Value matches a row's Current Value (an Enhanced row): it is skipped and the row stays Enhanced.",
+            "Import a CSV that changes a key you already edited: the conflict box opens, as it does for Import INI.",
+            "Import a CSV with no Key or Custom Value column: one box says what the file needs, nothing changes.",
+            "Export INI, then Import INI that same file: nothing to import, and the box says how many were skipped.",
+            "Switch to German: both CSV items in More and their tooltips are in German.",
+        ],
+    },
+    {
         "title": "Portable build",
         "items": [
             "Unzip the portable build into a deep folder path, run it, extract, generate and apply: no path-length errors.",

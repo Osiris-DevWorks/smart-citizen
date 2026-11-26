@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Smart Citizen オーバーレイ (SCO) を開始または停止します：ゲーム画面上で採掘シグネチャを解読し、ブループリントドロワーを表示します。ボーダーレスウィンドウモードが必要です。"
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "CSV をインポート…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "CSV をエクスポート…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "CSV ファイルから編集した文字列を取り込みます"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "表に表示されている行を CSV ファイルに保存します"
     }
   },
   "filters": {
@@ -2465,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "ウィンドウサイズ、パネルのレイアウト、文字列エディターの列幅を既定値に戻しますか？\n\n保存されたサイズは破棄されます。設定とローカライズデータには影響しません。"
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "CSV をエクスポート"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "エクスポートする行が表に表示されていません。フィルターを解除してもう一度お試しください。"
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} 行を保存しました:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "CSV ファイルを保存できませんでした:\n{error}"
     }
   },
   "progress": {
@@ -2787,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "INI ファイルのインポートに失敗しました：\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "CSV ファイルを選択"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV ファイル (*.csv);;すべてのファイル (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "この CSV を読み込めません"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "ファイルには Key 列と Custom Value 列が必要です。Smart Citizen から CSV をエクスポートすると形式を確認できます。"
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} 件をスキップしました（空、または元のテキストと同じ）。"
     }
   },
   "restore_backup": {

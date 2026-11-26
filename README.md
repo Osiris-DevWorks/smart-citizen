@@ -121,7 +121,8 @@ The Config tab lets you set:
 - **Smart Citizen data folder** (where `user.ini`, cache, DataForge extraction, enhancement INIs, and backups live)
 - **Theme** and **Font size** (Small / Medium / Large; applies after a restart)
 - **Data sources**: enable/disable, drag-drop merge priority
-- **Import INI**: fold an external `.ini` into your overrides
+- **Import INI**: fold an external `.ini` into your overrides (empty values and values that match the original are skipped)
+- **Export / Import CSV** (More menu): save the rows the table shows to a CSV, edit the Custom Value column in a spreadsheet, and bring it back
 - **Reset / Restore user.ini**: wipe your edits for the channel (with an auto-backup), or roll them back to an earlier rotating snapshot
 - **Clear Shader Cache** (Star Citizen Tools): clean a build's shader cache in `%LOCALAPPDATA%\Star Citizen` (graphics settings kept), or remove the whole build folder
 

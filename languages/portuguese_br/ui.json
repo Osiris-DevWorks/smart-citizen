@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Iniciar ou parar a Sobreposição do Smart Citizen (SCO): decodificação de assinaturas de mineração e uma gaveta de blueprints sobre o jogo. Requer o modo janela sem bordas."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "Importar CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "Exportar CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Trazer os textos editados de um arquivo CSV"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Salvar as linhas que a tabela mostra em um arquivo CSV"
     }
   },
   "filters": {
@@ -2465,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Redefinir o tamanho da janela, o layout dos painéis e a largura das colunas do editor de strings para os padrões?\n\nOs tamanhos salvos serão esquecidos. Suas configurações e dados de localização não são afetados."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "Exportar CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "A tabela não mostra linhas para exportar. Limpe um filtro e tente de novo."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} linhas salvas em:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "Não foi possível salvar o arquivo CSV:\n{error}"
     }
   },
   "progress": {
@@ -2787,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "Falha ao importar o arquivo INI:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Escolha um arquivo CSV"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "Arquivos CSV (*.csv);;Todos os arquivos (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Não é possível ler este CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "O arquivo precisa de uma coluna Key e de uma coluna Custom Value. Exporte um CSV do Smart Citizen para ver o formato."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} ignoradas (vazias ou iguais ao texto original)."
     }
   },
   "restore_backup": {
