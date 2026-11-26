@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-from src.utils.atomic_io import atomic_write_text
+from src.utils.atomic_io import atomic_writer
 
 # The columns written, in order. Key and Custom Value are what import reads.
 COL_KEY = "Key"
@@ -79,7 +79,11 @@ def strings_csv_text(rows: Iterable[CsvRow]) -> str:
 def write_strings_csv(path: "str | Path", rows: Iterable[CsvRow]) -> int:
     """Write ``rows`` to ``path`` in one step; return how many were written."""
     rows = list(rows)
-    atomic_write_text(Path(path), "﻿" + strings_csv_text(rows), encoding="utf-8")
+    # Bytes, not text mode: text mode on Windows turns the CSV's own "\r\n"
+    # into "\r\r\n", a blank row after every row.
+    data = ("\ufeff" + strings_csv_text(rows)).encode("utf-8")
+    with atomic_writer(Path(path), "wb") as f:
+        f.write(data)
     return len(rows)
 
 
