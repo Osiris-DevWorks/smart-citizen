@@ -3194,6 +3194,10 @@
       "ht": "",
       "at": "Describe errores, sorpresas o sugerencias..."
     },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Notas (opcional)"
+    },
     "copied_status": {
       "ht": "",
       "at": "Informe copiado al portapapeles."

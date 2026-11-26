@@ -1,7 +1,8 @@
 """The side-docked Test Plan panel for testers (#144).
 
 An interactive checklist of what changed in the release. Testers check items
-off as they verify them; progress persists across launches, and the run can be
+off as they verify them and can write a short note under each one; progress
+and notes persist across launches, and the run can be
 copied to the clipboard or posted to a Discord webhook. Modelled on the Help
 dock (right-side `QDockWidget`); the plan content and report formatting live in
 the Qt-free `src/utils/test_plan.py`.
@@ -32,6 +33,11 @@ from src.utils.version import get_version
 
 logger = logging.getLogger(__name__)
 
+# A note is a short line, not a bug report: long feedback goes in the
+# free-text box at the bottom. Keeps a report's per-item line readable and
+# well inside one Discord message.
+NOTE_MAX_LENGTH = 200
+
 
 class _ClickableLabel(QLabel):
     """A word-wrapping label that emits ``clicked`` when pressed.
@@ -58,7 +64,9 @@ class TestPlanPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._checked = AppSettings.get_test_plan_checks()
+        self._item_notes = AppSettings.get_test_plan_item_notes()
         self._checkboxes: dict[str, QCheckBox] = {}
+        self._note_edits: dict[str, QLineEdit] = {}
         self._submit_worker = None
         self._build_ui()
         self._refresh_progress()
@@ -163,24 +171,39 @@ class TestPlanPanel(QWidget):
         self.reset_btn.setText(tr("test_plan.reset_btn"))
         self._notes_label.setText(tr("test_plan.notes_label"))
         self.notes_edit.setPlaceholderText(tr("test_plan.notes_placeholder"))
+        for edit in self._note_edits.values():
+            edit.setPlaceholderText(tr("test_plan.item_notes_placeholder"))
 
     def _make_check_row(self, key: str, text: str) -> QWidget:
-        """A checklist row: a text-less checkbox plus a word-wrapping label.
+        """A checklist row: a text-less checkbox, a word-wrapping label and,
+        under the label, a one-line notes box for that item.
 
         QCheckBox can't wrap its own label, so the wrapping text lives in a
         sibling label; clicking either the box or the text toggles the item.
+        The note is saved when the box loses focus and goes into the report
+        under the item's line.
         """
         row = QWidget()
         hb = QHBoxLayout(row)
         hb.setContentsMargins(0, 0, 0, 0)
+        text_col = QVBoxLayout()
+        text_col.setContentsMargins(0, 0, 0, 0)
         cb = QCheckBox()
         cb.setChecked(key in self._checked)
         cb.toggled.connect(lambda checked, k=key: self._on_toggle(k, checked))
         label = _ClickableLabel(text)
         label.clicked.connect(cb.toggle)
+        note = QLineEdit(self._item_notes.get(key, ""))
+        note.setPlaceholderText(tr("test_plan.item_notes_placeholder"))
+        note.setMaxLength(NOTE_MAX_LENGTH)
+        note.setClearButtonEnabled(True)
+        note.editingFinished.connect(self._save_item_notes)
+        text_col.addWidget(label)
+        text_col.addWidget(note)
         hb.addWidget(cb, 0, Qt.AlignmentFlag.AlignTop)
-        hb.addWidget(label, 1)
+        hb.addLayout(text_col, 1)
         self._checkboxes[key] = cb
+        self._note_edits[key] = note
         return row
 
     # ── state ─────────────────────────────────────────────────────────────────
@@ -191,6 +214,20 @@ class TestPlanPanel(QWidget):
             self._checked.discard(key)
         AppSettings.set_test_plan_checks(self._checked)
         self._refresh_progress()
+
+    def _current_item_notes(self) -> dict[str, str]:
+        """Each item's note as typed now, blank ones left out."""
+        return {
+            key: edit.text().strip()
+            for key, edit in self._note_edits.items()
+            if edit.text().strip()
+        }
+
+    def _save_item_notes(self) -> None:
+        notes = self._current_item_notes()
+        if notes != self._item_notes:
+            self._item_notes = notes
+            AppSettings.set_test_plan_item_notes(notes)
 
     def _refresh_progress(self) -> None:
         done, total, pct = test_plan.progress(self._checked)
@@ -204,10 +241,12 @@ class TestPlanPanel(QWidget):
             self.tester_edit.text(),
             get_version(),
             notes=self.notes_edit.toPlainText(),
+            item_notes=self._current_item_notes(),
         )
 
     # ── actions ─────────────────────────────────────────────────────────────
     def _copy_report(self) -> None:
+        self._save_item_notes()
         report = self._build_report()
         try:
             import pyperclip
@@ -225,10 +264,17 @@ class TestPlanPanel(QWidget):
             cb.blockSignals(True)
             cb.setChecked(False)
             cb.blockSignals(False)
+        for edit in self._note_edits.values():
+            edit.blockSignals(True)
+            edit.clear()
+            edit.blockSignals(False)
+        self._item_notes = {}
+        AppSettings.set_test_plan_item_notes({})
         self._refresh_progress()
         self.status_label.setText(tr("test_plan.reset_status"))
 
     def _submit(self) -> None:
+        self._save_item_notes()
         webhook = AppSettings.get_test_webhook_url()
         if not webhook:
             self.status_label.setText(tr("test_plan.no_webhook_status"))

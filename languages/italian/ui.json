@@ -3194,6 +3194,10 @@
       "ht": "",
       "at": "Descrivi eventuali bug, sorprese o suggerimenti..."
     },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Note (facoltative)"
+    },
     "copied_status": {
       "ht": "",
       "at": "Report copiato negli appunti."

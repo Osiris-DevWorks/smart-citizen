@@ -3194,6 +3194,10 @@
       "ht": "",
       "at": "Décrivez bugs, surprises ou suggestions..."
     },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Notes (facultatif)"
+    },
     "copied_status": {
       "ht": "",
       "at": "Rapport copié dans le presse-papiers."

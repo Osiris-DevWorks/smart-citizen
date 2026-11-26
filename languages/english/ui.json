@@ -3194,6 +3194,10 @@
       "ht": "Describe any bugs, surprises, or suggestions...",
       "at": ""
     },
+    "item_notes_placeholder": {
+      "ht": "Notes (optional)",
+      "at": ""
+    },
     "copied_status": {
       "ht": "Report copied to clipboard.",
       "at": ""
