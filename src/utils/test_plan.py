@@ -43,6 +43,14 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Apply when Windows blocks the game file",
+        "items": [
+            "Right-click the game's global.ini, tick Read-only, then Apply: it works, and the file is no longer read-only.",
+            "Start Star Citizen, then Apply: the box says the game is running and to close it.",
+            "With the game in Program Files, turn on Controlled folder access in Windows Security, then Apply: the box lists the steps to try instead of an Errno 13 error.",
+        ],
+    },
+    {
         "title": "Blueprint scan in other languages (#564)",
         "items": [
             "Select Spanish, apply, and receive a blueprint in game. Scan Logs for Owned Blueprints: it is added to Owned.",
@@ -167,6 +175,15 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "README badges (#601)",
+        "items": [
+            "Open the README on GitHub: a row of five badges sits under the title (Windows, Linux (Wine), version, license, VirusTotal).",
+            "Click the Linux (Wine) badge: it opens the Linux guide. Click the version badge: it opens Releases.",
+            "After the 3.1.0 release is published: the version badge reads v3.1.0 and the VirusTotal badge opens the 3.1.0 installer's scan.",
+            "The 3.1.0 release notes on GitHub have no VirusTotal links added at the end.",
+        ],
+    },
+    {
         "title": "Portable build",
         "items": [
             "Unzip the portable build into a deep folder path, run it, extract, generate and apply: no path-length errors.",
@@ -217,13 +234,21 @@ def progress(checked) -> tuple[int, int, int]:
     return done, total, pct
 
 
-def build_report(checked, tester_name: str, version: str, notes: str = "") -> str:
+def build_report(
+    checked,
+    tester_name: str,
+    version: str,
+    notes: str = "",
+    item_notes: dict | None = None,
+) -> str:
     """Render the tester's run as a markdown report (clipboard or Discord).
 
     Shows overall and per-section progress and a ✅/⬜ line per item, so a
-    reader sees exactly what was and wasn't verified.
+    reader sees exactly what was and wasn't verified. A tester's note on an
+    item (*item_notes*, keyed by ``item_key``) follows that item's line.
     """
     checked = set(checked)
+    item_notes = item_notes or {}
     done, total, pct = progress(checked)
     tester = tester_name.strip() or "Anonymous"
     lines = [
@@ -237,8 +262,12 @@ def build_report(checked, tester_name: str, version: str, notes: str = "") -> st
         sec_done = sum(1 for k in sec_keys if k in checked)
         lines.append(f"__{section['title']}__ ({sec_done}/{len(sec_keys)})")
         for i, text in enumerate(section["items"]):
-            mark = "✅" if item_key(s, i) in checked else "⬜"
+            key = item_key(s, i)
+            mark = "✅" if key in checked else "⬜"
             lines.append(f"{mark} {text}")
+            note = " ".join(str(item_notes.get(key, "")).split())
+            if note:
+                lines.append(f"> 📝 {note}")
         lines.append("")
     notes = notes.strip()
     if notes:

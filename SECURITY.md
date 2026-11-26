@@ -16,7 +16,7 @@ Only the latest release gets security fixes. Please update before reporting.
 
 Download Smart Citizen only from the [GitHub releases page](https://github.com/Osiris-DevWorks/smart-citizen/releases).
 
-Each release lists VirusTotal scan links for its files in the release notes. You can also check that a file was built by this repository's release workflow:
+The VirusTotal badge at the top of the README opens the scan of the latest installer. You can also check that a file was built by this repository's release workflow:
 
 ```
 gh attestation verify SmartCitizen-X.Y.Z-Setup.exe --repo Osiris-DevWorks/smart-citizen

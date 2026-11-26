@@ -3171,6 +3171,18 @@
     "failed_body": {
       "ht": "",
       "at": "Anwenden auf das Spiel fehlgeschlagen: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows hat den Spielordner blockiert"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen konnte nicht schreiben in:\n{path}\n\nStar Citizen läuft und hat die Datei geöffnet. Schließe das Spiel und klicke dann erneut auf Anwenden."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen nicht erlaubt, zu schreiben in:\n{path}\n\nVersuche Folgendes und klicke dann erneut auf Anwenden:\n1. Schließe Star Citizen und den RSI Launcher.\n2. Öffne in Windows-Sicherheit Viren- & Bedrohungsschutz > Ransomware-Schutz und erlaube Smart Citizen im überwachten Ordnerzugriff. Erlaube es auch in jedem anderen Virenschutz.\n3. Wenn das Spiel unter Program Files liegt, klicke mit der rechten Maustaste auf Smart Citizen und wähle Als Administrator ausführen."
     }
   },
   "test_plan": {
@@ -3209,6 +3221,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "Beschreibe Fehler, Überraschungen oder Vorschläge..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Notizen (optional)"
     },
     "copied_status": {
       "ht": "",

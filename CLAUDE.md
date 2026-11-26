@@ -183,6 +183,7 @@ Anchor examples already in-tree: `COL_*` constants in `src/gui/string_table_mode
 | Change table model | `src/gui/string_table_model.py`, `src/gui/main_window.py` | `StringTableModel`, `COL_*` constants, `setup_string_table()` |
 | Modify auto-update | `src/utils/updater.py` | `check_for_updates()`, `download_base_file()` |
 | Change backup behavior | `src/gui/main_window.py` | `manage_backups()` |
+| Change what Apply says when Windows refuses the game folder (Errno 13) | `src/gui/main_window.py`, `src/merger/ini_merger.py`, `src/utils/read_only.py` | the `except PermissionError` in `apply_to_game()` and `_show_game_folder_refused()` (`apply.refused_game_running_body` when `shader_cache.is_star_citizen_running()`, else `apply.refused_body`); `merge_ini_files` re-raises a `PermissionError` unwrapped; `clear_read_only()` before the write and on each backup |
 | Modify P4K extraction | `src/utils/pak_extractor.py` | `extract_dataforge()` |
 | Change the extraction free-space check | `src/utils/pak_extractor.py` | `_require_free_space()`, `_dataforge_needs()`, `_require_room_for_new_cache()`, the #482 constants |
 | Change how a folder tree is deleted (working folder, old cache, Clear Cache, queued cleanup) | `src/utils/pak_extractor.py` | `robust_rmtree()`, `_delete_files_first()` (the threaded file pass, #522), `_DELETE_THREADS` |
@@ -296,7 +297,7 @@ The branching model above is enforced by GitHub settings, not just convention. D
 
 **Code signing**: `release.yml` signs `SmartCitizen.exe` (with the bundled unp4k/unforge), the installer and the portable `.exe` files through Azure Artifact Signing, then zips the portable folder again (`build_exe.py --portable --zip-only`). It runs only when the `AZURE_SIGNING_ACCOUNT` repository variable is set; the job uses the `release` environment so the Azure federated credential has one subject. Inno signs the installer and its uninstaller itself through `scripts/build/sign_file.ps1` (`/DSIGN` turns on `SignTool=azure` in `installer.iss`).
 
-**Download checks**: every release gets a build provenance attestation for the installer and the portable zip (`gh attestation verify <file> --repo Osiris-DevWorks/smart-citizen`), and, when the `VIRUSTOTAL_API_KEY` secret is set, a VirusTotal scan whose links are added to the release notes. Security reports go through `SECURITY.md` (GitHub private vulnerability reporting).
+**Download checks**: every release gets a build provenance attestation for the installer and the portable zip (`gh attestation verify <file> --repo Osiris-DevWorks/smart-citizen`), and, when the `VIRUSTOTAL_API_KEY` secret is set, a VirusTotal scan. The README's VirusTotal badge links to `https://osiris-devworks.github.io/smart-citizen/virustotal/`, a redirect page on the `gh-pages` branch that the release workflow rewrites to the installer's newest scan (#601); the release notes no longer carry scan links, and the README never needs a hand edit. Security reports go through `SECURITY.md` (GitHub private vulnerability reporting).
 
 Discord notification fires via GitHub Actions (`scripts/discord_notify.py`) when `DISCORD_RELEASE_WEBHOOK_URL` secret is set.
 

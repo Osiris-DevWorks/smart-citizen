@@ -88,7 +88,18 @@ def build_main_window(tmp_dir, patch, mode: str, language: str | None = None):
 
 
 def retire_main_window(window) -> None:
-    """Detach the root-logger handler and hide the window. Never destroys it."""
+    """Detach the root-logger handler, wait for the already-applied check and
+    hide the window. Never destroys it.
+
+    The check (``AppliedStateWorker``) reads ``AppSettings`` on its own thread.
+    Left running, it could still be reading when the next test's monkeypatch
+    teardown swapped the settings store, and Windows killed the run with an
+    access violation in ``_compute_already_applied``. ``closeEvent`` settles it
+    the same way; a retired window is never closed, so it is settled here.
+    Reported by CircuitGuy on #615."""
+    settle = getattr(window, "_settle_applied_state_check", None)
+    if settle is not None:
+        settle()
     handler = getattr(window, "_error_dialog_handler", None)
     if handler is not None:
         logging.getLogger().removeHandler(handler)

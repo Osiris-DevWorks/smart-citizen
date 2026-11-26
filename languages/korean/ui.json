@@ -3171,6 +3171,18 @@
     "failed_body": {
       "ht": "",
       "at": "게임에 적용하지 못했습니다: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows가 게임 폴더를 차단했습니다"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen이 다음 위치에 쓰지 못했습니다:\n{path}\n\nStar Citizen이 실행 중이며 파일을 열고 있습니다. 게임을 닫은 다음 적용을 다시 클릭하세요."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows가 Smart Citizen이 다음 위치에 쓰는 것을 허용하지 않았습니다:\n{path}\n\n다음을 시도한 다음 적용을 다시 클릭하세요:\n1. Star Citizen과 RSI Launcher를 닫습니다.\n2. Windows 보안에서 바이러스 및 위협 방지 > 랜섬웨어 방지를 열고 제어된 폴더 액세스에서 Smart Citizen을 허용합니다. 다른 백신 프로그램에서도 허용하세요.\n3. 게임이 Program Files에 있으면 Smart Citizen을 마우스 오른쪽 버튼으로 클릭하고 관리자 권한으로 실행을 선택합니다."
     }
   },
   "test_plan": {
@@ -3209,6 +3221,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "버그, 예상 밖의 상황, 또는 제안 사항을 설명하세요..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "메모 (선택 사항)"
     },
     "copied_status": {
       "ht": "",

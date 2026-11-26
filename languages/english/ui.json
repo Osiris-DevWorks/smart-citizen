@@ -3171,6 +3171,18 @@
     "failed_body": {
       "ht": "Failed to apply to game: {error}",
       "at": ""
+    },
+    "refused_title": {
+      "ht": "Windows Blocked the Game Folder",
+      "at": ""
+    },
+    "refused_game_running_body": {
+      "ht": "Smart Citizen could not write to:\n{path}\n\nStar Citizen is running and has the file open. Close the game, then click Apply again.",
+      "at": ""
+    },
+    "refused_body": {
+      "ht": "Windows did not let Smart Citizen write to:\n{path}\n\nTry these, then click Apply again:\n1. Close Star Citizen and the RSI Launcher.\n2. In Windows Security, open Virus & threat protection > Ransomware protection and allow Smart Citizen through Controlled folder access. Allow it in any other antivirus too.\n3. If the game is in Program Files, right-click Smart Citizen and choose Run as administrator.",
+      "at": ""
     }
   },
   "test_plan": {
@@ -3208,6 +3220,10 @@
     },
     "notes_placeholder": {
       "ht": "Describe any bugs, surprises, or suggestions...",
+      "at": ""
+    },
+    "item_notes_placeholder": {
+      "ht": "Notes (optional)",
       "at": ""
     },
     "copied_status": {
