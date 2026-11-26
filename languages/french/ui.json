@@ -1682,6 +1682,10 @@
       "ht": "",
       "at": "Étiquette de filière de réputation (ajoute « (Security) » / « (Contractor) » à l'étiquette Rep)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP terminés (ajoute « [BP Complete] »)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missions de scan/minage"
@@ -3143,6 +3147,10 @@
     "applied_body": {
       "ht": "",
       "at": "Appliqué à {target_path}\n\n  Modifications utilisateur : {user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Missions marquées [BP Complete] : {count}"
     },
     "failed_body": {
       "ht": "",

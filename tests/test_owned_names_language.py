@@ -595,6 +595,9 @@ class _Window:
     _rename_imported_names = MainWindow._rename_imported_names
     _owned_names_from_log = MainWindow._owned_names_from_log
 
+    def _read_mission_bp_descs(self):
+        """The [BP Complete] record is not what these tests are about."""
+
     def __init__(self):
         self.entries = []
         self.default_values = {}

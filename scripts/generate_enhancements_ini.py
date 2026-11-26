@@ -134,6 +134,10 @@ try:
     if str(_gen_root) not in sys.path:
         sys.path.insert(0, str(_gen_root))
     from src.utils.blueprint_meta import strip_raw_blueprint_filename_prefix
+    # The [BP Complete] title tag's record of each mission's descriptions.
+    from src.utils.blueprint_meta import (
+        MISSION_BLUEPRINT_DESCS_FILE, write_mission_blueprint_descs,
+    )
     # The DataForge cache layout, which pak_extractor (the module that
     # writes it) names once for every reader, and the lookup pickle folder
     # in it, whose leftover temps EnhancementsGeneratorWorker sweeps.
@@ -151,6 +155,7 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
     ORE_SIGNATURES = {}  # type: ignore[assignment]
     _MINING_COMPENDIUM_ORE_ALIASES = {"savrilium": "savrillium"}
     CRAFTING_INDEX_FILE = None  # type: ignore[assignment]
+    MISSION_BLUEPRINT_DESCS_FILE = None  # type: ignore[assignment]
     def strip_raw_blueprint_filename_prefix(stem):  # type: ignore[misc]
         for prefix in ("bp_craft_", "bp_rewards_", "bp_"):
             if stem.lower().startswith(prefix):
@@ -8122,6 +8127,8 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
     # SingleToMultiToken) recurs across many titles and each expansion scans
     # every loc key for the suffix match.
     _route_expand_cache: dict = {}
+    # Filled below, written by main() next to the mission INI.
+    mission_bp_descs: dict = ctx.setdefault("mission_blueprint_descs", {})
     for title_key, variants in contractgen_missions.items():
         base_title = (loc or {}).get(title_key)
         is_discovered_title = not base_title
@@ -8292,6 +8299,15 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
             # dropped because there is no distinct key to hold it.
             if dk and dk != title_key and dk not in unique_desc_keys:
                 unique_desc_keys.append(dk)
+        # The [BP Complete] title tag's record of a blueprint mission's
+        # descriptions (blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE, which
+        # says why it is a file). Only the contract data here knows which
+        # descriptions a title has, so it is recorded now. Whether the
+        # mission is complete is not: the app reads each description's
+        # POTENTIAL BLUEPRINTS list from the loaded strings, so the tag
+        # follows the Owned set with no new generation.
+        if has_blueprints and unique_desc_keys:
+            mission_bp_descs[title_key] = sorted(unique_desc_keys)
 
         for desc_key in unique_desc_keys:
             desc_variants = [v for v in variants if v.desc_key == desc_key]
@@ -9088,6 +9104,8 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         # Filled by the commodity/journal generator for the SCO drawer.
         "crafting_index":    {},
         "crafting_order":    {},
+        # Filled by the missions generator for the [BP Complete] title tag.
+        "mission_blueprint_descs": {},
     }
 
     gen_jobs: dict[str, Callable] = {}
@@ -9199,6 +9217,13 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
                   {**out_fps_weapons, **out_armor})
     if _want("mission_rewards"):
         write_ini(output_dir / "mission_rewards_enhancements.ini", out_missions)
+        # Beside the INI and from the same run, so the record never names
+        # descriptions an older INI wrote. This is the only place the record
+        # is written; the app only reads it.
+        if MISSION_BLUEPRINT_DESCS_FILE:
+            write_mission_blueprint_descs(
+                output_dir / MISSION_BLUEPRINT_DESCS_FILE, ctx["mission_blueprint_descs"],
+            )
     if _want("commodity_crafting"):
         write_ini(output_dir / "commodity_crafting_enhancements.ini", out_commodities)
     if _want("journal"):

@@ -1670,6 +1670,10 @@
       "ht": "",
       "at": "聲望軌道標籤（在聲望標籤後新增“(Security)” / “(Contractor)”）"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "藍圖已完成（新增“[BP Complete]”）"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "掃描/採礦任務"
@@ -3143,6 +3147,10 @@
     "applied_body": {
       "ht": "",
       "at": "已應用到 {target_path}\n\n  使用者編輯數：{user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "標記為 [BP Complete] 的任務：{count}"
     },
     "failed_body": {
       "ht": "",

@@ -1670,6 +1670,10 @@
       "ht": "",
       "at": "評判トラックタグ（評判タグの後に「(Security)」「(Contractor)」を追加）"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "設計図コンプリート（「[BP Complete]」を追加）"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "スキャン/採掘任務"
@@ -3143,6 +3147,10 @@
     "applied_body": {
       "ht": "",
       "at": "{target_path} に適用しました\n\n  ユーザー編集数：{user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "[BP Complete] が付いたミッション: {count}"
     },
     "failed_body": {
       "ht": "",

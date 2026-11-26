@@ -1682,6 +1682,10 @@
       "ht": "",
       "at": "Etiqueta de línea de reputación (añade «(Security)» / «(Contractor)» a la etiqueta Rep)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP completados (añade «[BP Complete]»)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Misiones de escaneo/minería"
@@ -3143,6 +3147,10 @@
     "applied_body": {
       "ht": "",
       "at": "Aplicado en {target_path}\n\n  Ediciones del usuario: {user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Misiones marcadas [BP Complete]: {count}"
     },
     "failed_body": {
       "ht": "",

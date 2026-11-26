@@ -267,13 +267,18 @@ class _InputsWindow:
 
     _apply_merge_inputs = MainWindow._apply_merge_inputs
     _build_apply_merged_dict = MainWindow._build_apply_merged_dict
+    _bp_complete_record = MainWindow._bp_complete_record
 
-    def __init__(self, entries, bp_header=None):
+    def __init__(self, entries, bp_header=None, mission_bp_descs=None):
         self.entries = entries
         self._header = bp_header
+        self._mission_bp_descs = mission_bp_descs or {}
 
     def _bp_header(self):
         return self._header
+
+    def _read_mission_bp_descs(self):
+        """The record is handed in; the real method reads it from disk."""
 
 
 @pytest.fixture

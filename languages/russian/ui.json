@@ -1682,6 +1682,10 @@
       "ht": "",
       "at": "Тег трека репутации (добавляет «(Security)» / «(Contractor)» к тегу репутации)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP собраны (добавляет «[BP Complete]»)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Миссии сканирования/добычи"
@@ -3143,6 +3147,10 @@
     "applied_body": {
       "ht": "",
       "at": "Применено к {target_path}\n\n  Правок пользователя: {user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Миссии с отметкой [BP Complete]: {count}"
     },
     "failed_body": {
       "ht": "",
