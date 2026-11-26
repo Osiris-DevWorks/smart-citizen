@@ -105,7 +105,7 @@ class TestStatusChecksWithUnusableCache:
         """A cache that is already there needs no new folder, so a folder
         above it that refuses new ones changes nothing."""
         from src.utils.pak_extractor import (
-            DATAFORGE_LIBS_SUBPATH, P4K_MTIME_STAMP, P4K_SIZE_STAMP,
+            DATAFORGE_LIBS_SUBPATH, DATAFORGE_TAGS_FILE, P4K_MTIME_STAMP, P4K_SIZE_STAMP,
         )
 
         p4k = tmp_profile / "StarCitizen" / "LIVE" / "Data.p4k"
@@ -116,6 +116,7 @@ class TestStatusChecksWithUnusableCache:
         (leaf / DATAFORGE_LIBS_SUBPATH / "record.xml").write_text("<x/>", encoding="utf-8")
         (leaf / P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
         (leaf / P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
+        (leaf / DATAFORGE_TAGS_FILE).write_text("{}")
         AppSettings.set_cache_dir(base)
         with new_folders_denied(base, base / "LIVE", base / "LIVE" / "cache", leaf):
             tab = _new_tab()

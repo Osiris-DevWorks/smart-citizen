@@ -465,6 +465,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "Yok"
+    },
     "Objectives": {
       "ht": "",
       "at": "Hedefler"
@@ -765,6 +769,10 @@
       "ht": "",
       "at": "Evet"
     },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "iptal: {time}"
+    },
     "base": {
       "ht": "",
       "at": "temel"
@@ -801,6 +809,14 @@
       "ht": "",
       "at": "çıkış"
     },
+    "variant {n}": {
+      "ht": "",
+      "at": "varyant {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "varyantlar {n}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} eşya"
@@ -812,6 +828,18 @@
     "{count} types": {
       "ht": "",
       "at": "{count} tür"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} veya {last}"
+    },
+    "{items}, or {last}": {
+      "ht": "",
+      "at": "{items}, veya {last}"
+    },
+    "{items}; and {last}": {
+      "ht": "",
+      "at": "{items}; ve {last}"
     },
     "{item} Set": {
       "ht": "",

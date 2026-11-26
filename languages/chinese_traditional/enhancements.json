@@ -465,6 +465,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "無"
+    },
     "Objectives": {
       "ht": "",
       "at": "目標"
@@ -765,6 +769,10 @@
       "ht": "",
       "at": "是"
     },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "放棄：{time}"
+    },
     "base": {
       "ht": "",
       "at": "基礎"
@@ -801,6 +809,14 @@
       "ht": "",
       "at": "上升"
     },
+    "variant {n}": {
+      "ht": "",
+      "at": "變體 {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "變體 {n}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} 件物品"
@@ -812,6 +828,18 @@
     "{count} types": {
       "ht": "",
       "at": "{count} 種"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items}或{last}"
+    },
+    "{items}, or {last}": {
+      "ht": "",
+      "at": "{items}，或{last}"
+    },
+    "{items}; and {last}": {
+      "ht": "",
+      "at": "{items}；以及{last}"
     },
     "{item} Set": {
       "ht": "",

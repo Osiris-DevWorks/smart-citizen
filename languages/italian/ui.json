@@ -1526,6 +1526,10 @@
       "ht": "",
       "at": "Pilota Asso"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Ricarica"
+    },
     "mission_detail_fields_note": {
       "ht": "",
       "at": "I campi deselezionati vengono esclusi dalle descrizioni delle missioni. Si applica al prossimo Genera Miglioramenti."

@@ -121,6 +121,7 @@ class TestPakExtractorLongPath:
         libs.mkdir(parents=True)
         (libs / "a.xml").write_text("<x/>")
         (cache_dir / ".p4k_mtime").write_text("2000000000")
+        (cache_dir / "tag_database.json").write_text("{}")
 
         with patch(
             "src.utils.pak_extractor._win_long_path", wraps=win_long_path

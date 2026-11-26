@@ -465,6 +465,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "Nessuno"
+    },
     "Objectives": {
       "ht": "",
       "at": "Obiettivi"
@@ -765,6 +769,10 @@
       "ht": "",
       "at": "Sì"
     },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "abbandono: {time}"
+    },
     "base": {
       "ht": "",
       "at": "base"
@@ -801,6 +809,14 @@
       "ht": "",
       "at": "salita"
     },
+    "variant {n}": {
+      "ht": "",
+      "at": "variante {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "varianti {n}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} oggetti"
@@ -812,6 +828,18 @@
     "{count} types": {
       "ht": "",
       "at": "{count} tipi"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} o {last}"
+    },
+    "{items}, or {last}": {
+      "ht": "",
+      "at": "{items}, o {last}"
+    },
+    "{items}; and {last}": {
+      "ht": "",
+      "at": "{items}; e {last}"
     },
     "{item} Set": {
       "ht": "",

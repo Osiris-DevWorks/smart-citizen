@@ -74,7 +74,7 @@ import pytest
 
 import src.utils.pak_extractor as pe
 from src.utils.onedrive import _ONEDRIVE_ENV_VARS
-from src.utils.win_paths import win_long_path
+from src.utils.win_paths import win_long_path, win_plain_path
 from tests.unusable_folder import new_folders_denied
 
 pytestmark = [
@@ -614,6 +614,55 @@ def _fake_records_are_excluded(monkeypatch):
                         pe.DATAFORGE_EXCLUDE_SUBPATHS + _FAKE_EXCLUDED)
 
 
+@pytest.fixture(autouse=True)
+def _tag_tree_saved_quietly(monkeypatch):
+    """_FakeTools' Game2.dcb is a few bytes, which the real tag read rightly
+    warns about, and many tests here pin a run with nothing at WARNING. So
+    the read saves an empty tree; TestTheTagTree runs the real one."""
+    def save(dcb_path, out_path, write_text):
+        write_text(out_path, "{}")
+        return None
+    monkeypatch.setattr(pe, "write_tag_database", save)
+
+
+class TestTheTagTree:
+    def test_it_is_read_from_the_runs_dcb_and_saved_beside_the_cache(self, setup, monkeypatch):
+        leaf, run = setup
+        seen = []
+
+        def save(dcb_path, out_path, write_text):
+            seen.append((Path(dcb_path), Path(out_path), dcb_path.exists()))
+            write_text(out_path, "{}")
+
+        monkeypatch.setattr(pe, "write_tag_database", save)
+        fake = _FakeTools()
+        assert run(fake) is True
+        run_dir = Path(next(cwd for _tool, _args, cwd in fake.calls))
+        assert len(seen) == 1
+        dcb, out, existed = seen[0]
+        assert dcb.name == "Game2.dcb" and Path(win_plain_path(dcb)).parent.parent == run_dir
+        assert existed
+        assert Path(win_plain_path(out)) == Path(win_plain_path(leaf / pe.DATAFORGE_TAGS_FILE))
+
+    def test_a_dcb_it_cannot_read_saves_no_tags_and_keeps_the_cache_fresh(
+            self, setup, monkeypatch, caplog):
+        """The real read on _FakeTools' few-byte Game2.dcb: one WARNING, the
+        file saved with no tags and the error, and the cache stamped fresh,
+        so the next start does not ask to extract again."""
+        from src.utils import dcb_tags
+        monkeypatch.setattr(pe, "write_tag_database", dcb_tags.write_tag_database)
+        leaf, run = setup
+        caplog.set_level(logging.WARNING)
+        assert run(_FakeTools()) is True
+        saved = json.loads((leaf / pe.DATAFORGE_TAGS_FILE).read_text(encoding="utf-8"))
+        assert saved["tags"] == {} and "DcbFormatError" in saved["error"]
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1 and "tag tree" in warnings[0]
+        assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+        p4k = leaf.parents[3] / "tools" / "Data.p4k"
+        assert pe.dataforge_cache_is_fresh(p4k, leaf)
+
+
 def _working_records(run_dir: Path) -> Path:
     """Where _FakeTools' unforge writes the records in the working folder."""
     return run_dir / "Data" / "libs" / "foundry" / "records"
@@ -714,6 +763,7 @@ def _stamp_old_cache(leaf: Path) -> Path:
     (kept / "x.xml").write_text("<x/>", encoding="utf-8")
     (leaf / pe.P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
     (leaf / pe.P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
+    (leaf / pe.DATAFORGE_TAGS_FILE).write_text("{}")
     assert pe.dataforge_cache_is_fresh(p4k, leaf)
     return p4k
 
@@ -1118,6 +1168,7 @@ class TestExtractDataforgeWorkingFolder:
             (records / rel / "x.xml").write_text("<x/>", encoding="utf-8")
         (leaf / pe.P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
         (leaf / pe.P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
+        (leaf / pe.DATAFORGE_TAGS_FILE).write_text("{}")
         assert pe.dataforge_cache_is_fresh(p4k, leaf)
         real_rmtree = pe.robust_rmtree
 

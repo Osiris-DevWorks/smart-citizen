@@ -465,6 +465,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "なし"
+    },
     "Objectives": {
       "ht": "",
       "at": "目標"
@@ -765,6 +769,10 @@
       "ht": "",
       "at": "あり"
     },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "破棄：{time}"
+    },
     "base": {
       "ht": "",
       "at": "通常"
@@ -801,6 +809,14 @@
       "ht": "",
       "at": "上昇"
     },
+    "variant {n}": {
+      "ht": "",
+      "at": "バリアント {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "バリアント {n}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} アイテム"
@@ -812,6 +828,18 @@
     "{count} types": {
       "ht": "",
       "at": "{count} 種類"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items}または{last}"
+    },
+    "{items}, or {last}": {
+      "ht": "",
+      "at": "{items}、または{last}"
+    },
+    "{items}; and {last}": {
+      "ht": "",
+      "at": "{items}、および{last}"
     },
     "{item} Set": {
       "ht": "",

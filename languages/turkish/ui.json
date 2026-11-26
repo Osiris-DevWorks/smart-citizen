@@ -1530,6 +1530,10 @@
       "ht": "",
       "at": "As Pilot"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Bekleme"
+    },
     "mission_field_resource_signatures": {
       "ht": "",
       "at": "Kaynak İmzaları"

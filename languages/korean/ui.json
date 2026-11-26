@@ -1530,6 +1530,10 @@
       "ht": "",
       "at": "에이스 파일럿"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "재사용 대기"
+    },
     "mission_field_resource_signatures": {
       "ht": "",
       "at": "자원 신호"

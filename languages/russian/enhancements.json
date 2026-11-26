@@ -465,6 +465,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "Нет"
+    },
     "Objectives": {
       "ht": "",
       "at": "Цели"
@@ -765,6 +769,10 @@
       "ht": "",
       "at": "Да"
     },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "отказ: {time}"
+    },
     "base": {
       "ht": "",
       "at": "базовая"
@@ -801,6 +809,14 @@
       "ht": "",
       "at": "разгон"
     },
+    "variant {n}": {
+      "ht": "",
+      "at": "вариант {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "варианты {n}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} шт."
@@ -812,6 +828,18 @@
     "{count} types": {
       "ht": "",
       "at": "{count} типов"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} или {last}"
+    },
+    "{items}, or {last}": {
+      "ht": "",
+      "at": "{items}, или {last}"
+    },
+    "{items}; and {last}": {
+      "ht": "",
+      "at": "{items}; и {last}"
     },
     "{item} Set": {
       "ht": "",

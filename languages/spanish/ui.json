@@ -1530,6 +1530,10 @@
       "ht": "",
       "at": "Piloto Ace"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Enfriamiento"
+    },
     "mission_field_resource_signatures": {
       "ht": "",
       "at": "Firmas de Recursos"

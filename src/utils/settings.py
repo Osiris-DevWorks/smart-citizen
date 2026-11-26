@@ -482,7 +482,7 @@ class AppSettings:
     # MISSION_TITLE_TAG_KEYS below with the other title-only toggles.
     MISSION_FIELD_KEYS = (
         "mission_type", "difficulty", "spawns", "reputation",
-        "blueprints", "ace", "resource_signatures",
+        "blueprints", "ace", "resource_signatures", "cooldown",
     )
     _MISSION_FIELD_SETTING = {
         "mission_type":  "mission_field/mission_type",
@@ -502,6 +502,9 @@ class AppSettings:
         # which patches the ore's own display name instead of adding a body
         # line -- a user can have either, both, or neither.
         "resource_signatures": "mission_field/resource_signatures",
+        # The mission's personal cooldown ("Cooldown: 1 h", with the abandon
+        # cooldown when it differs), read from each contract's availability.
+        "cooldown": "mission_field/cooldown",
     }
 
     # Mission TITLE tags (2.2.0, "General Tags" section): independent of the

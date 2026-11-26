@@ -52,6 +52,8 @@ def _make_variant(
     contract_bp_variant: str,
     rank_name: str,
     rep_track: str,
+    roster: tuple = (),
+    cooldown: tuple | None = None,
 ) -> tuple:
     return (
         system_name,
@@ -66,6 +68,8 @@ def _make_variant(
         contract_bp_variant,
         rank_name,
         rep_track,
+        roster,
+        cooldown,
     )
 
 
@@ -90,6 +94,8 @@ class TestMissionVariantTupleShape:
             contract_bp_variant="hard",
             rank_name="Rookie",
             rep_track="Security",
+            roster=(("hostile", "Pirates", 4),),
+            cooldown=(30, 5),
         )
         fields = gen_module.ContractVariant._fields
         assert len(values) == len(fields), (
@@ -110,6 +116,8 @@ class TestMissionVariantTupleShape:
             "bp_variant": "hard",
             "rank_name": "Rookie",
             "rep_track": "Security",
+            "roster": (("hostile", "Pirates", 4),),
+            "cooldown": (30, 5),
         }
 
 
@@ -119,6 +127,8 @@ class TestMissionVariantTupleShape:
 _CONTRACT_GEN_XML = """\
 <ContractGenerator>
   <ContractGeneratorHandler_Career debugName="Test_Handler">
+    <defaultAvailability hasPersonalCooldown="1" personalCooldownTime="30"
+                         abandonedCooldownTime="5" />
     <CareerContract debugName="Pyro_Intro_Test" minStanding="standing">
       <ContractStringParam param="Title" value="@my_title" />
       <ContractStringParam param="Description" value="@my_desc" />
@@ -182,6 +192,10 @@ class TestScanContractGeneratorsFillsEachField:
             contract_bp_variant="Pyro_Intro_Test",
             rank_name="Rookie",
             rep_track="Security",
+            # No tag tree in this scan, so no ships; the cooldown comes from
+            # the handler's availability.
+            roster=(),
+            cooldown=(30, 5),
         )
         assert missions["my_title"] == [_make_variant(desc_key="my_desc", **shared)]
         assert missions["sub_title"] == [_make_variant(desc_key="sub_desc", **shared)]

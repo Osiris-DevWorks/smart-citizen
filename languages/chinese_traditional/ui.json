@@ -1526,6 +1526,10 @@
       "ht": "",
       "at": "王牌飛行員"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "冷卻"
+    },
     "mission_detail_fields_note": {
       "ht": "",
       "at": "未勾選的欄位不會出現在任務描述中。下次生成增強內容時生效。"

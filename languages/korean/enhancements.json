@@ -465,6 +465,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "없음"
+    },
     "Objectives": {
       "ht": "",
       "at": "목표"
@@ -765,6 +769,10 @@
       "ht": "",
       "at": "예"
     },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "포기: {time}"
+    },
     "base": {
       "ht": "",
       "at": "기본"
@@ -801,6 +809,14 @@
       "ht": "",
       "at": "가속"
     },
+    "variant {n}": {
+      "ht": "",
+      "at": "변형 {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "변형 {n}"
+    },
     "{count} items": {
       "ht": "",
       "at": "아이템 {count}개"
@@ -812,6 +828,18 @@
     "{count} types": {
       "ht": "",
       "at": "{count}종"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} 또는 {last}"
+    },
+    "{items}, or {last}": {
+      "ht": "",
+      "at": "{items}, 또는 {last}"
+    },
+    "{items}; and {last}": {
+      "ht": "",
+      "at": "{items}; 그리고 {last}"
     },
     "{item} Set": {
       "ht": "",

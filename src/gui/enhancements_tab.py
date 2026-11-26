@@ -236,6 +236,7 @@ class EnhancementsTab(QWidget):
             ("reputation",    "enhancements.mission_field_reputation"),
             ("blueprints",    "enhancements.mission_field_blueprints"),
             ("ace",           "enhancements.mission_field_ace_pilot"),
+            ("cooldown",      "enhancements.mission_field_cooldown"),
             # #331: "Resource Signatures:" breakdown block in the DETAILS
             # body for Recco Battaglia scan/mining contracts -- one line per
             # targeted ore with its full RS value progression. Independent of

@@ -1526,6 +1526,10 @@
       "ht": "",
       "at": "Ass-Pilot"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Abklingzeit"
+    },
     "mission_detail_fields_note": {
       "ht": "",
       "at": "Nicht angehakte Felder werden aus den Missionsbeschreibungen weggelassen. Wird beim nächsten „Erweiterungen erzeugen“ angewendet."

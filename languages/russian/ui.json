@@ -1530,6 +1530,10 @@
       "ht": "",
       "at": "Ас-пилот"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Перезарядка"
+    },
     "mission_field_resource_signatures": {
       "ht": "",
       "at": "Ресурсные сигналы"

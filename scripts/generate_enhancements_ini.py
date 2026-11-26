@@ -137,7 +137,12 @@ try:
     # The DataForge cache layout, which pak_extractor (the module that
     # writes it) names once for every reader, and the lookup pickle folder
     # in it, whose leftover temps EnhancementsGeneratorWorker sweeps.
-    from src.utils.pak_extractor import DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH
+    from src.utils.pak_extractor import (
+        DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH, DATAFORGE_TAGS_FILE,
+    )
+    # The game's tag tree the extraction saves beside the cache, which
+    # names the ships a mission's spawn tags can pick.
+    from src.utils.dcb_tags import load_tag_database, tag_paths, with_ancestors
     # The curated per-ore RS table and the SCO drawer's crafting index,
     # shared with the Smart Citizen Overlay (see the RS consumers below).
     from src.utils.mining_signatures import MINEABLE_RS_VALUES, ORE_SIGNATURES
@@ -159,6 +164,16 @@ except ImportError:  # pragma: no cover — only triggers if src/ is removed
 
     DATAFORGE_RECORDS_SUBPATH = Path("raw") / "libs" / "foundry" / "records"
     DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
+    DATAFORGE_TAGS_FILE = "tag_database.json"
+
+    def load_tag_database(path):  # type: ignore[misc]
+        return {}
+
+    def tag_paths(tags):  # type: ignore[misc]
+        return {}
+
+    def with_ancestors(guids, tags):  # type: ignore[misc]
+        return frozenset(guids)
 
 # ── Translated generated text (#579) ──────────────────────────────────────────
 # Every label, word and sentence this script adds goes through _t(), keyed by
@@ -495,6 +510,8 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # v16: XML facts only (#522, see the history above).
     "blueprint_pools": "v16",
     "scitem_lookups": "v11",
+    # Each ship entity's own tags and name loc key (build_ship_spawn_facts).
+    "ship_spawn_tags": "v1",
     "standings": "v3",
     "wearables": "v1",
     "xml_path_index": "v2",
@@ -2998,46 +3015,30 @@ def _extract_spawn_counts(element: ET.Element,
         # once as Turrets.
         if "turret" in name.lower():
             continue
-        bucket, label = classify_spawn_group(name, "ship")
-        if bucket == SPAWN_UNKNOWN:
-            fallback = _wrapper_hostile_fallback(sg)
-            if fallback is not None:
-                bucket, label = fallback
+        bucket, label = _group_bucket(sg, name, "ship")
         _add_spawn(breakdown, bucket, label, total)
 
     for ng in element.findall(".//SpawnDescription_NPC_Group"):
         if _within_excluded_subtree(ng, element, exclude_within):
             continue
         name = ng.get("Name", "")
-        auto_settings = ng.findall(".//autoSpawnSettings")
-        total_npcs = 0
-        for auto in auto_settings:
-            max_spawns = auto.get("maxSpawns", "0")
-            if max_spawns != "-1":
-                total_npcs += max(_spawn_count(max_spawns, name, "maxSpawns"), 0)
-            else:
-                max_concurrent = auto.get("maxConcurrentSpawns", "0")
-                if max_concurrent != "-1":
-                    total_npcs += max(
-                        _spawn_count(max_concurrent, name, "maxConcurrentSpawns"), 0
-                    )
-
-        if total_npcs <= 0:
-            m = re.search(r"x\s*(\d+)", name)
-            if m:
-                total_npcs = int(m.group(1))
-
+        total_npcs = _npc_group_total(ng, name)
         if total_npcs <= 0:
             continue
-
-        bucket, label = classify_spawn_group(name, "npc")
-        if bucket == SPAWN_UNKNOWN:
-            fallback = _wrapper_hostile_fallback(ng)
-            if fallback is not None:
-                bucket, label = fallback
+        bucket, label = _group_bucket(ng, name, "npc")
         _add_spawn(breakdown, bucket, label, total_npcs)
 
     return breakdown
+
+
+# Each spawn bucket's heading in MISSION DETAILS, in the order they are
+# written. The first two are the buckets whose ships are listed by name
+# (_extract_spawn_roster); objectives stay a count.
+_ROSTER_HEADERS: tuple[tuple[str, str], ...] = (
+    (SPAWN_HOSTILE,   "Hostiles"),
+    (SPAWN_FRIENDLY,  "Friendlies"),
+)
+_SPAWN_HEADERS = _ROSTER_HEADERS + ((SPAWN_OBJECTIVE, "Objectives"),)
 
 
 def _format_spawn_lines(breakdown: SpawnBreakdown) -> list[str]:
@@ -3055,11 +3056,7 @@ def _format_spawn_lines(breakdown: SpawnBreakdown) -> list[str]:
     ``_wrapper_hostile_fallback`` before they ever land in Unknown.
     """
     lines: list[str] = []
-    for bucket, header in (
-        (SPAWN_HOSTILE,   "Hostiles"),
-        (SPAWN_FRIENDLY,  "Friendlies"),
-        (SPAWN_OBJECTIVE, "Objectives"),
-    ):
+    for bucket, header in _SPAWN_HEADERS:
         items = breakdown.get(bucket) or {}
         if not items:
             continue
@@ -3083,6 +3080,429 @@ def _merge_spawn_breakdowns_max(into: SpawnBreakdown, src: SpawnBreakdown) -> No
         for label, count in items.items():
             if count > target.get(label, 0):
                 target[label] = count
+
+
+# ── The ships a mission spawns, and its cooldown ──────────────────────────────
+# A ship spawn option asks for ships by tags (a faction, a difficulty class, a
+# model). The ships it can give are the ship entities that carry every one of
+# its tags, a tag counting for each tag above it (AI/Faction/Criminal for
+# AI/Faction), and none of its negative tags. The tag tree comes from
+# Game2.dcb (src/utils/dcb_tags.py), saved by the extraction as
+# DATAFORGE_TAGS_FILE; without it the Hostiles and Friendlies lines stay the
+# spawn counts they were.
+#
+# Tags in these families set a ship up once it is picked (its behaviour,
+# pilot skill, cargo, crew, the group it joins) and never pick it, so the
+# match leaves them out: no ship carries a group identifier, and each of the
+# others is on one ship at most (LIVE, Nov 2026). Missions/MissionModule and
+# Missions/UnmannedAI look like set-up tags, but the escort and unmanned ships
+# they pick carry them, so they count.
+_SPAWN_SETUP_TAG_FAMILIES: tuple[str, ...] = (
+    "AI/Spawning/Identifier",
+    "AI/SkillDefinitions",
+    "AI/Ship/SpawnFlags",
+    "AI/CargoManifest",
+    "AI/CrewManifest",
+)
+# Left out of a bracketed label too: every PU spawn asks for the PU game mode.
+_LABEL_SKIPPED_TAG_FAMILIES = _SPAWN_SETUP_TAG_FAMILIES + ("AI/Spawning/GameMode",)
+# A bracketed label's word order: difficulty, faction, then the rest as the
+# option lists them ([Very Easy Ninetails], [Easy Criminal Large Combat Ship]).
+_LABEL_TAG_ORDER: tuple[str, ...] = ("AI/Ship/CombatClass/", "AI/Faction/")
+
+
+def _tag_words(name: str) -> str:
+    """A tag's name as words: ``VeryEasy`` -> ``Very Easy``,
+    ``Cutlass_Black`` -> ``Cutlass Black``."""
+    return " ".join(re.sub(r"(?<=[a-z0-9])(?=[A-Z])|_+", " ", name).split())
+
+
+class ShipSpawnIndex:
+    """The ships a spawn option's tags can pick, by their in-game names.
+
+    *tags* is the tag tree (``dcb_tags.load_tag_database``), *ships* each ship
+    entity's own tags and name loc key (``build_ship_spawn_facts``), *loc* the
+    strings of the language being generated and *fallback_loc* the English
+    ones, for a name *loc* lacks. False when either is empty, which leaves the
+    spawn lines as counts.
+    """
+
+    def __init__(self, tags: dict, ships: list, loc: dict, fallback_loc: dict | None = None):
+        self._paths = tag_paths(tags)
+        self._ships: list[tuple[frozenset, str]] = []
+        for own, key in ships:
+            name = " ".join((loc.get(key) or (fallback_loc or {}).get(key) or "").split())
+            if name:
+                self._ships.append((with_ancestors(own, tags), name))
+        self._picks: dict = {}
+
+    def __bool__(self) -> bool:
+        return bool(self._paths and self._ships)
+
+    def pick(self, positive, negative) -> tuple[tuple[str, ...], str]:
+        """``(names, label)`` for one spawn option: the names of the ships it
+        can give, sorted and each once, or no names and a label made from its
+        tags when no ship has them. Both empty when it asks for no tag that
+        picks a ship."""
+        key = (tuple(positive), tuple(negative))
+        if key in self._picks:
+            return self._picks[key]
+        wanted = [g for g in positive
+                  if not self._paths.get(g, "").startswith(_SPAWN_SETUP_TAG_FAMILIES)]
+        names: tuple[str, ...] = ()
+        label = ""
+        if wanted:
+            refused = set(negative)
+            found = {name for ship_tags, name in self._ships
+                     if refused.isdisjoint(ship_tags) and all(g in ship_tags for g in wanted)}
+            names = tuple(sorted(found, key=str.casefold))
+            if not names:
+                label = self._label(wanted)
+        self._picks[key] = (names, label)
+        return names, label
+
+    def _label(self, wanted) -> str:
+        paths = [self._paths.get(g, "") for g in wanted]
+        paths = [p for p in paths if p and not p.startswith(_LABEL_SKIPPED_TAG_FAMILIES)]
+        paths.sort(key=lambda p: next(
+            (i for i, prefix in enumerate(_LABEL_TAG_ORDER) if p.startswith(prefix)),
+            len(_LABEL_TAG_ORDER)))
+        words: list[str] = []
+        for p in paths:
+            phrase = _tag_words(p.rsplit("/", 1)[-1])
+            if phrase and phrase.casefold() not in (w.casefold() for w in words):
+                words.append(phrase)
+        return " ".join(words)
+
+
+def _ship_spawn_fact(xml_file) -> tuple[list[str], str]:
+    """A ship entity's own tags (the root's ``<tags>``) and its name loc key
+    (``VehicleComponentParams`` ``vehicleName``), read only as far as
+    ``VehicleComponentParams``, which sits near the top of every ship file."""
+    own: list[str] = []
+    depth = 0
+    with open(xml_file, "rb") as f:
+        for event, el in ET.iterparse(f, events=("start", "end")):
+            if event == "start":
+                depth += 1
+                if el.tag == "VehicleComponentParams":
+                    return own, el.get("vehicleName", "")
+            else:
+                depth -= 1
+                if depth == 1 and el.tag == "tags":
+                    own = [r.get("value", "") for r in el.findall("Reference")]
+    return own, ""
+
+
+def build_ship_spawn_facts(spaceships_dir: Path, xml_path_index: dict | None = None,
+                           records_dir: Path | None = None) -> list[tuple[list[str], str]]:
+    """``(own tags, name loc key)`` for every ship entity a spawn could pick:
+    AI and player versions alike, templates and ships with no name left out.
+    XML facts only, so ``_cached_lookup`` keeps it per DataForge build."""
+    if xml_path_index is not None and records_dir is not None:
+        key = spaceships_dir.relative_to(records_dir).as_posix()
+        files = sorted(Path(p) for p in xml_path_index.get(key, []))
+    else:
+        files = sorted(spaceships_dir.glob("*.xml"))
+    facts = []
+    for xml_file in files:
+        if "_template" in xml_file.stem.lower():
+            continue
+        try:
+            own, ref = _ship_spawn_fact(xml_file)
+        except (ET.Error, OSError) as e:
+            logger.debug(f"Ship spawn tags: skipped {xml_file.name}: {e}")
+            continue
+        if own and ref.startswith("@") and not _is_sentinel_loc_ref(ref):
+            facts.append((own, ref[1:]))
+    logger.info(f"Ship spawn tags: {len(facts)} ships")
+    return facts
+
+
+# The ShipSpawnIndex the mission generators read, set by _run_gen_missions for
+# its run (as _set_text_language sets _TEXT). None leaves spawn lines as counts.
+_SHIP_SPAWNS: "ShipSpawnIndex | None" = None
+
+
+def _set_ship_spawns(index: "ShipSpawnIndex | None") -> None:
+    global _SHIP_SPAWNS
+    _SHIP_SPAWNS = index if index else None
+
+
+def _group_bucket(group: ET.Element, name: str, kind: str) -> tuple[str, str]:
+    """A spawn group's (bucket, label): by its name, then by the property
+    that holds it (see _wrapper_hostile_fallback)."""
+    bucket, label = classify_spawn_group(name, kind)
+    if bucket == SPAWN_UNKNOWN:
+        fallback = _wrapper_hostile_fallback(group)
+        if fallback is not None:
+            bucket, label = fallback
+    return bucket, label
+
+
+def _npc_group_total(group: ET.Element, name: str) -> int:
+    """How many NPCs an on-foot spawn group brings: its spawn caps, else an
+    ``x N`` in its name."""
+    total = 0
+    for auto in group.findall(".//autoSpawnSettings"):
+        max_spawns = auto.get("maxSpawns", "0")
+        if max_spawns != "-1":
+            total += max(_spawn_count(max_spawns, name, "maxSpawns"), 0)
+        else:
+            max_concurrent = auto.get("maxConcurrentSpawns", "0")
+            if max_concurrent != "-1":
+                total += max(_spawn_count(max_concurrent, name, "maxConcurrentSpawns"), 0)
+    if total <= 0:
+        m = re.search(r"x\s*(\d+)", name)
+        if m:
+            total = int(m.group(1))
+    return total
+
+
+def _ship_group_slots(group: ET.Element, name: str, ships: ShipSpawnIndex) -> "tuple | None":
+    """A ship spawn group's slots, each a tuple of ``(amount, names, label)``
+    choices the game picks one of; every slot spawns. None when a choice asks
+    for no tag that picks a ship, so the group shows as a count instead."""
+    slot_elements = group.findall(".//SpawnDescription_ShipOptions")
+    if slot_elements:
+        slot_choices = [s.findall("./options/SpawnDescription_Ship") for s in slot_elements]
+    else:
+        slot_choices = [[s] for s in group.findall(".//SpawnDescription_Ship")]
+    slots = []
+    for choices in slot_choices:
+        slot = []
+        for s in choices:
+            amount = _spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount")
+            if amount <= 0:
+                continue
+            names, label = ships.pick(
+                [r.get("value", "") for r in s.findall("./tags/tags/Reference")],
+                [r.get("value", "") for r in s.findall("./negativeTags/tags/Reference")],
+            )
+            if not names and not label:
+                return None
+            slot.append((amount, names, label))
+        if slot:
+            slots.append(tuple(slot))
+    return tuple(slots) or None
+
+
+def _extract_spawn_roster(element: ET.Element, ships: ShipSpawnIndex,
+                          exclude_within: str | tuple[str, ...] | None = None) -> tuple:
+    """The hostile and friendly spawn groups of *element*, each
+    ``(bucket, label, ships)``: *ships* the group's slots
+    (_ship_group_slots), or an int, the count of an on-foot group or of a ship
+    group with nothing to name. Ship groups come first, in file order; on-foot
+    groups follow, one per label with their counts added. Objectives and
+    unknown groups are left out (they stay in the spawn counts), and so are
+    turrets, as _extract_spawn_counts leaves them out. Groups that are the
+    same in all but their name become one, their amounts added: four
+    recipient groups of one ship each from one pool are four ships from it."""
+    ship_groups: dict[tuple, int] = {}
+    for sg in element.findall(".//SpawnDescription_ShipGroup"):
+        if _within_excluded_subtree(sg, element, exclude_within):
+            continue
+        name = sg.get("Name", "")
+        if "turret" in name.lower():
+            continue
+        total = sum(
+            _spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount")
+            for s in sg.findall(".//SpawnDescription_Ship")
+        )
+        if total <= 0:
+            continue
+        bucket, label = _group_bucket(sg, name, "ship")
+        if bucket not in (SPAWN_HOSTILE, SPAWN_FRIENDLY):
+            continue
+        slots = _ship_group_slots(sg, name, ships)
+        if slots is None:
+            key = (bucket, label, None)
+            ship_groups[key] = ship_groups.get(key, 0) + total
+        else:
+            key = (bucket, label, slots)
+            ship_groups[key] = ship_groups.get(key, 0) + 1
+    groups: list = []
+    for (bucket, label, slots), times in ship_groups.items():
+        if slots is None:
+            groups.append((bucket, label, times))
+        else:
+            groups.append((bucket, label, tuple(
+                tuple((amount * times, names, pick_label) for amount, names, pick_label in slot)
+                for slot in slots)))
+    npc_totals: dict[tuple[str, str], int] = {}
+    for ng in element.findall(".//SpawnDescription_NPC_Group"):
+        if _within_excluded_subtree(ng, element, exclude_within):
+            continue
+        name = ng.get("Name", "")
+        total = _npc_group_total(ng, name)
+        if total <= 0:
+            continue
+        bucket, label = _group_bucket(ng, name, "npc")
+        if bucket in (SPAWN_HOSTILE, SPAWN_FRIENDLY):
+            npc_totals[(bucket, label)] = npc_totals.get((bucket, label), 0) + total
+    groups.extend((bucket, label, total) for (bucket, label), total in npc_totals.items())
+    return tuple(groups)
+
+
+# How _join_words joins a list, by kind: ship names (``A, B or C``), choices
+# at different amounts (``2x A, or 3x B``) and slots that all spawn
+# (``2x A; and 1x B``). Translated through _t, so each language orders the
+# words its own way.
+_LIST_JOINS: dict[str, tuple[str, str]] = {
+    "names":   ("{items} or {last}", ", "),
+    "choices": ("{items}, or {last}", ", "),
+    "slots":   ("{items}; and {last}", "; "),
+}
+
+
+def _join_words(parts: list[str], kind: str) -> str:
+    """*parts* as one phrase, joined as _LIST_JOINS says for *kind*."""
+    if len(parts) == 1:
+        return parts[0]
+    template, sep = _LIST_JOINS[kind]
+    return _t(template, items=sep.join(parts[:-1]), last=parts[-1])
+
+
+def _format_ship_slot(slot: tuple) -> str:
+    """One slot's choices: equal ships at different amounts become a range
+    (``2-3x A, B or C``), choices at one amount share one list
+    (``1x A, B or C``), and what is left is joined with ``, or``
+    (``2x A or B, or 3x C``). A choice no ship matches shows its label in
+    brackets."""
+    ranges: dict[tuple, list[int]] = {}
+    for amount, names, label in slot:
+        low_high = ranges.setdefault((names, label), [amount, amount])
+        low_high[0] = min(low_high[0], amount)
+        low_high[1] = max(low_high[1], amount)
+    by_amount: dict[tuple[int, int], list[str]] = {}
+    for (names, label), (low, high) in ranges.items():
+        items = by_amount.setdefault((low, high), [])
+        for item in (names or (f"[{label}]",)):
+            if item not in items:
+                items.append(item)
+    parts = []
+    for (low, high), items in by_amount.items():
+        amount = f"{low}" if low == high else f"{low}-{high}"
+        named = sorted((i for i in items if not i.startswith("[")), key=str.casefold)
+        labels = [i for i in items if i.startswith("[")]
+        parts.append(f"{amount}x {_join_words(named + labels, 'names')}")
+    return _join_words(parts, "choices")
+
+
+def _format_roster_group(group: tuple) -> str:
+    """One bullet: ``- Targets: 1x A, B or C`` or ``- Soldiers x6``."""
+    _, label, ships = group
+    if isinstance(ships, int):
+        return f"- {_t(label)} x{ships}"
+    return f"- {_t(label)}: " + _join_words([_format_ship_slot(slot) for slot in ships], "slots")
+
+
+def _variant_suffix(numbers: list[int]) -> str:
+    """``variant 2`` or ``variants 1, 3``."""
+    joined = ", ".join(str(n) for n in numbers)
+    return _t("variant {n}", n=joined) if len(numbers) == 1 else _t("variants {n}", n=joined)
+
+
+def _cooldown_minutes(value) -> int:
+    try:
+        return max(int(round(float(value))), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _extract_cooldown(availability: "ET.Element | None",
+                      contract: "ET.Element | None" = None) -> "tuple[int, int] | None":
+    """``(personal, abandoned)`` cooldown in minutes, personal 0 when the
+    mission has none. *availability* holds the attributes (a contract
+    handler's ``defaultAvailability``, or a pu_missions record's root);
+    *contract*'s own ``paramOverrides`` win over it. None when there is no
+    *availability*."""
+    if availability is None:
+        return None
+    has = availability.get("hasPersonalCooldown", "0") == "1"
+    personal = _cooldown_minutes(availability.get("personalCooldownTime"))
+    abandoned = _cooldown_minutes(availability.get("abandonedCooldownTime"))
+    if contract is not None:
+        for p in contract.findall("./paramOverrides/boolParamOverrides/ContractBoolParam"):
+            if p.get("param") == "HasPersonalCooldown":
+                has = p.get("value") == "1"
+        for p in contract.findall("./paramOverrides/intParamOverrides/ContractIntParam"):
+            if p.get("param") == "PersonalCooldownTime":
+                personal = _cooldown_minutes(p.get("value"))
+            elif p.get("param") == "AbandonedCooldownTime":
+                abandoned = _cooldown_minutes(p.get("value"))
+    return (personal if has else 0), abandoned
+
+
+def _format_minutes(minutes: int) -> str:
+    """``45 min``, ``1 h``, ``1 h 30 min``, ``2 d``. Units are not translated,
+    as elsewhere in this script."""
+    if minutes < 60:
+        return f"{minutes} min"
+    if minutes % 1440 == 0:
+        return f"{minutes // 1440} d"
+    hours, rest = divmod(minutes, 60)
+    return f"{hours} h" if not rest else f"{hours} h {rest} min"
+
+
+def _format_cooldown(cooldown: "tuple[int, int]") -> str:
+    """``1 h``, ``1 h (abandon: 15 min)`` when abandoning differs, or ``None``."""
+    personal, abandoned = cooldown
+    text = _format_minutes(personal) if personal else _t("None")
+    if abandoned and abandoned != personal:
+        text += f" ({_t('abandon: {time}', time=_format_minutes(abandoned))})"
+    return text
+
+
+def _roster_block(header: str, groups: tuple, numbers: "list[int] | None" = None) -> list[str]:
+    """A Hostiles or Friendlies heading and its bullets; the heading names
+    the variants it is for when *numbers* is given."""
+    head = _t(header) if not numbers else f"{_t(header)} ({_variant_suffix(numbers)})"
+    return [f"<EM4>{head}:</EM4>"] + [_format_roster_group(g) for g in groups]
+
+
+def _by_value(values: list) -> list[tuple[object, list[int]]]:
+    """``[(value, [variant numbers])]``: each distinct value with the
+    1-based numbers of the variants that have it, in first-seen order."""
+    out: dict = {}
+    for number, value in enumerate(values, 1):
+        out.setdefault(value, []).append(number)
+    return list(out.items())
+
+
+def _variant_detail_lines(variants: list, show_spawns: bool,
+                          show_cooldown: bool) -> tuple[list[str], list[str]]:
+    """The roster lines and the cooldown line for one description's variants.
+
+    Variants are numbered by what these lines show of them, so two variants
+    that show the same get one number, and a line that is the same for every
+    variant names none. Returns ``(roster lines, cooldown lines)``.
+    """
+    # Each variant as what these lines show of it: its groups per
+    # _ROSTER_HEADERS bucket, then its cooldown.
+    shown = list(dict.fromkeys(
+        tuple(tuple(g for g in v.roster if g[0] == bucket) if show_spawns else ()
+              for bucket, _ in _ROSTER_HEADERS)
+        + (v.cooldown if show_cooldown else None,)
+        for v in variants
+    ))
+    roster_lines: list[str] = []
+    for index, (_, header) in enumerate(_ROSTER_HEADERS):
+        values = _by_value([s[index] for s in shown])
+        for groups, numbers in values:
+            if groups:
+                roster_lines.extend(
+                    _roster_block(header, groups, numbers if len(values) > 1 else None))
+    cooldown_lines: list[str] = []
+    values = [(cd, numbers) for cd, numbers in _by_value([s[-1] for s in shown]) if cd is not None]
+    if values:
+        if len(values) == 1 and len(values[0][1]) == len(shown):
+            text = _format_cooldown(values[0][0])
+        else:
+            text = "; ".join(f"{_variant_suffix(numbers)}: {_format_cooldown(cd)}"
+                             for cd, numbers in values)
+        cooldown_lines.append(f"<EM4>{_t('Cooldown')}:</EM4> {text}")
+    return roster_lines, cooldown_lines
 
 
 def _extract_turret_info(root: ET.Element) -> str | None:
@@ -3291,7 +3711,17 @@ def enhancements_mission(root: ET.Element, reputation_lookup: dict[str, int] | N
             _bd = _extract_spawn_counts(root)
             if _ambiguous:
                 _bd[SPAWN_HOSTILE] = {}
-            lines.extend(_format_spawn_lines(_bd))
+            if _SHIP_SPAWNS:
+                # The ships replace the Hostiles and Friendlies counts;
+                # objectives stay a count.
+                _roster = _extract_spawn_roster(root, _SHIP_SPAWNS)
+                for _bucket, _header in _ROSTER_HEADERS:
+                    _groups = tuple(g for g in _roster if g[0] == _bucket)
+                    if _groups and not (_ambiguous and _bucket == SPAWN_HOSTILE):
+                        lines.extend(_roster_block(_header, _groups))
+                lines.extend(_format_spawn_lines({SPAWN_OBJECTIVE: _bd[SPAWN_OBJECTIVE]}))
+            else:
+                lines.extend(_format_spawn_lines(_bd))
 
         # Turret presence — groups visually with the other hostile-entity
         # tallies so a player sizing up the mission sees enemies + turrets
@@ -3299,6 +3729,11 @@ def enhancements_mission(root: ET.Element, reputation_lookup: dict[str, int] | N
         turret_info = _extract_turret_info(root)
         if turret_info:
             lines.append(f"<EM4>{_t('Turrets')}:</EM4> {turret_info}")
+
+        if _show("cooldown"):
+            _cooldown = _extract_cooldown(root)
+            if _cooldown is not None:
+                lines.append(f"<EM4>{_t('Cooldown')}:</EM4> {_format_cooldown(_cooldown)}")
 
     except Exception:
         pass
@@ -4199,6 +4634,11 @@ class ContractVariant(NamedTuple):
     bp_variant: str
     rank_name: str
     rep_track: str
+    # The hostile and friendly groups with their ships (_extract_spawn_roster),
+    # empty without the tag tree, and (personal, abandoned) cooldown minutes
+    # (_extract_cooldown), None when the handler sets no availability.
+    roster: tuple = ()
+    cooldown: "tuple[int, int] | None" = None
 
 
 def scan_contract_generators(
@@ -4363,10 +4803,16 @@ def scan_contract_generators(
                     # not a union of every sibling contract's roster (#186) —
                     # including the one-time intro mission's own roster, which
                     # uses the plain <Contract> tag, not <CareerContract>.
+                    handler_roster: tuple = ()
                     try:
                         handler_spawns = _extract_spawn_counts(
                             handler, exclude_within=("CareerContract", "Contract")
                         )
+                        if _SHIP_SPAWNS:
+                            handler_roster = _extract_spawn_roster(
+                                handler, _SHIP_SPAWNS,
+                                exclude_within=("CareerContract", "Contract"),
+                            )
                     except Exception as e:
                         # Outside the per-contract try, so a failure here used to end
                         # the whole scan. The contracts' own spawns still count.
@@ -4375,6 +4821,8 @@ def scan_contract_generators(
                             f"{type(e).__name__}: {e}"
                         )
                         handler_spawns = _empty_spawn_breakdown()
+                        handler_roster = ()
+                    handler_availability = handler.find("defaultAvailability")
 
                     contracts = handler.findall(contract_xpath)
 
@@ -4589,11 +5037,14 @@ def scan_contract_generators(
                             # node itself has no spawn descriptions of its own
                             # (a contract is empty when every bucket is empty).
                             contract_spawns = _extract_spawn_counts(contract)
-                            spawns = (
-                                contract_spawns
-                                if any(contract_spawns.values())
-                                else handler_spawns
-                            )
+                            own_spawns = any(contract_spawns.values())
+                            spawns = contract_spawns if own_spawns else handler_spawns
+                            # The same rule for the ships: the contract's own
+                            # groups, else the handler's.
+                            roster = handler_roster
+                            if own_spawns and _SHIP_SPAWNS:
+                                roster = _extract_spawn_roster(contract, _SHIP_SPAWNS)
+                            cooldown = _extract_cooldown(handler_availability, contract)
 
                             # Extract per-contract difficulty
                             contract_difficulty = _extract_difficulty(contract)
@@ -4613,6 +5064,8 @@ def scan_contract_generators(
                                 desc_key=desc_key,
                                 flags=contract_flags,
                                 spawns=spawns,
+                                roster=roster,
+                                cooldown=cooldown,
                                 difficulty=contract_difficulty,
                                 has_bp=contract_has_bp,
                                 bp_chance=contract_bp_chance,
@@ -7849,7 +8302,33 @@ def _scan_pu_missions(
                           cargo_delivery_descs, title_xps, xp_records)
 
 
+def _load_ship_spawns(ctx: dict) -> "ShipSpawnIndex | None":
+    """The ShipSpawnIndex for this run: the tag tree beside the cache and
+    the ship entities' tags (pickled per DataForge build), names in the run's
+    language with English behind it. None without the tag tree, an older
+    cache's case until it is extracted again."""
+    forge_dir = ctx["forge_dir"]
+    tags = load_tag_database(forge_dir / DATAFORGE_TAGS_FILE)
+    if not tags:
+        logger.info("No tag tree beside the DataForge cache: missions show spawn counts")
+        return None
+    records = ctx["records"]
+    facts = _cached_lookup(forge_dir, "ship_spawn_tags", lambda: build_ship_spawn_facts(
+        records / "entities" / "spaceships", ctx.get("xml_path_index"), records))
+    index = ShipSpawnIndex(tags, facts, ctx["loc"], ctx.get("tag_loc"))
+    return index if index else None
+
+
 def _run_gen_missions(ctx: dict) -> dict[str, str]:
+    """_gen_missions with the ship index set for its run."""
+    _set_ship_spawns(_load_ship_spawns(ctx))
+    try:
+        return _gen_missions(ctx)
+    finally:
+        _set_ship_spawns(None)
+
+
+def _gen_missions(ctx: dict) -> dict[str, str]:
     records           = ctx["records"]
     forge_dir         = ctx["forge_dir"]
     loc               = ctx["loc"]
@@ -8341,10 +8820,21 @@ def _run_gen_missions(ctx: dict) -> dict[str, str]:
                 _rs_ores = battaglia_mineable_rs_desc_ores.get(desc_key)
                 if _rs_ores:
                     details_lines.extend(_format_rs_details_lines(_rs_ores, loc))
+            # With the tag tree the ships replace the Hostiles and Friendlies
+            # counts, one heading per variant where they differ; objectives
+            # stay a count.
+            roster_lines, cooldown_lines = _variant_detail_lines(
+                desc_variants, _show("spawns") and bool(_SHIP_SPAWNS), _show("cooldown"))
             if _show("spawns"):
-                details_lines.extend(_format_spawn_lines(agg_spawns))
+                if _SHIP_SPAWNS:
+                    details_lines.extend(roster_lines)
+                    details_lines.extend(
+                        _format_spawn_lines({SPAWN_OBJECTIVE: agg_spawns[SPAWN_OBJECTIVE]}))
+                else:
+                    details_lines.extend(_format_spawn_lines(agg_spawns))
             if _show("ace") and bool(agg_spawns.get(SPAWN_HOSTILE, {}).get("Ace Pilots", 0)):
                 details_lines.append(f"<EM4>{_t('Ace Pilot')}:</EM4> {_t('Yes')}")
+            details_lines.extend(cooldown_lines)
             nonzero_tiers = [(s, f, rn, rt) for s, f, rn, rt in desc_seen_tiers if s > 0]
             if _show("reputation"):
                 if len(nonzero_tiers) == 1:

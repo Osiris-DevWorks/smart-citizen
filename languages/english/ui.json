@@ -1530,6 +1530,10 @@
       "ht": "Ace Pilot",
       "at": ""
     },
+    "mission_field_cooldown": {
+      "ht": "Cooldown",
+      "at": ""
+    },
     "mission_field_resource_signatures": {
       "ht": "Resource Signatures",
       "at": ""

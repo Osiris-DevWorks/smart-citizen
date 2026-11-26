@@ -1530,6 +1530,10 @@
       "ht": "",
       "at": "Pilote Ace"
     },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Recharge"
+    },
     "mission_field_resource_signatures": {
       "ht": "",
       "at": "Signatures de Ressources"
