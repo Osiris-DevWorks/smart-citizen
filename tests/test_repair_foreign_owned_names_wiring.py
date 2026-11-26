@@ -231,6 +231,9 @@ def test_a_load_drops_a_saved_label_but_not_a_name_the_tracker_offers(
         _repair_foreign_owned_names = MainWindow._repair_foreign_owned_names
         _rename_from_other_languages = MainWindow._rename_from_other_languages
 
+        def _read_mission_bp_descs(self):
+            """The [BP Complete] record is not what this test is about."""
+
         def __init__(self, entries):
             self.entries = entries
             self.default_values = {}

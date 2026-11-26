@@ -1686,6 +1686,10 @@
       "ht": "",
       "at": "평판 트랙 태그(평판 태그에 \"(Security)\" / \"(Contractor)\" 추가)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "설계도 완료(\"[BP Complete]\" 추가)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "스캔/채굴 임무"
@@ -3147,6 +3151,10 @@
     "applied_body": {
       "ht": "",
       "at": "{target_path}에 적용됨\n\n  사용자 편집: {user_count}건\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "[BP Complete] 표시된 임무: {count}"
     },
     "failed_body": {
       "ht": "",

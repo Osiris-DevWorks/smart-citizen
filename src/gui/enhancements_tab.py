@@ -86,6 +86,9 @@ class EnhancementsTab(QWidget):
     # the saved set (#532). MainWindow keeps Apply Enhancements red for a
     # pending tick, since Apply saves it first.
     category_ticks_changed = pyqtSignal(bool)
+    # The General Tags "BP Completed" switch changed (saved already).
+    # MainWindow re-weaves the [BP Complete] title tag, as for an Owned change.
+    bp_complete_tag_changed = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -1083,6 +1086,7 @@ class EnhancementsTab(QWidget):
             cfg = AppSettings.get_tag_config(cat)
             page = _TagBuilderPage(cat, cfg)
             page.config_changed.connect(self._mark_tag_dirty)
+            page.bp_complete_tag_changed.connect(self.bp_complete_tag_changed.emit)
             self._tag_builder_pages[cat] = page
             self._tag_builder_tabs.addTab(page, _CATEGORY_LABELS[cat])
         gl.addWidget(self._tag_builder_tabs)
@@ -1520,6 +1524,9 @@ class _TagBuilderPage(QWidget):
     # Fired on every user-driven config mutation (never during construction)
     # so the tab can light up its Save Tag Changes button.
     config_changed = pyqtSignal()
+    # The General Tags "BP Completed" switch changed (saved already). Not a
+    # config change: MainWindow weaves that tag in, so nothing is generated.
+    bp_complete_tag_changed = pyqtSignal()
 
     def __init__(self, category: str, config: TagConfig, parent: QWidget | None = None):
         super().__init__(parent)
@@ -1934,6 +1941,8 @@ class _TagBuilderPage(QWidget):
         _TITLE_TAG_KEYS = [
             ("rep",       "enhancements.mt_tag_rep_cb"),
             ("blueprint", "enhancements.mt_tag_blueprint_cb"),
+            # Right after BP Tag: [BP Complete] sits next to [BP] in the title.
+            (AppSettings.MISSION_TITLE_TAG_BP_COMPLETE, "enhancements.mt_tag_bp_complete_cb"),
             ("ace",       "enhancements.mt_tag_ace_cb"),
             ("rep_track", "enhancements.mt_tag_rep_track_cb"),
         ]
@@ -1946,7 +1955,15 @@ class _TagBuilderPage(QWidget):
             cb.toggled.connect(
                 lambda checked, f=_field: AppSettings.set_mission_title_tag(f, checked)
             )
-            cb.toggled.connect(self.config_changed.emit)
+            if _field == AppSettings.MISSION_TITLE_TAG_BP_COMPLETE:
+                # Woven in on load like [Owned], not generated: a toggle
+                # re-weaves at once and leaves Save Tag Changes alone.
+                # config_changed would light that button, whose save re-runs
+                # the enhancement generator for a change that needs none
+                # (blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE says why).
+                cb.toggled.connect(self.bp_complete_tag_changed.emit)
+            else:
+                cb.toggled.connect(self.config_changed.emit)
             tags_col.addWidget(cb)
             self._title_tag_checkboxes[_field] = cb
         tags_col.addStretch()
@@ -2179,6 +2196,7 @@ class _TagBuilderPage(QWidget):
             # leaving a stale saved value if one had somehow drifted out of
             # sync).
             _tt_saved = AppSettings.get_mission_title_tags()
+            bp_complete_changed = False
             for field, box in self._title_tag_checkboxes.items():
                 if reset_title_tags:
                     value = AppSettings.get_mission_title_tag_default(field)
@@ -2187,6 +2205,8 @@ class _TagBuilderPage(QWidget):
                     # just mirror them. Writing here would be a no-op at best
                     # and could clobber at worst.
                     value = _tt_saved.get(field, True)
+                if field == AppSettings.MISSION_TITLE_TAG_BP_COMPLETE:
+                    bp_complete_changed = box.isChecked() != value
                 box.blockSignals(True)
                 box.setChecked(value)
                 box.blockSignals(False)
@@ -2195,6 +2215,10 @@ class _TagBuilderPage(QWidget):
             self._set_mt_controls_enabled(self._mt_enable.isChecked())
             self._refresh_preview()
             self.config_changed.emit()
+            # The signals were blocked, and this tag needs a re-weave, not
+            # a generation.
+            if bp_complete_changed:
+                self.bp_complete_tag_changed.emit()
             return
         self._select_combo(self.sep_combo, fresh.separator)
         self._select_combo(self.enc_combo, fresh.enclosing)

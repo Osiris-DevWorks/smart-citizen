@@ -1686,6 +1686,10 @@
       "ht": "",
       "at": "Rep Yolu Etiketi (Rep etiketine \"(Security)\" / \"(Contractor)\" ekler)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP Tamamlandı (\"[BP Complete]\" ekler)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Tarama/Madencilik Görevleri"
@@ -3147,6 +3151,10 @@
     "applied_body": {
       "ht": "",
       "at": "{target_path} konumuna uygulandı\n\n  Kullanıcı düzenlemeleri: {user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "[BP Complete] olarak işaretlenen görevler: {count}"
     },
     "failed_body": {
       "ht": "",

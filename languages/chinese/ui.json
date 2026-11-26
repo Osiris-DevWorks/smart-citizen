@@ -1674,6 +1674,10 @@
       "ht": "",
       "at": "声望轨道标签（在声望标签后添加“(Security)” / “(Contractor)”）"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "蓝图已完成（添加“[BP Complete]”）"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "扫描/采矿任务"
@@ -3147,6 +3151,10 @@
     "applied_body": {
       "ht": "",
       "at": "已应用到 {target_path}\n\n  用户编辑数：{user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "标记为 [BP Complete] 的任务：{count}"
     },
     "failed_body": {
       "ht": "",

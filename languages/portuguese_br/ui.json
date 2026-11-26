@@ -1686,6 +1686,10 @@
       "ht": "",
       "at": "Tag de trilha de reputação (adiciona \"(Security)\" / \"(Contractor)\" à tag Rep)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP concluídos (adiciona \"[BP Complete]\")"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missões de escaneamento/mineração"
@@ -3147,6 +3151,10 @@
     "applied_body": {
       "ht": "",
       "at": "Aplicado em {target_path}\n\n  Edições do usuário: {user_count}\n\n{enhancement_block}"
+    },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Missões marcadas [BP Complete]: {count}"
     },
     "failed_body": {
       "ht": "",

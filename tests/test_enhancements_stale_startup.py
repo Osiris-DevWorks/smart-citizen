@@ -69,6 +69,7 @@ from src.utils.pak_extractor import (  # noqa: E402
     DATAFORGE_TAGS_FILE, P4K_MTIME_STAMP, P4K_SIZE_STAMP,
 )
 from src.utils.atomic_io import atomic_write_text  # noqa: E402
+from src.utils.blueprint_meta import MISSION_BLUEPRINT_DESCS_FILE  # noqa: E402
 from src.utils.settings import AppSettings  # noqa: E402
 from src.utils.tag_builder import tag_config_fingerprint  # noqa: E402
 from tests.gui_window import build_main_window, retire_main_window  # noqa: E402
@@ -148,6 +149,9 @@ def _write_set(language: str) -> None:
     for key in _enabled_files():
         (enh_dir / AppSettings.ENHANCEMENTS_FILES[key]).write_text(
             "; generated\n", encoding="utf-8")
+    if AppSettings.ENHANCEMENT_FILE_MISSIONS in _enabled_files():
+        # A generation writes the [BP Complete] mission record with Missions.
+        (enh_dir / MISSION_BLUEPRINT_DESCS_FILE).write_text("{}", encoding="utf-8")
 
 
 def _stamp(language: str, state: str) -> None:
