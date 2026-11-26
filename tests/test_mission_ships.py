@@ -78,6 +78,9 @@ SHIPS = [
     ("anvl_arrow", [ARROW], "vehicle_NameANVL_Arrow"),
 ]
 TARGETS = "TargetSpawnDescriptions_BP"
+NL = "\\n"
+IN1 = "\u00a0" * 2
+IN2 = "\u00a0" * 4
 AVAILABILITY = (
     '<defaultAvailability hasPersonalCooldown="1" personalCooldownTime="15" '
     'abandonedCooldownTime="15" />'
@@ -214,7 +217,7 @@ class TestShipSpawnFacts:
         )
         (ships / "broken.xml").write_text("<E><tags>", encoding="utf-8")
         assert gen.build_ship_spawn_facts(ships) == [
-            (["a", "b"], "vehicle_NameANVL_Arrow")
+            (["a", "b"], "vehicle_NameANVL_Arrow", "anvl_arrow_pu_ai_crim")
         ]
 
 
@@ -232,8 +235,8 @@ class TestRoster:
         roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
         lines = [gen._format_roster_group(g) for g in roster]
         assert lines == [
-            "- Hostile Wave: 2-3x Anvil Arrow or Anvil Gladiator; and 1x Anvil Arrow",
-            "- Targets: 1x Anvil Gladiator or Vanduul Blade",
+            "- Hostile Wave: 2-3x of Anvil Arrow or Anvil Gladiator and 1x Anvil Arrow",
+            "- Targets: 1x of Anvil Gladiator or Vanduul Blade",
             "- Soldiers x5",
         ]
 
@@ -246,21 +249,21 @@ class TestRoster:
         xml = xml.replace("Recipient1", "Recipient")
         roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
         assert [gen._format_roster_group(g) for g in roster] == [
-            "- Recipient: 4x Anvil Arrow or Anvil Gladiator"
+            "- Recipient: 4x of Anvil Arrow or Anvil Gladiator"
         ]
 
     def test_choices_at_different_amounts(self, gen, index):
         xml = f"<C>{_group('Wave1', [_ship(2, [VANDUUL]), _ship(3, [ARROW])])}</C>"
         roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
         assert gen._format_roster_group(roster[0]) == (
-            "- Hostile Wave: 2x Vanduul Blade, or 3x Anvil Arrow"
+            f"- Hostile Wave, one of:{NL}{IN2}2x Vanduul Blade{NL}{IN2}3x Anvil Arrow"
         )
 
-    def test_a_choice_no_ship_matches_shows_its_label(self, gen, index):
+    def test_a_choice_no_ship_matches_names_its_kind(self, gen, index):
         xml = f"<C>{_group('Wave1', [_ship(1, [NINETAILS, VERY_EASY]), _ship(1, [ARROW])])}</C>"
         roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
         assert gen._format_roster_group(roster[0]) == (
-            "- Hostile Wave: 1x Anvil Arrow or [Very Easy Ninetails]"
+            "- Hostile Wave: 1x of Anvil Arrow or Very Easy Ninetails ship"
         )
 
     def test_a_group_with_nothing_to_name_is_a_count(self, gen, index):
@@ -297,8 +300,116 @@ class TestListJoins:
         xml = f"<C>{_group('Wave1', [_ship(1, [FACTION, EASY])])}</C>"
         roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
         assert gen._format_roster_group(roster[0]) == (
-            "- Hostile Wave: 1x Anvil Arrow, Anvil Gladiator, or Vanduul Blade"
+            "- Hostile Wave: 1x of Anvil Arrow, Anvil Gladiator, or Vanduul Blade"
         )
+
+
+class TestLayout:
+    """One choice per line where a group has choices or a long list, one line
+    for a simple group, and numbered waves."""
+
+    def test_a_long_list_breaks_the_group_into_lines(self, gen, index):
+        xml = f"<C>{_group('Wave1', [_ship(2, [FACTION, EASY])], [_ship(1, [ARROW])])}</C>"
+        roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
+        assert gen._format_roster_group(roster[0]) == (
+            f"- Hostile Wave:{NL}{IN1}2x of Anvil Arrow, Anvil Gladiator, or Vanduul Blade"
+            f"{NL}{IN1}and 1x Anvil Arrow"
+        )
+
+    def test_a_second_slot_with_choices_is_and_one_of(self, gen, index):
+        group = _group(
+            "Wave1",
+            [_ship(2, [VANDUUL]), _ship(3, [ARROW])],
+            [_ship(1, [GLADIATOR]), _ship(2, [VANDUUL])],
+            [_ship(1, [ARROW])],
+        )
+        roster = gen._extract_spawn_roster(ET.fromstring(f"<C>{group}</C>"), index)
+        assert gen._format_roster_group(roster[0]).split(NL) == [
+            "- Hostile Wave, one of:",
+            f"{IN2}2x Vanduul Blade",
+            f"{IN2}3x Anvil Arrow",
+            f"{IN1}and one of:",
+            f"{IN2}1x Anvil Gladiator",
+            f"{IN2}2x Vanduul Blade",
+            f"{IN1}and 1x Anvil Arrow",
+        ]
+
+    def test_simple_parts_join_with_and(self, gen, index):
+        three = _group(
+            "Wave1", [_ship(2, [ARROW])], [_ship(1, [GLADIATOR])], [_ship(3, [VANDUUL])]
+        )
+        roster = gen._extract_spawn_roster(ET.fromstring(f"<C>{three}</C>"), index)
+        assert gen._format_roster_group(roster[0]) == (
+            "- Hostile Wave: 2x Anvil Arrow, 1x Anvil Gladiator, and 3x Vanduul Blade"
+        )
+
+    def test_two_or_more_waves_are_numbered_and_a_lone_wave_is_not(self, gen):
+        one = (gen.SPAWN_HOSTILE, "Hostile Wave", (((1, ("Anvil Arrow",), ""),),))
+        two = (gen.SPAWN_HOSTILE, "Hostile Wave", (((2, ("Vanduul Blade",), ""),),))
+        target = (gen.SPAWN_HOSTILE, "Targets", 1)
+        assert gen._roster_block("Hostiles", (one, target, two)) == [
+            "<EM4>Hostiles:</EM4>",
+            "- Wave 1: 1x Anvil Arrow",
+            "- Targets x1",
+            "- Wave 2: 2x Vanduul Blade",
+        ]
+        assert (
+            gen._roster_block("Hostiles", (one,))[1] == "- Hostile Wave: 1x Anvil Arrow"
+        )
+
+    def test_a_kind_already_ending_in_ship_is_not_doubled(self, gen):
+        assert gen._ship_kind("Easy Criminal Large Combat Ship") == (
+            "Easy Criminal Large Combat Ship"
+        )
+        assert gen._ship_kind("Very Easy Ninetails") == "Very Easy Ninetails ship"
+
+    def test_the_layout_words_follow_the_language(self, gen, index):
+        from src.utils.enhancement_text import load_table
+
+        xml = f"<C>{_group('Wave1', [_ship(2, [VANDUUL]), _ship(3, [CRIMINAL])])}</C>"
+        roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
+        gen._TEXT.update(load_table("german"))
+        try:
+            text = gen._format_roster_group(roster[0], gen._t("Wave {n}", n=1))
+        finally:
+            gen._TEXT.clear()
+        assert text.split(NL) == [
+            "- Welle 1, eines von:",
+            f"{IN2}2x Vanduul Blade",
+            f"{IN2}3x aus Anvil Arrow oder Anvil Gladiator",
+        ]
+
+
+class TestModelFallback:
+    """A mission that asks for a model tag the newer AI ships do not carry
+    (they carry only their series) still names the ship, through the model
+    name in the entity file names."""
+
+    HAMMER = "00000000-0000-0000-0000-0000000000d1"
+    SERIES = "00000000-0000-0000-0000-0000000000d2"
+    HAMMER_SERIES = "00000000-0000-0000-0000-0000000000d3"
+
+    def _index(self, gen, stem):
+        tags = dict(TAGS)
+        tags[self.HAMMER] = ("Hammerhead", MODEL)
+        tags[self.SERIES] = ("Series", SHIP)
+        tags[self.HAMMER_SERIES] = ("Hammerhead", self.SERIES)
+        ships = [([CRIMINAL, self.HAMMER_SERIES], "vehicle_NameAEGS_Hammerhead", stem)]
+        loc = dict(LOC, vehicle_NameAEGS_Hammerhead="Aegis Hammerhead")
+        return gen.ShipSpawnIndex(tags, ships, loc)
+
+    def test_the_file_name_names_the_model(self, gen):
+        index = self._index(gen, "aegs_hammerhead_gs_pu_ai_crim")
+        assert index.pick([self.HAMMER, CRIMINAL], []) == (("Aegis Hammerhead",), "")
+
+    def test_the_other_tags_still_count(self, gen):
+        index = self._index(gen, "aegs_hammerhead_gs_pu_ai_crim")
+        assert index.pick([self.HAMMER, VANDUUL], []) == ((), "Vanduul Hammerhead")
+        assert index.pick([self.HAMMER, CRIMINAL], [CRIMINAL])[0] == ()
+
+    def test_a_name_only_inside_a_word_does_not_count(self, gen):
+        index = self._index(gen, "aegs_hammerheadx_pu_ai_crim")
+        assert index.pick([self.HAMMER, CRIMINAL], [])[0] == ()
 
 
 class TestCooldown:
@@ -468,8 +579,8 @@ class TestGeneration:
         desc = _generate(gen, records, forge)
         assert (
             "<EM4>Hostiles:</EM4>\\n"
-            "- Hostile Wave: 2-3x Anvil Arrow or Anvil Gladiator; and 1x Anvil Arrow\\n"
-            "- Targets: 1x [Very Easy Ninetails]"
+            "- Hostile Wave: 2-3x of Anvil Arrow or Anvil Gladiator and 1x Anvil Arrow\\n"
+            "- Targets: 1x Very Easy Ninetails ship"
         ) in desc
         assert "<EM4>Cooldown:</EM4> 1 h (abandon: 15 min)" in desc
         assert "Hostile Wave x" not in desc

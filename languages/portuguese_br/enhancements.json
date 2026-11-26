@@ -749,6 +749,10 @@
       "ht": "",
       "at": "Velocidade"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "Onda {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "Desgaste"
@@ -772,6 +776,14 @@
     "abandon: {time}": {
       "ht": "",
       "at": "abandono: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "e um de:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "e {item}"
     },
     "base": {
       "ht": "",
@@ -829,21 +841,29 @@
       "ht": "",
       "at": "{count} tipos"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{count}x dentre {ships}"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} e {last}"
+    },
     "{items} or {last}": {
       "ht": "",
       "at": "{items} ou {last}"
     },
-    "{items}, or {last}": {
-      "ht": "",
-      "at": "{items}, ou {last}"
-    },
-    "{items}; and {last}": {
-      "ht": "",
-      "at": "{items}; e {last}"
-    },
     "{item} Set": {
       "ht": "",
       "at": "Conjunto {item}"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "nave {kind}"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, um de:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -852,6 +872,10 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "{pct}% de chance (só {variants})"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} e {last}"
     },
     "{rest}, or {last}": {
       "ht": "",

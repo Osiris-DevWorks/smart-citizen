@@ -515,8 +515,9 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # v16: XML facts only (#522, see the history above).
     "blueprint_pools": "v16",
     "scitem_lookups": "v11",
-    # Each ship entity's own tags and name loc key (build_ship_spawn_facts).
-    "ship_spawn_tags": "v1",
+    # Each ship entity's own tags, name loc key and file stem
+    # (build_ship_spawn_facts). v2: the stem, for the model fallback.
+    "ship_spawn_tags": "v2",
     "standings": "v3",
     "wearables": "v1",
     "xml_path_index": "v2",
@@ -3109,11 +3110,19 @@ _SPAWN_SETUP_TAG_FAMILIES: tuple[str, ...] = (
     "AI/CargoManifest",
     "AI/CrewManifest",
 )
-# Left out of a bracketed label too: every PU spawn asks for the PU game mode.
+# Left out of a no-match label too: every PU spawn asks for the PU game mode.
 _LABEL_SKIPPED_TAG_FAMILIES = _SPAWN_SETUP_TAG_FAMILIES + ("AI/Spawning/GameMode",)
-# A bracketed label's word order: difficulty, faction, then the rest as the
-# option lists them ([Very Easy Ninetails], [Easy Criminal Large Combat Ship]).
+# A no-match label's word order: difficulty, faction, then the rest as the
+# option lists them ("Very Easy Ninetails", "Easy Criminal Large Combat Ship").
 _LABEL_TAG_ORDER: tuple[str, ...] = ("AI/Ship/CombatClass/", "AI/Faction/")
+# Model tags. Many mission records still ask for a ship by its model tag
+# (Ship/Model/Hammerhead, Ship/Model/Constellation_Andromeda) while the newer
+# AI ships carry only their series tag, so the exact match finds nothing
+# although the ship is there. Such an option is matched again with the model
+# named by the entity's file name instead (aegs_hammerhead_gs_pu_ai_crim,
+# rsi_constellation_andromeda_gs_pu_ai_crim): 76 of LIVE's 206 options that
+# matched nothing (Nov 2026).
+_MODEL_TAG_PREFIXES: tuple[str, ...] = ("Ship/Model/", "Global/Ship/ShipModel/")
 
 
 def _tag_words(name: str) -> str:
@@ -3126,20 +3135,27 @@ class ShipSpawnIndex:
     """The ships a spawn option's tags can pick, by their in-game names.
 
     *tags* is the tag tree (``dcb_tags.load_tag_database``), *ships* each ship
-    entity's own tags and name loc key (``build_ship_spawn_facts``), *loc* the
-    strings of the language being generated and *fallback_loc* the English
-    ones, for a name *loc* lacks. False when either is empty, which leaves the
-    spawn lines as counts.
+    entity's own tags, name loc key and file stem (``build_ship_spawn_facts``;
+    the stem may be left off), *loc* the strings of the language being
+    generated and *fallback_loc* the English ones, for a name *loc* lacks.
+    False when either is empty, which leaves the spawn lines as counts.
     """
 
     def __init__(self, tags: dict, ships: list, loc: dict, fallback_loc: dict | None = None):
         self._paths = tag_paths(tags)
-        self._ships: list[tuple[frozenset, str]] = []
-        for own, key in ships:
+        self._ships: list[tuple[frozenset, str, str]] = []
+        for own, key, *stem in ships:
             name = " ".join((loc.get(key) or (fallback_loc or {}).get(key) or "").split())
             if name:
-                self._ships.append((with_ancestors(own, tags), name))
+                stem_text = f"_{stem[0].lower()}_" if stem else ""
+                self._ships.append((with_ancestors(own, tags), name, stem_text))
         self._picks: dict = {}
+
+    def _match(self, wanted, refused, stem_part: str = "") -> tuple[str, ...]:
+        found = {name for ship_tags, name, stem in self._ships
+                 if refused.isdisjoint(ship_tags) and all(g in ship_tags for g in wanted)
+                 and stem_part in stem}
+        return tuple(sorted(found, key=str.casefold))
 
     def __bool__(self) -> bool:
         return bool(self._paths and self._ships)
@@ -3148,7 +3164,9 @@ class ShipSpawnIndex:
         """``(names, label)`` for one spawn option: the names of the ships it
         can give, sorted and each once, or no names and a label made from its
         tags when no ship has them. Both empty when it asks for no tag that
-        picks a ship."""
+        picks a ship. An option whose model tag no ship carries is matched
+        again by the model's name in the entity file names (see
+        _MODEL_TAG_PREFIXES)."""
         key = (tuple(positive), tuple(negative))
         if key in self._picks:
             return self._picks[key]
@@ -3158,9 +3176,12 @@ class ShipSpawnIndex:
         label = ""
         if wanted:
             refused = set(negative)
-            found = {name for ship_tags, name in self._ships
-                     if refused.isdisjoint(ship_tags) and all(g in ship_tags for g in wanted)}
-            names = tuple(sorted(found, key=str.casefold))
+            names = self._match(wanted, refused)
+            models = [g for g in wanted if self._paths.get(g, "").startswith(_MODEL_TAG_PREFIXES)]
+            if not names and models:
+                model = self._paths[models[0]].rsplit("/", 1)[-1].lower()
+                names = self._match([g for g in wanted if g not in models], refused,
+                                    f"_{model}_")
             if not names:
                 label = self._label(wanted)
         self._picks[key] = (names, label)
@@ -3200,10 +3221,12 @@ def _ship_spawn_fact(xml_file) -> tuple[list[str], str]:
 
 
 def build_ship_spawn_facts(spaceships_dir: Path, xml_path_index: dict | None = None,
-                           records_dir: Path | None = None) -> list[tuple[list[str], str]]:
-    """``(own tags, name loc key)`` for every ship entity a spawn could pick:
-    AI and player versions alike, templates and ships with no name left out.
-    XML facts only, so ``_cached_lookup`` keeps it per DataForge build."""
+                           records_dir: Path | None = None) -> list[tuple[list[str], str, str]]:
+    """``(own tags, name loc key, file stem)`` for every ship entity a spawn
+    could pick: AI and player versions alike, templates and ships with no
+    name left out. The stem names the model where the tags do not (see
+    _MODEL_TAG_PREFIXES). XML facts only, so ``_cached_lookup`` keeps it per
+    DataForge build."""
     if xml_path_index is not None and records_dir is not None:
         key = spaceships_dir.relative_to(records_dir).as_posix()
         files = sorted(Path(p) for p in xml_path_index.get(key, []))
@@ -3219,7 +3242,7 @@ def build_ship_spawn_facts(spaceships_dir: Path, xml_path_index: dict | None = N
             logger.debug(f"Ship spawn tags: skipped {xml_file.name}: {e}")
             continue
         if own and ref.startswith("@") and not _is_sentinel_loc_ref(ref):
-            facts.append((own, ref[1:]))
+            facts.append((own, ref[1:], xml_file.stem))
     logger.info(f"Ship spawn tags: {len(facts)} ships")
     return facts
 
@@ -3350,61 +3373,106 @@ def _extract_spawn_roster(element: ET.Element, ships: ShipSpawnIndex,
 
 
 # How _join_words joins a list, by kind: ship names (``A or B``, and with
-# the serial comma ``A, B, or C``), choices at different amounts
-# (``2x A, or 3x B``) and slots that all spawn (``2x A; and 1x B``). Each
-# kind has its text for two items and for three or more, translated through
-# _t, so each language orders the words its own way. Three or more names
-# get a text of their own (``{rest}``, so its key differs from the choices'
-# ``{items}, or {last}``): English adds the serial comma there, and a
+# the serial comma ``A, B, or C``) and the parts of a wave that all spawn,
+# on one line (``2x A and 3x B``, ``2x A, 3x B, and 1x C``). Each kind has
+# its text for two items and for three or more, translated through _t, so
+# each language orders the words its own way. Three or more get a text of
+# their own (``{rest}``): English adds the serial comma there, and a
 # language without one leaves it out.
-_LIST_JOINS: dict[str, tuple[str, str, str]] = {
-    "names":   ("{items} or {last}", "{rest}, or {last}", ", "),
-    "choices": ("{items}, or {last}", "{items}, or {last}", ", "),
-    "slots":   ("{items}; and {last}", "{items}; and {last}", "; "),
+_LIST_JOINS: dict[str, tuple[str, str]] = {
+    "names": ("{items} or {last}", "{rest}, or {last}"),
+    "parts": ("{items} and {last}", "{rest}, and {last}"),
 }
+
+# The indent of a ship list's lines: no-break spaces, so nothing that trims
+# or collapses plain spaces can take it away. "and ..." lines sit at one
+# step, the choices of a "one of:" at two.
+_ROSTER_INDENT = "  "
+# The spawn label (_SPAWN_KEYWORD_TABLE) whose groups are numbered, Wave 1,
+# Wave 2, ..., when a roster has two or more.
+_WAVE_LABEL = "Hostile Wave"
+# A wave stays on one line only while no part of it names this many ships:
+# a long list would run into the part after it.
+_ONE_LINE_MAX_NAMES = 3
 
 
 def _join_words(parts: list[str], kind: str) -> str:
     """*parts* as one phrase, joined as _LIST_JOINS says for *kind*."""
     if len(parts) == 1:
         return parts[0]
-    two, many, sep = _LIST_JOINS[kind]
-    head = sep.join(parts[:-1])
+    two, many = _LIST_JOINS[kind]
+    head = ", ".join(parts[:-1])
     return _t(two if len(parts) == 2 else many, items=head, rest=head, last=parts[-1])
 
 
-def _format_ship_slot(slot: tuple) -> str:
-    """One slot's choices: equal ships at different amounts become a range
-    (``2-3x A, B, or C``), choices at one amount share one list
-    (``1x A, B, or C``), and what is left is joined with ``, or``
-    (``2x A or B, or 3x C``). A choice no ship matches shows its label in
-    brackets."""
+def _ship_kind(label: str) -> str:
+    """A no-match label as a kind of ship: ``Very Easy Ninetails ship``, or
+    the label as it is when it already ends in "ship"."""
+    if label.casefold().endswith("ship"):
+        return label
+    return _t("{kind} ship", kind=label)
+
+
+def _slot_choices(slot: tuple) -> list[tuple[str, int]]:
+    """A slot's choices as ``(text, how many ships it names)``: equal ships at
+    different amounts become a range, choices at one amount share one list,
+    and a list reads ``2-3x of A, B, or C`` so the count is not taken for a
+    count of each. A choice no ship matches names its kind of ship."""
     ranges: dict[tuple, list[int]] = {}
     for amount, names, label in slot:
         low_high = ranges.setdefault((names, label), [amount, amount])
         low_high[0] = min(low_high[0], amount)
         low_high[1] = max(low_high[1], amount)
-    by_amount: dict[tuple[int, int], list[str]] = {}
+    by_amount: dict[tuple[int, int], tuple[list[str], list[str]]] = {}
     for (names, label), (low, high) in ranges.items():
-        items = by_amount.setdefault((low, high), [])
-        for item in (names or (f"[{label}]",)):
-            if item not in items:
-                items.append(item)
-    parts = []
-    for (low, high), items in by_amount.items():
+        named, kinds = by_amount.setdefault((low, high), ([], []))
+        named.extend(n for n in names if n not in named)
+        if not names and label and label not in kinds:
+            kinds.append(label)
+    out = []
+    for (low, high), (named, kinds) in by_amount.items():
+        items = sorted(named, key=str.casefold) + [_ship_kind(k) for k in kinds]
         amount = f"{low}" if low == high else f"{low}-{high}"
-        named = sorted((i for i in items if not i.startswith("[")), key=str.casefold)
-        labels = [i for i in items if i.startswith("[")]
-        parts.append(f"{amount}x {_join_words(named + labels, 'names')}")
-    return _join_words(parts, "choices")
+        what = _join_words(items, "names")
+        text = _t("{count}x of {ships}", count=amount, ships=what) if len(items) > 1 \
+            else f"{amount}x {what}"
+        out.append((text, len(items)))
+    return out
 
 
-def _format_roster_group(group: tuple) -> str:
-    """One bullet: ``- Targets: 1x A, B or C`` or ``- Soldiers x6``."""
-    _, label, ships = group
+def _format_roster_group(group: tuple, label: str | None = None) -> str:
+    """One group's lines, *label* (or the group's own, translated) leading.
+
+    A group whose every slot is a single choice, with no long list in it,
+    is one line (``- Wave 2: 3x A, 1x of B or C, and 3x D``). Otherwise each
+    choice gets a line: ``- Hostile Wave, one of:`` with its choices under
+    it, and each further slot an ``and ...`` line (``and one of:`` with its
+    own choices under it when it has several). On-foot groups and ship
+    groups with nothing to name are counts (``- Soldiers x6``).
+    """
+    _, key, ships = group
+    name = label or _t(key)
     if isinstance(ships, int):
-        return f"- {_t(label)} x{ships}"
-    return f"- {_t(label)}: " + _join_words([_format_ship_slot(slot) for slot in ships], "slots")
+        return f"- {name} x{ships}"
+    slots = [_slot_choices(slot) for slot in ships]
+    if all(len(choices) == 1 for choices in slots) and (
+            len(slots) == 1 or all(c[0][1] < _ONE_LINE_MAX_NAMES for c in slots)):
+        return f"- {name}: " + _join_words([c[0][0] for c in slots], "parts")
+    inner = _ROSTER_INDENT * 2
+    lines: list[str] = []
+    for i, choices in enumerate(slots):
+        texts = [text for text, _ in choices]
+        if i == 0 and len(texts) == 1:
+            lines += [f"- {name}:", _ROSTER_INDENT + texts[0]]
+        elif i == 0:
+            lines.append("- " + _t("{label}, one of:", label=name))
+            lines += [inner + text for text in texts]
+        elif len(texts) == 1:
+            lines.append(_ROSTER_INDENT + _t("and {item}", item=texts[0]))
+        else:
+            lines.append(_ROSTER_INDENT + _t("and one of:"))
+            lines += [inner + text for text in texts]
+    return "\\n".join(lines)
 
 
 def _variant_suffix(numbers: list[int]) -> str:
@@ -3466,9 +3534,20 @@ def _format_cooldown(cooldown: "tuple[int, int]") -> str:
 
 def _roster_block(header: str, groups: tuple, numbers: "list[int] | None" = None) -> list[str]:
     """A Hostiles or Friendlies heading and its bullets; the heading names
-    the variants it is for when *numbers* is given."""
+    the variants it is for when *numbers* is given. Two or more hostile
+    waves are numbered, Wave 1, Wave 2, ..., in the order the game lists
+    them; a lone wave keeps its label."""
     head = _t(header) if not numbers else f"{_t(header)} ({_variant_suffix(numbers)})"
-    return [f"<EM4>{head}:</EM4>"] + [_format_roster_group(g) for g in groups]
+    waves = sum(1 for g in groups if g[1] == _WAVE_LABEL)
+    lines = [f"<EM4>{head}:</EM4>"]
+    wave = 0
+    for g in groups:
+        label = None
+        if waves > 1 and g[1] == _WAVE_LABEL:
+            wave += 1
+            label = _t("Wave {n}", n=wave)
+        lines.append(_format_roster_group(g, label))
+    return lines
 
 
 def _by_value(values: list) -> list[tuple[object, list[int]]]:

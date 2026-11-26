@@ -749,6 +749,10 @@
       "ht": "Velocity",
       "at": ""
     },
+    "Wave {n}": {
+      "ht": "Wave {n}",
+      "at": ""
+    },
     "Wear": {
       "ht": "Wear",
       "at": ""
@@ -771,6 +775,14 @@
     },
     "abandon: {time}": {
       "ht": "abandon: {time}",
+      "at": ""
+    },
+    "and one of:": {
+      "ht": "and one of:",
+      "at": ""
+    },
+    "and {item}": {
+      "ht": "and {item}",
       "at": ""
     },
     "base": {
@@ -829,20 +841,28 @@
       "ht": "{count} types",
       "at": ""
     },
+    "{count}x of {ships}": {
+      "ht": "{count}x of {ships}",
+      "at": ""
+    },
+    "{items} and {last}": {
+      "ht": "{items} and {last}",
+      "at": ""
+    },
     "{items} or {last}": {
       "ht": "{items} or {last}",
       "at": ""
     },
-    "{items}, or {last}": {
-      "ht": "{items}, or {last}",
-      "at": ""
-    },
-    "{items}; and {last}": {
-      "ht": "{items}; and {last}",
-      "at": ""
-    },
     "{item} Set": {
       "ht": "{item} Set",
+      "at": ""
+    },
+    "{kind} ship": {
+      "ht": "{kind} ship",
+      "at": ""
+    },
+    "{label}, one of:": {
+      "ht": "{label}, one of:",
       "at": ""
     },
     "{pct}% chance": {
@@ -851,6 +871,10 @@
     },
     "{pct}% chance ({variants} only)": {
       "ht": "{pct}% chance ({variants} only)",
+      "at": ""
+    },
+    "{rest}, and {last}": {
+      "ht": "{rest}, and {last}",
       "at": ""
     },
     "{rest}, or {last}": {

@@ -749,6 +749,10 @@
       "ht": "",
       "at": "속도"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "웨이브 {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "마모"
@@ -772,6 +776,14 @@
     "abandon: {time}": {
       "ht": "",
       "at": "포기: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "그리고 다음 중 하나:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "그리고 {item}"
     },
     "base": {
       "ht": "",
@@ -829,21 +841,29 @@
       "ht": "",
       "at": "{count}종"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{ships} 중 {count}x"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} 및 {last}"
+    },
     "{items} or {last}": {
       "ht": "",
       "at": "{items} 또는 {last}"
     },
-    "{items}, or {last}": {
-      "ht": "",
-      "at": "{items}, 또는 {last}"
-    },
-    "{items}; and {last}": {
-      "ht": "",
-      "at": "{items}; 그리고 {last}"
-    },
     "{item} Set": {
       "ht": "",
       "at": "{item} 세트"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "{kind} 함선"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, 다음 중 하나:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -852,6 +872,10 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "{pct}% 확률({variants} 한정)"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} 및 {last}"
     },
     "{rest}, or {last}": {
       "ht": "",

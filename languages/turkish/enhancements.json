@@ -749,6 +749,10 @@
       "ht": "",
       "at": "Hız"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "Dalga {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "Aşınma"
@@ -772,6 +776,14 @@
     "abandon: {time}": {
       "ht": "",
       "at": "iptal: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "ve şunlardan biri:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "ve {item}"
     },
     "base": {
       "ht": "",
@@ -829,21 +841,29 @@
       "ht": "",
       "at": "{count} tür"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{ships} arasından {count}x"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} ve {last}"
+    },
     "{items} or {last}": {
       "ht": "",
       "at": "{items} veya {last}"
     },
-    "{items}, or {last}": {
-      "ht": "",
-      "at": "{items}, veya {last}"
-    },
-    "{items}; and {last}": {
-      "ht": "",
-      "at": "{items}; ve {last}"
-    },
     "{item} Set": {
       "ht": "",
       "at": "{item} Seti"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "{kind} gemisi"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, şunlardan biri:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -852,6 +872,10 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "%{pct} şans (yalnızca {variants})"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} ve {last}"
     },
     "{rest}, or {last}": {
       "ht": "",

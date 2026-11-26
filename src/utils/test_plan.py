@@ -137,12 +137,15 @@ TEST_SECTIONS: list[dict] = [
         "title": "Mission ships and cooldowns (3.1.0)",
         "items": [
             "Upgrade from 3.0.x and start the app: it asks to extract DataForge again. Say Yes and let it generate.",
-            "Find an Eckhart Ship Ambush (Medium): Hostiles lists ships by name, one heading per variant, e.g. Targets: 1x Argo RAFT, Drake Cutlass Black, or MISC Freelancer MIS.",
-            "Find a mission whose hostiles match no real ship: that group shows a bracketed name, e.g. [Very Easy Ninetails].",
+            "Find an Eckhart Ship Ambush (Medium): Hostiles lists ships by name, one heading per variant, e.g. Targets: 1x of Argo RAFT, Drake Cutlass Black, or MISC Freelancer MIS.",
+            "Find a Headhunters Ship Ambush (Very Hard): the Hostile Wave reads one of:, a choice per line, then and one of: with its own choices, each indented.",
+            "Find Tactical Strike Group Needed: its waves read Wave 1 to Wave 8, each on one line, and name the RSI Constellation Mk IV Andromeda.",
+            "Find Gilly's Combat Gauntlet part 7: its wave names the Aegis Hammerhead.",
+            "Find a Headhunters claim sweep: a ship no real model matches reads as a kind, e.g. 1x Very Easy Ninetails ship, with no brackets.",
             "Missions with ground enemies still list them with a count, e.g. Soldiers x6, in the same list.",
             "Mission details carry a Cooldown line: e.g. 15 min, or None (abandon: 1 min). The Eckhart ambush shows a cooldown per variant.",
             "Enhancements tab: untick Cooldown, then Hostiles, and generate: each line leaves the mission text.",
-            "Select German and generate: ship names come from the German strings and the words (Abklingzeit, oder) are German.",
+            "Select German and generate: ship names come from the German strings and the words (Abklingzeit, oder, Welle, eines von) are German.",
         ],
     },
     {

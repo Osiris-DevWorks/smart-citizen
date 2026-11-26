@@ -749,6 +749,10 @@
       "ht": "",
       "at": "速度"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "第{n}波"
+    },
     "Wear": {
       "ht": "",
       "at": "磨损"
@@ -772,6 +776,14 @@
     "abandon: {time}": {
       "ht": "",
       "at": "放弃：{time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "以及以下之一："
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "以及{item}"
     },
     "base": {
       "ht": "",
@@ -829,21 +841,29 @@
       "ht": "",
       "at": "{count} 种"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "从{ships}中{count}x"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items}和{last}"
+    },
     "{items} or {last}": {
       "ht": "",
       "at": "{items}或{last}"
     },
-    "{items}, or {last}": {
-      "ht": "",
-      "at": "{items}，或{last}"
-    },
-    "{items}; and {last}": {
-      "ht": "",
-      "at": "{items}；以及{last}"
-    },
     "{item} Set": {
       "ht": "",
       "at": "{item} 套装"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "{kind}舰船"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}，以下之一："
     },
     "{pct}% chance": {
       "ht": "",
@@ -852,6 +872,10 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "{pct}% 概率（仅 {variants}）"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest}和{last}"
     },
     "{rest}, or {last}": {
       "ht": "",
