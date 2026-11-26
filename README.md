@@ -1,5 +1,11 @@
 # Smart Citizen
 
+[![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Osiris-DevWorks/smart-citizen/releases/latest)
+[![Platform: Linux (Wine)](https://img.shields.io/badge/platform-Linux%20(Wine)-E95420)](docs/LINUX.md)
+[![Latest version](https://img.shields.io/github/v/release/Osiris-DevWorks/smart-citizen?label=version&color=2EA043)](https://github.com/Osiris-DevWorks/smart-citizen/releases)
+[![License](https://img.shields.io/github/license/Osiris-DevWorks/smart-citizen?color=007EC6)](LICENSE)
+[![VirusTotal scan of the latest installer](https://img.shields.io/badge/VirusTotal-scan%20results-394EFF)](https://osiris-devworks.github.io/smart-citizen/virustotal/)
+
 *Smarter Strings for Star Citizen*
 
 A Windows desktop app for customizing Star Citizen's localization strings. Layer auto-generated stat and crafting enhancements on top of stock text, edit any in-game string in a sortable filterable table, and apply the result to your game install with a single click and an automatic backup.

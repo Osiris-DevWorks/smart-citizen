@@ -158,6 +158,15 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "README badges (#601)",
+        "items": [
+            "Open the README on GitHub: a row of five badges sits under the title (Windows, Linux (Wine), version, license, VirusTotal).",
+            "Click the Linux (Wine) badge: it opens the Linux guide. Click the version badge: it opens Releases.",
+            "After the 3.1.0 release is published: the version badge reads v3.1.0 and the VirusTotal badge opens the 3.1.0 installer's scan.",
+            "The 3.1.0 release notes on GitHub have no VirusTotal links added at the end.",
+        ],
+    },
+    {
         "title": "Portable build",
         "items": [
             "Unzip the portable build into a deep folder path, run it, extract, generate and apply: no path-length errors.",
