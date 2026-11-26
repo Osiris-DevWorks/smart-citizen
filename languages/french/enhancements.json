@@ -853,6 +853,10 @@
       "ht": "",
       "at": "{pct}% de chance ({variants} uniquement)"
     },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} ou {last}"
+    },
     "{type} Ammo": {
       "ht": "",
       "at": "Munitions {type}"

@@ -853,6 +853,10 @@
       "ht": "",
       "at": "шанс {pct}% (только {variants})"
     },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} или {last}"
+    },
     "{type} Ammo": {
       "ht": "",
       "at": "Боеприпасы {type}"

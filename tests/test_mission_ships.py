@@ -277,6 +277,30 @@ class TestRoster:
         assert gen._extract_spawn_roster(ET.fromstring(xml), index) == ()
 
 
+class TestListJoins:
+    def test_two_names_take_no_comma_and_three_take_the_serial_comma(self, gen):
+        assert gen._join_words(["A", "B"], "names") == "A or B"
+        assert gen._join_words(["A", "B", "C"], "names") == "A, B, or C"
+        assert gen._join_words(["A", "B", "C", "D"], "names") == "A, B, C, or D"
+
+    def test_a_language_without_the_serial_comma_leaves_it_out(self, gen):
+        from src.utils.enhancement_text import load_table
+
+        gen._TEXT.update(load_table("german"))
+        try:
+            assert gen._join_words(["A", "B", "C"], "names") == "A, B oder C"
+            assert gen._join_words(["A", "B"], "names") == "A oder B"
+        finally:
+            gen._TEXT.clear()
+
+    def test_a_slot_of_three_names(self, gen, index):
+        xml = f"<C>{_group('Wave1', [_ship(1, [FACTION, EASY])])}</C>"
+        roster = gen._extract_spawn_roster(ET.fromstring(xml), index)
+        assert gen._format_roster_group(roster[0]) == (
+            "- Hostile Wave: 1x Anvil Arrow, Anvil Gladiator, or Vanduul Blade"
+        )
+
+
 class TestCooldown:
     AVAIL = AVAILABILITY
 

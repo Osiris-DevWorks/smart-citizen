@@ -3349,14 +3349,18 @@ def _extract_spawn_roster(element: ET.Element, ships: ShipSpawnIndex,
     return tuple(groups)
 
 
-# How _join_words joins a list, by kind: ship names (``A, B or C``), choices
-# at different amounts (``2x A, or 3x B``) and slots that all spawn
-# (``2x A; and 1x B``). Translated through _t, so each language orders the
-# words its own way.
-_LIST_JOINS: dict[str, tuple[str, str]] = {
-    "names":   ("{items} or {last}", ", "),
-    "choices": ("{items}, or {last}", ", "),
-    "slots":   ("{items}; and {last}", "; "),
+# How _join_words joins a list, by kind: ship names (``A or B``, and with
+# the serial comma ``A, B, or C``), choices at different amounts
+# (``2x A, or 3x B``) and slots that all spawn (``2x A; and 1x B``). Each
+# kind has its text for two items and for three or more, translated through
+# _t, so each language orders the words its own way. Three or more names
+# get a text of their own (``{rest}``, so its key differs from the choices'
+# ``{items}, or {last}``): English adds the serial comma there, and a
+# language without one leaves it out.
+_LIST_JOINS: dict[str, tuple[str, str, str]] = {
+    "names":   ("{items} or {last}", "{rest}, or {last}", ", "),
+    "choices": ("{items}, or {last}", "{items}, or {last}", ", "),
+    "slots":   ("{items}; and {last}", "{items}; and {last}", "; "),
 }
 
 
@@ -3364,14 +3368,15 @@ def _join_words(parts: list[str], kind: str) -> str:
     """*parts* as one phrase, joined as _LIST_JOINS says for *kind*."""
     if len(parts) == 1:
         return parts[0]
-    template, sep = _LIST_JOINS[kind]
-    return _t(template, items=sep.join(parts[:-1]), last=parts[-1])
+    two, many, sep = _LIST_JOINS[kind]
+    head = sep.join(parts[:-1])
+    return _t(two if len(parts) == 2 else many, items=head, rest=head, last=parts[-1])
 
 
 def _format_ship_slot(slot: tuple) -> str:
     """One slot's choices: equal ships at different amounts become a range
-    (``2-3x A, B or C``), choices at one amount share one list
-    (``1x A, B or C``), and what is left is joined with ``, or``
+    (``2-3x A, B, or C``), choices at one amount share one list
+    (``1x A, B, or C``), and what is left is joined with ``, or``
     (``2x A or B, or 3x C``). A choice no ship matches shows its label in
     brackets."""
     ranges: dict[tuple, list[int]] = {}

@@ -853,6 +853,10 @@
       "ht": "",
       "at": "%{pct} şans (yalnızca {variants})"
     },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} veya {last}"
+    },
     "{type} Ammo": {
       "ht": "",
       "at": "{type} Mühimmatı"

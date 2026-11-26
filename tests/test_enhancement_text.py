@@ -80,7 +80,7 @@ def _data_texts(gen) -> set[str]:
     out |= {"Ship", "FPS", "FPS & Ship"}
     out |= set(gen._SEPARATOR_LABELS)
     # The list joins of the mission ship lines (_join_words).
-    out |= {template for template, _ in gen._LIST_JOINS.values()}
+    out |= {t for two, many, _ in gen._LIST_JOINS.values() for t in (two, many)}
     return out
 
 

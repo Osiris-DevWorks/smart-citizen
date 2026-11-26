@@ -853,6 +853,10 @@
       "ht": "",
       "at": "{pct}% 概率（仅 {variants}）"
     },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest}或{last}"
+    },
     "{type} Ammo": {
       "ht": "",
       "at": "{type} 弹药"
