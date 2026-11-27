@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Smart Citizen Katmanını (SCO) başlatır veya durdurur: oyunun üzerinde maden imzası çözümleme ve bir plan çekmecesi. Kenarlıksız pencere modu gerekir."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "CSV İçe Aktar…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "CSV Dışa Aktar…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Düzenlenmiş metinleri bir CSV dosyasından geri al"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Tabloda görünen satırları bir CSV dosyasına kaydet"
     }
   },
   "filters": {
@@ -2481,6 +2497,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Pencere boyutu, panel düzeni ve Metin Düzenleyici sütun genişlikleri varsayılanlarına sıfırlansın mı?\n\nKaydedilmiş boyutlarınız unutulacak. Ayarlarınız ve yerelleştirme verileriniz etkilenmez."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "CSV Dışa Aktar"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "Tabloda dışa aktarılacak satır yok. Bir filtreyi temizleyip tekrar deneyin."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} satır kaydedildi:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "CSV dosyası kaydedilemedi:\n{error}"
     }
   },
   "progress": {
@@ -2803,6 +2835,26 @@
     "error_body": {
       "ht": "",
       "at": "INI dosyası içe aktarılamadı:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Bir CSV dosyası seçin"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV dosyaları (*.csv);;Tüm dosyalar (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Bu CSV okunamıyor"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "Dosyada bir Key sütunu ve bir Custom Value sütunu olmalı. Düzeni görmek için Smart Citizen'dan bir CSV dışa aktarın."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} atlandı (boş veya özgün metinle aynı)."
     }
   },
   "restore_backup": {

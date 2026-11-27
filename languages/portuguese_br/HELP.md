@@ -96,6 +96,10 @@ Abra o menu **Mais** e escolha **Limpar Localização** para excluir o `global.i
 
 Use **Importar INI** na aba **Config** (também disponível no menu **Mais** da barra de ferramentas) para incorporar um arquivo INI existente às suas alterações. Uma caixa de resolução de conflitos permite decidir, chave por chave: **manter o atual**, **usar o importado**, **anexar**, **inserir antes**, ou informar um valor **personalizado**.
 
+A importação ignora qualquer valor vazio ou igual ao texto original, então importar um `global.ini` exportado inteiro só adiciona os textos que você realmente mudou, e os textos aprimorados continuam sendo atualizados depois de um patch do jogo.
+
+Para editar muitos textos de uma vez (por exemplo, para traduzi-los no Excel ou no Google Sheets), abra o menu **Mais** e escolha **Exportar CSV…**. Ele salva as linhas que a tabela mostra no momento, então use antes os filtros e a busca para escolher um lote. Preencha a coluna **Custom Value**, salve o arquivo como CSV e depois escolha **Mais → Importar CSV…**. Só as colunas Key e Custom Value são lidas, e a mesma regra vale. As linhas importadas aparecem como modificadas e entram no jogo no próximo Aplicar.
+
 ## 11. Exportar Loc-Pack
 
 Abra o menu **Mais** e escolha **Exportar INI…** para empacotar o `global.ini` atualmente aplicado em um único zip, `SmartCitizen-LocPack-{canal}-{AAAAMMDD}.zip`, que qualquer pessoa pode soltar em `StarCitizen\<canal>\data\Localization\english\` para usar o mesmo loc-pack sem instalar o Smart Citizen. Útil para compartilhar configurações com amigos ou com sua org.

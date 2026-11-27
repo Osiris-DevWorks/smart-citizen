@@ -94,6 +94,10 @@ Open the **More** menu and choose **Clear Localization** to delete the custom `g
 
 Use **Import INI** in the **Config** tab (also available under the toolbar's **More** menu) to fold an existing INI file into your overrides. A conflict-resolution dialog lets you decide, per key, whether to **keep current**, **use imported**, **append**, **prepend**, or provide a **custom** value.
 
+Import skips any value that is empty or the same as the original text, so importing a full exported `global.ini` only adds the strings you really changed, and enhanced strings keep updating after a game patch.
+
+To edit many strings at once (for example, to translate them in Excel or Google Sheets), open the **More** menu and choose **Export CSV…**. It saves the rows the table shows right now, so use the filters and search to pick a batch first. Fill in the **Custom Value** column, save the file as CSV, then choose **More → Import CSV…**. Only the Key and Custom Value columns are read, and the same skipping rule applies. Imported rows show as Modified and go into the game on your next Apply.
+
 ## 11. Export Loc-Pack
 
 Open the **More** menu and choose **Export INI…** to bundle the currently applied `global.ini` into a single zip — `SmartCitizen-LocPack-{channel}-{YYYYMMDD}.zip` — that anyone else can drop into their `StarCitizen\<channel>\data\Localization\english\` to run the same loc-pack without installing Smart Citizen. Useful for sharing presets with friends or your org.

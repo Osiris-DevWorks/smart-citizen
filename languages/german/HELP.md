@@ -94,6 +94,10 @@ Beim Anwenden bekommt außerdem die Spielen-Schaltfläche im Hauptmenü (`Fronte
 
 Verwende **INI importieren** im **Konfiguration**-Tab (auch über das Menü **Mehr** in der Symbolleiste verfügbar), um eine vorhandene INI-Datei in deine Überschreibungen einzufügen. Ein Konfliktlösungsdialog lässt dich pro Schlüssel entscheiden, ob du den **aktuellen behalten**, den **importierten verwenden**, **anhängen**, **voranstellen** oder einen **benutzerdefinierten** Wert angeben möchtest.
 
+Der Import überspringt jeden Wert, der leer oder gleich dem Originaltext ist. So fügt der Import einer komplett exportierten `global.ini` nur die Texte hinzu, die du wirklich geändert hast, und erweiterte Texte werden nach einem Spielpatch weiter aktualisiert.
+
+Um viele Texte auf einmal zu bearbeiten (zum Beispiel, um sie in Excel oder Google Sheets zu übersetzen), öffne das Menü **Mehr** und wähle **CSV exportieren…**. Es speichert die Zeilen, die die Tabelle gerade zeigt, also wähle zuerst mit Filtern und Suche einen Stapel aus. Fülle die Spalte **Custom Value** aus, speichere die Datei als CSV und wähle dann **Mehr → CSV importieren…**. Nur die Spalten Key und Custom Value werden gelesen, und es gilt dieselbe Regel. Importierte Zeilen erscheinen als geändert und kommen beim nächsten Anwenden ins Spiel.
+
 ## 11. Lokalisierungspaket exportieren
 
 Öffne das Menü **Mehr** und wähle **INI exportieren…**, um die aktuell angewendete `global.ini` in ein einzelnes Zip zu verpacken — `SmartCitizen-LocPack-{channel}-{YYYYMMDD}.zip` —, das jeder andere in seinen Ordner `StarCitizen\<Kanal>\data\Localization\english\` legen kann, um dasselbe Loc-Pack ohne Installation von Smart Citizen zu nutzen. Nützlich, um Voreinstellungen mit Freunden oder deiner Organisation zu teilen.

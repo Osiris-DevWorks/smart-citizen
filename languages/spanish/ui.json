@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Iniciar o detener la Superposición de Smart Citizen (SCO): decodificación de firmas de minería y un cajón de blueprints sobre el juego. Requiere el modo ventana sin bordes."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "Importar CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "Exportar CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Traer los textos editados desde un archivo CSV"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Guardar las filas que muestra la tabla en un archivo CSV"
     }
   },
   "filters": {
@@ -2481,6 +2497,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "¿Restablecer el tamaño de la ventana, la disposición de los paneles y el ancho de las columnas del editor de cadenas a sus valores predeterminados?\n\nSe olvidarán los tamaños guardados. Su configuración y sus datos de localización no se ven afectados."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "Exportar CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "La tabla no muestra filas para exportar. Quita un filtro e inténtalo de nuevo."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "Se guardaron {count} filas en:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "No se pudo guardar el archivo CSV:\n{error}"
     }
   },
   "progress": {
@@ -2803,6 +2835,26 @@
     "error_body": {
       "ht": "",
       "at": "Error al importar el archivo INI:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Elige un archivo CSV"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "Archivos CSV (*.csv);;Todos los archivos (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "No se puede leer este CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "El archivo necesita una columna Key y una columna Custom Value. Exporta un CSV desde Smart Citizen para ver el formato."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} omitidas (vacías o iguales al texto original)."
     }
   },
   "restore_backup": {

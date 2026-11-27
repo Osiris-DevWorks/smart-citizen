@@ -94,6 +94,10 @@ Uygulama sırasında Smart Citizen, ana menüdeki Oyna düğmesine (`Frontend_pl
 
 Mevcut bir INI dosyasını geçersiz kılmalarınıza katmak için **Yapılandırma** sekmesindeki **INI İçe Aktar...** düğmesini kullanın (araç çubuğunun **Daha Fazla** menüsünde de bulunur). Bir çakışma çözüm iletişim kutusu her anahtar için **Mevcudu Koru**, **İçe Aktarılanı Kullan**, **İçe Aktarılanı Sona Ekle**, **İçe Aktarılanı Başa Ekle** veya **Özel...** bir değer girme seçeneklerinden birini seçmenizi sağlar.
 
+İçe aktarma, boş olan veya özgün metinle aynı olan her değeri atlar. Böylece dışa aktarılmış tam bir `global.ini` dosyasını içe aktarmak yalnızca gerçekten değiştirdiğiniz metinleri ekler ve geliştirilmiş metinler oyun yamasından sonra güncellenmeye devam eder.
+
+Birçok metni aynı anda düzenlemek için (örneğin Excel veya Google E-Tablolar'da çevirmek için) **Daha Fazla** menüsünü açın ve **CSV Dışa Aktar…** seçeneğini seçin. Tablonun o anda gösterdiği satırları kaydeder, bu yüzden önce filtreler ve arama ile bir grup seçin. **Custom Value** sütununu doldurun, dosyayı CSV olarak kaydedin, ardından **Daha Fazla → CSV İçe Aktar…** seçeneğini seçin. Yalnızca Key ve Custom Value sütunları okunur ve aynı atlama kuralı geçerlidir. İçe aktarılan satırlar değiştirilmiş olarak görünür ve bir sonraki Uygula'da oyuna girer.
+
 ## 11. Yerelleştirme Paketini Dışa Aktarın
 
 **Daha Fazla** menüsünü açın ve **INI Dışa Aktar…** seçeneğini seçerek o anda uygulanmış `global.ini` dosyasını tek bir zip'te toplayın — `SmartCitizen-LocPack-{channel}-{YYYYMMDD}.zip` — başka herkes bunu kendi `StarCitizen\<channel>\data\Localization\english\` klasörüne bırakarak Smart Citizen'ı kurmadan aynı yerelleştirme paketini çalıştırabilir. Ön ayarlarınızı arkadaşlarınızla veya organizasyonunuzla paylaşmak için kullanışlıdır.
