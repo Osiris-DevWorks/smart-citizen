@@ -428,12 +428,17 @@ class LanguageBaseDownloadWorker(QThread):
         super().__init__()
         self._source = source
         self._dest = dest_path
+        # True once a fetch wrote a new base.ini (a URL that changed, or a
+        # local copy), False for an unchanged URL or a failure (#579: the
+        # startup check reloads only after a change).
+        self.changed = False
 
     def run(self):
         from src.utils.updater import fetch_language_base
         is_url = self._source.startswith(("http://", "https://"))
         try:
             changed = fetch_language_base(self._source, self._dest)
+            self.changed = bool(changed)
             if is_url:
                 logger.info(
                     f"Language base.ini ready: {self._dest} "
@@ -448,6 +453,33 @@ class LanguageBaseDownloadWorker(QThread):
             # finished(False): a fetch failure isn't fatal — the caller
             # falls back to any cached copy, or to English.
             self.finished.emit(False)
+
+
+class UexShopDataWorker(QThread):
+    """Load the SCO Item Finder's shop data (``src/utils/uex_shops.py``):
+    the cached copy when it is under 12 hours old, otherwise a fresh one
+    from UEX, falling back to the cached copy when UEX can't be reached.
+    The cache read and the download both stay off the GUI thread."""
+
+    # (ShopData or None, error text: "" when nothing went wrong)
+    finished = pyqtSignal(object, str)
+
+    def __init__(self, cache_path, *, force: bool = False):
+        super().__init__()
+        self._cache_path = cache_path
+        self._force = force
+
+    def run(self):
+        from src.utils.uex_shops import default_opener, load_shop_data
+        from src.utils.version import get_version
+        try:
+            data, error = load_shop_data(
+                self._cache_path, default_opener(f"SmartCitizen/{get_version()}"),
+                force=self._force)
+        except Exception as e:  # never let the finder take the app down
+            logger.exception(f"UEX shop data load failed: {e}")
+            data, error = None, str(e)
+        self.finished.emit(data, error)
 
 
 class ShaderCacheWorker(QThread):
@@ -539,6 +571,55 @@ class BlueprintLogScanWorker(QThread):
             logger.exception(f"Blueprint log scan failed: {e}")
             self.error.emit(str(e))
             self.finished.emit(None)
+
+
+class SmartSyncWorker(QThread):
+    """Run one Smart Sync (#567) off the GUI thread.
+
+    The sync folder is usually a cloud client's folder, and one on a NAS or
+    a OneDrive online-only folder can take a while to answer, so the read,
+    merge and write happen here. Everything it needs is handed in as plain
+    data captured on the main thread, and the merged result goes back in
+    ``finished``; the main-thread slot writes the settings, so the owned set
+    and the ledger are only ever changed on one thread.
+
+    Always emits ``finished`` once: a ``SyncResult``, or None when the folder
+    could not be used (the reason, logged at WARNING, goes in ``error``
+    first, so the global error dialog opens no box for it).
+    """
+
+    finished = pyqtSignal(object)   # smart_sync.SyncResult, or None
+    error = pyqtSignal(str)
+
+    def __init__(self, folder, machine_id, ledger, seeded, last_written, **extra):
+        super().__init__()
+        self._folder = folder
+        self._machine_id = machine_id
+        self._ledger = ledger
+        self._seeded = seeded
+        self._last_written = last_written
+        # Settings and user.ini ledgers and baselines (smart_sync.sync's
+        # keyword arguments), captured on the main thread like the rest.
+        self._extra = extra
+
+    def run(self):
+        from src.utils import smart_sync
+        try:
+            result = smart_sync.sync(
+                self._folder, self._machine_id, self._ledger, self._seeded,
+                last_written=self._last_written, **self._extra,
+            )
+        except OSError as e:
+            logger.warning("Smart Sync: could not use %s: %s", self._folder, e)
+            self.error.emit(str(e))
+            self.finished.emit(None)
+            return
+        except Exception as e:
+            logger.warning("Smart Sync failed: %s", e, exc_info=True)
+            self.error.emit(str(e))
+            self.finished.emit(None)
+            return
+        self.finished.emit(result)
 
 
 class LiveBlueprintLogWorker(QThread):
@@ -791,7 +872,11 @@ class EnhancementsGeneratorWorker(QThread):
             # lookup pickles).
             forge_dir    = AppSettings.get_dataforge_cache_leaf()
             english_base = AppSettings.get_base_ini_path(AppSettings.DEFAULT_LANGUAGE)
-            build_key    = AppSettings.get_dataforge_build_key(forge_dir)
+            # With the language's generated-text table in it (#579), so a
+            # table an update changes makes the set read as out of date.
+            text_language = self.language or AppSettings.get_selected_language()
+            build_key    = AppSettings.enhancements_stamp_value(
+                AppSettings.get_dataforge_build_key(forge_dir), text_language)
             tag_stamp    = tag_config_fingerprint(self.tag_configs, self.annotate_mission_descs)
             # Temp files a hard kill left between a write and its swap
             # (atomic_io): the INI folder and the generator's lookup pickle
@@ -875,7 +960,8 @@ class EnhancementsGeneratorWorker(QThread):
                      standardize_earnable_ship_names=self.standardize_earnable_ship_names,
                      rs_ore_name_annotations=self.rs_ore_name_annotations,
                      english_base_ini_path=english_base,
-                     should_cancel=self.isInterruptionRequested)
+                     should_cancel=self.isInterruptionRequested,
+                     language=text_language)
             logger.info("Enhancements generation worker: mod.main() completed successfully")
 
             # Record which Tag Builder config these INIs were generated

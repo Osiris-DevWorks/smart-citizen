@@ -804,3 +804,88 @@ def apply_owned_to_value(
         return m.group(0)
 
     return value[:start] + _BULLET_RE.sub(_retag, value[start:end]) + value[end:]
+
+
+# The title tag for a mission whose every blueprint is owned. It takes the
+# place of the generator's [BP] / [BP?] tag, in the same EM4.
+BP_COMPLETE_EM = "<EM4>[BP Complete]</EM4>"
+# How it is added to a title with no [BP] tag (the BP Tag switch off).
+BP_COMPLETE_TAG = " " + BP_COMPLETE_EM
+_BP_COMPLETE_TEXT = "[BP Complete]"
+# Strip a tag that stands alone (with its leading space).
+_BP_COMPLETE_STRIP_RE = re.compile(r"\s*<EM4>\[BP Complete\]</EM4>")
+# The generator's blueprint title tag, which the complete tag replaces.
+BP_TITLE_TAG = "<EM4>[BP]</EM4>"
+_BP_TITLE_TAG_RE = re.compile(r"<EM4>\[BP\??\]</EM4>")
+
+
+def complete_mission_titles(
+    title_descs: "Mapping[str, Iterable[str]]",
+    names_by_desc: "Mapping[str, Collection[str]]",
+    owned: Collection[str],
+) -> frozenset:
+    """Title keys of the missions whose every blueprint is owned.
+
+    *title_descs* is the generator's ``{title key: desc keys}`` record
+    (``blueprint_meta.read_mission_blueprint_descs``); *names_by_desc* is
+    ``{desc key: item names}`` from ``build_blueprint_metadata``, the names
+    the Blueprint Tracker and the Owned set use. A mission's blueprints are
+    the bullets of every description under its title. One whose
+    descriptions list no blueprint in the loaded strings (the POTENTIAL
+    BLUEPRINTS body field hidden, or descriptions overridden without the
+    list) is never complete: nothing says what it awards.
+    """
+    if not owned:
+        return frozenset()
+    complete = set()
+    for title, descs in title_descs.items():
+        names: set = set()
+        for desc in descs:
+            names.update(names_by_desc.get(desc, ()))
+        if names and names.issubset(owned):
+            complete.add(title)
+    return frozenset(complete)
+
+
+def apply_bp_complete_to_title(value: str, complete: bool, replaced: str = BP_TITLE_TAG) -> str:
+    """Return the title *value* with ``[BP Complete]`` when *complete*, and
+    without it otherwise.
+
+    The tag takes the place of the generator's ``[BP]`` / ``[BP?]`` tag, so
+    the title reads ``[BP Complete]`` alone, ahead of the reputation tag. A
+    title with neither gets it at the end.
+
+    Idempotent, as :func:`apply_owned_to_value` is: an existing tag is
+    undone first, so an item moved back to Available puts the old tag back.
+    *replaced* is the tag that one stands in for: what
+    :func:`bp_title_tag` read before it was added, or "" when it was added
+    at the end. The table remembers it per title
+    (``MainWindow._bp_tags_under_complete``); Apply merges fresh strings, so
+    only a user's override can carry the tag there, and the default
+    ``[BP]`` is put back. A title that also still has a ``[BP]`` tag (as
+    an earlier version wrote it, next to the tag) just loses the tag.
+    """
+    if not value:
+        return value
+    if _BP_COMPLETE_TEXT in value:
+        if replaced and not _BP_TITLE_TAG_RE.search(value):
+            value = value.replace(BP_COMPLETE_EM, replaced, 1)
+        value = _BP_COMPLETE_STRIP_RE.sub("", value)
+    if not complete:
+        return value
+    m = _BP_TITLE_TAG_RE.search(value)
+    if m is None:
+        return value + BP_COMPLETE_TAG
+    return value[:m.start()] + BP_COMPLETE_EM + value[m.end():]
+
+
+def bp_title_tag(value: str) -> str:
+    """The generator's ``[BP]`` / ``[BP?]`` tag in *value*, or ""."""
+    m = _BP_TITLE_TAG_RE.search(value or "")
+    return m.group(0) if m else ""
+
+
+def has_bp_complete_tag(value: str) -> bool:
+    """True when *value* carries the ``[BP Complete]`` tag (cheap test
+    callers use to skip values that need no strip)."""
+    return bool(value) and _BP_COMPLETE_TEXT in value

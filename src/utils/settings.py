@@ -103,6 +103,20 @@ def _is_valid_sc_root(path: str) -> bool:
         return False
 
 
+def _p4k_exists(path: Path) -> bool:
+    """Return True if *path* exists, False when it is missing or can't be read.
+
+    ``Path.exists()`` swallows only a few Windows errors. Any other OSError,
+    such as WinError 448 for an elevated process following a link a normal
+    user made (#595), reads as missing here instead of crashing the caller.
+    """
+    try:
+        return path.exists()
+    except OSError as exc:
+        logger.warning("Could not check %s: %s", path, exc)
+        return False
+
+
 def _path_ends_in_channel(path: str) -> bool:
     """Return True if *path*'s last component is a recognised channel name.
 
@@ -437,6 +451,7 @@ class AppSettings:
     # Settings keys - Test Plan panel (#144)
     TEST_PLAN_CHECKS = "test_plan/checks"        # JSON: {"hash": ..., "checked": [...]}
     TEST_PLAN_TESTER = "test_plan/tester_name"
+    TEST_PLAN_ITEM_NOTES = "test_plan/item_notes"  # JSON: {"hash": ..., "notes": {key: text}}
     TEST_WEBHOOK_URL = "test_plan/webhook_url"   # falls back to env var when unset
     TEST_WEBHOOK_ENV = "SMART_CITIZEN_TEST_WEBHOOK_URL"
 
@@ -497,7 +512,10 @@ class AppSettings:
     # ace title tag and the rep/xp title tag were both unconditionally shown
     # before this split). migrate_title_tag_settings() carries a user's prior
     # blueprint_tag / ace choice forward once.
-    MISSION_TITLE_TAG_KEYS = ("rep", "blueprint", "ace", "rs", "rep_track")
+    MISSION_TITLE_TAG_BP_COMPLETE = "bp_complete"
+    MISSION_TITLE_TAG_KEYS = (
+        "rep", "blueprint", MISSION_TITLE_TAG_BP_COMPLETE, "ace", "rs", "rep_track",
+    )
     _MISSION_TITLE_TAG_SETTING = {
         "rep":       "mission_title_tag/rep",
         "blueprint": "mission_title_tag/blueprint",
@@ -513,6 +531,12 @@ class AppSettings:
         # suffix (MISSION DETAILS' Reputation field) is unconditional and
         # always on, independent of this toggle.
         "rep_track": "mission_title_tag/rep_track",
+        # [BP Complete] on a mission whose every blueprint is owned. Unlike
+        # the tags above, the generator does not write it: MainWindow weaves
+        # it in on every load and Owned change, as it weaves [Owned] into
+        # blueprint bullets (owned_items.apply_bp_complete_to_title), so a
+        # change needs no Generate. Read by MainWindow._bp_complete_titles.
+        MISSION_TITLE_TAG_BP_COMPLETE: "mission_title_tag/bp_complete",
     }
     # Per-field default for get_mission_title_tags() — every title tag
     # defaults on except where overridden here.
@@ -567,6 +591,18 @@ class AppSettings:
     # new steps worth showing again. Empty string means "never shown".
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
+    # The app version whose What's New dialog was last shown, so it shows
+    # once after an install or an update. Empty means never shown.
+    WHATS_NEW_SEEN_VERSION = "whats_new_seen_version"
+
+    # Settings keys - Window
+    # Minimize to the system tray instead of the taskbar (Config tab,
+    # src/gui/tray.py). Off by default.
+    MINIMIZE_TO_TRAY = "minimize_to_tray"
+    # Whether the one-time "still running" notice has been shown, on the
+    # first trip to the tray (src/gui/tray.py). Per-install state, like the
+    # tour's completed version.
+    TRAY_NOTICE_SHOWN = "tray_notice_shown"
 
     # Settings keys - App self-update check
     # Settings keys - Star Citizen channel selection
@@ -604,13 +640,16 @@ class AppSettings:
     # languages/sources.json map. Keyed LANG_SOURCE_OVERRIDE_PREFIX/<language>.
     LANG_SOURCE_OVERRIDE_PREFIX = "language_source_url"
 
+    # The Missions checkbox's file key (ENHANCEMENTS_FILES, ENHANCEMENT_CATEGORY_FILES).
+    ENHANCEMENT_FILE_MISSIONS = "mission_rewards"
+
     # Enhancements cache filenames (written by generate_enhancements_ini.py into cache dir)
     ENHANCEMENTS_FILES = {
         "ship_descs":          "ships_desc_enhancements.ini",
         "component_descs":     "components_desc_enhancements.ini",
         "ship_weapon_descs":   "ship_weapons_desc_enhancements.ini",
         "fps_weapon_descs":    "fps_weapons_desc_enhancements.ini",
-        "mission_rewards":     "mission_rewards_enhancements.ini",
+        ENHANCEMENT_FILE_MISSIONS: "mission_rewards_enhancements.ini",
         "commodity_crafting":  "commodity_crafting_enhancements.ini",
         "journal":            "journal_enhancements.ini",
         "missile_enhancements": "missile_enhancements.ini",
@@ -633,7 +672,7 @@ class AppSettings:
         "ships":       ["ship_descs"],
         "ship_items":  ["component_descs", "ship_weapon_descs", "missile_enhancements"],
         "gear":        ["fps_weapon_descs"],
-        "missions":    ["mission_rewards"],
+        "missions":    [ENHANCEMENT_FILE_MISSIONS],
         "commodities": ["commodity_crafting"],
         "journal":     ["journal"],
         "medical_consumables": ["medical_consumables"],
@@ -738,6 +777,15 @@ class AppSettings:
     # owned_items (see import_values): restoring an owned set from before 3.0
     # resets it, so the next scan adds the starters to that set.
     DEFAULT_BLUEPRINTS_SEED = "blueprints/default_owned_seed"
+    # Smart Sync (#567): the folder the player picked (empty means off), this
+    # PC's random machine id, this PC's ledger of owned changes (JSON, see
+    # smart_sync.py) and the "updated" time this PC last wrote to its file.
+    # All four are this PC's own, so they are in PROFILE_EXCLUDE_KEYS: a
+    # settings backup restored on another PC must not bring this PC's id.
+    SMART_SYNC_FOLDER = "smart_sync/folder"
+    SMART_SYNC_MACHINE_ID = "smart_sync/machine_id"
+    SMART_SYNC_LEDGER = "smart_sync/owned_ledger"
+    SMART_SYNC_LAST_WRITTEN = "smart_sync/last_written"
 
     # Smart Citizen Overlay (SCO) switch names on the Overlay tab (3.0.0),
     # named once. A drawer section's switch is SCO_DRAWER_SECTION_PREFIX +
@@ -762,6 +810,8 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "blueprints": ("sco/drawer_blueprints", True),
         SCO_DRAWER_SECTION_PREFIX + "minerals":   ("sco/drawer_minerals", True),
         SCO_DRAWER_SECTION_PREFIX + "crafting":   ("sco/drawer_crafting", True),
+        SCO_DRAWER_SECTION_PREFIX + "order":      ("sco/drawer_order", True),
+        SCO_DRAWER_SECTION_PREFIX + "finder":     ("sco/drawer_finder", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
     }
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
@@ -795,6 +845,19 @@ class AppSettings:
     # decoded scan of one sets off the label's alerts. JSON list of
     # ORE_SIGNATURES keys and "salvage".
     SCO_WATCHED_MINERALS = "sco/watched_minerals"
+    # The SCO drawer's crafting order (3.1.0): a JSON list of
+    # crafting_order.OrderLine dicts. User data, like owned_items, so a
+    # backup's "unset" never empties it (PROFILE_DEFAULT_EXCLUDE_KEYS).
+    SCO_ORDER = "sco/order"
+    # How the Order tab shows ore volumes: "cscu" (as in game) or "scu".
+    SCO_ORDER_VOLUME = "sco/order_volume"
+    SCO_ORDER_VOLUMES = ("cscu", "scu")
+    SCO_ORDER_VOLUME_DEFAULT = "cscu"
+    # The Order tab's "Owned only" search filter (off: every blueprint).
+    SCO_ORDER_OWNED_ONLY = "sco/order_owned_only"
+    # The Order tab's quality sliders stop at each ore's tier qualities (on)
+    # or take any quality (off, for ores mixed to a quality in between).
+    SCO_ORDER_QUALITY_STEPS = "sco/order_quality_steps"
 
     # Set at Import Settings time so the NEXT launch can prompt "your imported
     # settings need enhancements regenerated + applied" once the app is fully
@@ -837,6 +900,10 @@ class AppSettings:
         "vehicles_path",
         "last_overrides_path",
         POST_IMPORT_APPLY_PENDING,
+        SMART_SYNC_FOLDER,
+        SMART_SYNC_MACHINE_ID,
+        SMART_SYNC_LEDGER,
+        SMART_SYNC_LAST_WRITTEN,
     })
 
     # Keys that have a default but are deliberately NOT materialised into a
@@ -850,7 +917,10 @@ class AppSettings:
     #   - the blueprint log watermark: scan position, per-channel, and
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
-    #   - tutorial_completed_version: per-install first-run state.
+    #   - tutorial_completed_version and whats_new_seen_version: per-install
+    #     first-run state.
+    #   - tray_notice_shown: the same kind of state, for the one-time "still
+    #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
     #     set, so it is exported only when stored, the same way owned_items
     #     is, and import_values takes it from a backup only together with
@@ -860,11 +930,15 @@ class AppSettings:
         "sc_install_root",
         "game_install_path",
         "owned_items",
+        SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        WHATS_NEW_SEEN_VERSION,
+        TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
+        "test_plan/item_notes",
     })
     # Prefixes of the same, for per-channel keys whose full name is dynamic.
     PROFILE_DEFAULT_EXCLUDE_PREFIXES = ("blueprint_log_watermark",)
@@ -1184,6 +1258,36 @@ class AppSettings:
         AppSettings.settings().setValue(AppSettings.TEST_PLAN_CHECKS, payload)
 
     @staticmethod
+    def get_test_plan_item_notes() -> dict:
+        """Return the tester's note per item key, or empty if the plan changed.
+
+        Kept against the plan hash like the check-marks, so a note never ends
+        up on a different item after TEST_SECTIONS changes.
+        """
+        from src.utils.test_plan import plan_hash
+        raw = AppSettings.settings().value(AppSettings.TEST_PLAN_ITEM_NOTES, "")
+        if not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return {}
+        if not isinstance(data, dict) or data.get("hash") != plan_hash():
+            return {}
+        notes = data.get("notes", {})
+        if not isinstance(notes, dict):
+            return {}
+        return {str(k): str(v) for k, v in notes.items() if str(v).strip()}
+
+    @staticmethod
+    def set_test_plan_item_notes(notes: dict) -> None:
+        """Persist the tester's per-item notes against the current plan hash."""
+        from src.utils.test_plan import plan_hash
+        kept = {k: v for k, v in notes.items() if v.strip()}
+        payload = json.dumps({"hash": plan_hash(), "notes": kept}, sort_keys=True)
+        AppSettings.settings().setValue(AppSettings.TEST_PLAN_ITEM_NOTES, payload)
+
+    @staticmethod
     def get_tester_name() -> str:
         return AppSettings.settings().value(AppSettings.TEST_PLAN_TESTER, "")
 
@@ -1319,7 +1423,7 @@ class AppSettings:
     @staticmethod
     def get_mission_title_tags() -> dict:
         """Return {field: enabled} for the mission TITLE tags (2.2.0, "General
-        Tags"): rep/xp, blueprint, ace, rep_track. Independent of
+        Tags"): rep/xp, blueprint, ace, rs, rep_track, bp_complete. Independent of
         get_mission_detail_fields() — see MISSION_TITLE_TAG_KEYS. Every field
         defaults to True (matching prior, unsplit behaviour) except where
         overridden in _MISSION_TITLE_TAG_DEFAULTS (currently just
@@ -1595,12 +1699,313 @@ class AppSettings:
 
     @staticmethod
     def set_owned_items(names) -> None:
-        """Persist the owned blueprint item-name set (#157)."""
+        """Persist the owned blueprint item-name set (#157).
+
+        With Smart Sync on (#567), each name that changes is also stamped in
+        this PC's sync ledger, so the change carries its real time to the
+        other PCs. Every writer of the owned set comes through here; one that
+        does not (Import Settings writes the key itself) is caught at the
+        next sync, which records the same differences.
+        """
         import json
+        names = set(names)
+        if AppSettings.get_smart_sync_folder():
+            from src.utils import smart_sync
+            AppSettings.set_smart_sync_ledger(
+                smart_sync.record(AppSettings.get_smart_sync_ledger(), names)
+            )
         AppSettings.settings().setValue(
             AppSettings.OWNED_ITEMS, json.dumps(sorted(names))
         )
         AppSettings.settings().sync()
+
+    # -- Smart Sync (#567) -------------------------------------------------
+
+    @staticmethod
+    def get_smart_sync_folder() -> str:
+        """The folder Smart Sync uses, or "" when it is off."""
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_FOLDER, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_folder(folder) -> None:
+        """Turn Smart Sync on with *folder*, or off with None or "".
+
+        Turning it on with no ledger yet shares what this PC owns as a
+        baseline that any real change wins over; turning it on again later
+        records what changed while it was off as changes made now.
+        """
+        from src.utils import smart_sync
+        folder = str(folder) if folder else ""
+        backend = AppSettings.settings()
+        if folder:
+            ledger = AppSettings.get_smart_sync_ledger()
+            owned = AppSettings.get_owned_items()
+            ledger = (smart_sync.record(ledger, owned) if ledger
+                      else smart_sync.baseline(ledger, owned))
+            AppSettings.set_smart_sync_ledger(ledger)
+            backend.setValue(AppSettings.SMART_SYNC_FOLDER, folder)
+        else:
+            backend.remove(AppSettings.SMART_SYNC_FOLDER)
+            # Off forgets the settings and user.ini ledgers, so turning it on
+            # again joins afresh instead of reading every change made
+            # meanwhile against an old "seen".
+            try:
+                AppSettings.get_smart_sync_state_path().unlink(missing_ok=True)
+            except OSError as e:
+                logger.warning("Smart Sync: could not remove its state file: %s", e)
+        backend.sync()
+
+    @staticmethod
+    def get_smart_sync_machine_id() -> str:
+        """This PC's random Smart Sync id, made the first time it is asked for."""
+        backend = AppSettings.settings()
+        machine_id = backend.value(AppSettings.SMART_SYNC_MACHINE_ID, "", type=str) or ""
+        if not machine_id:
+            from src.utils import smart_sync
+            machine_id = smart_sync.new_machine_id()
+            AppSettings.set_smart_sync_machine_id(machine_id)
+        return machine_id
+
+    @staticmethod
+    def set_smart_sync_machine_id(machine_id: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_MACHINE_ID, machine_id)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_ledger() -> dict:
+        """This PC's Smart Sync ledger (see smart_sync.py); {} when unset or unreadable."""
+        from src.utils import smart_sync
+        raw = AppSettings.settings().value(AppSettings.SMART_SYNC_LEDGER, "", type=str)
+        try:
+            return smart_sync.clean_ledger(json.loads(raw)) if raw else {}
+        except ValueError:
+            return {}
+
+    @staticmethod
+    def set_smart_sync_ledger(ledger: dict) -> None:
+        AppSettings.settings().setValue(
+            AppSettings.SMART_SYNC_LEDGER, json.dumps(ledger, sort_keys=True)
+        )
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_smart_sync_last_written() -> str:
+        return AppSettings.settings().value(AppSettings.SMART_SYNC_LAST_WRITTEN, "", type=str) or ""
+
+    @staticmethod
+    def set_smart_sync_last_written(updated: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SMART_SYNC_LAST_WRITTEN, updated)
+        AppSettings.settings().sync()
+
+    # Settings and string edits (Smart Sync v2). Their ledgers and what this
+    # PC last saw live in a state file beside the channel folders, not in the
+    # registry: a user.ini ledger holds every override of every channel.
+    SMART_SYNC_STATE_FILE = "smart-sync-state.json"
+    SMART_SYNC_BACKUPS_SUBDIR = "smart-sync"
+    SMART_SYNC_BACKUPS_KEEP = 5
+    SMART_SYNC_BACKUP_PREFIX = "SmartCitizen-SmartSync-Backup-"
+    # State file fields.
+    SYNC_STATE_SETTINGS = "settings"
+    SYNC_STATE_SETTINGS_SEEN = "settings_seen"
+    SYNC_STATE_USER_INI = "user_ini"
+    SYNC_STATE_USER_INI_SEEN = "user_ini_seen"
+
+    # Settings a backup carries that stay on each PC all the same: where the
+    # game is and which channel is open, the blueprint set (Smart Sync's own
+    # owned ledger shares it) and its scan positions, per-install first-run
+    # state, the merge sources (their paths are this PC's), the UI scale
+    # (it suits one screen, as column widths do) and the tester keys.
+    SMART_SYNC_LOCAL_KEYS = frozenset({
+        SC_INSTALL_ROOT,
+        GAME_INSTALL_PATH,
+        ACTIVE_CHANNEL,
+        "owned_items",
+        DEFAULT_BLUEPRINTS_SEED,
+        FONT_SIZE,
+        ONEDRIVE_WARNING_DISMISSED,
+        TUTORIAL_COMPLETED_VERSION,
+        WHATS_NEW_SEEN_VERSION,
+        TRAY_NOTICE_SHOWN,
+        MERGE_HIERARCHY,
+    })
+    SMART_SYNC_LOCAL_PREFIXES = (
+        BLUEPRINT_LOG_WATERMARK,
+        f"{DATA_SOURCES_PREFIX}/",
+        f"{SOURCE_AUTO_UPDATE_PREFIX}/",
+        "test_plan/",
+        "smart_sync/",
+    )
+
+    @staticmethod
+    def is_smart_sync_local_key(key: str) -> bool:
+        """True for a setting Smart Sync never shares (it stays on this PC)."""
+        return (key in AppSettings.SMART_SYNC_LOCAL_KEYS
+                or key.startswith(AppSettings.SMART_SYNC_LOCAL_PREFIXES))
+
+    @staticmethod
+    def smart_sync_settings_values() -> dict:
+        """The settings Smart Sync shares: what Export Settings saves, less
+        :meth:`is_smart_sync_local_key`."""
+        return {key: value for key, value in AppSettings.export_all_values().items()
+                if not AppSettings.is_smart_sync_local_key(key)}
+
+    @staticmethod
+    def smart_sync_user_ini_values() -> dict:
+        """``{channel: {key: value}}`` of every channel's user.ini, as Export
+        Settings reads them (values not stripped: a space can matter, #100)."""
+        from src.parser.ini_parser import parse_ini_text
+        out = {}
+        for channel, text in AppSettings.export_channel_overrides().items():
+            values = parse_ini_text(text, strip_values=False)
+            if values:
+                out[channel] = values
+        return out
+
+    @staticmethod
+    def get_smart_sync_state_path() -> Path:
+        return AppSettings.get_user_data_dir() / AppSettings.SMART_SYNC_STATE_FILE
+
+    @staticmethod
+    def get_smart_sync_state() -> dict:
+        """The settings and user.ini ledgers and what this PC last saw.
+
+        {} when sync has never shared them on this PC (or the file is gone
+        or unreadable): the next sync then joins with what the PC has.
+        """
+        from src.utils import smart_sync
+        from src.utils.atomic_io import read_bytes_retrying
+        path = AppSettings.get_smart_sync_state_path()
+        try:
+            data = json.loads(read_bytes_retrying(path).decode("utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, ValueError, UnicodeDecodeError) as e:
+            logger.warning("Smart Sync: could not read %s: %s", path, e)
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        seen = data.get(AppSettings.SYNC_STATE_SETTINGS_SEEN)
+        user_seen = data.get(AppSettings.SYNC_STATE_USER_INI_SEEN)
+        if not isinstance(seen, dict) or not isinstance(user_seen, dict):
+            return {}
+        return {
+            AppSettings.SYNC_STATE_SETTINGS:
+                smart_sync.clean_value_ledger(data.get(AppSettings.SYNC_STATE_SETTINGS)),
+            AppSettings.SYNC_STATE_SETTINGS_SEEN: seen,
+            AppSettings.SYNC_STATE_USER_INI:
+                smart_sync.clean_channel_ledgers(data.get(AppSettings.SYNC_STATE_USER_INI)),
+            AppSettings.SYNC_STATE_USER_INI_SEEN: {
+                ch: v for ch, v in user_seen.items()
+                if isinstance(ch, str) and isinstance(v, dict)},
+        }
+
+    @staticmethod
+    def set_smart_sync_state(state: dict) -> None:
+        """Write the state file in one step. Raises OSError."""
+        from src.utils.atomic_io import atomic_write_text
+        path = AppSettings.get_smart_sync_state_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_text(path, json.dumps(state, sort_keys=True, ensure_ascii=False))
+
+    @staticmethod
+    def get_smart_sync_backups_dir() -> Path:
+        return (AppSettings.get_user_data_dir() / "backups"
+                / AppSettings.SMART_SYNC_BACKUPS_SUBDIR)
+
+    @staticmethod
+    def write_smart_sync_backup() -> Path:
+        """Save an Export Settings zip before a sync changes anything here.
+
+        Into ``{data folder}\\backups\\smart-sync``, keeping the newest
+        :data:`SMART_SYNC_BACKUPS_KEEP`; Import Settings restores one. Raises
+        OSError when it cannot be written, and the caller then changes
+        nothing.
+        """
+        from datetime import datetime
+        from src.utils.build_mode import IS_PORTABLE
+        from src.utils.settings_profile import (
+            SOURCE_MODE_PORTABLE, SOURCE_MODE_REGISTRY, write_profile_zip,
+        )
+        from src.utils.version import get_version
+        folder = AppSettings.get_smart_sync_backups_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+        path = folder / f"{AppSettings.SMART_SYNC_BACKUP_PREFIX}{stamp}.zip"
+        write_profile_zip(
+            path,
+            settings=AppSettings.export_all_values(),
+            overrides=AppSettings.export_channel_overrides(),
+            app_version=get_version(),
+            source_mode=SOURCE_MODE_PORTABLE if IS_PORTABLE else SOURCE_MODE_REGISTRY,
+        )
+        backups = sorted(folder.glob(f"{AppSettings.SMART_SYNC_BACKUP_PREFIX}*.zip"))
+        for old in backups[:-AppSettings.SMART_SYNC_BACKUPS_KEEP]:
+            try:
+                old.unlink()
+            except OSError as e:
+                logger.warning("Smart Sync: could not remove old backup %s: %s", old, e)
+        logger.info("Smart Sync: saved a backup before syncing: %s", path)
+        return path
+
+    @staticmethod
+    def _same_setting(a, b) -> bool:
+        """Equal, or equal as the registry hands them back ("true" for True)."""
+        return a == b or str(a).lower() == str(b).lower()
+
+    @staticmethod
+    def apply_synced_settings_at_startup() -> int:
+        """Take the settings other PCs changed, before anything reads them.
+
+        Runs in ``main()`` before the language is loaded and the window is
+        built, because settings from another PC apply at the next start
+        (some, the language or the theme, are read only then). Changes this
+        PC made since its last sync are recorded first, so they are not
+        taken for old values. A backup is saved before anything changes; when
+        it cannot be, nothing changes. Returns how many settings changed.
+        """
+        from src.utils import smart_sync
+        if not AppSettings.get_smart_sync_folder():
+            return 0
+        state = AppSettings.get_smart_sync_state()
+        if not state:
+            return 0
+        current = AppSettings.smart_sync_settings_values()
+        ledger = smart_sync.record_values(
+            state[AppSettings.SYNC_STATE_SETTINGS], current,
+            state[AppSettings.SYNC_STATE_SETTINGS_SEEN])
+        changes = {}
+        removals = []
+        for key, entry in ledger.items():
+            if AppSettings.is_smart_sync_local_key(key) or AppSettings.is_profile_excluded_key(key):
+                continue
+            value = entry[smart_sync.VALUE]
+            if value is None:
+                if key in current:
+                    removals.append(key)
+            elif key not in current or not AppSettings._same_setting(value, current[key]):
+                changes[key] = value
+        if changes or removals:
+            try:
+                AppSettings.write_smart_sync_backup()
+            except OSError as e:
+                logger.warning("Smart Sync: no backup could be saved, so the settings "
+                               "from other PCs were not applied: %s", e)
+                return 0
+            backend = AppSettings.settings()
+            for key, value in changes.items():
+                backend.setValue(key, value)
+            for key in removals:
+                backend.remove(key)
+            backend.sync()
+            logger.info("Smart Sync: applied %d setting(s) changed on other PCs: %s",
+                        len(changes) + len(removals), ", ".join(sorted(changes) + removals))
+        state[AppSettings.SYNC_STATE_SETTINGS] = ledger
+        state[AppSettings.SYNC_STATE_SETTINGS_SEEN] = AppSettings.smart_sync_settings_values()
+        try:
+            AppSettings.set_smart_sync_state(state)
+        except OSError as e:
+            logger.warning("Smart Sync: could not save its state: %s", e)
+        return len(changes) + len(removals)
 
     @staticmethod
     def get_blueprint_show_tags() -> bool:
@@ -1772,6 +2177,55 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
+    def get_sco_order() -> list:
+        """The SCO drawer's crafting order as stored: a list of line dicts
+        (``crafting_order.OrderLine.to_dict``), [] when none or unreadable.
+        ``crafting_order.load_order`` fits it to the blueprints there are."""
+        import json
+        raw = AppSettings.settings().value(AppSettings.SCO_ORDER, "", type=str)
+        try:
+            lines = json.loads(raw) if raw else []
+        except (ValueError, TypeError):
+            return []
+        return lines if isinstance(lines, list) else []
+
+    @staticmethod
+    def set_sco_order(lines) -> None:
+        import json
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER, json.dumps(list(lines)))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order_volume() -> str:
+        return AppSettings._get_choice(AppSettings.SCO_ORDER_VOLUME,
+                                       AppSettings.SCO_ORDER_VOLUMES,
+                                       AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def set_sco_order_volume(volume: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_ORDER_VOLUME, volume,
+                                AppSettings.SCO_ORDER_VOLUMES,
+                                AppSettings.SCO_ORDER_VOLUME_DEFAULT)
+
+    @staticmethod
+    def get_sco_order_owned_only() -> bool:
+        return AppSettings.settings().value(AppSettings.SCO_ORDER_OWNED_ONLY, False, type=bool)
+
+    @staticmethod
+    def set_sco_order_owned_only(owned_only: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER_OWNED_ONLY, bool(owned_only))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_order_quality_steps() -> bool:
+        return AppSettings.settings().value(AppSettings.SCO_ORDER_QUALITY_STEPS, True, type=bool)
+
+    @staticmethod
+    def set_sco_order_quality_steps(stepped: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_ORDER_QUALITY_STEPS, bool(stepped))
+        AppSettings.settings().sync()
+
+    @staticmethod
     def get_sco_option(name: str) -> bool:
         """One of the Overlay tab's switches (``SCO_OPTION_SETTING``)."""
         key, default = AppSettings.SCO_OPTION_SETTING[name]
@@ -1853,6 +2307,17 @@ class AppSettings:
         AppSettings.settings().sync()
 
     @staticmethod
+    def get_whats_new_seen_version() -> str:
+        """App version whose What's New dialog was last shown, or '' if never."""
+        return AppSettings.settings().value(AppSettings.WHATS_NEW_SEEN_VERSION, "")
+
+    @staticmethod
+    def set_whats_new_seen_version(version: str) -> None:
+        """Record that the What's New dialog was shown for *version*."""
+        AppSettings.settings().setValue(AppSettings.WHATS_NEW_SEEN_VERSION, version)
+        AppSettings.settings().sync()
+
+    @staticmethod
     def get_tutorial_disabled() -> bool:
         """When True, the tutorial never auto-launches (Config tab opt-out)."""
         return AppSettings.settings().value(AppSettings.TUTORIAL_DISABLED, False, type=bool)
@@ -1860,6 +2325,28 @@ class AppSettings:
     @staticmethod
     def set_tutorial_disabled(disabled: bool) -> None:
         AppSettings.settings().setValue(AppSettings.TUTORIAL_DISABLED, bool(disabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_minimize_to_tray() -> bool:
+        """When True, minimizing hides the window in the system tray instead
+        of the taskbar (Config tab opt-in, src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.MINIMIZE_TO_TRAY, False, type=bool)
+
+    @staticmethod
+    def set_minimize_to_tray(enabled: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.MINIMIZE_TO_TRAY, bool(enabled))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_tray_notice_shown() -> bool:
+        """Whether the one-time "still running" notice has been shown, so it
+        comes on the first trip to the tray only (src/gui/tray.py)."""
+        return AppSettings.settings().value(AppSettings.TRAY_NOTICE_SHOWN, False, type=bool)
+
+    @staticmethod
+    def set_tray_notice_shown(shown: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.TRAY_NOTICE_SHOWN, bool(shown))
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3102,6 +3589,11 @@ class AppSettings:
         can't actually switch to. When the root isn't configured yet we
         return all channels so the combo isn't empty — the user can still
         pick one before the path is set.
+
+        A channel whose Data.p4k can't be checked counts as missing rather
+        than crashing the app (#595): Windows raises WinError 448 when an
+        elevated process follows a link a normal user made, e.g. a PTU folder
+        linked to LIVE, and ``Path.exists()`` lets that error through.
         """
         root = AppSettings.get_sc_install_root()
         if not root:
@@ -3109,7 +3601,7 @@ class AppSettings:
         root_path = Path(root)
         return [
             channel for channel in AppSettings.AVAILABLE_CHANNELS
-            if (root_path / channel / "Data.p4k").exists()
+            if _p4k_exists(root_path / channel / "Data.p4k")
         ]
 
     @staticmethod
@@ -3361,9 +3853,55 @@ class AppSettings:
         Generate button and the language switch. An empty stamp means a run
         was cut off or failed after it started (see
         :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
+
+        A set whose Missions file has no [BP Complete] mission record beside it
+        is not current either (:meth:`_mission_record_missing`).
         """
         stamp = AppSettings.get_enhancements_stamp(language)
-        return bool(stamp) and stamp == AppSettings.get_dataforge_build_key()
+        if not stamp or stamp != AppSettings.enhancements_stamp_value(
+                AppSettings.get_dataforge_build_key(), language):
+            return False
+        return not AppSettings._mission_record_missing(language)
+
+    @staticmethod
+    def enhancements_stamp_value(build_key: str, language: "str | None" = None) -> str:
+        """The ``.dataforge_stamp`` text for a set generated from *build_key*
+        in *language*.
+
+        A language with a table of translated generated text (#579,
+        ``languages/<language>/enhancements.json``) adds ``|text=`` and the
+        table's fingerprint, so an update that changes the table makes that
+        language's set read as out of date and the app offers to generate it
+        again. English has no table, so its stamp is the plain build key, as
+        before."""
+        from src.utils.enhancement_text import table_fingerprint
+        if language is None:
+            language = AppSettings.get_selected_language()
+        text = table_fingerprint(language)
+        return f"{build_key}|text={text}" if text else build_key
+
+    @staticmethod
+    def _mission_record_missing(language: "str | None" = None) -> bool:
+        """True when Missions is generated for *language* but the [BP Complete]
+        mission record (``blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE``) is not
+        beside it.
+
+        Only a generation writes the record, and a set generated before the
+        record existed still carries a stamp that matches the DataForge build,
+        so without this the app called it current: the startup check stayed
+        quiet, Generate stayed grey, and no title got the tag until a game
+        patch. Counting it as out of date makes the app offer that one
+        generation. It never starts one itself."""
+        missions = AppSettings.ENHANCEMENT_FILE_MISSIONS
+        if missions not in AppSettings.get_enabled_enhancement_categories():
+            return False
+        from src.utils.blueprint_meta import MISSION_BLUEPRINT_DESCS_FILE
+        folder = AppSettings.get_enhancements_dir(language)
+        try:
+            return ((folder / AppSettings.ENHANCEMENTS_FILES[missions]).is_file()
+                    and not (folder / MISSION_BLUEPRINT_DESCS_FILE).is_file())
+        except OSError:
+            return False
 
     @staticmethod
     def invalidate_enhancements_stamp(folder: Path) -> None:
@@ -3489,6 +4027,15 @@ class AppSettings:
         backups_dir = AppSettings.get_channel_data_dir() / "backups"
         backups_dir.mkdir(parents=True, exist_ok=True)
         return backups_dir
+
+    @staticmethod
+    def get_sco_orders_dir() -> Path:
+        r"""Where the SCO Order tab's saved orders go
+        (``{user_data_dir}\orders\<name>.json``). Not per channel: an
+        order is the same on every channel. Not created here; saving makes
+        it."""
+        from src.utils.crafting_order import SAVED_ORDERS_FOLDER
+        return AppSettings.get_user_data_dir() / SAVED_ORDERS_FOLDER
 
     @staticmethod
     def get_logs_dir() -> Path:
@@ -3966,6 +4513,7 @@ class AppSettings:
             AppSettings.RS_ORE_NAME_ANNOTATIONS: True,
             AppSettings.ONEDRIVE_WARNING_DISMISSED: False,
             AppSettings.TUTORIAL_DISABLED: False,
+            AppSettings.MINIMIZE_TO_TRAY: False,
             AppSettings.BLUEPRINT_SHOW_TAGS: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_ON_STARTUP: False,
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
@@ -3975,6 +4523,9 @@ class AppSettings:
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
+            AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,
+            AppSettings.SCO_ORDER_OWNED_ONLY: False,
+            AppSettings.SCO_ORDER_QUALITY_STEPS: True,
         }
         # Composed from the same maps the getters read, so these can't drift.
         defaults.update({
@@ -4082,6 +4633,12 @@ class AppSettings:
         adds the starters to the restored set instead of leaving them out for
         good. A backup with no owned set leaves both alone, so it can't undo
         the one-shot and bring back a starter the user moved out of Owned.
+
+        With Smart Sync on (#567) the backup's owned set is added to the
+        current one rather than replacing it, and recorded in the ledger as
+        it is added: replacing it would read as this PC moving every newer
+        blueprint back to Available, and the next sync would take them off
+        every other PC too.
         """
         backend = AppSettings.settings()
         applied = 0
@@ -4090,6 +4647,14 @@ class AppSettings:
                 continue
             if key == AppSettings.DEFAULT_BLUEPRINTS_SEED:
                 continue  # follows owned_items, below
+            if key == AppSettings.OWNED_ITEMS and AppSettings.get_smart_sync_folder():
+                try:
+                    imported = set(json.loads(value)) if value else set()
+                except (ValueError, TypeError):
+                    imported = set()
+                AppSettings.set_owned_items(AppSettings.get_owned_items() | imported)
+                applied += 1
+                continue
             if AppSettings.is_profile_excluded_key(key, value):
                 continue
             backend.setValue(key, value)

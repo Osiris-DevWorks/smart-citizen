@@ -34,6 +34,14 @@ SetupIconFile=assets\logo.ico
 ; without this, the WARNING from a WaitForUninstallToFinish timeout goes nowhere
 ; and a tester reporting "uninstall.exe was deleted" gives us nothing to grep.
 SetupLogging=yes
+; Code signing. release.yml compiles with /DSIGN and /Sazure=... once the
+; Azure Artifact Signing account is set up; Inno then signs Setup.exe and the
+; uninstaller through scripts\build\sign_file.ps1. Builds without /DSIGN
+; (local builds, tester previews) stay unsigned.
+#ifdef SIGN
+SignTool=azure
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -75,7 +83,10 @@ Name: "{group}\{cm:UninstallProgram,Smart Citizen}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\Smart Citizen"; Filename: "{app}\SmartCitizen.exe"
 
 [Run]
-Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citizen}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\SmartCitizen.exe"; Description: "{cm:LaunchProgram,Smart Citizen}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+; runasoriginaluser (#595): Setup runs as admin, and without it this launch
+; would too. Windows then refuses to follow a link a normal user made (a PTU
+; folder linked to LIVE), WinError 448, and the app also ran elevated.
 ; The #211 in-app auto-update relaunch is not a [Run] entry. Setup runs [Run]
 ; entries that are not postinstall BEFORE it signals ssPostInstall, and
 ; WriteInstallerChoicesToRegistry runs at ssPostInstall, so an entry here

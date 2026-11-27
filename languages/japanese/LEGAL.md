@@ -43,11 +43,12 @@ Smart Citizen は、**ローカルのデスクトップアプリケーション*
 
 ### ネットワークを経由するもの
 
-Smart Citizen が外部へのネットワークリクエストを行うのは、次の 3 つの場合のみです。
+Smart Citizen が外部へのネットワークリクエストを行うのは、次の 4 つの場合のみです。
 
 - **アップデート確認** — インストール中のバージョンを最新の GitHub リリースと比較するため、約 6 時間ごとに `api.github.com/repos/Osiris-DevWorks/smart-citizen/releases/latest` へ小さな認証なしのリクエストを送ります。返されるのはリリースのメタデータ（タグ名、リリース URL）のみで、Smart Citizen の状態は一切送信されません。
 - **言語のダウンロード** — 英語以外の言語に切り替えると、Smart Citizen は設定された URL（デフォルトでは [Dymerz/StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) GitHub リポジトリ）から、その言語のコミュニティ翻訳された `global.ini` をダウンロードします。ダウンロードはローカルにキャッシュされ、あなたのマシンからは何も送信されません。
 - **ユーザーが設定したリモートソース** — Config タブで `http(s)://` URL を指すデータソースを設定している場合、Smart Citizen はソースファイルの更新時にその URL を取得します。標準状態では、これは `global` ソースの GitHub-raw URL 形式にのみ該当します。v1.0 以降の標準構成では、代わりにローカルの Data.p4k 抽出から `base.ini` を読み込みます。
+- **SCO アイテム検索のショップリスト** — アイテム検索セクションをオンにしてオーバーレイを実行している間、Smart Citizen はショップとアイテム価格のリストを [UEX](https://uexcorp.space) の API（`api.uexcorp.uk`）から最大 12 時間ごとにダウンロードします。アプリ名とバージョンだけを含む 2 回の単純なリクエストで、お使いのマシンの情報は送信されません。リストはローカルにキャッシュされます。止めるには、オーバーレイタブでアイテム検索をオフにしてください。
 
 ### Smart Citizen オーバーレイ
 

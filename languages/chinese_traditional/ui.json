@@ -15,6 +15,24 @@
       "at": "智慧公民 v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "顯示 Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "退出"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen 仍在執行"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "它在系統托盤中。點選其圖示即可恢復視窗，右鍵點選可退出。如果看不到圖示，它可能在時鐘旁的 ^ 箭頭裡。"
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "開啟智慧公民 Discord 頻道，反饋問題、報告 Bug，並為即將推出的功能投票（需要加入 Osiris DevWorks Discord）。"
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "開啟 Karolinger Guides 上的智慧公民指南"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "將合併後的表格內容寫入遊戲的 global.ini。會先建立當前 global.ini 的帶時間戳備份。"
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "反饋、錯誤報告與功能投票"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -239,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "啟動或停止 Smart Citizen 疊加層 (SCO)：在遊戲畫面上解碼採礦訊號並顯示藍圖抽屜。需要無邊框視窗模式。"
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "匯入 CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "匯出 CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "從 CSV 檔案匯入編輯過的文字"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "將表格目前顯示的列儲存為 CSV 檔案"
     }
   },
   "filters": {
@@ -794,6 +836,18 @@
       "ht": "",
       "at": "勾選後，引導教程將不會在新版本中自動啟動。工具欄中的教程按鈕仍然可用。"
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "最小化到系統托盤"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "勾選後，最小化 Smart Citizen 時會將其隱藏到系統托盤（時鐘旁的圖示）而不是工作列。點選其托盤圖示即可恢復。在托盤中時，再次啟動 Smart Citizen 會恢復該視窗，而不是開啟第二個副本。"
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "未找到系統托盤，因此 Smart Citizen 將最小化到工作列。"
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "《星際公民》安裝根目錄——包含 LIVE/、PTU/、EPTU/、HOTFIX/ 和（或）TECH-PREVIEW/ 的目錄。安裝時會自動檢測；如果你的遊戲安裝在其他位置，可在此編輯。下方的“頻道”下拉選單選擇應用讀寫哪個頻道。"
@@ -841,6 +895,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "清除自定義快取資料夾，改用平臺預設值。"
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "讓你擁有的藍圖、文字修改和設定在你玩遊戲的每台電腦上保持一致。選擇一個雲端應用程式已在同步的資料夾，例如 Google Drive、OneDrive 或 Dropbox 中的資料夾，然後在其他電腦上選擇同一個資料夾。新加入的電腦會採用其他電腦已共享的設定和修改。同步變更任何內容之前，Smart Citizen 都會儲存一份備份，你可以用「匯入設定」還原。資料夾路徑、遊戲位置和視窗配置保留在各自的電腦上，每台電腦產生自己的 global.ini。"
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "已關閉。選擇一個資料夾即可開啟。"
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "選擇雲端應用程式會同步到其他電腦的資料夾"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "關閉"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "停止同步。此電腦上的藍圖、修改和設定保持不變。"
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "選擇 Smart Sync 資料夾"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync 已關閉。"
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "正在同步..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "上次同步於 {time}。此資料夾中的其他電腦：{count}。"
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "無法同步：{error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -1588,6 +1686,10 @@
       "ht": "",
       "at": "聲望軌道標籤（在聲望標籤後新增“(Security)” / “(Contractor)”）"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "藍圖已完成（新增“[BP Complete]”）"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "掃描/採礦任務"
@@ -2204,6 +2306,18 @@
       "ht": "",
       "at": "無法檢查更新：\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "新功能"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} 已安裝。以下是更新內容。"
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "關閉"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "沒有可重置的內容"
@@ -2255,6 +2369,10 @@
     "language_download_failed": {
       "ht": "",
       "at": "無法從所設定的來源載入 {language} 本地化內容，也未找到快取副本。改為顯示英文基礎內容。請檢查“對映語言檔案”中的地址或檔案，然後重試。"
+    },
+    "language_updated_status": {
+      "ht": "",
+      "at": "已下載更新的 {language} 翻譯，正在重新載入。"
     },
     "language_generating_enhancements": {
       "ht": "",
@@ -2363,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "是否將視窗大小、面板佈局和字串編輯器的列寬恢復為預設值？\n\n已儲存的尺寸將被清除。您的設定和本地化資料不會受到影響。"
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "匯出 CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "表格中沒有可匯出的列。請清除篩選後再試一次。"
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "已將 {count} 列儲存到：\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "無法儲存 CSV 檔案：\n{error}"
     }
   },
   "progress": {
@@ -2583,6 +2717,22 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "視窗比例已恢復為預設值。"
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync 無法使用其資料夾：{error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync 已從其他電腦更新 {count} 個已擁有藍圖。"
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync 無法儲存備份，因此沒有向此電腦同步任何內容：{error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync 從你的其他電腦收到 {count} 項設定。重新啟動 Smart Citizen 即可使用。"
     }
   },
   "import_flow": {
@@ -2669,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "匯入 INI 檔案失敗：\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "選擇 CSV 檔案"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV 檔案 (*.csv);;所有檔案 (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "無法讀取此 CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "檔案需要包含 Key 欄和 Custom Value 欄。從 Smart Citizen 匯出一個 CSV 即可查看格式。"
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "已略過 {count} 項（為空或與原文相同）。"
     }
   },
   "restore_backup": {
@@ -3030,9 +3200,25 @@
       "ht": "",
       "at": "已應用到 {target_path}\n\n  使用者編輯數：{user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "標記為 [BP Complete] 的任務：{count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "應用到遊戲失敗：{error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows 封鎖了遊戲資料夾"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen 無法寫入：\n{path}\n\nStar Citizen 正在執行並開啟了該檔案。請關閉遊戲，然後再次點擊「套用」。"
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows 不允許 Smart Citizen 寫入：\n{path}\n\n請嘗試以下步驟，然後再次點擊「套用」：\n1. 關閉 Star Citizen 和 RSI Launcher。\n2. 在 Windows 安全性中開啟「病毒與威脅防護」>「勒索軟體防護」，在「受控制的資料夾存取權」中允許 Smart Citizen。如有其他防毒軟體，也請在其中允許。\n3. 如果遊戲安裝在 Program Files 中，請以滑鼠右鍵點擊 Smart Citizen 並選擇「以系統管理員身分執行」。"
     }
   },
   "test_plan": {
@@ -3071,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "描述任何錯誤、意外情況或建議..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "備註（選填）"
     },
     "copied_status": {
       "ht": "",
@@ -3241,7 +3431,7 @@
       },
       "description": {
         "ht": "",
-        "at": "選擇應用程式主題（預設 / 淺色 / 深色 / ODW）和字型大小（小 / 中 / 大，重新啟動後生效），並可選擇在新版本時關閉自動教程。"
+        "at": "選擇應用程式主題（預設 / 淺色 / 深色 / ODW）和字型大小（小 / 中 / 大，重新啟動後生效），並可選擇在新版本時關閉自動教程。勾選“最小化到系統托盤”後，視窗在最小化時會進入系統托盤。"
       }
     },
     "cfg_sc_install": {
@@ -3311,7 +3501,21 @@
       },
       "description": {
         "ht": "",
-        "at": "“幫助”按鈕會開啟一個側邊面板，其中包含完整指南、已知問題列表，以及智慧公民 Discord 頻道的反饋連結。到這裡，你需要了解的一切就都齊了——祝你好運，公民。"
+        "at": "“幫助”按鈕會開啟一個側邊面板，其中包含完整指南、已知問題列表，以及智慧公民 Discord 頻道的反饋連結。"
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. 指南與影片教學"
+      },
+      "description": {
+        "ht": "",
+        "at": "視窗底部的 Karolinger Guides 標誌會開啟 Karolinger Guides 上的智慧公民指南。想看影片？影片教學會帶你走完整個流程。到這裡，你需要了解的一切就都齊了——祝你好運，公民。"
+      },
+      "link_text": {
+        "ht": "",
+        "at": "觀看影片教學"
       }
     }
   },
@@ -3565,6 +3769,302 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "此處礦物：{minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "訂單"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "將物品加入訂單..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "訂單摘要：{items} 種物品，{crafts} 次製造"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "訂單還是空的。在下方搜尋以加入物品。"
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "還沒有訂單資料。擷取 DataForge，然後勾選 Commodities 或 Journal 產生增強內容。"
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}：{amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "品質 {quality}+：{amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "用於：{items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "顯示 SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "顯示 cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "以 SCU 或 cSCU（SCU 的百分之一，與遊戲內相同）顯示礦石數量"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "複製"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "已複製"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "將訂單及其材料複製為文字，用於 Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "監視礦物"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "將訂單的礦物加入掃描監視清單，掃描器讀到其中之一時會提醒你"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "新訂單"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "確定？"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "再按一次「新訂單」以清空此訂單。已儲存的訂單會保留。"
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "開始新訂單：移除目前訂單中的所有物品。已儲存的訂單會保留。"
+    },
+    "order_less": {
+      "ht": "",
+      "at": "減少一個"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "增加一個"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "從訂單移除"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "尚未擁有藍圖"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "僅已擁有"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "只搜尋你已擁有的藍圖。"
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "未知材料"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "訂單名稱"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "儲存"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "以你輸入的名稱儲存此訂單。"
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "取代？"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "已儲存"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "請先輸入訂單名稱。"
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "無法將訂單儲存到：\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "已儲存的訂單"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "載入"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "用清單中選取的已儲存訂單取代此訂單。"
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "刪除"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "確定"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "再按一次「刪除」以刪除已儲存的訂單「{name}」。"
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "刪除清單中選取的已儲存訂單。正在編輯的訂單不受影響。"
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "無法刪除已儲存的訂單「{name}」。"
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "「{name}」中沒有目前遊戲資料認得的物品。"
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "從這 {of} 個中選用 {need} 個："
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "使用此槽位。勾選數超過藍圖所需時，會取消另一個的勾選。"
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}：{material}，{amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "此槽位所用材料的品質（0 到 1000）"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality}（{tier}）"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} 只有以下品質（{source} 資料）：{tiers}。滑桿會停在這些值以及 0、500 和 1000 上。"
+    },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "對齊礦石品質"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "開啟：品質滑桿停在每種礦石的品質上。關閉：可選 0 到 1000 的任意品質，用於混合成中間品質的礦石。"
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} 的品質（{source} 資料）：{tiers}。混合後可能落在中間，因此滑桿可選任意品質。"
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "需要品質 {quality} 或更高"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "所有槽位：{bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "材料品質不會改變此物品的屬性。"
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} 點能量"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} 個"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "製造訂單：{count} 次製造"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "材料："
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "品質 {quality}+ 的 {amount}"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "輸入物品名稱，查看在哪裡購買..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "正在從 UEX 載入商店資料..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "無法連線 UEX 取得商店資料。請檢查網路連線。覆蓋層會在幾分鐘後重試。"
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "商店資料來自 {site}，由玩家回報。更新於 {updated}。"
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "無法連線 UEX，因此顯示的是上次儲存的副本。"
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "沒有已知商店販售該名稱的物品。"
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item}（{count}）"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}，{place}：{price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} 至 {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "顯示 {total} 個物品中的 {shown} 個。繼續輸入以縮小範圍。"
     }
   },
   "overlay": {
@@ -3784,6 +4284,14 @@
       "ht": "",
       "at": "輸入礦物可查看使用它的物品，輸入物品可查看所需礦物。需要先擷取 DataForge。"
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "物品搜尋"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "輸入物品名稱，查看哪些商店販售、商店位置和價格。商店資料透過網際網路來自 UEX，由玩家回報。"
+    },
     "drawer_position": {
       "ht": "",
       "at": "抽屜位置："
@@ -3839,6 +4347,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "這個不能用作快速鍵。請按住 Ctrl、Alt 或 Win，再加一個字母、數字、符號、空白鍵、Tab 或導覽鍵（方向鍵、Home、End、Page Up/Down、Insert、Delete），也可以再加 Shift。F 鍵或 Pause 也可以單獨使用。"
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "訂單"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "建立製造訂單，依品質查看所需的每種材料。需要擷取 DataForge。"
     }
   },
   "shader_cache": {

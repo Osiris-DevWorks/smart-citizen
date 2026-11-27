@@ -35,15 +35,28 @@ jobs:
     name: Build & Release
     runs-on: windows-latest
     timeout-minutes: 30
+    # A fixed environment name gives the Azure federated credential one
+    # subject to trust (repo:Osiris-DevWorks/smart-citizen:environment:release)
+    # whichever of the three triggers started the run.
+    environment: release
     permissions:
       # Required for: softprops/action-gh-release (create release + upload
       # assets) AND `git push origin <tag>` (auto-tag the merge commit on
       # branch-push trigger).
       contents: write
-      # Required for the build provenance attestation.
+      # Required for the Azure OIDC login that code signing uses, and for
+      # the build provenance attestation.
       id-token: write
       attestations: write
+    # Code signing (Azure Artifact Signing) runs only once the
+    # AZURE_SIGNING_ACCOUNT repository variable is set. Until then every
+    # signing step is skipped and the release ships unsigned, as before.
+    # Repository variables it reads (none are secret): AZURE_CLIENT_ID,
+    # AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_SIGNING_ENDPOINT
+    # (e.g. https://weu.codesigning.azure.net/), AZURE_SIGNING_ACCOUNT,
+    # AZURE_SIGNING_PROFILE.
     env:
+      SIGN: ${{ vars.AZURE_SIGNING_ACCOUNT != '' }}
       # The VirusTotal step runs only when this secret is set.
       VT_KEY_SET: ${{ secrets.VIRUSTOTAL_API_KEY != '' }}
 
@@ -160,6 +173,28 @@ jobs:
         if: steps.gate.outputs.skip == 'false'
         run: python scripts/build/build_exe.py
 
+      - name: Azure login (code signing)
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign program files (SmartCitizen.exe, unp4k, unforge)
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist\SmartCitizen
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
       - name: Install Inno Setup
         if: steps.gate.outputs.skip == 'false'
         shell: pwsh
@@ -168,13 +203,24 @@ jobs:
       - name: Compile installer
         if: steps.gate.outputs.skip == 'false'
         shell: pwsh
+        env:
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
             Write-Error "ISCC.exe not found at $iscc — Inno Setup install failed?"
             exit 1
           }
-          & $iscc installer.iss
+          if ($env:SIGN -eq 'true') {
+            # Inno signs Setup.exe and the uninstaller itself, so the
+            # uninstaller it writes into the install folder is signed too.
+            $signScript = Join-Path $env:GITHUB_WORKSPACE "scripts\build\sign_file.ps1"
+            & $iscc /DSIGN "/Sazure=pwsh -NoProfile -ExecutionPolicy Bypass -File `"$signScript`" `$f" installer.iss
+          } else {
+            & $iscc installer.iss
+          }
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Inno Setup compile failed with exit code $LASTEXITCODE"
             exit $LASTEXITCODE
@@ -203,6 +249,25 @@ jobs:
         # script removes _build_info.py in its finally block.
         if: steps.gate.outputs.skip == 'false'
         run: python scripts/build/build_exe.py --portable
+
+      - name: Sign portable program files
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist\SmartCitizen-Portable-v${{ steps.resolve.outputs.version }}
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Zip signed portable build again
+        # build_exe.py --portable zipped the folder before it was signed.
+        if: steps.gate.outputs.skip == 'false' && env.SIGN == 'true'
+        run: python scripts/build/build_exe.py --portable --zip-only
 
       - name: Restore standard installer
         # Move the stashed installer back into dist/ so both artifacts
@@ -312,21 +377,85 @@ jobs:
           prerelease: false
 
       - name: Scan release files on VirusTotal
-        # Uploads both files to VirusTotal and adds the scan links to the
-        # end of the release notes, so users can check the results
-        # themselves. Runs only when the VIRUSTOTAL_API_KEY secret is set
-        # (a free VirusTotal account's key is enough). A VirusTotal outage
-        # never fails a release that is already published.
+        # Uploads both files to VirusTotal. The README's VirusTotal badge
+        # opens the installer's scan through the redirect page the next
+        # step writes (#601); the release notes no longer carry the links.
+        # Runs only when the VIRUSTOTAL_API_KEY secret is set (a free
+        # VirusTotal account's key is enough). A VirusTotal outage never
+        # fails a release that is already published.
+        id: virustotal
         if: steps.gate.outputs.skip == 'false' && env.VT_KEY_SET == 'true'
         uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f # v4.2.0
         with:
           vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          update_release_body: true
+          update_release_body: false
           request_rate: 4
           files: |
             ${{ steps.artifacts.outputs.installer_path }}
             ${{ steps.artifacts.outputs.portable_path }}
+        continue-on-error: true
+
+      - name: Point the README's VirusTotal badge at the new scan
+        # The badge links to https://osiris-devworks.github.io/smart-citizen/virustotal/
+        # (GitHub Pages, served from the gh-pages branch). This step
+        # rewrites that page so it redirects to the installer's newest
+        # scan. main needs a PR for every change, so the README itself
+        # never changes; only gh-pages does. Skipped when the scan
+        # did not run or failed, which leaves the badge on the last scan.
+        if: steps.virustotal.outcome == 'success' && steps.virustotal.outputs.analysis != ''
+        shell: bash
+        env:
+          ANALYSIS: ${{ steps.virustotal.outputs.analysis }}
+          INSTALLER: ${{ steps.artifacts.outputs.installer_path }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          name="$(basename "$INSTALLER")"
+          # ANALYSIS is "file=url,file=url"; pick the installer's url.
+          url=""
+          IFS=',' read -ra pairs <<< "$ANALYSIS"
+          for pair in "${pairs[@]}"; do
+            if [ "$(basename "${pair%%=*}")" = "$name" ]; then url="${pair#*=}"; fi
+          done
+          case "$url" in
+            https://www.virustotal.com/*) ;;
+            *) echo "No VirusTotal link for $name in: $ANALYSIS"; exit 0 ;;
+          esac
+          work="$RUNNER_TEMP/gh-pages"
+          rm -rf "$work"
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            git clone --quiet --depth 1 --branch gh-pages \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$work"
+          else
+            git init --quiet -b gh-pages "$work"
+            git -C "$work" remote add origin \
+              "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+            touch "$work/.nojekyll"
+          fi
+          mkdir -p "$work/virustotal"
+          cat > "$work/virustotal/index.html" <<HTML
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <title>Smart Citizen $TAG on VirusTotal</title>
+          <meta http-equiv="refresh" content="0; url=$url">
+          <link rel="canonical" href="$url">
+          </head>
+          <body>
+          <p>Opening the VirusTotal scan of $name: <a href="$url">$url</a></p>
+          </body>
+          </html>
+          HTML
+          cd "$work"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Badge already points at $url"; exit 0; fi
+          git commit --quiet -m "VirusTotal badge: $TAG"
+          git push --quiet origin gh-pages
+          echo "Badge now opens $url"
         continue-on-error: true
 
       - name: Post Discord notification

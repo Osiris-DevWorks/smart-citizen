@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Smart Citizen anzeigen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Beenden"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen läuft weiter"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Es ist jetzt im Infobereich. Ein Klick auf sein Symbol holt das Fenster zurück, ein Rechtsklick bietet Beenden an. Ist das Symbol nicht zu sehen, liegt es vielleicht hinter dem Pfeil ^ neben der Uhr."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "Den Smart-Citizen-Discord-Kanal für Feedback, Fehlerberichte und Abstimmungen über kommende Funktionen öffnen (erfordert den Beitritt zum Osiris-DevWorks-Discord)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Die Smart-Citizen-Anleitungen auf Karolinger Guides öffnen"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Schreibt den zusammengeführten Tabelleninhalt in die global.ini des Spiels. Zuerst wird eine Sicherung der aktuellen global.ini mit Zeitstempel erstellt."
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Feedback, Fehler & Feature-Abstimmung"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -239,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Smart Citizen Overlay (SCO) starten oder beenden: Entschlüsselung von Bergbau-Signaturen und eine Blaupausen-Schublade über dem Spiel. Benötigt den randlosen Fenstermodus."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "CSV importieren…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "CSV exportieren…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Bearbeitete Texte aus einer CSV-Datei übernehmen"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Die angezeigten Zeilen in einer CSV-Datei speichern"
     }
   },
   "filters": {
@@ -798,6 +840,18 @@
       "ht": "",
       "at": "Wenn aktiviert, startet die geführte Tour bei einer neuen Version nicht automatisch. Der Tutorial-Knopf in der Symbolleiste funktioniert weiterhin."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "In den Infobereich minimieren"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Wenn aktiviert, verschwindet Smart Citizen beim Minimieren in den Infobereich (die Symbole neben der Uhr) statt in die Taskleiste. Ein Klick auf sein Symbol dort holt es zurück. Solange es dort ist, holt ein erneuter Start von Smart Citizen dieses Fenster zurück, statt eine zweite Kopie zu öffnen."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Es wurde kein Infobereich gefunden, daher wird Smart Citizen in die Taskleiste minimiert."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Star-Citizen-Installationsverzeichnis — das Verzeichnis, das LIVE/, PTU/, EPTU/, HOTFIX/ und/oder TECH-PREVIEW/ enthält. Wird bei der Installation automatisch erkannt; bearbeite es, falls dein Spiel woanders liegt. Das Dropdown-Menü „Kanal“ unten wählt aus, welchen die App liest und beschreibt."
@@ -845,6 +899,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Den benutzerdefinierten Cache-Ordner löschen und den Plattformstandard verwenden."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Halte deine besessenen Blaupausen, Textänderungen und Einstellungen auf jedem PC gleich, auf dem du spielst. Wähle einen Ordner, den deine Cloud-App bereits synchronisiert, etwa in Google Drive, OneDrive oder Dropbox, und wähle denselben Ordner auf deinen anderen PCs. Ein neu hinzugefügter PC übernimmt die Einstellungen und Änderungen, die die anderen bereits teilen. Bevor eine Synchronisierung etwas ändert, speichert Smart Citizen eine Sicherung, die du mit Einstellungen importieren zurückholen kannst. Ordnerpfade, der Spielort und das Fensterlayout bleiben auf jedem PC, und jeder PC erstellt seine eigene global.ini."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Aus. Wähle einen Ordner, um es einzuschalten."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Wähle einen Ordner, den deine Cloud-App mit deinen anderen PCs synchronisiert"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Ausschalten"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Synchronisierung beenden. Blaupausen, Änderungen und Einstellungen auf diesem PC bleiben, wie sie sind."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Smart-Sync-Ordner wählen"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync ist aus."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Synchronisiere..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Zuletzt synchronisiert um {time}. Andere PCs in diesem Ordner: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Synchronisierung fehlgeschlagen: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -1588,6 +1686,10 @@
       "ht": "",
       "at": "Ruf-Track-Tag (fügt „(Security)“ / „(Contractor)“ zum Ruf-Tag hinzu)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP komplett (fügt „[BP Complete]“ hinzu)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Scan-/Abbaumissionen"
@@ -2204,6 +2306,18 @@
       "ht": "",
       "at": "Es konnte nicht nach Updates gesucht werden:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Neuigkeiten"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} ist installiert. Das hat sich geändert."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Schließen"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Nichts zurückzusetzen"
@@ -2255,6 +2369,10 @@
     "language_download_failed": {
       "ht": "",
       "at": "Die {language}-Lokalisierung konnte nicht aus der konfigurierten Quelle geladen werden, und es wurde keine zwischengespeicherte Kopie gefunden. Stattdessen wird die englische Basis angezeigt. Überprüfe die URL oder Datei in Sprachdatei zuordnen und versuche es erneut."
+    },
+    "language_updated_status": {
+      "ht": "",
+      "at": "Eine neuere {language}-Übersetzung wurde heruntergeladen. Wird neu geladen."
     },
     "language_generating_enhancements": {
       "ht": "",
@@ -2363,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Fenstergröße, Panel-Layout und die Spaltenbreiten des String-Editors auf die Standardwerte zurücksetzen?\n\nIhre gespeicherten Größen gehen verloren. Einstellungen und Lokalisierungsdaten sind nicht betroffen."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "CSV exportieren"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "Die Tabelle zeigt keine Zeilen zum Exportieren. Entferne einen Filter und versuche es erneut."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} Zeilen gespeichert in:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "Die CSV-Datei konnte nicht gespeichert werden:\n{error}"
     }
   },
   "progress": {
@@ -2583,6 +2717,22 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Fensterproportionen auf Standardwerte zurückgesetzt."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync konnte seinen Ordner nicht verwenden: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync hat {count} besessene(n) Bauplan/Baupläne von deinen anderen PCs aktualisiert."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync konnte keine Sicherung speichern, daher wurde nichts auf diesen PC synchronisiert: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync hat {count} Einstellung(en) von deinen anderen PCs erhalten. Starte Smart Citizen neu, um sie zu verwenden."
     }
   },
   "import_flow": {
@@ -2669,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "INI-Datei konnte nicht importiert werden:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "CSV-Datei wählen"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV-Dateien (*.csv);;Alle Dateien (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Diese CSV kann nicht gelesen werden"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "Die Datei braucht eine Spalte Key und eine Spalte Custom Value. Exportiere eine CSV aus Smart Citizen, um den Aufbau zu sehen."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} übersprungen (leer oder gleich dem Originaltext)."
     }
   },
   "restore_backup": {
@@ -3030,9 +3200,25 @@
       "ht": "",
       "at": "Angewendet auf {target_path}\n\n  Benutzerbearbeitungen: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Als [BP Complete] markierte Missionen: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Anwenden auf das Spiel fehlgeschlagen: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows hat den Spielordner blockiert"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen konnte nicht schreiben in:\n{path}\n\nStar Citizen läuft und hat die Datei geöffnet. Schließe das Spiel und klicke dann erneut auf Anwenden."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows hat Smart Citizen nicht erlaubt, zu schreiben in:\n{path}\n\nVersuche Folgendes und klicke dann erneut auf Anwenden:\n1. Schließe Star Citizen und den RSI Launcher.\n2. Öffne in Windows-Sicherheit Viren- & Bedrohungsschutz > Ransomware-Schutz und erlaube Smart Citizen im überwachten Ordnerzugriff. Erlaube es auch in jedem anderen Virenschutz.\n3. Wenn das Spiel unter Program Files liegt, klicke mit der rechten Maustaste auf Smart Citizen und wähle Als Administrator ausführen."
     }
   },
   "test_plan": {
@@ -3071,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "Beschreibe Fehler, Überraschungen oder Vorschläge..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Notizen (optional)"
     },
     "copied_status": {
       "ht": "",
@@ -3241,7 +3431,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und die Schriftgröße (Klein / Mittel / Groß, gilt nach einem Neustart) und deaktiviere optional die automatische Tour bei neuen Versionen."
+        "at": "Wähle das App-Design (Standard / Hell / Dunkel / ODW) und die Schriftgröße (Klein / Mittel / Groß, gilt nach einem Neustart) und deaktiviere optional die automatische Tour bei neuen Versionen. Aktiviere „In den Infobereich minimieren“, damit das Fenster beim Minimieren in den Infobereich geht."
       }
     },
     "cfg_sc_install": {
@@ -3311,7 +3501,21 @@
       },
       "description": {
         "ht": "",
-        "at": "Der Hilfe-Knopf öffnet ein Seitenpanel mit der vollständigen Anleitung, einer Liste bekannter Probleme und einem Feedback-Link zum Smart-Citizen-Discord-Kanal. Das war alles, was du für den Einstieg brauchst — viel Erfolg, Citizen."
+        "at": "Der Hilfe-Knopf öffnet ein Seitenpanel mit der vollständigen Anleitung, einer Liste bekannter Probleme und einem Feedback-Link zum Smart-Citizen-Discord-Kanal."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Anleitungen & Video-Tutorial"
+      },
+      "description": {
+        "ht": "",
+        "at": "Das Karolinger-Guides-Logo unten im Fenster öffnet die Smart-Citizen-Anleitungen auf Karolinger Guides. Lieber zuschauen? Das Video-Tutorial zeigt dir alles Schritt für Schritt. Das war alles, was du für den Einstieg brauchst — viel Erfolg, Citizen."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Video-Tutorial ansehen"
       }
     }
   },
@@ -3565,6 +3769,302 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Mineralien hier: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Auftrag"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Gegenstand zum Auftrag hinzufügen..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Auftragsübersicht: {items} Gegenstände, {crafts} Herstellungen"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "Noch nichts im Auftrag. Suche unten, um einen Gegenstand hinzuzufügen."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Noch keine Auftragsdaten. Extrahiere DataForge und erzeuge dann die Erweiterungen mit aktiviertem Commodities oder Journal."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Qualität {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Verwendet von: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "SCU zeigen"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "cSCU zeigen"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Erzmengen in SCU oder cSCU anzeigen (ein Hundertstel SCU, wie im Spiel)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Kopieren"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Kopiert"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Auftrag und Materialien als Text kopieren, für Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Mineralien beobachten"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Die Mineralien des Auftrags zur Scan-Beobachtungsliste hinzufügen, damit der Scanner dich warnt, wenn er eines liest"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Neuer Auftrag"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "Sicher?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Klicke erneut auf Neuer Auftrag, um diesen Auftrag zu leeren. Gespeicherte Aufträge bleiben erhalten."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Einen neuen Auftrag beginnen: entfernt alle Gegenstände aus diesem. Gespeicherte Aufträge bleiben erhalten."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Einen weniger"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Einen mehr"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Aus dem Auftrag entfernen"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Blaupause noch nicht im Besitz"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Nur besessene"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Nur Blaupausen durchsuchen, die du besitzt."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Unbekanntes Material"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Auftragsname"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Speichern"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Diesen Auftrag unter dem eingegebenen Namen speichern."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Ersetzen?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Gespeichert"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Gib zuerst einen Namen für den Auftrag ein."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Der Auftrag konnte nicht gespeichert werden in:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Gespeicherte Aufträge"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Laden"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Diesen Auftrag durch den in der Liste gewählten gespeicherten ersetzen."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Löschen"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Sicher?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Klicke erneut auf Löschen, um den gespeicherten Auftrag „{name}“ zu löschen."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Den in der Liste gewählten gespeicherten Auftrag löschen. Der Auftrag, den du gerade baust, bleibt."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Der gespeicherte Auftrag „{name}“ konnte nicht gelöscht werden."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "„{name}“ enthält keine Gegenstände, die diese Spieldaten kennen."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Nutzt {need} von diesen {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Diesen Platz verwenden. Wird einer mehr angehakt, als die Blaupause braucht, wird ein anderer abgehakt."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "Die Qualität des Materials für diesen Platz (0 bis 1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} gibt es nur in diesen Qualitäten ({source}-Daten): {tiers}. Der Regler hält dort und bei 0, 500 und 1000."
+    },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "An Erzqualitäten einrasten"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "An: Die Qualitätsregler halten bei den Qualitäten, in denen es jedes Erz gibt. Aus: Sie nehmen jede Qualität von 0 bis 1000, für Erze, die zu einer Qualität dazwischen gemischt wurden."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} gibt es in diesen Qualitäten ({source}-Daten): {tiers}. Gemischte Erze können dazwischen liegen, daher nimmt der Regler jede Qualität."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Benötigt Qualität {quality} oder besser"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Alle Plätze: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "Die Materialqualität ändert die Werte dieses Gegenstands nicht."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} Pips"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} Stk."
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Herstellungsauftrag: {count} Herstellungen"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materialien:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} mit Qualität {quality}+"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Gegenstand eingeben, um zu sehen, wo man ihn kauft..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Shopdaten werden von UEX geladen..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "UEX war für die Shopdaten nicht erreichbar. Prüfe deine Internetverbindung. Das Overlay versucht es in ein paar Minuten erneut."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Shopdaten von {site}, von Spielern gemeldet. Aktualisiert {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX war nicht erreichbar, daher ist dies die zuletzt gespeicherte Kopie."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "Kein bekannter Shop verkauft einen Gegenstand mit diesem Namen."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place}: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "{low} bis {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "{shown} von {total} Gegenständen angezeigt. Gib mehr ein, um die Suche einzugrenzen."
     }
   },
   "overlay": {
@@ -3784,6 +4284,14 @@
       "ht": "",
       "at": "Mineral eingeben, um die Gegenstände zu sehen, die es nutzen, oder einen Gegenstand, um die nötigen Mineralien zu sehen. Erfordert eine DataForge-Extraktion."
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Gegenstandssuche"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Gib einen Gegenstand ein, um zu sehen, welche Shops ihn verkaufen, wo sie sind und was er kostet. Die Shopdaten kommen über das Internet von UEX und werden von Spielern gemeldet."
+    },
     "drawer_position": {
       "ht": "",
       "at": "Position der Schublade:"
@@ -3839,6 +4347,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Das kann kein Tastenkürzel sein. Halte Strg, Alt oder Win mit einem Buchstaben, einer Ziffer, einem Symbol, der Leertaste, Tab oder einer Navigationstaste (Pfeile, Pos1, Ende, Bild auf/ab, Einfg, Entf), auf Wunsch auch Umschalt. Eine F-Taste oder Pause geht auch allein."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Auftrag"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Stelle einen Herstellungsauftrag zusammen und sieh jedes nötige Material, nach Qualität. Erfordert eine DataForge-Extraktion."
     }
   },
   "shader_cache": {

@@ -1,0 +1,833 @@
+{
+  "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
+  "strings": {
+    "--- EFFECT ---": {
+      "ht": "",
+      "at": "--- 효과 ---"
+    },
+    "--- STATS ---": {
+      "ht": "",
+      "at": "--- 능력치 ---"
+    },
+    "Absolute Range": {
+      "ht": "",
+      "at": "절대 사거리"
+    },
+    "Acceleration": {
+      "ht": "",
+      "at": "가속도"
+    },
+    "Ace Pilot": {
+      "ht": "",
+      "at": "에이스 조종사"
+    },
+    "Ace Pilots": {
+      "ht": "",
+      "at": "에이스 조종사"
+    },
+    "Aim Assist Range": {
+      "ht": "",
+      "at": "조준 보조 범위"
+    },
+    "Alpha Dmg": {
+      "ht": "",
+      "at": "단발 피해"
+    },
+    "Ammo": {
+      "ht": "",
+      "at": "탄약"
+    },
+    "Arm Dist": {
+      "ht": "",
+      "at": "신관 작동 거리"
+    },
+    "Arm Time": {
+      "ht": "",
+      "at": "신관 작동 시간"
+    },
+    "Armor HP": {
+      "ht": "",
+      "at": "장갑 HP"
+    },
+    "Armour": {
+      "ht": "",
+      "at": "방어구"
+    },
+    "Attackers": {
+      "ht": "",
+      "at": "공격자"
+    },
+    "Auto": {
+      "ht": "",
+      "at": "자동"
+    },
+    "Backup": {
+      "ht": "",
+      "at": "지원군"
+    },
+    "Bandits": {
+      "ht": "",
+      "at": "도적"
+    },
+    "Base Resource Signature": {
+      "ht": "",
+      "at": "기본 자원 신호"
+    },
+    "Beam": {
+      "ht": "",
+      "at": "빔"
+    },
+    "Bio": {
+      "ht": "",
+      "at": "생화학"
+    },
+    "Blast Radius": {
+      "ht": "",
+      "at": "폭발 반경"
+    },
+    "Blueprint Reward": {
+      "ht": "",
+      "at": "설계도 보상"
+    },
+    "Bomb Slots": {
+      "ht": "",
+      "at": "폭탄 슬롯"
+    },
+    "Boost": {
+      "ht": "",
+      "at": "부스트"
+    },
+    "Boss": {
+      "ht": "",
+      "at": "보스"
+    },
+    "Burst": {
+      "ht": "",
+      "at": "점사"
+    },
+    "CQC": {
+      "ht": "",
+      "at": "근접전"
+    },
+    "Cal Rate": {
+      "ht": "",
+      "at": "보정 속도"
+    },
+    "Captain": {
+      "ht": "",
+      "at": "함장"
+    },
+    "Chain": {
+      "ht": "",
+      "at": "연계"
+    },
+    "Charge": {
+      "ht": "",
+      "at": "충전"
+    },
+    "Civilians": {
+      "ht": "",
+      "at": "민간인"
+    },
+    "Class": {
+      "ht": "",
+      "at": "등급"
+    },
+    "Combat": {
+      "ht": "",
+      "at": "전투"
+    },
+    "Complexity": {
+      "ht": "",
+      "at": "복잡도"
+    },
+    "Component HP": {
+      "ht": "",
+      "at": "부품 HP"
+    },
+    "Cooldown": {
+      "ht": "",
+      "at": "재사용 대기"
+    },
+    "Coolers": {
+      "ht": "",
+      "at": "냉각기"
+    },
+    "Cooling Rate": {
+      "ht": "",
+      "at": "냉각 속도"
+    },
+    "Cost/Shot": {
+      "ht": "",
+      "at": "발당 소모"
+    },
+    "Crew": {
+      "ht": "",
+      "at": "승무원"
+    },
+    "DPS": {
+      "ht": "",
+      "at": "DPS"
+    },
+    "Damage": {
+      "ht": "",
+      "at": "피해"
+    },
+    "Damage-Map Rate": {
+      "ht": "",
+      "at": "손상 맵 속도"
+    },
+    "Damaged Delay": {
+      "ht": "",
+      "at": "손상 시 지연"
+    },
+    "Defenders": {
+      "ht": "",
+      "at": "방어자"
+    },
+    "Deflect": {
+      "ht": "",
+      "at": "편향"
+    },
+    "Detection Mode": {
+      "ht": "",
+      "at": "탐지 모드"
+    },
+    "Detonation": {
+      "ht": "",
+      "at": "기폭"
+    },
+    "Difficulty (1-7)": {
+      "ht": "",
+      "at": "난이도 (1-7)"
+    },
+    "Distort": {
+      "ht": "",
+      "at": "왜곡"
+    },
+    "Dmg Mult": {
+      "ht": "",
+      "at": "피해 배율"
+    },
+    "Downed Delay": {
+      "ht": "",
+      "at": "정지 시 지연"
+    },
+    "Drop": {
+      "ht": "",
+      "at": "감소"
+    },
+    "EM": {
+      "ht": "",
+      "at": "EM"
+    },
+    "EM Signature": {
+      "ht": "",
+      "at": "EM 신호"
+    },
+    "Effective Range": {
+      "ht": "",
+      "at": "유효 사거리"
+    },
+    "Energy": {
+      "ht": "",
+      "at": "에너지"
+    },
+    "Engagement Type": {
+      "ht": "",
+      "at": "교전 유형"
+    },
+    "Escort Wings": {
+      "ht": "",
+      "at": "호위 편대"
+    },
+    "Escorts": {
+      "ht": "",
+      "at": "호위"
+    },
+    "Extraction": {
+      "ht": "",
+      "at": "추출"
+    },
+    "FPS": {
+      "ht": "",
+      "at": "FPS"
+    },
+    "FPS & Ship": {
+      "ht": "",
+      "at": "FPS 및 함선"
+    },
+    "Failure": {
+      "ht": "",
+      "at": "실패"
+    },
+    "Failure Penalty": {
+      "ht": "",
+      "at": "실패 패널티"
+    },
+    "Fire Modes": {
+      "ht": "",
+      "at": "사격 모드"
+    },
+    "Fire Rate": {
+      "ht": "",
+      "at": "연사 속도"
+    },
+    "Fracture": {
+      "ht": "",
+      "at": "파쇄"
+    },
+    "Friendlies": {
+      "ht": "",
+      "at": "아군"
+    },
+    "Fuel": {
+      "ht": "",
+      "at": "연료"
+    },
+    "Fuel/Gm": {
+      "ht": "",
+      "at": "연료/Gm"
+    },
+    "Full Dmg to": {
+      "ht": "",
+      "at": "최대 피해 거리"
+    },
+    "Grade": {
+      "ht": "",
+      "at": "등급"
+    },
+    "Grunts": {
+      "ht": "",
+      "at": "졸개"
+    },
+    "Guaranteed": {
+      "ht": "",
+      "at": "확정"
+    },
+    "Guards": {
+      "ht": "",
+      "at": "경비병"
+    },
+    "Guidance": {
+      "ht": "",
+      "at": "유도"
+    },
+    "Guns": {
+      "ht": "",
+      "at": "기관포"
+    },
+    "HP Rate": {
+      "ht": "",
+      "at": "HP 속도"
+    },
+    "HP/Ammo": {
+      "ht": "",
+      "at": "HP/탄약"
+    },
+    "Heat": {
+      "ht": "",
+      "at": "열"
+    },
+    "Heist Target": {
+      "ht": "",
+      "at": "강탈 대상"
+    },
+    "Hostages": {
+      "ht": "",
+      "at": "인질"
+    },
+    "Hostile Allies": {
+      "ht": "",
+      "at": "적 지원군"
+    },
+    "Hostile Wave": {
+      "ht": "",
+      "at": "적 웨이브"
+    },
+    "Hostiles": {
+      "ht": "",
+      "at": "적"
+    },
+    "IR": {
+      "ht": "",
+      "at": "IR"
+    },
+    "IR Signature": {
+      "ht": "",
+      "at": "IR 신호"
+    },
+    "Inert Filter": {
+      "ht": "",
+      "at": "불활성 필터"
+    },
+    "Insurance": {
+      "ht": "",
+      "at": "보험"
+    },
+    "Interdiction Ships": {
+      "ht": "",
+      "at": "차단 함선"
+    },
+    "Item Type": {
+      "ht": "",
+      "at": "아이템 유형"
+    },
+    "Juggernauts": {
+      "ht": "",
+      "at": "저거너트"
+    },
+    "Jump Drives": {
+      "ht": "",
+      "at": "점프 드라이브"
+    },
+    "Knowledge": {
+      "ht": "",
+      "at": "지식"
+    },
+    "Kopions": {
+      "ht": "",
+      "at": "코피온"
+    },
+    "Length": {
+      "ht": "",
+      "at": "길이"
+    },
+    "Lifetime": {
+      "ht": "",
+      "at": "지속 시간"
+    },
+    "Locations": {
+      "ht": "",
+      "at": "위치"
+    },
+    "Lock Range": {
+      "ht": "",
+      "at": "락온 범위"
+    },
+    "Lock Time": {
+      "ht": "",
+      "at": "락온 시간"
+    },
+    "MRacks": {
+      "ht": "",
+      "at": "미사일 랙"
+    },
+    "Material Efficiency": {
+      "ht": "",
+      "at": "재료 효율"
+    },
+    "Maulers": {
+      "ht": "",
+      "at": "Maulers"
+    },
+    "Max": {
+      "ht": "",
+      "at": "최대"
+    },
+    "Max Distortion": {
+      "ht": "",
+      "at": "최대 왜곡"
+    },
+    "Max G-Force": {
+      "ht": "",
+      "at": "최대 G"
+    },
+    "Max HP": {
+      "ht": "",
+      "at": "최대 HP"
+    },
+    "Max Lifetime": {
+      "ht": "",
+      "at": "최대 수명"
+    },
+    "Max Lock Range": {
+      "ht": "",
+      "at": "최대 락온 거리"
+    },
+    "Min Detonate": {
+      "ht": "",
+      "at": "최소 기폭 거리"
+    },
+    "Min Dmg": {
+      "ht": "",
+      "at": "최소 피해"
+    },
+    "Min Lock Range": {
+      "ht": "",
+      "at": "최소 락온 거리"
+    },
+    "Mission Type": {
+      "ht": "",
+      "at": "임무 유형"
+    },
+    "Nine Tails": {
+      "ht": "",
+      "at": "Nine Tails"
+    },
+    "Objectives": {
+      "ht": "",
+      "at": "목표"
+    },
+    "Overheat Temp": {
+      "ht": "",
+      "at": "과열 온도"
+    },
+    "Phys": {
+      "ht": "",
+      "at": "물리"
+    },
+    "Ping Cooldown": {
+      "ht": "",
+      "at": "핑 재사용 대기"
+    },
+    "Pirates": {
+      "ht": "",
+      "at": "해적"
+    },
+    "Pitch": {
+      "ht": "",
+      "at": "피치"
+    },
+    "Polaris": {
+      "ht": "",
+      "at": "Polaris"
+    },
+    "Power": {
+      "ht": "",
+      "at": "전원"
+    },
+    "Power Draw": {
+      "ht": "",
+      "at": "전력 소모"
+    },
+    "Power Output": {
+      "ht": "",
+      "at": "전력 출력"
+    },
+    "Power Plants": {
+      "ht": "",
+      "at": "발전기"
+    },
+    "Private Security": {
+      "ht": "",
+      "at": "민간 경비"
+    },
+    "Probe": {
+      "ht": "",
+      "at": "탐사정"
+    },
+    "Prospectors": {
+      "ht": "",
+      "at": "Prospector"
+    },
+    "Protected": {
+      "ht": "",
+      "at": "보호 대상"
+    },
+    "Proximity Range": {
+      "ht": "",
+      "at": "근접 신관 범위"
+    },
+    "QD": {
+      "ht": "",
+      "at": "QD"
+    },
+    "QT Fuel Use": {
+      "ht": "",
+      "at": "QT 연료 소모"
+    },
+    "QT Speed": {
+      "ht": "",
+      "at": "QT 속도"
+    },
+    "Quantum Drives": {
+      "ht": "",
+      "at": "양자 드라이브"
+    },
+    "Quantum Enforcement Devices": {
+      "ht": "",
+      "at": "양자 차단 장치"
+    },
+    "Radars": {
+      "ht": "",
+      "at": "레이더"
+    },
+    "Ramp": {
+      "ht": "",
+      "at": "가동"
+    },
+    "Range": {
+      "ht": "",
+      "at": "사거리"
+    },
+    "Rank": {
+      "ht": "",
+      "at": "등급"
+    },
+    "Recharges Oxygen reserves of a suit.": {
+      "ht": "",
+      "at": "슈트의 산소 비축량을 채운다."
+    },
+    "Recipient": {
+      "ht": "",
+      "at": "수령인"
+    },
+    "Reduces concussion symptoms, normalizes weapon handling and movement speed.": {
+      "ht": "",
+      "at": "뇌진탕 증상을 줄이고 무기 조작과 이동 속도를 정상으로 되돌린다."
+    },
+    "Reduces injuries from radiation.": {
+      "ht": "",
+      "at": "방사선 부상을 줄인다."
+    },
+    "Reduces pain symptoms, normalizes movement ability.": {
+      "ht": "",
+      "at": "통증 증상을 줄이고 이동 능력을 정상으로 되돌린다."
+    },
+    "Reduces vision and hearing symptoms, normalizes stamina.": {
+      "ht": "",
+      "at": "시각과 청각 증상을 줄이고 지구력을 정상으로 되돌린다."
+    },
+    "Refuel Nozzles": {
+      "ht": "",
+      "at": "급유 노즐"
+    },
+    "Regen": {
+      "ht": "",
+      "at": "재생"
+    },
+    "Reinforcements": {
+      "ht": "",
+      "at": "지원군"
+    },
+    "Required": {
+      "ht": "",
+      "at": "필요"
+    },
+    "Resource Signatures": {
+      "ht": "",
+      "at": "자원 신호"
+    },
+    "Restores health and stops bleeding. When used on another person recovers from incapacitated state.": {
+      "ht": "",
+      "at": "체력을 회복하고 출혈을 멈춘다. 다른 사람에게 사용하면 무력화 상태에서 회복시킨다."
+    },
+    "Revives an overdosed person (if not incapacitated), doubles decay rate of Blood Drug Level.": {
+      "ht": "",
+      "at": "약물 과다 복용자를 소생시킨다(무력화 상태가 아닐 때). 혈중 약물 농도 감소 속도를 두 배로 늘린다."
+    },
+    "Risk": {
+      "ht": "",
+      "at": "위험"
+    },
+    "Role": {
+      "ht": "",
+      "at": "역할"
+    },
+    "Roll": {
+      "ht": "",
+      "at": "롤"
+    },
+    "SCM": {
+      "ht": "",
+      "at": "SCM"
+    },
+    "Salvageable Ships": {
+      "ht": "",
+      "at": "인양 가능한 함선"
+    },
+    "Scanners": {
+      "ht": "",
+      "at": "스캐너"
+    },
+    "Security Forces": {
+      "ht": "",
+      "at": "보안군"
+    },
+    "Seeker": {
+      "ht": "",
+      "at": "탐색기"
+    },
+    "Semi-Auto": {
+      "ht": "",
+      "at": "반자동"
+    },
+    "Sentries": {
+      "ht": "",
+      "at": "보초"
+    },
+    "Shields": {
+      "ht": "",
+      "at": "보호막"
+    },
+    "Ship": {
+      "ht": "",
+      "at": "함선"
+    },
+    "Ships to Defend": {
+      "ht": "",
+      "at": "방어할 함선"
+    },
+    "Shotgun": {
+      "ht": "",
+      "at": "산탄"
+    },
+    "Size": {
+      "ht": "",
+      "at": "크기"
+    },
+    "Snipers": {
+      "ht": "",
+      "at": "저격수"
+    },
+    "Soldiers": {
+      "ht": "",
+      "at": "병사"
+    },
+    "Spool": {
+      "ht": "",
+      "at": "예열"
+    },
+    "Standard": {
+      "ht": "",
+      "at": "일반"
+    },
+    "Starter": {
+      "ht": "",
+      "at": "입문"
+    },
+    "Stun": {
+      "ht": "",
+      "at": "기절"
+    },
+    "Targets": {
+      "ht": "",
+      "at": "표적"
+    },
+    "Technicians": {
+      "ht": "",
+      "at": "기술자"
+    },
+    "Thermal": {
+      "ht": "",
+      "at": "열"
+    },
+    "Tier": {
+      "ht": "",
+      "at": "단계"
+    },
+    "Tracking": {
+      "ht": "",
+      "at": "추적"
+    },
+    "Tracking Range": {
+      "ht": "",
+      "at": "추적 범위"
+    },
+    "Turn Rate": {
+      "ht": "",
+      "at": "선회 속도"
+    },
+    "Turrets": {
+      "ht": "",
+      "at": "포탑"
+    },
+    "Unique": {
+      "ht": "",
+      "at": "1회 한정"
+    },
+    "Used To Craft": {
+      "ht": "",
+      "at": "제작 용도"
+    },
+    "Velocity": {
+      "ht": "",
+      "at": "속도"
+    },
+    "Wear": {
+      "ht": "",
+      "at": "마모"
+    },
+    "Weight": {
+      "ht": "",
+      "at": "무게"
+    },
+    "Xeno Threat": {
+      "ht": "",
+      "at": "Xeno Threat"
+    },
+    "Yaw": {
+      "ht": "",
+      "at": "요"
+    },
+    "Yes": {
+      "ht": "",
+      "at": "예"
+    },
+    "base": {
+      "ht": "",
+      "at": "기본"
+    },
+    "down": {
+      "ht": "",
+      "at": "감속"
+    },
+    "empty": {
+      "ht": "",
+      "at": "비어 있음"
+    },
+    "express": {
+      "ht": "",
+      "at": "긴급"
+    },
+    "friendly": {
+      "ht": "",
+      "at": "아군"
+    },
+    "hostile": {
+      "ht": "",
+      "at": "적대"
+    },
+    "present": {
+      "ht": "",
+      "at": "있음"
+    },
+    "select variants": {
+      "ht": "",
+      "at": "일부 변형"
+    },
+    "up": {
+      "ht": "",
+      "at": "가속"
+    },
+    "{count} items": {
+      "ht": "",
+      "at": "아이템 {count}개"
+    },
+    "{count} sets": {
+      "ht": "",
+      "at": "세트 {count}개"
+    },
+    "{count} types": {
+      "ht": "",
+      "at": "{count}종"
+    },
+    "{item} Set": {
+      "ht": "",
+      "at": "{item} 세트"
+    },
+    "{pct}% chance": {
+      "ht": "",
+      "at": "{pct}% 확률"
+    },
+    "{pct}% chance ({variants} only)": {
+      "ht": "",
+      "at": "{pct}% 확률({variants} 한정)"
+    },
+    "{type} Ammo": {
+      "ht": "",
+      "at": "{type} 탄약"
+    }
+  }
+}

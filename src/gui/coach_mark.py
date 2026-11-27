@@ -18,6 +18,7 @@ and calls ``tour.start()``.
 """
 from __future__ import annotations
 
+import html
 import logging
 from dataclasses import dataclass
 from typing import Callable, Optional
@@ -49,6 +50,8 @@ class CoachMarkStep:
     description: str
     pre_action: Optional[Callable[[], None]] = None  # e.g. switch to Config tab
     preferred_side: str = "auto"              # "right" | "below" | "above" | "left" | "auto"
+    link_url: str = ""                        # optional link shown under the description
+    link_text: str = ""                       # its text (the URL itself when empty)
 
 
 # ── Visual constants ──────────────────────────────────────────────────────────
@@ -104,6 +107,7 @@ class CoachMarkOverlay(QWidget):
             QFrame#coachCallout QLabel { background: transparent; }
             QFrame#coachCallout #coachTitle { font-size: 15px; font-weight: bold; }
             QFrame#coachCallout #coachDesc  { font-size: 13px; }
+            QFrame#coachCallout #coachLink  { font-size: 13px; font-weight: bold; }
             QFrame#coachCallout #coachCounter {
                 color: palette(mid); font-size: 11px;
             }
@@ -127,6 +131,16 @@ class CoachMarkOverlay(QWidget):
         self._desc_label.setObjectName("coachDesc")
         self._desc_label.setWordWrap(True)
         v.addWidget(self._desc_label)
+
+        # A step's optional link (#602), opened in the browser.
+        self._link_label = QLabel(frame)
+        self._link_label.setObjectName("coachLink")
+        self._link_label.setWordWrap(True)
+        self._link_label.setTextFormat(Qt.TextFormat.RichText)
+        self._link_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        self._link_label.setOpenExternalLinks(True)
+        self._link_label.hide()
+        v.addWidget(self._link_label)
 
         footer = QHBoxLayout()
         footer.setSpacing(8)
@@ -187,6 +201,11 @@ class CoachMarkOverlay(QWidget):
 
         self._title_label.setText(step.title)
         self._desc_label.setText(step.description)
+        if step.link_url:
+            self._link_label.setText(
+                f'<a href="{html.escape(step.link_url, quote=True)}">'
+                f'{html.escape(step.link_text or step.link_url)}</a>')
+        self._link_label.setVisible(bool(step.link_url))
         self._counter_label.setText(tr("coach.step_counter", current=current_idx + 1, total=total))
         self._back_btn.setEnabled(has_back)
         self._next_btn.setText(tr("coach.finish_btn") if is_last else tr("coach.next_btn"))
@@ -195,7 +214,7 @@ class CoachMarkOverlay(QWidget):
         # width — without this, adjustSize() on the frame can return a height
         # that only fits the first line of a multi-line description.
         content_w = _CALLOUT_WIDTH - 2 * (_CALLOUT_H_MARGINS + _CALLOUT_BORDER_PX)
-        for lbl in (self._title_label, self._desc_label):
+        for lbl in (self._title_label, self._desc_label, self._link_label):
             lbl.setFixedWidth(content_w)
             # Reset the prior step's min height before recomputing so a long
             # step doesn't lock the callout's height for subsequent shorter ones.

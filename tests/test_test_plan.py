@@ -114,3 +114,68 @@ def test_webhook_url_stored_then_env_fallback(json_backend, monkeypatch):
     # A stored override wins over the env var.
     AppSettings.set_test_webhook_url("https://discord/stored")
     assert AppSettings.get_test_webhook_url() == "https://discord/stored"
+
+
+# ── per-item notes ────────────────────────────────────────────────────────────
+def test_build_report_puts_item_note_under_its_item():
+    key = test_plan.item_key(0, 0)
+    first_item = test_plan.TEST_SECTIONS[0]["items"][0]
+    report = test_plan.build_report(
+        {key}, "Tester", "3.1.0", item_notes={key: "  flickers\non 4K  "}
+    )
+    lines = report.split("\n")
+    at = lines.index(f"✅ {first_item}")
+    # Whitespace and line breaks fold to one line so the note stays one line.
+    assert lines[at + 1] == "> 📝 flickers on 4K"
+
+
+def test_build_report_leaves_out_blank_item_notes():
+    key = test_plan.item_key(0, 0)
+    report = test_plan.build_report(set(), "Tester", "3.1.0", item_notes={key: "   "})
+    assert "📝" not in report
+    assert "📝" not in test_plan.build_report(set(), "Tester", "3.1.0")
+
+
+def test_item_notes_round_trip(json_backend):
+    assert AppSettings.get_test_plan_item_notes() == {}
+    key = test_plan.item_key(1, 0)
+    AppSettings.set_test_plan_item_notes({key: "works", test_plan.item_key(0, 0): " "})
+    assert AppSettings.get_test_plan_item_notes() == {key: "works"}
+
+
+def test_item_notes_dropped_when_plan_hash_changes(json_backend, monkeypatch):
+    AppSettings.set_test_plan_item_notes({test_plan.item_key(0, 0): "ok"})
+    monkeypatch.setattr(test_plan, "plan_hash", lambda: "deadbeefcafe")
+    assert AppSettings.get_test_plan_item_notes() == {}
+
+
+def test_item_notes_ignore_unreadable_value(json_backend):
+    json_backend.setValue(AppSettings.TEST_PLAN_ITEM_NOTES, "not json")
+    assert AppSettings.get_test_plan_item_notes() == {}
+
+
+def test_item_notes_have_no_backup_default_and_are_not_synced():
+    assert AppSettings.TEST_PLAN_ITEM_NOTES in AppSettings.PROFILE_DEFAULT_EXCLUDE_KEYS
+    assert AppSettings.is_smart_sync_local_key(AppSettings.TEST_PLAN_ITEM_NOTES)
+
+
+# ── panel ─────────────────────────────────────────────────────────────────────
+def test_panel_keeps_item_notes_and_reports_them(qapp, json_backend):
+    from src.gui.test_plan_panel import TestPlanPanel
+
+    key = test_plan.item_key(0, 0)
+    panel = TestPlanPanel()
+    panel._note_edits[key].setText("crashed once")
+    panel._note_edits[key].editingFinished.emit()
+    assert AppSettings.get_test_plan_item_notes() == {key: "crashed once"}
+    assert "> 📝 crashed once" in panel._build_report()
+
+    # A new panel (next launch) shows the saved note.
+    again = TestPlanPanel()
+    assert again._note_edits[key].text() == "crashed once"
+
+    again._reset()
+    assert again._note_edits[key].text() == ""
+    assert AppSettings.get_test_plan_item_notes() == {}
+    panel.deleteLater()
+    again.deleteLater()

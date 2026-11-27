@@ -15,6 +15,24 @@
       "at": "Smart Citizen v{version}"
     }
   },
+  "tray": {
+    "show": {
+      "ht": "",
+      "at": "Mostra Smart Citizen"
+    },
+    "quit": {
+      "ht": "",
+      "at": "Esci"
+    },
+    "notice_title": {
+      "ht": "",
+      "at": "Smart Citizen è ancora in esecuzione"
+    },
+    "notice_body": {
+      "ht": "",
+      "at": "Si trova nell'area di notifica. Fai clic sulla sua icona per riportare la finestra, oppure fai clic destro per uscire. Se non vedi l'icona, potrebbe essere dietro la freccia ^ accanto all'orologio."
+    }
+  },
   "simple_mode": {
     "switch_to_advanced": {
       "ht": "",
@@ -212,6 +230,10 @@
       "ht": "",
       "at": "Apri il canale Discord di Smart Citizen per feedback, segnalazioni di bug e votazioni sulle prossime funzionalità (richiede l'iscrizione al Discord di Osiris DevWorks)."
     },
+    "karolinger_tooltip": {
+      "ht": "",
+      "at": "Apri le guide di Smart Citizen su Karolinger Guides"
+    },
     "apply_enabled_tooltip": {
       "ht": "",
       "at": "Scrive il contenuto della tabella unita nel global.ini del gioco. Viene prima creato un backup con data e ora del global.ini attuale."
@@ -223,6 +245,10 @@
     "feedback_fallback_text": {
       "ht": "",
       "at": "Feedback, Bug e Votazione Funzionalità"
+    },
+    "karolinger_fallback_text": {
+      "ht": "",
+      "at": "Karolinger Guides"
     },
     "paypal_fallback_text": {
       "ht": "",
@@ -239,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Avvia o ferma l'Overlay di Smart Citizen (SCO): decodifica delle firme minerarie e un cassetto dei blueprint sopra il gioco. Richiede la modalità finestra senza bordi."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "Importa CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "Esporta CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Riporta i testi modificati da un file CSV"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Salva le righe mostrate nella tabella in un file CSV"
     }
   },
   "filters": {
@@ -798,6 +840,18 @@
       "ht": "",
       "at": "Se selezionato, il tour guidato non si avvierà automaticamente con una nuova versione. Il pulsante Tutorial nella barra degli strumenti continua a funzionare."
     },
+    "minimize_to_tray_cb": {
+      "ht": "",
+      "at": "Riduci nell'area di notifica"
+    },
+    "minimize_to_tray_tooltip": {
+      "ht": "",
+      "at": "Se selezionato, ridurre a icona Smart Citizen lo nasconde nell'area di notifica (le icone accanto all'orologio) invece che nella barra delle applicazioni. Fai clic sulla sua icona per riportarlo indietro. Finché è lì, avviare di nuovo Smart Citizen riporta quella finestra invece di aprirne una seconda copia."
+    },
+    "minimize_to_tray_unavailable_tooltip": {
+      "ht": "",
+      "at": "Nessuna area di notifica trovata, quindi Smart Citizen viene ridotto a icona nella barra delle applicazioni."
+    },
     "game_path_tooltip": {
       "ht": "",
       "at": "Cartella principale di installazione di Star Citizen — la directory che contiene LIVE/, PTU/, EPTU/, HOTFIX/ e/o TECH-PREVIEW/. Rilevata automaticamente durante l'installazione; modificala se il gioco si trova altrove. Il menu a tendina \"Canale\" qui sotto determina quale cartella l'app legge e scrive."
@@ -845,6 +899,50 @@
     "reset_cache_tooltip": {
       "ht": "",
       "at": "Cancella la cartella cache personalizzata e usa il valore predefinito della piattaforma."
+    },
+    "smart_sync_group": {
+      "ht": "",
+      "at": "Smart Sync"
+    },
+    "smart_sync_desc": {
+      "ht": "",
+      "at": "Mantieni i tuoi progetti posseduti, le modifiche ai testi e le impostazioni uguali su ogni PC su cui giochi. Scegli una cartella che la tua app cloud sincronizza già, ad esempio in Google Drive, OneDrive o Dropbox, poi scegli la stessa cartella sugli altri PC. Un PC che aggiungi prende le impostazioni e le modifiche che gli altri condividono già. Prima che una sincronizzazione cambi qualcosa, Smart Citizen salva un backup che puoi ripristinare con Importa impostazioni. I percorsi delle cartelle, la posizione del gioco e la disposizione della finestra restano su ogni PC, e ogni PC crea il proprio global.ini."
+    },
+    "smart_sync_placeholder": {
+      "ht": "",
+      "at": "Disattivato. Scegli una cartella per attivarlo."
+    },
+    "smart_sync_browse_tooltip": {
+      "ht": "",
+      "at": "Scegli una cartella che la tua app cloud sincronizza con gli altri PC"
+    },
+    "smart_sync_off_btn": {
+      "ht": "",
+      "at": "Disattiva"
+    },
+    "smart_sync_off_tooltip": {
+      "ht": "",
+      "at": "Interrompi la sincronizzazione. Progetti, modifiche e impostazioni su questo PC restano come sono."
+    },
+    "select_smart_sync_folder": {
+      "ht": "",
+      "at": "Scegli la cartella di Smart Sync"
+    },
+    "smart_sync_status_off": {
+      "ht": "",
+      "at": "Smart Sync è disattivato."
+    },
+    "smart_sync_status_waiting": {
+      "ht": "",
+      "at": "Sincronizzazione..."
+    },
+    "smart_sync_status_ok": {
+      "ht": "",
+      "at": "Ultima sincronizzazione alle {time}. Altri PC in questa cartella: {count}."
+    },
+    "smart_sync_status_failed": {
+      "ht": "",
+      "at": "Impossibile sincronizzare: {error}"
     },
     "extract_tooltip": {
       "ht": "",
@@ -1588,6 +1686,10 @@
       "ht": "",
       "at": "Tag Traccia Reputazione (aggiunge \"(Security)\" / \"(Contractor)\" al tag Reputazione)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP completati (aggiunge \"[BP Complete]\")"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missioni di Scansione/Estrazione"
@@ -2204,6 +2306,18 @@
       "ht": "",
       "at": "Impossibile controllare la presenza di aggiornamenti:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Novità"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} è installato. Ecco cosa è cambiato."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Chiudi"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Niente da ripristinare"
@@ -2255,6 +2369,10 @@
     "language_download_failed": {
       "ht": "",
       "at": "Impossibile caricare la localizzazione {language} dalla fonte configurata, e non è stata trovata alcuna copia in cache. Viene mostrata la base inglese. Controlla l'URL o il file in Associa file lingua, poi riprova."
+    },
+    "language_updated_status": {
+      "ht": "",
+      "at": "È stata scaricata una traduzione {language} più recente. Ricaricamento in corso."
     },
     "language_generating_enhancements": {
       "ht": "",
@@ -2363,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Reimpostare le dimensioni della finestra, il layout dei pannelli e la larghezza delle colonne dell'editor di stringhe ai valori predefiniti?\n\nLe dimensioni salvate andranno perse. Le impostazioni e i dati di localizzazione non vengono modificati."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "Esporta CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "La tabella non mostra righe da esportare. Rimuovi un filtro e riprova."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} righe salvate in:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "Impossibile salvare il file CSV:\n{error}"
     }
   },
   "progress": {
@@ -2583,6 +2717,22 @@
     "window_proportions_reset": {
       "ht": "",
       "at": "Proporzioni della finestra reimpostate."
+    },
+    "smart_sync_failed": {
+      "ht": "",
+      "at": "Smart Sync non ha potuto usare la sua cartella: {error}"
+    },
+    "smart_sync_updated": {
+      "ht": "",
+      "at": "Smart Sync ha aggiornato {count} blueprint posseduti dagli altri PC."
+    },
+    "smart_sync_no_backup": {
+      "ht": "",
+      "at": "Smart Sync non ha potuto salvare un backup, quindi niente è stato sincronizzato su questo PC: {error}"
+    },
+    "smart_sync_settings_waiting": {
+      "ht": "",
+      "at": "Smart Sync ha ricevuto {count} impostazione/i dagli altri PC. Riavvia Smart Citizen per usarle."
     }
   },
   "import_flow": {
@@ -2669,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "Importazione del file INI fallita:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Scegli un file CSV"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "File CSV (*.csv);;Tutti i file (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Impossibile leggere questo CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "Il file deve avere una colonna Key e una colonna Custom Value. Esporta un CSV da Smart Citizen per vedere la struttura."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} saltate (vuote o uguali al testo originale)."
     }
   },
   "restore_backup": {
@@ -3030,9 +3200,25 @@
       "ht": "",
       "at": "Applicato a {target_path}\n\n  Modifiche utente: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Missioni contrassegnate [BP Complete]: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Applicazione al gioco fallita: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows ha bloccato la cartella del gioco"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a scrivere in:\n{path}\n\nStar Citizen è in esecuzione e ha il file aperto. Chiudi il gioco, poi fai di nuovo clic su Applica."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows non ha permesso a Smart Citizen di scrivere in:\n{path}\n\nProva questi passaggi, poi fai di nuovo clic su Applica:\n1. Chiudi Star Citizen e l'RSI Launcher.\n2. In Sicurezza di Windows apri Protezione da virus e minacce > Protezione ransomware e consenti Smart Citizen nell'accesso alle cartelle controllato. Consentilo anche in qualsiasi altro antivirus.\n3. Se il gioco è in Program Files, fai clic destro su Smart Citizen e scegli Esegui come amministratore."
     }
   },
   "test_plan": {
@@ -3071,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "Descrivi eventuali bug, sorprese o suggerimenti..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Note (facoltative)"
     },
     "copied_status": {
       "ht": "",
@@ -3241,7 +3431,7 @@
       },
       "description": {
         "ht": "",
-        "at": "Scegli il tema dell'app (Predefinito / Chiaro / Scuro / ODW) e la dimensione del testo (Piccola / Media / Grande, applicata dopo un riavvio) e, se vuoi, disattiva il tour automatico nelle nuove versioni."
+        "at": "Scegli il tema dell'app (Predefinito / Chiaro / Scuro / ODW) e la dimensione del testo (Piccola / Media / Grande, applicata dopo un riavvio) e, se vuoi, disattiva il tour automatico nelle nuove versioni. Seleziona Riduci nell'area di notifica perché la finestra ci vada quando la riduci a icona."
       }
     },
     "cfg_sc_install": {
@@ -3311,7 +3501,21 @@
       },
       "description": {
         "ht": "",
-        "at": "Il pulsante Guida apre un pannello laterale con la guida completa, un elenco dei problemi noti e un link di feedback al canale Discord di Smart Citizen. Questo è tutto ciò che ti serve per iniziare — buona fortuna, cittadino."
+        "at": "Il pulsante Guida apre un pannello laterale con la guida completa, un elenco dei problemi noti e un link di feedback al canale Discord di Smart Citizen."
+      }
+    },
+    "guides": {
+      "title": {
+        "ht": "",
+        "at": "22. Guide e video tutorial"
+      },
+      "description": {
+        "ht": "",
+        "at": "Il logo Karolinger Guides in fondo alla finestra apre le guide di Smart Citizen su Karolinger Guides. Preferisci guardare? Il video tutorial ti mostra tutto passo per passo. Questo è tutto ciò che ti serve per iniziare — buona fortuna, cittadino."
+      },
+      "link_text": {
+        "ht": "",
+        "at": "Guarda il video tutorial"
       }
     }
   },
@@ -3565,6 +3769,302 @@
     "tooltip_minerals_here": {
       "ht": "",
       "at": "Minerali qui: {minerals}"
+    },
+    "section_order": {
+      "ht": "",
+      "at": "Ordine"
+    },
+    "order_search_placeholder": {
+      "ht": "",
+      "at": "Aggiungi un oggetto all'ordine..."
+    },
+    "order_summary": {
+      "ht": "",
+      "at": "Riepilogo ordine: {items} oggetti, {crafts} fabbricazioni"
+    },
+    "order_empty": {
+      "ht": "",
+      "at": "L'ordine è vuoto. Cerca qui sotto per aggiungere un oggetto."
+    },
+    "order_no_data": {
+      "ht": "",
+      "at": "Nessun dato per gli ordini. Estrai DataForge, poi genera i miglioramenti con Commodities o Journal spuntato."
+    },
+    "order_material_total": {
+      "ht": "",
+      "at": "{material}: {amount}"
+    },
+    "order_band": {
+      "ht": "",
+      "at": "Qualità {quality}+: {amount}"
+    },
+    "order_used_by": {
+      "ht": "",
+      "at": "Usato da: {items}"
+    },
+    "order_show_scu": {
+      "ht": "",
+      "at": "Mostra SCU"
+    },
+    "order_show_cscu": {
+      "ht": "",
+      "at": "Mostra cSCU"
+    },
+    "order_volume_tooltip": {
+      "ht": "",
+      "at": "Mostra le quantità di minerale in SCU o cSCU (un centesimo di SCU, come in gioco)"
+    },
+    "order_copy": {
+      "ht": "",
+      "at": "Copia"
+    },
+    "order_copied": {
+      "ht": "",
+      "at": "Copiato"
+    },
+    "order_copy_tooltip": {
+      "ht": "",
+      "at": "Copia l'ordine e i suoi materiali come testo, per Discord"
+    },
+    "order_watch": {
+      "ht": "",
+      "at": "Osserva minerali"
+    },
+    "order_watch_tooltip": {
+      "ht": "",
+      "at": "Aggiungi i minerali dell'ordine alla lista di osservazione della scansione, così lo scanner ti avvisa quando ne legge uno"
+    },
+    "order_new": {
+      "ht": "",
+      "at": "Nuovo ordine"
+    },
+    "order_new_confirm": {
+      "ht": "",
+      "at": "Sicuro?"
+    },
+    "order_new_note": {
+      "ht": "",
+      "at": "Clicca di nuovo su Nuovo ordine per svuotare questo ordine. Gli ordini salvati restano."
+    },
+    "order_new_tooltip": {
+      "ht": "",
+      "at": "Inizia un nuovo ordine: rimuove tutti gli oggetti da questo. Gli ordini salvati restano."
+    },
+    "order_less": {
+      "ht": "",
+      "at": "Uno in meno"
+    },
+    "order_more": {
+      "ht": "",
+      "at": "Uno in più"
+    },
+    "order_remove": {
+      "ht": "",
+      "at": "Rimuovi dall'ordine"
+    },
+    "order_not_owned": {
+      "ht": "",
+      "at": "Progetto non ancora posseduto"
+    },
+    "order_owned_only": {
+      "ht": "",
+      "at": "Solo posseduti"
+    },
+    "order_owned_only_tooltip": {
+      "ht": "",
+      "at": "Cerca solo tra i progetti che possiedi."
+    },
+    "order_unknown_material": {
+      "ht": "",
+      "at": "Materiale sconosciuto"
+    },
+    "order_save_placeholder": {
+      "ht": "",
+      "at": "Nome dell'ordine"
+    },
+    "order_save": {
+      "ht": "",
+      "at": "Salva"
+    },
+    "order_save_tooltip": {
+      "ht": "",
+      "at": "Salva questo ordine con il nome inserito."
+    },
+    "order_save_replace": {
+      "ht": "",
+      "at": "Sostituire?"
+    },
+    "order_saved": {
+      "ht": "",
+      "at": "Salvato"
+    },
+    "order_save_name_needed": {
+      "ht": "",
+      "at": "Inserisci prima un nome per l'ordine."
+    },
+    "order_save_failed": {
+      "ht": "",
+      "at": "Impossibile salvare l'ordine in:\n{file}"
+    },
+    "order_saved_orders": {
+      "ht": "",
+      "at": "Ordini salvati"
+    },
+    "order_load": {
+      "ht": "",
+      "at": "Carica"
+    },
+    "order_load_tooltip": {
+      "ht": "",
+      "at": "Sostituisci questo ordine con quello salvato scelto nell'elenco."
+    },
+    "order_delete": {
+      "ht": "",
+      "at": "Elimina"
+    },
+    "order_delete_confirm": {
+      "ht": "",
+      "at": "Sicuro?"
+    },
+    "order_delete_note": {
+      "ht": "",
+      "at": "Clicca di nuovo su Elimina per eliminare l'ordine salvato \"{name}\"."
+    },
+    "order_delete_tooltip": {
+      "ht": "",
+      "at": "Elimina l'ordine salvato scelto nell'elenco. L'ordine che stai creando resta."
+    },
+    "order_delete_failed": {
+      "ht": "",
+      "at": "Impossibile eliminare l'ordine salvato \"{name}\"."
+    },
+    "order_load_empty": {
+      "ht": "",
+      "at": "\"{name}\" non contiene oggetti noti a questi dati di gioco."
+    },
+    "order_pick": {
+      "ht": "",
+      "at": "Usa {need} di questi {of}:"
+    },
+    "order_pick_tooltip": {
+      "ht": "",
+      "at": "Usa questo slot. Spuntarne uno in più di quelli richiesti dal progetto ne toglie un altro."
+    },
+    "order_slot": {
+      "ht": "",
+      "at": "{slot}: {material}, {amount}"
+    },
+    "order_quality": {
+      "ht": "",
+      "at": "Q {quality}"
+    },
+    "order_quality_tooltip": {
+      "ht": "",
+      "at": "La qualità del materiale per questo slot (da 0 a 1000)"
+    },
+    "order_quality_tier": {
+      "ht": "",
+      "at": "Q {quality} ({tier})"
+    },
+    "order_quality_tiers_tooltip": {
+      "ht": "",
+      "at": "{material} esiste solo a queste qualità (dati {source}): {tiers}. Il cursore si ferma su queste e su 0, 500 e 1000."
+    },
+    "order_quality_steps": {
+      "ht": "",
+      "at": "Aggancia alle qualità del minerale"
+    },
+    "order_quality_steps_tooltip": {
+      "ht": "",
+      "at": "Attivo: i cursori di qualità si fermano sulle qualità in cui esiste ogni minerale. Disattivo: accettano qualsiasi qualità da 0 a 1000, per minerali mescolati a una qualità intermedia."
+    },
+    "order_quality_range_tooltip": {
+      "ht": "",
+      "at": "{material} esiste a queste qualità (dati {source}): {tiers}. Una miscela può cadere nel mezzo, quindi il cursore accetta qualsiasi qualità."
+    },
+    "order_min_quality": {
+      "ht": "",
+      "at": "Richiede qualità {quality} o superiore"
+    },
+    "order_item_bonus": {
+      "ht": "",
+      "at": "Tutti gli slot: {bonuses}"
+    },
+    "order_no_bonus": {
+      "ht": "",
+      "at": "La qualità dei materiali non cambia le statistiche di questo oggetto."
+    },
+    "order_pips": {
+      "ht": "",
+      "at": "{value} pip"
+    },
+    "order_pieces": {
+      "ht": "",
+      "at": "{count} pz"
+    },
+    "order_scu": {
+      "ht": "",
+      "at": "{amount} SCU"
+    },
+    "order_cscu": {
+      "ht": "",
+      "at": "{amount} cSCU"
+    },
+    "order_text_title": {
+      "ht": "",
+      "at": "Ordine di fabbricazione: {count} fabbricazioni"
+    },
+    "order_text_materials": {
+      "ht": "",
+      "at": "Materiali:"
+    },
+    "order_text_band": {
+      "ht": "",
+      "at": "{amount} con qualità {quality}+"
+    },
+    "finder_search_placeholder": {
+      "ht": "",
+      "at": "Digita un oggetto per vedere dove comprarlo..."
+    },
+    "finder_loading": {
+      "ht": "",
+      "at": "Caricamento dei dati dei negozi da UEX..."
+    },
+    "finder_failed": {
+      "ht": "",
+      "at": "Impossibile raggiungere UEX per i dati dei negozi. Controlla la connessione Internet. L'overlay riprova tra qualche minuto."
+    },
+    "finder_source": {
+      "ht": "",
+      "at": "Dati dei negozi da {site}, segnalati dai giocatori. Aggiornati il {updated}."
+    },
+    "finder_offline": {
+      "ht": "",
+      "at": "UEX non è raggiungibile, quindi questa è l'ultima copia salvata."
+    },
+    "finder_none": {
+      "ht": "",
+      "at": "Nessun negozio noto vende un oggetto con questo nome."
+    },
+    "finder_item": {
+      "ht": "",
+      "at": "{item} ({count})"
+    },
+    "finder_location": {
+      "ht": "",
+      "at": "{shop}, {place}: {price} aUEC"
+    },
+    "finder_price_range": {
+      "ht": "",
+      "at": "da {low} a {high} aUEC"
+    },
+    "finder_price": {
+      "ht": "",
+      "at": "{price} aUEC"
+    },
+    "finder_more": {
+      "ht": "",
+      "at": "Mostrati {shown} oggetti su {total}. Digita altro per restringere."
     }
   },
   "overlay": {
@@ -3784,6 +4284,14 @@
       "ht": "",
       "at": "Scrivi un minerale per vedere quali oggetti lo usano, o un oggetto per vedere i minerali richiesti. Richiede un'estrazione DataForge."
     },
+    "drawer_finder": {
+      "ht": "",
+      "at": "Cerca oggetti"
+    },
+    "drawer_finder_hint": {
+      "ht": "",
+      "at": "Digita un oggetto per vedere quali negozi lo vendono, dove si trovano e il prezzo. I dati dei negozi arrivano da UEX via Internet e sono segnalati dai giocatori."
+    },
     "drawer_position": {
       "ht": "",
       "at": "Posizione del cassetto:"
@@ -3839,6 +4347,14 @@
     "hotkey_unsupported": {
       "ht": "",
       "at": "Questa non può essere una scorciatoia. Tieni premuto Ctrl, Alt o Win con una lettera, un numero, un simbolo, Spazio, Tab o un tasto di navigazione (frecce, Home, Fine, Pag su/giù, Ins, Canc), e anche Maiusc se vuoi. Un tasto F o Pausa funziona anche da solo."
+    },
+    "drawer_order": {
+      "ht": "",
+      "at": "Ordine"
+    },
+    "drawer_order_hint": {
+      "ht": "",
+      "at": "Prepara un ordine di fabbricazione e vedi ogni materiale necessario, per qualità. Richiede un'estrazione DataForge."
     }
   },
   "shader_cache": {

@@ -23,6 +23,7 @@ tuple into :func:`build_blueprint_metadata`.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -404,6 +405,30 @@ _DESC_KEY_RE = re.compile(r"^(?P<base>.*)_Desc(?:_(?P<num>\d+))?$", re.IGNORECAS
 
 # Trailing reward tags on a title, e.g. "<EM4>[BP]</EM4> <EM4>[150 REP]</EM4>".
 _TITLE_TAG_RE = re.compile(r"(?:\s*<EM\d>\[[^\]]*\]</EM\d>)+\s*$")
+
+# The generator's record of which descriptions belong to each blueprint
+# mission: title key -> the keys of every description written under it.
+# Written next to mission_rewards_enhancements.ini, read by the [BP Complete]
+# title tag.
+#
+# Why a file. [Owned] needs none: the item name and its tag are in the same
+# description string. [BP Complete] goes on the title, a different key that
+# names no blueprints, so the app must know which descriptions belong to the
+# title. Only DataForge's contract data says that. The key pairing above
+# guesses from names and misses 66 of LIVE's 342 blueprint descriptions
+# (Covalex_HaulCargo_AToB_title has five, none named like it).
+#
+# Why the generator writes it, and the app never does. Which descriptions a
+# mission has changes only with the game data, so a normal generation records
+# it once. Whether a mission is complete changes with the Owned set (a click,
+# a log scan, the overlay), so the app works that out from the loaded strings
+# on every load and Owned change. Nothing on that path may start a generation
+# or read DataForge to fill in a missing or old record: a generation takes
+# minutes, and the record is right again after the user's next one.
+#
+# It holds description keys, not item names. The names come from the loaded
+# text, so an old record can leave a tag off but never put a wrong one on.
+MISSION_BLUEPRINT_DESCS_FILE = "mission_blueprint_descs.json"
 
 
 @dataclass(frozen=True)
@@ -822,11 +847,92 @@ def read_item_keys_by_name(paths, cached=None) -> dict:
     return tables
 
 
+def write_mission_blueprint_descs(path, titles: "dict[str, list[str]]") -> None:
+    """Write the generator's ``{title key: [desc keys]}`` record
+    (:data:`MISSION_BLUEPRINT_DESCS_FILE`). Replaced in one step like every
+    file a generation writes (atomic_io, #476), with its keys sorted so two
+    runs over the same data write the same bytes (#522)."""
+    from src.utils.atomic_io import atomic_write_text
+
+    atomic_write_text(
+        path,
+        json.dumps({"version": 1, "titles": titles},
+                   ensure_ascii=False, indent=1, sort_keys=True),
+    )
+
+
+def read_mission_blueprint_descs(path) -> "dict[str, tuple[str, ...]]":
+    """Read :data:`MISSION_BLUEPRINT_DESCS_FILE`: ``{title key: (desc keys,
+    ...)}``. Empty when the file is missing or unreadable, as it is until
+    the first generation that writes it, which leaves every mission without
+    the [BP Complete] tag. Retries the moment a generation swaps the file in
+    (``read_bytes_retrying``), which Windows refuses a reader."""
+    from src.utils.atomic_io import read_bytes_retrying
+
+    try:
+        data = json.loads(read_bytes_retrying(path).decode("utf-8"))
+    except (OSError, ValueError):
+        return {}
+    titles = data.get("titles") if isinstance(data, dict) else None
+    if not isinstance(titles, dict):
+        return {}
+    return {
+        title: tuple(d for d in descs if isinstance(d, str))
+        for title, descs in titles.items()
+        if isinstance(title, str) and isinstance(descs, list)
+    }
+
+
+@dataclass(frozen=True)
+class _LoadedString:
+    """The three fields build_blueprint_metadata reads from an entry."""
+    key: str
+    original_value: str
+    category: str
+
+
+def complete_titles_in_strings(
+    strings: "dict[str, str]",
+    title_descs: "dict[str, tuple[str, ...]]",
+    owned,
+    *,
+    enclosings=None,
+    default_values: "dict[str, str] | None" = None,
+    bp_header: "str | None" = None,
+) -> frozenset:
+    """[BP Complete] titles worked out from *strings* (``{key: value}``), the
+    strings Apply is about to write, not the last load's.
+
+    Simple mode applies straight after a generation and reloads only
+    afterwards, so the table's names (``MainWindow._bp_names_by_desc``) can be
+    from before the run that wrote the record: a first generation tagged
+    nothing in the file it applied. This scans *strings* the way the table's
+    load does (``build_blueprint_metadata``, about 0.15 s on LIVE), with the
+    record's descriptions counted as missions, as the loader counts every key
+    of the mission INI. *title_descs* is the record
+    (``read_mission_blueprint_descs``)."""
+    from src.models.string_model import StringEntry
+    from src.utils.owned_items import complete_mission_titles
+
+    if not owned or not title_descs:
+        return frozenset()
+    descs = {d for ds in title_descs.values() for d in ds}
+    entries = [
+        _LoadedString(k, v, CATEGORY_MISSIONS if k in descs else StringEntry.extract_category(k))
+        for k, v in strings.items()
+    ]
+    names_by_desc: dict = {}
+    build_blueprint_metadata(entries, enclosings=enclosings, default_values=default_values,
+                             bp_header=bp_header, names_by_desc=names_by_desc)
+    return complete_mission_titles(title_descs, names_by_desc, owned)
+
+
 def build_blueprint_metadata(
     entries,
     enclosings: "Sequence[tuple[str, str]] | None" = None,
     default_values: "dict[str, str] | None" = None,
     bp_header: "str | None" = None,
+    names_by_desc: "dict | None" = None,
 ) -> dict:
     """Scan loaded strings once and return ``{name: BlueprintItem}``.
 
@@ -863,6 +969,13 @@ def build_blueprint_metadata(
     blueprint-bearing section at all, so the Pass 1 gate below silently
     skips every mission, not just mis-tags one. See
     ``owned_items.has_bp_section``'s docstring.
+
+    ``names_by_desc``, when given, is filled with ``{desc key:
+    frozenset(item names)}`` for every blueprint-bearing mission
+    description, each bullet resolved to the name the Blueprint Tracker and
+    the Owned set use (Pass 2 below). The [BP Complete] title tag reads it
+    (``owned_items.complete_mission_titles``), so it calls a mission
+    complete by exactly the names the user marks owned.
     """
     enclosings = tuple(enclosings) if enclosings is not None else _DEFAULT_ENCLOSINGS
     default_values = default_values or {}
@@ -873,7 +986,7 @@ def build_blueprint_metadata(
     name_to_value: dict = {}    # normalized display name -> its raw item_Name value (tag intact)
     attrs: dict = {}            # normalized name -> (cls, size, grade)
     titles: dict = {}           # (base_lower, num) -> cleaned mission name
-    bp_descs: list = []         # (pair_key | None, value)
+    bp_descs: list = []         # (desc key, pair_key | None, value)
     keyslug_to_name: dict = {}  # _key_slug(key) -> normalized display name
     default_loaded: dict = {}   # #416: declared starter key -> (entry key, value)
 
@@ -940,7 +1053,7 @@ def build_blueprint_metadata(
         if cat == CATEGORY_MISSIONS and has_bp_section(val, bp_header):
             dm = _DESC_KEY_RE.match(key)
             pair = _title_pair_key(dm.group("base"), dm.group("num")) if dm else None
-            bp_descs.append((pair, val))
+            bp_descs.append((key, pair, val))
 
     # Pass 2: gather each blueprint item's missions, then attach type + attrs.
     # A bullet name that doesn't match any real item directly is checked
@@ -950,8 +1063,9 @@ def build_blueprint_metadata(
     # itself, so a mismatched bullet still joins the real, tagged item
     # instead of creating a separate untagged "Other" entry.
     missions_by_name: dict = {}
-    for pair, val in bp_descs:
+    for desc_key, pair, val in bp_descs:
         title = titles.get(pair) if pair else None
+        desc_names: set = set()
         for raw_nm in extract_bp_item_names(val, enclosings, bp_header):
             if raw_nm in name_to_value:
                 nm = raw_nm
@@ -962,9 +1076,12 @@ def build_blueprint_metadata(
             else:
                 slug = _raw_blueprint_filename_slug(raw_nm)
                 nm = _BULLET_NAME_ALIASES.get(slug, raw_nm) if slug else raw_nm
+            desc_names.add(nm)
             bucket = missions_by_name.setdefault(nm, set())
             if title:
                 bucket.add(title)
+        if names_by_desc is not None:
+            names_by_desc[desc_key] = frozenset(desc_names)
 
     result: dict = {}
     for nm, missions in missions_by_name.items():
