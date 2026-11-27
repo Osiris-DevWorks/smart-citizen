@@ -1530,17 +1530,17 @@
       "ht": "",
       "at": "Feindkräfte"
     },
-    "hostiles_detail_simple": {
+    "ships_per_type_label": {
       "ht": "",
-      "at": "Einfach"
+      "at": "Schiffe pro Typ"
     },
-    "hostiles_detail_all": {
+    "ships_per_type_all": {
       "ht": "",
-      "at": "Alle Schiffsdetails"
+      "at": "Alle"
     },
-    "hostiles_detail_tooltip": {
+    "ships_per_type_tooltip": {
       "ht": "",
-      "at": "Wie die Zeilen Feinde und Verbündete Schiffe auflisten. Einfach zeigt eine Auswahl von mehr als 3 Schiffen als ihren Typ und nennt jeden Typ einmal unter Schiffstypen, mit Anzahl sowie größtem und kleinstem Schiff; Alle Schiffsdetails listet jedes Schiff auf. Wirkt beim nächsten Erzeugen der Verbesserungen."
+      "at": "Wie viele Schiffe jeder Typ unter Schiffstypen in den Missionsdetails auflistet. Ein Typ mit mehr nennt seine größten und kleinsten, mit der Zahl der übrigen dazwischen. Wirkt beim nächsten Erzeugen der Verbesserungen."
     },
     "mission_field_reputation": {
       "ht": "",

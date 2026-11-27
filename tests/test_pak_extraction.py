@@ -22,6 +22,8 @@ from src.utils.onedrive import _ONEDRIVE_ENV_VARS
 from src.utils.dataforge_exclude import DATAFORGE_EXCLUDE_SUBPATHS
 from src.utils.pak_extractor import (
     DATAFORGE_KEEP_SUBPATHS,
+    CACHE_LAYOUT,
+    CACHE_LAYOUT_STAMP,
     DATAFORGE_TAGS_FILE,
     P4kLockedError,
     _cache_filtered_records,
@@ -59,6 +61,7 @@ class TestDataForgeCache:
             (cache_dir / ".p4k_size").write_text(str(stamp_size))
         if with_tags:
             (cache_dir / DATAFORGE_TAGS_FILE).write_text("{}")
+            (cache_dir / CACHE_LAYOUT_STAMP).write_text(CACHE_LAYOUT)
 
     def test_cache_without_the_tag_tree_is_not_fresh(self):
         """A cache from before the tag tree was saved extracts once more, so
@@ -72,6 +75,25 @@ class TestDataForgeCache:
                                  with_tags=False)
             assert dataforge_cache_is_fresh(p4k_path, cache_dir) is False
             (cache_dir / DATAFORGE_TAGS_FILE).write_text("{}")
+            (cache_dir / CACHE_LAYOUT_STAMP).write_text(CACHE_LAYOUT)
+            assert dataforge_cache_is_fresh(p4k_path, cache_dir) is True
+
+    def test_cache_from_an_older_layout_is_not_fresh(self):
+        """A cache with the tag tree but from before the location templates
+        were kept (no layout stamp, or an older one) extracts once more, so
+        the Regions block appears without the player hunting for a button
+        (found in game: Pilot In Distress named regions it did not list)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            p4k_path = tmp / "Data.p4k"
+            p4k_path.write_bytes(b"x" * 4096)
+            cache_dir = tmp / "dataforge"
+            self._populate_cache(cache_dir, stamp_mtime=2_000_000_000, stamp_size=4096)
+            (cache_dir / CACHE_LAYOUT_STAMP).unlink()
+            assert dataforge_cache_is_fresh(p4k_path, cache_dir) is False
+            (cache_dir / CACHE_LAYOUT_STAMP).write_text("1")
+            assert dataforge_cache_is_fresh(p4k_path, cache_dir) is False
+            (cache_dir / CACHE_LAYOUT_STAMP).write_text(CACHE_LAYOUT + "\n")
             assert dataforge_cache_is_fresh(p4k_path, cache_dir) is True
 
     def test_cache_is_fresh_when_stamp_newer(self):
@@ -470,6 +492,7 @@ GENERATOR_READ_SUBPATHS = (
     "crafting/blueprints/crafting",                      # crafting blueprint scan
     "crafting/craftedproperties",                        # SCO Order tab stat names
     "missionbroker/pu_missions",                         # mission XP augmentation
+    "missiondata/pu_locations",                          # Regions block (location templates)
     # Guarded reads (may or may not exist in a given patch; extractor keeps
     # the parent subtree, generator guards with `if dir.exists()`):
     "entities/missions",
@@ -582,7 +605,9 @@ class TestCacheFilteredRecords:
     """Exercise the caching helper on a synthetic unforge output tree, with
     the kept subtrees copied and moved (#484)."""
 
-    _DROPPED = ("ui", "actor", "missiondata", "tintpalettes", "starmap")
+    # missiondata/pu_items: missiondata is split since 3.1.0, its
+    # pu_locations kept and the rest excluded folder by folder.
+    _DROPPED = ("ui", "actor", "missiondata/pu_items", "tintpalettes", "starmap")
 
     @staticmethod
     def _make_fake_unforge_output(root: Path) -> None:

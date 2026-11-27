@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "（… 他{count}隻）"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- 効果 ---"
@@ -601,6 +605,10 @@
       "ht": "",
       "at": "回復"
     },
+    "Regions": {
+      "ht": "",
+      "at": "地域"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "増援"
@@ -825,6 +833,10 @@
       "ht": "",
       "at": "上昇"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "確率最大{chance}"
+    },
     "variant {n}": {
       "ht": "",
       "at": "バリアント {n}"
@@ -832,6 +844,10 @@
     "variants {n}": {
       "ht": "",
       "at": "バリアント {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "確率{chance}"
     },
     "{count} items": {
       "ht": "",
@@ -865,9 +881,17 @@
       "ht": "",
       "at": "{kind}の艦船"
     },
-    "{kind}: {count} ships, {first} … {last}": {
+    "{kind}: {ships}": {
       "ht": "",
-      "at": "{kind}：{count}隻、{first} … {last}"
+      "at": "{kind}：{ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label}（確率{chance}）"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
     },
     "{label}, one of:": {
       "ht": "",
@@ -888,6 +912,14 @@
     "{rest}, or {last}": {
       "ht": "",
       "at": "{rest}または{last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system} 地域{name}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system} 地域{names}"
     },
     "{type} Ammo": {
       "ht": "",

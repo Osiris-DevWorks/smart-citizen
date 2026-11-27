@@ -1534,17 +1534,17 @@
       "ht": "",
       "at": "Düşmanlar"
     },
-    "hostiles_detail_simple": {
+    "ships_per_type_label": {
       "ht": "",
-      "at": "Basit"
+      "at": "Tür başına gemi"
     },
-    "hostiles_detail_all": {
+    "ships_per_type_all": {
       "ht": "",
-      "at": "Tüm gemi ayrıntıları"
+      "at": "Tümü"
     },
-    "hostiles_detail_tooltip": {
+    "ships_per_type_tooltip": {
       "ht": "",
-      "at": "Düşmanlar ve Dostlar satırlarının gemileri nasıl listelediği. Basit, 3'ten fazla gemilik bir grubu türüyle gösterir ve her türü Gemi türleri altında bir kez, sayısıyla ve en büyük ile en küçük gemisiyle adlandırır; Tüm gemi ayrıntıları her gemiyi listeler. Bir sonraki iyileştirme oluşturmada geçerli olur."
+      "at": "Görev ayrıntılarındaki Gemi türleri altında her türün kaç gemi listeleyeceği. Daha fazlası olan bir tür en büyük ve en küçük gemilerini, aralarında kalanların sayısıyla gösterir. Bir sonraki iyileştirme oluşturmada geçerli olur."
     },
     "mission_field_reputation": {
       "ht": "",

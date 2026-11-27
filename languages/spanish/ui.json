@@ -1534,17 +1534,17 @@
       "ht": "",
       "at": "Hostiles"
     },
-    "hostiles_detail_simple": {
+    "ships_per_type_label": {
       "ht": "",
-      "at": "Simple"
+      "at": "Naves por tipo"
     },
-    "hostiles_detail_all": {
+    "ships_per_type_all": {
       "ht": "",
-      "at": "Todas las naves"
+      "at": "Todas"
     },
-    "hostiles_detail_tooltip": {
+    "ships_per_type_tooltip": {
       "ht": "",
-      "at": "Cómo las líneas Hostiles y Aliados listan las naves. Simple muestra un grupo de más de 3 naves por su tipo y nombra cada tipo una vez en Tipos de nave, con cuántas son y la más grande y la más pequeña; Todas las naves las lista todas. Se aplica en la próxima generación de mejoras."
+      "at": "Cuántas naves lista cada tipo en Tipos de nave dentro de los detalles de la misión. Un tipo con más lista las más grandes y las más pequeñas, con el número de las demás entre ellas. Se aplica en la próxima generación de mejoras."
     },
     "mission_field_reputation": {
       "ht": "",

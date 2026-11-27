@@ -804,7 +804,7 @@ class EnhancementsGeneratorWorker(QThread):
                  mission_headers: dict[str, str] | None = None,
                  mission_header_em_tag: str = AppSettings.DEFAULT_MISSION_HEADER_EM_TAG,
                  mission_detail_fields: dict | None = None,
-                 hostiles_detail: str = AppSettings.HOSTILES_DETAIL_DEFAULT,
+                 ships_per_type: str = AppSettings.SHIPS_PER_TYPE_DEFAULT,
                  mission_title_tags: dict | None = None,
                  stats_prepend: bool = False,
                  standardize_earnable_ship_names: bool = False,
@@ -818,7 +818,7 @@ class EnhancementsGeneratorWorker(QThread):
         self.mission_headers = mission_headers
         self.mission_header_em_tag = mission_header_em_tag
         self.mission_detail_fields = mission_detail_fields
-        self.hostiles_detail = hostiles_detail
+        self.ships_per_type = ships_per_type
         self.mission_title_tags = mission_title_tags
         self.stats_prepend = stats_prepend
         self.standardize_earnable_ship_names = standardize_earnable_ship_names
@@ -957,7 +957,7 @@ class EnhancementsGeneratorWorker(QThread):
                      mission_headers=self.mission_headers,
                      mission_header_em_tag=self.mission_header_em_tag,
                      mission_detail_fields=self.mission_detail_fields,
-                     hostiles_detail=self.hostiles_detail,
+                     ships_per_type=self.ships_per_type,
                      mission_title_tags=self.mission_title_tags,
                      stats_prepend=self.stats_prepend,
                      standardize_earnable_ship_names=self.standardize_earnable_ship_names,

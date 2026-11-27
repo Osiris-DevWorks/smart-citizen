@@ -1530,17 +1530,17 @@
       "ht": "",
       "at": "Ostili"
     },
-    "hostiles_detail_simple": {
+    "ships_per_type_label": {
       "ht": "",
-      "at": "Semplice"
+      "at": "Navi per tipo"
     },
-    "hostiles_detail_all": {
+    "ships_per_type_all": {
       "ht": "",
-      "at": "Tutte le navi"
+      "at": "Tutte"
     },
-    "hostiles_detail_tooltip": {
+    "ships_per_type_tooltip": {
       "ht": "",
-      "at": "Come le righe Ostili e Alleati elencano le navi. Semplice mostra un gruppo di più di 3 navi con il suo tipo e nomina ogni tipo una volta sotto Tipi di nave, con quante sono e la più grande e la più piccola; Tutte le navi le elenca tutte. Ha effetto alla prossima generazione dei miglioramenti."
+      "at": "Quante navi elenca ogni tipo sotto Tipi di nave nei dettagli della missione. Un tipo con più navi elenca le più grandi e le più piccole, con il numero delle altre in mezzo. Ha effetto alla prossima generazione dei miglioramenti."
     },
     "mission_field_reputation": {
       "ht": "",

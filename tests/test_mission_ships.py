@@ -401,14 +401,15 @@ class TestLayout:
         ]
 
 
-class TestSimple:
-    """The Hostiles dropdown's Simple: a pool of more than 3 ships is its
-    type, and each type is named once under Ship types, with how many ships
-    it holds and its biggest and smallest by bounding box."""
+class TestShipTypes:
+    """A pool of more than 3 ships is its type in the waves, and each type is
+    named once under Ship types, biggest first by bounding-box volume: up to
+    Ships per type (8 by default) all listed, beyond that (n - 2) / 2 at each
+    end with the rest counted."""
 
     POOL = "00000000-0000-0000-0000-0000000000e1"
 
-    def _index(self, gen, count, simple=True):
+    def _index(self, gen, count, per_type=8):
         tags = dict(TAGS)
         tags[self.POOL] = ("Pool", FACTION)
         ships = [
@@ -416,14 +417,14 @@ class TestSimple:
             for i in range(count)
         ]
         loc = {f"vehicle_Name{i:02}": f"Ship {i:02}" for i in range(count)}
-        return gen.ShipSpawnIndex(tags, ships, loc, simple=simple)
+        return gen.ShipSpawnIndex(tags, ships, loc, per_type=per_type)
 
     def _block(self, gen, index, *groups):
         """The Hostiles block for *groups* and the Ship types after it, as
         _variant_detail_lines writes them."""
         gen._set_ship_spawns(index)
         try:
-            pools: dict = {}
+            pools = gen._ship_pools(groups)
             lines = gen._roster_block("Hostiles", groups, pools=pools)
             return lines + gen._ship_types_block(pools)
         finally:
@@ -439,8 +440,50 @@ class TestSimple:
             "<EM4>Hostiles:</EM4>",
             "- Targets: 2x Easy Pool ship",
             "<EM4>Ship types:</EM4>",
-            "- Easy Pool ship: 4 ships, Ship 03 \u2026 Ship 00",
+            "- Easy Pool ship: Ship 03, Ship 02, Ship 01, Ship 00",
         ]
+
+    def _types_line(self, gen, count, per_type):
+        index = self._index(gen, count, per_type)
+        return self._block(gen, index, self._pool(gen, index))[-1]
+
+    def test_up_to_eight_ships_are_listed_and_nine_are_counted(self, gen):
+        assert self._types_line(gen, 8, 8) == (
+            "- Easy Pool ship: Ship 07, Ship 06, Ship 05, Ship 04, Ship 03,"
+            " Ship 02, Ship 01, Ship 00"
+        )
+        assert self._types_line(gen, 9, 8) == (
+            "- Easy Pool ship: Ship 08, Ship 07, Ship 06, (\u2026 3 others),"
+            " Ship 02, Ship 01, Ship 00"
+        )
+
+    def test_four_keeps_one_ship_at_each_end(self, gen):
+        assert self._types_line(gen, 4, 4) == (
+            "- Easy Pool ship: Ship 03, Ship 02, Ship 01, Ship 00"
+        )
+        assert self._types_line(gen, 11, 4) == (
+            "- Easy Pool ship: Ship 10, (\u2026 9 others), Ship 00"
+        )
+
+    def test_sixteen_keeps_seven_at_each_end(self, gen):
+        line = self._types_line(gen, 17, 16)
+        assert line.startswith("- Easy Pool ship: Ship 16, Ship 15, Ship 14,")
+        assert "Ship 10, (\u2026 3 others), Ship 06," in line
+        assert line.endswith("Ship 01, Ship 00")
+
+    def test_all_lists_every_ship(self, gen):
+        line = self._types_line(gen, 77, 0)
+        assert "others" not in line
+        assert line.count("Ship ") == 77
+
+    def test_the_setting_is_read_as_a_number_of_ships(self, gen):
+        assert gen._ships_per_type("all") == 0
+        assert gen._ships_per_type("All") == 0
+        assert gen._ships_per_type("16") == 16
+        assert gen._ships_per_type(128) == 128
+        assert gen._ships_per_type("nonsense") == 8
+        assert gen._ships_per_type(2) == 8
+        assert gen._ships_per_type(None) == 8
 
     def test_three_ships_are_still_listed(self, gen):
         index = self._index(gen, 3)
@@ -459,16 +502,35 @@ class TestSimple:
         )
         assert lines[1:3] == ["- Wave 1: 2x Easy Pool ship", "- Wave 2: 5x Easy Pool ship"]
         assert lines.count("<EM4>Ship types:</EM4>") == 1
-        assert lines[-1] == "- Easy Pool ship: 4 ships, Ship 03 \u2026 Ship 00"
+        assert lines[-1] == "- Easy Pool ship: Ship 03, Ship 02, Ship 01, Ship 00"
 
-    def test_two_pools_of_one_type_share_an_entry(self, gen):
+    def test_two_pools_of_one_type_with_other_ships_are_numbered(self, gen):
+        # The review's ORS_ShipWaveAt_Desc: five pools whose tags differ only
+        # in what they leave out all read "Criminal ship", listed as one.
         index = self._index(gen, 6)
         names, kind = index.pick([self.POOL, EASY], [])
         first = (gen.SPAWN_HOSTILE, "Targets", (((1, names[:4], kind),),))
         second = (gen.SPAWN_HOSTILE, "Targets", (((1, names[2:], kind),),))
-        assert self._block(gen, index, first, second)[-2:] == [
+        assert self._block(gen, index, first, second) == [
+            "<EM4>Hostiles:</EM4>",
+            "- Wave 1: 1x Easy Pool ship 1",
+            "- Wave 2: 1x Easy Pool ship 2",
             "<EM4>Ship types:</EM4>",
-            "- Easy Pool ship: 6 ships, Ship 05 \u2026 Ship 00",
+            "- Easy Pool ship 1: Ship 03, Ship 02, Ship 01, Ship 00",
+            "- Easy Pool ship 2: Ship 05, Ship 04, Ship 03, Ship 02",
+        ]
+
+    def test_two_pools_with_the_same_ships_are_one(self, gen):
+        index = self._index(gen, 4)
+        names, kind = index.pick([self.POOL, EASY], [])
+        lines = self._block(
+            gen, index,
+            (gen.SPAWN_HOSTILE, "Hostile Wave", (((1, names, kind),),)),
+            (gen.SPAWN_HOSTILE, "Targets", (((2, names, kind),),)),
+        )
+        assert lines[-2:] == [
+            "<EM4>Ship types:</EM4>",
+            "- Easy Pool ship: Ship 03, Ship 02, Ship 01, Ship 00",
         ]
 
     def test_a_pool_with_no_type_is_listed_and_not_a_ship_type(self, gen):
@@ -477,12 +539,6 @@ class TestSimple:
         group = (gen.SPAWN_HOSTILE, "Targets", (((1, names, ""),),))
         lines = self._block(gen, index, group)
         assert lines[1].startswith("- Targets:") and "Ship 03" in "\n".join(lines)
-        assert "<EM4>Ship types:</EM4>" not in lines
-
-    def test_all_ship_details_lists_every_ship_and_has_no_ship_types(self, gen):
-        index = self._index(gen, 11, simple=False)
-        lines = self._block(gen, index, self._pool(gen, index))
-        assert lines[1].startswith("- Targets: 2x of Ship 00,") and "Ship 10" in lines[1]
         assert "<EM4>Ship types:</EM4>" not in lines
 
     def test_the_type_counts_as_one_name_for_the_one_line_rule(self, gen):
@@ -501,6 +557,20 @@ class TestSimple:
             gen._set_ship_spawns(None)
         assert text == "- Hostile Wave: 2x Easy Pool ship and 1x Ship 03"
 
+    def test_the_generation_takes_the_setting(self, gen, tmp_path):
+        records, forge = _records(tmp_path)
+        ctx = {
+            "records": records,
+            "forge_dir": forge,
+            "loc": LOC,
+            "tag_loc": LOC,
+            "ships_per_type": "all",
+        }
+        assert gen._load_ship_spawns(ctx).per_type == 0
+        assert gen._load_ship_spawns(dict(ctx, ships_per_type="16")).per_type == 16
+        del ctx["ships_per_type"]
+        assert gen._load_ship_spawns(ctx).per_type == 8  # the app's default
+
     def test_the_variant_lines_end_with_the_ship_types_after_friendlies(self, gen):
         index = self._index(gen, 4)
         friend = (gen.SPAWN_FRIENDLY, "Escorts", (((1, ("Anvil Arrow",), ""),),))
@@ -516,13 +586,13 @@ class TestSimple:
             "<EM4>Friendlies:</EM4>",
             "- Escorts: 1x Anvil Arrow",
             "<EM4>Ship types:</EM4>",
-            "- Easy Pool ship: 4 ships, Ship 03 \u2026 Ship 00",
+            "- Easy Pool ship: Ship 03, Ship 02, Ship 01, Ship 00",
         ]
 
 
 class TestWaves:
-    """Groups numbered Wave 1, Wave 2, ... in a roster block, in both modes:
-    hostile waves, and target groups in a block with no wave."""
+    """Groups numbered Wave 1, Wave 2, ... in a roster block: hostile waves,
+    and target groups in a block with no wave."""
 
     def _group(self, gen, label, name):
         return (gen.SPAWN_HOSTILE, label, (((1, (name,), ""),),))
@@ -540,14 +610,34 @@ class TestWaves:
         a = self._group(gen, "Targets", "Anvil Arrow")
         assert gen._roster_block("Hostiles", (a,))[1] == "- Targets: 1x Anvil Arrow"
 
-    def test_targets_beside_a_wave_keep_their_label(self, gen):
+    def test_targets_beside_a_wave_are_numbered_after_their_label(self, gen):
+        # They are what the wave guards, so they do not become waves, but two
+        # lines with one label are told apart.
         wave = self._group(gen, "Hostile Wave", "Anvil Arrow")
         a = self._group(gen, "Targets", "Vanduul Blade")
         b = self._group(gen, "Targets", "Anvil Gladiator")
         assert gen._roster_block("Hostiles", (wave, a, b))[1:] == [
             "- Hostile Wave: 1x Anvil Arrow",
+            "- Targets 1: 1x Vanduul Blade",
+            "- Targets 2: 1x Anvil Gladiator",
+        ]
+
+    def test_a_lone_target_beside_a_wave_keeps_its_label(self, gen):
+        wave = self._group(gen, "Hostile Wave", "Anvil Arrow")
+        a = self._group(gen, "Targets", "Vanduul Blade")
+        assert gen._roster_block("Hostiles", (wave, a))[1:] == [
+            "- Hostile Wave: 1x Anvil Arrow",
             "- Targets: 1x Vanduul Blade",
-            "- Targets: 1x Anvil Gladiator",
+        ]
+
+    def test_any_other_label_that_repeats_is_numbered(self, gen):
+        # The review's CleanAir_EscortShip_Easy_desc showed two
+        # "- Reinforcements:" lines.
+        a = self._group(gen, "Reinforcements", "Anvil Arrow")
+        b = self._group(gen, "Reinforcements", "Anvil Gladiator")
+        assert gen._roster_block("Hostiles", (a, b))[1:] == [
+            "- Reinforcements 1: 1x Anvil Arrow",
+            "- Reinforcements 2: 1x Anvil Gladiator",
         ]
 
     def test_a_many_line_target_group_is_numbered_too(self, gen):
@@ -558,19 +648,495 @@ class TestWaves:
         assert lines[1].split(NL)[0] == "- Wave 1:"
         assert lines[-1] == "- Wave 2: 1x Vanduul Scythe"
 
-    def test_the_generation_takes_the_setting(self, gen, tmp_path):
-        records, forge = _records(tmp_path)
-        ctx = {
-            "records": records,
-            "forge_dir": forge,
-            "loc": LOC,
-            "tag_loc": LOC,
-            "hostiles_detail": "all",
+
+def _prop(name: str, inner: str = "", **attrs) -> str:
+    extra = "".join(f' {k}="{v}"' for k, v in attrs.items())
+    return (
+        f'<MissionProperty missionVariableName="{name}"{extra}>'
+        f"<value>{inner}</value></MissionProperty>"
+    )
+
+
+def _chance(value: float) -> str:
+    return (
+        "<MissionPropertyValue_Float><options>"
+        f'<MissionPropertyValueOption_Float weighting="1" value="{value}" />'
+        "</options></MissionPropertyValue_Float>"
+    )
+
+
+def _switch(on: bool) -> str:
+    return f'<MissionPropertyValue_Boolean value="{int(on)}" />'
+
+
+class TestMergedProperties:
+    """A contract runs with its template's properties, then its handler's,
+    then its own, a later one of a name replacing an earlier one (review
+    point 2: 174 released contracts had template groups never read)."""
+
+    def test_template_then_handler_then_contract(self, gen):
+        template = ET.fromstring(
+            "<contractProperties>"
+            + _prop("A", src="template") + _prop("B", src="template")
+            + "</contractProperties>"
+        )
+        handler = ET.fromstring(
+            "<ContractGeneratorHandler_Career><contractParams><propertyOverrides>"
+            + _prop("B", src="handler") + _prop("C", src="handler")
+            + "</propertyOverrides></contractParams>"
+            "<CareerContract><paramOverrides><propertyOverrides>"
+            + _prop("C", src="contract")
+            + "</propertyOverrides></paramOverrides></CareerContract>"
+            "</ContractGeneratorHandler_Career>"
+        )
+        contract = handler.find("CareerContract")
+        merged = gen._merged_properties(template, handler, contract)
+        assert [(p.get("missionVariableName"), p.get("src")) for p in merged] == [
+            ("A", "template"), ("B", "handler"), ("C", "contract"),
+        ]
+
+    def test_two_of_one_name_in_one_place_are_both_kept(self, gen):
+        contract = ET.fromstring(
+            "<CareerContract><paramOverrides><propertyOverrides>"
+            + _prop("A", src="1") + _prop("A", src="2")
+            + "</propertyOverrides></paramOverrides></CareerContract>"
+        )
+        merged = gen._merged_properties(None, None, contract)
+        assert [p.get("src") for p in merged] == ["1", "2"]
+
+
+class TestSpawnChances:
+    """A spawn property's chance, or a switch, decides whether its groups
+    come (review point 1): 0 leaves them out, between 0 and 1 says so."""
+
+    def _chances(self, gen, *props):
+        root = ET.fromstring(f"<p>{''.join(props)}</p>")
+        return gen._spawn_chances(root.findall("MissionProperty"))
+
+    def test_each_rule_names_its_spawn_property(self, gen):
+        assert self._chances(
+            gen,
+            _prop("AcePilotChance_BP", _chance(0.1)),
+            _prop("AllEncounters_AcePilotChance_BP", _chance(0.25)),
+            _prop("EnableAlliedReinforcements_BP", _switch(False)),
+            _prop("DropoffLocation2_PercentageChanceOfEncounter_BP", _chance(30)),
+            _prop("EscortShipToLandingArea_EscortReinforcementChance_BP", _chance(1)),
+        ) == {
+            "AcePilot_BP": 0.1,
+            "AllEncounters_AcePilot_BP": 0.25,
+            "AlliedSpawnDescriptions_BP": 0.0,
+            "DropoffLocation2_ShipsToSpawn_BP": 0.3,
+            "EscortShipToLandingArea_EscortReinforcementsWave01_BP": 1.0,
+            "EscortShipToLandingArea_EscortReinforcementsWave02_BP": 1.0,
+            "EscortShipToLandingArea_EscortReinforcementsWave03_BP": 1.0,
         }
-        assert gen._load_ship_spawns(ctx).simple is False
-        assert gen._load_ship_spawns(dict(ctx, hostiles_detail="simple")).simple is True
-        del ctx["hostiles_detail"]
-        assert gen._load_ship_spawns(ctx).simple is True  # the app's default
+
+    def test_weighted_options_give_their_mean(self, gen):
+        options = (
+            "<MissionPropertyValue_Float><options>"
+            '<MissionPropertyValueOption_Float weighting="1" value="0" />'
+            '<MissionPropertyValueOption_Float weighting="3" value="1" />'
+            "</options></MissionPropertyValue_Float>"
+        )
+        assert self._chances(gen, _prop("AcePilotChance_BP", options)) == {"AcePilot_BP": 0.75}
+
+    def test_a_chance_that_names_no_spawn_property_is_left_alone(self, gen):
+        assert self._chances(
+            gen,
+            _prop("AmbushChance_BP", _chance(0.5)),
+            _prop("InvisibleTimer_ReinforcementChance_BP", _chance(0.5)),
+            _prop("XAcePilotChance_BP", _chance(0.5)),
+        ) == {}
+
+    def _contract(self, gen, chance_prop: str) -> ET.Element:
+        ace = _group("AcePilotShip", [_ship(1, [ARROW])], wrapper="AcePilot_BP")
+        wave = _group("Wave1", [_ship(2, [VANDUUL])])
+        return ET.fromstring(f"<CareerContract>{chance_prop}{ace}{wave}</CareerContract>")
+
+    def test_a_chance_of_0_leaves_the_group_out(self, gen, index):
+        root = self._contract(gen, _prop("AcePilotChance_BP", _chance(0)))
+        chances = gen._spawn_chances(root.iter("MissionProperty"))
+        counts = gen._extract_spawn_counts(root, chances=chances)
+        assert counts[gen.SPAWN_HOSTILE] == {"Hostile Wave": 2}
+        roster = gen._extract_spawn_roster(root, index, chances=chances)
+        assert [g[1] for g in roster] == ["Hostile Wave"]
+
+    def test_a_chance_between_shows_on_its_line(self, gen, index):
+        root = self._contract(gen, _prop("AcePilotChance_BP", _chance(0.1)))
+        chances = gen._spawn_chances(root.iter("MissionProperty"))
+        label_chances: dict = {}
+        counts = gen._extract_spawn_counts(root, chances=chances, label_chances=label_chances)
+        assert counts[gen.SPAWN_HOSTILE] == {"Ace Pilots": 1, "Hostile Wave": 2}
+        assert label_chances == {"Ace Pilots": 0.1, "Hostile Wave": 1.0}
+        ace = gen._extract_spawn_roster(root, index, chances=chances)[0]
+        assert gen._format_roster_group(ace) == "- Ace Pilots (10% chance): 1x Anvil Arrow"
+
+    def test_chance_text(self, gen):
+        assert gen._chance_text(0.33) == "33%"
+        assert gen._chance_text(0.004) == "<1%"
+
+    def test_the_ace_line_and_its_wording(self, gen):
+        assert gen._ace_line_text([1.0, 1.0]) == "Yes"
+        assert gen._ace_line_text([0.1, 0.1]) == "10% chance"
+        assert gen._ace_line_text([0.05, 0.33]) == "up to 33% chance"
+        assert gen._ace_line_text([0.0, 0.2]) == "up to 20% chance"
+        assert gen._ace_line_text([0.0, 0.0]) == ""
+
+
+_TEMPLATE_REF = "00000000-0000-0000-0000-00000000f001"
+
+
+def _scan_with_template(gen, tmp_path, contract_props: str, template_props: str):
+    """One contract on a template, scanned; its variant."""
+    gen_dir = tmp_path / "contracts" / "contractgenerator"
+    tmpl_dir = tmp_path / "contracts" / "contracttemplates"
+    gen_dir.mkdir(parents=True)
+    tmpl_dir.mkdir(parents=True)
+    (tmpl_dir / "t.xml").write_text(
+        f'<ContractTemplate.T __ref="{_TEMPLATE_REF}"><contractProperties>'
+        f"{template_props}</contractProperties></ContractTemplate.T>",
+        encoding="utf-8",
+    )
+    (gen_dir / "g.xml").write_text(
+        '<ContractGenerator><generators><ContractGeneratorHandler_Career debugName="H">'
+        f'<CareerContract debugName="Patrol_Nyx_Easy" template="{_TEMPLATE_REF}">'
+        "<paramOverrides><stringParamOverrides>"
+        '<ContractStringParam param="Title" value="@test_title" />'
+        '<ContractStringParam param="Description" value="@test_desc" />'
+        f"</stringParamOverrides><propertyOverrides>{contract_props}</propertyOverrides>"
+        "</paramOverrides></CareerContract></ContractGeneratorHandler_Career>"
+        "</generators></ContractGenerator>",
+        encoding="utf-8",
+    )
+    missions, _, _, _ = gen.scan_contract_generators(gen_dir)
+    return missions["test_title"][0]
+
+
+class TestTheContractScanReadsItsTemplate:
+    ACE = _group("AcePilotShip", [_ship(1, [ARROW])], wrapper="AllEncounters_AcePilot_BP")
+    WAVE = _group("Wave1", [_ship(2, [VANDUUL])])
+
+    def test_a_template_ace_by_chance_reaches_the_variant(self, gen, tmp_path):
+        v = _scan_with_template(
+            gen, tmp_path, self.WAVE,
+            self.ACE + _prop("AllEncounters_AcePilotChance_BP", _chance(0.1)),
+        )
+        assert v.spawns[gen.SPAWN_HOSTILE] == {"Ace Pilots": 1, "Hostile Wave": 2}
+        assert v.ace_chance == 0.1
+
+    def test_the_contract_overrides_the_template_chance(self, gen, tmp_path):
+        v = _scan_with_template(
+            gen, tmp_path,
+            self.WAVE + _prop("AllEncounters_AcePilotChance_BP", _chance(0)),
+            self.ACE + _prop("AllEncounters_AcePilotChance_BP", _chance(0.1)),
+        )
+        assert v.spawns[gen.SPAWN_HOSTILE] == {"Hostile Wave": 2}
+
+    def test_a_switch_that_is_off_drops_the_allies(self, gen, tmp_path):
+        allies = _group("Allies", [_ship(1, [ARROW])], wrapper="AlliedSpawnDescriptions_BP")
+        on = _scan_with_template(
+            gen, tmp_path / "on", self.WAVE + allies,
+            _prop("EnableAlliedReinforcements_BP", _switch(True)),
+        )
+        off = _scan_with_template(
+            gen, tmp_path / "off", self.WAVE + allies,
+            _prop("EnableAlliedReinforcements_BP", _switch(False)),
+        )
+
+        def labels(v):
+            return {label for bucket in v.spawns.values() for label in bucket}
+
+        assert labels(on) - labels(off) and labels(off) == {"Hostile Wave"}
+
+
+class TestCountsOnePerSlot:
+    """Without the tag tree the count adds one option per slot, from the
+    smallest to the biggest, where it used to add every option (review
+    point 8: Hostile Wave x6 for a Nyx contract that spawns 3 to 4)."""
+
+    def test_a_slot_of_choices_is_a_range(self, gen):
+        root = ET.fromstring(
+            "<c>" + _group("Wave1", [_ship(2, [CRIMINAL]), _ship(3, [CRIMINAL])],
+                           [_ship(1, [ARROW])]) + "</c>"
+        )
+        counts = gen._extract_spawn_counts(root)
+        assert counts[gen.SPAWN_HOSTILE] == {"Hostile Wave": (3, 4)}
+        assert gen._format_spawn_lines(counts) == ["<EM4>Hostiles:</EM4> Hostile Wave x3-4"]
+
+    def test_ranges_add_and_merge(self, gen):
+        breakdown = gen._empty_spawn_breakdown()
+        gen._add_spawn(breakdown, gen.SPAWN_HOSTILE, "Hostile Wave", (3, 4))
+        gen._add_spawn(breakdown, gen.SPAWN_HOSTILE, "Hostile Wave", 2)
+        assert breakdown[gen.SPAWN_HOSTILE] == {"Hostile Wave": (5, 6)}
+        # The worst case of each end: 5 against 5-6 is 5-6.
+        into = {gen.SPAWN_HOSTILE: {"Hostile Wave": 5}}
+        gen._merge_spawn_breakdowns_max(into, breakdown)
+        assert into[gen.SPAWN_HOSTILE] == {"Hostile Wave": (5, 6)}
+
+
+class TestGroupsThatReadTheSame:
+    def test_ships_that_match_with_other_tags_merge(self, gen, index):
+        # The review's Headhunters_claimsweep_desc_hard showed
+        # "- Prospectors: 2x MISC Prospector" twice.
+        root = ET.fromstring(
+            "<c>"
+            + _group("", [_ship(2, [ARROW])], wrapper=TARGETS)
+            + _group("", [_ship(2, [CRIMINAL, ARROW])], wrapper="TargetSpawnDescriptions2_BP")
+            + "</c>"
+        )
+        roster = gen._extract_spawn_roster(root, index)
+        assert len(roster) == 1
+        assert gen._format_roster_group(roster[0]) == "- Targets: 4x Anvil Arrow"
+
+
+class TestTagNameFixes:
+    def test_cigs_misspellings_are_put_right(self, gen):
+        assert gen._tag_words("CombatRaiting2") == "Combat Rating 2"
+        assert gen._tag_words("CombatRaiting") == "Combat Rating"
+        assert gen._tag_words("MainEnemys") == "Main Enemies"
+        assert gen._tag_words("VeryEasy") == "Very Easy"
+
+
+class TestVariantNames:
+    """Variants are named by what tells them apart (review point 3): their
+    star systems, else their combat rating, else a number."""
+
+    def _v(self, gen, system, difficulty=""):
+        return gen.ContractVariant(
+            system_name=system, success_xp=0, failure_xp=0, desc_key="d", flags=[],
+            spawns={}, difficulty=difficulty, has_bp=False, bp_chance=0.0,
+            bp_variant="", rank_name="", rep_track="",
+        )
+
+    def test_by_system(self, gen):
+        members = [[self._v(gen, "Stanton"), self._v(gen, "Pyro")], [self._v(gen, "Nyx")]]
+        assert gen._variant_names(members) == ["Stanton, Pyro", "Nyx"]
+
+    def test_a_region_is_kept(self, gen):
+        members = [[self._v(gen, "Pyro RegionA"), self._v(gen, "Pyro RegionB")],
+                   [self._v(gen, "Stanton")]]
+        assert gen._variant_names(members) == ["Pyro Regions A, B", "Stanton"]
+
+    def test_one_system_for_all_names_them_by_combat(self, gen):
+        members = [[self._v(gen, "Nyx", "Combat 3/7 | Risk 2/7")],
+                   [self._v(gen, "Nyx", "Combat 5/7 | Risk 2/7")]]
+        assert gen._variant_names(members) == ["Combat 3/7", "Combat 5/7"]
+
+    def test_combat_where_it_tells_a_shared_system_apart(self, gen):
+        members = [[self._v(gen, "Stanton", "Combat 3/7")],
+                   [self._v(gen, "Nyx", "Combat 3/7")],
+                   [self._v(gen, "Nyx", "Combat 5/7")]]
+        assert gen._variant_names(members) == [
+            "Stanton", "Nyx, Combat 3/7", "Nyx, Combat 5/7",
+        ]
+
+    def test_a_number_where_nothing_else_does(self, gen):
+        # The review's #620 mission: Nyx and Nyx's Vanduul contract.
+        members = [[self._v(gen, "Stanton"), self._v(gen, "Pyro")],
+                   [self._v(gen, "Nyx", "Combat 4/7")],
+                   [self._v(gen, "Nyx", "Combat 4/7")]]
+        assert gen._variant_names(members) == ["Stanton, Pyro", "Nyx #1", "Nyx #2"]
+
+    def test_a_handler_name_is_no_system(self, gen):
+        members = [[self._v(gen, "HeadHunters_ShipAmbush")],
+                   [self._v(gen, "HeadHunters_ShipAmbush")]]
+        names = gen._variant_names(members)
+        assert names == ["", ""]
+        assert gen._variant_suffix([1, 2], names) == "variants 1, 2"
+
+    def test_the_suffix_joins_names(self, gen):
+        assert gen._variant_suffix([1, 2], ["Stanton, Pyro", "Nyx"]) == "Stanton, Pyro / Nyx"
+        assert gen._variant_suffix([2], ["Nyx", ""]) == "variant 2"
+
+
+LT = "00000000-0000-0000-0000-0000000000d0"     # Missions/LocationType
+SYS = "00000000-0000-0000-0000-0000000000d1"    # .../System
+PYRO = "00000000-0000-0000-0000-0000000000d2"   # .../System/Pyro
+REGIONS = "00000000-0000-0000-0000-0000000000d3"
+REG_A = "00000000-0000-0000-0000-0000000000d4"
+REG_B = "00000000-0000-0000-0000-0000000000d5"
+REG_C = "00000000-0000-0000-0000-0000000000d6"
+PYRO1 = "00000000-0000-0000-0000-0000000000d7"
+PYRO2 = "00000000-0000-0000-0000-0000000000d8"
+PYRO5A = "00000000-0000-0000-0000-0000000000d9"
+STATION = "00000000-0000-0000-0000-0000000000e0"
+ST_PYRO = "00000000-0000-0000-0000-0000000000e2"
+ST_P3 = "00000000-0000-0000-0000-0000000000e3"
+ST_P3L1 = "00000000-0000-0000-0000-0000000000e4"
+TEXT = "00000000-0000-0000-0000-0000000000e5"
+NAME = "00000000-0000-0000-0000-0000000000e6"
+MISSIONS_TAG = "00000000-0000-0000-0000-0000000000e7"
+REGION_TAGS = {
+    MISSIONS_TAG: ("Missions", None),
+    LT: ("LocationType", MISSIONS_TAG),
+    SYS: ("System", LT),
+    PYRO: ("Pyro", SYS),
+    REGIONS: ("Regions", PYRO),
+    REG_A: ("RegionA", REGIONS),
+    REG_B: ("RegionB", REGIONS),
+    REG_C: ("RegionC", REGIONS),
+    PYRO1: ("Pyro1", PYRO),
+    PYRO2: ("Pyro2", PYRO),
+    PYRO5A: ("Pyro5a", PYRO),
+    STATION: ("Station", LT),
+    ST_PYRO: ("Pyro", STATION),
+    ST_P3: ("Pyro3", ST_PYRO),
+    ST_P3L1: ("Pyro3_L1", ST_P3),
+    TEXT: ("Text", MISSIONS_TAG),
+    NAME: ("Name", TEXT),
+}
+REGION_LOC = {"Pyro1": "Pyro I", "Pyro2": "Monox", "Pyro5": "Pyro V",
+              "loc_starlight": "Starlight Service Station",
+              "loc_starlight_clinic": "Starlight Clinic"}
+# (file stem, tags, name loc key): a cave on Pyro I in A, one on a moon of
+# Pyro V in C, a station in B and one of its rooms tagged C with a stray body.
+REGION_FACTS = [
+    ("cave_pyro1", (REG_A, PYRO1), ()),
+    ("cave_pyro5a", (REG_C, PYRO5A), ()),
+    ("rr_p3_l1_starlight", (REG_B, ST_P3L1), ((NAME, "@loc_starlight"),)),
+    ("rr_p3_l1_starlight_clinic", (REG_C, ST_P3L1, PYRO2), ((NAME, "@loc_starlight_clinic"),)),
+]
+
+
+class TestRegions:
+    """Pyro's contract regions read "Pyro Region B", and a Regions block after
+    the flavour text says each named region's planets and stations."""
+
+    def test_place_names(self, gen):
+        assert gen._place_names(["Stanton"]) == "Stanton"
+        assert gen._place_names(["Pyro RegionB"]) == "Pyro Region B"
+        assert gen._place_names(["Pyro RegionD", "Pyro RegionB", "Pyro RegionC"]) == (
+            "Pyro Regions B, C, D")
+        assert gen._place_names(["Stanton", "Pyro RegionA", "Pyro RegionC"]) == (
+            "Stanton, Pyro Regions A, C")
+
+    def test_planets_from_caves_and_stations_from_their_main_record(self, gen):
+        places = gen._region_places(REGION_FACTS, {**TAGS, **REGION_TAGS}, REGION_LOC)
+        assert places == {
+            ("Pyro", "RegionA"): (["Pyro I"], []),
+            # The station is B's: its room tagged C moves it nowhere, and the
+            # room's stray Monox tag adds no planet.
+            ("Pyro", "RegionB"): ([], ["Starlight Service Station"]),
+            # A moon counts as its planet.
+            ("Pyro", "RegionC"): (["Pyro V"], []),
+        }
+
+    def test_the_block_lists_known_regions_in_order(self, gen):
+        gen._set_region_places({
+            ("Pyro", "RegionA"): (["Pyro I", "Monox"], ["Checkmate", "Patch City"]),
+            ("Pyro", "RegionB"): (["Bloom"], ["Orbituary"]),
+        })
+        try:
+            assert gen._regions_block({("Pyro", "RegionB"), ("Pyro", "RegionA"),
+                                       ("Pyro", "RegionX")}) == [
+                "<EM4>Regions:</EM4>",
+                "- Pyro Region A: Pyro I, Monox; Checkmate, Patch City",
+                "- Pyro Region B: Bloom; Orbituary",
+            ]
+            assert gen._regions_block({("Pyro", "RegionX")}) == []
+        finally:
+            gen._set_region_places({})
+        assert gen._regions_block({("Pyro", "RegionA")}) == []
+
+    def test_facts_read_tags_and_strings(self, gen, tmp_path):
+        folder = tmp_path / "missiondata" / "pu_locations" / "templates"
+        folder.mkdir(parents=True)
+        (folder / "Cave_Pyro1.xml").write_text(
+            '<MissionLocationTemplate.Cave><locationData><generalTags><tags>'
+            f'<Reference value="{REG_A}" /><Reference value="{PYRO1}" />'
+            '</tags></generalTags><stringVariants><variants>'
+            f'<MissionStringVariant tag="{NAME}" string="@cave_name" />'
+            '</variants></stringVariants></locationData></MissionLocationTemplate.Cave>',
+            encoding="utf-8",
+        )
+        assert gen.build_location_region_facts(tmp_path / "missiondata" / "pu_locations") == [
+            ("cave_pyro1", (REG_A, PYRO1), ((NAME, "@cave_name"),)),
+        ]
+        assert gen.build_location_region_facts(tmp_path / "nowhere") == []
+
+    def test_blueprint_headers_name_regions_and_report_them(self, gen):
+        named: set = set()
+        parts = gen._build_blueprint_body_parts({
+            ("Gun A",): [("Pyro RegionA", ""), ("Pyro RegionB", "")],
+            ("Gun C",): [("Pyro RegionC", "")],
+        }, named_regions=named)
+        assert parts == ["<EM4>[Pyro Regions A, B]</EM4>\\n- Gun A",
+                         "<EM4>[Pyro Region C]</EM4>\\n- Gun C"]
+        assert named == {("Pyro", "RegionA"), ("Pyro", "RegionB"), ("Pyro", "RegionC")}
+
+    def _v(self, gen, system, roster):
+        return gen.ContractVariant(
+            system_name=system, success_xp=0, failure_xp=0, desc_key="d", flags=[],
+            spawns={}, difficulty="", has_bp=False, bp_chance=0.0, bp_variant="",
+            rank_name="", rep_track="", roster=roster, cooldown=(45, 45),
+        )
+
+    def test_the_headings_name_regions_and_report_only_those_shown(self, gen):
+        a = ((gen.SPAWN_HOSTILE, "Soldiers", 3),)
+        b = ((gen.SPAWN_HOSTILE, "Soldiers", 2),)
+        named: set = set()
+        lines, _ = gen._variant_detail_lines(
+            [self._v(gen, "Pyro RegionA", a), self._v(gen, "Pyro RegionB", b),
+             self._v(gen, "Pyro RegionC", b)], True, True, named)
+        assert lines[0] == "<EM4>Hostiles (Pyro Region A):</EM4>"
+        assert "<EM4>Hostiles (Pyro Regions B, C):</EM4>" in lines
+        assert named == {("Pyro", "RegionA"), ("Pyro", "RegionB"), ("Pyro", "RegionC")}
+        # One roster for all: no heading names a region, so none is reported.
+        named = set()
+        gen._variant_detail_lines(
+            [self._v(gen, "Pyro RegionA", a), self._v(gen, "Pyro RegionB", a)], True, True, named)
+        assert named == set()
+
+    def test_the_generation_puts_the_block_after_the_flavour_text(self, gen, tmp_path):
+        records, forge = _records(tmp_path)
+        (forge / "tag_database.json").write_text(
+            json.dumps({"version": 1, "tags": {
+                g: [n, p] for g, (n, p) in {**TAGS, **REGION_TAGS}.items()}}),
+            encoding="utf-8",
+        )
+        locations = records / "missiondata" / "pu_locations"
+        locations.mkdir(parents=True)
+        for stem, tags, strings in REGION_FACTS:
+            refs = "".join(f'<Reference value="{t}" />' for t in tags)
+            names = "".join(f'<MissionStringVariant tag="{t}" string="{s}" />' for t, s in strings)
+            (locations / f"{stem}.xml").write_text(
+                f"<MissionLocationTemplate.T><locationData><generalTags><tags>{refs}</tags>"
+                f"</generalTags><stringVariants><variants>{names}</variants></stringVariants>"
+                "</locationData></MissionLocationTemplate.T>",
+                encoding="utf-8",
+            )
+
+        def contract(name, ship):
+            hostiles = _group("Wave1", [_ship(1, [ship])])
+            return (
+                f'<CareerContract debugName="{name}">'
+                "<paramOverrides><stringParamOverrides>"
+                '<ContractStringParam param="Title" value="@test_title" />'
+                '<ContractStringParam param="Description" value="@test_desc" />'
+                f"</stringParamOverrides><propertyOverrides>{hostiles}</propertyOverrides>"
+                "</paramOverrides></CareerContract>"
+            )
+
+        (records / "contracts" / "contractgenerator" / "ambush.xml").write_text(
+            '<ContractGenerator><generators><ContractGeneratorHandler_Career debugName="H">'
+            f"{AVAILABILITY}"
+            + contract("HH_Pyro_RegionA_Ambush", ARROW)
+            + contract("HH_Pyro_RegionB_Ambush", GLADIATOR)
+            + "</ContractGeneratorHandler_Career></generators></ContractGenerator>",
+            encoding="utf-8",
+        )
+        loc = {**LOC, **REGION_LOC}
+        ctx = {"records": records, "forge_dir": forge, "loc": loc, "tag_loc": loc,
+               "entity_names": {}, "reputation_lookup": {}, "mission_detail_fields": {}}
+        desc = gen._run_gen_missions(ctx)["test_desc"]
+        assert desc.startswith(
+            "Take them out.\\n\\n<EM4>Regions:</EM4>\\n"
+            "- Pyro Region A: Pyro I\\n"
+            "- Pyro Region B: Starlight Service Station\\n\\n<EM3>MISSION DETAILS</EM3>"
+        )
+        assert "<EM4>Hostiles (Pyro Region A):</EM4>" in desc
+        assert "<EM4>Hostiles (Pyro Region B):</EM4>" in desc
+        assert gen._REGION_PLACES == {}  # set for the run only
 
 
 class TestModelFallback:
@@ -637,7 +1203,9 @@ class TestCooldown:
             ((90, 0), "1 h 30 min"),
             ((2880, 2880), "2 d"),
             ((60, 15), "1 h (abandon: 15 min)"),
-            ((0, 1), "None (abandon: 1 min)"),
+            ((0, 1), "None"),
+            ((0, 2), "None (abandon: 2 min)"),
+            ((30, 1), "30 min"),
             ((0, 0), "None"),
         ],
     )
@@ -782,8 +1350,9 @@ class TestGeneration:
     def test_without_the_tag_tree_the_counts_stay(self, gen, tmp_path):
         records, forge = _records(tmp_path, with_tags=False)
         desc = _generate(gen, records, forge)
-        # The count line as it always was (it adds every choice's amount).
-        assert "<EM4>Hostiles:</EM4> Hostile Wave x6, Targets x1" in desc
+        # The count line, one choice per slot: the wave's 2- and 3-ship
+        # choices are 3-4 ships with the Arrow, not all of them added up (6).
+        assert "<EM4>Hostiles:</EM4> Hostile Wave x3-4, Targets x1" in desc
         assert "Anvil" not in desc
         assert "<EM4>Cooldown:</EM4> 1 h (abandon: 15 min)" in desc
 

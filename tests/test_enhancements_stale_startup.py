@@ -66,7 +66,7 @@ from src.gui.workers import EnhancementsGeneratorWorker  # noqa: E402
 from src.utils.i18n import tr  # noqa: E402
 from src.utils.pak_extractor import (  # noqa: E402
     DATAFORGE_LOOKUPS_SUBPATH, DATAFORGE_RECORDS_SUBPATH,
-    DATAFORGE_TAGS_FILE, P4K_MTIME_STAMP, P4K_SIZE_STAMP,
+    CACHE_LAYOUT, CACHE_LAYOUT_STAMP, DATAFORGE_TAGS_FILE, P4K_MTIME_STAMP, P4K_SIZE_STAMP,
 )
 from src.utils.atomic_io import atomic_write_text  # noqa: E402
 from src.utils.blueprint_meta import MISSION_BLUEPRINT_DESCS_FILE  # noqa: E402
@@ -110,6 +110,7 @@ class _Disk:
         size = stat.st_size + 1 if outdated else stat.st_size
         (forge / P4K_SIZE_STAMP).write_text(str(size), encoding="utf-8")
         (forge / DATAFORGE_TAGS_FILE).write_text("{}", encoding="utf-8")
+        (forge / CACHE_LAYOUT_STAMP).write_text(CACHE_LAYOUT, encoding="utf-8")
         return AppSettings.get_dataforge_build_key(forge)
 
     def never_extracted(self) -> None:

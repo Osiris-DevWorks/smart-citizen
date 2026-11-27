@@ -246,10 +246,11 @@ class TestAFailureInAHandlersOwnSpawns:
         and the variants are still sorted with Stanton first."""
         real = gen_module._extract_spawn_counts
 
-        def spawn_counts(element, exclude_within=None):
+        def spawn_counts(element, exclude_within=None, **kwargs):
+            # The handler's own spawns are the one call with exclude_within.
             if exclude_within:
                 raise ValueError("odd")
-            return real(element)
+            return real(element, **kwargs)
 
         monkeypatch.setattr(gen_module, "_extract_spawn_counts", spawn_counts)
         first_file = _generator(

@@ -2246,6 +2246,7 @@ class TestDataForgeQuestionAfterASuccess:
         size = p4k.stat().st_size + (0 if fresh else 1)
         (leaf / pe.P4K_SIZE_STAMP).write_text(str(size), encoding="utf-8")
         (leaf / pe.DATAFORGE_TAGS_FILE).write_text("{}", encoding="utf-8")
+        (leaf / pe.CACHE_LAYOUT_STAMP).write_text(pe.CACHE_LAYOUT, encoding="utf-8")
 
     @staticmethod
     def _finish(box, follow_up, **attrs):
@@ -2787,6 +2788,7 @@ class TestStartupRefreshPrompt:
         (leaf / pe.P4K_MTIME_STAMP).write_text(str(stat.st_mtime))
         (leaf / pe.P4K_SIZE_STAMP).write_text(str(stat.st_size))
         (leaf / pe.DATAFORGE_TAGS_FILE).write_text("{}")
+        (leaf / pe.CACHE_LAYOUT_STAMP).write_text(pe.CACHE_LAYOUT)
         MainWindow._maybe_prompt_dataforge_refresh(me)
         box.question.assert_not_called()
 

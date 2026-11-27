@@ -54,6 +54,7 @@ def _make_variant(
     rep_track: str,
     roster: tuple = (),
     cooldown: tuple | None = None,
+    ace_chance: float = 1.0,
 ) -> tuple:
     return (
         system_name,
@@ -70,6 +71,7 @@ def _make_variant(
         rep_track,
         roster,
         cooldown,
+        ace_chance,
     )
 
 
@@ -96,6 +98,7 @@ class TestMissionVariantTupleShape:
             rep_track="Security",
             roster=(("hostile", "Pirates", 4),),
             cooldown=(30, 5),
+            ace_chance=0.1,
         )
         fields = gen_module.ContractVariant._fields
         assert len(values) == len(fields), (
@@ -118,6 +121,7 @@ class TestMissionVariantTupleShape:
             "rep_track": "Security",
             "roster": (("hostile", "Pirates", 4),),
             "cooldown": (30, 5),
+            "ace_chance": 0.1,
         }
 
 

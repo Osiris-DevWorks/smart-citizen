@@ -1534,17 +1534,17 @@
       "ht": "",
       "at": "Hostiles"
     },
-    "hostiles_detail_simple": {
+    "ships_per_type_label": {
       "ht": "",
-      "at": "Simple"
+      "at": "Vaisseaux par type"
     },
-    "hostiles_detail_all": {
+    "ships_per_type_all": {
       "ht": "",
-      "at": "Tous les vaisseaux"
+      "at": "Tous"
     },
-    "hostiles_detail_tooltip": {
+    "ships_per_type_tooltip": {
       "ht": "",
-      "at": "Comment les lignes Hostiles et Alliés listent les vaisseaux. Simple affiche un groupe de plus de 3 vaisseaux par son type et nomme chaque type une fois sous Types de vaisseaux, avec leur nombre et le plus grand et le plus petit ; Tous les vaisseaux les liste tous. Prend effet à la prochaine génération des améliorations."
+      "at": "Combien de vaisseaux chaque type liste sous Types de vaisseaux dans les détails de mission. Un type qui en a plus liste les plus grands et les plus petits, avec le nombre des autres entre eux. Prend effet à la prochaine génération des améliorations."
     },
     "mission_field_reputation": {
       "ht": "",

@@ -519,6 +519,9 @@ _LOOKUP_VERSIONS: dict[str, str] = {
     # (build_ship_spawn_facts). v2: the stem, for the model fallback. v3: the
     # bounding-box size, for the Simple summary's order.
     "ship_spawn_tags": "v3",
+    # Each mission location template's tags and strings
+    # (build_location_region_facts), for the Regions block.
+    "location_regions": "v1",
     "standings": "v3",
     "wearables": "v1",
     "xml_path_index": "v2",
@@ -2927,10 +2930,13 @@ def _empty_spawn_breakdown() -> SpawnBreakdown:
     }
 
 
-def _add_spawn(breakdown: SpawnBreakdown, bucket: str, label: str, count: int) -> None:
-    if count <= 0:
+def _add_spawn(breakdown: SpawnBreakdown, bucket: str, label: str, count) -> None:
+    """Add *count* (a number, or ``(fewest, most)``, see _span) to a label."""
+    low, high = _span(count)
+    if high <= 0:
         return
-    breakdown[bucket][label] = breakdown[bucket].get(label, 0) + count
+    old_low, old_high = _span(breakdown[bucket].get(label, 0))
+    breakdown[bucket][label] = _span_value(old_low + low, old_high + high)
 
 
 def _within_excluded_subtree(node: ET.Element, scope: ET.Element,
@@ -2975,8 +2981,184 @@ def _spawn_count(value: str, group: str, attribute: str) -> int:
     return 0
 
 
-def _extract_spawn_counts(element: ET.Element,
-                          exclude_within: str | tuple[str, ...] | None = None) -> SpawnBreakdown:
+# ── What a contract runs with: its merged mission properties ─────────────────
+# A contract's mission properties come from three places, each replacing an
+# earlier one with the same missionVariableName: its template's
+# contractProperties (found by the contract's ``template`` GUID), its
+# handler's contractParams/propertyOverrides, then its own
+# paramOverrides/propertyOverrides. Every spawn group on LIVE sits in one of
+# them (Nov 2026), and 174 released contracts have template ship groups they
+# do not override, most of them template aces, which reading the contract
+# alone missed.
+
+
+def _merged_properties(template_props: "ET.Element | None", handler: "ET.Element | None",
+                       contract: "ET.Element | None") -> list:
+    """The ``MissionProperty`` elements a contract runs with, each name once:
+    the template's (*template_props*, its ``contractProperties``), then the
+    handler's, then the contract's own, a later one taking an earlier one's
+    place. Properties with no name, and two of one name in the same place,
+    are all kept."""
+    sources = (
+        (template_props, "./MissionProperty"),
+        (handler, "./contractParams/propertyOverrides/MissionProperty"),
+        (contract, "./paramOverrides/propertyOverrides/MissionProperty"),
+    )
+    merged: dict = {}
+    for element, path in sources:
+        if element is None:
+            continue
+        own: dict = {}
+        for prop in element.findall(path):
+            own.setdefault(prop.get("missionVariableName") or id(prop), []).append(prop)
+        merged.update(own)
+    return [prop for props in merged.values() for prop in props]
+
+
+# The properties that decide whether a spawn property's groups come at all,
+# by the end of their name: a chance (the weighted mean of its float
+# options, out of *scale*) or a switch (a boolean). A prefix before that end
+# carries over to the spawn properties: AllEncounters_AcePilotChance_BP
+# decides AllEncounters_AcePilot_BP, DropoffLocation2_PercentageChanceOf
+# Encounter_BP decides DropoffLocation2_ShipsToSpawn_BP. LIVE's other
+# chances (AmbushChance_BP, InvisibleTimer_ReinforcementChance_BP, ...) name
+# no spawn property they could stand for, so they are left alone.
+_SPAWN_CHANCE_RULES: tuple[tuple[str, tuple[str, ...], float], ...] = (
+    ("AcePilotChance_BP", ("AcePilot_BP",), 1.0),
+    ("EnableAlliedReinforcements_BP", ("AlliedSpawnDescriptions_BP",), 1.0),
+    ("ReinforcementsSpawnChance_BP", ("ReinforcementsSpawnDescription_BP",), 1.0),
+    ("EscortReinforcementChance_BP", ("EscortReinforcementsWave01_BP",
+                                      "EscortReinforcementsWave02_BP",
+                                      "EscortReinforcementsWave03_BP"), 1.0),
+    ("InterdictionChance_BP", ("InterdictionShips_BP",), 1.0),
+    ("ChanceOfReinforcements_BP", ("Reinforcements_BP",), 1.0),
+    ("PercentageChanceOfEncounter_BP", ("ShipsToSpawn_BP",), 100.0),
+)
+
+
+def _property_value(prop: ET.Element) -> "float | None":
+    """A switch property as 1 or 0, or a chance property's weighted mean;
+    None when it holds neither."""
+    switch = prop.find(".//MissionPropertyValue_Boolean")
+    if switch is not None:
+        return 1.0 if switch.get("value") == "1" else 0.0
+    total = weights = 0.0
+    for option in prop.findall(".//MissionPropertyValueOption_Float"):
+        try:
+            value = float(option.get("value", ""))
+            weight = float(option.get("weighting", "1"))
+        except ValueError:
+            continue
+        if weight > 0 and value == value and abs(value) != float("inf"):
+            total += value * weight
+            weights += weight
+    return total / weights if weights else None
+
+
+def _spawn_chances(props) -> dict[str, float]:
+    """Each spawn property's chance of coming, from 0 to 1, for the spawn
+    properties a chance or switch among *props* decides
+    (_SPAWN_CHANCE_RULES); one not named here comes for certain."""
+    chances: dict[str, float] = {}
+    for prop in props:
+        name = prop.get("missionVariableName") or ""
+        for ending, targets, scale in _SPAWN_CHANCE_RULES:
+            prefix = name[: -len(ending)]
+            if not name.endswith(ending) or (prefix and not prefix.endswith("_")):
+                continue
+            value = _property_value(prop)
+            if value is not None:
+                for target in targets:
+                    chances[prefix + target] = min(max(value / scale, 0.0), 1.0)
+            break
+    return chances
+
+
+def _group_chance(group: ET.Element, chances: "dict[str, float] | None") -> float:
+    """The chance a spawn group comes: its property's, 1 when none decides it."""
+    if not chances:
+        return 1.0
+    node = group.getparent()
+    while node is not None:
+        if node.tag == "MissionProperty":
+            return chances.get(node.get("missionVariableName") or "", 1.0)
+        node = node.getparent()
+    return 1.0
+
+
+def _chance_text(chance: float) -> str:
+    """``10%``, or ``<1%`` for a chance that rounds to nothing."""
+    percent = round(chance * 100)
+    return f"{percent}%" if percent >= 1 else "<1%"
+
+
+def _contract_spawn_scopes(props: list, contract: ET.Element) -> tuple[list, bool]:
+    """Where a contract's spawn groups are, as ``(element, exclude_within)``
+    scopes: each of its merged properties (_merged_properties), then its
+    spawn groups that sit in no property (none on LIVE, Nov 2026; kept for a
+    file that places them so). The flag says whether the contract has a
+    spawn group of its own at all; one without inherits its handler's
+    groups that sit in no property."""
+    own = contract.find(".//SpawnDescription_ShipGroup") is not None or \
+        contract.find(".//SpawnDescription_NPC_Group") is not None
+    scopes: list = [(prop, None) for prop in props]
+    if own:
+        scopes.append((contract, ("MissionProperty",)))
+    return scopes, own
+
+
+def _groups_in(element, exclude_within, tag: str):
+    """The *tag* spawn groups in *element* outside *exclude_within*, or in each
+    ``(element, exclude_within)`` scope when *element* is a list of them."""
+    scopes = element if isinstance(element, list) else [(element, exclude_within)]
+    for scope, exclude in scopes:
+        for group in scope.findall(f".//{tag}"):
+            if not _within_excluded_subtree(group, scope, exclude):
+                yield group
+
+
+def _slot_options(group: ET.Element) -> list[list[ET.Element]]:
+    """A ship group's slots, each the ``SpawnDescription_Ship`` options the
+    game picks one of; every slot spawns. A group with no
+    ``SpawnDescription_ShipOptions`` has one slot per ship."""
+    slot_elements = group.findall(".//SpawnDescription_ShipOptions")
+    if slot_elements:
+        return [s.findall("./options/SpawnDescription_Ship") for s in slot_elements]
+    return [[s] for s in group.findall(".//SpawnDescription_Ship")]
+
+
+def _ship_group_span(group: ET.Element, name: str) -> tuple[int, int]:
+    """The fewest and most ships a group spawns: one option per slot, the
+    smallest and the biggest."""
+    low = high = 0
+    for options in _slot_options(group):
+        amounts = [max(_spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount"), 0)
+                   for s in options]
+        if amounts:
+            low += min(amounts)
+            high += max(amounts)
+    return low, high
+
+
+# A spawn count in a SpawnBreakdown is a number, or (fewest, most) when the
+# game picks among options of different sizes.
+def _span(count) -> tuple[int, int]:
+    return count if isinstance(count, tuple) else (count, count)
+
+
+def _span_value(low: int, high: int):
+    return low if low == high else (low, high)
+
+
+def _span_text(count) -> str:
+    low, high = _span(count)
+    return f"{low}" if low == high else f"{low}-{high}"
+
+
+def _extract_spawn_counts(element,
+                          exclude_within: str | tuple[str, ...] | None = None,
+                          chances: "dict[str, float] | None" = None,
+                          label_chances: "dict[str, float] | None" = None) -> SpawnBreakdown:
     """Extract a per-bucket per-label breakdown of spawn descriptions.
 
     Parses ``SpawnDescription_ShipGroup`` and ``SpawnDescription_NPC_Group``
@@ -3002,19 +3184,23 @@ def _extract_spawn_counts(element: ET.Element,
     Pre-1.4.1 this returned ``(num_waves, num_enemies, num_not_enemies)`` and
     bucketed everything unrecognized as hostile — see the keyword-table
     docstring for the misclassifications that surfaced.
+
+    *element* may also be a list of ``(element, exclude_within)`` scopes
+    (_contract_spawn_scopes). A ship group counts one option per slot, the
+    game picking one, so a slot of 3 or 4 scouts is ``(3, 4)`` (see _span);
+    adding every option up read a slot of choices as all of them. *chances*
+    (_spawn_chances) leaves out a group whose chance is 0, and
+    *label_chances* gets each label's highest chance of the groups counted.
     """
     breakdown = _empty_spawn_breakdown()
 
-    for sg in element.findall(".//SpawnDescription_ShipGroup"):
-        if _within_excluded_subtree(sg, element, exclude_within):
+    for sg in _groups_in(element, exclude_within, "SpawnDescription_ShipGroup"):
+        chance = _group_chance(sg, chances)
+        if chance <= 0:
             continue
         name = sg.get("Name", "")
-        ships = sg.findall(".//SpawnDescription_Ship")
-        total = sum(
-            _spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount")
-            for s in ships
-        )
-        if total <= 0:
+        low, high = _ship_group_span(sg, name)
+        if high <= 0:
             continue
         # Turret ship-groups are reported separately by _extract_turret_info;
         # skipping them here keeps them off the Hostiles tally so the
@@ -3023,10 +3209,13 @@ def _extract_spawn_counts(element: ET.Element,
         if "turret" in name.lower():
             continue
         bucket, label = _group_bucket(sg, name, "ship")
-        _add_spawn(breakdown, bucket, label, total)
+        _add_spawn(breakdown, bucket, label, _span_value(low, high))
+        if label_chances is not None:
+            label_chances[label] = max(label_chances.get(label, 0.0), chance)
 
-    for ng in element.findall(".//SpawnDescription_NPC_Group"):
-        if _within_excluded_subtree(ng, element, exclude_within):
+    for ng in _groups_in(element, exclude_within, "SpawnDescription_NPC_Group"):
+        chance = _group_chance(ng, chances)
+        if chance <= 0:
             continue
         name = ng.get("Name", "")
         total_npcs = _npc_group_total(ng, name)
@@ -3034,6 +3223,8 @@ def _extract_spawn_counts(element: ET.Element,
             continue
         bucket, label = _group_bucket(ng, name, "npc")
         _add_spawn(breakdown, bucket, label, total_npcs)
+        if label_chances is not None:
+            label_chances[label] = max(label_chances.get(label, 0.0), chance)
 
     return breakdown
 
@@ -3069,7 +3260,7 @@ def _format_spawn_lines(breakdown: SpawnBreakdown) -> list[str]:
             continue
         # Sorted by the English label, so the order is the same in every
         # language and only the words change.
-        parts = [f"{_t(lbl)} x{cnt}" for lbl, cnt in sorted(items.items())]
+        parts = [f"{_t(lbl)} x{_span_text(cnt)}" for lbl, cnt in sorted(items.items())]
         lines.append(f"<EM4>{_t(header)}:</EM4> {', '.join(parts)}")
     return lines
 
@@ -3085,8 +3276,9 @@ def _merge_spawn_breakdowns_max(into: SpawnBreakdown, src: SpawnBreakdown) -> No
     for bucket, items in src.items():
         target = into.setdefault(bucket, {})
         for label, count in items.items():
-            if count > target.get(label, 0):
-                target[label] = count
+            low, high = _span(count)
+            old_low, old_high = _span(target.get(label, 0))
+            target[label] = _span_value(max(low, old_low), max(high, old_high))
 
 
 # ── The ships a mission spawns, and its cooldown ──────────────────────────────
@@ -3126,9 +3318,21 @@ _LABEL_TAG_ORDER: tuple[str, ...] = ("AI/Ship/CombatClass/", "AI/Faction/")
 _MODEL_TAG_PREFIXES: tuple[str, ...] = ("Ship/Model/", "Global/Ship/ShipModel/")
 
 
+# CIG's misspellings in the tag names a type label is made of, put right
+# before the name is split into words: ``CombatRaiting2`` reads ``Combat
+# Rating 2`` (AI/Ship/CombatRaiting1 to 10, LIVE Nov 2026).
+_TAG_NAME_FIXES: tuple[tuple["re.Pattern[str]", str], ...] = (
+    (re.compile(r"Raiting(?=\d|$)"), "Rating "),
+    (re.compile(r"Enemys\b"), "Enemies"),
+)
+
+
 def _tag_words(name: str) -> str:
     """A tag's name as words: ``VeryEasy`` -> ``Very Easy``,
-    ``Cutlass_Black`` -> ``Cutlass Black``."""
+    ``Cutlass_Black`` -> ``Cutlass Black``, with CIG's misspellings put
+    right (_TAG_NAME_FIXES)."""
+    for pattern, fix in _TAG_NAME_FIXES:
+        name = pattern.sub(fix, name)
     return " ".join(re.sub(r"(?<=[a-z0-9])(?=[A-Z])|_+", " ", name).split())
 
 
@@ -3139,18 +3343,18 @@ class ShipSpawnIndex:
     entity's own tags, name loc key, file stem and size
     (``build_ship_spawn_facts``; the stem and size may be left off), *loc*
     the strings of the language being generated and *fallback_loc* the
-    English ones, for a name *loc* lacks. *simple* shortens a pool of more
-    than _SIMPLE_MAX_SHIPS ships to its type, its ships named once under Ship
-    types (the Hostiles dropdown's Simple).
+    English ones, for a name *loc* lacks. *per_type* is how many ships a
+    type lists under Ship types before the middle ones are counted (the
+    Enhancements tab's Ships per type), 0 for all of them.
     False when either is empty, which leaves the spawn lines as counts.
     """
 
     def __init__(self, tags: dict, ships: list, loc: dict, fallback_loc: dict | None = None,
-                 simple: bool = False):
+                 per_type: int = 8):
         self._paths = tag_paths(tags)
         self._ships: list[tuple[frozenset, str, str]] = []
         self._sizes: dict[str, float] = {}
-        self.simple = simple
+        self.per_type = per_type
         for own, key, *rest in ships:
             name = " ".join((loc.get(key) or (fallback_loc or {}).get(key) or "").split())
             if name:
@@ -3317,13 +3521,8 @@ def _ship_group_slots(group: ET.Element, name: str, ships: ShipSpawnIndex) -> "t
     """A ship spawn group's slots, each a tuple of ``(amount, names, label)``
     choices the game picks one of; every slot spawns. None when a choice asks
     for no tag that picks a ship, so the group shows as a count instead."""
-    slot_elements = group.findall(".//SpawnDescription_ShipOptions")
-    if slot_elements:
-        slot_choices = [s.findall("./options/SpawnDescription_Ship") for s in slot_elements]
-    else:
-        slot_choices = [[s] for s in group.findall(".//SpawnDescription_Ship")]
     slots = []
-    for choices in slot_choices:
+    for choices in _slot_options(group):
         slot = []
         for s in choices:
             amount = _spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount")
@@ -3341,51 +3540,64 @@ def _ship_group_slots(group: ET.Element, name: str, ships: ShipSpawnIndex) -> "t
     return tuple(slots) or None
 
 
-def _extract_spawn_roster(element: ET.Element, ships: ShipSpawnIndex,
-                          exclude_within: str | tuple[str, ...] | None = None) -> tuple:
+def _shown_slot(slot: tuple) -> tuple:
+    """A slot as it reads: a choice's label counts only where it shows (no
+    ship matched, or a pool big enough to be its type), so two groups whose
+    ships match but whose tags differ read, and merge, as one."""
+    return tuple((amount, names, label if not names or len(names) > _POOL_AS_TYPE_OVER else "")
+                 for amount, names, label in slot)
+
+
+def _extract_spawn_roster(element, ships: ShipSpawnIndex,
+                          exclude_within: str | tuple[str, ...] | None = None,
+                          chances: "dict[str, float] | None" = None) -> tuple:
     """The hostile and friendly spawn groups of *element*, each
-    ``(bucket, label, ships)``: *ships* the group's slots
+    ``(bucket, label, ships, chance)``: *ships* the group's slots
     (_ship_group_slots), or an int, the count of an on-foot group or of a ship
-    group with nothing to name. Ship groups come first, in file order; on-foot
-    groups follow, one per label with their counts added. Objectives and
-    unknown groups are left out (they stay in the spawn counts), and so are
-    turrets, as _extract_spawn_counts leaves them out. Groups that are the
-    same in all but their name become one, their amounts added: four
-    recipient groups of one ship each from one pool are four ships from it."""
-    ship_groups: dict[tuple, int] = {}
-    for sg in element.findall(".//SpawnDescription_ShipGroup"):
-        if _within_excluded_subtree(sg, element, exclude_within):
-            continue
+    group with nothing to name, and *chance* the chance it comes
+    (_spawn_chances; a group whose chance is 0 is left out). Ship groups come
+    first, in file order; on-foot groups follow, one per label with their
+    counts added. Objectives and unknown groups are left out (they stay in the
+    spawn counts), and so are turrets, as _extract_spawn_counts leaves them
+    out. Groups that read the same become one, their amounts added: four
+    recipient groups of one ship each from one pool are four ships from it,
+    and so are two whose ships match but whose tags differ (_shown_slot).
+    *element* may be a list of scopes, as for _extract_spawn_counts."""
+    ship_groups: dict[tuple, list] = {}
+    for sg in _groups_in(element, exclude_within, "SpawnDescription_ShipGroup"):
         name = sg.get("Name", "")
         if "turret" in name.lower():
             continue
-        total = sum(
-            _spawn_count(s.get("concurrentAmount", "0"), name, "concurrentAmount")
-            for s in sg.findall(".//SpawnDescription_Ship")
-        )
-        if total <= 0:
+        chance = _group_chance(sg, chances)
+        if chance <= 0:
+            continue
+        high = _ship_group_span(sg, name)[1]
+        if high <= 0:
             continue
         bucket, label = _group_bucket(sg, name, "ship")
         if bucket not in (SPAWN_HOSTILE, SPAWN_FRIENDLY):
             continue
         slots = _ship_group_slots(sg, name, ships)
         if slots is None:
-            key = (bucket, label, None)
-            ship_groups[key] = ship_groups.get(key, 0) + total
+            entry = ship_groups.setdefault((bucket, label, None, chance), [None, 0])
+            entry[1] += high
         else:
-            key = (bucket, label, slots)
-            ship_groups[key] = ship_groups.get(key, 0) + 1
+            shown = tuple(_shown_slot(slot) for slot in slots)
+            key = (bucket, label, tuple(tuple(sorted(slot)) for slot in shown), chance)
+            entry = ship_groups.setdefault(key, [shown, 0])
+            entry[1] += 1
     groups: list = []
-    for (bucket, label, slots), times in ship_groups.items():
+    for (bucket, label, _, chance), (slots, times) in ship_groups.items():
         if slots is None:
-            groups.append((bucket, label, times))
+            groups.append((bucket, label, times, chance))
         else:
             groups.append((bucket, label, tuple(
                 tuple((amount * times, names, pick_label) for amount, names, pick_label in slot)
-                for slot in slots)))
-    npc_totals: dict[tuple[str, str], int] = {}
-    for ng in element.findall(".//SpawnDescription_NPC_Group"):
-        if _within_excluded_subtree(ng, element, exclude_within):
+                for slot in slots), chance))
+    npc_totals: dict[tuple[str, str, float], int] = {}
+    for ng in _groups_in(element, exclude_within, "SpawnDescription_NPC_Group"):
+        chance = _group_chance(ng, chances)
+        if chance <= 0:
             continue
         name = ng.get("Name", "")
         total = _npc_group_total(ng, name)
@@ -3393,8 +3605,9 @@ def _extract_spawn_roster(element: ET.Element, ships: ShipSpawnIndex,
             continue
         bucket, label = _group_bucket(ng, name, "npc")
         if bucket in (SPAWN_HOSTILE, SPAWN_FRIENDLY):
-            npc_totals[(bucket, label)] = npc_totals.get((bucket, label), 0) + total
-    groups.extend((bucket, label, total) for (bucket, label), total in npc_totals.items())
+            npc_totals[(bucket, label, chance)] = npc_totals.get((bucket, label, chance), 0) + total
+    groups.extend((bucket, label, total, chance)
+                  for (bucket, label, chance), total in npc_totals.items())
     return tuple(groups)
 
 
@@ -3422,12 +3635,28 @@ _TARGETS_LABEL = "Targets"
 # A wave stays on one line only while no part of it names this many ships:
 # a long list would run into the part after it.
 _ONE_LINE_MAX_NAMES = 3
-# With the Hostiles dropdown on Simple, a pool of more than this many ships
-# is shown as its type, and its ships are named once under Ship types.
-_SIMPLE_MAX_SHIPS = 3
-# The Hostiles dropdown's values (AppSettings.HOSTILES_DETAILS), as main()
-# takes them; Simple is the app's default.
-_HOSTILES_SIMPLE = "simple"
+# A pool of more than this many ships is shown in a wave as its type, and
+# its ships are named once under Ship types.
+_POOL_AS_TYPE_OVER = 3
+# Under Ship types, a type lists up to the Enhancements tab's Ships per type
+# (AppSettings.SHIPS_PER_TYPE: 4, 8, 16, ... 128, or all) ships, biggest
+# first; a bigger one lists (n - 2) // 2 at each end with the rest counted
+# between them. 8 is the default: on LIVE 4-8 ships is a third of the types,
+# 9-12 almost none and 13 or more the rest.
+_SHIPS_PER_TYPE_DEFAULT = 8
+_SHIPS_PER_TYPE_ALL = "all"
+
+
+def _ships_per_type(value) -> int:
+    """main()'s *ships_per_type* as a number of ships, 0 for all; anything
+    that is neither a number of 4 or more nor "all" is the default."""
+    if str(value).strip().lower() == _SHIPS_PER_TYPE_ALL:
+        return 0
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return _SHIPS_PER_TYPE_DEFAULT
+    return number if number >= 4 else _SHIPS_PER_TYPE_DEFAULT
 
 
 def _join_words(parts: list[str], kind: str) -> str:
@@ -3448,30 +3677,78 @@ def _ship_kind(label: str) -> str:
 
 
 def _ship_types_block(pools: dict) -> list[str]:
-    """The Simple ship lists' Ship types: each type a wave named, once, with
-    how many ships it holds and its biggest and smallest by bounding box,
-    ``- Hard Criminal Combat Ship: 13 ships, Crusader A1 Spirit … Anvil Arrow``.
-    *pools* maps each type to its ships, in the order the waves name them."""
+    """The ship lists' Ship types: each type a wave named, once, its ships
+    biggest first by bounding-box volume. A type of up to the index's
+    *per_type* ships (all of them at 0) lists them all
+    (``- Easy Criminal ship: Drake Cutlass Black, ..., Anvil Arrow``); a
+    bigger one lists (per_type - 2) // 2 at each end and counts the rest
+    between them (``- Hard Criminal Combat Ship: Crusader A1 Spirit, Aegis
+    Vanguard Harbinger, Aegis Vanguard Warden, (… 7 others), Esperia Talon,
+    Esperia Talon Shrike, Anvil Arrow``). The DataForge records hold no ship
+    mass, and volume ranked better than length on LIVE's types. *pools* maps
+    each pool (``(type, ships)``) to the name it reads as (_ship_pools), in
+    the order the waves name them."""
     if not pools:
         return []
+    per_type = _SHIP_SPAWNS.per_type if _SHIP_SPAWNS else _SHIPS_PER_TYPE_DEFAULT
     lines = [f"<EM4>{_t('Ship types')}:</EM4>"]
-    for kind, names in pools.items():
+    for (_, names), shown in pools.items():
         ordered = _SHIP_SPAWNS.biggest_first(names) if _SHIP_SPAWNS else sorted(names)
-        text = _t("{kind}: {count} ships, {first} … {last}", kind=kind,
-                  count=len(ordered), first=ordered[0], last=ordered[-1])
+        if per_type and len(ordered) > per_type:
+            ends = (per_type - 2) // 2
+            others = _t("(… {count} others)", count=len(ordered) - 2 * ends)
+            ordered = ordered[:ends] + [others] + ordered[-ends:]
+        text = _t("{kind}: {ships}", kind=shown, ships=", ".join(ordered))
         lines.append(f"- {text}")
     return lines
+
+
+def _typed_pool(names: tuple, label: str) -> str:
+    """The type a pool reads as in its wave (``Very Hard Criminal Large Combat
+    Ship``) when it has more than _POOL_AS_TYPE_OVER ships and a type, else
+    "". Without a ship index (a test's own groups) every pool is listed."""
+    if _SHIP_SPAWNS and label and len(names) > _POOL_AS_TYPE_OVER:
+        return _ship_kind(label)
+    return ""
+
+
+def _ship_pools(groups) -> dict:
+    """Each pool *groups* show as a type, ``(type, ships)``, mapped to the name
+    it reads as: its type, or, where pools with different ships share a type
+    (their tags differ only in what they leave out), the type numbered in the
+    order the groups name them (``Criminal ship 1``, ``Criminal ship 2``).
+    Pools with the same ships are one. _slot_choices names the pools by it
+    and _ship_types_block lists them."""
+    found: dict[tuple[str, tuple], None] = {}
+    for group in groups:
+        if isinstance(group[2], int):
+            continue
+        for slot in group[2]:
+            for _, names, label in slot:
+                kind = _typed_pool(names, label)
+                if kind:
+                    found.setdefault((kind, names), None)
+    per_kind: dict[str, int] = {}
+    for kind, _ in found:
+        per_kind[kind] = per_kind.get(kind, 0) + 1
+    seen: dict[str, int] = {}
+    pools: dict = {}
+    for kind, names in found:
+        if per_kind[kind] > 1:
+            seen[kind] = seen.get(kind, 0) + 1
+            pools[(kind, names)] = f"{kind} {seen[kind]}"
+        else:
+            pools[(kind, names)] = kind
+    return pools
 
 
 def _slot_choices(slot: tuple, pools: "dict | None" = None) -> list[tuple[str, int]]:
     """A slot's choices as ``(text, how many ships it names)``: equal ships at
     different amounts become a range, choices at one amount share one list,
     and a list reads ``2-3x of A, B, or C`` so the count is not taken for a
-    count of each. A choice no ship matches names its kind of ship, and with
-    Simple a pool of more than _SIMPLE_MAX_SHIPS ships is its type, which
-    counts as one name; its ships go into *pools* under that type (two pools
-    of one type share an entry) for _ship_types_block."""
-    simple = bool(_SHIP_SPAWNS and _SHIP_SPAWNS.simple)
+    count of each. A choice no ship matches names its kind of ship, and a
+    pool big enough to be its type (_typed_pool) reads as the name *pools*
+    gives it (_ship_pools), which counts as one name."""
     ranges: dict[tuple, list[int]] = {}
     for amount, names, label in slot:
         low_high = ranges.setdefault((names, label), [amount, amount])
@@ -3480,12 +3757,11 @@ def _slot_choices(slot: tuple, pools: "dict | None" = None) -> list[tuple[str, i
     by_amount: dict[tuple[int, int], tuple[list[str], list[str]]] = {}
     for (names, label), (low, high) in ranges.items():
         named, kinds = by_amount.setdefault((low, high), ([], []))
+        kind = _typed_pool(names, label)
         if not names:
             kind = _ship_kind(label) if label else ""
-        elif simple and label and len(names) > _SIMPLE_MAX_SHIPS:
-            kind = _ship_kind(label)
-            if pools is not None:
-                pools.setdefault(kind, set()).update(names)
+        elif kind:
+            kind = (pools or {}).get((kind, names), kind)
         else:
             named.extend(n for n in names if n not in named)
             continue
@@ -3504,8 +3780,9 @@ def _slot_choices(slot: tuple, pools: "dict | None" = None) -> list[tuple[str, i
 
 def _format_roster_group(group: tuple, label: str | None = None,
                          pools: "dict | None" = None) -> str:
-    """One group's lines, *label* (or the group's own, translated) leading;
-    Simple's typed pools go into *pools* (_slot_choices).
+    """One group's lines, *label* (or the group's own, translated) leading,
+    with its chance when it comes only by chance (``- Ace Pilots (10%
+    chance): ...``); *pools* names the pools shown as types (_ship_pools).
 
     A group whose every slot is a single choice, with no long list in it,
     is one line (``- Wave 2: 3x A, 1x of B or C, and 3x D``). Otherwise each
@@ -3514,8 +3791,11 @@ def _format_roster_group(group: tuple, label: str | None = None,
     own choices under it when it has several). On-foot groups and ship
     groups with nothing to name are counts (``- Soldiers x6``).
     """
-    _, key, ships = group
+    key, ships = group[1], group[2]
+    chance = group[3] if len(group) > 3 else 1.0
     name = label or _t(key)
+    if chance < 1:
+        name = _t("{label} ({chance} chance)", label=name, chance=_chance_text(chance))
     if isinstance(ships, int):
         return f"- {name} x{ships}"
     slots = [_slot_choices(slot, pools) for slot in ships]
@@ -3539,10 +3819,245 @@ def _format_roster_group(group: tuple, label: str | None = None,
     return "\\n".join(lines)
 
 
-def _variant_suffix(numbers: list[int]) -> str:
-    """``variant 2`` or ``variants 1, 3``."""
+def _variant_suffix(numbers: list[int], names: "list[str] | None" = None) -> str:
+    """The variants *numbers* (1-based) stand for: their names (_variant_names)
+    joined with `` / ``, or ``variant 2`` / ``variants 1, 3`` when none has a
+    name (one without a name among named ones is ``variant N``)."""
+    labels = [names[n - 1] if names else "" for n in numbers]
+    if any(labels):
+        return " / ".join(label or _t("variant {n}", n=n) for label, n in zip(labels, numbers))
     joined = ", ".join(str(n) for n in numbers)
     return _t("variant {n}", n=joined) if len(numbers) == 1 else _t("variants {n}", n=joined)
+
+
+# The tokens of a contract's debugName that name where it runs
+# (scan_contract_generators' _extract_system). Its system_name falls back to
+# the handler's debugName when it has none, which names no place.
+_SYSTEM_TOKENS = frozenset({"Stanton", "Pyro", "Nyx", "Desert", "ArcCorp", "Crusader"})
+
+
+def _is_system_name(name: str) -> bool:
+    """True for a system_name that names a place (``Nyx``, ``Nyx/Stanton``,
+    ``Pyro RegionA``), not a handler's debugName."""
+    first = (name or "").split(" ")[0]
+    return bool(first) and all(part in _SYSTEM_TOKENS for part in first.split("/"))
+
+
+# ── Regions: CIG's contract regions and the places in them ───────────────────
+# Pyro's contracts are split into Regions A to D: a contract's debugName
+# carries the token (HeadHunters_..._Pyro_RegionB_...), which _extract_system
+# keeps in system_name (``Pyro RegionB``), and its locations are found by the
+# region's tag (Missions/LocationType/System/Pyro/Regions/RegionB). The
+# mission location templates (missiondata/pu_locations) carry that tag on the
+# region's caves, outposts and stations, so _region_places can name each
+# region's planets and stations. The text says ``Pyro Region B`` and ``Pyro
+# Regions B, C, D`` (_place_names), and a Regions block after the flavour text
+# (_regions_block) says where each region it names is.
+_REGION_TOKEN = re.compile(r"Region([A-Z]\d*)")
+
+
+def _region_key(system_name: str) -> "tuple[str, str] | None":
+    """``("Pyro", "RegionB")`` for ``Pyro RegionB``, None for a name with no region."""
+    parts = (system_name or "").split(" ")
+    if len(parts) == 2 and _REGION_TOKEN.fullmatch(parts[1]):
+        return parts[0], parts[1]
+    return None
+
+
+def _place_names(names) -> str:
+    """*names* (system_names) as the text shows them, each once, in order:
+    ``Stanton``, ``Pyro Region B``, and a system's several regions as one
+    ``Pyro Regions B, C, D``."""
+    order: list[tuple[str, str]] = []
+    regions: dict[str, list[str]] = {}
+    for name in names:
+        key = _region_key(name)
+        if key is None:
+            order.append(("place", name))
+            continue
+        system, token = key
+        if system not in regions:
+            regions[system] = []
+            order.append(("regions", system))
+        letter = token[len("Region"):]
+        if letter not in regions[system]:
+            regions[system].append(letter)
+    out = []
+    for kind, value in order:
+        if kind == "place":
+            out.append(value)
+            continue
+        letters = sorted(regions[value])
+        out.append(_t("{system} Region {name}", system=value, name=letters[0])
+                   if len(letters) == 1
+                   else _t("{system} Regions {names}", system=value, names=", ".join(letters)))
+    return ", ".join(dict.fromkeys(out))
+
+
+def build_location_region_facts(locations_dir: Path, xml_path_index: dict | None = None,
+                                records_dir: Path | None = None) -> list[tuple]:
+    """``(file stem, tag GUIDs, ((tag, loc string), ...))`` for every mission
+    location template under *locations_dir* (missiondata/pu_locations): its
+    ``generalTags`` and its string variants (name, address). XML facts only,
+    so ``_cached_lookup`` keeps it per DataForge build; _region_places reads
+    it with the tag tree and the run's strings."""
+    if not locations_dir.exists():
+        return []
+    files = (
+        _index_rglob(xml_path_index, locations_dir, records_dir)
+        if xml_path_index is not None and records_dir is not None
+        else locations_dir.rglob("*.xml")
+    )
+    facts = []
+    for xml_file in sorted(Path(f) for f in files):
+        try:
+            root = _parse_xml_file(xml_file)
+        except (ET.Error, OSError) as e:
+            logger.debug(f"Location regions: skipped {Path(xml_file).name}: {e}")
+            continue
+        tags = tuple(r.get("value", "")
+                     for r in root.findall("./locationData/generalTags/tags/Reference"))
+        strings = tuple((v.get("tag", ""), v.get("string", ""))
+                        for v in root.iter("MissionStringVariant"))
+        if tags:
+            facts.append((Path(xml_file).stem.lower(), tags, strings))
+    logger.info(f"Location regions: {len(facts)} location templates")
+    return facts
+
+
+_SYSTEM_TAG = re.compile(r"Missions/LocationType/System/([^/]+)/([^/]+)")
+_REGION_TAG = re.compile(r"Missions/LocationType/System/([^/]+)/Regions/(Region[A-Z]\d*)")
+_STATION_TAG = re.compile(r"Missions/LocationType/Station/[^/]+/[^/]+/[^/]+")
+_LOCATION_NAME_TAG = "Missions/Text/Name"
+
+
+def _region_places(facts: list, tags: dict, loc: dict,
+                   fallback_loc: dict | None = None) -> dict:
+    """Each region's ``(planets, stations)``, keyed ``(system, token)``.
+
+    A planet is a body one of the region's caves or outposts is on (its
+    ``System/Pyro/Pyro3`` tag), a moon counting as its planet (Pyro5a is
+    Pyro V), named from the strings (``Pyro3=Bloom``); a station's records
+    never add one, since some carry a stray body tag (Patch City's hangar is
+    tagged Bloom, a Gaslight room Monox). A station is in the regions its main
+    record carries, the shortest-named record with its station tag
+    (reststop_..._p3_leo_orb, not ..._orb_clinic), named by that record's
+    name string: one of its rooms tagged for another region (an Orbituary
+    room tagged C) does not move it. On LIVE (Nov 2026): A Pyro I, Monox;
+    Checkmate, Patch City. B Bloom; Orbituary, Starlight Service Station.
+    C Pyro IV, Pyro V; Gaslight. D Terminus; Ruin Station. Rat's Nest, Rod's
+    Fuel and the Terminus stops other than Ruin Station carry no region."""
+    if not facts or not tags:
+        return {}
+    paths = tag_paths(tags)
+
+    def text(key: str) -> str:
+        key = key.lstrip("@")
+        return " ".join((loc.get(key) or (fallback_loc or {}).get(key) or "").split())
+
+    planets: dict[tuple, set] = {}
+    main_station: dict[str, tuple] = {}
+    for stem, guids, strings in facts:
+        tag_texts = [paths.get(g, "") for g in guids]
+        keys = [m.groups() for m in (_REGION_TAG.fullmatch(p) for p in tag_texts) if m]
+        station = next((p for p in tag_texts if _STATION_TAG.fullmatch(p)), None)
+        if station:
+            name = next((text(s) for t, s in strings if paths.get(t, "") == _LOCATION_NAME_TAG), "")
+            if station not in main_station or (len(stem), stem) < main_station[station][:2]:
+                main_station[station] = (len(stem), stem, name, tuple(keys))
+            continue
+        for p in tag_texts:
+            m = _SYSTEM_TAG.fullmatch(p)
+            if m and m.group(2) != "Regions":
+                body = re.sub(r"(?<=\d)[a-z]$", "", m.group(2))
+                for key in keys:
+                    planets.setdefault(key, set()).add(body)
+    stations: dict[tuple, set] = {}
+    for _, _, name, keys in main_station.values():
+        for key in keys:
+            if name:
+                stations.setdefault(key, set()).add(name)
+
+    def body_order(body: str):
+        return [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", body)]
+
+    out = {}
+    for key in set(planets) | set(stations):
+        names = [text(b) or b for b in sorted(planets.get(key, ()), key=body_order)]
+        out[key] = (list(dict.fromkeys(names)),
+                    sorted(stations.get(key, ()), key=str.casefold))
+    return out
+
+
+# The regions' places for the missions run, set by _run_gen_missions (as
+# _SHIP_SPAWNS is). Empty without the tag tree or the location templates.
+_REGION_PLACES: dict = {}
+
+
+def _set_region_places(places: dict) -> None:
+    global _REGION_PLACES
+    _REGION_PLACES = places or {}
+
+
+def _regions_block(keys) -> list[str]:
+    """The Regions block for the regions *keys* name (``(system, token)``):
+    ``- Pyro Region B: Bloom; Orbituary, Starlight Service Station``, one
+    line per region the index knows, in order; nothing when none is known."""
+    lines = []
+    for key in sorted(set(keys)):
+        planets, stations = _REGION_PLACES.get(key, ((), ()))
+        parts = [", ".join(group) for group in (planets, stations) if group]
+        if parts:
+            lines.append(f"- {_place_names([' '.join(key)])}: {'; '.join(parts)}")
+    return [f"<EM4>{_t('Regions')}:</EM4>"] + lines if lines else []
+
+
+def _variant_names(members: list[list], regions: "list | None" = None) -> list[str]:
+    """A name for each group of variants that read alike (*members*, each a
+    list of ContractVariant): its star systems where they tell the groups
+    apart (``Stanton, Pyro``, ``Pyro Regions B, C, D``, _place_names), with
+    the combat rating added where they do not (``Nyx, Combat 4/7``), and a
+    number only where neither does (``Nyx 1``, ``Nyx 2``); "" for a group with
+    neither, which _variant_suffix numbers. *regions*, when given, gets each
+    group's list of the regions its name mentions (``(system, token)``)."""
+    def joined(values) -> str:
+        return ", ".join(dict.fromkeys(v for v in values if v))
+
+    def combat(variants) -> str:
+        parts = ((v.difficulty or "").split(" | ")[0] for v in variants)
+        return joined(p for p in parts if p.startswith(_t("Combat")))
+
+    places = [[v.system_name for v in group if _is_system_name(v.system_name)]
+              for group in members]
+    systems = [_place_names(names) for names in places]
+    if len(set(systems)) == 1:
+        # One system for all tells none of them apart.
+        systems = [""] * len(systems)
+    if regions is not None:
+        regions.extend(
+            [key for key in map(_region_key, names) if key] if s else []
+            for names, s in zip(places, systems))
+    # Where groups share their systems, the combat rating names them when it
+    # tells every one of them apart; otherwise they are numbered below.
+    combats = [combat(group) for group in members]
+    names = []
+    for s, rating in zip(systems, combats):
+        sharing = [c for s2, c in zip(systems, combats) if s2 == s]
+        if len(sharing) > 1 or not s:
+            if all(sharing) and len(set(sharing)) == len(sharing):
+                s = ", ".join(p for p in (s, rating) if p)
+        names.append(s)
+    counts = {n: names.count(n) for n in names}
+    seen: dict[str, int] = {}
+    out = []
+    for n in names:
+        if n and counts[n] > 1:
+            # "#1", so the number is not read as part of a region's name
+            # ("Pyro Regions A, B, C, D #1", not "... D 1").
+            seen[n] = seen.get(n, 0) + 1
+            n = f"{n} #{seen[n]}"
+        out.append(n)
+    return out
 
 
 def _cooldown_minutes(value) -> int:
@@ -3587,39 +4102,65 @@ def _format_minutes(minutes: int) -> str:
     return f"{hours} h" if not rest else f"{hours} h {rest} min"
 
 
+def _ace_chances(variants) -> list[float]:
+    """Each variant's chance of an ace pilot: 0 without one in its spawns,
+    else its ``ace_chance`` (1 for certain)."""
+    return [v.ace_chance if "Ace Pilots" in (v.spawns or {}).get(SPAWN_HOSTILE, {}) else 0.0
+            for v in variants]
+
+
+def _ace_line_text(chances: list[float]) -> str:
+    """The Ace Pilot line's value for a description's variants: ``Yes`` when
+    every one has an ace for certain, ``10% chance`` when each has the same
+    chance, ``up to 33% chance`` otherwise, and "" when none can have one."""
+    if not any(chances):
+        return ""
+    if all(c >= 1 for c in chances):
+        return _t("Yes")
+    if len(set(chances)) == 1:
+        return _t("{chance} chance", chance=_chance_text(chances[0]))
+    return _t("up to {chance} chance", chance=_chance_text(max(chances)))
+
+
+# An abandon cooldown this short is CIG's default and is left out of the
+# Cooldown line (421 missions on LIVE showed "None (abandon: 1 min)").
+_ABANDON_SHOWN_OVER = 1
+
+
 def _format_cooldown(cooldown: "tuple[int, int]") -> str:
-    """``1 h``, ``1 h (abandon: 15 min)`` when abandoning differs, or ``None``."""
+    """``1 h``, ``1 h (abandon: 15 min)`` when abandoning differs and takes
+    more than _ABANDON_SHOWN_OVER minutes, or ``None``."""
     personal, abandoned = cooldown
     text = _format_minutes(personal) if personal else _t("None")
-    if abandoned and abandoned != personal:
+    if abandoned > _ABANDON_SHOWN_OVER and abandoned != personal:
         text += f" ({_t('abandon: {time}', time=_format_minutes(abandoned))})"
     return text
 
 
 def _roster_block(header: str, groups: tuple, numbers: "list[int] | None" = None,
-                  pools: "dict | None" = None) -> list[str]:
+                  pools: "dict | None" = None, names: "list[str] | None" = None) -> list[str]:
     """A Hostiles or Friendlies heading and its bullets; the heading names
-    the variants it is for when *numbers* is given. Two or more hostile
-    waves are numbered, Wave 1, Wave 2, ..., in the order the game lists
-    them, and so are two or more target groups in a block with no wave (a
-    patrol's hotspots); a lone one keeps its label, and so do target groups
-    beside a wave, which are what the wave guards. Simple's typed pools go
-    into *pools* (_slot_choices)."""
-    head = _t(header) if not numbers else f"{_t(header)} ({_variant_suffix(numbers)})"
-    counts = {_WAVE_LABEL: 0, _TARGETS_LABEL: 0}
+    the variants it is for when *numbers* is given (by *names*, see
+    _variant_suffix). Two or more hostile waves are numbered, Wave 1, Wave
+    2, ..., in the order the game lists them, and so are two or more target
+    groups in a block with no wave (a patrol's hotspots); any other label
+    that repeats, target groups beside a wave among them, is numbered after
+    its label (``Reinforcements 1``, ``Reinforcements 2``). A lone group
+    keeps its label. *pools* names the pools shown as types (_ship_pools)."""
+    head = _t(header) if not numbers else f"{_t(header)} ({_variant_suffix(numbers, names)})"
+    counts: dict[str, int] = {}
     for g in groups:
-        if g[1] in counts:
-            counts[g[1]] += 1
-    numbered = (_WAVE_LABEL if counts[_WAVE_LABEL] > 1
-                else _TARGETS_LABEL if counts[_TARGETS_LABEL] > 1 and not counts[_WAVE_LABEL]
-                else None)
+        counts[g[1]] = counts.get(g[1], 0) + 1
     lines = [f"<EM4>{head}:</EM4>"]
-    wave = 0
+    seen: dict[str, int] = {}
     for g in groups:
         label = None
-        if numbered and g[1] == numbered:
-            wave += 1
-            label = _t("Wave {n}", n=wave)
+        if counts[g[1]] > 1:
+            seen[g[1]] = seen.get(g[1], 0) + 1
+            if g[1] == _WAVE_LABEL or (g[1] == _TARGETS_LABEL and not counts.get(_WAVE_LABEL)):
+                label = _t("Wave {n}", n=seen[g[1]])
+            else:
+                label = _t("{label} {n}", label=_t(g[1]), n=seen[g[1]])
         lines.append(_format_roster_group(g, label, pools))
     return lines
 
@@ -3633,30 +4174,40 @@ def _by_value(values: list) -> list[tuple[object, list[int]]]:
     return list(out.items())
 
 
-def _variant_detail_lines(variants: list, show_spawns: bool,
-                          show_cooldown: bool) -> tuple[list[str], list[str]]:
+def _variant_detail_lines(variants: list, show_spawns: bool, show_cooldown: bool,
+                          named_regions: "set | None" = None) -> tuple[list[str], list[str]]:
     """The roster lines and the cooldown line for one description's variants.
 
-    Variants are numbered by what these lines show of them, so two variants
-    that show the same get one number, and a line that is the same for every
-    variant names none. Returns ``(roster lines, cooldown lines)``.
+    Variants are grouped by what these lines show of them, so two variants
+    that show the same are one, and a line that is the same for every
+    variant names none. A group is named by what tells it apart
+    (_variant_names: its star systems, else its combat rating, else a
+    number). *named_regions*, when given, gets the regions the written
+    lines name, for _regions_block. Returns ``(roster lines, cooldown lines)``.
     """
     # Each variant as what these lines show of it: its groups per
     # _ROSTER_HEADERS bucket, then its cooldown.
-    shown = list(dict.fromkeys(
+    displays = [
         tuple(tuple(g for g in v.roster if g[0] == bucket) if show_spawns else ()
               for bucket, _ in _ROSTER_HEADERS)
         + (v.cooldown if show_cooldown else None,)
         for v in variants
-    ))
-    roster_lines: list[str] = []
-    pools: dict = {}
+    ]
+    shown = list(dict.fromkeys(displays))
+    group_regions: list = []
+    names = _variant_names([[v for v, d in zip(variants, displays) if d == s] for s in shown],
+                           group_regions)
+    named: set[int] = set()
+    blocks = []
     for index, (_, header) in enumerate(_ROSTER_HEADERS):
         values = _by_value([s[index] for s in shown])
-        for groups, numbers in values:
-            if groups:
-                roster_lines.extend(_roster_block(
-                    header, groups, numbers if len(values) > 1 else None, pools))
+        blocks += [(header, groups, numbers if len(values) > 1 else None)
+                   for groups, numbers in values if groups]
+    pools = _ship_pools(g for _, groups, _ in blocks for g in groups)
+    roster_lines: list[str] = []
+    for header, groups, numbers in blocks:
+        roster_lines.extend(_roster_block(header, groups, numbers, pools, names))
+        named.update(numbers or ())
     roster_lines.extend(_ship_types_block(pools))
     cooldown_lines: list[str] = []
     values = [(cd, numbers) for cd, numbers in _by_value([s[-1] for s in shown]) if cd is not None]
@@ -3664,9 +4215,14 @@ def _variant_detail_lines(variants: list, show_spawns: bool,
         if len(values) == 1 and len(values[0][1]) == len(shown):
             text = _format_cooldown(values[0][0])
         else:
-            text = "; ".join(f"{_variant_suffix(numbers)}: {_format_cooldown(cd)}"
+            text = "; ".join(f"{_variant_suffix(numbers, names)}: {_format_cooldown(cd)}"
                              for cd, numbers in values)
+            for _, numbers in values:
+                named.update(numbers)
         cooldown_lines.append(f"<EM4>{_t('Cooldown')}:</EM4> {text}")
+    if named_regions is not None:
+        for number in named:
+            named_regions.update(group_regions[number - 1])
     return roster_lines, cooldown_lines
 
 
@@ -3873,17 +4429,22 @@ def enhancements_mission(root: ET.Element, reputation_lookup: dict[str, int] | N
         # consistent buckets (e.g. Friendlies "Salvageable Ships") still show.
         _ambiguous = loc_key in spawn_ambiguous_keys if spawn_ambiguous_keys else False
         if _show("spawns"):
-            _bd = _extract_spawn_counts(root)
+            _chances = _spawn_chances(root.iter("MissionProperty"))
+            _bd = _extract_spawn_counts(root, chances=_chances)
             if _ambiguous:
                 _bd[SPAWN_HOSTILE] = {}
             if _SHIP_SPAWNS:
                 # The ships replace the Hostiles and Friendlies counts;
                 # objectives stay a count.
-                _roster = _extract_spawn_roster(root, _SHIP_SPAWNS)
-                _pools: dict = {}
-                for _bucket, _header in _ROSTER_HEADERS:
-                    _groups = tuple(g for g in _roster if g[0] == _bucket)
-                    if _groups and not (_ambiguous and _bucket == SPAWN_HOSTILE):
+                _roster = _extract_spawn_roster(root, _SHIP_SPAWNS, chances=_chances)
+                _blocks = [
+                    (_header, tuple(g for g in _roster if g[0] == _bucket))
+                    for _bucket, _header in _ROSTER_HEADERS
+                    if not (_ambiguous and _bucket == SPAWN_HOSTILE)
+                ]
+                _pools = _ship_pools(g for _, _groups in _blocks for g in _groups)
+                for _header, _groups in _blocks:
+                    if _groups:
                         lines.extend(_roster_block(_header, _groups, pools=_pools))
                 lines.extend(_ship_types_block(_pools))
                 lines.extend(_format_spawn_lines({SPAWN_OBJECTIVE: _bd[SPAWN_OBJECTIVE]}))
@@ -4129,7 +4690,8 @@ def _warn_if_near_override_miss(fp_items: frozenset[str]) -> None:
 
 def _build_blueprint_body_parts(unique_fps: dict,
                                 allow_overrides: bool = True,
-                                bullet_names: "dict[str, str] | None" = None) -> list[str]:
+                                bullet_names: "dict[str, str] | None" = None,
+                                named_regions: "set | None" = None) -> list[str]:
     """Render a mission's blueprint-pool fingerprints into POTENTIAL
     BLUEPRINTS body text blocks, one per distinct item set.
 
@@ -4169,11 +4731,20 @@ def _build_blueprint_body_parts(unique_fps: dict,
     a bullet line is written, so the overrides, the drift check, the "Set"
     headers and the ordering all keep reading bare names. Without it the
     output is unchanged.
+
+    A header names its systems as _place_names does (``[Pyro Regions A,
+    B]``), and *named_regions*, when given, gets the regions the written
+    headers name, for _regions_block.
     """
     shown = bullet_names or {}
 
     def _bullets(names) -> str:
         return "\\n".join(f"- {shown.get(name, name)}" for name in names)
+
+    def _systems_text(systems) -> str:
+        if named_regions is not None:
+            named_regions.update(key for key in map(_region_key, systems) if key)
+        return _place_names(systems)
 
     if len(unique_fps) == 1:
         items = list(next(iter(unique_fps)))
@@ -4184,7 +4755,7 @@ def _build_blueprint_body_parts(unique_fps: dict,
         only_labels = sorted({l for _, l in only_keys if l})
         if only_labels:
             only_systems = sorted({s for s, _ in only_keys})
-            header = f"{', '.join(only_systems)}, {', '.join(only_labels)}"
+            header = f"{_systems_text(only_systems)}, {', '.join(only_labels)}"
             return [f"<EM4>[{header}]</EM4>\\n" + _bullets(items)]
         return [_bullets(items)]
 
@@ -4196,7 +4767,7 @@ def _build_blueprint_body_parts(unique_fps: dict,
             continue
         systems = sorted({s for s, _ in keys})
         labels = sorted({l for _, l in keys if l})
-        sys_str = ", ".join(systems)
+        sys_str = _systems_text(systems)
         header = f"{sys_str}, {', '.join(labels)}" if labels else sys_str
         header_entries.append((header, fp, keys))
     # Sort by (system/label keys, header text, fingerprint): the keys
@@ -4503,11 +5074,16 @@ def _build_template_lookup(
     templates_dir: Path,
     xml_path_index: dict | None = None,
     records_dir: Path | None = None,
+    properties: dict | None = None,
 ) -> dict[str, tuple[str, str]]:
     """Build mapping of contract template UUID → (title_loc_key, desc_loc_key).
 
     Some contracts don't have inline ContractStringParam elements and instead
     inherit title/description from their template via LocID elements.
+
+    *properties*, when given, gets every template's ``contractProperties``
+    element by UUID, titled or not, which a contract's own properties are
+    merged over (_merged_properties).
     """
     lookup: dict[str, tuple[str, str]] = {}
     if not templates_dir.exists():
@@ -4524,6 +5100,10 @@ def _build_template_lookup(
             ref = root.get("__ref", "")
             if not ref:
                 continue
+            if properties is not None:
+                template_props = root.find("contractProperties")
+                if template_props is not None:
+                    properties[ref] = template_props
             title_key = ""
             desc_key = ""
             for lid in root.findall(".//LocID"):
@@ -4806,6 +5386,9 @@ class ContractVariant(NamedTuple):
     # (_extract_cooldown), None when the handler sets no availability.
     roster: tuple = ()
     cooldown: "tuple[int, int] | None" = None
+    # The chance its ace pilot comes when its spawns list one (_spawn_chances:
+    # AcePilotChance_BP and the like), 1 for certain.
+    ace_chance: float = 1.0
 
 
 def scan_contract_generators(
@@ -4820,11 +5403,13 @@ def scan_contract_generators(
     standing_track_lookup: dict[str, str] | None = None,
     template_lookup: dict[str, tuple[str, str]] | None = None,
     roots=None,
+    template_properties: dict | None = None,
 ):
     """Scan contract generator XMLs for mission variants with different systems.
 
     *template_lookup* (:func:`_build_template_lookup` of the sibling
-    contracttemplates folder) and *roots* (the parsed contractgen XML roots,
+    contracttemplates folder), *template_properties* (its ``properties``)
+    and *roots* (the parsed contractgen XML roots,
     in file order) let _run_gen_missions hand over the parse it shares with
     the Battaglia RS-tag and calculated-reward scans (#522); each
     is worked out here when omitted, as it always was, so a call with the
@@ -4895,9 +5480,14 @@ def scan_contract_generators(
     # Build template lookup for contracts that inherit title/desc from templates
     if template_lookup is None:
         templates_dir = contractgen_dir.parent / "contracttemplates"
+        if template_properties is None:
+            template_properties = {}
         template_lookup = _build_template_lookup(
-            templates_dir, xml_path_index=xml_path_index, records_dir=records_dir
+            templates_dir, xml_path_index=xml_path_index, records_dir=records_dir,
+            properties=template_properties,
         )
+    if template_properties is None:
+        template_properties = {}
 
     if roots is None:
         roots = _parse_xml_roots(
@@ -4912,7 +5502,7 @@ def scan_contract_generators(
                 (".//ContractGeneratorHandler_List", ".//Contract"),
             ]
 
-            known_systems = {"Stanton", "Pyro", "Nyx", "Desert", "ArcCorp", "Crusader"}
+            known_systems = _SYSTEM_TOKENS
             # Intra-system region markers used by Headhunters / CFP / etc.
             # to partition contracts within a single system (different pools
             # per region). Matches ``RegionA``, ``RegionB1``, etc.
@@ -4962,23 +5552,26 @@ def scan_contract_generators(
                     if has_chain_prereqs:
                         handler_flags.append("Chain")
 
-                    # Extract handler-level spawn breakdown (shared across
-                    # contracts; per-contract overrides win when non-empty).
-                    # Exclude spawns nested inside the handler's CareerContract
-                    # children AND its introContracts' Contract wrapper so the
-                    # fallback inherits only genuine handler-scope defaults,
-                    # not a union of every sibling contract's roster (#186) —
+                    # Extract handler-level spawn breakdown: the spawn groups
+                    # at handler scope that sit in no mission property, which
+                    # a contract with no spawn group of its own inherits (the
+                    # handler's properties reach every contract through
+                    # _merged_properties). Exclude spawns nested inside the
+                    # handler's CareerContract children AND its
+                    # introContracts' Contract wrapper so the fallback
+                    # inherits only genuine handler-scope defaults, not a
+                    # union of every sibling contract's roster (#186) —
                     # including the one-time intro mission's own roster, which
                     # uses the plain <Contract> tag, not <CareerContract>.
+                    handler_scope = ("CareerContract", "Contract", "MissionProperty")
                     handler_roster: tuple = ()
                     try:
                         handler_spawns = _extract_spawn_counts(
-                            handler, exclude_within=("CareerContract", "Contract")
+                            handler, exclude_within=handler_scope
                         )
                         if _SHIP_SPAWNS:
                             handler_roster = _extract_spawn_roster(
-                                handler, _SHIP_SPAWNS,
-                                exclude_within=("CareerContract", "Contract"),
+                                handler, _SHIP_SPAWNS, exclude_within=handler_scope,
                             )
                     except Exception as e:
                         # Outside the per-contract try, so a failure here used to end
@@ -5199,18 +5792,29 @@ def scan_contract_generators(
                                 if "Starter" not in contract_flags:
                                     contract_flags.append("Starter")
 
-                            # Extract per-contract spawn breakdown; fall back
-                            # to the handler-level breakdown when the contract
-                            # node itself has no spawn descriptions of its own
-                            # (a contract is empty when every bucket is empty).
-                            contract_spawns = _extract_spawn_counts(contract)
-                            own_spawns = any(contract_spawns.values())
-                            spawns = contract_spawns if own_spawns else handler_spawns
-                            # The same rule for the ships: the contract's own
-                            # groups, else the handler's.
-                            roster = handler_roster
-                            if own_spawns and _SHIP_SPAWNS:
-                                roster = _extract_spawn_roster(contract, _SHIP_SPAWNS)
+                            # The spawns the contract runs with: its template's,
+                            # handler's and own mission properties merged by
+                            # name, a group whose chance is 0 left out, and the
+                            # handler's spawns that sit in no property when the
+                            # contract has no spawn group of its own.
+                            props = _merged_properties(
+                                template_properties.get(contract.get("template", "")),
+                                handler, contract,
+                            )
+                            chances = _spawn_chances(props)
+                            scopes, own_spawns = _contract_spawn_scopes(props, contract)
+                            label_chances: dict[str, float] = {}
+                            spawns = _extract_spawn_counts(
+                                scopes, chances=chances, label_chances=label_chances)
+                            roster = ()
+                            if _SHIP_SPAWNS:
+                                roster = _extract_spawn_roster(
+                                    scopes, _SHIP_SPAWNS, chances=chances)
+                            if not own_spawns:
+                                for bucket, items in handler_spawns.items():
+                                    for label, count in items.items():
+                                        _add_spawn(spawns, bucket, label, count)
+                                roster += handler_roster
                             cooldown = _extract_cooldown(handler_availability, contract)
 
                             # Extract per-contract difficulty
@@ -5233,6 +5837,7 @@ def scan_contract_generators(
                                 spawns=spawns,
                                 roster=roster,
                                 cooldown=cooldown,
+                                ace_chance=label_chances.get("Ace Pilots", 1.0),
                                 difficulty=contract_difficulty,
                                 has_bp=contract_has_bp,
                                 bp_chance=contract_bp_chance,
@@ -8469,13 +9074,15 @@ def _scan_pu_missions(
                           cargo_delivery_descs, title_xps, xp_records)
 
 
-def _load_ship_spawns(ctx: dict) -> "ShipSpawnIndex | None":
-    """The ShipSpawnIndex for this run: the tag tree beside the cache and
-    the ship entities' tags (pickled per DataForge build), names in the run's
-    language with English behind it. None without the tag tree, an older
-    cache's case until it is extracted again."""
+def _load_ship_spawns(ctx: dict, tags: "dict | None" = None) -> "ShipSpawnIndex | None":
+    """The ShipSpawnIndex for this run: the tag tree beside the cache (*tags*,
+    read here when not given) and the ship entities' tags (pickled per
+    DataForge build), names in the run's language with English behind it.
+    None without the tag tree, an older cache's case until it is extracted
+    again."""
     forge_dir = ctx["forge_dir"]
-    tags = load_tag_database(forge_dir / DATAFORGE_TAGS_FILE)
+    if tags is None:
+        tags = load_tag_database(forge_dir / DATAFORGE_TAGS_FILE)
     if not tags:
         logger.info("No tag tree beside the DataForge cache: missions show spawn counts")
         return None
@@ -8483,17 +9090,36 @@ def _load_ship_spawns(ctx: dict) -> "ShipSpawnIndex | None":
     facts = _cached_lookup(forge_dir, "ship_spawn_tags", lambda: build_ship_spawn_facts(
         records / "entities" / "spaceships", ctx.get("xml_path_index"), records))
     index = ShipSpawnIndex(tags, facts, ctx["loc"], ctx.get("tag_loc"),
-                           simple=ctx.get("hostiles_detail", _HOSTILES_SIMPLE) == _HOSTILES_SIMPLE)
+                           per_type=_ships_per_type(
+                               ctx.get("ships_per_type", _SHIPS_PER_TYPE_DEFAULT)))
     return index if index else None
 
 
+def _load_region_places(ctx: dict, tags: dict) -> dict:
+    """The regions' places for this run (_region_places): the location
+    templates' facts (pickled per DataForge build) read with the tag tree and
+    the run's strings. Empty without the tag tree or the templates, a cache
+    extracted before 3.1.0's case, which then has no Regions block."""
+    if not tags:
+        return {}
+    records = ctx["records"]
+    facts = _cached_lookup(ctx["forge_dir"], "location_regions",
+                           lambda: build_location_region_facts(
+                               records / "missiondata" / "pu_locations",
+                               ctx.get("xml_path_index"), records))
+    return _region_places(facts, tags, ctx["loc"], ctx.get("tag_loc"))
+
+
 def _run_gen_missions(ctx: dict) -> dict[str, str]:
-    """_gen_missions with the ship index set for its run."""
-    _set_ship_spawns(_load_ship_spawns(ctx))
+    """_gen_missions with the ship index and the regions' places set for its run."""
+    tags = load_tag_database(ctx["forge_dir"] / DATAFORGE_TAGS_FILE)
+    _set_ship_spawns(_load_ship_spawns(ctx, tags))
+    _set_region_places(_load_region_places(ctx, tags))
     try:
         return _gen_missions(ctx)
     finally:
         _set_ship_spawns(None)
+        _set_region_places({})
 
 
 def _gen_missions(ctx: dict) -> dict[str, str]:
@@ -8683,10 +9309,12 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
     battaglia_error: Exception | None = None
     calc_reward_error: Exception | None = None
     _template_lookup: dict[str, tuple[str, str]] = {}
+    _template_properties: dict = {}
     if contractgen_dir.exists():
         _template_lookup = _build_template_lookup(
             contractgen_dir.parent / "contracttemplates",
             xml_path_index=xml_path_index, records_dir=records,
+            properties=_template_properties,
         )
 
     def _contractgen_roots(xml_files):
@@ -8733,6 +9361,7 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
                 standings_lookup=standings_lookup,
                 standing_track_lookup=standing_track_lookup,
                 template_lookup=_template_lookup,
+                template_properties=_template_properties,
                 roots=_roots,
             )
         )
@@ -8893,17 +9522,15 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
                 augmented_title += " <EM4>[BP?]</EM4>"
         # #158: ace-pilot flag. An AcePilotShip spawn group classifies as the
         # "Ace Pilots" hostile label (see _SPAWN_KEYWORD_TABLE). [ACE] when
-        # every variant of this title spawns an ace; [ACE?] when only some do
-        # (mirrors [BP]/[BP?] for shared/ambiguous titles). The ace always
-        # spawns when its group is present — there is no probability in the
-        # data — so there is no percentage to show.
+        # every variant of this title spawns an ace for certain; [ACE?] when
+        # only some do, or one comes only by chance (AcePilotChance_BP and
+        # the like, _spawn_chances; a chance of 0 drops the group, so it adds
+        # no tag). Mirrors [BP]/[BP?] for shared/ambiguous titles.
         if _show_title_tag("ace"):
-            _ace_flags = [
-                "Ace Pilots" in (v.spawns or {}).get(SPAWN_HOSTILE, {}) for v in variants
-            ]
-            if _ace_flags and all(_ace_flags):
+            _ace = _ace_chances(variants)
+            if _ace and all(c >= 1 for c in _ace):
                 augmented_title += " <EM4>[ACE]</EM4>"
-            elif any(_ace_flags):
+            elif any(_ace):
                 augmented_title += " <EM4>[ACE?]</EM4>"
         nonzero_xp = [x for x in unique_xp if x > 0] if _show_title_tag("rep") else []
         # #412: every variant's success_xp resolved to 0 -- either this
@@ -9002,8 +9629,10 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
             # With the tag tree the ships replace the Hostiles and Friendlies
             # counts, one heading per variant where they differ; objectives
             # stay a count.
+            named_regions: set = set()
             roster_lines, cooldown_lines = _variant_detail_lines(
-                desc_variants, _show("spawns") and bool(_SHIP_SPAWNS), _show("cooldown"))
+                desc_variants, _show("spawns") and bool(_SHIP_SPAWNS), _show("cooldown"),
+                named_regions)
             if _show("spawns"):
                 if _SHIP_SPAWNS:
                     details_lines.extend(roster_lines)
@@ -9011,8 +9640,10 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
                         _format_spawn_lines({SPAWN_OBJECTIVE: agg_spawns[SPAWN_OBJECTIVE]}))
                 else:
                     details_lines.extend(_format_spawn_lines(agg_spawns))
-            if _show("ace") and bool(agg_spawns.get(SPAWN_HOSTILE, {}).get("Ace Pilots", 0)):
-                details_lines.append(f"<EM4>{_t('Ace Pilot')}:</EM4> {_t('Yes')}")
+            if _show("ace"):
+                _ace_text = _ace_line_text(_ace_chances(desc_variants))
+                if _ace_text:
+                    details_lines.append(f"<EM4>{_t('Ace Pilot')}:</EM4> {_ace_text}")
             details_lines.extend(cooldown_lines)
             nonzero_tiers = [(s, f, rn, rt) for s, f, rn, rt in desc_seen_tiers if s > 0]
             if _show("reputation"):
@@ -9064,7 +9695,7 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
                         fp = tuple(items)
                         unique_fps.setdefault(fp, []).append((sys_name, pool_label))
                 bp_body_parts = _build_blueprint_body_parts(
-                    unique_fps, _overrides_ok, armor_bullets)
+                    unique_fps, _overrides_ok, armor_bullets, named_regions)
                 # Join regional sub-sections with a blank line between them
                 # (two `\n` literals = one empty line in CIG's renderer) so
                 # the eye can tell adjacent [Pyro RegionA] / [Pyro RegionB]
@@ -9091,6 +9722,12 @@ def _gen_missions(ctx: dict) -> dict[str, str]:
                         sections.append(f"<EM4>? = only the {quoted} variants award blueprints</EM4>")
                 else:
                     sections.append("<EM4>? = only some variants award blueprints</EM4>")
+
+            # The places of the regions the headers name, right after the
+            # flavour text, so the reader meets them before any header does.
+            regions_lines = _regions_block(named_regions)
+            if regions_lines:
+                sections.insert(1, "\\n".join(regions_lines))
 
             new_text = "\\n\\n".join(sections)
             new_has_bp = f"<{mh_em}>{hdr_blueprints}</{mh_em}>" in new_text
@@ -9343,7 +9980,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
          mission_headers: dict[str, str] | None = None,
          mission_header_em_tag: str = _DEFAULT_MISSION_HEADER_EM_TAG,
          mission_detail_fields: dict | None = None,
-         hostiles_detail: str = _HOSTILES_SIMPLE,
+         ships_per_type: "int | str" = _SHIPS_PER_TYPE_DEFAULT,
          mission_title_tags: dict | None = None,
          stats_prepend: bool = False,
          standardize_earnable_ship_names: bool = False,
@@ -9752,7 +10389,7 @@ def main(base_ini_path: Path, forge_dir: Path | None = None,
         "mission_headers":   mission_headers or dict(_DEFAULT_MISSION_HEADERS),
         "mission_header_em": mission_header_em_tag or _DEFAULT_MISSION_HEADER_EM_TAG,
         "mission_detail_fields": mission_detail_fields or {},
-        "hostiles_detail": hostiles_detail,
+        "ships_per_type": ships_per_type,
         "mission_title_tags": mission_title_tags or {},
         "stats_prepend":     bool(stats_prepend),
         "rs_ore_name_annotations": bool(rs_ore_name_annotations),

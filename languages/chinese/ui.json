@@ -1530,17 +1530,17 @@
       "ht": "",
       "at": "敌对数量"
     },
-    "hostiles_detail_simple": {
+    "ships_per_type_label": {
       "ht": "",
-      "at": "简洁"
+      "at": "每类舰船数"
     },
-    "hostiles_detail_all": {
+    "ships_per_type_all": {
       "ht": "",
-      "at": "全部舰船详情"
+      "at": "全部"
     },
-    "hostiles_detail_tooltip": {
+    "ships_per_type_tooltip": {
       "ht": "",
-      "at": "敌对与友方行如何列出舰船。简洁会将超过3艘的候选显示为其类型，并在舰船类型下将每种类型列出一次，附上数量以及最大和最小的舰船；全部舰船详情列出每一艘舰船。下次生成增强时生效。"
+      "at": "任务详情的舰船类型中，每种类型最多列出多少艘舰船。超出的类型列出最大和最小的舰船，中间注明其余的数量。下次生成增强时生效。"
     },
     "mission_field_reputation": {
       "ht": "",

@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "(… {count} weitere)"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- WIRKUNG ---"
@@ -601,6 +605,10 @@
       "ht": "",
       "at": "Regen."
     },
+    "Regions": {
+      "ht": "",
+      "at": "Regionen"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "Verstärkung"
@@ -825,6 +833,10 @@
       "ht": "",
       "at": "an"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "bis zu {chance} Chance"
+    },
     "variant {n}": {
       "ht": "",
       "at": "Variante {n}"
@@ -832,6 +844,10 @@
     "variants {n}": {
       "ht": "",
       "at": "Varianten {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "{chance} Chance"
     },
     "{count} items": {
       "ht": "",
@@ -865,9 +881,17 @@
       "ht": "",
       "at": "{kind}-Schiff"
     },
-    "{kind}: {count} ships, {first} … {last}": {
+    "{kind}: {ships}": {
       "ht": "",
-      "at": "{kind}: {count} Schiffe, {first} … {last}"
+      "at": "{kind}: {ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label} ({chance} Chance)"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
     },
     "{label}, one of:": {
       "ht": "",
@@ -888,6 +912,14 @@
     "{rest}, or {last}": {
       "ht": "",
       "at": "{rest} oder {last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system} Region {name}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system} Regionen {names}"
     },
     "{type} Ammo": {
       "ht": "",

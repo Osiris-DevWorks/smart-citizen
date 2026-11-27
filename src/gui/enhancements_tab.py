@@ -269,7 +269,8 @@ class EnhancementsTab(QWidget):
             mf_row.addWidget(cb)
             self._mission_field_checkboxes[_field] = cb
             if _field == "spawns":
-                mf_row.addWidget(self._build_hostiles_detail_combo(cb))
+                for widget in self._build_ships_per_type(cb):
+                    mf_row.addWidget(widget)
         mf_row.addStretch()
         gl.addLayout(mf_row)
 
@@ -784,34 +785,36 @@ class EnhancementsTab(QWidget):
         time, so the change shows up after the next Generate Enhancements."""
         AppSettings.set_mission_detail_field(field, checked)
 
-    # The Hostiles dropdown's choices, in AppSettings.HOSTILES_DETAILS order,
-    # with each one's text key.
-    _HOSTILES_DETAIL_TEXTS = (
-        ("simple", "enhancements.hostiles_detail_simple"),
-        ("all", "enhancements.hostiles_detail_all"),
-    )
+    @staticmethod
+    def _ships_per_type_text(value: str) -> str:
+        """A Ships per type choice as the dropdown shows it: the number, or
+        the translated All."""
+        return tr("enhancements.ships_per_type_all") if value == "all" else value
 
-    def _build_hostiles_detail_combo(self, hostiles_box: QCheckBox) -> NoScrollComboBox:
-        """The dropdown beside the Hostiles box: Simple shortens a pool of
-        more than 3 ships to its type, named once under Ship types, and All
-        Ship Details lists every ship.
-        Greyed out while Hostiles is unticked, since it has nothing to shape."""
+    def _build_ships_per_type(self, hostiles_box: QCheckBox) -> tuple:
+        """The Ships per type label and dropdown beside the Hostiles box: how
+        many ships a type lists under Ship types (AppSettings.SHIPS_PER_TYPE_CHOICES,
+        8 by default, All for every ship). Greyed out while Hostiles is
+        unticked, since it has nothing to shape."""
+        label = QLabel(tr("enhancements.ships_per_type_label"))
+        label.setStyleSheet("font-size: 11px;")
         combo = NoScrollComboBox()
         combo.setStyleSheet("font-size: 11px;")
         combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        for value, key in self._HOSTILES_DETAIL_TEXTS:
-            combo.addItem(tr(key), userData=value)
-        saved = AppSettings.get_hostiles_detail()
-        combo.setCurrentIndex(max(combo.findData(saved), 0))
-        combo.setToolTip(tr("enhancements.hostiles_detail_tooltip"))
-        combo.setEnabled(hostiles_box.isChecked())
-        hostiles_box.toggled.connect(combo.setEnabled)
-        combo.currentIndexChanged.connect(self._on_hostiles_detail_changed)
-        self._hostiles_detail_combo = combo
-        return combo
+        for value in AppSettings.SHIPS_PER_TYPE_CHOICES:
+            combo.addItem(self._ships_per_type_text(value), userData=value)
+        combo.setCurrentIndex(max(combo.findData(AppSettings.get_ships_per_type()), 0))
+        for widget in (label, combo):
+            widget.setToolTip(tr("enhancements.ships_per_type_tooltip"))
+            widget.setEnabled(hostiles_box.isChecked())
+            hostiles_box.toggled.connect(widget.setEnabled)
+        combo.currentIndexChanged.connect(self._on_ships_per_type_changed)
+        self._ships_per_type_label = label
+        self._ships_per_type_combo = combo
+        return label, combo
 
-    def _on_hostiles_detail_changed(self, index: int) -> None:
-        AppSettings.set_hostiles_detail(self._hostiles_detail_combo.itemData(index))
+    def _on_ships_per_type_changed(self, index: int) -> None:
+        AppSettings.set_ships_per_type(self._ships_per_type_combo.itemData(index))
         self._mark_enhancements_dirty()
 
     # ── Favorites ─────────────────────────────────────────────────────────────
@@ -1198,9 +1201,11 @@ class EnhancementsTab(QWidget):
             label = _mf_label_by_field.get(field, field)
             cb.setText(label)
             cb.setToolTip(self._mission_field_tooltip(field, label))
-        for i, (_value, key) in enumerate(self._HOSTILES_DETAIL_TEXTS):
-            self._hostiles_detail_combo.setItemText(i, tr(key))
-        self._hostiles_detail_combo.setToolTip(tr("enhancements.hostiles_detail_tooltip"))
+        self._ships_per_type_label.setText(tr("enhancements.ships_per_type_label"))
+        for i, value in enumerate(AppSettings.SHIPS_PER_TYPE_CHOICES):
+            self._ships_per_type_combo.setItemText(i, self._ships_per_type_text(value))
+        for widget in (self._ships_per_type_label, self._ships_per_type_combo):
+            widget.setToolTip(tr("enhancements.ships_per_type_tooltip"))
         self._mf_note.setText(tr("enhancements.mission_detail_fields_note"))
         self._stats_prepend_check.setText(tr("enhancements.stats_prepend_cb"))
         self._stats_prepend_check.setToolTip(tr("enhancements.stats_prepend_tooltip"))

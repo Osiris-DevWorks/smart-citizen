@@ -764,6 +764,7 @@ def _stamp_old_cache(leaf: Path) -> Path:
     (leaf / pe.P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
     (leaf / pe.P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
     (leaf / pe.DATAFORGE_TAGS_FILE).write_text("{}")
+    (leaf / pe.CACHE_LAYOUT_STAMP).write_text(pe.CACHE_LAYOUT)
     assert pe.dataforge_cache_is_fresh(p4k, leaf)
     return p4k
 
@@ -1169,6 +1170,7 @@ class TestExtractDataforgeWorkingFolder:
         (leaf / pe.P4K_MTIME_STAMP).write_text(str(p4k.stat().st_mtime))
         (leaf / pe.P4K_SIZE_STAMP).write_text(str(p4k.stat().st_size))
         (leaf / pe.DATAFORGE_TAGS_FILE).write_text("{}")
+        (leaf / pe.CACHE_LAYOUT_STAMP).write_text(pe.CACHE_LAYOUT)
         assert pe.dataforge_cache_is_fresh(p4k, leaf)
         real_rmtree = pe.robust_rmtree
 

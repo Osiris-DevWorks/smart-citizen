@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "(… {count} diğer)"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- ETKİ ---"
@@ -601,6 +605,10 @@
       "ht": "",
       "at": "Yenilenme"
     },
+    "Regions": {
+      "ht": "",
+      "at": "Bölgeler"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "Takviyeler"
@@ -825,6 +833,10 @@
       "ht": "",
       "at": "çıkış"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "{chance} şansa kadar"
+    },
     "variant {n}": {
       "ht": "",
       "at": "varyant {n}"
@@ -832,6 +844,10 @@
     "variants {n}": {
       "ht": "",
       "at": "varyantlar {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "{chance} şans"
     },
     "{count} items": {
       "ht": "",
@@ -865,9 +881,17 @@
       "ht": "",
       "at": "{kind} gemisi"
     },
-    "{kind}: {count} ships, {first} … {last}": {
+    "{kind}: {ships}": {
       "ht": "",
-      "at": "{kind}: {count} gemi, {first} … {last}"
+      "at": "{kind}: {ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label} ({chance} şans)"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
     },
     "{label}, one of:": {
       "ht": "",
@@ -888,6 +912,14 @@
     "{rest}, or {last}": {
       "ht": "",
       "at": "{rest} veya {last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system} Bölge {name}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system} Bölgeler {names}"
     },
     "{type} Ammo": {
       "ht": "",
