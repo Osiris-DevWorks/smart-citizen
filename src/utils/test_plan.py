@@ -45,7 +45,10 @@ TEST_SECTIONS: list[dict] = [
     {
         "title": "Smart Sync (#567)",
         "items": [
-            "Two PCs, Config tab Smart Sync on both pointed at one cloud-synced folder: mark a blueprint Owned and edit a string on one; the other shows both, and backups\\smart-sync has a zip.",
+            "Two PCs, Smart Sync on both pointed at one cloud-synced folder: on A mark a blueprint Owned and edit a string. B shows both, and its Apply button turns red.",
+            "Change a setting on A (e.g. Theme to Light), then restart B: B uses it.",
+            "After each sync that changes B, B's backups\\smart-sync folder has a new zip, and only the newest 5 are kept.",
+            "Turn on Smart Sync on a third PC with that folder: it takes the shared settings, string edits and Owned blueprints.",
         ],
     },
     {
