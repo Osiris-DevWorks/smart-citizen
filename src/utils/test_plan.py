@@ -19,7 +19,7 @@ import json
 
 # Each section is a title plus a flat list of one-line test items. Keep items
 # imperative and self-contained ("do X, confirm Y") so a tester needs no other
-# doc. This plan covers Smart Citizen 3.0.1 (the diff over its 3.0.0 base).
+# doc. This plan covers Smart Citizen 3.1.0 (the diff over its 3.0.1 base).
 #
 # Keep each item under ~190 characters. tests/test_test_plan.py chunks the
 # submitted report at a 200-char limit and asserts every line survives intact,
@@ -29,17 +29,9 @@ TEST_SECTIONS: list[dict] = [
         "title": "Core workflow (smoke)",
         "items": [
             "Launch the app: it opens to the strings table with no crash dialog.",
-            "Config tab: Extract from Data.p4k, then Generate Enhancements; the progress bar keeps moving and the table reloads.",
             "Edit a string's Custom Value, then Apply to Game; confirm the change shows in game.",
-            "Upgrade over 3.0.0: settings, user.ini, owned blueprints and backups survive.",
-        ],
-    },
-    {
-        "title": "Play button reminder (#566)",
-        "items": [
-            "Apply in English and start the game: the main menu's Play button has a second line, Run Smart Citizen after every patch, centred under the first.",
-            "Apply twice and start the game: the reminder shows once, not twice.",
-            "Apply in Japanese, Korean or Russian and start the game: both lines on the Play button are centred.",
+            "Upgrade over 3.0.1: settings, user.ini, owned blueprints and backups survive.",
+            "In this Test Plan, type a note under an item and restart: it is still there, and Copy Report shows it under that item.",
         ],
     },
     {
@@ -51,11 +43,45 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
-        "title": "Blueprint scan in other languages (#564)",
+        "title": "Smart Sync (#567)",
         "items": [
-            "Select Spanish, apply, and receive a blueprint in game. Scan Logs for Owned Blueprints: it is added to Owned.",
-            "With the overlay running in Spanish and Mark new blueprints as owned on, receive a blueprint: it moves to Owned without a scan.",
-            "In English, Scan Logs for Owned Blueprints: it finds the same blueprints as 3.0.0 did.",
+            "Two PCs, Config tab Smart Sync on both pointed at one cloud-synced folder: mark a blueprint Owned and edit a string on one; the other shows both, and backups\\smart-sync has a zip.",
+        ],
+    },
+    {
+        "title": "Minimize to Tray (#577)",
+        "items": [
+            "Tick Minimize to Tray on the Config tab and minimise: the window goes to the tray. Start Smart Citizen again: the hidden window comes back, no second copy.",
+        ],
+    },
+    {
+        "title": "Generated text in your language (#579)",
+        "items": [
+            "Select German and Generate Enhancements: ship stats, mission details and journal lines in the table are in German.",
+        ],
+    },
+    {
+        "title": "Linked channel folder (#595)",
+        "items": [
+            "With PTU linked to LIVE, install over 3.0.1 with Launch Smart Citizen ticked: the app opens with no WinError 448 and is not running as admin.",
+        ],
+    },
+    {
+        "title": "Simple mode Overlay button",
+        "items": [
+            "In Simple mode, click Start Overlay: the overlay starts and the button reads Stop Overlay. Click it: the overlay stops.",
+        ],
+    },
+    {
+        "title": "[BP Complete] mission tag",
+        "items": [
+            "Generate with Missions ticked, own every blueprint a mission rewards, then Apply: in game that mission's title reads [BP Complete] in place of [BP].",
+        ],
+    },
+    {
+        "title": "Karolinger Guides footer (#602)",
+        "items": [
+            "Click the Karolinger Guides logo in the footer: a page opens in your browser. The logo matches the Osiris DevWorks logo's size and gold.",
         ],
     },
     {
@@ -88,57 +114,10 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
-        "title": "Owned names after a language switch (#569, #570)",
+        "title": "Overlay: scans and screens (#573, #592)",
         "items": [
-            "Upgrade with an existing Owned list and open the Blueprint Tracker: no owned blueprint is lost.",
-            "With some blueprints owned, switch English to Spanish: Owned shows them under their Spanish names, none listed twice or back in Available.",
-            "Switch back to English: Owned shows the English names again.",
-            "A Spanish Owned list that showed the S-38 Pistol twice (English and Spanish) shows it once after the upgrade.",
-            "Export Owned Blueprints in English, switch to Spanish, Import it: every blueprint matches, none skipped.",
-        ],
-    },
-    {
-        "title": "Overlay: closing the drawer with its tab (#585)",
-        "items": [
-            "In game, hold F, click a drawer tab, click an item in it, then click the same tab to close it: keys and a single click work in game at once.",
-            "In game, open the drawer with its hotkey, click an item with F held, then close it with the hotkey: keys and a single click work in game at once, as in 3.0.0.",
-        ],
-    },
-    {
-        "title": "Overlay: scan decoder (#546, #563)",
-        "items": [
-            "Golem or Prospector, HDR off: scan rocks; the label shows the deposit as in 3.0.0.",
-            "Scan on a bright planet or in snow (e.g. Microtech), and with Windows HDR on if you have it: the label still reads.",
-            "Set the field of view to its maximum and scan: the label still reads.",
-            "Aurora at 1080p: scan a rock; the label reads. Note your ship and resolution if it does not.",
-        ],
-    },
-    {
-        "title": "Overlay: drawer while aiming (#582)",
-        "items": [
-            "Drawer at top right, in game: aim with the pointer hidden and shoot across the drawer and the screen corner. The game keeps focus and every shot fires.",
-            "Hold F (or open the mobiGlas) and click a drawer tab: it opens. Click back into the game, then aim and shoot over the drawer: the game keeps focus.",
-            "With the Smart Citizen window in front, click a drawer tab: it opens as in 3.0.0.",
-            "Windows scale at 125% or 150%, drawer at middle right: click the drawer's outermost edge pixels; a tab opens each time.",
-            "Two screens at different scales, the second to the right: open and close the drawer at middle right; it stays on the main screen at its usual size.",
-        ],
-    },
-    {
-        "title": "Overlay: drawer hotkey (#587)",
-        "items": [
-            "Set a drawer hotkey on the Overlay tab and start the overlay. In game, press it: the drawer opens. Hold F to use it, then press the hotkey again: it closes.",
-            "In game, press the hotkey's key alone, or with one modifier more than it has (Ctrl+Alt+8 for Alt+8): the drawer stays as it is.",
-            "With the Smart Citizen window in front, press the hotkey: the drawer opens in front. Press it again: it closes.",
-            "Set Pause as the drawer hotkey and start the overlay. In game, press Pause: the drawer opens. Press it again: it closes.",
-            "Alt-Tab into the game and at once press the hotkey, holding it a moment: the drawer opens.",
-        ],
-    },
-    {
-        "title": "Enhancements (#555, #561)",
-        "items": [
-            "Generate with Commodities ticked. Point a mining tool at an unfractured Aphorite, Dolivine or Hadanite rock: its HUD name carries the [CF] tag.",
-            "Generate with Ships ticked. Open the Carrack's map: room labels show no ship stats.",
-            "Generate with every category ticked: it finishes with no error and the mission contracts carry their details.",
+            "Game on your second monitor: start the overlay. The drawer docks on the game's screen and a rock scan still reads.",
+            "Open a cargo inventory showing a µSCU amount with the overlay on: no scan label pops up. Then scan a rock: it reads as usual.",
         ],
     },
     {
@@ -149,12 +128,6 @@ TEST_SECTIONS: list[dict] = [
             "Fresh install on a PC that never had Smart Citizen: What's New opens once on the first start.",
             "Select German and restart after a fresh install: the title, line and button are in German; the notes stay English.",
             "When it offers an update, take it: after the update, What's New shows the new version's notes.",
-        ],
-    },
-    {
-        "title": "Guided tour (#545)",
-        "items": [
-            "Start the guided tour: it has 21 steps, including Settings Backup and Star Citizen Tools, and each step points at the right control.",
         ],
     },
     {
@@ -178,13 +151,6 @@ TEST_SECTIONS: list[dict] = [
             "Import a CSV with no Key or Custom Value column: one box says what the file needs, nothing changes.",
             "Export INI, then Import INI that same file: nothing to import, and the box says how many were skipped.",
             "Switch to German: both CSV items in More and their tooltips are in German.",
-        ],
-    },
-    {
-        "title": "Portable build",
-        "items": [
-            "Unzip the portable build into a deep folder path, run it, extract, generate and apply: no path-length errors.",
-            "Start the overlay from the portable build: it runs and the drawer works.",
         ],
     },
 ]
