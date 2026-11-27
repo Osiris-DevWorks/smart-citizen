@@ -1528,7 +1528,7 @@
     },
     "hostiles_detail_tooltip": {
       "ht": "",
-      "at": "Cómo las líneas Hostiles y Aliados listan las naves. Simple muestra un grupo de más de 10 naves por su tipo, con cuántas son y la más grande y la más pequeña; Todas las naves las lista todas. Se aplica en la próxima generación de mejoras."
+      "at": "Cómo las líneas Hostiles y Aliados listan las naves. Simple muestra un grupo de más de 3 naves por su tipo y nombra cada tipo una vez en Tipos de nave, con cuántas son y la más grande y la más pequeña; Todas las naves las lista todas. Se aplica en la próxima generación de mejoras."
     },
     "mission_field_reputation": {
       "ht": "",

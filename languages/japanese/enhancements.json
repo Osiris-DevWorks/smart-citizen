@@ -669,6 +669,10 @@
       "ht": "",
       "at": "艦船"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "艦船の種類"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "防衛対象の艦船"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "{item} セット"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind}（{count}隻：{first} … {last}）"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind}の艦船"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind}：{count}隻、{first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

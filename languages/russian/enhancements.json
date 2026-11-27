@@ -669,6 +669,10 @@
       "ht": "",
       "at": "Корабль"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "Типы кораблей"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "Защищаемые корабли"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "Комплект {item}"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind} ({count} кораблей: {first} … {last})"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "корабль {kind}"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind}: {count} кораблей, {first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

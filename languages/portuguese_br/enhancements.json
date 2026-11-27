@@ -669,6 +669,10 @@
       "ht": "",
       "at": "Nave"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "Tipos de nave"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "Naves a defender"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "Conjunto {item}"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind} ({count} naves: {first} … {last})"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "nave {kind}"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind}: {count} naves, {first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

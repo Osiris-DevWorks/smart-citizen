@@ -508,9 +508,10 @@ class AppSettings:
         "cooldown": "mission_field/cooldown",
     }
     # How the Hostiles and Friendlies ship lists read: "simple" shortens a
-    # pool of more than 10 ships to its type ("3x Hard Criminal ship (24 ships:
-    # biggest ... smallest)"), "all" lists every ship. The Enhancements tab's
-    # dropdown beside the Hostiles box.
+    # pool of more than 3 ships to its type ("3x Hard Criminal Combat Ship"),
+    # each type named once under Ship types with its count and its biggest and
+    # smallest ship; "all" lists every ship. The Enhancements tab's dropdown
+    # beside the Hostiles box.
     HOSTILES_DETAIL = "mission_field/hostiles_detail"
     HOSTILES_DETAILS = ("simple", "all")
     HOSTILES_DETAIL_DEFAULT = "simple"

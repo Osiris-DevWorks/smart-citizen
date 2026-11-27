@@ -1524,7 +1524,7 @@
     },
     "hostiles_detail_tooltip": {
       "ht": "",
-      "at": "Wie die Zeilen Feinde und Verbündete Schiffe auflisten. Einfach zeigt eine Auswahl von mehr als 10 Schiffen als ihren Typ, mit Anzahl sowie größtem und kleinstem Schiff; Alle Schiffsdetails listet jedes Schiff auf. Wirkt beim nächsten Erzeugen der Verbesserungen."
+      "at": "Wie die Zeilen Feinde und Verbündete Schiffe auflisten. Einfach zeigt eine Auswahl von mehr als 3 Schiffen als ihren Typ und nennt jeden Typ einmal unter Schiffstypen, mit Anzahl sowie größtem und kleinstem Schiff; Alle Schiffsdetails listet jedes Schiff auf. Wirkt beim nächsten Erzeugen der Verbesserungen."
     },
     "mission_field_reputation": {
       "ht": "",

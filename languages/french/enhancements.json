@@ -669,6 +669,10 @@
       "ht": "",
       "at": "Vaisseau"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "Types de vaisseaux"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "Vaisseaux à défendre"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "Ensemble {item}"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind} ({count} vaisseaux : {first} … {last})"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "vaisseau {kind}"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind} : {count} vaisseaux, {first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

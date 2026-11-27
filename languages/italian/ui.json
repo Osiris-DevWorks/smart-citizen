@@ -1524,7 +1524,7 @@
     },
     "hostiles_detail_tooltip": {
       "ht": "",
-      "at": "Come le righe Ostili e Alleati elencano le navi. Semplice mostra un gruppo di più di 10 navi con il suo tipo, quante sono e la più grande e la più piccola; Tutte le navi le elenca tutte. Ha effetto alla prossima generazione dei miglioramenti."
+      "at": "Come le righe Ostili e Alleati elencano le navi. Semplice mostra un gruppo di più di 3 navi con il suo tipo e nomina ogni tipo una volta sotto Tipi di nave, con quante sono e la più grande e la più piccola; Tutte le navi le elenca tutte. Ha effetto alla prossima generazione dei miglioramenti."
     },
     "mission_field_reputation": {
       "ht": "",

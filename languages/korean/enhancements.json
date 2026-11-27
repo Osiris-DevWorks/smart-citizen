@@ -669,6 +669,10 @@
       "ht": "",
       "at": "함선"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "함선 유형"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "방어할 함선"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "{item} 세트"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind} ({count}척: {first} … {last})"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind} 함선"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind}: {count}척, {first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

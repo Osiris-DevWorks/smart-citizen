@@ -669,6 +669,10 @@
       "ht": "Ship",
       "at": ""
     },
+    "Ship types": {
+      "ht": "Ship types",
+      "at": ""
+    },
     "Ships to Defend": {
       "ht": "Ships to Defend",
       "at": ""
@@ -857,12 +861,12 @@
       "ht": "{item} Set",
       "at": ""
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "{kind} ({count} ships: {first} … {last})",
-      "at": ""
-    },
     "{kind} ship": {
       "ht": "{kind} ship",
+      "at": ""
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "{kind}: {count} ships, {first} … {last}",
       "at": ""
     },
     "{label}, one of:": {

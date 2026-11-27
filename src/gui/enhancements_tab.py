@@ -793,7 +793,8 @@ class EnhancementsTab(QWidget):
 
     def _build_hostiles_detail_combo(self, hostiles_box: QCheckBox) -> NoScrollComboBox:
         """The dropdown beside the Hostiles box: Simple shortens a pool of
-        more than 10 ships to its type, All Ship Details lists every ship.
+        more than 3 ships to its type, named once under Ship types, and All
+        Ship Details lists every ship.
         Greyed out while Hostiles is unticked, since it has nothing to shape."""
         combo = NoScrollComboBox()
         combo.setStyleSheet("font-size: 11px;")

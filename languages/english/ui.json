@@ -1527,7 +1527,7 @@
       "at": ""
     },
     "hostiles_detail_tooltip": {
-      "ht": "How the Hostiles and Friendlies lines list ships. Simple shows a pool of more than 10 ships as its type, with how many there are and the biggest and smallest; All Ship Details lists every ship. Takes effect on the next Generate Enhancements.",
+      "ht": "How the Hostiles and Friendlies lines list ships. Simple shows a pool of more than 3 ships as its type and names each type once under Ship types, with how many ships it holds and the biggest and smallest; All Ship Details lists every ship. Takes effect on the next Generate Enhancements.",
       "at": ""
     },
     "mission_field_reputation": {

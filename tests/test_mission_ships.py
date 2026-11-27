@@ -402,8 +402,9 @@ class TestLayout:
 
 
 class TestSimple:
-    """The Hostiles dropdown's Simple: a pool of more than 10 ships is its
-    type, with how many and the biggest and smallest by bounding box."""
+    """The Hostiles dropdown's Simple: a pool of more than 3 ships is its
+    type, and each type is named once under Ship types, with how many ships
+    it holds and its biggest and smallest by bounding box."""
 
     POOL = "00000000-0000-0000-0000-0000000000e1"
 
@@ -417,31 +418,74 @@ class TestSimple:
         loc = {f"vehicle_Name{i:02}": f"Ship {i:02}" for i in range(count)}
         return gen.ShipSpawnIndex(tags, ships, loc, simple=simple)
 
-    def _text(self, gen, index):
-        names, label = index.pick([self.POOL, EASY], [])
+    def _block(self, gen, index, *groups):
+        """The Hostiles block for *groups* and the Ship types after it, as
+        _variant_detail_lines writes them."""
         gen._set_ship_spawns(index)
         try:
-            return gen._format_roster_group(
-                (gen.SPAWN_HOSTILE, "Targets", (((2, names, label),),))
-            )
+            pools: dict = {}
+            lines = gen._roster_block("Hostiles", groups, pools=pools)
+            return lines + gen._ship_types_block(pools)
         finally:
             gen._set_ship_spawns(None)
 
-    def test_a_big_pool_is_its_type_biggest_and_smallest(self, gen):
-        assert self._text(gen, self._index(gen, 11)) == (
-            "- Targets: 2x Easy Pool ship (11 ships: Ship 10 \u2026 Ship 00)"
+    def _pool(self, gen, index, amount=2, label="Targets"):
+        names, kind = index.pick([self.POOL, EASY], [])
+        return (gen.SPAWN_HOSTILE, label, (((amount, names, kind),),))
+
+    def test_a_big_pool_is_its_type_named_once_under_ship_types(self, gen):
+        index = self._index(gen, 4)
+        assert self._block(gen, index, self._pool(gen, index)) == [
+            "<EM4>Hostiles:</EM4>",
+            "- Targets: 2x Easy Pool ship",
+            "<EM4>Ship types:</EM4>",
+            "- Easy Pool ship: 4 ships, Ship 03 \u2026 Ship 00",
+        ]
+
+    def test_three_ships_are_still_listed(self, gen):
+        index = self._index(gen, 3)
+        assert self._block(gen, index, self._pool(gen, index)) == [
+            "<EM4>Hostiles:</EM4>",
+            "- Targets: 2x of Ship 00, Ship 01, or Ship 02",
+        ]
+
+    def test_a_type_named_in_two_groups_is_listed_once(self, gen):
+        index = self._index(gen, 4)
+        lines = self._block(
+            gen,
+            index,
+            self._pool(gen, index, 2, "Hostile Wave"),
+            self._pool(gen, index, 5, "Hostile Wave"),
         )
+        assert lines[1:3] == ["- Wave 1: 2x Easy Pool ship", "- Wave 2: 5x Easy Pool ship"]
+        assert lines.count("<EM4>Ship types:</EM4>") == 1
+        assert lines[-1] == "- Easy Pool ship: 4 ships, Ship 03 \u2026 Ship 00"
 
-    def test_ten_ships_are_still_listed(self, gen):
-        assert self._text(gen, self._index(gen, 10)).startswith(
-            "- Targets: 2x of Ship 00, Ship 01,"
-        )
+    def test_two_pools_of_one_type_share_an_entry(self, gen):
+        index = self._index(gen, 6)
+        names, kind = index.pick([self.POOL, EASY], [])
+        first = (gen.SPAWN_HOSTILE, "Targets", (((1, names[:4], kind),),))
+        second = (gen.SPAWN_HOSTILE, "Targets", (((1, names[2:], kind),),))
+        assert self._block(gen, index, first, second)[-2:] == [
+            "<EM4>Ship types:</EM4>",
+            "- Easy Pool ship: 6 ships, Ship 05 \u2026 Ship 00",
+        ]
 
-    def test_all_ship_details_lists_every_ship(self, gen):
-        text = self._text(gen, self._index(gen, 11, simple=False))
-        assert text.startswith("- Targets: 2x of Ship 00,") and "Ship 10" in text
+    def test_a_pool_with_no_type_is_listed_and_not_a_ship_type(self, gen):
+        index = self._index(gen, 4)
+        names, _ = index.pick([self.POOL, EASY], [])
+        group = (gen.SPAWN_HOSTILE, "Targets", (((1, names, ""),),))
+        lines = self._block(gen, index, group)
+        assert lines[1].startswith("- Targets:") and "Ship 03" in "\n".join(lines)
+        assert "<EM4>Ship types:</EM4>" not in lines
 
-    def test_the_summary_counts_as_one_name_for_the_one_line_rule(self, gen):
+    def test_all_ship_details_lists_every_ship_and_has_no_ship_types(self, gen):
+        index = self._index(gen, 11, simple=False)
+        lines = self._block(gen, index, self._pool(gen, index))
+        assert lines[1].startswith("- Targets: 2x of Ship 00,") and "Ship 10" in lines[1]
+        assert "<EM4>Ship types:</EM4>" not in lines
+
+    def test_the_type_counts_as_one_name_for_the_one_line_rule(self, gen):
         index = self._index(gen, 11)
         names, label = index.pick([self.POOL, EASY], [])
         gen._set_ship_spawns(index)
@@ -455,10 +499,64 @@ class TestSimple:
             )
         finally:
             gen._set_ship_spawns(None)
-        assert text == (
-            "- Hostile Wave: 2x Easy Pool ship (11 ships: Ship 10 \u2026 Ship 00)"
-            " and 1x Ship 03"
-        )
+        assert text == "- Hostile Wave: 2x Easy Pool ship and 1x Ship 03"
+
+    def test_the_variant_lines_end_with_the_ship_types_after_friendlies(self, gen):
+        index = self._index(gen, 4)
+        friend = (gen.SPAWN_FRIENDLY, "Escorts", (((1, ("Anvil Arrow",), ""),),))
+        variant = TestVariants()._variant(gen, (self._pool(gen, index), friend))
+        gen._set_ship_spawns(index)
+        try:
+            lines, _ = gen._variant_detail_lines([variant], True, False)
+        finally:
+            gen._set_ship_spawns(None)
+        assert lines == [
+            "<EM4>Hostiles:</EM4>",
+            "- Targets: 2x Easy Pool ship",
+            "<EM4>Friendlies:</EM4>",
+            "- Escorts: 1x Anvil Arrow",
+            "<EM4>Ship types:</EM4>",
+            "- Easy Pool ship: 4 ships, Ship 03 \u2026 Ship 00",
+        ]
+
+
+class TestWaves:
+    """Groups numbered Wave 1, Wave 2, ... in a roster block, in both modes:
+    hostile waves, and target groups in a block with no wave."""
+
+    def _group(self, gen, label, name):
+        return (gen.SPAWN_HOSTILE, label, (((1, (name,), ""),),))
+
+    def test_target_groups_alone_are_numbered(self, gen):
+        a = self._group(gen, "Targets", "Anvil Arrow")
+        b = self._group(gen, "Targets", "Vanduul Blade")
+        assert gen._roster_block("Hostiles", (a, b)) == [
+            "<EM4>Hostiles:</EM4>",
+            "- Wave 1: 1x Anvil Arrow",
+            "- Wave 2: 1x Vanduul Blade",
+        ]
+
+    def test_a_lone_target_group_keeps_its_label(self, gen):
+        a = self._group(gen, "Targets", "Anvil Arrow")
+        assert gen._roster_block("Hostiles", (a,))[1] == "- Targets: 1x Anvil Arrow"
+
+    def test_targets_beside_a_wave_keep_their_label(self, gen):
+        wave = self._group(gen, "Hostile Wave", "Anvil Arrow")
+        a = self._group(gen, "Targets", "Vanduul Blade")
+        b = self._group(gen, "Targets", "Anvil Gladiator")
+        assert gen._roster_block("Hostiles", (wave, a, b))[1:] == [
+            "- Hostile Wave: 1x Anvil Arrow",
+            "- Targets: 1x Vanduul Blade",
+            "- Targets: 1x Anvil Gladiator",
+        ]
+
+    def test_a_many_line_target_group_is_numbered_too(self, gen):
+        names = ("Anvil Arrow", "Anvil Gladiator", "Vanduul Blade", "Vanduul Glaive")
+        a = (gen.SPAWN_HOSTILE, "Targets", (((2, names, ""),), ((1, ("Ship X",), ""),)))
+        b = self._group(gen, "Targets", "Vanduul Scythe")
+        lines = gen._roster_block("Hostiles", (a, b))
+        assert lines[1].split(NL)[0] == "- Wave 1:"
+        assert lines[-1] == "- Wave 2: 1x Vanduul Scythe"
 
     def test_the_generation_takes_the_setting(self, gen, tmp_path):
         records, forge = _records(tmp_path)

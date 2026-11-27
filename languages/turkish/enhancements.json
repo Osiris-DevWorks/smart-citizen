@@ -669,6 +669,10 @@
       "ht": "",
       "at": "Gemi"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "Gemi türleri"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "Korunacak gemiler"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "{item} Seti"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind} ({count} gemi: {first} … {last})"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind} gemisi"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind}: {count} gemi, {first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

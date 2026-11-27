@@ -669,6 +669,10 @@
       "ht": "",
       "at": "艦船"
     },
+    "Ship types": {
+      "ht": "",
+      "at": "艦船類型"
+    },
     "Ships to Defend": {
       "ht": "",
       "at": "需保護的艦船"
@@ -857,13 +861,13 @@
       "ht": "",
       "at": "{item} 套裝"
     },
-    "{kind} ({count} ships: {first} … {last})": {
-      "ht": "",
-      "at": "{kind}（{count}艘：{first} … {last}）"
-    },
     "{kind} ship": {
       "ht": "",
       "at": "{kind}艦船"
+    },
+    "{kind}: {count} ships, {first} … {last}": {
+      "ht": "",
+      "at": "{kind}：{count}艘，{first} … {last}"
     },
     "{label}, one of:": {
       "ht": "",

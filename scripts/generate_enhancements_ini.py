@@ -3140,7 +3140,8 @@ class ShipSpawnIndex:
     (``build_ship_spawn_facts``; the stem and size may be left off), *loc*
     the strings of the language being generated and *fallback_loc* the
     English ones, for a name *loc* lacks. *simple* shortens a pool of more
-    than _SIMPLE_MAX_SHIPS ships to its type (the Hostiles dropdown's Simple).
+    than _SIMPLE_MAX_SHIPS ships to its type, its ships named once under Ship
+    types (the Hostiles dropdown's Simple).
     False when either is empty, which leaves the spawn lines as counts.
     """
 
@@ -3413,15 +3414,17 @@ _LIST_JOINS: dict[str, tuple[str, str]] = {
 # or collapses plain spaces can take it away. "and ..." lines sit at one
 # step, the choices of a "one of:" at two.
 _ROSTER_INDENT = "  "
-# The spawn label (_SPAWN_KEYWORD_TABLE) whose groups are numbered, Wave 1,
-# Wave 2, ..., when a roster has two or more.
+# The spawn labels (_SPAWN_KEYWORD_TABLE) whose groups are numbered Wave 1,
+# Wave 2, ..., in file order (_roster_block): hostile waves when a block has
+# two or more, and target groups when a block has two or more and no waves.
 _WAVE_LABEL = "Hostile Wave"
+_TARGETS_LABEL = "Targets"
 # A wave stays on one line only while no part of it names this many ships:
 # a long list would run into the part after it.
 _ONE_LINE_MAX_NAMES = 3
 # With the Hostiles dropdown on Simple, a pool of more than this many ships
-# is shown as its type and size range instead of every name.
-_SIMPLE_MAX_SHIPS = 10
+# is shown as its type, and its ships are named once under Ship types.
+_SIMPLE_MAX_SHIPS = 3
 # The Hostiles dropdown's values (AppSettings.HOSTILES_DETAILS), as main()
 # takes them; Simple is the app's default.
 _HOSTILES_SIMPLE = "simple"
@@ -3444,22 +3447,30 @@ def _ship_kind(label: str) -> str:
     return _t("{kind} ship", kind=label)
 
 
-def _pool_summary(names: tuple, label: str) -> str:
-    """A big pool in the Simple ship lists: its type and its size range,
-    ``Hard Criminal ship (24 ships: Aegis Idris-P … Anvil Arrow)``, biggest
-    and smallest by bounding box."""
-    ordered = _SHIP_SPAWNS.biggest_first(names) if _SHIP_SPAWNS else sorted(names)
-    return _t("{kind} ({count} ships: {first} … {last})", kind=_ship_kind(label),
-              count=len(names), first=ordered[0], last=ordered[-1])
+def _ship_types_block(pools: dict) -> list[str]:
+    """The Simple ship lists' Ship types: each type a wave named, once, with
+    how many ships it holds and its biggest and smallest by bounding box,
+    ``- Hard Criminal Combat Ship: 13 ships, Crusader A1 Spirit … Anvil Arrow``.
+    *pools* maps each type to its ships, in the order the waves name them."""
+    if not pools:
+        return []
+    lines = [f"<EM4>{_t('Ship types')}:</EM4>"]
+    for kind, names in pools.items():
+        ordered = _SHIP_SPAWNS.biggest_first(names) if _SHIP_SPAWNS else sorted(names)
+        text = _t("{kind}: {count} ships, {first} … {last}", kind=kind,
+                  count=len(ordered), first=ordered[0], last=ordered[-1])
+        lines.append(f"- {text}")
+    return lines
 
 
-def _slot_choices(slot: tuple) -> list[tuple[str, int]]:
+def _slot_choices(slot: tuple, pools: "dict | None" = None) -> list[tuple[str, int]]:
     """A slot's choices as ``(text, how many ships it names)``: equal ships at
     different amounts become a range, choices at one amount share one list,
     and a list reads ``2-3x of A, B, or C`` so the count is not taken for a
     count of each. A choice no ship matches names its kind of ship, and with
-    Simple a pool of more than _SIMPLE_MAX_SHIPS ships is its type with its
-    size range (_pool_summary), which counts as one name."""
+    Simple a pool of more than _SIMPLE_MAX_SHIPS ships is its type, which
+    counts as one name; its ships go into *pools* under that type (two pools
+    of one type share an entry) for _ship_types_block."""
     simple = bool(_SHIP_SPAWNS and _SHIP_SPAWNS.simple)
     ranges: dict[tuple, list[int]] = {}
     for amount, names, label in slot:
@@ -3472,7 +3483,9 @@ def _slot_choices(slot: tuple) -> list[tuple[str, int]]:
         if not names:
             kind = _ship_kind(label) if label else ""
         elif simple and label and len(names) > _SIMPLE_MAX_SHIPS:
-            kind = _pool_summary(names, label)
+            kind = _ship_kind(label)
+            if pools is not None:
+                pools.setdefault(kind, set()).update(names)
         else:
             named.extend(n for n in names if n not in named)
             continue
@@ -3489,8 +3502,10 @@ def _slot_choices(slot: tuple) -> list[tuple[str, int]]:
     return out
 
 
-def _format_roster_group(group: tuple, label: str | None = None) -> str:
-    """One group's lines, *label* (or the group's own, translated) leading.
+def _format_roster_group(group: tuple, label: str | None = None,
+                         pools: "dict | None" = None) -> str:
+    """One group's lines, *label* (or the group's own, translated) leading;
+    Simple's typed pools go into *pools* (_slot_choices).
 
     A group whose every slot is a single choice, with no long list in it,
     is one line (``- Wave 2: 3x A, 1x of B or C, and 3x D``). Otherwise each
@@ -3503,7 +3518,7 @@ def _format_roster_group(group: tuple, label: str | None = None) -> str:
     name = label or _t(key)
     if isinstance(ships, int):
         return f"- {name} x{ships}"
-    slots = [_slot_choices(slot) for slot in ships]
+    slots = [_slot_choices(slot, pools) for slot in ships]
     if all(len(choices) == 1 for choices in slots) and (
             len(slots) == 1 or all(c[0][1] < _ONE_LINE_MAX_NAMES for c in slots)):
         return f"- {name}: " + _join_words([c[0][0] for c in slots], "parts")
@@ -3581,21 +3596,31 @@ def _format_cooldown(cooldown: "tuple[int, int]") -> str:
     return text
 
 
-def _roster_block(header: str, groups: tuple, numbers: "list[int] | None" = None) -> list[str]:
+def _roster_block(header: str, groups: tuple, numbers: "list[int] | None" = None,
+                  pools: "dict | None" = None) -> list[str]:
     """A Hostiles or Friendlies heading and its bullets; the heading names
     the variants it is for when *numbers* is given. Two or more hostile
     waves are numbered, Wave 1, Wave 2, ..., in the order the game lists
-    them; a lone wave keeps its label."""
+    them, and so are two or more target groups in a block with no wave (a
+    patrol's hotspots); a lone one keeps its label, and so do target groups
+    beside a wave, which are what the wave guards. Simple's typed pools go
+    into *pools* (_slot_choices)."""
     head = _t(header) if not numbers else f"{_t(header)} ({_variant_suffix(numbers)})"
-    waves = sum(1 for g in groups if g[1] == _WAVE_LABEL)
+    counts = {_WAVE_LABEL: 0, _TARGETS_LABEL: 0}
+    for g in groups:
+        if g[1] in counts:
+            counts[g[1]] += 1
+    numbered = (_WAVE_LABEL if counts[_WAVE_LABEL] > 1
+                else _TARGETS_LABEL if counts[_TARGETS_LABEL] > 1 and not counts[_WAVE_LABEL]
+                else None)
     lines = [f"<EM4>{head}:</EM4>"]
     wave = 0
     for g in groups:
         label = None
-        if waves > 1 and g[1] == _WAVE_LABEL:
+        if numbered and g[1] == numbered:
             wave += 1
             label = _t("Wave {n}", n=wave)
-        lines.append(_format_roster_group(g, label))
+        lines.append(_format_roster_group(g, label, pools))
     return lines
 
 
@@ -3625,12 +3650,14 @@ def _variant_detail_lines(variants: list, show_spawns: bool,
         for v in variants
     ))
     roster_lines: list[str] = []
+    pools: dict = {}
     for index, (_, header) in enumerate(_ROSTER_HEADERS):
         values = _by_value([s[index] for s in shown])
         for groups, numbers in values:
             if groups:
-                roster_lines.extend(
-                    _roster_block(header, groups, numbers if len(values) > 1 else None))
+                roster_lines.extend(_roster_block(
+                    header, groups, numbers if len(values) > 1 else None, pools))
+    roster_lines.extend(_ship_types_block(pools))
     cooldown_lines: list[str] = []
     values = [(cd, numbers) for cd, numbers in _by_value([s[-1] for s in shown]) if cd is not None]
     if values:
@@ -3853,10 +3880,12 @@ def enhancements_mission(root: ET.Element, reputation_lookup: dict[str, int] | N
                 # The ships replace the Hostiles and Friendlies counts;
                 # objectives stay a count.
                 _roster = _extract_spawn_roster(root, _SHIP_SPAWNS)
+                _pools: dict = {}
                 for _bucket, _header in _ROSTER_HEADERS:
                     _groups = tuple(g for g in _roster if g[0] == _bucket)
                     if _groups and not (_ambiguous and _bucket == SPAWN_HOSTILE):
-                        lines.extend(_roster_block(_header, _groups))
+                        lines.extend(_roster_block(_header, _groups, pools=_pools))
+                lines.extend(_ship_types_block(_pools))
                 lines.extend(_format_spawn_lines({SPAWN_OBJECTIVE: _bd[SPAWN_OBJECTIVE]}))
             else:
                 lines.extend(_format_spawn_lines(_bd))
