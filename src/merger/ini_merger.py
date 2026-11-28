@@ -325,5 +325,10 @@ def merge_ini_files(
                     new_line = f"{clean_key}={value}{original_ending}"
                     outfile.write(new_line)
 
+    except PermissionError:
+        # Kept as it is so Apply to Game can tell a refused game folder (a
+        # running game, Program Files, Controlled folder access) from a
+        # merge bug and say what to try.
+        raise
     except Exception as e:
         raise IOError(f"Error merging INI files: {e}")

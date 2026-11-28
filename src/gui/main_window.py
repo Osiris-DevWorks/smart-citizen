@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -73,6 +73,7 @@ from src.parser.ini_parser import (
 # Lives in the parser module so the Config tab's Apply Preview counts the same way (#443).
 from src.parser.ini_parser import count_enhancement_categories as _count_enhancement_categories
 from src.gui.update_dialog import UpdateDialog
+from src.gui.whats_new_dialog import WhatsNewDialog
 from src.utils.app_updater import AppUpdateCheckWorker, AppUpdateDownloadWorker
 from src.utils.applied_file_validator import validate_applied_file as _validate_applied_file_impl
 from src.utils.build_mode import IS_PORTABLE
@@ -84,8 +85,10 @@ from src.utils.karolinger import (
     with_guides_url,
 )
 from src.utils.perf import timed
+from src.utils.release_notes import bundled_release_notes
 from src.utils.resource_path import get_resource_path
 from src.utils.pak_extractor import base_ini_is_fresh, linked_cache_folder_error, windows_reason
+from src.utils.read_only import clear_read_only
 from src.utils.settings import (
     AppSettings,
     CACHE_FOLDER_REFUSED,
@@ -599,6 +602,10 @@ class _ApplyMergeInputs:
     # place that builds these inputs without it fails instead of centring
     # every language in Blender Pro.
     sc_language_id: str
+    # The [BP Complete] mission record ({title key: desc keys}), empty while
+    # the General Tags switch is off. The merge works out which titles are
+    # complete from the strings it writes (blueprint_meta.complete_titles_in_strings).
+    bp_complete_record: dict = field(default_factory=dict)
 
 
 def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInputs) -> dict:
@@ -623,6 +630,19 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     # Merge all sources in hierarchy order, with user edits on top
     merged_dict = merge_sources_by_hierarchy(sources_dict, hierarchy, inputs.user_overrides)
 
+    # Which missions get [BP Complete], from these strings rather than the last
+    # load's: Simple mode applies straight after a generation, before the
+    # reload. Before the [Owned] weave, so the bullets are read as written.
+    bp_complete_titles: frozenset = frozenset()
+    if inputs.owned and inputs.bp_complete_record:
+        from src.utils.blueprint_meta import complete_titles_in_strings
+        bp_complete_titles = complete_titles_in_strings(
+            merged_dict, inputs.bp_complete_record, inputs.owned,
+            enclosings=inputs.enclosings,
+            default_values=sources_dict.get(AppSettings.SOURCE_GLOBAL, {}),
+            bp_header=inputs.bp_header,
+        )
+
     # #157: weave [Owned] into blueprint lists so the tag reaches the
     # applied game file (apply re-loads sources from disk, where the
     # live owned overlay isn't baked in). Idempotent.
@@ -634,6 +654,15 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
             )
             if _nv != _v:
                 merged_dict[_k] = _nv
+
+    # [BP Complete] on the complete titles, for the same reason. Also strips
+    # one an override carries for a mission no longer complete, as the weave
+    # above does [Owned]. Idempotent.
+    from src.utils.owned_items import apply_bp_complete_to_title, has_bp_complete_tag
+    for _k, _v in list(merged_dict.items()):
+        _complete = _k in bp_complete_titles
+        if _complete or has_bp_complete_tag(_v):
+            merged_dict[_k] = apply_bp_complete_to_title(_v, _complete)
 
     # Stamp Journal entries Smart Citizen produced or modified —
     # both user-edited journals AND auto-generated journal
@@ -654,6 +683,22 @@ def _merge_for_apply(sources_dict: dict, hierarchy: list, inputs: _ApplyMergeInp
     # Smart Citizen is active. Idempotent across re-applies and
     # version bumps; skipped if stock doesn't ship the key.
     return _stamp_frontend_version(merged_dict)
+
+
+def _enhancement_summary_block(categories, bp_complete_count: "int | None" = None) -> str:
+    """The Apply success box's enhancements lines: one per category, biggest
+    first. *bp_complete_count*, the titles carrying [BP Complete] in the file
+    just written, goes on its own line under Missions; None (the General Tags
+    switch off) leaves that line out."""
+    if not categories:
+        return "  Smart Citizen enhancements: 0"
+    lines = []
+    for cat, count in categories.most_common():
+        lines.append(f"    {cat}: {count:,}")
+        if cat == CATEGORY_MISSIONS and bp_complete_count is not None:
+            lines.append("      " + tr("apply.bp_complete_count", count=f"{bp_complete_count:,}"))
+    total = sum(categories.values())
+    return f"  Smart Citizen enhancements ({total:,} total):\n" + "\n".join(lines)
 
 
 @dataclass(frozen=True)
@@ -1068,6 +1113,18 @@ class MainWindow(QMainWindow):
         # Built once per load (pure function of the loaded strings), so
         # owned-toggles only re-partition rather than rescan ~87k entries.
         self._blueprint_meta: dict = {}
+        # [BP Complete] title tag: each blueprint description's item names,
+        # built with _blueprint_meta, and the generator's record of each
+        # blueprint mission's descriptions (blueprint_meta.
+        # MISSION_BLUEPRINT_DESCS_FILE), read again only once the file
+        # changes (_mission_bp_descs_key: its path and stat).
+        self._bp_names_by_desc: dict = {}
+        self._mission_bp_descs: dict = {}
+        self._mission_bp_descs_key = None
+        # Title key -> the [BP] / [BP?] tag (or "") its [BP Complete] took the
+        # place of, so _recompute_owned can put it back. A reload brings fresh
+        # values without the tag, so an entry left from before is never read.
+        self._bp_tags_under_complete: dict = {}
 
         # The answer to the generate-enhancements question this session: None
         # until it is asked, then True (Generate) or False (Skip). Recorded
@@ -1229,6 +1286,7 @@ class MainWindow(QMainWindow):
         self.enhancements_tab.enhancements_pipeline_requested.connect(self._run_enhancements_pipeline)
         self.enhancements_tab.favorite_prefix_changed.connect(self._on_favorite_prefix_changed)
         self.enhancements_tab.category_ticks_changed.connect(self._on_category_ticks_changed)
+        self.enhancements_tab.bp_complete_tag_changed.connect(self._recompute_owned)
         self.config_tab.preview_starting.connect(
             self.enhancements_tab.apply_pending_category_changes
         )
@@ -1330,6 +1388,10 @@ class MainWindow(QMainWindow):
         self.simple_page.switch_to_advanced_requested.connect(
             lambda: self._apply_ui_mode(AppSettings.UI_MODE_ADVANCED)
         )
+        # Start/Stop Overlay on the Simple page drives the toolbar's Overlay
+        # button, as the Overlay tab's does, so it goes through
+        # _toggle_sco_overlay too.
+        self.simple_page.overlay_toggled.connect(lambda on: self.sco_btn.setChecked(on))
         # Siblings swapped by visibility, deliberately not a QStackedWidget: a
         # stack reports its *tallest* page, so with Simple showing it would go
         # on reserving height for the Advanced tabs (323px against the 214 the
@@ -1563,6 +1625,15 @@ class MainWindow(QMainWindow):
         more_menu.addSeparator()
         self._action_import_ini = more_menu.addAction(tr("toolbar.menu_import_ini"), self._handle_import_ini)
         self._action_export_ini = more_menu.addAction(tr("toolbar.menu_export_ini"), self.export_locpack)
+        # #565: the rows the table shows, out to a CSV and back.
+        self._action_import_csv = more_menu.addAction(
+            tr("toolbar.menu_import_csv"), self._handle_import_csv
+        )
+        self._action_import_csv.setToolTip(tr("toolbar.import_csv_tooltip"))
+        self._action_export_csv = more_menu.addAction(
+            tr("toolbar.menu_export_csv"), self._export_csv
+        )
+        self._action_export_csv.setToolTip(tr("toolbar.export_csv_tooltip"))
         more_menu.addSeparator()
         self._action_open_loc_dir = more_menu.addAction(
             tr("toolbar.open_loc_dir_btn"), self.open_localization_dir
@@ -1818,8 +1889,7 @@ class MainWindow(QMainWindow):
         # Smart Citizen guides on Karolinger Guides.
         footer_layout.addSpacing(10)
         self.karolinger_label = QLabel()
-        karolinger_pixmap = self._footer_pixmap(
-            "karolinger-guides.png", self._KAROLINGER_IMAGE_HEIGHT)
+        karolinger_pixmap = self._footer_pixmap("karolinger-guides.png")
         if karolinger_pixmap is not None:
             self.karolinger_label.setPixmap(karolinger_pixmap)
         else:
@@ -1892,22 +1962,19 @@ class MainWindow(QMainWindow):
 
     # Footer images are scaled to the Osiris logo's height.
     _FOOTER_IMAGE_HEIGHT = 40
-    # The Karolinger Guides logo is a little shorter (#602): at full height
-    # the footer grew wider than the window's 900 px narrow size and brought
-    # up the window-level scroll bar (tests/test_tab_scrollbar_placement.py).
-    _KAROLINGER_IMAGE_HEIGHT = 32
 
     @classmethod
-    def _footer_pixmap(cls, filename: str, height: int = _FOOTER_IMAGE_HEIGHT) -> "QPixmap | None":
-        """Load ``assets/<filename>`` for the footer, at most *height* tall,
-        or None when the file is missing (the caller then shows its fallback
-        text)."""
+    def _footer_pixmap(cls, filename: str) -> "QPixmap | None":
+        """Load ``assets/<filename>`` for the footer, at most
+        _FOOTER_IMAGE_HEIGHT tall, or None when the file is missing (the
+        caller then shows its fallback text)."""
         path = get_resource_path(os.path.join("assets", filename))
         if not os.path.exists(path):
             return None
         pixmap = QPixmap(path)
-        if pixmap.height() > height:
-            pixmap = pixmap.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
+        if pixmap.height() > cls._FOOTER_IMAGE_HEIGHT:
+            pixmap = pixmap.scaledToHeight(
+                cls._FOOTER_IMAGE_HEIGHT, Qt.TransformationMode.SmoothTransformation)
         return pixmap
 
     def open_karolinger_guides(self, event):
@@ -2893,6 +2960,9 @@ class MainWindow(QMainWindow):
         if owned:
             from src.utils.owned_items import enclosings_from_tag_configs
             enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
+        # Read again only if the file changed: Simple mode applies straight
+        # after the generation that wrote it, before the reload that would.
+        self._read_mission_bp_descs()
         return _ApplyMergeInputs(
             user_overrides=user_overrides,
             discarded_new_keys=frozenset(discarded_new_keys),
@@ -2900,6 +2970,7 @@ class MainWindow(QMainWindow):
             enclosings=enclosings,
             bp_header=self._bp_header(),
             sc_language_id=AppSettings.get_sc_language_id(),
+            bp_complete_record=self._bp_complete_record(owned),
         )
 
     def _build_apply_merged_dict(self, sources_dict: dict, hierarchy: list) -> dict:
@@ -3085,6 +3156,8 @@ class MainWindow(QMainWindow):
                 # Delete oldest backup if we already have 5
                 if len(backup_files) >= 5:
                     oldest_backup = backup_files[0]
+                    # copy2 carried a read-only global.ini's flag into it.
+                    clear_read_only(oldest_backup)
                     oldest_backup.unlink()
                     logger.info(f"Deleted oldest backup: {oldest_backup.name}")
 
@@ -3092,6 +3165,9 @@ class MainWindow(QMainWindow):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = backup_dir / f"global.ini.bak_{timestamp}"
                 shutil.copy2(target_path, backup_path)
+                # copy2 copies the read-only flag too, which would later stop
+                # the rotation above deleting this backup.
+                clear_read_only(backup_path)
                 logger.info(f"Backed up existing file to {backup_path}")
 
             # Re-load all sources fresh, so Apply uses the latest source
@@ -3153,6 +3229,9 @@ class MainWindow(QMainWindow):
             # below can deliver it, so drop it before writing.
             from src.merger.ini_merger import merge_ini_files
             self._invalidate_applied_check()
+            # Windows will not open a read-only file for writing, and some
+            # guides tell players to mark global.ini read-only.
+            clear_read_only(target_path)
             merge_ini_files(str(base_file), merged_dict, str(target_path))
 
             # Validate written file against stock base. Pass the already-parsed
@@ -3230,17 +3309,15 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(
                 tr("dialogs.apply_status", user_count=user_count, enhancement_count=enhancement_count)
             )
-            if enhancement_categories:
-                breakdown = "\n".join(
-                    f"    {cat}: {count:,}"
-                    for cat, count in enhancement_categories.most_common()
-                )
-                enhancement_block = (
-                    f"  Smart Citizen enhancements ({enhancement_count:,} total):\n"
-                    f"{breakdown}"
-                )
-            else:
-                enhancement_block = "  Smart Citizen enhancements: 0"
+            # How many missions the file marks [BP Complete], shown while the
+            # General Tags switch is on.
+            bp_complete_count = None
+            if AppSettings.get_mission_title_tags()[AppSettings.MISSION_TITLE_TAG_BP_COMPLETE]:
+                from src.utils.owned_items import has_bp_complete_tag
+                bp_complete_count = sum(1 for v in merged_dict.values() if has_bp_complete_tag(v))
+                logger.info(f"[BP Complete]: {bp_complete_count} missions marked complete")
+            enhancement_block = _enhancement_summary_block(
+                enhancement_categories, bp_complete_count)
             # Mark before the success box, as Clear Localization does: its
             # event loop can deliver a change made after the merge above (a
             # blueprint scan finishing, #416), which marks Apply red. Marking
@@ -3252,12 +3329,34 @@ class MainWindow(QMainWindow):
                    enhancement_block=enhancement_block),
             )
             return True
+        except PermissionError as e:
+            # Windows refused the game folder: the game holds the file open,
+            # the app is not allowed to write under Program Files, or
+            # Controlled folder access or an antivirus blocked it. All of them
+            # read "[Errno 13] Permission denied", so say what to try.
+            self._mark_apply_dirty()
+            logger.warning(f"Windows refused writing to the game folder: {e}")
+            self._show_game_folder_refused(Path(e.filename) if e.filename else target_path)
+            return False
         except Exception as e:
             # Mark first: the dialog's event loop can deliver a queued verdict.
             self._mark_apply_dirty()
             QMessageBox.critical(self, tr("dialogs.error_title"), tr("apply.failed_body", error=e))
             logger.error(f"Error applying to game: {e}")
             return False
+
+    def _show_game_folder_refused(self, path: Path) -> None:
+        """Explain an Apply that Windows refused with a permission error.
+
+        A running game is the common case and has its own one-line fix, so
+        it is asked about first (tasklist, only on this failure path)."""
+        from src.utils.shader_cache import is_star_citizen_running
+        if is_star_citizen_running():
+            body = tr("apply.refused_game_running_body", path=path)
+        else:
+            body = tr("apply.refused_body", path=path)
+        self.statusBar().showMessage(tr("dialogs.apply_failed_status"))
+        QMessageBox.critical(self, tr("apply.refused_title"), body)
 
     def _validate_applied_file(
         self,
@@ -3303,6 +3402,7 @@ class MainWindow(QMainWindow):
         try:
             # A file that is already gone (deleted outside the app while the
             # confirmation was open) is as cleared as one we delete.
+            clear_read_only(global_ini)
             global_ini.unlink(missing_ok=True)
             self._mark_game_file_changed()
             logger.info(f"Deleted {global_ini}")
@@ -3745,6 +3845,8 @@ class MainWindow(QMainWindow):
         self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
         if hasattr(self, "overlay_tab"):
             self.overlay_tab.refresh_styles()
+        if hasattr(self, "simple_page"):
+            self.simple_page.refresh_styles()
         self._render_document_browsers()
         self._apply_editor_dock_canvas_tint()
 
@@ -4283,9 +4385,7 @@ class MainWindow(QMainWindow):
 
     def _handle_import_ini(self):
         """Handle Import INI button: get source, validate, resolve conflicts, merge."""
-        from PyQt6.QtWidgets import QDialog
         from src.parser.ini_parser import parse_ini_file
-        from src.utils.user_ini_manager import save_user_ini_dict
         import tempfile
         import urllib.request
 
@@ -4327,99 +4427,179 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, tr("dialogs.empty_file_title"), tr("dialogs.empty_file_body"))
                 return
 
-            # Step 4: Validate against base.ini keys
-            if not self.default_values:
-                QMessageBox.warning(
-                    self, tr("import_flow.no_base_data_title"),
-                    tr("import_flow.no_base_data_body"),
-                )
-                return
-
-            valid_keys = {k: v for k, v in imported.items() if k in self.default_values}
-            excluded_count = len(imported) - len(valid_keys)
-
-            if not valid_keys:
-                QMessageBox.warning(
-                    self, tr("import_flow.no_valid_keys_title"),
-                    tr("import_flow.no_valid_keys_body", count=len(imported)),
-                )
-                return
-
-            # Step 5: Load current user.ini (strip_values=False so leading-space
-            # favourite prefixes round-trip verbatim — see issue #100).
-            user_ini_path = AppSettings.get_user_ini_path()
-            current_user = parse_ini_file(user_ini_path, strip_values=False) if user_ini_path.exists() else {}
-
-            # Step 6: Categorize keys
-            auto_add = {}
-            conflicts = {}
-            for key, imported_value in valid_keys.items():
-                current_value = current_user.get(key)
-                if current_value is None:
-                    auto_add[key] = imported_value
-                elif current_value != imported_value:
-                    conflicts[key] = (current_value, imported_value)
-                # else: identical, skip
-
-            # Step 7: Handle cases
-            if not auto_add and not conflicts:
-                QMessageBox.information(
-                    self, tr("import_flow.nothing_to_import_title"),
-                    tr("import_flow.nothing_to_import_body"),
-                )
-                return
-
-            if not conflicts:
-                reply = QMessageBox.question(
-                    self, tr("import_flow.confirm_title"),
-                    tr("import_flow.confirm_body", new_count=len(auto_add), excluded_count=excluded_count),
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                if reply != QMessageBox.StandardButton.Yes:
-                    return
-                resolutions = {}
-            else:
-                from src.gui.import_dialog import ImportConflictDialog
-                dialog = ImportConflictDialog(conflicts, len(auto_add), excluded_count, self)
-                if dialog.exec() != QDialog.DialogCode.Accepted:
-                    return
-                resolutions = dialog.get_resolutions()
-
-            # Step 8: Merge
-            final = dict(current_user)
-            final.update(auto_add)
-            final.update(resolutions)
-
-            # Step 9: Save
-            save_user_ini_dict(final, user_ini_path)
-
-            # Step 10: Reload. The table takes the values the import changed
-            # first, so the reload keeps them rather than an unapplied change
-            # to the same key, such as a Reset to Original (#531). A
-            # conflict kept as it is (Keep Current) changed nothing, so the
-            # table's own change of that key stays.
-            imported = {key: value for key, value in {**auto_add, **resolutions}.items()
-                        if current_user.get(key) != value}
-            for entry in self.entries:
-                if entry.key in imported:
-                    entry.custom_value = imported[entry.key]
-            self._show_loading_progress(tr("import_flow.reload_status"))
-
-            # Step 11: Summary
-            QMessageBox.information(
-                self, tr("import_flow.complete_title"),
-                tr("import_flow.complete_body", added=len(auto_add),
-                   resolved=len(resolutions), excluded=excluded_count),
-            )
+            self._import_override_values(imported)
 
         except Exception as e:
             logger.exception(f"Import failed: {e}")
-            QMessageBox.critical(self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e))
+            QMessageBox.critical(
+                self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e)
+            )
         finally:
             if temp_file:
                 try:
                     Path(temp_file.name).unlink(missing_ok=True)
                 except Exception:
                     pass
+
+    def _import_override_values(self, imported: dict) -> None:
+        """Add imported values to user.ini, asking about conflicts (#565).
+
+        Shared by Import INI and Import CSV. A value that is empty or the same
+        as the row's Default or Current text is skipped
+        (``strings_csv.plan_override_import``), so a full exported global.ini
+        or CSV only adds what was really changed, and an enhanced row keeps
+        updating after a game patch.
+        """
+        from PyQt6.QtWidgets import QDialog
+        from src.parser.ini_parser import parse_ini_file
+        from src.utils.strings_csv import plan_override_import
+        from src.utils.user_ini_manager import save_user_ini_dict
+
+        if not self.default_values:
+            QMessageBox.warning(
+                self, tr("import_flow.no_base_data_title"),
+                tr("import_flow.no_base_data_body"),
+            )
+            return
+
+        # strip_values=False so leading-space favourite prefixes round-trip
+        # verbatim (issue #100).
+        user_ini_path = AppSettings.get_user_ini_path()
+        current_user = (
+            parse_ini_file(user_ini_path, strip_values=False) if user_ini_path.exists() else {}
+        )
+        current_values = {entry.key: entry.original_value for entry in self.entries}
+        plan = plan_override_import(imported, self.default_values, current_values, current_user)
+
+        if plan.unknown == len(imported):
+            QMessageBox.warning(
+                self, tr("import_flow.no_valid_keys_title"),
+                tr("import_flow.no_valid_keys_body", count=len(imported)),
+            )
+            return
+
+        skipped_line = ("\n" + tr("import_flow.unchanged_skipped", count=plan.unchanged)
+                        if plan.unchanged else "")
+        if not plan.has_work:
+            QMessageBox.information(
+                self, tr("import_flow.nothing_to_import_title"),
+                tr("import_flow.nothing_to_import_body") + skipped_line,
+            )
+            return
+
+        if not plan.conflicts:
+            reply = QMessageBox.question(
+                self, tr("import_flow.confirm_title"),
+                tr("import_flow.confirm_body", new_count=len(plan.auto_add),
+                   excluded_count=plan.unknown) + skipped_line,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+            resolutions = {}
+        else:
+            from src.gui.import_dialog import ImportConflictDialog
+            dialog = ImportConflictDialog(plan.conflicts, len(plan.auto_add), plan.unknown, self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            resolutions = dialog.get_resolutions()
+
+        final = dict(current_user)
+        final.update(plan.auto_add)
+        final.update(resolutions)
+        save_user_ini_dict(final, user_ini_path)
+
+        # The table takes the values the import changed first, so the reload
+        # keeps them rather than an unapplied change to the same key, such as
+        # a Reset to Original (#531). A conflict kept as it is (Keep Current)
+        # changed nothing, so the table's own change of that key stays.
+        changed = {key: value for key, value in {**plan.auto_add, **resolutions}.items()
+                   if current_user.get(key) != value}
+        for entry in self.entries:
+            if entry.key in changed:
+                entry.custom_value = changed[entry.key]
+        self._show_loading_progress(tr("import_flow.reload_status"))
+
+        QMessageBox.information(
+            self, tr("import_flow.complete_title"),
+            tr("import_flow.complete_body", added=len(plan.auto_add),
+               resolved=len(resolutions), excluded=plan.unknown) + skipped_line,
+        )
+
+    def _handle_import_csv(self):
+        """More > Import CSV: read Key and Custom Value back from a CSV (#565)."""
+        import csv
+        from src.utils.strings_csv import CsvColumnsMissing, read_strings_csv
+
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("import_flow.select_csv_file_title"), "", tr("import_flow.csv_file_filter"))
+        if not path:
+            return
+        try:
+            imported = read_strings_csv(path)
+        except CsvColumnsMissing:
+            QMessageBox.warning(
+                self, tr("import_flow.csv_columns_missing_title"),
+                tr("import_flow.csv_columns_missing_body"),
+            )
+            return
+        except (OSError, csv.Error) as e:
+            logger.warning("Import CSV could not read %s: %s", path, e)
+            QMessageBox.critical(
+                self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e)
+            )
+            return
+        if not imported:
+            QMessageBox.warning(self, tr("dialogs.empty_file_title"), tr("dialogs.empty_file_body"))
+            return
+        try:
+            self._import_override_values(imported)
+        except Exception as e:
+            logger.exception(f"Import failed: {e}")
+            QMessageBox.critical(
+                self, tr("import_flow.error_title"), tr("import_flow.error_body", error=e)
+            )
+
+    def _export_csv(self):
+        """More > Export CSV: the rows the table shows, in its order (#565)."""
+        from src.utils.strings_csv import CsvRow, default_csv_filename, write_strings_csv
+
+        rows = []
+        for row in range(self._model.rowCount()):
+            entry = self.entries[self._model.entry_index_for_row(row)]
+            rows.append(CsvRow(
+                key=entry.key,
+                category=entry.category,
+                default_value=self.default_values.get(entry.key, ""),
+                current_value=entry.original_value,
+                custom_value=entry.custom_value,
+                status=entry.status,
+            ))
+        if not rows:
+            QMessageBox.information(
+                self, tr("dialogs.export_csv_title"), tr("dialogs.export_csv_empty_body"))
+            return
+
+        downloads_dir = Path.home() / "Downloads"
+        if not downloads_dir.exists():
+            downloads_dir = Path.home()
+        default_path = str(downloads_dir / default_csv_filename(AppSettings.get_active_channel()))
+        out_path_str, _ = QFileDialog.getSaveFileName(
+            self, tr("dialogs.export_csv_title"), default_path, tr("import_flow.csv_file_filter"))
+        if not out_path_str:
+            return
+        try:
+            count = write_strings_csv(out_path_str, rows)
+        except OSError as e:
+            logger.warning("Export CSV could not write %s: %s", out_path_str, e)
+            QMessageBox.critical(
+                self, tr("dialogs.export_failed_title"),
+                tr("dialogs.export_csv_failed_body", error=e),
+            )
+            return
+        QMessageBox.information(
+            self, tr("dialogs.export_complete_title"),
+            tr("dialogs.export_csv_done_body", count=count, path=out_path_str),
+        )
 
     def _get_import_source(self) -> str | None:
         """Show dialog to get a file path or URL for import."""
@@ -4492,6 +4672,7 @@ class MainWindow(QMainWindow):
             # Localization marks only after its delete: a failed restore is no
             # revert, so it must not clear the close reminder. The except
             # branch below covers a copy that fails part-way.
+            clear_read_only(target_path)
             shutil.copy2(str(backup_file_path), str(target_path))
             self._mark_game_file_changed()
 
@@ -5073,6 +5254,7 @@ class MainWindow(QMainWindow):
         # First, so a DataForge extraction the startup prompts start waits
         # for it rather than sweeping beside it.
         self._sweep_stale_working_folders_at_startup()
+        self._maybe_show_whats_new()
         self._start_startup_sync()
         self._start_smart_sync()
         self._report_installer_data_move()
@@ -5080,6 +5262,24 @@ class MainWindow(QMainWindow):
         self._maybe_prompt_post_import_apply()
         self._maybe_auto_scan_blueprints()
         self._check_language_translation_at_startup()
+
+    def _maybe_show_whats_new(self) -> None:
+        """Show this version's release notes once, after an install or update.
+
+        Runs after the update check, so an update taken there shows the new
+        version's notes on its own first launch, not this one's. A build with
+        no notes bundled shows nothing and records nothing, so the release
+        build that has them still shows them.
+        """
+        current = get_version()
+        if AppSettings.get_whats_new_seen_version() == current:
+            return
+        notes = bundled_release_notes(current)
+        if not notes:
+            return
+        WhatsNewDialog(self, version=current,
+                       notes_html=self.markdown_to_html(notes)).exec()
+        AppSettings.set_whats_new_seen_version(current)
 
     def _maybe_auto_scan_blueprints(self) -> None:
         """Run "Scan Logs for Owned Blueprints" on startup if opted in (#386).
@@ -5558,6 +5758,10 @@ class MainWindow(QMainWindow):
         self._action_clear_cache.setText(tr("toolbar.menu_clear_cache"))
         self._action_import_ini.setText(tr("toolbar.menu_import_ini"))
         self._action_export_ini.setText(tr("toolbar.menu_export_ini"))
+        self._action_import_csv.setText(tr("toolbar.menu_import_csv"))
+        self._action_import_csv.setToolTip(tr("toolbar.import_csv_tooltip"))
+        self._action_export_csv.setText(tr("toolbar.menu_export_csv"))
+        self._action_export_csv.setToolTip(tr("toolbar.export_csv_tooltip"))
         self._action_open_loc_dir.setText(tr("toolbar.open_loc_dir_btn"))
         self._action_test_plan.setText(tr("toolbar.menu_test_plan"))
         self._action_test_plan.setToolTip(tr("toolbar.test_plan_tooltip"))
@@ -8224,10 +8428,13 @@ class MainWindow(QMainWindow):
         from src.utils.owned_items import enclosings_from_tag_configs
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
+        self._bp_names_by_desc = {}
         self._blueprint_meta = build_blueprint_metadata(
             self.entries, enclosings=enclosings,
             default_values=self.default_values, bp_header=bp_header,
+            names_by_desc=self._bp_names_by_desc,
         )
+        self._read_mission_bp_descs()
         self._bp_item_names = set(self._blueprint_meta)
         # Deliberately broader than _bp_item_names -- every real item name
         # this install knows about, not just ones currently offered as a
@@ -8546,18 +8753,93 @@ class MainWindow(QMainWindow):
         loaded strings."""
         return self._rename_from_other_languages(names, "Import Owned Blueprints")
 
+    def _read_mission_bp_descs(self) -> None:
+        """Read the generator's record of each blueprint mission's
+        descriptions (blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE) for the
+        [BP Complete] title tag, from the folder the loaded enhancements come
+        from, named without making it. A small file (a few hundred titles),
+        read again only when its size or modified time changed since the
+        last load. Missing until the first generation that writes it, which
+        leaves every title without the tag.
+
+        Only reads. A missing or old record is never filled in from here by
+        starting a generation or reading DataForge: this runs on every load,
+        and the record is right again after the user's next generation (see
+        MISSION_BLUEPRINT_DESCS_FILE for why the generator owns it)."""
+        from src.utils.blueprint_meta import (
+            MISSION_BLUEPRINT_DESCS_FILE, read_mission_blueprint_descs,
+        )
+        path = AppSettings.get_base_ini_leaf().parent / MISSION_BLUEPRINT_DESCS_FILE
+        try:
+            st = path.stat()
+            key = (str(path), st.st_size, st.st_mtime_ns)
+        except OSError:
+            key = (str(path), None, None)
+        if key == self._mission_bp_descs_key:
+            return
+        self._mission_bp_descs_key = key
+        self._mission_bp_descs = read_mission_blueprint_descs(path) if key[1] is not None else {}
+        if self._mission_bp_descs:
+            logger.info(
+                f"[BP Complete]: {len(self._mission_bp_descs)} blueprint missions from {path}"
+            )
+        else:
+            logger.info(f"[BP Complete]: no mission record at {path} until the next generation")
+
+    def _bp_complete_record(self, owned) -> dict:
+        """The generator's mission record (_read_mission_bp_descs) while the
+        General Tags switch is on and something is owned, else empty: with
+        nothing to check, neither the table nor Apply scans for the tag."""
+        if not owned or not self._mission_bp_descs:
+            return {}
+        if not AppSettings.get_mission_title_tags()[AppSettings.MISSION_TITLE_TAG_BP_COMPLETE]:
+            return {}
+        return self._mission_bp_descs
+
+    def _bp_complete_titles(self, owned) -> frozenset:
+        """Title keys the table tags [BP Complete]: missions whose every
+        blueprint is in *owned*, while the General Tags switch is on. Built
+        from the last load's strings (_rebuild_blueprint_metadata). A set
+        check over a few hundred titles, cheap enough for every Owned change,
+        which is why it works from the generator's record and never from
+        DataForge. Apply works the titles out again from the strings it
+        writes (_merge_for_apply), which match these once the load is current."""
+        record = self._bp_complete_record(owned)
+        if not record:
+            return frozenset()
+        from src.utils.owned_items import complete_mission_titles
+        return complete_mission_titles(record, self._bp_names_by_desc, owned)
+
     def _recompute_owned(self):
         """#157: weave/strip [Owned] tags on blueprint-list bullets to match the
         owned set and refresh the table. Called after every load and on every
         Owned change; the transform is idempotent so repeated runs never double
         the tag. The eligible-name set + filter metadata are built separately by
-        `_rebuild_blueprint_metadata` (cached, not rescanned here)."""
-        from src.utils.owned_items import apply_owned_to_value, enclosings_from_tag_configs
+        `_rebuild_blueprint_metadata` (cached, not rescanned here). Weaves the
+        [BP Complete] title tag the same way (`_bp_complete_titles`)."""
+        from src.utils.owned_items import (
+            BP_TITLE_TAG, apply_bp_complete_to_title, apply_owned_to_value, bp_title_tag,
+            enclosings_from_tag_configs, has_bp_complete_tag,
+        )
         enclosings = enclosings_from_tag_configs(AppSettings.get_all_tag_configs())
         bp_header = self._bp_header()
         owned = AppSettings.get_owned_items()
+        complete = self._bp_complete_titles(owned)
+        under = self._bp_tags_under_complete
         for e in self.entries:
             new_val = apply_owned_to_value(e.original_value, owned, enclosings=enclosings, bp_header=bp_header)
+            # [BP Complete] in place of the [BP] / [BP?] tag on the title of a
+            # mission whose every blueprint is owned, and that tag back once
+            # one is not (or the switch is off). The value is edited in place,
+            # so the tag it replaced is remembered to be put back.
+            if e.key in complete or has_bp_complete_tag(new_val):
+                new_val = apply_bp_complete_to_title(
+                    new_val, False, under.get(e.key, BP_TITLE_TAG))
+                if e.key in complete:
+                    under[e.key] = bp_title_tag(new_val)
+                    new_val = apply_bp_complete_to_title(new_val, True)
+                else:
+                    under.pop(e.key, None)
             if new_val != e.original_value:
                 e.original_value = new_val
         self._model.set_owned_state(self._bp_item_names, owned, enclosings=enclosings)
@@ -8955,7 +9237,7 @@ class MainWindow(QMainWindow):
         self._refresh_sco_catalog()
         self._sco_overlay.start()
         self._apply_sco_options()
-        self.overlay_tab.set_running(True)
+        self._mirror_sco_running(True)
 
     def _refresh_sco_catalog(self):
         """Feed the drawer's Minerals and Crafting searches.
@@ -8995,9 +9277,17 @@ class MainWindow(QMainWindow):
         self._stop_sco_log_watcher()
         if self._sco_overlay is not None:
             self._sco_overlay.stop()
+        self._mirror_sco_running(False)
+
+    def _mirror_sco_running(self, running: bool):
+        """Show the overlay's state on the Overlay tab's and the Simple page's
+        start buttons (the toolbar's is the one that toggled)."""
         overlay_tab = getattr(self, "overlay_tab", None)  # closeEvent may run first
         if overlay_tab is not None:
-            overlay_tab.set_running(False)
+            overlay_tab.set_running(running)
+        simple_page = getattr(self, "simple_page", None)
+        if simple_page is not None:
+            simple_page.set_overlay_running(running)
 
     def _apply_sco_options(self):
         """Push the Overlay tab's switches to a running overlay."""

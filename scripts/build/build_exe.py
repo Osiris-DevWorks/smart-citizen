@@ -236,6 +236,15 @@ common_args = [
     '--collect-all=concurrent',
 ]
 
+# This version's release notes, for the What's New dialog after an install or
+# update. A build made before the notes are written (a tester preview) goes
+# without them, and the dialog stays hidden. Mirrors SmartCitizen.spec.
+release_notes_file = os.path.join(root_dir, 'docs', f'{current_version}-RELEASE-NOTES.md')
+if os.path.isfile(release_notes_file):
+    common_args += ['--add-data', f'{release_notes_file}{os.pathsep}docs']
+else:
+    print(f"Note: docs/{current_version}-RELEASE-NOTES.md not found; What's New stays hidden")
+
 # Build --onedir version only — feeds the Inno Setup installer. The portable
 # --onefile build was retired because we release the installer as the sole
 # distribution artifact.

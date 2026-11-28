@@ -50,7 +50,7 @@ Procedure:
    - **Stale sections** — items left over from a previous release's scope, or items describing UI that this cycle renamed or removed.
 3. Report both lists. For each missing area, draft the section title and imperative, self-contained items in the module's existing style ("do X, confirm Y" — a tester needs no other doc).
 
-Mechanics to remember: `plan_hash()` changes automatically with the content, dropping testers' stale check-marks, so no manual versioning is needed. The plan content must land via a normal PR to the release branch (branch protection blocks direct pushes).
+Mechanics to remember: `plan_hash()` changes automatically with the content, dropping testers' stale check-marks, so no manual versioning is needed. Each feature push should already have added its own section, so this pass mostly catches drift. Plan changes are pushed straight to the release branch as one commit.
 
 **CHECKPOINT — present the proposed Test Plan additions/removals and ask before editing `test_plan.py`.** On approval, apply them and remind the user to re-trigger the preview builds (re-add the label or run the workflow manually) so testers get the updated plan.
 
@@ -181,7 +181,7 @@ Procedure:
 
 1. Find the release PR: `gh pr list --base main --head release/X.Y.Z --state open --json number,title`.
 2. If none exists, this is the moment to open it — `main` only ever receives the release-branch merge via PR, so it's needed for the ship step anyway. Title `Release X.Y.Z`, body summarizing the release scope (link the release notes if drafted). **Opening the PR is not merging it** — the merge stays the user's ship trigger.
-3. **Refresh the Test Plan checklist — always the step right before labeling.** Step 4 ran earlier, but steps 3–7 can land more commits on the branch (language backfills, acknowledgement edits, close-out fixes). Re-run step 4's delta pass — `git log main..HEAD --oneline` vs the current `TEST_SECTIONS` in `src/utils/test_plan.py` — and draft items for anything user-visible that landed since. If there are updates, present them, and on approval land them via a normal PR to the release branch (branch protection blocks direct pushes), so the plan is final before any artifact builds. If nothing changed since step 4, say so and move on.
+3. **Refresh the Test Plan checklist — always the step right before labeling.** Step 4 ran earlier, but steps 3–7 can land more commits on the branch (language backfills, acknowledgement edits, close-out fixes). Re-run step 4's delta pass — `git log main..HEAD --oneline` vs the current `TEST_SECTIONS` in `src/utils/test_plan.py` — and draft items for anything user-visible that landed since. If there are updates, present them, and on approval push them straight to the release branch as one commit, so the plan is final before any artifact builds. If nothing changed since step 4, say so and move on.
 4. Add both labels: `gh pr edit <N> --add-label build-installer --add-label build-portable`.
 5. Report the two workflow runs once they start (`gh run list --limit 2`) so the user can watch them, and note the artifact names (`smartcitizen-installer-{SHA}`, `smartcitizen-portable-{SHA}`, 30-day retention).
 

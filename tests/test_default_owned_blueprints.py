@@ -448,6 +448,9 @@ class _Stub:
     _queue_deferred_starter_report = MainWindow._queue_deferred_starter_report
     _flush_deferred_starter_report = MainWindow._flush_deferred_starter_report
 
+    def _read_mission_bp_descs(self):
+        """The [BP Complete] record is not what these tests are about."""
+
     def __init__(self, entries=(), log_names=(), silent=False):
         self.entries = list(entries)
         self.default_values = {}

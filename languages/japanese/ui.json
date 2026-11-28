@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Smart Citizen オーバーレイ (SCO) を開始または停止します：ゲーム画面上で採掘シグネチャを解読し、ブループリントドロワーを表示します。ボーダーレスウィンドウモードが必要です。"
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "CSV をインポート…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "CSV をエクスポート…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "CSV ファイルから編集した文字列を取り込みます"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "表に表示されている行を CSV ファイルに保存します"
     }
   },
   "filters": {
@@ -1670,6 +1686,10 @@
       "ht": "",
       "at": "評判トラックタグ（評判タグの後に「(Security)」「(Contractor)」を追加）"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "設計図コンプリート（「[BP Complete]」を追加）"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "スキャン/採掘任務"
@@ -2286,6 +2306,18 @@
       "ht": "",
       "at": "アップデートを確認できませんでした：\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "新機能"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} がインストールされました。変更内容は次のとおりです。"
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "閉じる"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "リセットするものがありません"
@@ -2449,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "ウィンドウサイズ、パネルのレイアウト、文字列エディターの列幅を既定値に戻しますか？\n\n保存されたサイズは破棄されます。設定とローカライズデータには影響しません。"
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "CSV をエクスポート"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "エクスポートする行が表に表示されていません。フィルターを解除してもう一度お試しください。"
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} 行を保存しました:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "CSV ファイルを保存できませんでした:\n{error}"
     }
   },
   "progress": {
@@ -2771,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "INI ファイルのインポートに失敗しました：\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "CSV ファイルを選択"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV ファイル (*.csv);;すべてのファイル (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "この CSV を読み込めません"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "ファイルには Key 列と Custom Value 列が必要です。Smart Citizen から CSV をエクスポートすると形式を確認できます。"
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} 件をスキップしました（空、または元のテキストと同じ）。"
     }
   },
   "restore_backup": {
@@ -3132,9 +3200,25 @@
       "ht": "",
       "at": "{target_path} に適用しました\n\n  ユーザー編集数：{user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "[BP Complete] が付いたミッション: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "ゲームへの適用に失敗しました：{error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows がゲームフォルダーをブロックしました"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen は次の場所に書き込めませんでした:\n{path}\n\nStar Citizen が起動中で、ファイルを開いています。ゲームを閉じてから、もう一度「適用」をクリックしてください。"
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows が Smart Citizen による次の場所への書き込みを許可しませんでした:\n{path}\n\n次を試してから、もう一度「適用」をクリックしてください:\n1. Star Citizen と RSI Launcher を閉じます。\n2. Windows セキュリティで「ウイルスと脅威の防止」>「ランサムウェア防止」を開き、コントロールされたフォルダー アクセスで Smart Citizen を許可します。ほかのウイルス対策ソフトでも許可してください。\n3. ゲームが Program Files にある場合は、Smart Citizen を右クリックして「管理者として実行」を選びます。"
     }
   },
   "test_plan": {
@@ -3173,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "バグ、想定外の挙動、提案などを記入してください..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "メモ（任意）"
     },
     "copied_status": {
       "ht": "",

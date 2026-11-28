@@ -40,13 +40,12 @@ def test_the_tour_ends_on_the_guides_step_with_the_video_link():
     assert wiring["guides"]["link_url"] == KAROLINGER_VIDEO_TUTORIAL_URL
 
 
-def test_footer_images_are_scaled_to_the_height_asked_for(qapp):
+def test_the_footer_logo_is_scaled_to_the_footer_height(qapp):
     from src.gui.main_window import MainWindow
 
-    assert MainWindow._footer_pixmap("discord.png").height() == MainWindow._FOOTER_IMAGE_HEIGHT
-    pixmap = MainWindow._footer_pixmap("karolinger-guides.png", MainWindow._KAROLINGER_IMAGE_HEIGHT)
+    pixmap = MainWindow._footer_pixmap("karolinger-guides.png")
     assert pixmap is not None
-    assert pixmap.height() == MainWindow._KAROLINGER_IMAGE_HEIGHT
+    assert pixmap.height() == MainWindow._FOOTER_IMAGE_HEIGHT
     assert MainWindow._footer_pixmap("no-such-image.png") is None
 
 

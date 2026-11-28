@@ -82,6 +82,32 @@ them against the new source.
 
 ## Backfill log
 
+- **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):**
+  `[BP Complete]` now takes the place of `[BP]` / `[BP?]` instead of following
+  it. In `docs/HELP.md` BP Completed "adds `[BP Complete]` after it" became
+  "replaces it with `[BP Complete]`", and the 11 translated `HELP.md` files
+  say the same (AI-written). Checked by a script: each old text matched once
+  and every line ending was kept. Not back-translated.
+- **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):** the Apply
+  success box now counts the missions it marked `[BP Complete]`, on a line
+  under Missions while the General Tags switch is on. One new key,
+  `apply.bp_complete_count` (`Missions marked [BP Complete]: {count}`), AI
+  `at` in all 11 other languages, `[BP Complete]` and `{count}` kept as is. A
+  new key, so nothing needs human re-review. Not back-translated.
+- **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):** the
+  `[BP Complete]` mission title tag. One new key,
+  `enhancements.mt_tag_bp_complete_cb` (`BP Completed (adds "[BP Complete]")`,
+  the General Tags checkbox, placed right after BP Tag), AI `at` in all 11
+  other languages, `[BP Complete]` kept as is in every one because the tag
+  itself is English. `docs/HELP.md` gained a sentence after the General Tags
+  passage (what the tag means, that it follows the Owned set with no new
+  generation but needs one generation first, and that hiding POTENTIAL
+  BLUEPRINTS hides it) and an Apply Owned Tags note; `docs/ABOUT.md` and
+  `README.md` gained one sentence in the Blueprint Tracker entry. The 11
+  translated `HELP.md` and `ABOUT.md` files gained the same words, naming
+  General Tags, the checkbox and Generate Enhancements as each `ui.json` does.
+  A new key, so nothing needs human re-review. Checked by a script: each
+  anchor matched once and every line ending was kept. Not back-translated.
 - **3.1.0 cycle (2026-11-15, Claude Opus 5.5, minimize to tray):** seven new
   keys for the Config tab's **Minimize to Tray**, the tray icon's menu and
   its one-time "still running" notice: `config.minimize_to_tray_cb`,

@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Smart Citizen Katmanını (SCO) başlatır veya durdurur: oyunun üzerinde maden imzası çözümleme ve bir plan çekmecesi. Kenarlıksız pencere modu gerekir."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "CSV İçe Aktar…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "CSV Dışa Aktar…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Düzenlenmiş metinleri bir CSV dosyasından geri al"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Tabloda görünen satırları bir CSV dosyasına kaydet"
     }
   },
   "filters": {
@@ -1682,6 +1698,10 @@
       "ht": "",
       "at": "Rep Yolu Etiketi (Rep etiketine \"(Security)\" / \"(Contractor)\" ekler)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP Tamamlandı (\"[BP Complete]\" ekler)"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Tarama/Madencilik Görevleri"
@@ -2286,6 +2306,18 @@
       "ht": "",
       "at": "Güncellemeler denetlenemedi:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Yenilikler"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} yüklendi. Değişenler şunlar."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Kapat"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Sıfırlanacak Bir Şey Yok"
@@ -2449,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Pencere boyutu, panel düzeni ve Metin Düzenleyici sütun genişlikleri varsayılanlarına sıfırlansın mı?\n\nKaydedilmiş boyutlarınız unutulacak. Ayarlarınız ve yerelleştirme verileriniz etkilenmez."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "CSV Dışa Aktar"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "Tabloda dışa aktarılacak satır yok. Bir filtreyi temizleyip tekrar deneyin."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} satır kaydedildi:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "CSV dosyası kaydedilemedi:\n{error}"
     }
   },
   "progress": {
@@ -2771,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "INI dosyası içe aktarılamadı:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Bir CSV dosyası seçin"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV dosyaları (*.csv);;Tüm dosyalar (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Bu CSV okunamıyor"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "Dosyada bir Key sütunu ve bir Custom Value sütunu olmalı. Düzeni görmek için Smart Citizen'dan bir CSV dışa aktarın."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} atlandı (boş veya özgün metinle aynı)."
     }
   },
   "restore_backup": {
@@ -3132,9 +3200,25 @@
       "ht": "",
       "at": "{target_path} konumuna uygulandı\n\n  Kullanıcı düzenlemeleri: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "[BP Complete] olarak işaretlenen görevler: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Oyuna uygulanamadı: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows oyun klasörünü engelledi"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen şuraya yazamadı:\n{path}\n\nStar Citizen çalışıyor ve dosyayı açık tutuyor. Oyunu kapatın, ardından Uygula'ya tekrar tıklayın."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows, Smart Citizen'ın şuraya yazmasına izin vermedi:\n{path}\n\nŞunları deneyin, ardından Uygula'ya tekrar tıklayın:\n1. Star Citizen'ı ve RSI Launcher'ı kapatın.\n2. Windows Güvenliği'nde Virüs ve tehdit koruması > Fidye yazılımı koruması'nı açın ve Denetimli klasör erişiminde Smart Citizen'a izin verin. Başka bir antivirüs kullanıyorsanız orada da izin verin.\n3. Oyun Program Files içindeyse Smart Citizen'a sağ tıklayıp Yönetici olarak çalıştır'ı seçin."
     }
   },
   "test_plan": {
@@ -3173,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "Hataları, beklenmedik durumları veya önerileri açıklayın..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Notlar (isteğe bağlı)"
     },
     "copied_status": {
       "ht": "",

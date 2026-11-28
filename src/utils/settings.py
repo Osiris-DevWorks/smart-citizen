@@ -451,6 +451,7 @@ class AppSettings:
     # Settings keys - Test Plan panel (#144)
     TEST_PLAN_CHECKS = "test_plan/checks"        # JSON: {"hash": ..., "checked": [...]}
     TEST_PLAN_TESTER = "test_plan/tester_name"
+    TEST_PLAN_ITEM_NOTES = "test_plan/item_notes"  # JSON: {"hash": ..., "notes": {key: text}}
     TEST_WEBHOOK_URL = "test_plan/webhook_url"   # falls back to env var when unset
     TEST_WEBHOOK_ENV = "SMART_CITIZEN_TEST_WEBHOOK_URL"
 
@@ -511,7 +512,10 @@ class AppSettings:
     # ace title tag and the rep/xp title tag were both unconditionally shown
     # before this split). migrate_title_tag_settings() carries a user's prior
     # blueprint_tag / ace choice forward once.
-    MISSION_TITLE_TAG_KEYS = ("rep", "blueprint", "ace", "rs", "rep_track")
+    MISSION_TITLE_TAG_BP_COMPLETE = "bp_complete"
+    MISSION_TITLE_TAG_KEYS = (
+        "rep", "blueprint", MISSION_TITLE_TAG_BP_COMPLETE, "ace", "rs", "rep_track",
+    )
     _MISSION_TITLE_TAG_SETTING = {
         "rep":       "mission_title_tag/rep",
         "blueprint": "mission_title_tag/blueprint",
@@ -527,6 +531,12 @@ class AppSettings:
         # suffix (MISSION DETAILS' Reputation field) is unconditional and
         # always on, independent of this toggle.
         "rep_track": "mission_title_tag/rep_track",
+        # [BP Complete] on a mission whose every blueprint is owned. Unlike
+        # the tags above, the generator does not write it: MainWindow weaves
+        # it in on every load and Owned change, as it weaves [Owned] into
+        # blueprint bullets (owned_items.apply_bp_complete_to_title), so a
+        # change needs no Generate. Read by MainWindow._bp_complete_titles.
+        MISSION_TITLE_TAG_BP_COMPLETE: "mission_title_tag/bp_complete",
     }
     # Per-field default for get_mission_title_tags() — every title tag
     # defaults on except where overridden here.
@@ -581,6 +591,9 @@ class AppSettings:
     # new steps worth showing again. Empty string means "never shown".
     TUTORIAL_COMPLETED_VERSION = "tutorial_completed_version"
     TUTORIAL_DISABLED = "tutorial_disabled"
+    # The app version whose What's New dialog was last shown, so it shows
+    # once after an install or an update. Empty means never shown.
+    WHATS_NEW_SEEN_VERSION = "whats_new_seen_version"
 
     # Settings keys - Window
     # Minimize to the system tray instead of the taskbar (Config tab,
@@ -627,13 +640,16 @@ class AppSettings:
     # languages/sources.json map. Keyed LANG_SOURCE_OVERRIDE_PREFIX/<language>.
     LANG_SOURCE_OVERRIDE_PREFIX = "language_source_url"
 
+    # The Missions checkbox's file key (ENHANCEMENTS_FILES, ENHANCEMENT_CATEGORY_FILES).
+    ENHANCEMENT_FILE_MISSIONS = "mission_rewards"
+
     # Enhancements cache filenames (written by generate_enhancements_ini.py into cache dir)
     ENHANCEMENTS_FILES = {
         "ship_descs":          "ships_desc_enhancements.ini",
         "component_descs":     "components_desc_enhancements.ini",
         "ship_weapon_descs":   "ship_weapons_desc_enhancements.ini",
         "fps_weapon_descs":    "fps_weapons_desc_enhancements.ini",
-        "mission_rewards":     "mission_rewards_enhancements.ini",
+        ENHANCEMENT_FILE_MISSIONS: "mission_rewards_enhancements.ini",
         "commodity_crafting":  "commodity_crafting_enhancements.ini",
         "journal":            "journal_enhancements.ini",
         "missile_enhancements": "missile_enhancements.ini",
@@ -656,7 +672,7 @@ class AppSettings:
         "ships":       ["ship_descs"],
         "ship_items":  ["component_descs", "ship_weapon_descs", "missile_enhancements"],
         "gear":        ["fps_weapon_descs"],
-        "missions":    ["mission_rewards"],
+        "missions":    [ENHANCEMENT_FILE_MISSIONS],
         "commodities": ["commodity_crafting"],
         "journal":     ["journal"],
         "medical_consumables": ["medical_consumables"],
@@ -901,7 +917,8 @@ class AppSettings:
     #   - the blueprint log watermark: scan position, per-channel, and
     #     resetting it only forces a slow full re-scan.
     #   - the test-plan keys: tester identity and per-run progress.
-    #   - tutorial_completed_version: per-install first-run state.
+    #   - tutorial_completed_version and whats_new_seen_version: per-install
+    #     first-run state.
     #   - tray_notice_shown: the same kind of state, for the one-time "still
     #     running" notice on the first trip to the tray.
     #   - the starter-blueprint seed marker (#416): it describes the owned
@@ -916,10 +933,12 @@ class AppSettings:
         SCO_ORDER,
         DEFAULT_BLUEPRINTS_SEED,
         "tutorial_completed_version",
+        WHATS_NEW_SEEN_VERSION,
         TRAY_NOTICE_SHOWN,
         "test_plan/checks",
         "test_plan/tester_name",
         "test_plan/webhook_url",
+        "test_plan/item_notes",
     })
     # Prefixes of the same, for per-channel keys whose full name is dynamic.
     PROFILE_DEFAULT_EXCLUDE_PREFIXES = ("blueprint_log_watermark",)
@@ -1239,6 +1258,36 @@ class AppSettings:
         AppSettings.settings().setValue(AppSettings.TEST_PLAN_CHECKS, payload)
 
     @staticmethod
+    def get_test_plan_item_notes() -> dict:
+        """Return the tester's note per item key, or empty if the plan changed.
+
+        Kept against the plan hash like the check-marks, so a note never ends
+        up on a different item after TEST_SECTIONS changes.
+        """
+        from src.utils.test_plan import plan_hash
+        raw = AppSettings.settings().value(AppSettings.TEST_PLAN_ITEM_NOTES, "")
+        if not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return {}
+        if not isinstance(data, dict) or data.get("hash") != plan_hash():
+            return {}
+        notes = data.get("notes", {})
+        if not isinstance(notes, dict):
+            return {}
+        return {str(k): str(v) for k, v in notes.items() if str(v).strip()}
+
+    @staticmethod
+    def set_test_plan_item_notes(notes: dict) -> None:
+        """Persist the tester's per-item notes against the current plan hash."""
+        from src.utils.test_plan import plan_hash
+        kept = {k: v for k, v in notes.items() if v.strip()}
+        payload = json.dumps({"hash": plan_hash(), "notes": kept}, sort_keys=True)
+        AppSettings.settings().setValue(AppSettings.TEST_PLAN_ITEM_NOTES, payload)
+
+    @staticmethod
     def get_tester_name() -> str:
         return AppSettings.settings().value(AppSettings.TEST_PLAN_TESTER, "")
 
@@ -1374,7 +1423,7 @@ class AppSettings:
     @staticmethod
     def get_mission_title_tags() -> dict:
         """Return {field: enabled} for the mission TITLE tags (2.2.0, "General
-        Tags"): rep/xp, blueprint, ace, rep_track. Independent of
+        Tags"): rep/xp, blueprint, ace, rs, rep_track, bp_complete. Independent of
         get_mission_detail_fields() — see MISSION_TITLE_TAG_KEYS. Every field
         defaults to True (matching prior, unsplit behaviour) except where
         overridden in _MISSION_TITLE_TAG_DEFAULTS (currently just
@@ -1775,6 +1824,7 @@ class AppSettings:
         FONT_SIZE,
         ONEDRIVE_WARNING_DISMISSED,
         TUTORIAL_COMPLETED_VERSION,
+        WHATS_NEW_SEEN_VERSION,
         TRAY_NOTICE_SHOWN,
         MERGE_HIERARCHY,
     })
@@ -2254,6 +2304,17 @@ class AppSettings:
     def set_tutorial_completed_version(version: str) -> None:
         """Record that the guided tour was completed for *version*."""
         AppSettings.settings().setValue(AppSettings.TUTORIAL_COMPLETED_VERSION, version)
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_whats_new_seen_version() -> str:
+        """App version whose What's New dialog was last shown, or '' if never."""
+        return AppSettings.settings().value(AppSettings.WHATS_NEW_SEEN_VERSION, "")
+
+    @staticmethod
+    def set_whats_new_seen_version(version: str) -> None:
+        """Record that the What's New dialog was shown for *version*."""
+        AppSettings.settings().setValue(AppSettings.WHATS_NEW_SEEN_VERSION, version)
         AppSettings.settings().sync()
 
     @staticmethod
@@ -3792,10 +3853,15 @@ class AppSettings:
         Generate button and the language switch. An empty stamp means a run
         was cut off or failed after it started (see
         :meth:`invalidate_enhancements_stamp`), or nothing was ever generated.
+
+        A set whose Missions file has no [BP Complete] mission record beside it
+        is not current either (:meth:`_mission_record_missing`).
         """
         stamp = AppSettings.get_enhancements_stamp(language)
-        return bool(stamp) and stamp == AppSettings.enhancements_stamp_value(
-            AppSettings.get_dataforge_build_key(), language)
+        if not stamp or stamp != AppSettings.enhancements_stamp_value(
+                AppSettings.get_dataforge_build_key(), language):
+            return False
+        return not AppSettings._mission_record_missing(language)
 
     @staticmethod
     def enhancements_stamp_value(build_key: str, language: "str | None" = None) -> str:
@@ -3813,6 +3879,29 @@ class AppSettings:
             language = AppSettings.get_selected_language()
         text = table_fingerprint(language)
         return f"{build_key}|text={text}" if text else build_key
+
+    @staticmethod
+    def _mission_record_missing(language: "str | None" = None) -> bool:
+        """True when Missions is generated for *language* but the [BP Complete]
+        mission record (``blueprint_meta.MISSION_BLUEPRINT_DESCS_FILE``) is not
+        beside it.
+
+        Only a generation writes the record, and a set generated before the
+        record existed still carries a stamp that matches the DataForge build,
+        so without this the app called it current: the startup check stayed
+        quiet, Generate stayed grey, and no title got the tag until a game
+        patch. Counting it as out of date makes the app offer that one
+        generation. It never starts one itself."""
+        missions = AppSettings.ENHANCEMENT_FILE_MISSIONS
+        if missions not in AppSettings.get_enabled_enhancement_categories():
+            return False
+        from src.utils.blueprint_meta import MISSION_BLUEPRINT_DESCS_FILE
+        folder = AppSettings.get_enhancements_dir(language)
+        try:
+            return ((folder / AppSettings.ENHANCEMENTS_FILES[missions]).is_file()
+                    and not (folder / MISSION_BLUEPRINT_DESCS_FILE).is_file())
+        except OSError:
+            return False
 
     @staticmethod
     def invalidate_enhancements_stamp(folder: Path) -> None:

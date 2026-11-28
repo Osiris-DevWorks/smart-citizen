@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "Start or stop the Smart Citizen Overlay (SCO): mining signature decoding and a blueprint drawer over the game. Needs borderless windowed mode.",
       "at": ""
+    },
+    "menu_import_csv": {
+      "ht": "Import CSV…",
+      "at": ""
+    },
+    "menu_export_csv": {
+      "ht": "Export CSV…",
+      "at": ""
+    },
+    "import_csv_tooltip": {
+      "ht": "Bring edited strings back from a CSV file",
+      "at": ""
+    },
+    "export_csv_tooltip": {
+      "ht": "Save the rows the table shows to a CSV file",
+      "at": ""
     }
   },
   "filters": {
@@ -1682,6 +1698,10 @@
       "ht": "Rep Track Tag (adds \"(Security)\" / \"(Contractor)\" to the Rep tag)",
       "at": ""
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "BP Completed (adds \"[BP Complete]\")",
+      "at": ""
+    },
     "mt_scanning_group": {
       "ht": "Scanning/Mining Missions",
       "at": ""
@@ -2286,6 +2306,18 @@
       "ht": "Could not check for updates:\n\n{message}",
       "at": ""
     },
+    "whats_new_title": {
+      "ht": "What's New",
+      "at": ""
+    },
+    "whats_new_body": {
+      "ht": "Smart Citizen v{version} is installed. Here is what changed.",
+      "at": ""
+    },
+    "whats_new_close": {
+      "ht": "Close",
+      "at": ""
+    },
     "nothing_to_reset_title": {
       "ht": "Nothing to Reset",
       "at": ""
@@ -2448,6 +2480,22 @@
     },
     "reset_proportions_body": {
       "ht": "Reset the window size, panel layout and String Editor column widths back to their defaults?\n\nYour saved sizes will be forgotten. Your settings and localization data are not affected.",
+      "at": ""
+    },
+    "export_csv_title": {
+      "ht": "Export CSV",
+      "at": ""
+    },
+    "export_csv_empty_body": {
+      "ht": "The table shows no rows to export. Clear a filter and try again.",
+      "at": ""
+    },
+    "export_csv_done_body": {
+      "ht": "Saved {count} rows to:\n{path}",
+      "at": ""
+    },
+    "export_csv_failed_body": {
+      "ht": "Could not save the CSV file:\n{error}",
       "at": ""
     }
   },
@@ -2770,6 +2818,26 @@
     },
     "error_body": {
       "ht": "Failed to import INI file:\n{error}",
+      "at": ""
+    },
+    "select_csv_file_title": {
+      "ht": "Choose a CSV file",
+      "at": ""
+    },
+    "csv_file_filter": {
+      "ht": "CSV files (*.csv);;All files (*)",
+      "at": ""
+    },
+    "csv_columns_missing_title": {
+      "ht": "Can't Read This CSV",
+      "at": ""
+    },
+    "csv_columns_missing_body": {
+      "ht": "The file needs a Key column and a Custom Value column. Export a CSV from Smart Citizen to see the layout.",
+      "at": ""
+    },
+    "unchanged_skipped": {
+      "ht": "{count} skipped (empty, or the same as the original text).",
       "at": ""
     }
   },
@@ -3132,8 +3200,24 @@
       "ht": "Applied to {target_path}\n\n  User edits: {user_count}\n\n{enhancement_block}",
       "at": ""
     },
+    "bp_complete_count": {
+      "ht": "Missions marked [BP Complete]: {count}",
+      "at": ""
+    },
     "failed_body": {
       "ht": "Failed to apply to game: {error}",
+      "at": ""
+    },
+    "refused_title": {
+      "ht": "Windows Blocked the Game Folder",
+      "at": ""
+    },
+    "refused_game_running_body": {
+      "ht": "Smart Citizen could not write to:\n{path}\n\nStar Citizen is running and has the file open. Close the game, then click Apply again.",
+      "at": ""
+    },
+    "refused_body": {
+      "ht": "Windows did not let Smart Citizen write to:\n{path}\n\nTry these, then click Apply again:\n1. Close Star Citizen and the RSI Launcher.\n2. In Windows Security, open Virus & threat protection > Ransomware protection and allow Smart Citizen through Controlled folder access. Allow it in any other antivirus too.\n3. If the game is in Program Files, right-click Smart Citizen and choose Run as administrator.",
       "at": ""
     }
   },
@@ -3172,6 +3256,10 @@
     },
     "notes_placeholder": {
       "ht": "Describe any bugs, surprises, or suggestions...",
+      "at": ""
+    },
+    "item_notes_placeholder": {
+      "ht": "Notes (optional)",
       "at": ""
     },
     "copied_status": {

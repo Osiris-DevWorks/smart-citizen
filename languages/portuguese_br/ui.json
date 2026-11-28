@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Iniciar ou parar a Sobreposição do Smart Citizen (SCO): decodificação de assinaturas de mineração e uma gaveta de blueprints sobre o jogo. Requer o modo janela sem bordas."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "Importar CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "Exportar CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Trazer os textos editados de um arquivo CSV"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Salvar as linhas que a tabela mostra em um arquivo CSV"
     }
   },
   "filters": {
@@ -1682,6 +1698,10 @@
       "ht": "",
       "at": "Tag de trilha de reputação (adiciona \"(Security)\" / \"(Contractor)\" à tag Rep)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP concluídos (adiciona \"[BP Complete]\")"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missões de escaneamento/mineração"
@@ -2286,6 +2306,18 @@
       "ht": "Não foi possível verificar se há atualizações:\n\n{message}",
       "at": "Não foi possível verificar se há atualizações:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Novidades"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "O Smart Citizen v{version} está instalado. Veja o que mudou."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Fechar"
+    },
     "nothing_to_reset_title": {
       "ht": "Nada para Reiniciar",
       "at": "Nada para Reiniciar"
@@ -2449,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Redefinir o tamanho da janela, o layout dos painéis e a largura das colunas do editor de strings para os padrões?\n\nOs tamanhos salvos serão esquecidos. Suas configurações e dados de localização não são afetados."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "Exportar CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "A tabela não mostra linhas para exportar. Limpe um filtro e tente de novo."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} linhas salvas em:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "Não foi possível salvar o arquivo CSV:\n{error}"
     }
   },
   "progress": {
@@ -2771,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "Falha ao importar o arquivo INI:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Escolha um arquivo CSV"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "Arquivos CSV (*.csv);;Todos os arquivos (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Não é possível ler este CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "O arquivo precisa de uma coluna Key e de uma coluna Custom Value. Exporte um CSV do Smart Citizen para ver o formato."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} ignoradas (vazias ou iguais ao texto original)."
     }
   },
   "restore_backup": {
@@ -3132,9 +3200,25 @@
       "ht": "",
       "at": "Aplicado em {target_path}\n\n  Edições do usuário: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Missões marcadas [BP Complete]: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Falha ao aplicar ao jogo: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "O Windows bloqueou a pasta do jogo"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "O Smart Citizen não conseguiu gravar em:\n{path}\n\nO Star Citizen está em execução e está com o arquivo aberto. Feche o jogo e clique em Aplicar novamente."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "O Windows não deixou o Smart Citizen gravar em:\n{path}\n\nTente isto e clique em Aplicar novamente:\n1. Feche o Star Citizen e o RSI Launcher.\n2. Na Segurança do Windows, abra Proteção contra vírus e ameaças > Proteção contra ransomware e permita o Smart Citizen no acesso controlado a pastas. Permita-o também em qualquer outro antivírus.\n3. Se o jogo estiver em Program Files, clique com o botão direito no Smart Citizen e escolha Executar como administrador."
     }
   },
   "test_plan": {
@@ -3173,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "Descreva bugs, surpresas ou sugestões..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Observações (opcional)"
     },
     "copied_status": {
       "ht": "",

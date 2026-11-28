@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "启动或停止 Smart Citizen 叠加层 (SCO)：在游戏画面上解码采矿信号并显示蓝图抽屉。需要无边框窗口模式。"
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "导入 CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "导出 CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "从 CSV 文件导入编辑过的文本"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "将表格当前显示的行保存为 CSV 文件"
     }
   },
   "filters": {
@@ -1670,6 +1686,10 @@
       "ht": "",
       "at": "声望轨道标签（在声望标签后添加“(Security)” / “(Contractor)”）"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "蓝图已完成（添加“[BP Complete]”）"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "扫描/采矿任务"
@@ -2286,6 +2306,18 @@
       "ht": "",
       "at": "无法检查更新：\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "新功能"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} 已安装。以下是更新内容。"
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "关闭"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "没有可重置的内容"
@@ -2449,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "是否将窗口大小、面板布局和字符串编辑器的列宽恢复为默认值？\n\n已保存的尺寸将被清除。您的设置和本地化数据不会受到影响。"
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "导出 CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "表格中没有可导出的行。请清除筛选后重试。"
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "已将 {count} 行保存到：\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "无法保存 CSV 文件：\n{error}"
     }
   },
   "progress": {
@@ -2771,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "导入 INI 文件失败：\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "选择 CSV 文件"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "CSV 文件 (*.csv);;所有文件 (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "无法读取此 CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "文件需要包含 Key 列和 Custom Value 列。从 Smart Citizen 导出一个 CSV 即可查看格式。"
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "已跳过 {count} 项（为空或与原文相同）。"
     }
   },
   "restore_backup": {
@@ -3132,9 +3200,25 @@
       "ht": "",
       "at": "已应用到 {target_path}\n\n  用户编辑数：{user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "标记为 [BP Complete] 的任务：{count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "应用到游戏失败：{error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows 阻止了游戏文件夹"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen 无法写入：\n{path}\n\nStar Citizen 正在运行并打开了该文件。请关闭游戏，然后再次点击“应用”。"
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows 不允许 Smart Citizen 写入：\n{path}\n\n请尝试以下操作，然后再次点击“应用”：\n1. 关闭 Star Citizen 和 RSI Launcher。\n2. 在 Windows 安全中心打开“病毒和威胁防护”>“勒索软件防护”，在“受控文件夹访问”中允许 Smart Citizen。如有其他杀毒软件，也请在其中允许。\n3. 如果游戏安装在 Program Files 中，请右键点击 Smart Citizen 并选择“以管理员身份运行”。"
     }
   },
   "test_plan": {
@@ -3173,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "描述任何错误、意外情况或建议..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "备注（可选）"
     },
     "copied_status": {
       "ht": "",

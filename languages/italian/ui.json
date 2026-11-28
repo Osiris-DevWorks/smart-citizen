@@ -265,6 +265,22 @@
     "sco_tooltip": {
       "ht": "",
       "at": "Avvia o ferma l'Overlay di Smart Citizen (SCO): decodifica delle firme minerarie e un cassetto dei blueprint sopra il gioco. Richiede la modalità finestra senza bordi."
+    },
+    "menu_import_csv": {
+      "ht": "",
+      "at": "Importa CSV…"
+    },
+    "menu_export_csv": {
+      "ht": "",
+      "at": "Esporta CSV…"
+    },
+    "import_csv_tooltip": {
+      "ht": "",
+      "at": "Riporta i testi modificati da un file CSV"
+    },
+    "export_csv_tooltip": {
+      "ht": "",
+      "at": "Salva le righe mostrate nella tabella in un file CSV"
     }
   },
   "filters": {
@@ -1670,6 +1686,10 @@
       "ht": "",
       "at": "Tag Traccia Reputazione (aggiunge \"(Security)\" / \"(Contractor)\" al tag Reputazione)"
     },
+    "mt_tag_bp_complete_cb": {
+      "ht": "",
+      "at": "BP completati (aggiunge \"[BP Complete]\")"
+    },
     "mt_scanning_group": {
       "ht": "",
       "at": "Missioni di Scansione/Estrazione"
@@ -2286,6 +2306,18 @@
       "ht": "",
       "at": "Impossibile controllare la presenza di aggiornamenti:\n\n{message}"
     },
+    "whats_new_title": {
+      "ht": "",
+      "at": "Novità"
+    },
+    "whats_new_body": {
+      "ht": "",
+      "at": "Smart Citizen v{version} è installato. Ecco cosa è cambiato."
+    },
+    "whats_new_close": {
+      "ht": "",
+      "at": "Chiudi"
+    },
     "nothing_to_reset_title": {
       "ht": "",
       "at": "Niente da ripristinare"
@@ -2449,6 +2481,22 @@
     "reset_proportions_body": {
       "ht": "",
       "at": "Reimpostare le dimensioni della finestra, il layout dei pannelli e la larghezza delle colonne dell'editor di stringhe ai valori predefiniti?\n\nLe dimensioni salvate andranno perse. Le impostazioni e i dati di localizzazione non vengono modificati."
+    },
+    "export_csv_title": {
+      "ht": "",
+      "at": "Esporta CSV"
+    },
+    "export_csv_empty_body": {
+      "ht": "",
+      "at": "La tabella non mostra righe da esportare. Rimuovi un filtro e riprova."
+    },
+    "export_csv_done_body": {
+      "ht": "",
+      "at": "{count} righe salvate in:\n{path}"
+    },
+    "export_csv_failed_body": {
+      "ht": "",
+      "at": "Impossibile salvare il file CSV:\n{error}"
     }
   },
   "progress": {
@@ -2771,6 +2819,26 @@
     "error_body": {
       "ht": "",
       "at": "Importazione del file INI fallita:\n{error}"
+    },
+    "select_csv_file_title": {
+      "ht": "",
+      "at": "Scegli un file CSV"
+    },
+    "csv_file_filter": {
+      "ht": "",
+      "at": "File CSV (*.csv);;Tutti i file (*)"
+    },
+    "csv_columns_missing_title": {
+      "ht": "",
+      "at": "Impossibile leggere questo CSV"
+    },
+    "csv_columns_missing_body": {
+      "ht": "",
+      "at": "Il file deve avere una colonna Key e una colonna Custom Value. Esporta un CSV da Smart Citizen per vedere la struttura."
+    },
+    "unchanged_skipped": {
+      "ht": "",
+      "at": "{count} saltate (vuote o uguali al testo originale)."
     }
   },
   "restore_backup": {
@@ -3132,9 +3200,25 @@
       "ht": "",
       "at": "Applicato a {target_path}\n\n  Modifiche utente: {user_count}\n\n{enhancement_block}"
     },
+    "bp_complete_count": {
+      "ht": "",
+      "at": "Missioni contrassegnate [BP Complete]: {count}"
+    },
     "failed_body": {
       "ht": "",
       "at": "Applicazione al gioco fallita: {error}"
+    },
+    "refused_title": {
+      "ht": "",
+      "at": "Windows ha bloccato la cartella del gioco"
+    },
+    "refused_game_running_body": {
+      "ht": "",
+      "at": "Smart Citizen non è riuscito a scrivere in:\n{path}\n\nStar Citizen è in esecuzione e ha il file aperto. Chiudi il gioco, poi fai di nuovo clic su Applica."
+    },
+    "refused_body": {
+      "ht": "",
+      "at": "Windows non ha permesso a Smart Citizen di scrivere in:\n{path}\n\nProva questi passaggi, poi fai di nuovo clic su Applica:\n1. Chiudi Star Citizen e l'RSI Launcher.\n2. In Sicurezza di Windows apri Protezione da virus e minacce > Protezione ransomware e consenti Smart Citizen nell'accesso alle cartelle controllato. Consentilo anche in qualsiasi altro antivirus.\n3. Se il gioco è in Program Files, fai clic destro su Smart Citizen e scegli Esegui come amministratore."
     }
   },
   "test_plan": {
@@ -3173,6 +3257,10 @@
     "notes_placeholder": {
       "ht": "",
       "at": "Descrivi eventuali bug, sorprese o suggerimenti..."
+    },
+    "item_notes_placeholder": {
+      "ht": "",
+      "at": "Note (facoltative)"
     },
     "copied_status": {
       "ht": "",
