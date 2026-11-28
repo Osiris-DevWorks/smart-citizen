@@ -273,6 +273,38 @@ def test_copy_puts_the_order_on_the_clipboard(section):
     assert "1 x Test Rifle" in text and "Tungsten: 6 cSCU" in text
 
 
+def test_copied_and_saved_go_back_without_a_timer_outliving_the_section(
+        qapp, tmp_profile, tmp_path, monkeypatch, slot_errors):
+    """Copied / Saved go back after DONE_SHOWN_MS, on timers the section
+    owns: a bare QTimer.singleShot lambda fired on a deleted button when the
+    section went first, inside whichever test ran the event loop next (the
+    full parallel run's flaky overlay test)."""
+    from PyQt6.QtCore import QCoreApplication, QEvent
+    from src.gui import sco_order
+    from tests.event_loop import pump_until
+
+    monkeypatch.setattr(sco_order, "DONE_SHOWN_MS", 10)
+    monkeypatch.setattr(AppSettings, "get_sco_orders_dir", staticmethod(lambda: tmp_path))
+    widget = OrderSection()
+    widget.set_catalog(_index(), {}, lambda info: "")
+    widget.add(RIFLE)
+    widget._copy_btn.click()
+    assert widget._copy_btn.text() == tr("sco.order_copied")
+    assert pump_until(lambda: widget._copy_btn.text() == tr("sco.order_copy"), seconds=2)
+    widget._save_name.setText("mine")
+    widget._save_btn.click()
+    assert widget._save_btn.text() == tr("sco.order_saved")
+    assert pump_until(lambda: widget._save_btn.text() == tr("sco.order_save"), seconds=2)
+
+    widget._copy_btn.click()
+    widget._save_name.setText("other")
+    widget._save_btn.click()
+    widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    pump_until(lambda: False, seconds=0.1)                      # past both timers
+    assert not slot_errors
+
+
 def test_not_owned_is_marked(section):
     section.add(RIFLE)
     card = section._cards[0]
