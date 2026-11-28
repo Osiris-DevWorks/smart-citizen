@@ -1312,11 +1312,19 @@ class MainWindow(QMainWindow):
         self.overlay_tab = OverlayTab()
         self.overlay_tab.overlay_toggled.connect(lambda on: self.sco_btn.setChecked(on))
         self.overlay_tab.options_changed.connect(self._apply_sco_options)
+        self.overlay_tab.telemetry_window_toggled.connect(self._set_telemetry_window_open)
+        # Its docked position is one of the tab's pickers.
+        self.overlay_tab.options_changed.connect(self._sync_telemetry_window)
         self._overlay_tab_index = self.tabs.addTab(self.overlay_tab, tr("tabs.overlay"))
         # Smart Citizen Overlay (SCO): windows built on first start; the live
         # Game.log watcher runs only while the overlay is on.
         self._sco_overlay = None
         self._sco_log_worker = None
+        # The game telemetry panel (a test, a placeholder for now), built the
+        # first time the Overlay tab's button opens it: docked at a screen
+        # edge or its own window (sco_telemetry.TelemetryPanel). It follows
+        # its button alone and needs no running overlay.
+        self._telemetry = None
         # The Item Finder's shop data load (UEX, 3.1.0), and the data and
         # error it last gave, kept for a drawer built after it finished.
         self._uex_shop_worker = None
@@ -3845,6 +3853,9 @@ class MainWindow(QMainWindow):
         self.sco_btn.setStyleSheet(f"background-color: {get_button_color('open')}; color: {text}; {base}")
         if hasattr(self, "overlay_tab"):
             self.overlay_tab.refresh_styles()
+        telemetry = getattr(self, "_telemetry", None)   # may run before setup_ui sets it
+        if telemetry is not None:
+            telemetry.refresh_colors()
         if hasattr(self, "simple_page"):
             self.simple_page.refresh_styles()
         self._render_document_browsers()
@@ -5450,6 +5461,11 @@ class MainWindow(QMainWindow):
             # persisting geometry would have no visible effect.
             if not getattr(self, "_geometry_restored", False):
                 self._size_window_for_mode(AppSettings.get_ui_mode())
+            # The telemetry window opens again when it was left open. One pass
+            # of the event loop later, once this window is up: opened here it
+            # ends up behind this window (measured).
+            if AppSettings.get_sco_telemetry_window_open():
+                QTimer.singleShot(0, self._sync_telemetry_window)
         self._maybe_start_first_run_tutorial()
 
     def _default_advanced_windowed_size(self) -> QSize:
@@ -5877,6 +5893,8 @@ class MainWindow(QMainWindow):
         self.overlay_tab.retranslate_ui()
         if self._sco_overlay is not None:
             self._sco_overlay.drawer.retranslate_ui()
+        if self._telemetry is not None:
+            self._telemetry.retranslate_ui()
 
         # About / FAQ / Legal tab bodies and the Help panel — loaded from a
         # per-language doc file (get_localized_doc_path) but only rendered at
@@ -8057,6 +8075,10 @@ class MainWindow(QMainWindow):
         self._stop_sco_overlay()
         if self._sco_overlay is not None:
             self._sco_overlay.wait_for_reader(2000)
+        # The telemetry panel goes with the main window. Hiding it saves its
+        # window's place, and it stays saved as open for the next start.
+        if self._telemetry is not None:
+            self._telemetry.set_open(False)
         # A shop data fetch ends within its request timeouts; a QThread
         # dropped while it runs would abort the exit.
         if self._uex_shop_worker is not None:
@@ -9408,6 +9430,37 @@ class MainWindow(QMainWindow):
         AppSettings.set_sco_option(AppSettings.SCO_SCAN_DECODER, on)
         self.overlay_tab.set_option(AppSettings.SCO_SCAN_DECODER, on)
         self._apply_sco_options()
+
+    def _set_telemetry_window_open(self, is_open: bool):
+        """The Overlay tab's button: open or close the game telemetry panel.
+        Saved, so a panel left open opens again at the next start."""
+        AppSettings.set_sco_telemetry_window_open(is_open)
+        self._sync_telemetry_window()
+
+    def _sync_telemetry_window(self):
+        """Show or hide the game telemetry panel (a test, a placeholder for
+        now) as saved: docked at a screen edge or its own window, and where.
+        Run when the Overlay tab's button is clicked or one of its pickers
+        changes, and when the main window first shows, so a panel left open
+        opens again at the next start. It is built the first time it is wanted."""
+        wanted = (AppSettings.get_sco_telemetry_window_open()
+                  and not self._close_committed)
+        if self._telemetry is None:
+            if not wanted:
+                return
+            from src.gui.sco_telemetry import TelemetryPanel
+            self._telemetry = TelemetryPanel(self.windowIcon(), self)
+            self._telemetry.closed_by_user.connect(self._on_telemetry_window_closed)
+            # A place picked on the panel itself shows on the tab's picker too.
+            self._telemetry.dock_position_changed.connect(
+                self.overlay_tab.set_telemetry_dock_position)
+        self._telemetry.set_open(wanted)
+
+    def _on_telemetry_window_closed(self):
+        """The player closed the telemetry window with its own X: saved as
+        closed, and the Overlay tab's button offers to open it again."""
+        AppSettings.set_sco_telemetry_window_open(False)
+        self.overlay_tab.set_telemetry_window_open(False)
 
     def _on_sco_owned_toggled(self, name: str, owned_now: bool):
         """The drawer's checkbox: same owned set the Blueprint Tracker edits."""

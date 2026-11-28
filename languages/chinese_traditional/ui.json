@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "採礦掃描解碼器因錯誤已停止。重新啟動疊加層即可重試；詳情見「日誌」分頁。"
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "遊戲遙測"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "正在等待遊戲的遙測資料。"
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "這些是範例數值，並非來自遊戲。Star Citizen 傳送遙測資料後，這裡將顯示實際讀數。"
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "範例資料"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "遙測"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "停靠"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "像疊加層抽屜一樣，停靠在螢幕邊緣、遊戲之上。"
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "取消停靠"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "變成獨立視窗，方便放到另一台螢幕上。"
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "停靠於："
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "遊戲所在螢幕"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "停靠所在的螢幕。點選切換到下一個。"
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "護盾"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "船體"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "氫燃料"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "量子燃料"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "加力"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "飛行員"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "生命值"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "氧氣"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "飢餓"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "口渴"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "停火區"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  延遲 {ping} ms  ·  伺服器 {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "藍圖"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "來自 Game.log 的藍圖"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "遊戲遙測（測試）"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "採礦掃描解碼器"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "疊加層執行時，從 Game.log 讀取你在遊戲中獲得的藍圖並標記為已擁有。"
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "開啟遙測"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "關閉遙測"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "在獨立視窗中開啟遙測，可以移到另一台螢幕上，讀數會隨視窗一起放大。點選「停靠」按鈕後，它會停靠在螢幕邊緣、遊戲之上，點選「取消停靠」則恢復為視窗。停靠的位置在遙測面板上選擇：在小螢幕示意圖上（或在下方）選位置，用示意圖旁的按鈕選螢幕。目前顯示的是範例數值，並非遊戲資料。"
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "停靠位置："
     },
     "drawer": {
       "ht": "",

@@ -4,7 +4,8 @@ The switches persist through ``AppSettings.get_/set_sco_option``, and the
 drawer position, the scan text size and the drawer hotkey through their own
 getters and setters; this tab only edits them and says so. ``MainWindow``
 owns the overlay itself and keeps the toolbar's Overlay button and this
-tab's start button in step.
+tab's start button in step. It also owns the game telemetry panel (a test),
+which this tab's last button asks it to open or close.
 """
 from __future__ import annotations
 
@@ -166,10 +167,14 @@ class HotkeyEdit(QLineEdit):
 
 class OverlayTab(QWidget):
     """Start/stop button plus one checkbox per SCO option, in a titled box
-    per part: scan decoder, drawer, blueprints from Game.log."""
+    per part: scan decoder, drawer, blueprints from Game.log. A last box holds
+    the button that opens and closes the game telemetry panel (a test) and
+    the picker for where it docks."""
 
     overlay_toggled = pyqtSignal(bool)
     options_changed = pyqtSignal()
+    # The telemetry panel's button asks for the panel open (True) or closed.
+    telemetry_window_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -238,6 +243,27 @@ class OverlayTab(QWidget):
         self._add_switch(self._group(layout, "blueprint_watch_group"),
                          AppSettings.SCO_LIVE_BLUEPRINT_WATCH)
 
+        # A test: the game telemetry panel, a placeholder for now. A button,
+        # as Start Overlay is: it opens a panel, it is no overlay option. The
+        # panel docks at a screen edge, picked here, or is its own window.
+        telemetry = self._group(layout, "telemetry_group")
+        self._telemetry_open = AppSettings.get_sco_telemetry_window_open()
+        self._telemetry_btn = QPushButton()
+        self._telemetry_btn.clicked.connect(self._on_telemetry_clicked)
+        telemetry_row = QHBoxLayout()
+        telemetry_row.addWidget(self._telemetry_btn)
+        telemetry_row.addStretch()
+        telemetry.addLayout(telemetry_row)
+        self._telemetry_hint = QLabel()
+        self._telemetry_hint.setProperty("role", "secondary")
+        self._telemetry_hint.setStyleSheet("font-size: 11px;")
+        self._telemetry_hint.setWordWrap(True)
+        telemetry.addWidget(self._telemetry_hint)
+        self._telemetry_position_label, self._telemetry_position_combo, row = self._picker_row(
+            AppSettings.SCO_DRAWER_POSITIONS, AppSettings.get_sco_telemetry_dock_position(),
+            AppSettings.set_sco_telemetry_dock_position)
+        telemetry.addLayout(row)
+
         layout.addStretch()
 
         for name in (AppSettings.SCO_SCAN_DECODER, AppSettings.SCO_DRAWER, SOUND_ALERT):
@@ -265,6 +291,8 @@ class OverlayTab(QWidget):
         for label, combo, title, item_prefix in (
                 (self._position_label, self._position_combo, "overlay.drawer_position",
                  "overlay.position_"),
+                (self._telemetry_position_label, self._telemetry_position_combo,
+                 "overlay.telemetry_dock_position", "overlay.position_"),
                 (self._size_label, self._size_combo, "overlay.label_size", "overlay.size_"),
                 (self._sound_label, self._sound_combo, "overlay.alert_sound_choice",
                  "overlay.sound_")):
@@ -278,6 +306,8 @@ class OverlayTab(QWidget):
         self._hotkey_clear.setText(tr("overlay.drawer_hotkey_clear"))
         self._hotkey_hint.setText(tr("overlay.drawer_hotkey_hint"))
         self._show_hotkey_problem()
+        self._sync_telemetry_text()
+        self._telemetry_hint.setText(tr("overlay.telemetry_window_hint"))
 
     def refresh_styles(self) -> None:
         """Re-apply the theme's button colours (MainWindow calls this after a
@@ -300,6 +330,31 @@ class OverlayTab(QWidget):
         check.blockSignals(True)
         check.setChecked(on)
         check.blockSignals(False)
+
+    def set_telemetry_window_open(self, is_open: bool) -> None:
+        """Mirror the telemetry window's state on its button without asking
+        for a change (MainWindow calls this when the window's own X closed it)."""
+        self._telemetry_open = bool(is_open)
+        self._sync_telemetry_text()
+
+    def set_telemetry_dock_position(self, position: str) -> None:
+        """Mirror a docked position picked on the telemetry panel itself on
+        this tab's picker, without saving it again or announcing a change."""
+        combo = self._telemetry_position_combo
+        index = combo.findData(position)
+        if index >= 0:
+            combo.blockSignals(True)
+            combo.setCurrentIndex(index)
+            combo.blockSignals(False)
+
+    def _sync_telemetry_text(self) -> None:
+        # The button names what a click does next, as the start button does.
+        key = "telemetry_close_btn" if self._telemetry_open else "telemetry_open_btn"
+        self._telemetry_btn.setText(tr(f"overlay.{key}"))
+
+    def _on_telemetry_clicked(self) -> None:
+        self.set_telemetry_window_open(not self._telemetry_open)
+        self.telemetry_window_toggled.emit(self._telemetry_open)
 
     def _sync_start_text(self) -> None:
         key = "overlay.stop_btn" if self._start_btn.isChecked() else "overlay.start_btn"

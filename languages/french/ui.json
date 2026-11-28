@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "Le décodeur de scan minier s'est arrêté après une erreur. Redémarrez la superposition pour réessayer ; l'onglet Journal donne les détails."
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "Télémétrie du jeu"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "En attente de la télémétrie du jeu."
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "Ce sont des valeurs d'exemple, pas celles du jeu. Les vrais indicateurs s'afficheront ici dès que Star Citizen enverra sa télémétrie."
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "Données d'exemple"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "Télémétrie"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "Ancrer"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "L'ancrer au bord de l'écran, par-dessus le jeu, comme le tiroir de la superposition."
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "Détacher"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "En faire une fenêtre séparée, pour un autre écran."
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "Ancrer à :"
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "Écran du jeu"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "L'écran où elle s'ancre. Cliquez pour passer au suivant."
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "Boucliers"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "Coque"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "Hydrogène"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "Quantique"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "Boost"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "Pilote"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "Santé"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "Oxygène"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "Faim"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "Soif"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "Zone d'armistice"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  ping {ping} ms  ·  serveur {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Plans"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Plans depuis Game.log"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "Télémétrie du jeu (test)"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Décodeur de scan minier"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Pendant que la superposition tourne, les plans reçus en jeu sont lus dans Game.log et marqués comme possédés."
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "Ouvrir la télémétrie"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "Fermer la télémétrie"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "Ouvre la télémétrie dans une fenêtre séparée que vous pouvez déplacer sur un autre écran, où ses indicateurs grandissent avec la fenêtre. Son bouton Ancrer la place plutôt au bord de l'écran, par-dessus le jeu, et Détacher rétablit la fenêtre. L'endroit où elle s'ancre se choisit sur la télémétrie elle-même : la position sur son petit plan de l'écran (ou ci-dessous) et l'écran avec le bouton à côté du plan. Pour l'instant, elle affiche des valeurs d'exemple, pas les données du jeu."
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "Position ancrée :"
     },
     "drawer": {
       "ht": "",

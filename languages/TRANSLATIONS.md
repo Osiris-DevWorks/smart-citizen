@@ -82,6 +82,20 @@ them against the new source.
 
 ## Backfill log
 
+- **3.1.0 cycle (2026-11-28, Claude Fable 5.2, game telemetry panel):** the
+  game telemetry panel (a test) on the Overlay tab. 30 new keys: its box,
+  button, hint and docked position picker (`overlay.telemetry_*`, 5), and the
+  panel's own texts (`sco.telemetry_*` and `sco.section_telemetry`, 25: title,
+  status, sample tag and note, Dock and Undock with their tooltips, the place
+  row, and the readouts' labels and two worded lines). AI `at` in all 11
+  other languages, with `{g}`, `{fps}`, `{ping}` and `{server_fps}` kept as
+  they are. New keys, so nothing needs human re-review. One new bullet in
+  `docs/HELP.md`'s Overlay Tab section and one new paragraph in
+  `docs/LEGAL.md`'s overlay section, and the same in the 11 translated
+  `HELP.md` and `LEGAL.md` files (AI-written, in each file's own words for
+  the overlay, the drawer and the panel's buttons). Checked by scripts: only
+  the new leaves and lines changed and every line ending was kept. Not
+  back-translated.
 - **3.1.0 cycle (2026-11-25, Claude Opus 5.5, [BP Complete]):**
   `[BP Complete]` now takes the place of `[BP]` / `[BP?]` instead of following
   it. In `docs/HELP.md` BP Completed "adds `[BP Complete]` after it" became

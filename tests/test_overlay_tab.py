@@ -478,7 +478,9 @@ def test_options_sit_in_titled_boxes_with_rows_of_switches(qapp, json_backend, t
     tab = OverlayTab()
     boxes = tab.findChildren(QGroupBox)
     assert [b.title() for b in boxes] == [
-        "Scan decoder", "Drawer", "Blueprints from Game.log"]
+        "Scan decoder", "Drawer", "Blueprints from Game.log", "Game telemetry (test)"]
+    for widget in (tab._telemetry_btn, tab._telemetry_hint, tab._telemetry_position_combo):
+        assert boxes[3].isAncestorOf(widget)
     home = {"scan_decoder": 0, "drawer": 1, "live_blueprint_watch": 2}
     for name, check in tab._checks.items():
         index = home.get(name, 0 if name.startswith("alert_") else 1)
@@ -495,6 +497,83 @@ def test_options_sit_in_titled_boxes_with_rows_of_switches(qapp, json_backend, t
         assert all(c.toolTip() for c in row) and not any(n in tab._hints for n in tab._checks
                                                          if n.startswith(prefix))
     tab.hide()
+
+
+def test_the_telemetry_button_asks_to_open_and_close_the_panel(
+        qapp, json_backend, tmp_path, english_ui):
+    """A test: a button, as Start Overlay is, not one of the overlay's
+    switches. It names what a click does next, asks through its own signal
+    and saves nothing itself (MainWindow owns the panel and its state)."""
+    from src.utils import i18n
+    tab = OverlayTab()
+    button = tab._telemetry_btn
+    assert not button.isCheckable() and button.text() == "Open Telemetry"
+    assert "sample values, not data from the game" in tab._telemetry_hint.text()
+    assert not any("telemetry" in name for name in tab._checks)
+    asked, changed = [], []
+    tab.telemetry_window_toggled.connect(asked.append)
+    tab.options_changed.connect(lambda: changed.append(True))
+    button.click()
+    assert asked == [True] and button.text() == "Close Telemetry"
+    assert AppSettings.get_sco_telemetry_window_open() is False     # not the tab's to save
+    button.click()
+    assert asked == [True, False] and button.text() == "Open Telemetry"
+    assert changed == []
+    tab.set_telemetry_window_open(True)         # mirrored, as when the window's X closed it
+    assert asked == [True, False] and button.text() == "Close Telemetry"
+    tab.set_telemetry_window_open(False)
+    assert asked == [True, False] and button.text() == "Open Telemetry"
+    # A new tab shows a panel left open, and a language switch rewords the button.
+    AppSettings.set_sco_telemetry_window_open(True)
+    again = OverlayTab()
+    assert again._telemetry_btn.text() == "Close Telemetry"
+    i18n.set_language("german")                 # english_ui puts English back
+    again.retranslate_ui()
+    assert again._telemetry_btn.text() == "Telemetrie schließen"
+    assert "Beispielwerte" in again._telemetry_hint.text()
+
+
+def test_the_telemetry_docked_position_is_picked_like_the_drawers(
+        qapp, json_backend, tmp_path, english_ui):
+    from src.utils import i18n
+    tab = OverlayTab()
+    combo = tab._telemetry_position_combo
+    assert tab._telemetry_position_label.text() == "Docked position:"
+    assert [combo.itemData(i) for i in range(combo.count())] == list(
+        AppSettings.SCO_DRAWER_POSITIONS)
+    # Across from the drawer's own default, so the two do not open on top of each other.
+    assert combo.currentData() == "middle_left" and combo.currentText() == "Middle left"
+    assert tab._position_combo.currentData() == "middle_right"
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    combo.setCurrentIndex(combo.findData("top_right"))
+    assert AppSettings.get_sco_telemetry_dock_position() == "top_right" and changed == [True]
+    assert AppSettings.get_sco_drawer_position() == "middle_right"   # the drawer's is its own
+    again = OverlayTab()
+    assert again._telemetry_position_combo.currentData() == "top_right"
+    i18n.set_language("german")                 # english_ui puts English back
+    again.retranslate_ui()
+    assert again._telemetry_position_label.text() == "Position angedockt:"
+    assert again._telemetry_position_combo.currentText() == again._position_combo.itemText(
+        again._position_combo.findData("top_right"))
+
+
+def test_a_place_picked_on_the_telemetry_panel_is_mirrored_on_the_tabs_picker(
+        qapp, json_backend, tmp_path, english_ui):
+    """The panel saves the place itself and tells the tab, which only shows
+    it: nothing is saved again and no change is announced."""
+    tab = OverlayTab()
+    combo = tab._telemetry_position_combo
+    changed = []
+    tab.options_changed.connect(lambda: changed.append(True))
+    tab.set_telemetry_dock_position("bottom_center")
+    assert combo.currentData() == "bottom_center" and combo.currentText() == "Bottom center"
+    assert changed == []
+    assert AppSettings.get_sco_telemetry_dock_position() == "middle_left"   # not the tab's to save
+    tab.set_telemetry_dock_position("no such place")    # left as it is
+    assert combo.currentData() == "bottom_center" and changed == []
+    combo.setCurrentIndex(combo.findData("top_left"))   # the player's own pick still counts
+    assert changed == [True] and AppSettings.get_sco_telemetry_dock_position() == "top_left"
 
 
 def test_a_refused_hotkey_shows_on_the_tab_and_the_status_bar(qapp, json_backend, tmp_path):

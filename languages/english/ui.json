@@ -3454,6 +3454,106 @@
       "ht": "Mining scan decoder stopped after an error. Restart the overlay to try again; the Log tab has the details.",
       "at": ""
     },
+    "telemetry_title": {
+      "ht": "Game Telemetry",
+      "at": ""
+    },
+    "telemetry_waiting": {
+      "ht": "Waiting for telemetry from the game.",
+      "at": ""
+    },
+    "telemetry_placeholder": {
+      "ht": "These are sample values, not from the game. Real readouts will show here once Star Citizen sends telemetry.",
+      "at": ""
+    },
+    "telemetry_sample": {
+      "ht": "Sample data",
+      "at": ""
+    },
+    "section_telemetry": {
+      "ht": "Telemetry",
+      "at": ""
+    },
+    "telemetry_dock": {
+      "ht": "Dock",
+      "at": ""
+    },
+    "telemetry_dock_hint": {
+      "ht": "Dock it at the screen edge, over the game, like the overlay drawer.",
+      "at": ""
+    },
+    "telemetry_undock": {
+      "ht": "Undock",
+      "at": ""
+    },
+    "telemetry_undock_hint": {
+      "ht": "Make it a separate window, for another monitor.",
+      "at": ""
+    },
+    "telemetry_place": {
+      "ht": "Dock at:",
+      "at": ""
+    },
+    "telemetry_screen_game": {
+      "ht": "Game's screen",
+      "at": ""
+    },
+    "telemetry_screen_hint": {
+      "ht": "The screen it docks on. Click for the next one.",
+      "at": ""
+    },
+    "telemetry_shields": {
+      "ht": "Shields",
+      "at": ""
+    },
+    "telemetry_level_hull": {
+      "ht": "Hull",
+      "at": ""
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "Hydrogen",
+      "at": ""
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "Quantum",
+      "at": ""
+    },
+    "telemetry_level_boost": {
+      "ht": "Boost",
+      "at": ""
+    },
+    "telemetry_pilot": {
+      "ht": "Pilot",
+      "at": ""
+    },
+    "telemetry_vital_health": {
+      "ht": "Health",
+      "at": ""
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "Oxygen",
+      "at": ""
+    },
+    "telemetry_vital_hunger": {
+      "ht": "Hunger",
+      "at": ""
+    },
+    "telemetry_vital_thirst": {
+      "ht": "Thirst",
+      "at": ""
+    },
+    "telemetry_armistice": {
+      "ht": "Armistice zone",
+      "at": ""
+    },
+    "telemetry_speed_line": {
+      "ht": "m/s   {g} G",
+      "at": ""
+    },
+    "telemetry_game_line": {
+      "ht": "{fps} FPS  ·  {ping} ms ping  ·  Server {server_fps} FPS",
+      "at": ""
+    },
     "section_blueprints": {
       "ht": "Blueprints",
       "at": ""
@@ -3860,6 +3960,10 @@
       "ht": "Blueprints from Game.log",
       "at": ""
     },
+    "telemetry_group": {
+      "ht": "Game telemetry (test)",
+      "at": ""
+    },
     "scan_decoder": {
       "ht": "Mining scan decoder",
       "at": ""
@@ -4014,6 +4118,22 @@
     },
     "live_blueprint_watch_hint": {
       "ht": "While the overlay runs, blueprints you receive in game are read from Game.log and marked owned.",
+      "at": ""
+    },
+    "telemetry_open_btn": {
+      "ht": "Open Telemetry",
+      "at": ""
+    },
+    "telemetry_close_btn": {
+      "ht": "Close Telemetry",
+      "at": ""
+    },
+    "telemetry_window_hint": {
+      "ht": "Opens the telemetry panel as a separate window you can move to another monitor, where its readouts grow to fill the window. Its Dock button puts it at the screen edge over the game instead, and Undock brings the window back. Pick where it docks on the panel itself: the place on its small map of the screen (or below), and the screen with the button beside the map. For now it shows sample values, not data from the game.",
+      "at": ""
+    },
+    "telemetry_dock_position": {
+      "ht": "Docked position:",
       "at": ""
     },
     "drawer": {

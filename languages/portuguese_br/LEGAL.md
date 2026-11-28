@@ -61,6 +61,8 @@ A sobreposição fica desligada até você iniciá-la. Enquanto ela roda, tudo o
 
 Ela nunca lê a memória do jogo, nunca se conecta nem se injeta no jogo e nunca envia entradas para ele.
 
+O painel **Telemetria do jogo (teste)** da aba Sobreposição é separado da sobreposição e fica desligado até você abri-lo. Por enquanto ele mostra valores de exemplo e não lê nada do jogo. Enquanto está encaixado na borda da tela, ele pergunta ao Windows as mesmas duas coisas que a gaveta (qual janela está em primeiro plano e se o ponteiro do mouse está visível) e em qual tela está a janela do jogo. Nada do que ele mostra ou pergunta sai do seu computador.
+
 ### O que o Smart Citizen **não** faz
 
 - Nenhuma telemetria, análise ou relatório de uso de qualquer tipo.

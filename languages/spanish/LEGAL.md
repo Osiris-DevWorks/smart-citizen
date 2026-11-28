@@ -61,6 +61,8 @@ La superposición está apagada hasta que la inicias. Mientras funciona, todo lo
 
 Nunca lee la memoria del juego, nunca se engancha ni se inyecta en el juego y nunca le envía entradas.
 
+El panel **Telemetría del juego (prueba)** de la pestaña Superposición es independiente de la superposición y está apagado hasta que lo abres. Por ahora muestra valores de ejemplo y no lee nada del juego. Mientras está anclado en el borde de la pantalla, pregunta a Windows las mismas dos cosas que el cajón (qué ventana está en primer plano y si el puntero del ratón está visible) y en qué pantalla está la ventana del juego. Nada de lo que muestra o pregunta sale de tu equipo.
+
 ### Lo que Smart Citizen **no** hace
 
 - Nada de telemetría, analítica ni informes de uso de ningún tipo.

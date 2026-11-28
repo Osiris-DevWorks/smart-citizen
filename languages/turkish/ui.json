@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "Maden tarama çözücüsü bir hatadan sonra durdu. Yeniden denemek için katmanı yeniden başlatın; ayrıntılar Günlük sekmesinde."
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "Oyun Telemetrisi"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "Oyundan telemetri bekleniyor."
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "Bunlar örnek değerlerdir, oyundan gelmez. Star Citizen telemetri gönderdiğinde gerçek göstergeler burada görünecek."
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "Örnek veri"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "Telemetri"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "Yerleştir"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "Katman çekmecesi gibi, oyunun üzerinde ekran kenarına yerleştirir."
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "Ayır"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "Başka bir monitör için ayrı bir pencere yapar."
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "Yerleşim:"
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "Oyunun ekranı"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "Yerleştiği ekran. Sonrakine geçmek için tıklayın."
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "Kalkanlar"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "Gövde"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "Hidrojen"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "Kuantum"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "Takviye"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "Pilot"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "Sağlık"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "Oksijen"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "Açlık"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "Susuzluk"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "Ateşkes bölgesi"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  {ping} ms ping  ·  Sunucu {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Planlar"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Game.log'dan planlar"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "Oyun telemetrisi (test)"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Maden tarama çözücüsü"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Katman çalışırken oyunda aldığınız planlar Game.log dosyasından okunur ve sahip olunan olarak işaretlenir."
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "Telemetriyi Aç"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "Telemetriyi Kapat"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "Telemetriyi, başka bir monitöre taşıyabileceğiniz ayrı bir pencerede açar ve göstergeleri pencereyle birlikte büyür. Yerleştir düğmesi onu oyunun üzerinde, ekran kenarına alır, Ayır düğmesi pencereyi geri getirir. Nereye yerleşeceği telemetrinin kendi üzerinden seçilir: konum küçük ekran haritasından (veya aşağıdan), ekran ise haritanın yanındaki düğmeyle. Şimdilik oyundan gelen verileri değil, örnek değerleri gösterir."
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "Yerleşim konumu:"
     },
     "drawer": {
       "ht": "",
