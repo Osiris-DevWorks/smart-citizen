@@ -163,6 +163,8 @@ TEST_SECTIONS: list[dict] = [
             "Find a CFP security patrol: it lists Ace Pilots (5% chance), its title reads [ACE?], Ace Pilot reads 5% chance, and the CHCO Auris PDC Monitor shows.",
             "Find a CleanAir ship escort: its two Reinforcements lines read Reinforcements 1 and Reinforcements 2. A Headhunters claim sweep lists Prospectors once, 4x.",
             "Find an IASI patrol: a type reads Criminal Combat Rating 2 ship (not Raiting2), numbered ship 1 and ship 2 where two pools differ, each listed under Ship types.",
+            "In that patrol, Targets 2 reads 3x Criminal Combat Rating 2 ship 1, not 1x ... ship 1 and 2x ... ship 1. No line names one ship type twice.",
+            "Find a Headhunters ship ambush (Easy): Hostiles (Stanton, Nyx, Pyro) and Hostiles (Nyx, Vanduul); Cooldown reads Stanton, Nyx, Pyro: 15 min; Nyx, Vanduul: 1 h.",
             "Without the tag tree (before the first extraction), a wave that spawns 3 or 4 ships reads Hostile Wave x3-4, not every option added up.",
             "Enhancements tab: untick Cooldown, then Hostiles, and generate: each line leaves the mission text.",
             "Select German and generate: ship names come from the German strings and the words (Abklingzeit, oder, Welle, eines von) are German.",

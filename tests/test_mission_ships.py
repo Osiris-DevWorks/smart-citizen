@@ -888,6 +888,25 @@ class TestGroupsThatReadTheSame:
         assert len(roster) == 1
         assert gen._format_roster_group(roster[0]) == "- Targets: 4x Anvil Arrow"
 
+    def test_slots_of_one_group_that_read_the_same_add_up(self, gen, index):
+        # Iasi_Patrol_Easy's second Targets group: a 1-ship slot and a 2-ship
+        # slot with the same tags read "1x ... ship 1 and 2x ... ship 1".
+        root = ET.fromstring(
+            "<c>"
+            + _group("", [_ship(1, [ARROW])], [_ship(1, [GLADIATOR])], [_ship(2, [ARROW])],
+                     wrapper=TARGETS)
+            + "</c>"
+        )
+        roster = gen._extract_spawn_roster(root, index)
+        assert gen._format_roster_group(roster[0]) == (
+            "- Targets: 3x Anvil Arrow and 1x Anvil Gladiator")
+
+    def test_slots_with_choices_at_different_amounts_stay_apart(self, gen, index):
+        slot = [_ship(1, [ARROW]), _ship(2, [GLADIATOR])]
+        root = ET.fromstring("<c>" + _group("", slot, slot, wrapper=TARGETS) + "</c>")
+        roster = gen._extract_spawn_roster(root, index)
+        assert len(roster[0][2]) == 2
+
 
 class TestTagNameFixes:
     def test_cigs_misspellings_are_put_right(self, gen):
@@ -922,6 +941,28 @@ class TestVariantNames:
                    [self._v(gen, "Nyx", "", {"Criminal"})],
                    [self._v(gen, "Nyx", "", {"Vanduul"})]]
         assert gen._variant_names(members) == ["Stanton, Pyro", "Nyx", "Nyx, Vanduul"]
+
+    def test_vanduul_where_another_variant_also_runs(self, gen):
+        # HeadHunters_ShipAmbush_E: one contract in Stanton, Nyx and Pyro and
+        # a Nyx-only Vanduul one read "Stanton, Nyx, Pyro" and "Nyx".
+        members = [[self._v(gen, "Stanton", "", {"Criminal"}),
+                    self._v(gen, "Nyx", "", {"Criminal"}),
+                    self._v(gen, "Pyro", "", {"Criminal"})],
+                   [self._v(gen, "Nyx", "", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["Stanton, Nyx, Pyro", "Nyx, Vanduul"]
+        # No shared place, no label: each system tells them apart.
+        members = [[self._v(gen, "Stanton", "", {"Criminal"})],
+                   [self._v(gen, "Nyx", "", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["Stanton", "Nyx"]
+        # Two regions of one system are two places.
+        members = [[self._v(gen, "Pyro RegionA", "", {"Criminal"})],
+                   [self._v(gen, "Pyro RegionB", "", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["Pyro Region A", "Pyro Region B"]
+
+    def test_place_parts(self, gen):
+        assert gen._place_parts("Nyx/Stanton") == ["Nyx", "Stanton"]
+        assert gen._place_parts("Pyro RegionB") == ["Pyro RegionB"]
+        assert gen._place_parts("") == []
 
     def test_vanduul_leaves_the_rest_numbered(self, gen):
         members = [[self._v(gen, "Nyx", "", {"Criminal"})],

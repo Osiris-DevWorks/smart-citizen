@@ -3581,6 +3581,31 @@ def _shown_slot(slot: tuple) -> tuple:
                  for amount, names, label in slot)
 
 
+def _add_same_slots(slots: tuple) -> tuple:
+    """*slots* (as they read, _shown_slot) with the slots that pick from the
+    same ships, each at one amount, made one in the first one's place, their
+    amounts added: a group of a 1-ship slot and a 2-ship slot with the same
+    tags is 3 ships from that pool (``3x Criminal ship``, not ``1x Criminal
+    ship and 2x Criminal ship``). A slot whose choices come at different
+    amounts stays as it is."""
+    out: list = []
+    index: dict[tuple, int] = {}
+    for slot in slots:
+        amounts = {amount for amount, _, _ in slot}
+        if len(amounts) != 1:
+            out.append(slot)
+            continue
+        picks = tuple(sorted({(names, label) for _, names, label in slot}))
+        if picks not in index:
+            index[picks] = len(out)
+            out.append(slot)
+            continue
+        first = out[index[picks]]
+        total = first[0][0] + amounts.pop()
+        out[index[picks]] = tuple((total, names, label) for _, names, label in first)
+    return tuple(out)
+
+
 def _extract_spawn_roster(element, ships: ShipSpawnIndex,
                           exclude_within: str | tuple[str, ...] | None = None,
                           chances: "dict[str, float] | None" = None) -> tuple:
@@ -3595,6 +3620,7 @@ def _extract_spawn_roster(element, ships: ShipSpawnIndex,
     out. Groups that read the same become one, their amounts added: four
     recipient groups of one ship each from one pool are four ships from it,
     and so are two whose ships match but whose tags differ (_shown_slot).
+    Slots of one group that read the same become one too (_add_same_slots).
     *element* may be a list of scopes, as for _extract_spawn_counts."""
     ship_groups: dict[tuple, list] = {}
     for sg in _groups_in(element, exclude_within, "SpawnDescription_ShipGroup"):
@@ -3615,7 +3641,7 @@ def _extract_spawn_roster(element, ships: ShipSpawnIndex,
             entry = ship_groups.setdefault((bucket, label, None, chance), [None, 0])
             entry[1] += high
         else:
-            shown = tuple(_shown_slot(slot) for slot in slots)
+            shown = _add_same_slots(tuple(_shown_slot(slot) for slot in slots))
             key = (bucket, label, tuple(tuple(sorted(slot)) for slot in shown), chance)
             entry = ship_groups.setdefault(key, [shown, 0])
             entry[1] += 1
@@ -4051,6 +4077,14 @@ def _regions_block(keys) -> list[str]:
 _VANDUUL_FACTION = "Vanduul"
 
 
+def _place_parts(system_name: str) -> list[str]:
+    """The places a system_name runs in, one per system: ``Nyx/Stanton`` is
+    ``Nyx`` and ``Stanton``, and a region stays with its system (``Pyro
+    RegionB``), so two regions of one system are not one place."""
+    first, _, rest = (system_name or "").partition(" ")
+    return [" ".join(p for p in (part, rest) if p) for part in first.split("/") if part]
+
+
 def _variant_names(members: list[list], regions: "list | None" = None) -> list[str]:
     """A name for each group of variants that read alike (*members*, each a
     list of ContractVariant): its star systems where they tell the groups
@@ -4058,7 +4092,8 @@ def _variant_names(members: list[list], regions: "list | None" = None) -> list[s
     the combat rating added where it tells every group sharing them apart
     (``Nyx, Combat 4/7``, the rating alone when all share one system), else
     ``Vanduul`` on the groups that spawn Vanduul where the others sharing
-    their systems do not (``Nyx`` and ``Nyx, Vanduul``), and a number only
+    their systems, or some of them, do not (``Nyx`` and ``Nyx, Vanduul``;
+    ``Stanton, Nyx, Pyro`` and ``Nyx, Vanduul``), and a number only
     where none of these does (``Nyx #1``, ``Nyx #2``); "" for a group with no
     name at all, which _variant_suffix numbers. *regions*, when given, gets
     each group's list of the regions its name mentions (``(system, token)``)."""
@@ -4092,6 +4127,15 @@ def _variant_names(members: list[list], regions: "list | None" = None) -> list[s
             names.append(", ".join(p for p in (s, _VANDUUL_FACTION if vanduul[i] else "") if p))
         else:
             names.append(base)
+    # A Vanduul group named by systems another group also runs in is Vanduul
+    # there too: the Headhunters ambush's Nyx-only Vanduul contract beside
+    # its Stanton, Nyx, Pyro one reads "Nyx, Vanduul", not a second "Nyx".
+    where = [{part for name in group_places for part in _place_parts(name)}
+             for group_places in places]
+    for i, name in enumerate(names):
+        if vanduul[i] and name and name == systems[i] and any(
+                not vanduul[j] and where[i] & where[j] for j in range(len(names)) if j != i):
+            names[i] = f"{name}, {_VANDUUL_FACTION}"
     if regions is not None:
         regions.extend(
             [key for key in map(_region_key, group_places) if key]
