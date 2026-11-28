@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "采矿扫描解码器因错误已停止。重新启动叠加层即可重试；详情见“日志”标签页。"
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "游戏遥测"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "正在等待游戏的遥测数据。"
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "这些是示例数值，并非来自游戏。Star Citizen 发送遥测数据后，这里将显示实际读数。"
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "示例数据"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "遥测"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "停靠"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "像叠加层抽屉一样，停靠在屏幕边缘、游戏之上。"
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "取消停靠"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "变成独立窗口，便于放到另一台显示器上。"
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "停靠于："
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "游戏所在屏幕"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "停靠所在的屏幕。点击切换到下一个。"
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "护盾"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "船体"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "氢燃料"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "量子燃料"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "加力"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "飞行员"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "生命值"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "氧气"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "饥饿"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "口渴"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "停火区"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  延迟 {ping} ms  ·  服务器 {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "蓝图"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "来自 Game.log 的蓝图"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "游戏遥测（测试）"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "采矿扫描解码器"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "叠加层运行时，从 Game.log 读取你在游戏中获得的蓝图并标记为已拥有。"
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "打开遥测"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "关闭遥测"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "在独立窗口中打开遥测，可以移到另一台显示器上，读数会随窗口一起放大。点击“停靠”按钮后，它会停靠在屏幕边缘、游戏之上，点击“取消停靠”则恢复为窗口。停靠的位置在遥测面板上选择：在小屏幕示意图上（或在下方）选位置，用示意图旁的按钮选显示器。目前显示的是示例数值，并非游戏数据。"
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "停靠位置："
     },
     "drawer": {
       "ht": "",

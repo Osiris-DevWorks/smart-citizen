@@ -61,6 +61,8 @@ Katman siz başlatana kadar kapalıdır. Çalışırken okuduğu her şey bilgis
 
 Oyunun belleğini asla okumaz, oyuna asla kanca atmaz veya enjekte olmaz ve oyuna asla girdi göndermez.
 
+Katman sekmesindeki **Oyun telemetrisi (test)** paneli katmandan ayrıdır ve siz açana kadar kapalıdır. Şimdilik örnek değerleri gösterir ve oyundan hiçbir şey okumaz. Ekran kenarına yerleşikken Windows'a çekmecenin sorduğu iki şeyi (hangi pencerenin önde olduğunu ve fare işaretçisinin görünüp görünmediğini) ve oyun penceresinin hangi ekranda olduğunu sorar. Gösterdiği veya sorduğu hiçbir şey bilgisayarınızdan çıkmaz.
+
 ### Smart Citizen'ın **yapmadığı** şeyler
 
 - Hiçbir türde telemetri, analiz veya kullanım raporlaması yoktur.

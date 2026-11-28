@@ -59,6 +59,8 @@ Das Overlay ist aus, bis du es startest. Während es läuft, bleibt alles, was e
 
 Es liest nie den Speicher des Spiels, hängt sich nie ins Spiel ein und schleust nichts ein, und es sendet nie Eingaben an das Spiel.
 
+Die **Spieltelemetrie (Test)** im Overlay-Tab ist vom Overlay getrennt und aus, bis du sie öffnest. Vorerst zeigt sie Beispielwerte und liest nichts aus dem Spiel. Solange sie am Bildschirmrand angedockt ist, fragt sie Windows dieselben zwei Dinge wie die Schublade (welches Fenster im Vordergrund ist und ob der Mauszeiger sichtbar ist) und auf welchem Bildschirm das Fenster des Spiels liegt. Nichts von dem, was sie zeigt oder fragt, verlässt deinen Computer.
+
 ### Was Smart Citizen **nicht** tut
 
 - Keine Telemetrie, Analyse oder Nutzungsberichte jeglicher Art.

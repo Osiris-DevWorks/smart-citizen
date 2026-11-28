@@ -117,6 +117,19 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: game telemetry panel (test)",
+        "items": [
+            "Overlay tab, Game telemetry (test): click Open Telemetry with no overlay running. A window opens with SAMPLE DATA readouts, and the button reads Close Telemetry.",
+            "Maximize the window on another monitor: its readouts grow and spread into columns to fill it. Drag it small again: it shrinks to one narrow column and no smaller.",
+            "Click Dock: the panel sits at the screen edge over the game, in the drawer's look. Its tab folds it away and opens it out. Undock brings the window back where it was.",
+            "On the panel's small screen map (Dock at:), click another cell: the panel docks there, and the Overlay tab's Docked position shows the same place.",
+            "With two monitors, click the button beside the map: the panel moves to the next screen, and Game's screen follows the game again. With one monitor there is no button.",
+            "In game with the panel docked, aim and fire across it: your shots are not stopped. Hold F so the pointer shows: its tab, its map and Undock take clicks.",
+            "Close the app with the panel open and start it again: it opens as it was left. Close the window with its own X: the tab's button reads Open Telemetry and it stays closed.",
+            "Select German: the panel's heading, buttons, labels and the map's tooltips are in German. The sample ship and place names stay as they are.",
+        ],
+    },
+    {
         "title": "Overlay: scans and screens (#573, #592)",
         "items": [
             "Game on your second monitor: start the overlay. The drawer docks on the game's screen and a rock scan still reads.",

@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "채굴 스캔 해독기가 오류로 중지되었습니다. 다시 시도하려면 오버레이를 다시 시작하세요. 자세한 내용은 로그 탭에 있습니다."
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "게임 텔레메트리"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "게임의 텔레메트리를 기다리는 중입니다."
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "게임에서 온 값이 아닌 샘플 값입니다. Star Citizen이 텔레메트리를 보내면 실제 정보가 여기에 표시됩니다."
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "샘플 데이터"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "텔레메트리"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "도킹"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "오버레이 서랍처럼 게임 위의 화면 가장자리에 붙입니다."
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "도킹 해제"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "다른 모니터에서 쓸 수 있도록 별도의 창으로 만듭니다."
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "도킹할 곳:"
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "게임 화면"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "도킹할 화면입니다. 클릭하면 다음 화면으로 바뀝니다."
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "실드"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "선체"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "수소"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "양자"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "부스트"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "조종사"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "체력"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "산소"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "허기"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "갈증"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "휴전 구역"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  핑 {ping} ms  ·  서버 {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "설계도"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Game.log의 설계도"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "게임 텔레메트리 (테스트)"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "채굴 스캔 해독기"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "오버레이가 실행되는 동안 게임에서 받은 설계도를 Game.log에서 읽어 보유로 표시합니다."
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "텔레메트리 열기"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "텔레메트리 닫기"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "텔레메트리를 다른 모니터로 옮길 수 있는 별도의 창으로 엽니다. 표시 내용은 창 크기에 맞춰 커집니다. 도킹 버튼을 누르면 화면 가장자리에, 게임 위에 붙고, 도킹 해제 버튼을 누르면 다시 창이 됩니다. 도킹할 곳은 텔레메트리에서 직접 고릅니다. 위치는 작은 화면 지도(또는 아래)에서, 화면은 지도 옆의 버튼으로 고릅니다. 지금은 게임 데이터가 아닌 샘플 값을 표시합니다."
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "도킹 위치:"
     },
     "drawer": {
       "ht": "",

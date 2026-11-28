@@ -61,6 +61,8 @@ La superposition reste désactivée tant que vous ne la lancez pas. Pendant qu'e
 
 Elle ne lit jamais la mémoire du jeu, ne s'y accroche ni ne s'y injecte jamais, et ne lui envoie jamais d'entrée.
 
+Le panneau **Télémétrie du jeu (test)** de l'onglet Superposition est distinct de la superposition et reste désactivé tant que vous ne l'ouvrez pas. Pour l'instant, il affiche des valeurs d'exemple et ne lit rien du jeu. Tant qu'il est ancré au bord de l'écran, il demande à Windows les deux mêmes choses que le tiroir (quelle fenêtre est au premier plan et si le pointeur de la souris est affiché) ainsi que l'écran sur lequel se trouve la fenêtre du jeu. Rien de ce qu'il affiche ou demande ne quitte votre ordinateur.
+
 ### Ce que Smart Citizen ne fait **pas**
 
 - Aucune télémétrie, analyse d'usage ou rapport d'utilisation d'aucune sorte.

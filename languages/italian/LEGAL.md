@@ -59,6 +59,8 @@ L'overlay resta spento finché non lo avvii. Mentre è attivo, tutto ciò che le
 
 Non legge mai la memoria del gioco, non si aggancia né si inietta mai nel gioco e non gli invia mai input.
 
+Il pannello **Telemetria di gioco (test)** della scheda Overlay è separato dall'overlay e resta spento finché non lo apri. Per ora mostra valori di esempio e non legge nulla dal gioco. Mentre è agganciato al bordo dello schermo, chiede a Windows le stesse due cose del cassetto (quale finestra è in primo piano e se il puntatore del mouse è visibile) e su quale schermo si trova la finestra del gioco. Nulla di ciò che mostra o chiede lascia il tuo computer.
+
 ### Cosa Smart Citizen **non** fa
 
 - Nessuna telemetria, analisi o segnalazione di utilizzo di alcun tipo.

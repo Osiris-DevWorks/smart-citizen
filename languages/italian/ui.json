@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "Il decodificatore di scansioni minerarie si è fermato dopo un errore. Riavvia l'overlay per riprovare; i dettagli sono nella scheda Log."
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "Telemetria di gioco"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "In attesa della telemetria dal gioco."
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "Sono valori di esempio, non del gioco. Gli indicatori reali appariranno qui quando Star Citizen invierà la telemetria."
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "Dati di esempio"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "Telemetria"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "Aggancia"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "Agganciala al bordo dello schermo, sopra il gioco, come il cassetto dell'overlay."
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "Sgancia"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "Trasformala in una finestra separata, per un altro monitor."
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "Aggancia a:"
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "Schermo del gioco"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "Lo schermo su cui si aggancia. Fai clic per passare al successivo."
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "Scudi"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "Scafo"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "Idrogeno"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "Quantum"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "Boost"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "Pilota"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "Salute"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "Ossigeno"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "Fame"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "Sete"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "Zona di armistizio"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  ping {ping} ms  ·  server {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Blueprint"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Blueprint da Game.log"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "Telemetria di gioco (test)"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificatore scansioni minerarie"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Mentre l'overlay è attivo, i blueprint ricevuti in gioco vengono letti da Game.log e segnati come posseduti."
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "Apri telemetria"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "Chiudi telemetria"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "Apre la telemetria in una finestra separata che puoi spostare su un altro monitor, dove i suoi indicatori crescono con la finestra. Il pulsante Aggancia la porta invece al bordo dello schermo, sopra il gioco, e Sgancia ripristina la finestra. Dove si aggancia si sceglie sulla telemetria stessa: la posizione sulla sua piccola mappa dello schermo (o qui sotto) e lo schermo con il pulsante accanto alla mappa. Per ora mostra valori di esempio, non dati del gioco."
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "Posizione agganciata:"
     },
     "drawer": {
       "ht": "",

@@ -814,6 +814,29 @@ class AppSettings:
         SCO_DRAWER_SECTION_PREFIX + "finder":     ("sco/drawer_finder", True),
         SCO_LIVE_BLUEPRINT_WATCH: ("sco/live_blueprint_watch", True),
     }
+    # The game telemetry panel (a test: a placeholder until a game build
+    # sends telemetry), opened and closed by the Overlay tab's button. It is
+    # either docked at a screen edge in the drawer's look or a separate window
+    # for another monitor. Whether it is open (so it opens again at the next
+    # start), which of the two it is, whether the docked panel is opened out
+    # from its tab, and where the separate window was last left
+    # (QWidget.saveGeometry bytes as base64 text, like window_geometry) are
+    # this PC's window state, all in PROFILE_EXCLUDE_KEYS: a backup or Smart
+    # Sync would otherwise open, dock or move it on another PC.
+    SCO_TELEMETRY_WINDOW_OPEN = "sco/telemetry_window_open"
+    SCO_TELEMETRY_WINDOW_DOCKED = "sco/telemetry_window_docked"
+    SCO_TELEMETRY_DOCK_EXPANDED = "sco/telemetry_dock_expanded"
+    SCO_TELEMETRY_WINDOW_GEOMETRY = "sco/telemetry_window_geometry"
+    # Where the docked panel sits, one of SCO_DRAWER_POSITIONS. A preference,
+    # as the drawer's position is, so it travels in a backup. Its default is
+    # the side across from the drawer's.
+    SCO_TELEMETRY_DOCK_POSITION = "sco/telemetry_dock_position"
+    SCO_TELEMETRY_DOCK_POSITION_DEFAULT = "middle_left"
+    # Which screen the docked panel sits on: a screen's name as Qt gives it
+    # (the monitor's own, such as "MSI MP275Q"), or "" to follow the screen
+    # the game is on. A monitor's name means nothing on another PC, so this
+    # one is this PC's own too, in PROFILE_EXCLUDE_KEYS.
+    SCO_TELEMETRY_DOCK_SCREEN = "sco/telemetry_dock_screen"
     # Where the SCO drawer sits: "<top|middle|bottom>_<left|center|right>",
     # every combination but the screen centre.
     SCO_DRAWER_POSITION = "sco/drawer_position"
@@ -890,6 +913,11 @@ class AppSettings:
         "pending_data_move_from",
         "window_geometry",
         "window_state",
+        SCO_TELEMETRY_WINDOW_OPEN,
+        SCO_TELEMETRY_WINDOW_DOCKED,
+        SCO_TELEMETRY_DOCK_EXPANDED,
+        SCO_TELEMETRY_WINDOW_GEOMETRY,
+        SCO_TELEMETRY_DOCK_SCREEN,
         # Column widths are machine-local for the same reason window geometry
         # is: they are measured against one screen. Exported and adopted
         # verbatim, a wide-monitor layout arrives on a laptop with columns
@@ -2236,6 +2264,79 @@ class AppSettings:
         key, _default = AppSettings.SCO_OPTION_SETTING[name]
         AppSettings.settings().setValue(key, bool(enabled))
         AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_telemetry_window_open() -> bool:
+        """Whether the telemetry window was left open (closed until first opened)."""
+        return AppSettings.settings().value(
+            AppSettings.SCO_TELEMETRY_WINDOW_OPEN, False, type=bool)
+
+    @staticmethod
+    def set_sco_telemetry_window_open(is_open: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_TELEMETRY_WINDOW_OPEN, bool(is_open))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_telemetry_window_docked() -> bool:
+        """Whether the telemetry panel is docked at a screen edge (True) or
+        its own window (False, as it starts)."""
+        return AppSettings.settings().value(
+            AppSettings.SCO_TELEMETRY_WINDOW_DOCKED, False, type=bool)
+
+    @staticmethod
+    def set_sco_telemetry_window_docked(docked: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_TELEMETRY_WINDOW_DOCKED, bool(docked))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_telemetry_dock_expanded() -> bool:
+        """Whether the docked telemetry panel is opened out from its tab (as
+        it starts) or folded away to the tab alone."""
+        return AppSettings.settings().value(
+            AppSettings.SCO_TELEMETRY_DOCK_EXPANDED, True, type=bool)
+
+    @staticmethod
+    def set_sco_telemetry_dock_expanded(expanded: bool) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_TELEMETRY_DOCK_EXPANDED, bool(expanded))
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_telemetry_dock_position() -> str:
+        """Where the docked telemetry panel sits (one of ``SCO_DRAWER_POSITIONS``)."""
+        return AppSettings._get_choice(AppSettings.SCO_TELEMETRY_DOCK_POSITION,
+                                       AppSettings.SCO_DRAWER_POSITIONS,
+                                       AppSettings.SCO_TELEMETRY_DOCK_POSITION_DEFAULT)
+
+    @staticmethod
+    def set_sco_telemetry_dock_position(position: str) -> None:
+        AppSettings._set_choice(AppSettings.SCO_TELEMETRY_DOCK_POSITION, position,
+                                AppSettings.SCO_DRAWER_POSITIONS,
+                                AppSettings.SCO_TELEMETRY_DOCK_POSITION_DEFAULT)
+
+    @staticmethod
+    def get_sco_telemetry_dock_screen() -> str:
+        """The screen the docked telemetry panel sits on, by the screen's
+        name, or "" (as it starts) to follow the screen the game is on."""
+        return str(AppSettings.settings().value(AppSettings.SCO_TELEMETRY_DOCK_SCREEN, "") or "")
+
+    @staticmethod
+    def set_sco_telemetry_dock_screen(name: str) -> None:
+        AppSettings.settings().setValue(AppSettings.SCO_TELEMETRY_DOCK_SCREEN, name or "")
+        AppSettings.settings().sync()
+
+    @staticmethod
+    def get_sco_telemetry_window_geometry() -> bytes:
+        """Where the telemetry window was last left (``saveGeometry`` bytes),
+        or ``b""`` before it was ever placed."""
+        return AppSettings._decode_qbytes(
+            AppSettings.settings().value(AppSettings.SCO_TELEMETRY_WINDOW_GEOMETRY, "")
+        )
+
+    @staticmethod
+    def set_sco_telemetry_window_geometry(geometry) -> None:
+        AppSettings.settings().setValue(
+            AppSettings.SCO_TELEMETRY_WINDOW_GEOMETRY, AppSettings._encode_qbytes(geometry)
+        )
 
     @staticmethod
     def get_auto_scan_show_popup_enabled() -> bool:
@@ -4519,6 +4620,8 @@ class AppSettings:
             AppSettings.BLUEPRINT_AUTO_SCAN_SHOW_POPUP: False,
             AppSettings.TAG_ANNOTATE_MISSION_DESCS: True,
             AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
+            AppSettings.SCO_TELEMETRY_DOCK_POSITION:
+                AppSettings.SCO_TELEMETRY_DOCK_POSITION_DEFAULT,
             AppSettings.SCO_DRAWER_HOTKEY: "",
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,

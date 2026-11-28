@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "O decodificador de escaneamento de mineração parou após um erro. Reinicie a sobreposição para tentar de novo; a aba Log tem os detalhes."
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "Telemetria do jogo"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "Aguardando a telemetria do jogo."
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "São valores de exemplo, não do jogo. Os indicadores reais aparecerão aqui quando o Star Citizen enviar telemetria."
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "Dados de exemplo"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "Telemetria"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "Encaixar"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "Encaixar na borda da tela, sobre o jogo, como a gaveta da sobreposição."
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "Desencaixar"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "Transformar em uma janela separada, para outro monitor."
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "Encaixar em:"
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "Tela do jogo"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "A tela em que ela encaixa. Clique para passar à próxima."
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "Escudos"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "Casco"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "Hidrogênio"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "Quântico"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "Impulso"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "Piloto"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "Saúde"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "Oxigênio"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "Fome"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "Sede"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "Zona de armistício"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  ping de {ping} ms  ·  servidor {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Blueprints"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Blueprints do Game.log"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "Telemetria do jogo (teste)"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Decodificador de escaneamento de mineração"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Enquanto a sobreposição roda, os blueprints recebidos no jogo são lidos do Game.log e marcados como possuídos."
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "Abrir telemetria"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "Fechar telemetria"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "Abre a telemetria em uma janela separada que você pode mover para outro monitor, onde os indicadores crescem com a janela. O botão Encaixar a coloca na borda da tela, sobre o jogo, e Desencaixar traz a janela de volta. Onde ela encaixa é escolhido na própria telemetria: a posição no pequeno mapa da tela (ou abaixo) e a tela com o botão ao lado do mapa. Por enquanto ela mostra valores de exemplo, não dados do jogo."
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "Posição encaixada:"
     },
     "drawer": {
       "ht": "",

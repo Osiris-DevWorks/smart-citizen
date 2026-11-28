@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "採掘スキャンデコーダーがエラーで停止しました。オーバーレイを再起動すると再試行できます。詳細はログタブにあります。"
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "ゲームテレメトリー"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "ゲームからのテレメトリーを待っています。"
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "これはサンプルの値で、ゲームの値ではありません。Star Citizen がテレメトリーを送信するようになると、実際の情報がここに表示されます。"
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "サンプルデータ"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "テレメトリー"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "固定"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "オーバーレイのドロワーのように、ゲームの上の画面端に固定します。"
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "固定解除"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "別のモニター用に、独立したウィンドウにします。"
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "固定先："
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "ゲームの画面"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "固定する画面です。クリックすると次の画面に切り替わります。"
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "シールド"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "船体"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "水素"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "量子"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "ブースト"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "パイロット"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "体力"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "酸素"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "空腹"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "渇き"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "休戦区域"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  ping {ping} ms  ·  サーバー {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "ブループリント"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Game.log からのブループリント"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "ゲームテレメトリー（テスト）"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "採掘スキャンデコーダー"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "オーバーレイの実行中、ゲーム内で受け取ったブループリントを Game.log から読み取り、所持済みにします。"
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "テレメトリーを開く"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "テレメトリーを閉じる"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "テレメトリーを、別のモニターに移動できる独立したウィンドウで開きます。表示はウィンドウの大きさに合わせて大きくなります。「固定」ボタンを押すと画面端にゲームの上へ固定され、「固定解除」でウィンドウに戻ります。固定する場所はテレメトリー自体で選びます。位置は小さな画面マップ（または下）で、画面はマップの横のボタンで選びます。今のところサンプルの値を表示し、ゲームのデータではありません。"
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "固定時の位置："
     },
     "drawer": {
       "ht": "",

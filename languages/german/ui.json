@@ -3690,6 +3690,106 @@
       "ht": "",
       "at": "Der Bergbau-Scan-Decoder wurde nach einem Fehler angehalten. Starte das Overlay neu, um es erneut zu versuchen; Details stehen im Tab „Protokoll“."
     },
+    "telemetry_title": {
+      "ht": "",
+      "at": "Spieltelemetrie"
+    },
+    "telemetry_waiting": {
+      "ht": "",
+      "at": "Warte auf Telemetrie vom Spiel."
+    },
+    "telemetry_placeholder": {
+      "ht": "",
+      "at": "Dies sind Beispielwerte, nicht aus dem Spiel. Echte Anzeigen erscheinen hier, sobald Star Citizen Telemetrie sendet."
+    },
+    "telemetry_sample": {
+      "ht": "",
+      "at": "Beispieldaten"
+    },
+    "section_telemetry": {
+      "ht": "",
+      "at": "Telemetrie"
+    },
+    "telemetry_dock": {
+      "ht": "",
+      "at": "Andocken"
+    },
+    "telemetry_dock_hint": {
+      "ht": "",
+      "at": "Am Bildschirmrand über dem Spiel andocken, wie die Overlay-Schublade."
+    },
+    "telemetry_undock": {
+      "ht": "",
+      "at": "Abdocken"
+    },
+    "telemetry_undock_hint": {
+      "ht": "",
+      "at": "Als eigenes Fenster lösen, etwa für einen anderen Monitor."
+    },
+    "telemetry_place": {
+      "ht": "",
+      "at": "Andocken an:"
+    },
+    "telemetry_screen_game": {
+      "ht": "",
+      "at": "Bildschirm des Spiels"
+    },
+    "telemetry_screen_hint": {
+      "ht": "",
+      "at": "Der Bildschirm, an dem sie andockt. Klicken für den nächsten."
+    },
+    "telemetry_shields": {
+      "ht": "",
+      "at": "Schilde"
+    },
+    "telemetry_level_hull": {
+      "ht": "",
+      "at": "Hülle"
+    },
+    "telemetry_level_hydrogen_fuel": {
+      "ht": "",
+      "at": "Wasserstoff"
+    },
+    "telemetry_level_quantum_fuel": {
+      "ht": "",
+      "at": "Quantum"
+    },
+    "telemetry_level_boost": {
+      "ht": "",
+      "at": "Boost"
+    },
+    "telemetry_pilot": {
+      "ht": "",
+      "at": "Pilot"
+    },
+    "telemetry_vital_health": {
+      "ht": "",
+      "at": "Gesundheit"
+    },
+    "telemetry_vital_oxygen": {
+      "ht": "",
+      "at": "Sauerstoff"
+    },
+    "telemetry_vital_hunger": {
+      "ht": "",
+      "at": "Hunger"
+    },
+    "telemetry_vital_thirst": {
+      "ht": "",
+      "at": "Durst"
+    },
+    "telemetry_armistice": {
+      "ht": "",
+      "at": "Waffenstillstandszone"
+    },
+    "telemetry_speed_line": {
+      "ht": "",
+      "at": "m/s   {g} G"
+    },
+    "telemetry_game_line": {
+      "ht": "",
+      "at": "{fps} FPS  ·  {ping} ms Ping  ·  Server {server_fps} FPS"
+    },
     "section_blueprints": {
       "ht": "",
       "at": "Baupläne"
@@ -4096,6 +4196,10 @@
       "ht": "",
       "at": "Baupläne aus Game.log"
     },
+    "telemetry_group": {
+      "ht": "",
+      "at": "Spieltelemetrie (Test)"
+    },
     "scan_decoder": {
       "ht": "",
       "at": "Bergbau-Scan-Decoder"
@@ -4251,6 +4355,22 @@
     "live_blueprint_watch_hint": {
       "ht": "",
       "at": "Solange das Overlay läuft, werden im Spiel erhaltene Baupläne aus Game.log gelesen und als besessen markiert."
+    },
+    "telemetry_open_btn": {
+      "ht": "",
+      "at": "Telemetrie öffnen"
+    },
+    "telemetry_close_btn": {
+      "ht": "",
+      "at": "Telemetrie schließen"
+    },
+    "telemetry_window_hint": {
+      "ht": "",
+      "at": "Öffnet die Telemetrie als eigenes Fenster, das du auf einen anderen Monitor schieben kannst. Dort wachsen ihre Anzeigen mit dem Fenster. Mit Andocken sitzt sie stattdessen am Bildschirmrand über dem Spiel, und Abdocken holt das Fenster zurück. Wo sie andockt, wählst du auf der Telemetrie selbst: die Stelle auf ihrer kleinen Bildschirmkarte (oder unten) und den Bildschirm mit der Schaltfläche neben der Karte. Vorerst zeigt sie Beispielwerte, keine Daten aus dem Spiel."
+    },
+    "telemetry_dock_position": {
+      "ht": "",
+      "at": "Position angedockt:"
     },
     "drawer": {
       "ht": "",

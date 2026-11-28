@@ -59,6 +59,8 @@ The overlay is off until you start it. While it runs, everything it reads stays 
 
 It never reads the game's memory, never hooks or injects into the game, and never sends input to it.
 
+The **Game telemetry (test)** panel on the Overlay tab is separate from the overlay and is off until you open it. For now it shows sample values and reads nothing from the game. While it is docked at a screen edge, it asks Windows the same two things as the drawer (which window is in front and whether the mouse pointer shows) and which screen the game's window is on. Nothing it shows or asks leaves your computer.
+
 ### What Smart Citizen does **not** do
 
 - No telemetry, analytics, or usage reporting of any kind.
