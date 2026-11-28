@@ -55,6 +55,7 @@ def _make_variant(
     roster: tuple = (),
     cooldown: tuple | None = None,
     ace_chance: float = 1.0,
+    hostile_factions: frozenset = frozenset(),
 ) -> tuple:
     return (
         system_name,
@@ -72,6 +73,7 @@ def _make_variant(
         roster,
         cooldown,
         ace_chance,
+        hostile_factions,
     )
 
 
@@ -99,6 +101,7 @@ class TestMissionVariantTupleShape:
             roster=(("hostile", "Pirates", 4),),
             cooldown=(30, 5),
             ace_chance=0.1,
+            hostile_factions=frozenset({"Vanduul"}),
         )
         fields = gen_module.ContractVariant._fields
         assert len(values) == len(fields), (
@@ -122,6 +125,7 @@ class TestMissionVariantTupleShape:
             "roster": (("hostile", "Pirates", 4),),
             "cooldown": (30, 5),
             "ace_chance": 0.1,
+            "hostile_factions": frozenset({"Vanduul"}),
         }
 
 

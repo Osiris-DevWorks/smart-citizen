@@ -3364,6 +3364,17 @@ class ShipSpawnIndex:
                 self._sizes[name] = max(size, self._sizes.get(name, 0.0))
         self._picks: dict = {}
 
+    def factions(self, positive) -> set[str]:
+        """The factions a spawn option asks for, by their tag names
+        (``Vanduul`` for AI/Faction/Vanduul, ``Criminal`` for one under
+        AI/Faction/Criminal)."""
+        out = set()
+        for g in positive:
+            parts = self._paths.get(g, "").split("/")
+            if len(parts) > 2 and parts[0] == "AI" and parts[1] == "Faction":
+                out.add(parts[2])
+        return out
+
     def biggest_first(self, names) -> list[str]:
         """*names* by size, biggest first; equal sizes by name."""
         return sorted(names, key=lambda n: (-self._sizes.get(n, 0.0), n.casefold()))
@@ -3538,6 +3549,28 @@ def _ship_group_slots(group: ET.Element, name: str, ships: ShipSpawnIndex) -> "t
         if slot:
             slots.append(tuple(slot))
     return tuple(slots) or None
+
+
+def _hostile_factions(element, ships: ShipSpawnIndex,
+                      exclude_within: str | tuple[str, ...] | None = None,
+                      chances: "dict[str, float] | None" = None) -> frozenset:
+    """The factions *element*'s hostile ship groups ask for
+    (ShipSpawnIndex.factions), a group whose chance is 0 left out, so
+    _variant_names can tell a variant that spawns Vanduul from one that
+    does not. *element* may be a list of scopes, as for
+    _extract_spawn_counts."""
+    out: set[str] = set()
+    for sg in _groups_in(element, exclude_within, "SpawnDescription_ShipGroup"):
+        name = sg.get("Name", "")
+        if "turret" in name.lower() or _group_chance(sg, chances) <= 0:
+            continue
+        if _group_bucket(sg, name, "ship")[0] != SPAWN_HOSTILE:
+            continue
+        for options in _slot_options(sg):
+            for s in options:
+                out |= ships.factions(
+                    [r.get("value", "") for r in s.findall("./tags/tags/Reference")])
+    return frozenset(out)
 
 
 def _shown_slot(slot: tuple) -> tuple:
@@ -4012,14 +4045,23 @@ def _regions_block(keys) -> list[str]:
     return [f"<EM4>{_t('Regions')}:</EM4>"] + lines if lines else []
 
 
+# The faction _variant_names names a variant by when nothing else tells it
+# apart: the Vanduul contracts beside a mission's human ones (CIG's _V
+# contracts, CFP_Patrol_Nyx_Easy_V), read from the ships it spawns.
+_VANDUUL_FACTION = "Vanduul"
+
+
 def _variant_names(members: list[list], regions: "list | None" = None) -> list[str]:
     """A name for each group of variants that read alike (*members*, each a
     list of ContractVariant): its star systems where they tell the groups
     apart (``Stanton, Pyro``, ``Pyro Regions B, C, D``, _place_names), with
-    the combat rating added where they do not (``Nyx, Combat 4/7``), and a
-    number only where neither does (``Nyx 1``, ``Nyx 2``); "" for a group with
-    neither, which _variant_suffix numbers. *regions*, when given, gets each
-    group's list of the regions its name mentions (``(system, token)``)."""
+    the combat rating added where it tells every group sharing them apart
+    (``Nyx, Combat 4/7``, the rating alone when all share one system), else
+    ``Vanduul`` on the groups that spawn Vanduul where the others sharing
+    their systems do not (``Nyx`` and ``Nyx, Vanduul``), and a number only
+    where none of these does (``Nyx #1``, ``Nyx #2``); "" for a group with no
+    name at all, which _variant_suffix numbers. *regions*, when given, gets
+    each group's list of the regions its name mentions (``(system, token)``)."""
     def joined(values) -> str:
         return ", ".join(dict.fromkeys(v for v in values if v))
 
@@ -4030,23 +4072,31 @@ def _variant_names(members: list[list], regions: "list | None" = None) -> list[s
     places = [[v.system_name for v in group if _is_system_name(v.system_name)]
               for group in members]
     systems = [_place_names(names) for names in places]
-    if len(set(systems)) == 1:
-        # One system for all tells none of them apart.
-        systems = [""] * len(systems)
+    # One system for all tells none of them apart, unless the Vanduul name
+    # needs it beside them.
+    one_system = len(set(systems)) == 1
+    combats = [combat(group) for group in members]
+    vanduul = [bool(group) and all(_VANDUUL_FACTION in v.hostile_factions for v in group)
+               for group in members]
+    names = []
+    for i, s in enumerate(systems):
+        sharing = [j for j, s2 in enumerate(systems) if s2 == s]
+        ratings = [combats[j] for j in sharing]
+        base = "" if one_system else s
+        if len(sharing) == 1 and base:
+            names.append(base)
+        elif all(ratings) and len(set(ratings)) == len(ratings):
+            names.append(", ".join(p for p in (base, combats[i]) if p))
+        elif len(sharing) > 1 and any(vanduul[j] for j in sharing) \
+                and not all(vanduul[j] for j in sharing):
+            names.append(", ".join(p for p in (s, _VANDUUL_FACTION if vanduul[i] else "") if p))
+        else:
+            names.append(base)
     if regions is not None:
         regions.extend(
-            [key for key in map(_region_key, names) if key] if s else []
-            for names, s in zip(places, systems))
-    # Where groups share their systems, the combat rating names them when it
-    # tells every one of them apart; otherwise they are numbered below.
-    combats = [combat(group) for group in members]
-    names = []
-    for s, rating in zip(systems, combats):
-        sharing = [c for s2, c in zip(systems, combats) if s2 == s]
-        if len(sharing) > 1 or not s:
-            if all(sharing) and len(set(sharing)) == len(sharing):
-                s = ", ".join(p for p in (s, rating) if p)
-        names.append(s)
+            [key for key in map(_region_key, group_places) if key]
+            if s and name.startswith(s) else []
+            for group_places, s, name in zip(places, systems, names))
     counts = {n: names.count(n) for n in names}
     seen: dict[str, int] = {}
     out = []
@@ -5389,6 +5439,9 @@ class ContractVariant(NamedTuple):
     # The chance its ace pilot comes when its spawns list one (_spawn_chances:
     # AcePilotChance_BP and the like), 1 for certain.
     ace_chance: float = 1.0
+    # The factions its hostile ships ask for (_hostile_factions), empty
+    # without the tag tree; _variant_names names a Vanduul variant by it.
+    hostile_factions: frozenset = frozenset()
 
 
 def scan_contract_generators(
@@ -5565,6 +5618,7 @@ def scan_contract_generators(
                     # uses the plain <Contract> tag, not <CareerContract>.
                     handler_scope = ("CareerContract", "Contract", "MissionProperty")
                     handler_roster: tuple = ()
+                    handler_factions: frozenset = frozenset()
                     try:
                         handler_spawns = _extract_spawn_counts(
                             handler, exclude_within=handler_scope
@@ -5573,6 +5627,8 @@ def scan_contract_generators(
                             handler_roster = _extract_spawn_roster(
                                 handler, _SHIP_SPAWNS, exclude_within=handler_scope,
                             )
+                            handler_factions = _hostile_factions(
+                                handler, _SHIP_SPAWNS, exclude_within=handler_scope)
                     except Exception as e:
                         # Outside the per-contract try, so a failure here used to end
                         # the whole scan. The contracts' own spawns still count.
@@ -5582,6 +5638,7 @@ def scan_contract_generators(
                         )
                         handler_spawns = _empty_spawn_breakdown()
                         handler_roster = ()
+                        handler_factions = frozenset()
                     handler_availability = handler.find("defaultAvailability")
 
                     contracts = handler.findall(contract_xpath)
@@ -5807,14 +5864,18 @@ def scan_contract_generators(
                             spawns = _extract_spawn_counts(
                                 scopes, chances=chances, label_chances=label_chances)
                             roster = ()
+                            factions: frozenset = frozenset()
                             if _SHIP_SPAWNS:
                                 roster = _extract_spawn_roster(
+                                    scopes, _SHIP_SPAWNS, chances=chances)
+                                factions = _hostile_factions(
                                     scopes, _SHIP_SPAWNS, chances=chances)
                             if not own_spawns:
                                 for bucket, items in handler_spawns.items():
                                     for label, count in items.items():
                                         _add_spawn(spawns, bucket, label, count)
                                 roster += handler_roster
+                                factions |= handler_factions
                             cooldown = _extract_cooldown(handler_availability, contract)
 
                             # Extract per-contract difficulty
@@ -5838,6 +5899,7 @@ def scan_contract_generators(
                                 roster=roster,
                                 cooldown=cooldown,
                                 ace_chance=label_chances.get("Ace Pilots", 1.0),
+                                hostile_factions=factions,
                                 difficulty=contract_difficulty,
                                 has_bp=contract_has_bp,
                                 bp_chance=contract_bp_chance,

@@ -901,12 +901,51 @@ class TestVariantNames:
     """Variants are named by what tells them apart (review point 3): their
     star systems, else their combat rating, else a number."""
 
-    def _v(self, gen, system, difficulty=""):
+    def _v(self, gen, system, difficulty="", factions=()):
         return gen.ContractVariant(
             system_name=system, success_xp=0, failure_xp=0, desc_key="d", flags=[],
             spawns={}, difficulty=difficulty, has_bp=False, bp_chance=0.0,
-            bp_variant="", rank_name="", rep_track="",
+            bp_variant="", rank_name="", rep_track="", hostile_factions=frozenset(factions),
         )
+
+    def test_a_vanduul_variant_is_named_by_it(self, gen):
+        # The review's CFP patrols: Nyx Easy and its _V contract, one system
+        # and one combat rating, the second spawning Vanduul.
+        members = [[self._v(gen, "Nyx", "Combat 3/7", {"Criminal"})],
+                   [self._v(gen, "Nyx", "Combat 3/7", {"Criminal", "Vanduul"})]]
+        assert gen._variant_names(members) == ["Nyx", "Nyx, Vanduul"]
+
+    def test_vanduul_beside_other_systems(self, gen):
+        # The #620 mission: Stanton and Pyro, Nyx, and Nyx's Vanduul contract.
+        members = [[self._v(gen, "Stanton", "", {"Criminal"}),
+                    self._v(gen, "Pyro", "", {"Criminal"})],
+                   [self._v(gen, "Nyx", "", {"Criminal"})],
+                   [self._v(gen, "Nyx", "", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["Stanton, Pyro", "Nyx", "Nyx, Vanduul"]
+
+    def test_vanduul_leaves_the_rest_numbered(self, gen):
+        members = [[self._v(gen, "Nyx", "", {"Criminal"})],
+                   [self._v(gen, "Nyx", "", {"Ninetails"})],
+                   [self._v(gen, "Nyx", "", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["Nyx #1", "Nyx #2", "Nyx, Vanduul"]
+        # Every one spawning Vanduul tells none apart.
+        members = [[self._v(gen, "Nyx", "", {"Vanduul"})], [self._v(gen, "Nyx", "", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["", ""]
+
+    def test_the_combat_rating_comes_before_vanduul(self, gen):
+        members = [[self._v(gen, "Nyx", "Combat 3/7", {"Criminal"})],
+                   [self._v(gen, "Nyx", "Combat 5/7", {"Vanduul"})]]
+        assert gen._variant_names(members) == ["Combat 3/7", "Combat 5/7"]
+
+    def test_hostile_factions_come_from_the_spawn_tags(self, gen, index):
+        root = ET.fromstring(
+            "<c>"
+            + _group("Wave1", [_ship(2, [VANDUUL, EASY])], [_ship(1, [CRIMINAL])])
+            + _group("", [_ship(1, [NINETAILS])], wrapper="FriendlyShips_BP")
+            + "</c>"
+        )
+        assert index.factions([VANDUUL, EASY]) == {"Vanduul"}
+        assert gen._hostile_factions(root, index) == {"Vanduul", "Criminal"}
 
     def test_by_system(self, gen):
         members = [[self._v(gen, "Stanton"), self._v(gen, "Pyro")], [self._v(gen, "Nyx")]]

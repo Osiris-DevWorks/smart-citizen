@@ -156,7 +156,7 @@ TEST_SECTIONS: list[dict] = [
             "Missions with ground enemies still list them with a count, e.g. Soldiers x6, in the same list.",
             "Mission details carry a Cooldown line: e.g. 15 min, or None. An abandon time of 1 min is left out; a longer one shows, e.g. None (abandon: 2 min).",
             "Find Ambush Op (HeadHunters, Medium): no Ace Pilots or Hostile Allies line, no Ace Pilot line, and no [ACE?] in its title.",
-            "Its variants are named, not numbered: Hostiles (Stanton, Pyro), Hostiles (Nyx #1), Hostiles (Nyx #2), and the Cooldown line names them the same way.",
+            "Its variants are named, not numbered: Hostiles (Stanton, Pyro), Hostiles (Nyx), Hostiles (Nyx, Vanduul), and the Cooldown line names them the same way.",
             "Find Crash some ships (Headhunters, Medium): a Regions block after the flavour text, e.g. Pyro Region B: Bloom; Orbituary, Starlight Service Station.",
             "In that mission, blueprint headers read [Pyro Region A] and Hostiles read (Pyro Regions B, C, D). No mission text says Pyro RegionA any more.",
             "Rat's Nest, Rod's Fuel and the Terminus stops other than Ruin Station appear on no Regions line (they carry no region tag).",
