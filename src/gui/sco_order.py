@@ -63,6 +63,9 @@ SEARCH_LIMIT = 30
 SEARCH_LIST_HEIGHT = 140
 # New order, Save over a name and Delete ask to be clicked again within this time.
 CLEAR_CONFIRM_MS = 3000
+# Copy and Save say Copied / Saved for this long. Their timers are the
+# section's children, so a section deleted meanwhile never hears from them.
+DONE_SHOWN_MS = 2000
 # How tall a quality slider's tier ticks are.
 TICK_HEIGHT = 4
 logger = logging.getLogger(__name__)
@@ -408,6 +411,9 @@ class OrderSection(QWidget):
         _no_focus(self._summary_toggle)
         self._volume_btn = _button(slot=self._toggle_volume)
         self._copy_btn = _button(slot=self._copy)
+        self._copy_timer = QTimer(self)
+        self._copy_timer.setSingleShot(True)
+        self._copy_timer.timeout.connect(self._reset_copy)
         self._watch_btn = _button(slot=self._watch)
         # New order empties this one; a first click arms it (a short "Sure?"
         # on the button, the why in the status line, so nothing runs off the
@@ -755,7 +761,10 @@ class OrderSection(QWidget):
         text = co.order_text(self._totals(), self._lines, self._by_key, names, self.volume)
         QApplication.clipboard().setText(text)
         self._copy_btn.setText(tr("sco.order_copied"))
-        QTimer.singleShot(2000, lambda: self._copy_btn.setText(tr("sco.order_copy")))
+        self._copy_timer.start(DONE_SHOWN_MS)
+
+    def _reset_copy(self) -> None:
+        self._copy_btn.setText(tr("sco.order_copy"))
 
     def _watchable(self, totals: list[co.MaterialTotal]) -> set[str]:
         ores = set()
@@ -845,7 +854,7 @@ class OrderSection(QWidget):
         self._save_name.clear()
         self.refresh_saved_orders(select=path.stem)
         self._save_btn.setText(tr("sco.order_saved"))
-        QTimer.singleShot(2000, self._disarm_save)
+        self._save_timer.start(DONE_SHOWN_MS)
 
     def _disarm_save(self) -> None:
         self._save_armed = False

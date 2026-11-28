@@ -95,6 +95,7 @@ TEST_SECTIONS: list[dict] = [
             "Open a line: each slot shows its material and amount. Drag a quality slider: the stat bonuses change, and the summary splits that material by quality.",
             "Compare one blueprint with RK Crafting Central: same materials, amounts and stat bonuses at the same qualities.",
             "Show SCU and Show cSCU switch the amounts. Copy, then paste in Discord: the order and its materials.",
+            "Click Copy (or Save), then stop the overlay within 2 seconds: no error box, and Copy reads Copy again next time.",
             "Watch minerals: the Minerals tab ticks the order's minerals. New order needs a second click, and its Sure? stays on screen.",
             "Restart the app: the order is still there.",
             "Search NDB-30 (and other items you know): they show whether you own them or not. Tick Owned only: only owned blueprints are listed.",
