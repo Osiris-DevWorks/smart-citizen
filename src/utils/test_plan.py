@@ -124,6 +124,16 @@ TEST_SECTIONS: list[dict] = [
         ],
     },
     {
+        "title": "Overlay: drawer after a screen change (#583)",
+        "items": [
+            "Start the overlay, drawer closed at middle right. Change the Windows display scale (e.g. 100% to 150%): within a second the drawer is back against the right edge at its usual size.",
+            "Open the drawer and change the scale back: it stays open and docks back against the edge.",
+            "With the overlay running, change the screen resolution: the drawer docks back against its edge, fully on the screen.",
+            "Drawer at bottom right: turn taskbar auto-hide on, then off. The drawer moves down to the screen's bottom edge, then back up above the taskbar.",
+            "Windows 10 only: move the taskbar to the right edge, then back to the bottom. Each time the drawer docks beside the taskbar, never under it.",
+        ],
+    },
+    {
         "title": "What's New pop-up (3.1.0)",
         "items": [
             "Install over 3.0.1 and start the app: once the update check is done, What's New opens with the 3.1.0 notes, no download or Windows blocks text at the top.",

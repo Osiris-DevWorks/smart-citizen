@@ -11,7 +11,7 @@ import ctypes
 import sys
 
 import pytest
-from PyQt6.QtCore import QPoint, QRect, Qt
+from PyQt6.QtCore import QObject, QPoint, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from src.gui import sco_overlay as so
@@ -818,12 +818,17 @@ def test_unknown_position_falls_back_to_middle_right(qapp):
 
 # --- the drawer inside its screen in device pixels -------------------------------
 
-class FakeScreen:
+class FakeScreen(QObject):
     """A QScreen as Qt on Windows shows a 2560 x 1440 monitor with a 60 px
     taskbar at *ratio*: the top-left in device pixels, the sizes divided by
-    the ratio and rounded."""
+    the ratio and rounded. It has the change signals the drawer follows
+    (#583)."""
+
+    geometryChanged = pyqtSignal(QRect)
+    availableGeometryChanged = pyqtSignal(QRect)
 
     def __init__(self, ratio):
+        super().__init__()
         self._ratio = ratio
         self._geometry = QRect(0, 0, qt_round(2560 / ratio), qt_round(1440 / ratio))
         self._available = QRect(0, 0, qt_round(2560 / ratio), qt_round(1380 / ratio))
