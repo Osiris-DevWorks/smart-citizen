@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "(… ещё {count})"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- ЭФФЕКТ ---"
@@ -465,6 +469,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "Нет"
+    },
     "Objectives": {
       "ht": "",
       "at": "Цели"
@@ -597,6 +605,10 @@
       "ht": "",
       "at": "Регенерация"
     },
+    "Regions": {
+      "ht": "",
+      "at": "Регионы"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "Подкрепление"
@@ -664,6 +676,10 @@
     "Ship": {
       "ht": "",
       "at": "Корабль"
+    },
+    "Ship types": {
+      "ht": "",
+      "at": "Типы кораблей"
     },
     "Ships to Defend": {
       "ht": "",
@@ -745,6 +761,10 @@
       "ht": "",
       "at": "Скорость"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "Волна {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "Износ"
@@ -764,6 +784,18 @@
     "Yes": {
       "ht": "",
       "at": "Да"
+    },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "отказ: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "и одно из:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "и {item}"
     },
     "base": {
       "ht": "",
@@ -801,6 +833,22 @@
       "ht": "",
       "at": "разгон"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "шанс до {chance}"
+    },
+    "variant {n}": {
+      "ht": "",
+      "at": "вариант {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "варианты {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "шанс {chance}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} шт."
@@ -813,9 +861,41 @@
       "ht": "",
       "at": "{count} типов"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{count}x из {ships}"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} и {last}"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} или {last}"
+    },
     "{item} Set": {
       "ht": "",
       "at": "Комплект {item}"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "корабль {kind}"
+    },
+    "{kind}: {ships}": {
+      "ht": "",
+      "at": "{kind}: {ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label} (шанс {chance})"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, одно из:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -824,6 +904,22 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "шанс {pct}% (только {variants})"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} и {last}"
+    },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} или {last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system}, регион {name}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system}, регионы {names}"
     },
     "{type} Ammo": {
       "ht": "",

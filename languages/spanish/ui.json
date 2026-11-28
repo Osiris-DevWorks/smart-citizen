@@ -1534,6 +1534,18 @@
       "ht": "",
       "at": "Hostiles"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "Naves por tipo"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "Todas"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "Cuántas naves lista cada tipo en Tipos de nave dentro de los detalles de la misión. Un tipo con más lista las más grandes y las más pequeñas, con el número de las demás entre ellas. Se aplica en la próxima generación de mejoras."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Reputación"
@@ -1545,6 +1557,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "Piloto Ace"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Enfriamiento"
     },
     "mission_field_resource_signatures": {
       "ht": "",

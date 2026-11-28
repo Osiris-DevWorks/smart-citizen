@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "(… {count} diğer)"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- ETKİ ---"
@@ -465,6 +469,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "Yok"
+    },
     "Objectives": {
       "ht": "",
       "at": "Hedefler"
@@ -597,6 +605,10 @@
       "ht": "",
       "at": "Yenilenme"
     },
+    "Regions": {
+      "ht": "",
+      "at": "Bölgeler"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "Takviyeler"
@@ -664,6 +676,10 @@
     "Ship": {
       "ht": "",
       "at": "Gemi"
+    },
+    "Ship types": {
+      "ht": "",
+      "at": "Gemi türleri"
     },
     "Ships to Defend": {
       "ht": "",
@@ -745,6 +761,10 @@
       "ht": "",
       "at": "Hız"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "Dalga {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "Aşınma"
@@ -764,6 +784,18 @@
     "Yes": {
       "ht": "",
       "at": "Evet"
+    },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "iptal: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "ve şunlardan biri:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "ve {item}"
     },
     "base": {
       "ht": "",
@@ -801,6 +833,22 @@
       "ht": "",
       "at": "çıkış"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "{chance} şansa kadar"
+    },
+    "variant {n}": {
+      "ht": "",
+      "at": "varyant {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "varyantlar {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "{chance} şans"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} eşya"
@@ -813,9 +861,41 @@
       "ht": "",
       "at": "{count} tür"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{ships} arasından {count}x"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} ve {last}"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} veya {last}"
+    },
     "{item} Set": {
       "ht": "",
       "at": "{item} Seti"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "{kind} gemisi"
+    },
+    "{kind}: {ships}": {
+      "ht": "",
+      "at": "{kind}: {ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label} ({chance} şans)"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, şunlardan biri:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -824,6 +904,22 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "%{pct} şans (yalnızca {variants})"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} ve {last}"
+    },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} veya {last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system} Bölge {name}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system} Bölgeler {names}"
     },
     "{type} Ammo": {
       "ht": "",

@@ -1534,6 +1534,18 @@
       "ht": "",
       "at": "Düşmanlar"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "Tür başına gemi"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "Tümü"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "Görev ayrıntılarındaki Gemi türleri altında her türün kaç gemi listeleyeceği. Daha fazlası olan bir tür en büyük ve en küçük gemilerini, aralarında kalanların sayısıyla gösterir. Bir sonraki iyileştirme oluşturmada geçerli olur."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "İtibar"
@@ -1545,6 +1557,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "As Pilot"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Bekleme"
     },
     "mission_field_resource_signatures": {
       "ht": "",

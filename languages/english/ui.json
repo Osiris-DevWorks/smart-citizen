@@ -1534,6 +1534,18 @@
       "ht": "Hostiles",
       "at": ""
     },
+    "ships_per_type_label": {
+      "ht": "Ships per type",
+      "at": ""
+    },
+    "ships_per_type_all": {
+      "ht": "All",
+      "at": ""
+    },
+    "ships_per_type_tooltip": {
+      "ht": "How many ships each type lists under Ship types in the mission details. A type with more lists its largest and smallest, with the number of others between them. Takes effect on the next Generate Enhancements.",
+      "at": ""
+    },
     "mission_field_reputation": {
       "ht": "Reputation",
       "at": ""
@@ -1544,6 +1556,10 @@
     },
     "mission_field_ace_pilot": {
       "ht": "Ace Pilot",
+      "at": ""
+    },
+    "mission_field_cooldown": {
+      "ht": "Cooldown",
       "at": ""
     },
     "mission_field_resource_signatures": {

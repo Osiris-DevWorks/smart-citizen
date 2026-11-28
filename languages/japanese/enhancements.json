@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "（… 他{count}隻）"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- 効果 ---"
@@ -465,6 +469,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "なし"
+    },
     "Objectives": {
       "ht": "",
       "at": "目標"
@@ -597,6 +605,10 @@
       "ht": "",
       "at": "回復"
     },
+    "Regions": {
+      "ht": "",
+      "at": "地域"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "増援"
@@ -664,6 +676,10 @@
     "Ship": {
       "ht": "",
       "at": "艦船"
+    },
+    "Ship types": {
+      "ht": "",
+      "at": "艦船の種類"
     },
     "Ships to Defend": {
       "ht": "",
@@ -745,6 +761,10 @@
       "ht": "",
       "at": "弾速"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "ウェーブ{n}"
+    },
     "Wear": {
       "ht": "",
       "at": "摩耗"
@@ -764,6 +784,18 @@
     "Yes": {
       "ht": "",
       "at": "あり"
+    },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "破棄：{time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "および次のいずれか："
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "および{item}"
     },
     "base": {
       "ht": "",
@@ -801,6 +833,22 @@
       "ht": "",
       "at": "上昇"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "確率最大{chance}"
+    },
+    "variant {n}": {
+      "ht": "",
+      "at": "バリアント {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "バリアント {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "確率{chance}"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} アイテム"
@@ -813,9 +861,41 @@
       "ht": "",
       "at": "{count} 種類"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{ships}から{count}x"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items}と{last}"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items}または{last}"
+    },
     "{item} Set": {
       "ht": "",
       "at": "{item} セット"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "{kind}の艦船"
+    },
+    "{kind}: {ships}": {
+      "ht": "",
+      "at": "{kind}：{ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label}（確率{chance}）"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}（いずれか）："
     },
     "{pct}% chance": {
       "ht": "",
@@ -824,6 +904,22 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "{pct}% の確率（{variants} のみ）"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest}と{last}"
+    },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest}または{last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system} 地域{name}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system} 地域{names}"
     },
     "{type} Ammo": {
       "ht": "",

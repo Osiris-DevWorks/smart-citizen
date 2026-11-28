@@ -1530,6 +1530,18 @@
       "ht": "",
       "at": "敌对数量"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "每类舰船数"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "全部"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "任务详情的舰船类型中，每种类型最多列出多少艘舰船。超出的类型列出最大和最小的舰船，中间注明其余的数量。下次生成增强时生效。"
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "声望"
@@ -1541,6 +1553,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "王牌飞行员"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "冷却"
     },
     "mission_detail_fields_note": {
       "ht": "",

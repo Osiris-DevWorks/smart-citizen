@@ -483,7 +483,7 @@ class AppSettings:
     # MISSION_TITLE_TAG_KEYS below with the other title-only toggles.
     MISSION_FIELD_KEYS = (
         "mission_type", "difficulty", "spawns", "reputation",
-        "blueprints", "ace", "resource_signatures",
+        "blueprints", "ace", "resource_signatures", "cooldown",
     )
     _MISSION_FIELD_SETTING = {
         "mission_type":  "mission_field/mission_type",
@@ -503,7 +503,18 @@ class AppSettings:
         # which patches the ore's own display name instead of adding a body
         # line -- a user can have either, both, or neither.
         "resource_signatures": "mission_field/resource_signatures",
+        # The mission's personal cooldown ("Cooldown: 1 h", with the abandon
+        # cooldown when it differs), read from each contract's availability.
+        "cooldown": "mission_field/cooldown",
     }
+    # How many ships a type lists under the mission ship lists' Ship types
+    # (the Enhancements tab's Ships per type, beside the Hostiles box): a
+    # bigger type lists (n - 2) / 2 at each end and counts the rest. A new
+    # key, so the old Simple / All Ship Details choice
+    # (mission_field/hostiles_detail) is left behind and everyone starts at 8.
+    SHIPS_PER_TYPE = "mission_field/ships_per_type"
+    SHIPS_PER_TYPE_CHOICES = ("4", "8", "16", "32", "64", "128", "all")
+    SHIPS_PER_TYPE_DEFAULT = "8"
 
     # Mission TITLE tags (2.2.0, "General Tags" section): independent of the
     # mission-detail body fields above — these gate the [BP]/[ACE]/[REP]
@@ -1419,6 +1430,20 @@ class AppSettings:
         reg_key = AppSettings._MISSION_FIELD_SETTING.get(field)
         if reg_key:
             AppSettings.settings().setValue(reg_key, enabled)
+
+    @staticmethod
+    def get_ships_per_type() -> str:
+        """How many ships a mission's Ship types lists per type (one of
+        ``SHIPS_PER_TYPE_CHOICES``, ``"all"`` for every ship)."""
+        return AppSettings._get_choice(AppSettings.SHIPS_PER_TYPE,
+                                       AppSettings.SHIPS_PER_TYPE_CHOICES,
+                                       AppSettings.SHIPS_PER_TYPE_DEFAULT)
+
+    @staticmethod
+    def set_ships_per_type(value: str) -> None:
+        AppSettings._set_choice(AppSettings.SHIPS_PER_TYPE, str(value),
+                                AppSettings.SHIPS_PER_TYPE_CHOICES,
+                                AppSettings.SHIPS_PER_TYPE_DEFAULT)
 
     @staticmethod
     def get_mission_title_tags() -> dict:
@@ -4521,6 +4546,7 @@ class AppSettings:
             AppSettings.SCO_DRAWER_POSITION: AppSettings.SCO_DRAWER_POSITION_DEFAULT,
             AppSettings.SCO_DRAWER_HOTKEY: "",
             AppSettings.SCO_LABEL_SIZE: AppSettings.SCO_LABEL_SIZE_DEFAULT,
+            AppSettings.SHIPS_PER_TYPE: AppSettings.SHIPS_PER_TYPE_DEFAULT,
             AppSettings.SCO_ALERT_SOUND: AppSettings.SCO_ALERT_SOUND_DEFAULT,
             AppSettings.SCO_WATCHED_MINERALS: "[]",
             AppSettings.SCO_ORDER_VOLUME: AppSettings.SCO_ORDER_VOLUME_DEFAULT,

@@ -1534,6 +1534,18 @@
       "ht": "",
       "at": "Hostiles"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "Vaisseaux par type"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "Tous"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "Combien de vaisseaux chaque type liste sous Types de vaisseaux dans les détails de mission. Un type qui en a plus liste les plus grands et les plus petits, avec le nombre des autres entre eux. Prend effet à la prochaine génération des améliorations."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Réputation"
@@ -1545,6 +1557,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "Pilote Ace"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Recharge"
     },
     "mission_field_resource_signatures": {
       "ht": "",

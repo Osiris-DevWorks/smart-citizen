@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "(… 외 {count}척)"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- 효과 ---"
@@ -465,6 +469,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "없음"
+    },
     "Objectives": {
       "ht": "",
       "at": "목표"
@@ -597,6 +605,10 @@
       "ht": "",
       "at": "재생"
     },
+    "Regions": {
+      "ht": "",
+      "at": "지역"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "지원군"
@@ -664,6 +676,10 @@
     "Ship": {
       "ht": "",
       "at": "함선"
+    },
+    "Ship types": {
+      "ht": "",
+      "at": "함선 유형"
     },
     "Ships to Defend": {
       "ht": "",
@@ -745,6 +761,10 @@
       "ht": "",
       "at": "속도"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "웨이브 {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "마모"
@@ -764,6 +784,18 @@
     "Yes": {
       "ht": "",
       "at": "예"
+    },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "포기: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "그리고 다음 중 하나:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "그리고 {item}"
     },
     "base": {
       "ht": "",
@@ -801,6 +833,22 @@
       "ht": "",
       "at": "가속"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "확률 최대 {chance}"
+    },
+    "variant {n}": {
+      "ht": "",
+      "at": "변형 {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "변형 {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "확률 {chance}"
+    },
     "{count} items": {
       "ht": "",
       "at": "아이템 {count}개"
@@ -813,9 +861,41 @@
       "ht": "",
       "at": "{count}종"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{ships} 중 {count}x"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} 및 {last}"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} 또는 {last}"
+    },
     "{item} Set": {
       "ht": "",
       "at": "{item} 세트"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "{kind} 함선"
+    },
+    "{kind}: {ships}": {
+      "ht": "",
+      "at": "{kind}: {ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label} (확률 {chance})"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, 다음 중 하나:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -824,6 +904,22 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "{pct}% 확률({variants} 한정)"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} 및 {last}"
+    },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} 또는 {last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "{system} {name} 지역"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "{system} {names} 지역"
     },
     "{type} Ammo": {
       "ht": "",

@@ -75,10 +75,12 @@ def _data_texts(gen) -> set[str]:
     # The spawn bucket headers (_format_spawn_lines), the mission flags
     # (_extract_mission_flags and the contract scan), the engagement types
     # (_classify_mission_engagement) and the two section labels (write_ini).
-    out |= {"Hostiles", "Friendlies", "Objectives"}
+    out |= {header for _, header in gen._SPAWN_HEADERS}
     out |= {"Chain", "Starter", "Unique"}
     out |= {"Ship", "FPS", "FPS & Ship"}
     out |= set(gen._SEPARATOR_LABELS)
+    # The list joins of the mission ship lines (_join_words).
+    out |= {t for pair in gen._LIST_JOINS.values() for t in pair}
     return out
 
 

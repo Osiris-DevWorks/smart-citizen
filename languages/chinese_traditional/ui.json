@@ -1530,6 +1530,18 @@
       "ht": "",
       "at": "敵對數量"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "每類艦船數"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "全部"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "任務詳情的艦船類型中，每種類型最多列出多少艘艦船。超出的類型列出最大和最小的艦船，中間註明其餘的數量。下次產生增強時生效。"
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "聲望"
@@ -1541,6 +1553,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "王牌飛行員"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "冷卻"
     },
     "mission_detail_fields_note": {
       "ht": "",

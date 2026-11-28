@@ -19,7 +19,9 @@ from typing import NamedTuple, Optional
 
 from src.utils.perf import timed
 
+from src.utils.atomic_io import atomic_write_text
 from src.utils.dataforge_exclude import DATAFORGE_EXCLUDE_SUBPATHS
+from src.utils.dcb_tags import write_tag_database
 from src.utils.i18n import tr
 from src.utils.onedrive import is_onedrive_path
 from src.utils.win_paths import win_long_path as _win_long_path
@@ -50,6 +52,20 @@ DATAFORGE_RECORDS_SUBPATH = DATAFORGE_LIBS_SUBPATH / DATAFORGE_RECORDS_UNDER_LIB
 # raw/ in this folder, and EnhancementsGeneratorWorker sweeps the temp files
 # a hard kill leaves there, so the two join this one name.
 DATAFORGE_LOOKUPS_SUBPATH = Path(".lookups")
+# The game's tag tree (dcb_tags), read from Game2.dcb during the extraction
+# and saved beside raw/, because unforge writes no tag records. The
+# generator matches mission spawn tags to ships with it. A cache without it
+# is not fresh, so an upgrade extracts once more to get it.
+DATAFORGE_TAGS_FILE = "tag_database.json"
+# What a cache holds, written by every extraction beside the tag tree and
+# required by dataforge_cache_is_fresh, so a cache from before a layout
+# change reads as out of date and the app offers to extract it again.
+# Bump it when the generator starts to read records the cache did not keep:
+# 2 is 3.1.0's, the tag tree and missiondata/pu_locations (the Regions
+# block). A stamp, not a check for the records themselves, so a game build
+# that stops shipping a kept folder never makes every start extract again.
+CACHE_LAYOUT_STAMP = ".cache_layout"
+CACHE_LAYOUT = "2"
 
 # The folder unforge writes beside Game2.dcb in the working folder. The cache
 # keeps its contents under DATAFORGE_LIBS_SUBPATH; the two are separate names
@@ -1684,6 +1700,9 @@ DATAFORGE_KEEP_SUBPATHS: tuple[str, ...] = (
     "crafting/blueprints/crafting",
     "crafting/craftedproperties",
     "missionbroker/pu_missions",
+    # 3.1.0: the mission location templates, whose region tags name the
+    # planets and stations of a mission's regions (the Regions block).
+    "missiondata/pu_locations",
     "ammoparams/vehicle",
     "ammoparams/fps",
     "reputation/rewards/missionrewards_reputation",
@@ -2480,6 +2499,17 @@ def extract_dataforge(
                 f"{moved + copied - kept} added beside them)"
             )
 
+            # The tag tree, from Game2.dcb while it is still in the working
+            # folder: unforge writes no tag records. A database it cannot
+            # read still saves the file, with no tags, so the cache stays
+            # fresh and missions fall back to spawn counts.
+            tags_error = write_tag_database(
+                dcb_path, dataforge_cache_dir / DATAFORGE_TAGS_FILE, atomic_write_text)
+            if tags_error:
+                logger.warning(f"Could not read the tag tree from {dcb_path.name}, so "
+                               f"missions show spawn counts without ships: {tags_error}")
+            atomic_write_text(dataforge_cache_dir / CACHE_LAYOUT_STAMP, CACHE_LAYOUT)
+
             # Stamp the source Data.p4k's mtime AND size so a later launch can tell
             # whether this cache is still current. Size is the reliable signal —
             # see dataforge_cache_is_fresh — because the RSI launcher's file
@@ -2549,6 +2579,16 @@ def dataforge_cache_is_fresh(p4k_path: Path, dataforge_cache_dir: Path) -> bool:
     size_stamp = dataforge_cache_dir / P4K_SIZE_STAMP
     libs_dir = dataforge_cache_dir / DATAFORGE_LIBS_SUBPATH
     if not stamp.exists() or not libs_dir.exists():
+        return False
+    # A cache from before the tag tree was saved (mission ships) extracts
+    # once more to get it, and so does one from before the current layout
+    # (CACHE_LAYOUT: since 3.1.0 the location templates for the Regions block).
+    if not (dataforge_cache_dir / DATAFORGE_TAGS_FILE).exists():
+        return False
+    try:
+        if (dataforge_cache_dir / CACHE_LAYOUT_STAMP).read_text().strip() != CACHE_LAYOUT:
+            return False
+    except OSError:
         return False
     # Verify there is at least one XML file — guards against empty extractions
     if not any(libs_dir.rglob("*.xml")):

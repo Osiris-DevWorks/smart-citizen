@@ -1530,6 +1530,18 @@
       "ht": "",
       "at": "敵対勢力"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "種類ごとの艦船数"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "すべて"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "ミッション詳細の「艦船の種類」で、種類ごとに何隻まで表示するか。それより多い種類は最大と最小の艦船を表示し、間に残りの隻数を示します。次回の強化生成から反映されます。"
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "評判"
@@ -1541,6 +1553,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "エースパイロット"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "クールダウン"
     },
     "mission_detail_fields_note": {
       "ht": "",

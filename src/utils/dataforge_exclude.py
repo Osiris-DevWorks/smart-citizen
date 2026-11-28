@@ -8,7 +8,10 @@ DataForge cache keeps everything else it writes. On LIVE's game build of
 beside the kept subtrees and beside the folders above them, 31,424 records
 in all, so unforge writes the 31,199 the generator reads. Since 3.1.0
 ``crafting/craftedproperties`` (the 29 stats a crafting slot's quality
-moves, for the SCO Order tab) is kept rather than excluded.
+moves, for the SCO Order tab) is kept rather than excluded, and so is
+``missiondata/pu_locations`` (the 2,105 mission location templates whose
+region tags name a Pyro region's planets and stations), the rest of
+``missiondata`` excluded folder by folder.
 
 It is an exclude list, not a keep list, on purpose. A record folder a game
 patch adds is in neither list, so unforge writes it and the cache keeps it
@@ -23,7 +26,7 @@ list, splitting the entry that holds it when that holds more. Entries
 are lower case (unforge compares them ignoring case), relative to
 ``libs/foundry/records/``, one record folder or ``.xml`` file each, and one
 holds a space (``entities/restricted areas``). unforge gets them in a file,
-one per line, rather than as ``--exclude`` arguments, which these 537
+one per line, rather than as ``--exclude`` arguments, which these 541
 entries would take past 20,000 characters of command line.
 """
 
@@ -148,7 +151,6 @@ DATAFORGE_EXCLUDE_SUBPATHS: tuple[str, ...] = (
     "megamap",
     "mining",
     "miningaudioparams",
-    "missiondata",
     "missionfailureconditions",
     "missiongiver",
     "missionscenarios",
@@ -295,6 +297,11 @@ DATAFORGE_EXCLUDE_SUBPATHS: tuple[str, ...] = (
     "missionbroker/jobboard",
     "missionbroker/pu_missioninvites",
     "missionbroker/testmissions",
+    "missiondata/declarations",
+    "missiondata/entityclustermembers",
+    "missiondata/pu_items",
+    "missiondata/pu_missionlocality",
+    "missiondata/pu_organizations",
     "reputation/contexts",
     "reputation/perks",
     "reputation/sandboxtriggers",

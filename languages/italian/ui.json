@@ -1530,6 +1530,18 @@
       "ht": "",
       "at": "Ostili"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "Navi per tipo"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "Tutte"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "Quante navi elenca ogni tipo sotto Tipi di nave nei dettagli della missione. Un tipo con più navi elenca le più grandi e le più piccole, con il numero delle altre in mezzo. Ha effetto alla prossima generazione dei miglioramenti."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Reputazione"
@@ -1541,6 +1553,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "Pilota Asso"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Ricarica"
     },
     "mission_detail_fields_note": {
       "ht": "",

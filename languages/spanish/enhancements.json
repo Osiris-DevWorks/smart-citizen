@@ -1,6 +1,10 @@
 {
   "_comment": "Translations of the text Smart Citizen adds to the game strings (stat labels, mission details, journal lines). Each key is the English text from languages/english/enhancements.json. 'ht' is a human translation and wins; 'at' is an AI draft. Keep each {placeholder} as it is.",
   "strings": {
+    "(… {count} others)": {
+      "ht": "",
+      "at": "(… {count} más)"
+    },
     "--- EFFECT ---": {
       "ht": "",
       "at": "--- EFECTO ---"
@@ -465,6 +469,10 @@
       "ht": "",
       "at": "Nine Tails"
     },
+    "None": {
+      "ht": "",
+      "at": "Ninguno"
+    },
     "Objectives": {
       "ht": "",
       "at": "Objetivos"
@@ -597,6 +605,10 @@
       "ht": "",
       "at": "Regen."
     },
+    "Regions": {
+      "ht": "",
+      "at": "Regiones"
+    },
     "Reinforcements": {
       "ht": "",
       "at": "Refuerzos"
@@ -664,6 +676,10 @@
     "Ship": {
       "ht": "",
       "at": "Nave"
+    },
+    "Ship types": {
+      "ht": "",
+      "at": "Tipos de nave"
     },
     "Ships to Defend": {
       "ht": "",
@@ -745,6 +761,10 @@
       "ht": "",
       "at": "Velocidad"
     },
+    "Wave {n}": {
+      "ht": "",
+      "at": "Oleada {n}"
+    },
     "Wear": {
       "ht": "",
       "at": "Desgaste"
@@ -764,6 +784,18 @@
     "Yes": {
       "ht": "",
       "at": "Sí"
+    },
+    "abandon: {time}": {
+      "ht": "",
+      "at": "abandono: {time}"
+    },
+    "and one of:": {
+      "ht": "",
+      "at": "y uno de:"
+    },
+    "and {item}": {
+      "ht": "",
+      "at": "y {item}"
     },
     "base": {
       "ht": "",
@@ -801,6 +833,22 @@
       "ht": "",
       "at": "subida"
     },
+    "up to {chance} chance": {
+      "ht": "",
+      "at": "hasta {chance} de probabilidad"
+    },
+    "variant {n}": {
+      "ht": "",
+      "at": "variante {n}"
+    },
+    "variants {n}": {
+      "ht": "",
+      "at": "variantes {n}"
+    },
+    "{chance} chance": {
+      "ht": "",
+      "at": "{chance} de probabilidad"
+    },
     "{count} items": {
       "ht": "",
       "at": "{count} objetos"
@@ -813,9 +861,41 @@
       "ht": "",
       "at": "{count} tipos"
     },
+    "{count}x of {ships}": {
+      "ht": "",
+      "at": "{count}x de entre {ships}"
+    },
+    "{items} and {last}": {
+      "ht": "",
+      "at": "{items} y {last}"
+    },
+    "{items} or {last}": {
+      "ht": "",
+      "at": "{items} o {last}"
+    },
     "{item} Set": {
       "ht": "",
       "at": "Conjunto {item}"
+    },
+    "{kind} ship": {
+      "ht": "",
+      "at": "nave {kind}"
+    },
+    "{kind}: {ships}": {
+      "ht": "",
+      "at": "{kind}: {ships}"
+    },
+    "{label} ({chance} chance)": {
+      "ht": "",
+      "at": "{label} ({chance} de probabilidad)"
+    },
+    "{label} {n}": {
+      "ht": "",
+      "at": "{label} {n}"
+    },
+    "{label}, one of:": {
+      "ht": "",
+      "at": "{label}, uno de:"
     },
     "{pct}% chance": {
       "ht": "",
@@ -824,6 +904,22 @@
     "{pct}% chance ({variants} only)": {
       "ht": "",
       "at": "{pct}% de probabilidad (solo {variants})"
+    },
+    "{rest}, and {last}": {
+      "ht": "",
+      "at": "{rest} y {last}"
+    },
+    "{rest}, or {last}": {
+      "ht": "",
+      "at": "{rest} o {last}"
+    },
+    "{system} Region {name}": {
+      "ht": "",
+      "at": "Región {name} de {system}"
+    },
+    "{system} Regions {names}": {
+      "ht": "",
+      "at": "Regiones {names} de {system}"
     },
     "{type} Ammo": {
       "ht": "",

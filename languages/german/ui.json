@@ -1530,6 +1530,18 @@
       "ht": "",
       "at": "Feindkräfte"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "Schiffe pro Typ"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "Alle"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "Wie viele Schiffe jeder Typ unter Schiffstypen in den Missionsdetails auflistet. Ein Typ mit mehr nennt seine größten und kleinsten, mit der Zahl der übrigen dazwischen. Wirkt beim nächsten Erzeugen der Verbesserungen."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "Ruf"
@@ -1541,6 +1553,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "Ass-Pilot"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "Abklingzeit"
     },
     "mission_detail_fields_note": {
       "ht": "",

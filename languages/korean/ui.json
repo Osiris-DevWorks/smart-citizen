@@ -1534,6 +1534,18 @@
       "ht": "",
       "at": "적대 세력"
     },
+    "ships_per_type_label": {
+      "ht": "",
+      "at": "유형별 함선 수"
+    },
+    "ships_per_type_all": {
+      "ht": "",
+      "at": "전체"
+    },
+    "ships_per_type_tooltip": {
+      "ht": "",
+      "at": "임무 세부 정보의 함선 유형에서 유형마다 몇 척까지 표시할지 정합니다. 그보다 많은 유형은 가장 큰 함선과 가장 작은 함선을 보여 주고, 그 사이에 나머지 수를 표시합니다. 다음 강화 생성부터 적용됩니다."
+    },
     "mission_field_reputation": {
       "ht": "",
       "at": "평판"
@@ -1545,6 +1557,10 @@
     "mission_field_ace_pilot": {
       "ht": "",
       "at": "에이스 파일럿"
+    },
+    "mission_field_cooldown": {
+      "ht": "",
+      "at": "재사용 대기"
     },
     "mission_field_resource_signatures": {
       "ht": "",
